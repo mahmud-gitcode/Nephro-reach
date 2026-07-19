@@ -10,7 +10,7 @@ export default function Hero() {
     <section className="relative pt-8 pb-20 px-4 sm:px-6 lg:px-8 max-w-[1404px] mx-auto">
       {/* Container Card with background image Container.png */}
       <div className="relative rounded-[16px] border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.02)] overflow-hidden w-full h-[570px] flex items-center justify-end px-6 sm:px-12 md:px-[71px]">
-        
+
         {/* Background Image Container.png */}
         <Image
           src="/images/Container.png"
@@ -36,7 +36,7 @@ export default function Hero() {
               Join Margin for daily SMS prompts, a private digital journal, and monthly classes designed to help you build a more intentional life.
             </p>
             <div className="pt-2">
-              <Link 
+              <Link
                 href="/registration"
                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-4 rounded-xl shadow-lg shadow-blue-500/15 hover:shadow-blue-500/25 transition-all hover:translate-y-[-2px] active:translate-y-0 active:scale-98 text-base"
               >

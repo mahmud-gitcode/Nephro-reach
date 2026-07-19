@@ -115,17 +115,24 @@ export default function AboutUsPage() {
               </form>
             </div>
 
-            {/* Right Column - Illustration Image with Teal Accent Panel */}
-            <div className="relative flex justify-center lg:justify-end items-center h-[500px] lg:h-[600px] w-full lg:pl-12">
+            {/* Right Column - Illustration Images with exact Figma dimensions */}
+            <div className="relative flex justify-center lg:justify-end items-center min-h-[600px] lg:min-h-[743px] w-full">
               
-              {/* Teal Accent background panel that bleeds to the right edge of viewport on large screens */}
-              <div className="absolute right-[-100vw] left-[35%] top-[-100px] bottom-[-100px] bg-[#2A9D8F] hidden lg:block -z-10" />
-              
-              {/* About Us Main Image */}
-              <div className="relative w-full max-w-[450px] lg:max-w-[480px] h-[450px] lg:h-[500px] rounded-[48px] overflow-hidden shadow-2xl z-10 border-4 border-white/10 lg:mr-[10%]">
+              {/* Bottom Image / Accent (aboutUs-bottom.png: Width 419px, Height 900px) */}
+              <div className="absolute right-[-100vw] lg:right-[-40px] top-1/2 -translate-y-1/2 w-full lg:w-[419px] h-[900px] hidden lg:block -z-10 overflow-hidden">
+                <Image
+                  src="/images/aboutUs-bottom.png"
+                  alt="About Us Bottom Graphic"
+                  fill
+                  className="object-cover object-right"
+                />
+              </div>
+
+              {/* Top Main Image (aboutUs-top.png: Width 550px, Height 743px) */}
+              <div className="relative w-full max-w-[550px] lg:w-[550px] h-[500px] lg:h-[743px] rounded-[32px] lg:rounded-[48px] overflow-hidden shadow-2xl z-10 border-4 border-white/10">
                 <Image
                   src="/images/aboutUs-top.png"
-                  alt="About Us Illustration"
+                  alt="About Us Top Illustration"
                   fill
                   priority
                   className="object-cover object-center"
