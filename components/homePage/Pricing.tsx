@@ -6,161 +6,204 @@ import { Check, X } from "lucide-react";
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
-      <div className="text-center space-y-3 mb-16">
-        <span className="text-blue-600 text-sm font-bold tracking-widest uppercase">Pricing</span>
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Membership Options</h2>
-        <p className="text-slate-500 text-base max-w-2xl mx-auto font-medium">
-          Choose the path that fits your goals. Simple, transparent pricing.
-        </p>
-      </div>
+    <section id="pricing" className="w-full bg-white py-20 md:py-24 scroll-mt-20">
+      <div className="mx-auto max-w-[1180px] px-6 md:px-8">
+        <div className="text-center space-y-3 mb-12 md:mb-16 max-w-[760px] mx-auto">
+          <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
+            Pricing
+          </span>
+          <h2 className="text-[31px] leading-[1.06] sm:text-[40px] md:text-[46px] font-semibold text-slate-900 tracking-tight">
+            Membership Options
+          </h2>
+          <p className="text-[15px] leading-6 md:text-[16px] md:leading-7 text-slate-500 font-normal max-w-[620px] mx-auto">
+            Choose the path that fits your goals. Simple, transparent pricing.
+          </p>
+        </div>
 
-      {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
         
         {/* Card 1 */}
-        <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100/80 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
+        <div className="rounded-[32px] border border-slate-200 bg-[#EEF3FB] p-6 md:p-8 flex flex-col justify-between min-h-[520px]">
           <div className="space-y-6">
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-slate-800">Class Purchase</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-extrabold text-slate-900">$10</span>
-                <span className="text-slate-400 text-sm font-semibold">/Month</span>
+              <h3 className="text-[18px] font-semibold text-slate-700">Class Purchase</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-[30px] md:text-[34px] font-semibold leading-none text-slate-900">$10</span>
+                <span className="pb-1 text-[15px] text-slate-600 font-normal">/Month</span>
               </div>
-              <p className="text-slate-400 text-xs font-medium">Complete access to all platform features</p>
+              <p className="text-[15px] leading-6 text-slate-600 font-normal pt-2">
+                Complete access to all platform features
+              </p>
             </div>
-            
-            <Link 
+
+            <Link
               href="/registration"
-              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-center rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/15 transition-all active:scale-[0.98] text-sm"
+              className="inline-flex h-10 w-fit items-center justify-center rounded-[10px] bg-[#2F69E8] px-4 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[#2459d1]"
             >
               Get Started
             </Link>
 
-            <hr className="border-slate-100" />
-
-            <ul className="space-y-3.5">
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Digital Journal</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>8-week educational curriculum</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Monthly live classes</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Weekly SMS check-ins</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Community support</span>
-              </li>
-            </ul>
+            <div className="border-t border-slate-200/80 pt-5">
+              <ul className="space-y-4">
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Digital Journal</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>8-week educational curriculum</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                  </span>
+                  <span>Monthly live classes</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Weekly SMS check-ins</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Community support</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
         {/* Card 2 - Most Popular */}
-        <div className="bg-white rounded-3xl p-8 border-2 border-blue-500 flex flex-col justify-between shadow-xl relative scale-102 z-10">
-          {/* Tag */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-bold tracking-wider uppercase">
-            Most Popular
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-blue-600">Full Membership</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-extrabold text-slate-900">$10</span>
-                <span className="text-slate-400 text-sm font-semibold">/Month</span>
-              </div>
-              <p className="text-slate-400 text-xs font-medium">Complete access to all platform features</p>
+        <div className="relative rounded-[34px] p-[2px] bg-[linear-gradient(180deg,#67C7D3_0%,#78A7D6_36%,#A7A0E8_68%,#F1D56C_100%)] shadow-[0_16px_40px_rgba(59,130,246,0.10)] md:scale-[1.02] z-10">
+          <div className="relative rounded-[32px] bg-white p-6 md:p-8 min-h-[520px]">
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-[15px] bg-[linear-gradient(90deg,#67C7D3_0%,#6A9AD6_100%)] px-7 py-2 text-[13px] font-semibold text-white shadow-sm">
+              Most Popular
             </div>
-            
-            <Link 
-              href="/registration"
-              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-center rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/25 transition-all active:scale-[0.98] text-sm"
-            >
-              Get Started
-            </Link>
 
-            <hr className="border-slate-100" />
+            <div className="space-y-6 pt-6">
+              <div className="space-y-2">
+                <h3 className="text-[18px] font-semibold text-[#2F69E8]">Full Membership</h3>
+                <div className="flex items-end gap-2">
+                  <span className="text-[32px] md:text-[36px] font-semibold leading-none text-slate-900">$10</span>
+                  <span className="pb-1 text-[16px] text-slate-600 font-normal">/Month</span>
+                </div>
+                <p className="text-[15px] leading-6 text-slate-600 font-normal pt-2 max-w-[260px]">
+                  Complete access to all platform features
+                </p>
+              </div>
 
-            <ul className="space-y-3.5">
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Digital Journal</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>8-week educational curriculum</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Monthly live classes</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Weekly SMS check-ins</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Community support</span>
-              </li>
-            </ul>
+              <Link
+                href="/registration"
+                className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-[#2F69E8] px-4 text-[14px] font-medium text-white shadow-[0_8px_20px_rgba(47,105,232,0.18)] transition-colors hover:bg-[#2459d1]"
+              >
+                Get Started
+              </Link>
+
+              <div className="border-t border-slate-200/80 pt-5">
+                <ul className="space-y-4">
+                  <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                    </span>
+                    <span>Digital Journal</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                    </span>
+                    <span>8-week educational curriculum</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                    </span>
+                    <span>Monthly live classes</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                    </span>
+                    <span>Weekly SMS check-ins</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                    </span>
+                    <span>Community support</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Card 3 */}
-        <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100/80 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
+        <div className="rounded-[32px] border border-slate-200 bg-[#EEF3FB] p-6 md:p-8 flex flex-col justify-between min-h-[520px]">
           <div className="space-y-6">
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-slate-800">Journal Only</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-extrabold text-slate-900">$5</span>
-                <span className="text-slate-400 text-sm font-semibold">/Month</span>
+              <h3 className="text-[18px] font-semibold text-slate-700">Journal Only</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-[30px] md:text-[34px] font-semibold leading-none text-slate-900">$5</span>
+                <span className="pb-1 text-[15px] text-slate-600 font-normal">/Month</span>
               </div>
-              <p className="text-slate-400 text-xs font-medium">Complete access to all platform features</p>
+              <p className="text-[15px] leading-6 text-slate-600 font-normal pt-2">
+                Complete access to all platform features
+              </p>
             </div>
-            
-            <Link 
+
+            <Link
               href="/registration"
-              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-center rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/15 transition-all active:scale-[0.98] text-sm"
+              className="inline-flex h-10 w-fit items-center justify-center rounded-[10px] bg-[#2F69E8] px-4 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[#2459d1]"
             >
               Get Started
             </Link>
 
-            <hr className="border-slate-100" />
-
-            <ul className="space-y-3.5">
-              <li className="flex items-center gap-3 text-slate-700 text-sm font-bold">
-                <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
-                <span>Digital Journal</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>8-week educational curriculum</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Monthly live classes</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Weekly SMS check-ins</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-400 text-sm font-medium">
-                <X className="w-4 h-4 text-rose-500 stroke-[3]" />
-                <span>Community support</span>
-              </li>
-            </ul>
+            <div className="border-t border-slate-200/80 pt-5">
+              <ul className="space-y-4">
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                  </span>
+                  <span>Digital Journal</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>8-week educational curriculum</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Monthly live classes</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Weekly SMS check-ins</span>
+                </li>
+                <li className="flex items-center gap-3 text-[15px] text-slate-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <X className="w-3.5 h-3.5 text-rose-400 stroke-[3]" />
+                  </span>
+                  <span>Community support</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
+        </div>
       </div>
     </section>
   );

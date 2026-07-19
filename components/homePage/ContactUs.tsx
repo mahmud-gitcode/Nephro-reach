@@ -1,38 +1,37 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function ContactUs() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="bg-[#1E3A8A] rounded-[40px] text-white overflow-hidden relative flex flex-col md:flex-row items-center justify-between p-8 sm:p-12 md:p-16 gap-8 shadow-2xl">
-        {/* Subtle curved graphics */}
-        <div className="absolute top-0 left-0 w-80 h-80 bg-amber-400/20 rounded-full blur-[100px] -z-10" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-blue-400/30 rounded-full blur-[120px] -z-10" />
+    <section className="relative w-full bg-[#DDE9FA] pt-12 pb-0">
+      <div className="max-w-[1404px] mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Container with Section.png background & Footer matching background color */}
+        <div className="relative overflow-hidden w-full min-h-[320px] sm:min-h-[380px] md:min-h-[420px] flex items-center justify-center rounded-none bg-[#DDE9FA]">
 
-        {/* Left side - Styled Support Avatar Vector */}
-        <div className="w-full md:w-[48%] flex justify-center md:justify-start">
-          <div className="relative flex items-center -space-x-4">
-            <div className="w-16 h-16 rounded-full border-4 border-[#1E3A8A] bg-teal-500 overflow-hidden flex items-center justify-center text-white font-bold text-lg select-none">JS</div>
-            <div className="w-16 h-16 rounded-full border-4 border-[#1E3A8A] bg-indigo-500 overflow-hidden flex items-center justify-center text-white font-bold text-lg select-none">MD</div>
-            <div className="w-16 h-16 rounded-full border-4 border-[#1E3A8A] bg-rose-500 overflow-hidden flex items-center justify-center text-white font-bold text-lg select-none">AJ</div>
-            <div className="w-16 h-16 rounded-full border-4 border-[#1E3A8A] bg-amber-500 overflow-hidden flex items-center justify-center text-white font-bold text-lg select-none">TL</div>
-            <div className="w-16 h-16 rounded-full border-4 border-[#1E3A8A] bg-slate-600 overflow-hidden flex items-center justify-center text-white font-bold text-lg select-none">➕</div>
+          {/* Background Banner Image Section.png */}
+          <Image
+            src="/images/Section.png"
+            alt="Still have questions banner background"
+            fill
+            priority
+            className="object-cover object-center"
+          />
+
+          {/* Center Overlay Content */}
+          <div className="relative z-10 text-center flex flex-col items-center justify-center gap-4 px-4 py-8 mx-auto">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Still have questions?
+            </h2>
+            <Link
+              href="mailto:support@nephroreach.com"
+              className="bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 text-sm tracking-wide"
+            >
+              Contact Us
+            </Link>
           </div>
-        </div>
-
-        {/* Middle/Right - CTA text and button */}
-        <div className="w-full md:w-[48%] flex flex-col md:flex-row items-center md:justify-end gap-6 text-center md:text-right">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Still have questions?
-          </h2>
-          <Link 
-            href="mailto:support@nephroreach.com"
-            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg transition-all active:scale-[0.98] text-sm tracking-wide shrink-0"
-          >
-            Contact Us
-          </Link>
         </div>
       </div>
     </section>
