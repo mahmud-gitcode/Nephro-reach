@@ -5,8 +5,10 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Image from "next/image";
 import { ChevronDown } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AboutUsPage() {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -39,13 +41,13 @@ export default function AboutUsPage() {
               
               <div className="space-y-3">
                 <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-none">
-                  Get in <span className="text-[#2563EB]">Touch</span>
+                  {t("contactUs.getInTouchTitle")}
                 </h1>
                 <p className="text-slate-600 text-sm sm:text-base font-semibold leading-relaxed">
-                  Have a question or need assistance? Reach out to us via email, phone, or the contact form below. We're eager to assist you.
+                  {t("contactUs.getInTouchDesc")}
                 </p>
                 <p className="text-slate-400 text-xs sm:text-sm font-semibold pt-1">
-                  Nice hearing from you!
+                  {t("contactUs.niceHearing")}
                 </p>
               </div>
 
@@ -55,7 +57,7 @@ export default function AboutUsPage() {
                   <input
                     type="text"
                     name="name"
-                    placeholder="Name"
+                    placeholder={t("contactUs.namePlaceholder")}
                     value={formData.name}
                     onChange={handleChange}
                     required
@@ -67,7 +69,7 @@ export default function AboutUsPage() {
                   <input
                     type="email"
                     name="email"
-                    placeholder="Email"
+                    placeholder={t("contactUs.emailPlaceholder")}
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -78,7 +80,7 @@ export default function AboutUsPage() {
                 <div>
                   <textarea
                     name="message"
-                    placeholder="Label"
+                    placeholder={t("contactUs.messagePlaceholder")}
                     rows={4}
                     value={formData.message}
                     onChange={handleChange}
@@ -95,11 +97,11 @@ export default function AboutUsPage() {
                     required
                     className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-slate-500 text-sm font-semibold placeholder-slate-400 shadow-sm transition-all bg-white appearance-none cursor-pointer"
                   >
-                    <option value="" disabled>How did you find us?</option>
-                    <option value="search">Search Engine (Google, Bing)</option>
-                    <option value="social">Social Media</option>
-                    <option value="referral">Friend or Colleague</option>
-                    <option value="other">Other</option>
+                    <option value="" disabled>{t("contactUs.sourcePlaceholder")}</option>
+                    <option value="search">{t("contactUs.sourceOption1")}</option>
+                    <option value="social">{t("contactUs.sourceOption2")}</option>
+                    <option value="referral">{t("contactUs.sourceOption3")}</option>
+                    <option value="other">{t("contactUs.sourceOption4")}</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                     <ChevronDown className="w-5 h-5" />
@@ -110,7 +112,7 @@ export default function AboutUsPage() {
                   type="submit"
                   className="w-full py-4 bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] uppercase tracking-wider"
                 >
-                  Send
+                  {t("contactUs.sendButton")}
                 </button>
               </form>
             </div>

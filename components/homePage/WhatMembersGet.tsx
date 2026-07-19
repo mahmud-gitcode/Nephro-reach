@@ -2,20 +2,23 @@
 
 import React from "react";
 import { MessageSquare, BookOpen, Calendar, TrendingUp, Users, Shield } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function WhatMembersGet() {
+  const { t } = useLanguage();
+
   return (
     <section id="features" className="w-full border-y border-slate-100 bg-[#EEF3FA] py-20 md:py-24">
       <div className="mx-auto max-w-[1180px] px-6 md:px-8">
         <div className="mb-12 md:mb-16 text-center space-y-3 max-w-[760px] mx-auto">
           <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
-            What You Fet
+            {t("whatMembersGet.badge")}
           </span>
           <h2 className="text-[31px] leading-[1.06] sm:text-[40px] md:text-[46px] font-semibold text-slate-900 tracking-tight">
-            What Members Get
+            {t("whatMembersGet.title")}
           </h2>
           <p className="mx-auto max-w-[540px] text-[15px] leading-6 md:text-[16px] md:leading-7 text-slate-600 font-normal">
-            everything you need to grow
+            {t("whatMembersGet.subtitle")}
           </p>
         </div>
 
@@ -28,10 +31,10 @@ export default function WhatMembersGet() {
               <MessageSquare className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Daily SMS Prompts
+              {t("whatMembersGet.card1Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              Carefully crafted questions sent to your phone to spark reflection and mindfulness throughout your day.
+              {t("whatMembersGet.card1Desc")}
             </p>
           </div>
 
@@ -41,10 +44,10 @@ export default function WhatMembersGet() {
               <BookOpen className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Digital Journal
+              {t("whatMembersGet.card2Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              A beautiful, private space where all your SMS replies are automatically saved and organized by date.
+              {t("whatMembersGet.card2Desc")}
             </p>
           </div>
 
@@ -54,10 +57,10 @@ export default function WhatMembersGet() {
               <Calendar className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Monthly Classes
+              {t("whatMembersGet.card3Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              Live, expert-led sessions focusing on personal growth, habit building, and intentional living.
+              {t("whatMembersGet.card3Desc")}
             </p>
           </div>
 
@@ -67,10 +70,10 @@ export default function WhatMembersGet() {
               <TrendingUp className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Progress Tracking
+              {t("whatMembersGet.card4Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              Look back at your entries over time to see patterns, growth, and shifts in your perspective.
+              {t("whatMembersGet.card4Desc")}
             </p>
           </div>
 
@@ -80,10 +83,10 @@ export default function WhatMembersGet() {
               <Users className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Community Access
+              {t("whatMembersGet.card5Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              Connect with other members in our moderated forum to share insights and discuss class topics.
+              {t("whatMembersGet.card5Desc")}
             </p>
           </div>
 
@@ -93,10 +96,10 @@ export default function WhatMembersGet() {
               <Shield className="w-5 h-5" />
             </div>
             <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              Private & Secure
+              {t("whatMembersGet.card6Title")}
             </h3>
             <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              Your reflections are yours alone. We use industry-standard encryption to keep your journal safe.
+              {t("whatMembersGet.card6Desc")}
             </p>
           </div>
 

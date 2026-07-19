@@ -4,10 +4,12 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Lock, User, Phone, X, Eye, EyeOff } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function RegistrationPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center bg-[#F1F5F9] p-4 sm:p-6 md:p-8 font-sans">
@@ -45,7 +47,7 @@ export default function RegistrationPage() {
             <div className="space-y-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-                  Personal Details
+                  {t("auth.createAccount")}
                 </h1>
               </div>
 
@@ -53,7 +55,7 @@ export default function RegistrationPage() {
                 {/* Full Name */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    Full Name
+                    {t("contactUs.namePlaceholder")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -70,7 +72,7 @@ export default function RegistrationPage() {
                 {/* Email Address */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    Email Address
+                    {t("contactUs.emailPlaceholder")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -78,7 +80,7 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type="email"
-                      placeholder="Example@email.com"
+                      placeholder={t("auth.emailPlaceholder")}
                       className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
                   </div>
@@ -87,7 +89,7 @@ export default function RegistrationPage() {
                 {/* Phone Number */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    Phone Number
+                    {t("auth.emailOrPhone")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -104,7 +106,7 @@ export default function RegistrationPage() {
                 {/* Password */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    Password
+                    {t("auth.password")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -112,7 +114,7 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="at least 8 characters"
+                      placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
                     <button
@@ -128,7 +130,7 @@ export default function RegistrationPage() {
                 {/* Confirm Password */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    Confirm Password
+                    {t("auth.password")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -136,7 +138,7 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="at least 8 characters"
+                      placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
                     <button
@@ -158,8 +160,8 @@ export default function RegistrationPage() {
                   />
                   <label htmlFor="hipaa-verify" className="text-[10px] text-slate-500 leading-normal select-none cursor-pointer">
                     I verify that I am an authorized healthcare professional and agree to the End{" "}
-                    <a href="#" className="text-blue-600 hover:underline font-semibold">terms and conditions</a> and acknowledge the{" "}
-                    <a href="#" className="text-blue-600 hover:underline font-semibold">Privacy Policy</a> regarding HIPAA compliance.
+                    <a href="#" className="text-blue-600 hover:underline font-semibold">{t("footer.terms")}</a> and acknowledge the{" "}
+                    <a href="#" className="text-blue-600 hover:underline font-semibold">{t("footer.privacy")}</a>.
                   </label>
                 </div>
 
@@ -168,7 +170,7 @@ export default function RegistrationPage() {
                   type="submit"
                   className="w-full py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-semibold rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] text-sm tracking-wide mt-1.5"
                 >
-                  Sign up
+                  {t("auth.signUp")}
                 </button>
               </form>
             </div>
@@ -179,7 +181,7 @@ export default function RegistrationPage() {
                 <div className="w-full border-t border-slate-200/80"></div>
               </div>
               <div className="relative flex justify-center text-[10px]">
-                <span className="bg-white/90 px-3 text-slate-400 font-semibold tracking-wider uppercase">Or</span>
+                <span className="bg-white/90 px-3 text-slate-400 font-semibold tracking-wider uppercase">{t("auth.or")}</span>
               </div>
             </div>
 
@@ -191,17 +193,17 @@ export default function RegistrationPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              Sign up with Google
+              {t("auth.signUp")} with Google
             </button>
 
             {/* Link to Login */}
             <p className="text-center text-xs font-semibold text-slate-500 mt-4">
-              Already have an account?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
               <Link
                 href="/login"
                 className="text-blue-600 hover:text-blue-700 hover:underline font-bold"
               >
-                Sign in
+                {t("auth.signIn")}
               </Link>
             </p>
           </div>

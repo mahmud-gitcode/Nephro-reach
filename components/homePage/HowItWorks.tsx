@@ -123,9 +123,9 @@ export default function HowItWorks() {
             </div>
             {/* Details */}
             <div className="p-5 flex-1 flex flex-col justify-start text-left">
-              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step3Title")}</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step4Title")}</h3>
               <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                {t("howItWorks.step3Desc")}
+                {t("howItWorks.step4Desc")}
               </p>
             </div>
           </div>

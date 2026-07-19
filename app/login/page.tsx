@@ -4,9 +4,11 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Lock, X, Eye, EyeOff } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center bg-[#F1F5F9] p-4 sm:p-6 md:p-8 font-sans">
@@ -43,10 +45,10 @@ export default function LoginPage() {
             <div className="space-y-6">
               <div>
                 <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                  Welcome Back <span className="animate-bounce">👋</span>
+                  {t("auth.welcomeBack")} <span className="animate-bounce">👋</span>
                 </h1>
                 <p className="text-sm font-medium text-slate-500 mt-2">
-                  Access your nephrology care dashboard.
+                  {t("auth.subTitle")}
                 </p>
               </div>
 
@@ -54,7 +56,7 @@ export default function LoginPage() {
                 {/* Email / Phone Number */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Email or Phone Number
+                    {t("auth.emailOrPhone")}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -62,7 +64,7 @@ export default function LoginPage() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Example@email.com"
+                      placeholder={t("auth.emailPlaceholder")}
                       className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
                   </div>
@@ -72,7 +74,7 @@ export default function LoginPage() {
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Password
+                      {t("auth.password")}
                     </label>
                   </div>
                   <div className="relative">
@@ -81,7 +83,7 @@ export default function LoginPage() {
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="at least 8 characters"
+                      placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
                     <button
@@ -94,7 +96,7 @@ export default function LoginPage() {
                   </div>
                   <div className="text-right">
                     <a href="#" className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline">
-                      Forgot Password?
+                      {t("auth.forgotPassword")}
                     </a>
                   </div>
                 </div>
@@ -104,7 +106,7 @@ export default function LoginPage() {
                   type="submit"
                   className="w-full py-3.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-semibold rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.3)] text-sm tracking-wide mt-2"
                 >
-                  Sign in
+                  {t("auth.signIn")}
                 </button>
               </form>
             </div>
@@ -115,7 +117,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-200/80"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white/90 px-3.5 text-slate-400 font-semibold tracking-wider uppercase">Or</span>
+                <span className="bg-white/90 px-3.5 text-slate-400 font-semibold tracking-wider uppercase">{t("auth.or")}</span>
               </div>
             </div>
 
@@ -127,17 +129,17 @@ export default function LoginPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              Sign in with Google
+              {t("auth.signInWithGoogle")}
             </button>
 
             {/* Link to Registration */}
             <p className="text-center text-sm font-semibold text-slate-500 mt-6">
-              Don&apos;t you have an account?{" "}
+              {t("auth.dontHaveAccount")}{" "}
               <Link
                 href="/registration"
                 className="text-blue-600 hover:text-blue-700 hover:underline font-bold"
               >
-                Sign up
+                {t("auth.signUp")}
               </Link>
             </p>
           </div>

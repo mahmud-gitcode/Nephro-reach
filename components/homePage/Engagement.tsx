@@ -2,8 +2,11 @@
 
 import React from "react";
 import { X, ChevronRight, Calendar, User, Flag, MoreHorizontal } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Engagement() {
+  const { t } = useLanguage();
+
   return (
     <section className="w-full bg-white py-20 md:py-24 scroll-mt-20">
       <div className="mx-auto flex w-full max-w-[1180px] flex-col items-center px-6 md:px-8 gap-10 md:gap-14">
@@ -11,13 +14,13 @@ export default function Engagement() {
         {/* Header Block */}
         <div className="text-center space-y-3 max-w-[840px]">
           <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
-            What's Include
+            {t("engagement.badge")}
           </span>
           <h2 className="text-[31px] leading-[1.06] sm:text-[40px] md:text-[46px] font-semibold text-slate-900 tracking-tight">
-            Everything members need to stay engaged
+            {t("engagement.title")}
           </h2>
           <p className="mx-auto max-w-[760px] text-[15px] leading-6 md:text-[16px] md:leading-7 text-slate-500 font-normal">
-            NephroReach combines automated SMS check-ins, digital journaling, guided education, and class access in one simple non-clinical membership platform.
+            {t("engagement.subtitle")}
           </p>
         </div>
 
@@ -90,37 +93,37 @@ export default function Engagement() {
             
             {/* Item 1 */}
             <div className="space-y-2.5 max-w-[430px]">
-              <span className="text-[#D97706] text-[12px] font-semibold uppercase tracking-wide">Start with ease</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">Create your account in minutes</h3>
+              <span className="text-[#D97706] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item1Badge")}</span>
+              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item1Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                Sign up with your email and phone number, choose your membership level, and receive your unique NephroReach member ID.
+                {t("engagement.item1Desc")}
               </p>
             </div>
 
             {/* Item 2 */}
             <div className="space-y-2.5 max-w-[430px]">
-              <span className="text-[#3E7C82] text-[12px] font-semibold uppercase tracking-wide">Build consistency</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">Stay connected through weekly texts</h3>
+              <span className="text-[#3E7C82] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item2Badge")}</span>
+              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item2Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                Receive automated educational SMS check-ins, reminders, and follow-up messages that help you stay engaged without needing real-time human support.
+                {t("engagement.item2Desc")}
               </p>
             </div>
 
             {/* Item 3 */}
             <div className="space-y-2.5 max-w-[430px]">
-              <span className="text-[#FB6A57] text-[12px] font-semibold uppercase tracking-wide">Learn at your pace</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">Follow a guided 8-week education path</h3>
+              <span className="text-[#FB6A57] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item3Badge")}</span>
+              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item3Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                Full members can access structured educational content designed to support steady learning, reflection, and continued engagement.
+                {t("engagement.item3Desc")}
               </p>
             </div>
 
             {/* Item 4 */}
             <div className="space-y-2.5 max-w-[430px]">
-              <span className="text-[#6C9F63] text-[12px] font-semibold uppercase tracking-wide">Reflect and participate</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">Journal, learn, and join live classes</h3>
+              <span className="text-[#6C9F63] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item4Badge")}</span>
+              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item4Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.
+                {t("engagement.item4Desc")}
               </p>
             </div>
 

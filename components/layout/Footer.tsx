@@ -23,7 +23,7 @@ export default function Footer() {
             className="object-contain"
           />
           <p className="text-slate-600 text-sm leading-relaxed max-w-sm font-semibold">
-            A non-clinical educational engagement platform for SMS check-ins, digital journaling, structured learning, and monthly live classes.
+            {t("footer.description")}
           </p>
           
           {/* Social Icons - Dark Rounded Buttons */}
@@ -78,10 +78,10 @@ export default function Footer() {
 
         {/* Platform Links */}
         <div className="space-y-4">
-          <h4 className="text-sm font-bold text-slate-900 tracking-wider">Platform</h4>
+          <h4 className="text-sm font-bold text-slate-900 tracking-wider">{t("footer.platform")}</h4>
           <ul className="space-y-3 text-sm text-slate-600 font-semibold">
-            <li><Link href="/#how-it-works" className="hover:text-blue-600 transition-colors">How it Works</Link></li>
-            <li><Link href="/#features" className="hover:text-blue-600 transition-colors">Product</Link></li>
+            <li><Link href="/#how-it-works" className="hover:text-blue-600 transition-colors">{t("footer.howItWorks")}</Link></li>
+            <li><Link href="/#features" className="hover:text-blue-600 transition-colors">{t("footer.product")}</Link></li>
             <li><Link href="/pricing" className="hover:text-blue-600 transition-colors">{t("header.pricing")}</Link></li>
             <li><Link href="/about-us" className="hover:text-blue-600 transition-colors">{t("header.aboutUs")}</Link></li>
             <li><Link href="/faq" className="hover:text-blue-600 transition-colors">{t("header.faq")}</Link></li>
@@ -90,7 +90,7 @@ export default function Footer() {
 
         {/* Legal Links */}
         <div className="space-y-4">
-          <h4 className="text-sm font-bold text-slate-900 tracking-wider">Legal</h4>
+          <h4 className="text-sm font-bold text-slate-900 tracking-wider">{t("footer.legal")}</h4>
           <ul className="space-y-3 text-sm text-slate-600 font-semibold">
             <li><a href="#" className="hover:text-blue-600 transition-colors">{t("footer.privacy")}</a></li>
             <li><a href="#" className="hover:text-blue-600 transition-colors">{t("footer.terms")}</a></li>
@@ -101,7 +101,7 @@ export default function Footer() {
       </div>
 
       <div className="max-w-[1404px] mx-auto mt-12 pt-8 border-t border-slate-300/40 text-center text-xs text-slate-600 font-semibold">
-        <span>© 2025 DropClicker. {t("footer.rights")}</span>
+        <span>© 2025 NephroReach. {t("footer.rights")}</span>
       </div>
     </footer>
   );
