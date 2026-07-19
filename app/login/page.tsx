@@ -148,7 +148,7 @@ export default function LoginPage() {
         <div className="hidden md:block w-[48%] p-5 relative overflow-hidden bg-slate-50">
           <div className="w-full h-full rounded-[24px] overflow-hidden relative shadow-inner">
             <Image
-              src="/images/login-page-image.png"
+              src="/images/subtract.png"
               alt="Sign In Swirl Banner"
               fill
               className="object-cover"
