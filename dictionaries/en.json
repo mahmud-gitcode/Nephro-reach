@@ -1,0 +1,107 @@
+{
+  "header": {
+    "home": "Home",
+    "faq": "FAQ",
+    "aboutUs": "About us",
+    "pricing": "Pricing",
+    "login": "Log in",
+    "tryItFree": "Try it free"
+  },
+  "hero": {
+    "badge": "Clear your mind",
+    "titleLine1": "A space to reflect,",
+    "titleLine2": "learn, and grow.",
+    "description": "Join Margin for daily SMS prompts, a private digital journal, and monthly classes designed to help you build a more intentional life.",
+    "button": "Try it free"
+  },
+  "pricingHero": {
+    "badge": "Clear your mind",
+    "titleLine1": "A space to reflect,",
+    "titleLine2": "learn, and grow.",
+    "description": "Join Margin for daily SMS prompts, a private digital journal, and monthly classes designed to help you build a more intentional life.",
+    "button": "Button"
+  },
+  "pricing": {
+    "badge": "Pricing",
+    "title": "Membership Options",
+    "description": "Choose the path that fits your goals. Simple, transparent pricing.",
+    "perMonth": "/Month",
+    "accessText": "Complete access to all platform features",
+    "getStarted": "Get Started",
+    "mostPopular": "Most Popular",
+    "classPurchase": "Class Purchase",
+    "fullMembership": "Full Membership",
+    "journalOnly": "Journal Only",
+    "features": {
+      "digitalJournal": "Digital Journal",
+      "curriculum": "8-week educational curriculum",
+      "liveClasses": "Monthly live classes",
+      "smsCheckIns": "Weekly SMS check-ins",
+      "communitySupport": "Community support"
+    }
+  },
+  "howItWorks": {
+    "badge": "Simple Process",
+    "title": "How NephroReach Works",
+    "subtitle": "Get started in three easy steps to manage your kidney health journey.",
+    "step1Title": "Sign Up Account",
+    "step1Desc": "Create your free account in less than 2 minutes to access customized prompts.",
+    "step2Title": "Track & Reflect",
+    "step2Desc": "Receive daily prompts and log your health stats in a secure digital journal.",
+    "step3Title": "Join Community",
+    "step3Desc": "Participate in live monthly classes and connect with experts and peers."
+  },
+  "engagement": {
+    "badge": "Community & Support",
+    "title": "Engage & Stay Informed",
+    "subtitle": "Everything you need to stay on top of your well-being.",
+    "feature1Title": "Daily SMS Check-ins",
+    "feature1Desc": "Timely reminders to keep you engaged and mindful.",
+    "feature2Title": "Private Digital Journal",
+    "feature2Desc": "Secure space to store reflections and personal health records.",
+    "feature3Title": "Monthly Live Webinars",
+    "feature3Desc": "Interactive sessions with professionals to answer your questions."
+  },
+  "whatMembersGet": {
+    "badge": "Benefits",
+    "title": "What Members Get",
+    "subtitle": "Comprehensive tools and community support tailored for you.",
+    "item1": "Access to all 8-week educational modules",
+    "item2": "Personalized health tracking dashboards",
+    "item3": "Exclusive monthly expert live Q&A sessions",
+    "item4": "Direct SMS check-ins and reflection prompts"
+  },
+  "contactUs": {
+    "title": "Have questions? We are here to help.",
+    "subtitle": "Fill out the form below and our team will get back to you shortly.",
+    "namePlaceholder": "Your Full Name",
+    "emailPlaceholder": "Your Email Address",
+    "messagePlaceholder": "Your Message",
+    "sendButton": "Send Message"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Simple answers about privacy, data, and how tracking works.",
+    "button": "Start Tracking",
+    "q1": "Are all suppliers really based in the UK?",
+    "a1": "Can I use this with my existing store? Yes, NephroReach operates with verified global suppliers while ensuring strict local compliance and high quality standards.",
+    "q2": "How does VAT work with DropClicker?",
+    "a2": "VAT calculations and tax compliance are automatically processed based on your billing region during account setup.",
+    "q3": "Average shipping time?",
+    "a3": "Average processing and delivery time ranges between 3 to 5 business days depending on your target location.",
+    "q4": "Can I use this with my existing store?",
+    "a4": "Yes, our platform seamlessly integrates with popular digital platforms, e-commerce stores, and member portals.",
+    "q5": "What payment methods are accepted?",
+    "a5": "We accept all major credit cards, Visa, Mastercard, PayPal, and direct secure bank transfers.",
+    "q6": "Is there a trial period available?",
+    "a6": "Yes! You can start with our 14-day free trial on any membership tier without entering credit card details.",
+    "q7": "How do I track my order status?",
+    "a7": "You can track your real-time status, journal updates, and active check-ins anytime inside your NephroReach dashboard."
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us"
+  }
+}

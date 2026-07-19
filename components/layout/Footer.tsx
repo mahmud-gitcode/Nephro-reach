@@ -3,8 +3,11 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-[#DDE9FA] border-t border-blue-100/50 py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1404px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
@@ -79,9 +82,9 @@ export default function Footer() {
           <ul className="space-y-3 text-sm text-slate-600 font-semibold">
             <li><Link href="/#how-it-works" className="hover:text-blue-600 transition-colors">How it Works</Link></li>
             <li><Link href="/#features" className="hover:text-blue-600 transition-colors">Product</Link></li>
-            <li><Link href="/pricing" className="hover:text-blue-600 transition-colors">Pricing</Link></li>
-            <li><Link href="/about-us" className="hover:text-blue-600 transition-colors">About Us</Link></li>
-            <li><Link href="/faq" className="hover:text-blue-600 transition-colors">FAQ</Link></li>
+            <li><Link href="/pricing" className="hover:text-blue-600 transition-colors">{t("header.pricing")}</Link></li>
+            <li><Link href="/about-us" className="hover:text-blue-600 transition-colors">{t("header.aboutUs")}</Link></li>
+            <li><Link href="/faq" className="hover:text-blue-600 transition-colors">{t("header.faq")}</Link></li>
           </ul>
         </div>
 
@@ -89,16 +92,16 @@ export default function Footer() {
         <div className="space-y-4">
           <h4 className="text-sm font-bold text-slate-900 tracking-wider">Legal</h4>
           <ul className="space-y-3 text-sm text-slate-600 font-semibold">
-            <li><a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a></li>
-            <li><a href="#" className="hover:text-blue-600 transition-colors">Terms of Service</a></li>
-            <li><a href="mailto:support@nephroreach.com" className="hover:text-blue-600 transition-colors">Contact</a></li>
+            <li><a href="#" className="hover:text-blue-600 transition-colors">{t("footer.privacy")}</a></li>
+            <li><a href="#" className="hover:text-blue-600 transition-colors">{t("footer.terms")}</a></li>
+            <li><a href="mailto:support@nephroreach.com" className="hover:text-blue-600 transition-colors">{t("footer.contact")}</a></li>
           </ul>
         </div>
 
       </div>
 
       <div className="max-w-[1404px] mx-auto mt-12 pt-8 border-t border-slate-300/40 text-center text-xs text-slate-600 font-semibold">
-        <span>© 2025 DropClicker. All rights reserved.</span>
+        <span>© 2025 DropClicker. {t("footer.rights")}</span>
       </div>
     </footer>
   );

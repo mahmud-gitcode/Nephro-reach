@@ -3,15 +3,18 @@
 import React from "react";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function HowItWorks() {
+  const { t } = useLanguage();
+
   return (
     <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-[1404px] mx-auto text-center scroll-mt-20">
       <div className="space-y-3 mb-16">
-        <span className="text-blue-600 text-sm font-bold tracking-widest uppercase">How we work</span>
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">How NephroReach Works</h2>
+        <span className="text-blue-600 text-sm font-bold tracking-widest uppercase">{t("howItWorks.badge")}</span>
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">{t("howItWorks.title")}</h2>
         <p className="text-slate-500 text-base max-w-2xl mx-auto font-medium">
-          Choose the path that fits your goals. Simple, transparent pricing.
+          {t("howItWorks.subtitle")}
         </p>
       </div>
 
@@ -51,9 +54,9 @@ export default function HowItWorks() {
             </div>
             {/* Details */}
             <div className="p-5 flex-1 flex flex-col justify-start text-left">
-              <h3 className="text-base font-extrabold text-slate-900 mb-1">Sign Up</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step1Title")}</h3>
               <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                Choose your membership level and securely add your phone number.
+                {t("howItWorks.step1Desc")}
               </p>
             </div>
           </div>
@@ -74,9 +77,9 @@ export default function HowItWorks() {
             </div>
             {/* Details */}
             <div className="p-5 flex-1 flex flex-col justify-start text-left">
-              <h3 className="text-base font-extrabold text-slate-900 mb-1">Get Your Member ID</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step2Title")}</h3>
               <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                Receive a unique ID for your NephroReach account.
+                {t("howItWorks.step2Desc")}
               </p>
             </div>
           </div>
@@ -97,9 +100,9 @@ export default function HowItWorks() {
             </div>
             {/* Details */}
             <div className="p-5 flex-1 flex flex-col justify-start text-left">
-              <h3 className="text-base font-extrabold text-slate-900 mb-1">Learn & Journal</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step3Title")}</h3>
               <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                Use your journal, prompts, and 04-week education library.
+                {t("howItWorks.step3Desc")}
               </p>
             </div>
           </div>
@@ -120,9 +123,9 @@ export default function HowItWorks() {
             </div>
             {/* Details */}
             <div className="p-5 flex-1 flex flex-col justify-start text-left">
-              <h3 className="text-base font-extrabold text-slate-900 mb-1">Receive SMS Check-Ins</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{t("howItWorks.step3Title")}</h3>
               <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                Receive automated weekly SMS check-ins and class reminders.
+                {t("howItWorks.step3Desc")}
               </p>
             </div>
           </div>

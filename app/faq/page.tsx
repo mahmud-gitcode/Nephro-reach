@@ -6,58 +6,25 @@ import Footer from "@/components/layout/Footer";
 import ContactUs from "@/components/homePage/ContactUs";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
-
-interface FAQItem {
-  id: number;
-  question: string;
-  answer: string;
-}
-
-const faqData: FAQItem[] = [
-  {
-    id: 1,
-    question: "Are all suppliers really based in the UK?",
-    answer: "Can I use this with my existing store? Yes, NephroReach operates with verified global suppliers while ensuring strict local compliance and high quality standards.",
-  },
-  {
-    id: 2,
-    question: "How does VAT work with DropClicker?",
-    answer: "VAT calculations and tax compliance are automatically processed based on your billing region during account setup.",
-  },
-  {
-    id: 3,
-    question: "Average shipping time?",
-    answer: "Average processing and delivery time ranges between 3 to 5 business days depending on your target location.",
-  },
-  {
-    id: 4,
-    question: "Can I use this with my existing store?",
-    answer: "Yes, our platform seamlessly integrates with popular digital platforms, e-commerce stores, and member portals.",
-  },
-  {
-    id: 5,
-    question: "What payment methods are accepted?",
-    answer: "We accept all major credit cards, Visa, Mastercard, PayPal, and direct secure bank transfers.",
-  },
-  {
-    id: 6,
-    question: "Is there a trial period available?",
-    answer: "Yes! You can start with our 14-day free trial on any membership tier without entering credit card details.",
-  },
-  {
-    id: 7,
-    question: "How do I track my order status?",
-    answer: "You can track your real-time status, journal updates, and active check-ins anytime inside your NephroReach dashboard.",
-  },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function FAQPage() {
-  // Item 1 open by default as shown in the mockup screenshot
+  const { t } = useLanguage();
   const [openId, setOpenId] = useState<number | null>(1);
 
   const toggleFAQ = (id: number) => {
     setOpenId(openId === id ? null : id);
   };
+
+  const faqItems = [
+    { id: 1, question: t("faq.q1"), answer: t("faq.a1") },
+    { id: 2, question: t("faq.q2"), answer: t("faq.a2") },
+    { id: 3, question: t("faq.q3"), answer: t("faq.a3") },
+    { id: 4, question: t("faq.q4"), answer: t("faq.a4") },
+    { id: 5, question: t("faq.q5"), answer: t("faq.a5") },
+    { id: 6, question: t("faq.q6"), answer: t("faq.a6") },
+    { id: 7, question: t("faq.q7"), answer: t("faq.a7") },
+  ];
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between font-sans">
@@ -72,17 +39,17 @@ export default function FAQPage() {
 
             <div className="relative z-10 max-w-xl space-y-4">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-                Frequently Asked Questions
+                {t("faq.title")}
               </h1>
               <p className="text-slate-600 text-sm sm:text-base lg:text-lg font-medium leading-relaxed">
-                Simple answers about privacy, data, and how tracking works.
+                {t("faq.subtitle")}
               </p>
               <div className="pt-2">
                 <Link
                   href="/registration"
                   className="inline-block bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white font-bold px-6 py-3.5 rounded-xl shadow-md transition-all active:scale-95 text-sm"
                 >
-                  Start Tracking
+                  {t("faq.button")}
                 </Link>
               </div>
             </div>
@@ -90,7 +57,7 @@ export default function FAQPage() {
 
           {/* FAQ Accordion List */}
           <div className="space-y-4">
-            {faqData.map((item) => {
+            {faqItems.map((item) => {
               const isOpen = openId === item.id;
               return (
                 <div

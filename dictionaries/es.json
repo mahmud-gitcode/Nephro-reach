@@ -1,0 +1,107 @@
+{
+  "header": {
+    "home": "Inicio",
+    "faq": "Preguntas Frecuentes",
+    "aboutUs": "Sobre nosotros",
+    "pricing": "Precios",
+    "login": "Iniciar sesión",
+    "tryItFree": "Pruébalo gratis"
+  },
+  "hero": {
+    "badge": "Despeja tu mente",
+    "titleLine1": "Un espacio para reflexionar,",
+    "titleLine2": "aprender y crecer.",
+    "description": "Únete a Margin para recibir mensajes SMS diarios, un diario digital privado y clases mensuales diseñadas para ayudarte a construir una vida más intencional.",
+    "button": "Pruébalo gratis"
+  },
+  "pricingHero": {
+    "badge": "Despeja tu mente",
+    "titleLine1": "Un espacio para reflexionar,",
+    "titleLine2": "aprender y crecer.",
+    "description": "Únete a Margin para recibir mensajes SMS diarios, un diario digital privado y clases mensuales diseñadas para ayudarte a construir una vida más intencional.",
+    "button": "Boton"
+  },
+  "pricing": {
+    "badge": "Precios",
+    "title": "Opciones de Membresía",
+    "description": "Elige el camino que se adapte a tus objetivos. Precios sencillos y transparentes.",
+    "perMonth": "/Mes",
+    "accessText": "Acceso completo a todas las funciones de la plataforma",
+    "getStarted": "Comenzar",
+    "mostPopular": "Más Popular",
+    "classPurchase": "Compra de Clase",
+    "fullMembership": "Membresía Completa",
+    "journalOnly": "Solo Diario",
+    "features": {
+      "digitalJournal": "Diario Digital",
+      "curriculum": "Plan de estudios de 8 semanas",
+      "liveClasses": "Clases en vivo mensuales",
+      "smsCheckIns": "Controles semanales por SMS",
+      "communitySupport": "Soporte comunitario"
+    }
+  },
+  "howItWorks": {
+    "badge": "Proceso Sencillo",
+    "title": "Cómo Funciona NephroReach",
+    "subtitle": "Comienza en tres sencillos pasos para controlar tu salud renal.",
+    "step1Title": "Crear Cuenta",
+    "step1Desc": "Crea tu cuenta gratuita en menos de 2 minutos para acceder a indicaciones personalizadas.",
+    "step2Title": "Seguimiento y Reflexión",
+    "step2Desc": "Recibe notificaciones diarias y registra tus estadísticas de salud en un diario digital seguro.",
+    "step3Title": "Únete a la Comunidad",
+    "step3Desc": "Participa en clases en vivo mensuales y conecta con expertos y compañeros."
+  },
+  "engagement": {
+    "badge": "Comunidad y Soporte",
+    "title": "Participa y Mantente Informado",
+    "subtitle": "Todo lo que necesitas para cuidar tu bienestar.",
+    "feature1Title": "Controles diarios por SMS",
+    "feature1Desc": "Recordatorios oportunos para mantenerte enfocado y atento.",
+    "feature2Title": "Diario Digital Privado",
+    "feature2Desc": "Espacio seguro para guardar reflexiones y registros de salud personales.",
+    "feature3Title": "Seminarios mensuales en vivo",
+    "feature3Desc": "Sesiones interactivas con profesionales para responder a tus preguntas."
+  },
+  "whatMembersGet": {
+    "badge": "Beneficios",
+    "title": "Lo Que Obtienen los Miembros",
+    "subtitle": "Herramientas integrales y soporte comunitario adaptados para ti.",
+    "item1": "Acceso a todos los módulos educativos de 8 semanas",
+    "item2": "Paneles de seguimiento de salud personalizados",
+    "item3": "Sesiones mensuales exclusivas de preguntas en vivo con expertos",
+    "item4": "Controles por SMS e indicaciones de reflexión directa"
+  },
+  "contactUs": {
+    "title": "¿Tienes preguntas? Estamos aquí para ayudarte.",
+    "subtitle": "Completa el formulario a continuación y nuestro equipo te responderá pronto.",
+    "namePlaceholder": "Tu Nombre Completo",
+    "emailPlaceholder": "Tu Correo Electrónico",
+    "messagePlaceholder": "Tu Mensaje",
+    "sendButton": "Enviar Mensaje"
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "subtitle": "Respuestas sencillas sobre privacidad, datos y cómo funciona el seguimiento.",
+    "button": "Comenzar Seguimiento",
+    "q1": "¿Todos los proveedores están realmente ubicados en el Reino Unido?",
+    "a1": "¿Puedo usar esto con mi tienda existente? Sí, NephroReach opera con proveedores globales verificados garantizando estrictos estándares de calidad.",
+    "q2": "¿Cómo funciona el IVA con DropClicker?",
+    "a2": "Los cálculos de IVA y cumplimiento fiscal se procesan automáticamente según tu región de facturación.",
+    "q3": "¿Tiempo promedio de envío?",
+    "a3": "El tiempo promedio de procesamiento y entrega varía entre 3 y 5 días hábiles según la ubicación.",
+    "q4": "¿Puedo usar esto con mi tienda existente?",
+    "a4": "Sí, nuestra plataforma se integra sin problemas con tiendas de comercio electrónico y portales de miembros.",
+    "q5": "¿Qué métodos de pago son aceptados?",
+    "a5": "Aceptamos todas las tarjetas de crédito principales, Visa, Mastercard, PayPal y transferencias bancarias directas.",
+    "q6": "¿Hay un período de prueba disponible?",
+    "a6": "¡Sí! Puedes comenzar con nuestra prueba gratuita de 14 días en cualquier nivel de membresía sin ingresar tarjeta de crédito.",
+    "q7": "¿Cómo realizo el seguimiento del estado de mi pedido?",
+    "a7": "Puedes realizar el seguimiento de tu estado en tiempo real, actualizaciones de diario y controles activos en cualquier momento dentro de tu panel de NephroReach."
+  },
+  "footer": {
+    "rights": "Todos los derechos reservados.",
+    "privacy": "Política de Privacidad",
+    "terms": "Términos de Servicio",
+    "contact": "Contacto"
+  }
+}
