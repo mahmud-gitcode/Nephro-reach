@@ -95,10 +95,13 @@ export default function Header() {
   };
 
   return (
-    <header className={`sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-transform duration-300 w-full px-15 ${
-      isVisible ? "translate-y-0" : "-translate-y-full"
-    }`}>
-      <div className="w-full px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between">
+    <>
+      {/* Spacer to prevent layout shift since header is fixed */}
+      <div className="h-20 w-full shrink-0" />
+      <header className={`fixed top-0 left-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-transform duration-300 w-full px-15 ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}>
+        <div className="w-full px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between">
 
         {/* Left Group: Logo + Language Selector */}
         <div className="flex items-center gap-4 sm:gap-6">
@@ -293,6 +296,7 @@ export default function Header() {
           </div>
         </div>
       )}
-    </header>
+      </header>
+    </>
   );
 }
