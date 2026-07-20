@@ -4,6 +4,7 @@ import React from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 
 export default function AboutUsPage() {
   return (
@@ -26,18 +27,21 @@ export default function AboutUsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
               <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-6 leading-tight inline-block relative">
-                Founded by Dr Jaime Jonsson
+                About the Founder
                 <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
                   <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
                 </svg>
               </h2>
               
-              <div className="space-y-6 text-slate-600 text-[17px] leading-relaxed font-medium">
+              <div className="space-y-6 text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium">
                 <p>
-                  Eye Movement Desensitisation and Reprocessing (EMDR) is an evidence based therapy for all types of mental health problems.
+                  Hello, I’m Joni Gathers, MSN, APRN, FNP-C, a board-certified Family Nurse Practitioner with a decade of nephrology and dialysis experience. Throughout my career as both a Dialysis Nurse and Practitioner, I’ve cared for hundreds of patients living with chronic kidney disease (CKD), end-stage kidney disease (ESKD), hypertension, diabetes, and those receiving dialysis.
                 </p>
                 <p>
-                  Our program combines professional guidance, AI-assisted tools, and personalised support to make EMDR therapy accessible in a safe and structured way.
+                  Working closely with patients and families, I recognized that many hospitalizations and emergency room visits happen because patients simply don’t have access to understandable, ongoing kidney education outside of their clinic visits. Many leave appointments overwhelmed, unsure of what their lab results mean, how to manage fluid intake, what symptoms require immediate attention, or how to confidently navigate life with kidney disease.
+                </p>
+                <p className="font-bold text-[#1a7f80] text-lg">
+                  I created NephroReach to bridge that gap.
                 </p>
               </div>
             </div>
@@ -46,7 +50,7 @@ export default function AboutUsPage() {
               <div className="relative w-full aspect-square lg:aspect-[4/5]">
                 <Image
                   src="/images/aboutImage.png"
-                  alt="Dr Jaime Jonsson"
+                  alt="Joni Gathers, MSN, APRN, FNP-C"
                   fill
                   className="object-contain"
                 />
@@ -55,160 +59,81 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* WHO WE ARE */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 text-center">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">Who We Are</h2>
-          <div className="space-y-4 text-slate-600 text-[16px] leading-relaxed font-medium text-left">
-            <p>
-              We are a non-clinical educational engagement platform designed to support members through simple, automated, and meaningful digital interactions. Our platform helps users register by phone number, receive a unique member ID, access a private digital journal, follow a 12-week education library, and stay connected through automated SMS check-ins.
+        {/* WHAT WE OFFER */}
+        <section className="w-full bg-[#F8FAFC] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 text-center">What We Offer</h2>
+            <p className="text-slate-600 text-[17px] leading-relaxed font-medium mb-10 text-center">
+              NephroReach provides:
             </p>
-            <p>
-              Our goal is to make personal growth and learning easier through a system that works smoothly without requiring real-time human responses.
-            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+              {[
+                "On-demand educational videos covering CKD, dialysis, nutrition, medications, lab values, and kidney health.",
+                "Live educational sessions with experienced kidney care professionals.",
+                "Interactive health tracking tools, including blood pressure, weight, medications, labs, dialysis treatments, and symptoms.",
+                "Resources designed specifically for caregivers.",
+                "Educational programs that help patients prepare for dialysis and better understand treatment options.",
+                "Practical guidance to help patients recognize concerning symptoms, know when to contact their dialysis or nephrology team, and understand when emergency care may be necessary."
+              ].map((item, index) => (
+                <div key={index} className="flex items-start gap-4">
+                  <CheckCircle2 className="w-6 h-6 text-[#3AA5A5] shrink-0 mt-0.5" />
+                  <p className="text-slate-600 font-medium leading-relaxed">
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* WHY CHOOSE US */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] pt-16 pb-12 text-center">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">Why Choose Us</h2>
-          <p className="text-slate-600 text-[16px] leading-relaxed font-medium text-left">
-            We provide a simple and scalable platform that combines SMS automation, digital journaling, education, and live class access in one easy-to-use system. Members can choose the plan that fits them best, whether they want journal-only access, full membership, or a one-time class purchase. The system is designed to be user-friendly, automated, and ready for future expansion.
-          </p>
-        </section>
-
-        {/* ZIGZAG LIST */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-12 space-y-24">
+        {/* ZIGZAG LIST: MISSION, VISION, NOTICE */}
+        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 lg:py-28 space-y-24">
           
-          {/* Item 1: Vision */}
+          {/* Item 1: Mission */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="Our Vision" fill className="object-cover" />
+              <Image src="/images/aboutCard.png" alt="Our Mission" fill className="object-cover" />
             </div>
             <div>
-              <h3 className="text-[28px] font-bold text-slate-900 mb-4">Our Vision</h3>
-              <p className="text-slate-600 text-[16px] leading-relaxed font-medium">
-                To become a trusted digital education and engagement platform that helps members stay connected, accountable, and supported through simple automated tools.
-              </p>
+              <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Mission</h3>
+              <div className="space-y-4 text-slate-600 text-[16px] leading-relaxed font-medium">
+                <p>
+                  NephroReach is an educational platform dedicated to empowering individuals living with kidney disease and the caregivers who support them. Our mission is to provide easy-to-understand, reliable kidney education that helps people make informed decisions, build confidence, and better manage their health every day.
+                </p>
+                <p>
+                  We believe education leads to empowerment, and empowered patients experience better outcomes.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Item 2: Mission */}
+          {/* Item 2: Vision */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="order-2 md:order-1">
-              <h3 className="text-[28px] font-bold text-slate-900 mb-4">Our Mission</h3>
+              <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Vision</h3>
               <p className="text-slate-600 text-[16px] leading-relaxed font-medium">
-                To make learning, reflection, and personal growth easier by providing automated SMS support, digital journaling, structured education, and monthly live class access in one seamless platform.
+                Our vision is to become the leading kidney education platform that supports patients and caregivers through every stage of kidney disease. We strive to improve health literacy, reduce preventable hospitalizations, encourage active participation in care, and help individuals live healthier, more confident lives.
               </p>
             </div>
             <div className="order-1 md:order-2 relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="Our Mission" fill className="object-cover" />
+              <Image src="/images/aboutCard.png" alt="Our Vision" fill className="object-cover" />
             </div>
           </div>
 
-          {/* Item 3: What We Are Not */}
+          {/* Item 3: Important Notice */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="What We Are Not" fill className="object-cover" />
+              <Image src="/images/aboutCard.png" alt="Important Notice" fill className="object-cover" />
             </div>
             <div>
-              <h3 className="text-[28px] font-bold text-slate-900 mb-4">What We Are Not</h3>
-              <div className="space-y-4 text-slate-600 text-[16px] leading-relaxed font-medium">
-                <p>
-                  We are not a clinical, medical, or emergency response platform. The system does not provide diagnosis, treatment, therapy, or real-time human support.
-                </p>
-                <p>
-                  This platform is designed for non-clinical education, engagement, journaling, and automated member support only.
-                </p>
-              </div>
+              <h3 className="text-[28px] lg:text-3xl font-bold text-[#bd3d44] mb-6">Important Notice</h3>
+              <p className="text-slate-600 text-[16px] leading-relaxed font-medium">
+                NephroReach is an educational platform only. The information provided on this website is intended for educational purposes and should not replace medical advice, diagnosis, or treatment from your physician, nephrologist, dialysis care team, or other qualified healthcare provider. Always consult your healthcare provider regarding your individual medical care.
+              </p>
             </div>
           </div>
           
-        </section>
-
-        {/* CORE VALUES */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 pb-32">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-[34px] font-bold text-slate-900 mb-6">Our Core Values</h2>
-            <p className="text-slate-600 text-[16px] leading-relaxed font-medium mx-auto">
-              We are building a simple, supportive, and scalable platform based on trust, accessibility, automation, and meaningful member engagement.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            {/* Connecting line behind cards */}
-            <div className="hidden md:block absolute top-[110px] left-0 w-full h-[2px] bg-slate-200 z-0" />
-            
-            {/* Card 1 */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm relative z-10 flex flex-col h-full">
-              <div className="h-[220px] bg-[#F7FBF8] flex items-center justify-center p-8">
-                 {/* Bulb Icon Placeholder (using simple SVG based on screenshot) */}
-                 <div className="w-20 h-20 relative text-orange-500">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-                     <path d="M9 18h6" />
-                     <path d="M10 22h4" />
-                     <path d="M12 2v1" />
-                     <path d="M12 7v1" />
-                     <path d="M19 12h1" />
-                     <path d="M4 12H3" />
-                     <path d="M12 7a5 5 0 1 1 0 10H12z" />
-                     <path d="M7 17l-1 1" />
-                     <path d="M17 17l1 1" />
-                     <path d="M17 7l1-1" />
-                     <path d="M7 7L6 6" />
-                   </svg>
-                 </div>
-              </div>
-              <div className="p-8 flex-grow">
-                <h3 className="text-[20px] font-bold text-slate-900 mb-4">Simplicity</h3>
-                <p className="text-slate-600 text-[15px] leading-relaxed font-medium">
-                  We believe member support should be easy to access, easy to understand, and simple to use.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm relative z-10 flex flex-col h-full">
-              <div className="h-[220px] bg-[#F9FAF2] flex items-center justify-center p-8">
-                 {/* Handshake Icon Placeholder */}
-                 <div className="w-20 h-20 relative text-orange-500">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-                     <path d="M8 12l-2 2a4.24 4.24 0 0 0 6 6l2-2" />
-                     <path d="M16 12l2-2a4.24 4.24 0 0 0-6-6l-2 2" />
-                     <path d="M15 9l-6 6" />
-                     <path d="M9 15l-3 3" />
-                     <path d="M15 9l3-3" />
-                   </svg>
-                 </div>
-              </div>
-              <div className="p-8 flex-grow">
-                <h3 className="text-[20px] font-bold text-slate-900 mb-4">Accountability</h3>
-                <p className="text-slate-600 text-[15px] leading-relaxed font-medium">
-                  We help members stay engaged through consistent SMS check-ins, journaling, and structured learning.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm relative z-10 flex flex-col h-full">
-              <div className="h-[220px] bg-[#FFFBF2] flex items-center justify-center p-8">
-                 {/* Badge/Check Icon Placeholder */}
-                 <div className="w-20 h-20 relative text-orange-500">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-                     <path d="M12 15l-3-3 1.4-1.4 1.6 1.6 3.6-3.6 1.4 1.4z" />
-                     <circle cx="12" cy="12" r="10" />
-                     <path d="M12 22l-2-2-4 1 1-4-2-2 3-3" />
-                   </svg>
-                 </div>
-              </div>
-              <div className="p-8 flex-grow">
-                <h3 className="text-[20px] font-bold text-slate-900 mb-4">Education</h3>
-                <p className="text-slate-600 text-[15px] leading-relaxed font-medium">
-                  We provide helpful educational resources, a 08-week curriculum, and monthly live classes to support personal growth.
-                </p>
-              </div>
-            </div>
-
-          </div>
         </section>
 
       </main>
