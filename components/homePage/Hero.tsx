@@ -10,9 +10,9 @@ export default function Hero() {
   const { t } = useLanguage();
 
   return (
-    <section className="relative pt-8 pb-20 px-4 sm:px-6 lg:px-8 max-w-[1404px] mx-auto">
+    <section className="relative pt-6 pb-16 px-4 sm:px-6 lg:px-12 w-full">
       {/* Container Card with background image Container.png */}
-      <div className="relative rounded-[16px] border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.02)] overflow-hidden w-full h-[570px] flex items-center justify-end px-6 sm:px-12 md:px-[71px]">
+      <div className="relative rounded-[24px] border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.02)] overflow-hidden w-full min-h-[480px] sm:min-h-[550px] lg:h-[600px] flex items-center justify-end px-6 sm:px-12 md:px-16 lg:px-20">
 
         {/* Background Image Container.png */}
         <Image
@@ -24,7 +24,7 @@ export default function Hero() {
         />
 
         {/* Text content aligned to the right */}
-        <div className="relative z-10 w-full lg:max-w-[50%] flex flex-col justify-center">
+        <div className="relative z-10 w-full lg:w-1/2 flex flex-col justify-center">
           {/* Text Content */}
           <div className="space-y-6 text-left bg-white/70 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none p-6 sm:p-8 lg:p-0 rounded-3xl border border-white/50 lg:border-none shadow-xl lg:shadow-none">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-xs font-bold tracking-wide uppercase">

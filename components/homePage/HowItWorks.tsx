@@ -9,7 +9,7 @@ export default function HowItWorks() {
   const { t } = useLanguage();
 
   return (
-    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-[1404px] mx-auto text-center scroll-mt-20">
+    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-12 w-full text-center scroll-mt-20">
       <div className="space-y-3 mb-16">
         <span className="text-blue-600 text-sm font-bold tracking-widest uppercase">{t("howItWorks.badge")}</span>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">{t("howItWorks.title")}</h2>
@@ -19,7 +19,7 @@ export default function HowItWorks() {
       </div>
 
       {/* 4 Steps Container with connecting lines on desktop */}
-      <div className="relative max-w-[1218px] mx-auto">
+      <div className="relative w-full">
         
         {/* Desktop dotted connection lines and arrow buttons positioned at the vertical center (129px from top) */}
         <div className="hidden lg:flex absolute top-[129px] -translate-y-1/2 left-[11%] right-[11%] items-center justify-between pointer-events-none z-0">
@@ -39,7 +39,7 @@ export default function HowItWorks() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[48px] relative z-10 justify-center">
           
           {/* Step 1 */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 h-[258px] w-full lg:w-[268.5px] mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 min-h-[258px] w-full mx-auto">
             {/* Top circular icon area with light green background */}
             <div className="h-[120px] bg-[#E8F5E9] flex items-center justify-center p-4 transition-colors duration-300 group-hover:bg-[#E8F5E9]/80">
               <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[#E8F5E9]">
@@ -62,7 +62,7 @@ export default function HowItWorks() {
           </div>
 
           {/* Step 2 */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 h-[258px] w-full lg:w-[268.5px] mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 min-h-[258px] w-full mx-auto">
             {/* Top circular icon area with light yellowish/green background */}
             <div className="h-[120px] bg-[#F1F8E9] flex items-center justify-center p-4 transition-colors duration-300 group-hover:bg-[#F1F8E9]/80">
               <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[#F1F8E9]">
@@ -85,7 +85,7 @@ export default function HowItWorks() {
           </div>
 
           {/* Step 3 */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 h-[258px] w-full lg:w-[268.5px] mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 min-h-[258px] w-full mx-auto">
             {/* Top circular icon area with light orange/cream background */}
             <div className="h-[120px] bg-[#FFF8E1] flex items-center justify-center p-4 transition-colors duration-300 group-hover:bg-[#FFF8E1]/80">
               <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[#FFF8E1]">
@@ -108,7 +108,7 @@ export default function HowItWorks() {
           </div>
 
           {/* Step 4 */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 h-[258px] w-full lg:w-[268.5px] mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] duration-300 min-h-[258px] w-full mx-auto">
             {/* Top circular icon area with light peach background */}
             <div className="h-[120px] bg-[#FBE9E7] flex items-center justify-center p-4 transition-colors duration-300 group-hover:bg-[#FBE9E7]/80">
               <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[#FBE9E7]">

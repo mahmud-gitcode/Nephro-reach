@@ -31,7 +31,7 @@ export default function FAQPage() {
       <div>
         <Header />
 
-        <main className="max-w-[1404px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+        <main className="w-full px-4 sm:px-6 md:px-10 lg:px-12 py-8 space-y-12">
           {/* FAQ Hero Banner */}
           <div className="relative rounded-[24px] overflow-hidden bg-gradient-to-r from-[#DDE9FA] via-[#E8F1FC] to-[#D5E4F9] p-8 sm:p-12 lg:p-16 border border-blue-100/50 shadow-sm">
             {/* Soft decorative background shape */}

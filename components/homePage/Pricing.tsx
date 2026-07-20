@@ -10,7 +10,7 @@ export default function Pricing() {
 
   return (
     <section id="pricing" className="w-full bg-white py-16 md:py-24 scroll-mt-20">
-      <div className="mx-auto max-w-[1404px] px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-12">
 
         {/* Section Title */}
         <div className="text-center space-y-3 mb-16 max-w-3xl mx-auto">
@@ -26,7 +26,7 @@ export default function Pricing() {
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch w-full">
 
           {/* Card 1: Class Purchase */}
           <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">

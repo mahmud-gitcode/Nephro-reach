@@ -9,8 +9,8 @@ export default function Footer() {
   const { t } = useLanguage();
 
   return (
-    <footer className="bg-[#DDE9FA] border-t border-blue-100/50 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-[1404px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-[#DDE9FA] border-t border-blue-100/50 py-16 px-4 sm:px-6 md:px-10 lg:px-12 w-full">
+      <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-12">
         
         {/* Logo & Description */}
         <div className="md:col-span-2 space-y-6">
@@ -100,7 +100,7 @@ export default function Footer() {
 
       </div>
 
-      <div className="max-w-[1404px] mx-auto mt-12 pt-8 border-t border-slate-300/40 text-center text-xs text-slate-600 font-semibold">
+      <div className="w-full mt-12 pt-8 border-t border-slate-300/40 text-center text-xs text-slate-600 font-semibold">
         <span>© 2025 NephroReach. {t("footer.rights")}</span>
       </div>
     </footer>

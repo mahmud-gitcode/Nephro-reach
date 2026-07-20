@@ -9,7 +9,7 @@ export default function Engagement() {
 
   return (
     <section className="w-full bg-white py-20 md:py-24 scroll-mt-20">
-      <div className="mx-auto flex w-full max-w-[1180px] flex-col items-center px-6 md:px-8 gap-10 md:gap-14">
+      <div className="w-full flex flex-col items-center px-4 sm:px-6 lg:px-12 gap-10 md:gap-14">
         
         {/* Header Block */}
         <div className="text-center space-y-3 max-w-[840px]">
@@ -92,7 +92,7 @@ export default function Engagement() {
           <div className="w-full space-y-12 text-left pt-1 lg:pt-4">
             
             {/* Item 1 */}
-            <div className="space-y-2.5 max-w-[430px]">
+            <div className="space-y-2.5 w-full">
               <span className="text-[#D97706] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item1Badge")}</span>
               <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item1Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
@@ -101,7 +101,7 @@ export default function Engagement() {
             </div>
 
             {/* Item 2 */}
-            <div className="space-y-2.5 max-w-[430px]">
+            <div className="space-y-2.5 w-full">
               <span className="text-[#3E7C82] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item2Badge")}</span>
               <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item2Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
@@ -110,7 +110,7 @@ export default function Engagement() {
             </div>
 
             {/* Item 3 */}
-            <div className="space-y-2.5 max-w-[430px]">
+            <div className="space-y-2.5 w-full">
               <span className="text-[#FB6A57] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item3Badge")}</span>
               <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item3Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
@@ -119,7 +119,7 @@ export default function Engagement() {
             </div>
 
             {/* Item 4 */}
-            <div className="space-y-2.5 max-w-[430px]">
+            <div className="space-y-2.5 w-full">
               <span className="text-[#6C9F63] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item4Badge")}</span>
               <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item4Title")}</h3>
               <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">

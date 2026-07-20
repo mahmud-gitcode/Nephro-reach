@@ -9,12 +9,12 @@ export default function PricingHero() {
   const { t } = useLanguage();
 
   return (
-    <section className="w-full bg-white py-10 md:py-16 lg:py-20">
-      <div className="mx-auto max-w-[1404px] px-4 sm:px-6 lg:px-8">
+    <section className="w-full bg-white py-10 md:py-16 lg:py-20 px-4 sm:px-6 lg:px-12">
+      <div className="w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Text Content */}
-          <div className="flex flex-col items-start text-left max-w-xl">
+          <div className="flex flex-col items-start text-left w-full">
             <span className="text-[#2563EB] text-sm sm:text-base font-semibold mb-3">
               {t("pricingHero.badge")}
             </span>
@@ -22,7 +22,7 @@ export default function PricingHero() {
               {t("pricingHero.titleLine1")} <br className="hidden sm:inline" />
               {t("pricingHero.titleLine2")}
             </h1>
-            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal mb-8">
+            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal mb-8 max-w-2xl">
               {t("pricingHero.description")}
             </p>
             <div>
@@ -37,7 +37,7 @@ export default function PricingHero() {
 
           {/* Right Column: Hero Image (pricing.png) */}
           <div className="relative w-full flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-[640px]">
+            <div className="relative w-full">
               <Image
                 src="/images/pricing.png"
                 alt="A space to reflect, learn, and grow"
