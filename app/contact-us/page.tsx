@@ -110,7 +110,7 @@ export default function ContactUsPage() {
             {/* The image overlaps the white and teal sections precisely */}
             <div className="relative w-full max-w-[540px] aspect-[4/5] sm:aspect-[3/4] lg:aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl lg:-translate-x-[15%]">
               <Image
-                src="/images/aboutUs-top.png"
+                src="/images/contactUs-top.png"
                 alt="Get in Touch"
                 fill
                 className="object-cover"

@@ -3,7 +3,7 @@
 import React from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import PricingHero from "@/components/homePage/PricingHero";
+import PricingHero from "@/components/PricingHero";
 import Pricing from "@/components/homePage/Pricing";
 
 export default function PricingPage() {

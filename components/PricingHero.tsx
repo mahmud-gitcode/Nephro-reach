@@ -9,8 +9,8 @@ export default function PricingHero() {
   const { t } = useLanguage();
 
   return (
-    <section className="w-full bg-white py-10 md:py-16 lg:py-20 px-4 sm:px-6 lg:px-12">
-      <div className="w-full">
+    <section className="w-full bg-white py-10 md:py-16 lg:py-20 px-4 sm:px-6 lg:px-15">
+      <div className="w-full px-15">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Text Content */}
