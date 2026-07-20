@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -65,6 +65,27 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        // Scrolling down & passed header height -> hide
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up -> show
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   const selectedLang = languages.find((l) => l.code === language) || languages[0];
 
@@ -74,7 +95,9 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-all duration-300 w-full px-15">
+    <header className={`sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-transform duration-300 w-full px-15 ${
+      isVisible ? "translate-y-0" : "-translate-y-full"
+    }`}>
       <div className="w-full px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between">
 
         {/* Left Group: Logo + Language Selector */}

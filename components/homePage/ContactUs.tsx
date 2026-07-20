@@ -29,7 +29,7 @@ export default function ContactUs() {
               {t("contactUs.title")}
             </h2>
             <Link
-              href="mailto:support@nephroreach.com"
+              href="/contact-us"
               className="bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 text-sm tracking-wide"
             >
               {t("footer.contact")}

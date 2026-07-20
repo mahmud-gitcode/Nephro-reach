@@ -25,7 +25,8 @@ export default function ContactUsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFF] overflow-hidden">
+    <>
+      <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFF] overflow-hidden">
       <Header />
       
       <main className="relative flex-grow flex w-full">
@@ -120,8 +121,8 @@ export default function ContactUsPage() {
           
         </div>
       </main>
-      
-      <Footer />
     </div>
+    <Footer />
+    </>
   );
 }
