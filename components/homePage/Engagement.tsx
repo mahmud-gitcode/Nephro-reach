@@ -9,7 +9,7 @@ export default function Engagement() {
 
   return (
     <section className="w-full bg-white py-20 md:py-24 scroll-mt-20">
-      <div className="w-full flex flex-col items-center px-4 sm:px-6 lg:px-12 gap-10 md:gap-14">
+      <div className="w-full flex flex-col items-center px-4 sm:px-8 md:px-[60px] gap-10 md:gap-14">
 
         {/* Header Block */}
         <div className="text-center space-y-3 max-w-[840px]">
@@ -28,7 +28,7 @@ export default function Engagement() {
         <div className="grid w-full grid-cols-1 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] items-start gap-10 lg:gap-16">
 
           {/* Left Column - Interactive UI Card Mockup */}
-          <div className="w-full flex justify-center lg:justify-start">
+          <div className="w-full flex justify-center lg:justify-start lg:pl-12 xl:pl-24">
             <div className="relative w-full max-w-[345px] sm:max-w-[380px] aspect-[1.05] rounded-[10px] bg-[#FFF6DC] overflow-hidden">
 
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.85),transparent_34%),radial-gradient(circle_at_85%_80%,rgba(255,223,140,0.34),transparent_28%)]" />
@@ -89,7 +89,7 @@ export default function Engagement() {
           </div>
 
           {/* Right Column - Step by Step engagement items */}
-          <div className="w-full space-y-12 text-left pt-1 lg:pt-4">
+          <div className="w-full space-y-12 text-left pt-1 lg:pt-4 lg:pr-12 xl:pr-24">
 
             {/* Item 1 */}
             <div className="space-y-2.5 w-full">
