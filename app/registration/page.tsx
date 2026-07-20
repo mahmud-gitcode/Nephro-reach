@@ -28,10 +28,10 @@ export default function RegistrationPage() {
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#4ADE80]/20 rounded-full blur-[80px] -z-10" />
           <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-[#22C55E]/10 rounded-full blur-[70px] -z-10" />
 
-          {/* Top Logo - Using public/images/logo.png */}
+          {/* Top Logo - Using public/images/logo.svg */}
           <div className="mb-4 flex items-center">
             <Image
-              src="/images/logo.png"
+              src="/images/logo.svg"
               alt="NephroReach Logo"
               width={140}
               height={46}

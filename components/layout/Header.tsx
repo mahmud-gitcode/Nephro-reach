@@ -81,7 +81,7 @@ export default function Header() {
         <div className="flex items-center gap-4 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
             <Image
-              src="/images/logo.png"
+              src="/images/logo.svg"
               alt="NephroReach Logo"
               width={100}
               height={50}

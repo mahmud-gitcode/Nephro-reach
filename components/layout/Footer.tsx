@@ -15,7 +15,7 @@ export default function Footer() {
         {/* Logo & Description */}
         <div className="md:col-span-2 space-y-6">
           <Image
-            src="/images/logo.png"
+            src="/images/logo.svg"
             alt="NephroReach Logo"
             width={160}
             height={50}

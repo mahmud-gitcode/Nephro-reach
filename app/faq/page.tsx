@@ -31,23 +31,23 @@ export default function FAQPage() {
       <div>
         <Header />
 
-        <main className="w-full px-4 sm:px-6 md:px-10 lg:px-12 py-8 space-y-12">
+        <main className="w-full">
           {/* FAQ Hero Banner */}
-          <div className="relative rounded-[24px] overflow-hidden bg-gradient-to-r from-[#DDE9FA] via-[#E8F1FC] to-[#D5E4F9] p-8 sm:p-12 lg:p-16 border border-blue-100/50 shadow-sm">
-            {/* Soft decorative background shape */}
-            <div className="absolute top-0 right-0 w-[45%] h-full bg-white/20 backdrop-blur-3xl rounded-l-full pointer-events-none hidden md:block" />
+          <div className="relative overflow-hidden bg-[#E4F2FE] w-full">
+            {/* Soft decorative background shape matching the diagonal gray-blue in screenshot */}
+            <div className="absolute top-0 right-[-10%] w-[60%] h-full bg-[#DFE6F5] transform -skew-x-[35deg] pointer-events-none hidden md:block" />
 
-            <div className="relative z-10 max-w-xl space-y-4">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+            <div className="relative z-10 w-full px-4 sm:px-8 md:px-[60px] py-12 md:py-16 space-y-4">
+              <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold text-slate-800 tracking-tight">
                 {t("faq.title")}
               </h1>
-              <p className="text-slate-600 text-sm sm:text-base lg:text-lg font-medium leading-relaxed">
+              <p className="text-slate-600 text-sm sm:text-[15px] lg:text-base font-medium leading-relaxed max-w-md">
                 {t("faq.subtitle")}
               </p>
               <div className="pt-2">
                 <Link
                   href="/registration"
-                  className="inline-block bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white font-bold px-6 py-3.5 rounded-xl shadow-md transition-all active:scale-95 text-sm"
+                  className="inline-block bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-all active:scale-95 text-sm"
                 >
                   {t("faq.button")}
                 </Link>
@@ -56,39 +56,39 @@ export default function FAQPage() {
           </div>
 
           {/* FAQ Accordion List */}
-          <div className="space-y-4">
+          <div className="w-full px-4 sm:px-8 md:px-[60px] py-12 space-y-3">
             {faqItems.map((item) => {
               const isOpen = openId === item.id;
               return (
                 <div
                   key={item.id}
-                  className="bg-[#EAF3FE] hover:bg-[#E3EFFE] transition-colors rounded-2xl p-5 sm:p-6 border border-blue-100/40 shadow-sm"
+                  className="bg-[#E4F2FE] transition-colors rounded-lg px-6 py-4"
                 >
                   <button
                     onClick={() => toggleFAQ(item.id)}
                     className="w-full flex items-center justify-between text-left gap-4 focus:outline-none group"
                   >
-                    <span className="text-base sm:text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                    <span className="text-[15px] sm:text-base font-medium text-slate-800 transition-colors">
                       {item.question}
                     </span>
                     <div
-                      className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center transition-all duration-300 shadow-sm ${
+                      className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center transition-all duration-300 ${
                         isOpen
-                          ? "bg-[#2563EB] text-white"
-                          : "bg-white text-blue-600 group-hover:bg-blue-50"
+                          ? "bg-[#2563EB] text-white shadow-sm"
+                          : "bg-white text-blue-600 shadow-sm"
                       }`}
                     >
                       {isOpen ? (
-                        <ChevronDown className="w-5 h-5 stroke-[2.5]" />
+                        <ChevronDown className="w-4 h-4 stroke-[2.5]" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 stroke-[2.5] text-blue-600" />
+                        <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                       )}
                     </div>
                   </button>
 
                   {/* Accordion Content */}
                   {isOpen && (
-                    <div className="mt-4 pt-3 border-t border-blue-200/50 text-slate-600 text-sm sm:text-base leading-relaxed font-medium">
+                    <div className="mt-3 text-slate-500 text-sm sm:text-[15px] leading-relaxed font-normal">
                       {item.answer}
                     </div>
                   )}
