@@ -8,7 +8,7 @@ export default function WhatMembersGet() {
   const { t } = useLanguage();
 
   return (
-    <section id="features" className="w-full border-y border-slate-100 bg-[#EEF3FA] py-20 md:py-24">
+    <section id="features" className="w-full border-y border-slate-100 bg-[#EEF3FA] py-20 px-15 md:py-24">
       <div className="w-full px-4 sm:px-6 md:px-10 lg:px-12">
         <div className="mb-12 md:mb-16 text-center space-y-3 max-w-[760px] mx-auto">
           <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
