@@ -122,7 +122,7 @@ export default function Engagement() {
             <div className="space-y-2.5 w-full">
               <span className="text-[#6C9F63] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item4Badge")}</span>
               <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item4Title")}</h3>
-              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
+              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal whitespace-pre-wrap">
                 {t("engagement.item4Desc")}
               </p>
             </div>

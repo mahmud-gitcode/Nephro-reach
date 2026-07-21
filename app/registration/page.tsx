@@ -159,7 +159,7 @@ export default function RegistrationPage() {
                     className="mt-0.5 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 focus:ring-offset-0 cursor-pointer"
                   />
                   <label htmlFor="hipaa-verify" className="text-[10px] text-slate-500 leading-normal select-none cursor-pointer">
-                    I verify that I am an authorized healthcare professional and agree to the End{" "}
+                    I verify that I am at least 18 years of age and agree to the{" "}
                     <a href="#" className="text-blue-600 hover:underline font-semibold">{t("footer.terms")}</a> and acknowledge the{" "}
                     <a href="#" className="text-blue-600 hover:underline font-semibold">{t("footer.privacy")}</a>.
                   </label>

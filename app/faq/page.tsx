@@ -24,6 +24,14 @@ export default function FAQPage() {
     { id: 5, question: t("faq.q5"), answer: t("faq.a5") },
     { id: 6, question: t("faq.q6"), answer: t("faq.a6") },
     { id: 7, question: t("faq.q7"), answer: t("faq.a7") },
+    { id: 8, question: t("faq.q8"), answer: t("faq.a8") },
+    { id: 9, question: t("faq.q9"), answer: t("faq.a9") },
+    { id: 10, question: t("faq.q10"), answer: t("faq.a10") },
+    { id: 11, question: t("faq.q11"), answer: t("faq.a11") },
+    { id: 12, question: t("faq.q12"), answer: t("faq.a12") },
+    { id: 13, question: t("faq.q13"), answer: t("faq.a13") },
+    { id: 14, question: t("faq.q14"), answer: t("faq.a14") },
+    { id: 15, question: t("faq.q15"), answer: t("faq.a15") },
   ];
 
   return (
@@ -88,7 +96,7 @@ export default function FAQPage() {
 
                   {/* Accordion Content */}
                   {isOpen && (
-                    <div className="mt-3 text-slate-500 text-sm sm:text-[15px] leading-relaxed font-normal">
+                    <div className="mt-3 text-slate-500 text-sm sm:text-[15px] leading-relaxed font-normal whitespace-pre-wrap">
                       {item.answer}
                     </div>
                   )}

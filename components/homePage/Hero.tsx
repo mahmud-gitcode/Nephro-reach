@@ -35,7 +35,7 @@ export default function Hero() {
               {t("hero.titleLine1")} <br className="hidden sm:inline" />
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{t("hero.titleLine2")}</span>
             </h1>
-            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-medium">
+            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-medium whitespace-pre-wrap">
               {t("hero.description")}
             </p>
             <div className="pt-2">

@@ -93,7 +93,7 @@ export default function AboutUsPage() {
           {/* Item 1: Mission */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="Our Mission" fill className="object-cover" />
+              <Image src="/images/our-mission.png" alt="Our Mission" fill className="object-cover" />
             </div>
             <div>
               <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Mission</h3>
@@ -117,14 +117,14 @@ export default function AboutUsPage() {
               </p>
             </div>
             <div className="order-1 md:order-2 relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="Our Vision" fill className="object-cover" />
+              <Image src="/images/our-mission.png" alt="Our Vision" fill className="object-cover" />
             </div>
           </div>
 
           {/* Item 3: Important Notice */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/aboutCard.png" alt="Important Notice" fill className="object-cover" />
+              <Image src="/images/our-mission.png" alt="Important Notice" fill className="object-cover" />
             </div>
             <div>
               <h3 className="text-[28px] lg:text-3xl font-bold text-[#bd3d44] mb-6">Important Notice</h3>

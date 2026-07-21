@@ -26,7 +26,7 @@ export default function Pricing() {
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch w-full">
 
           {/* Card 1: Class Purchase */}
           <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">
@@ -102,7 +102,7 @@ export default function Pricing() {
                   <div className="space-y-2 text-left">
                     <h3 className="text-lg font-bold text-[#2563EB]">{t("pricing.fullMembership")}</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-slate-900">$10</span>
+                      <span className="text-4xl font-extrabold text-slate-900">$7.99</span>
                       <span className="text-sm font-semibold text-slate-500">{t("pricing.perMonth")}</span>
                     </div>
                     <p className="text-sm text-slate-500 font-semibold pt-1">
@@ -163,7 +163,7 @@ export default function Pricing() {
               <div className="space-y-2 text-left">
                 <h3 className="text-lg font-bold text-slate-800">{t("pricing.journalOnly")}</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900">$5</span>
+                  <span className="text-4xl font-extrabold text-slate-900">$3.99</span>
                   <span className="text-sm font-semibold text-slate-500">{t("pricing.perMonth")}</span>
                 </div>
                 <p className="text-sm text-slate-500 font-semibold pt-1">
@@ -212,6 +212,49 @@ export default function Pricing() {
                       <X className="w-3.5 h-3.5 stroke-[2.5]" />
                     </span>
                     <span>{t("pricing.features.communitySupport")}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Dialysis Education */}
+          <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="space-y-6">
+              <div className="space-y-2 text-left">
+                <h3 className="text-lg font-bold text-slate-800">Dialysis Education</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-slate-900">$49.99</span>
+                  <span className="text-sm font-semibold text-slate-500">once</span>
+                </div>
+                <p className="text-sm text-slate-500 font-semibold pt-1">
+                  4 week Dialysis Education class with lifetime access
+                </p>
+              </div>
+
+              <div>
+                <Link
+                  href="/registration"
+                  className="inline-block px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98]"
+                >
+                  {t("pricing.getStarted")}
+                </Link>
+              </div>
+
+              {/* Dotted Divider */}
+              <div className="border-t border-dotted border-slate-300/80 pt-6">
+                <ul className="space-y-4">
+                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </span>
+                    <span>Lifetime Access</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </span>
+                    <span>4-week curriculum</span>
                   </li>
                 </ul>
               </div>
