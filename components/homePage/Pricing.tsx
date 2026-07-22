@@ -9,7 +9,7 @@ export default function Pricing() {
   const { t } = useLanguage();
 
   return (
-    <section id="pricing" className="w-full bg-white py-16 px-15 md:py-24 scroll-mt-20">
+    <section id="pricing" className="w-full bg-white py-16 px-4 md:px-12 md:py-24 scroll-mt-20">
       <div className="w-full px-4 sm:px-6 lg:px-12">
 
         {/* Section Title */}

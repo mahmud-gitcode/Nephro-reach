@@ -14,7 +14,7 @@ export default function AboutUsPage() {
       <main className="flex-grow w-full">
         
         {/* HERO SECTION (Image already contains text) */}
-        <section className="w-full px-10">
+        <section className="w-full px-4 sm:px-6 md:px-10">
           <img 
             src="/images/aboutHeroFrame.png" 
             alt="About Us Hero" 
@@ -87,12 +87,13 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* ZIGZAG LIST: MISSION, VISION, NOTICE */}
+        {/* ZIGZAG LIST: MISSION, VISION, NOTICE (Hidden until panelist photos/statements are ready) */}
+        {false && (
         <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 lg:py-28 space-y-24">
           
           {/* Item 1: Mission */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
+            <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
               <Image src="/images/our-mission.png" alt="Our Mission" fill className="object-cover" />
             </div>
             <div>
@@ -116,14 +117,14 @@ export default function AboutUsPage() {
                 Our vision is to become the leading kidney education platform that supports patients and caregivers through every stage of kidney disease. We strive to improve health literacy, reduce preventable hospitalizations, encourage active participation in care, and help individuals live healthier, more confident lives.
               </p>
             </div>
-            <div className="order-1 md:order-2 relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
+            <div className="order-1 md:order-2 relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
               <Image src="/images/our-mission.png" alt="Our Vision" fill className="object-cover" />
             </div>
           </div>
 
           {/* Item 3: Important Notice */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
+            <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
               <Image src="/images/our-mission.png" alt="Important Notice" fill className="object-cover" />
             </div>
             <div>
@@ -135,6 +136,7 @@ export default function AboutUsPage() {
           </div>
           
         </section>
+        )}
 
       </main>
 

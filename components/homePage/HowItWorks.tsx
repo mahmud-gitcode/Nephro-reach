@@ -56,7 +56,7 @@ export default function HowItWorks() {
       {/* 4 Steps Container */}
       <div className="w-full px-4 sm:px-[60px]">
         {/* Grid container with 48px gap on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-[48px] relative justify-center w-full px-15">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-[48px] relative justify-center w-full px-4 md:px-12">
           {steps.map((step, index) => (
             <div
               key={step.id}

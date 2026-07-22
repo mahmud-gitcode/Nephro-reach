@@ -12,7 +12,7 @@ export default function ContactUs() {
     <section className="relative w-full bg-[#DDE9FA] pt-12 pb-0">
       <div className="w-full">
         {/* Container with Section.png background & Footer matching background color */}
-        <div className="relative overflow-hidden w-full min-h-[320px] sm:min-h-[380px] md:min-h-[420px] flex items-center justify-center rounded-none bg-[#DDE9FA]">
+        <div className="relative overflow-hidden w-full min-h-[220px] sm:min-h-[320px] md:min-h-[420px] flex items-center justify-center rounded-none bg-[#DDE9FA]">
 
           {/* Background Banner Image Section.png */}
           <Image
@@ -20,7 +20,7 @@ export default function ContactUs() {
             alt="Still have questions banner background"
             fill
             priority
-            className="object-cover object-center"
+            className="object-contain sm:object-cover object-center"
           />
 
           {/* Center Overlay Content */}
