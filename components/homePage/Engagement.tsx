@@ -130,6 +130,17 @@ export default function Engagement() {
           </div>
         </div>
 
+        {/* Item 5 - Centered at the bottom */}
+        <div className="w-full flex justify-center mt-8 md:mt-16">
+          <div className="space-y-3.5 w-full max-w-[840px] text-center bg-[#F8FAFC] rounded-2xl p-8 md:p-12 border border-slate-100">
+            <span className="text-[#8B5CF6] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item5Badge")}</span>
+            <h3 className="text-[26px] sm:text-[32px] leading-[1.1] font-medium text-slate-700 tracking-tight">{t("engagement.item5Title")}</h3>
+            <p className="text-[15px] sm:text-[16px] leading-7 text-slate-500 font-normal whitespace-pre-wrap max-w-[650px] mx-auto mt-3">
+              {t("engagement.item5Desc")}
+            </p>
+          </div>
+        </div>
+
       </div>
     </section>
   );

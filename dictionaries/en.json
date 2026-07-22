@@ -68,7 +68,10 @@
     "item3Desc": "Full members can access structured educational content designed to support steady learning, reflection, and continued engagement.",
     "item4Badge": "Reflect and participate",
     "item4Title": "Journal, learn, and join live classes",
-    "item4Desc": "Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.\n\n* 4 week Dialysis Education class $49.99 once with a lifetime access"
+    "item4Desc": "Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.\n\n* 4 week Dialysis Education class $49.99 once with a lifetime access",
+    "item5Badge": "Share With Your Provider",
+    "item5Title": "Share With Your Provider",
+    "item5Desc": "You control your information. Generate a summary of your tracked information to share during appointments and help your provider better understand your kidney health."
   },
   "whatMembersGet": {
     "badge": "What You Get",

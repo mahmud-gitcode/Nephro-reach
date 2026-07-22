@@ -68,7 +68,10 @@
     "item3Desc": "Los miembros completos pueden acceder a contenido educativo estructurado diseñado para respaldar el aprendizaje constante.",
     "item4Badge": "Reflexiona y participa",
     "item4Title": "Escribe en tu diario, aprende y únete a clases en vivo",
-    "item4Desc": "Usa tu diario digital, responde a notificaciones guiadas y regístrate en clases educativas en vivo mensuales según tu membresía."
+    "item4Desc": "Usa tu diario digital, responde a notificaciones guiadas y regístrate en clases educativas en vivo mensuales según tu membresía.",
+    "item5Badge": "Comparte con tu médico",
+    "item5Title": "Comparte con tu médico",
+    "item5Desc": "Tú controlas tu información. Genera un resumen de tu información registrada para compartir durante las citas y ayudar a tu proveedor a comprender mejor tu salud renal."
   },
   "whatMembersGet": {
     "badge": "Lo Que Obtienes",
