@@ -5,8 +5,11 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AboutUsPage() {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white overflow-hidden">
       <Header />
@@ -27,21 +30,17 @@ export default function AboutUsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
               <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-6 leading-tight inline-block relative">
-                About the Founder
+                {t("aboutUsPage.founderTitle")}
                 <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
                   <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
                 </svg>
               </h2>
               
               <div className="space-y-6 text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium">
-                <p>
-                  Hello, I’m Joni Gathers, MSN, APRN, FNP-C, a board-certified Family Nurse Practitioner with a decade of nephrology and dialysis experience. Throughout my career as both a Dialysis Nurse and Practitioner, I’ve cared for hundreds of patients living with chronic kidney disease (CKD), end-stage kidney disease (ESKD), hypertension, diabetes, and those receiving dialysis.
-                </p>
-                <p>
-                  Working closely with patients and families, I recognized that many hospitalizations and emergency room visits happen because patients simply don’t have access to understandable, ongoing kidney education outside of their clinic visits. Many leave appointments overwhelmed, unsure of what their lab results mean, how to manage fluid intake, what symptoms require immediate attention, or how to confidently navigate life with kidney disease.
-                </p>
+                <p>{t("aboutUsPage.founderP1")}</p>
+                <p>{t("aboutUsPage.founderP2")}</p>
                 <p className="font-bold text-[#1a7f80] text-lg">
-                  I created NephroReach to bridge that gap.
+                  {t("aboutUsPage.founderP3")}
                 </p>
               </div>
             </div>
@@ -50,7 +49,7 @@ export default function AboutUsPage() {
               <div className="relative w-full aspect-square lg:aspect-[4/5]">
                 <Image
                   src="/images/aboutImage.png"
-                  alt="Joni Gathers, MSN, APRN, FNP-C"
+                  alt={t("aboutUsPage.founderImageAlt")}
                   fill
                   className="object-contain"
                 />
@@ -62,19 +61,19 @@ export default function AboutUsPage() {
         {/* WHAT WE OFFER */}
         <section className="w-full bg-[#F8FAFC] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 text-center">What We Offer</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 text-center">{t("aboutUsPage.whatWeOfferTitle")}</h2>
             <p className="text-slate-600 text-[17px] leading-relaxed font-medium mb-10 text-center">
-              NephroReach provides:
+              {t("aboutUsPage.whatWeOfferSubtitle")}
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
               {[
-                "On-demand educational videos covering CKD, dialysis, nutrition, medications, lab values, and kidney health.",
-                "Live educational sessions with experienced kidney care professionals.",
-                "Interactive health tracking tools, including blood pressure, weight, medications, labs, dialysis treatments, and symptoms.",
-                "Resources designed specifically for caregivers.",
-                "Educational programs that help patients prepare for dialysis and better understand treatment options.",
-                "Practical guidance to help patients recognize concerning symptoms, know when to contact their dialysis or nephrology team, and understand when emergency care may be necessary."
+                t("aboutUsPage.offer1"),
+                t("aboutUsPage.offer2"),
+                t("aboutUsPage.offer3"),
+                t("aboutUsPage.offer4"),
+                t("aboutUsPage.offer5"),
+                t("aboutUsPage.offer6")
               ].map((item, index) => (
                 <div key={index} className="flex items-start gap-4">
                   <CheckCircle2 className="w-6 h-6 text-[#3AA5A5] shrink-0 mt-0.5" />

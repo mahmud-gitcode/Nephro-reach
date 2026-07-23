@@ -154,5 +154,20 @@
     "terms": "Términos de Servicio",
     "contact": "Contacto",
     "rights": "Todos los derechos reservados."
+  },
+  "aboutUsPage": {
+    "founderTitle": "Sobre la fundadora",
+    "founderP1": "Hola, soy Joni Gathers, MSN, APRN, FNP-C, Enfermera Practicante de Familia certificada con una década de experiencia en nefrología y diálisis. A lo largo de mi carrera como Enfermera de Diálisis y Practicante, he cuidado a cientos de pacientes que viven con enfermedad renal crónica (ERC), enfermedad renal en etapa terminal (ESKD), hipertensión, diabetes y aquellos que reciben diálisis.",
+    "founderP2": "Trabajando estrechamente con pacientes y familias, reconocí que muchas hospitalizaciones y visitas a la sala de emergencias ocurren porque los pacientes simplemente no tienen acceso a una educación renal continua y comprensible fuera de sus visitas a la clínica. Muchos salen de las citas abrumados, sin estar seguros de qué significan los resultados de sus análisis, cómo manejar la ingesta de líquidos, qué síntomas requieren atención inmediata o cómo navegar con confianza la vida con la enfermedad renal.",
+    "founderP3": "Creé NephroReach para cerrar esa brecha.",
+    "founderImageAlt": "Joni Gathers, MSN, APRN, FNP-C",
+    "whatWeOfferTitle": "Lo Que Ofrecemos",
+    "whatWeOfferSubtitle": "NephroReach proporciona:",
+    "offer1": "Videos educativos a pedido que cubren ERC, diálisis, nutrición, medicamentos, valores de laboratorio y salud renal.",
+    "offer2": "Sesiones educativas en vivo con profesionales experimentados en el cuidado de los riñones.",
+    "offer3": "Herramientas interactivas de seguimiento de la salud, que incluyen presión arterial, peso, medicamentos, laboratorios, tratamientos de diálisis y síntomas.",
+    "offer4": "Recursos diseñados específicamente para cuidadores.",
+    "offer5": "Programas educativos que ayudan a los pacientes a prepararse para la diálisis y a comprender mejor las opciones de tratamiento.",
+    "offer6": "Orientación práctica para ayudar a los pacientes a reconocer síntomas preocupantes, saber cuándo comunicarse con su equipo de diálisis o nefrología, y comprender cuándo puede ser necesaria la atención de emergencia."
   }
 }
