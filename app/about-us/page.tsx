@@ -86,6 +86,66 @@ export default function AboutUsPage() {
           </div>
         </section>
 
+        {/* PANELISTS SECTION */}
+        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24 bg-white">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-4 inline-block relative">
+              {t("aboutUsPage.panelistTitle")}
+              <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
+                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
+              </svg>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            <div className="order-1 lg:order-1 flex justify-center">
+              <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-100 bg-slate-50 flex items-center justify-center p-2">
+                <img
+                  src="/images/panelListMember1.png"
+                  alt={t("aboutUsPage.panelistName")}
+                  className="w-full h-auto object-contain rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="order-2 lg:order-2">
+              <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">{t("aboutUsPage.panelistName")}</h3>
+              <p className="text-[#1a7f80] font-semibold text-lg mb-6">
+                {t("aboutUsPage.panelistDesignation")}
+              </p>
+              
+              <div className="space-y-4 text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium mb-8">
+                <p>
+                  {t("aboutUsPage.panelistP1")}
+                </p>
+                <p>
+                  {t("aboutUsPage.panelistP2")}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-slate-800 text-lg mb-4">{t("aboutUsPage.panelistTopicsTitle")}</h4>
+                <ul className="space-y-3">
+                  {[
+                    t("aboutUsPage.panelistTopic1"),
+                    t("aboutUsPage.panelistTopic2"),
+                    t("aboutUsPage.panelistTopic3"),
+                    t("aboutUsPage.panelistTopic4"),
+                    t("aboutUsPage.panelistTopic5"),
+                    t("aboutUsPage.panelistTopic6"),
+                    t("aboutUsPage.panelistTopic7")
+                  ].map((topic, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-[#3AA5A5] shrink-0 mt-0.5" />
+                      <span className="text-slate-600 font-medium">{topic}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ZIGZAG LIST: MISSION, VISION, NOTICE (Hidden until panelist photos/statements are ready) */}
         {false && (
         <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 lg:py-28 space-y-24">
