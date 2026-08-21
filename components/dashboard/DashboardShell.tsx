@@ -9,6 +9,7 @@ import {
   CreditCard,
   FlaskConical,
   HelpCircle,
+  Hospital,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -24,11 +25,12 @@ type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 const sidebarItems: Array<{ label: string; href: string; icon: IconType }> = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital },
   { label: "Member", href: "/dashboard/members", icon: Users },
   { label: "Class Management", href: "/dashboard/manage-curriculum", icon: FlaskConical },
   { label: "Live Class", href: "/dashboard/live-class", icon: Video },
-  { label: "SMS Analytics", href: "#", icon: MessageCircle },
-  { label: "Subscriptions", href: "#", icon: CreditCard },
+  { label: "SMS Analytics", href: "/dashboard/sms-analytics", icon: MessageCircle },
+  { label: "Subscriptions", href: "/dashboard/subscriptions", icon: CreditCard },
 ];
 
 const supportItems: Array<{ label: string; icon: IconType }> = [
@@ -38,9 +40,12 @@ const supportItems: Array<{ label: string; icon: IconType }> = [
 
 function getBreadcrumb(pathname: string) {
   if (pathname === "/dashboard") return "Breadcrumb";
+  if (pathname.startsWith("/dashboard/before-the-er")) return "Before-the-ER";
   if (pathname.startsWith("/dashboard/members")) return "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum")) return "Manage curriculum";
   if (pathname.startsWith("/dashboard/live-class")) return "Live Class";
+  if (pathname.startsWith("/dashboard/sms-analytics")) return "SMS Analytics";
+  if (pathname.startsWith("/dashboard/subscriptions")) return "Subscriptions";
   return "Breadcrumb";
 }
 
