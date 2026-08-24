@@ -33,9 +33,9 @@ const sidebarItems: Array<{ label: string; href: string; icon: IconType }> = [
   { label: "Subscriptions", href: "/dashboard/subscriptions", icon: CreditCard },
 ];
 
-const supportItems: Array<{ label: string; icon: IconType }> = [
-  { label: "Support", icon: HelpCircle },
-  { label: "Setting", icon: Settings },
+const supportItems: Array<{ label: string; href: string; icon: IconType }> = [
+  { label: "Support", href: "/dashboard/support", icon: HelpCircle },
+  { label: "Setting", href: "/dashboard/settings", icon: Settings },
 ];
 
 function getBreadcrumb(pathname: string) {
@@ -46,6 +46,8 @@ function getBreadcrumb(pathname: string) {
   if (pathname.startsWith("/dashboard/live-class")) return "Live Class";
   if (pathname.startsWith("/dashboard/sms-analytics")) return "SMS Analytics";
   if (pathname.startsWith("/dashboard/subscriptions")) return "Subscriptions";
+  if (pathname.startsWith("/dashboard/support")) return "Support";
+  if (pathname.startsWith("/dashboard/settings")) return "Setting";
   return "Breadcrumb";
 }
 
@@ -134,16 +136,42 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="mt-auto border-y border-white/80 py-5">
         <p className="mb-2 px-4 text-xs font-medium text-white/80">Help</p>
         <div className="space-y-2">
-          {supportItems.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {supportItems.map((item) => {
+            const isActive = isActiveRoute(item.href, pathname);
+            const content = (
+              <>
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span>{item.label}</span>
+              </>
+            );
+
+            if (item.href === "#") {
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onClose}
+                className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "bg-white text-slate-700 shadow-sm"
+                    : "text-white hover:bg-white/10"
+                }`}
+              >
+                {content}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
