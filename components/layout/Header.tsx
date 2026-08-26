@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useLanguage, LanguageCode } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { homeForRole } from "@/lib/auth";
 
 const USFlag = () => (
   <svg className="w-4 h-3 rounded-[2px] object-cover shrink-0 border border-slate-200/50" viewBox="0 0 640 480">
@@ -64,6 +66,8 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { user, logout, ready } = useAuth();
+  const dashboardHref = user ? homeForRole(user.role) : "/login";
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -200,19 +204,39 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-5">
-            <Link
-              href="/login"
-              className={`text-sm font-semibold transition-colors px-1 py-2 ${isLinkActive("/login") ? "text-blue-600 font-bold" : "text-slate-700 hover:text-blue-600"
-                }`}
-            >
-              {t("header.login")}
-            </Link>
-            <Link
-              href="/registration"
-              className="bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-            >
-              {t("header.tryItFree")}
-            </Link>
+            {ready && user ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  className="text-sm font-semibold text-slate-700 hover:text-blue-600 px-1 py-2"
+                >
+                  {t("header.openDashboard")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                >
+                  {t("header.logout")}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={`text-sm font-semibold transition-colors px-1 py-2 ${isLinkActive("/login") ? "text-blue-600 font-bold" : "text-slate-700 hover:text-blue-600"
+                    }`}
+                >
+                  {t("header.login")}
+                </Link>
+                <Link
+                  href="/registration"
+                  className="bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                >
+                  {t("header.tryItFree")}
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -279,20 +303,44 @@ export default function Header() {
           </div>
 
           <div className="pt-2 flex flex-col gap-3">
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-center py-2.5 font-semibold text-slate-700 hover:text-blue-600"
-            >
-              {t("header.login")}
-            </Link>
-            <Link
-              href="/registration"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-center py-3 bg-[#2563EB] text-white font-bold rounded-xl shadow-md"
-            >
-              {t("header.tryItFree")}
-            </Link>
+            {ready && user ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2.5 font-semibold text-slate-700 hover:text-blue-600"
+                >
+                  {t("header.openDashboard")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-center py-3 bg-[#2563EB] text-white font-bold rounded-xl shadow-md"
+                >
+                  {t("header.logout")}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2.5 font-semibold text-slate-700 hover:text-blue-600"
+                >
+                  {t("header.login")}
+                </Link>
+                <Link
+                  href="/registration"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-3 bg-[#2563EB] text-white font-bold rounded-xl shadow-md"
+                >
+                  {t("header.tryItFree")}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

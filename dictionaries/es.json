@@ -5,7 +5,9 @@
     "aboutUs": "Sobre nosotros",
     "pricing": "Precios",
     "login": "Iniciar sesión",
-    "tryItFree": "Pruébalo gratis"
+    "tryItFree": "Pruébalo gratis",
+    "logout": "Cerrar sesión",
+    "openDashboard": "Abrir panel"
   },
   "hero": {
     "badge": "Despeja tu mente",
@@ -139,7 +141,17 @@
     "dontHaveAccount": "¿No tienes una cuenta?",
     "signUp": "Regístrate",
     "createAccount": "Crear una cuenta",
-    "alreadyHaveAccount": "¿Ya tienes una cuenta?"
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "invalidCredentials": "Usa una cuenta de demostración o un correo que hayas registrado.",
+    "emailExists": "Ese correo ya está registrado. Inicia sesión.",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "agreeRequired": "Acepta los términos para continuar.",
+    "demoTitle": "Cuentas de demostración",
+    "demoAdmin": "Admin: admin@nephroreach.com / admin123",
+    "demoUser": "Usuario: user@nephroreach.com / user123",
+    "continueAdmin": "Continuar como Admin",
+    "continueUser": "Continuar como Usuario"
   },
   "footer": {
     "description": "Una plataforma no clínica de compromiso educativo para controles por SMS, diario digital, aprendizaje estructurado y clases en vivo mensuales.",

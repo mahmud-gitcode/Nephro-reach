@@ -3,13 +3,25 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Phone, X, Eye, EyeOff } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { DEMO_ACCOUNTS, USER_HOME } from "@/lib/auth";
 
 export default function RegistrationPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState("");
   const { t } = useLanguage();
+  const { register, loginAs } = useAuth();
+  const router = useRouter();
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center bg-[#F1F5F9] p-4 sm:p-6 md:p-8 font-sans">
@@ -51,7 +63,30 @@ export default function RegistrationPage() {
                 </h1>
               </div>
 
-              <form className="space-y-2.5" onSubmit={(e) => e.preventDefault()}>
+              <form
+                className="space-y-2.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (password.length < 8) {
+                    setError(t("auth.passwordTooShort"));
+                    return;
+                  }
+                  if (password !== confirmPassword) {
+                    setError(t("auth.passwordMismatch"));
+                    return;
+                  }
+                  if (!agreed) {
+                    setError(t("auth.agreeRequired"));
+                    return;
+                  }
+                  const result = register({ name, email, password });
+                  if (result === "exists") {
+                    setError(t("auth.emailExists"));
+                    return;
+                  }
+                  router.push(USER_HOME);
+                }}
+              >
                 {/* Full Name */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
@@ -63,6 +98,11 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type="text"
+                      value={name}
+                      onChange={(event) => {
+                        setName(event.target.value);
+                        setError("");
+                      }}
                       placeholder="Example"
                       className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -80,6 +120,11 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setError("");
+                      }}
                       placeholder={t("auth.emailPlaceholder")}
                       className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -97,6 +142,8 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type="tel"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
                       placeholder="Example123"
                       className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -114,6 +161,11 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setError("");
+                      }}
                       placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -138,6 +190,11 @@ export default function RegistrationPage() {
                     </div>
                     <input
                       type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        setError("");
+                      }}
                       placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -156,6 +213,8 @@ export default function RegistrationPage() {
                   <input
                     type="checkbox"
                     id="hipaa-verify"
+                    checked={agreed}
+                    onChange={(event) => setAgreed(event.target.checked)}
                     className="mt-0.5 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 focus:ring-offset-0 cursor-pointer"
                   />
                   <label htmlFor="hipaa-verify" className="text-[10px] text-slate-500 leading-normal select-none cursor-pointer">
@@ -164,6 +223,10 @@ export default function RegistrationPage() {
                     <a href="#" className="text-blue-600 hover:underline font-semibold">{t("footer.privacy")}</a>.
                   </label>
                 </div>
+
+                {error ? (
+                  <p className="text-[11px] font-semibold text-red-500">{error}</p>
+                ) : null}
 
                 {/* Submit Button */}
                 <button
@@ -186,7 +249,18 @@ export default function RegistrationPage() {
             </div>
 
             {/* Google Sign-in */}
-            <button className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-700 font-semibold text-sm shadow-sm hover:shadow active:scale-[0.99]">
+            <button
+              type="button"
+              onClick={() => {
+                loginAs({
+                  email: DEMO_ACCOUNTS[1].email,
+                  name: DEMO_ACCOUNTS[1].name,
+                  role: "user",
+                });
+                router.push(USER_HOME);
+              }}
+              className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-700 font-semibold text-sm shadow-sm hover:shadow active:scale-[0.99]"
+            >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />

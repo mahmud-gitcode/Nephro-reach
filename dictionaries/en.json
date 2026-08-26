@@ -5,7 +5,9 @@
     "aboutUs": "About us",
     "pricing": "Pricing",
     "login": "Log in",
-    "tryItFree": "Try it free"
+    "tryItFree": "Try it free",
+    "logout": "Log out",
+    "openDashboard": "Open dashboard"
   },
   "hero": {
     "badge": "NephroReach",
@@ -155,7 +157,17 @@
     "dontHaveAccount": "Don't you have an account?",
     "signUp": "Sign up",
     "createAccount": "Create an Account",
-    "alreadyHaveAccount": "Already have an account?"
+    "alreadyHaveAccount": "Already have an account?",
+    "invalidCredentials": "Use a demo account or an email you registered.",
+    "emailExists": "That email is already registered. Sign in instead.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "agreeRequired": "Please agree to the terms to continue.",
+    "demoTitle": "Demo accounts",
+    "demoAdmin": "Admin: admin@nephroreach.com / admin123",
+    "demoUser": "User: user@nephroreach.com / user123",
+    "continueAdmin": "Continue as Admin",
+    "continueUser": "Continue as User"
   },
   "footer": {
     "description": "A non-clinical educational engagement platform for SMS check-ins, digital journaling, structured learning, and monthly live classes.",

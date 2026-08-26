@@ -1,14 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, X, Eye, EyeOff } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { canAccessPath, DEMO_ACCOUNTS, homeForRole } from "@/lib/auth";
 
-export default function LoginPage() {
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { t } = useLanguage();
+  const { login, loginAs } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const goAfterLogin = (role: "admin" | "user") => {
+    const next = searchParams.get("next");
+    if (next && next.startsWith("/dashboard") && canAccessPath(role, next)) {
+      router.push(next);
+      return;
+    }
+    router.push(homeForRole(role));
+  };
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center bg-[#F1F5F9] p-4 sm:p-6 md:p-8 font-sans">
@@ -52,7 +70,54 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const next = login(email, password);
+                  if (!next) {
+                    setError(t("auth.invalidCredentials"));
+                    return;
+                  }
+                  goAfterLogin(next.role);
+                }}
+              >
+                <div className="rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-xs text-slate-600">
+                  <p className="font-bold text-slate-800">{t("auth.demoTitle")}</p>
+                  <p className="mt-1">{t("auth.demoAdmin")}</p>
+                  <p>{t("auth.demoUser")}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loginAs({
+                          email: DEMO_ACCOUNTS[0].email,
+                          name: DEMO_ACCOUNTS[0].name,
+                          role: "admin",
+                        });
+                        goAfterLogin("admin");
+                      }}
+                      className="rounded-lg bg-white px-3 py-1.5 font-semibold text-blue-700 shadow-sm"
+                    >
+                      {t("auth.continueAdmin")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loginAs({
+                          email: DEMO_ACCOUNTS[1].email,
+                          name: DEMO_ACCOUNTS[1].name,
+                          role: "user",
+                        });
+                        goAfterLogin("user");
+                      }}
+                      className="rounded-lg bg-white px-3 py-1.5 font-semibold text-blue-700 shadow-sm"
+                    >
+                      {t("auth.continueUser")}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Email / Phone Number */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -64,6 +129,11 @@ export default function LoginPage() {
                     </div>
                     <input
                       type="text"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setError("");
+                      }}
                       placeholder={t("auth.emailPlaceholder")}
                       className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -83,6 +153,11 @@ export default function LoginPage() {
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setError("");
+                      }}
                       placeholder={t("auth.passwordPlaceholder")}
                       className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all text-slate-800 text-sm font-medium shadow-sm placeholder:text-slate-400"
                     />
@@ -99,6 +174,9 @@ export default function LoginPage() {
                       {t("auth.forgotPassword")}
                     </a>
                   </div>
+                  {error ? (
+                    <p className="text-xs font-semibold text-red-500">{error}</p>
+                  ) : null}
                 </div>
 
                 {/* Submit Button */}
@@ -122,7 +200,18 @@ export default function LoginPage() {
             </div>
 
             {/* Google Sign-in */}
-            <button className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-700 font-semibold text-sm shadow-sm hover:shadow active:scale-[0.99]">
+            <button
+              type="button"
+              onClick={() => {
+                loginAs({
+                  email: DEMO_ACCOUNTS[1].email,
+                  name: DEMO_ACCOUNTS[1].name,
+                  role: "user",
+                });
+                goAfterLogin("user");
+              }}
+              className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-3 text-slate-700 font-semibold text-sm shadow-sm hover:shadow active:scale-[0.99]"
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -160,5 +249,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F1F5F9]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

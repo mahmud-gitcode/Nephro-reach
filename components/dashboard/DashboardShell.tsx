@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { UserRole } from "@/lib/auth";
 import {
   Bell,
   BookOpen,
@@ -28,44 +30,51 @@ import {
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
-const sidebarItems: Array<{ label: string; href: string; icon: IconType }> = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital },
-  { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse },
-  { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers },
+type NavItem = { label: string; href: string; icon: IconType; roles: UserRole[] };
+
+const sidebarItems: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "user"] },
+  { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital, roles: ["user"] },
+  { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse, roles: ["user"] },
+  { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers, roles: ["user"] },
   {
     label: "Dialysis Journal",
     href: "/dashboard/personal-log/dialysis-journal",
     icon: Notebook,
+    roles: ["user"],
   },
-  { label: "Member", href: "/dashboard/members", icon: Users },
+  { label: "Member", href: "/dashboard/members", icon: Users, roles: ["admin"] },
   {
     label: "Class Management",
     href: "/dashboard/manage-curriculum",
     icon: FlaskConical,
+    roles: ["admin"],
   },
   {
     label: "Education Center",
     href: "/dashboard/education-center",
     icon: BookOpen,
+    roles: ["user"],
   },
-  { label: "Live Class", href: "/dashboard/live-class", icon: Video },
-  { label: "Community", href: "/dashboard/community", icon: MessagesSquare },
+  { label: "Live Class", href: "/dashboard/live-class", icon: Video, roles: ["admin"] },
+  { label: "Community", href: "/dashboard/community", icon: MessagesSquare, roles: ["user"] },
   {
     label: "SMS Analytics",
     href: "/dashboard/sms-analytics",
     icon: MessageCircle,
+    roles: ["admin"],
   },
   {
     label: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
+    roles: ["admin"],
   },
 ];
 
-const supportItems: Array<{ label: string; href: string; icon: IconType }> = [
-  { label: "Support", href: "/dashboard/support", icon: HelpCircle },
-  { label: "Setting", href: "/dashboard/settings", icon: Settings },
+const supportItems: NavItem[] = [
+  { label: "Support", href: "/dashboard/support", icon: HelpCircle, roles: ["user"] },
+  { label: "Setting", href: "/dashboard/settings", icon: Settings, roles: ["user"] },
 ];
 
 function getBreadcrumb(pathname: string) {
@@ -127,6 +136,11 @@ function isActiveRoute(href: string, pathname: string) {
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const role = user?.role ?? "user";
+  const visibleItems = sidebarItems.filter((item) => item.roles.includes(role));
+  const visibleSupport = supportItems.filter((item) => item.roles.includes(role));
 
   return (
     <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white">
@@ -164,7 +178,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         <div className="border-t border-white/80 pt-5">
           <p className="mb-2 px-4 text-xs font-medium text-white/80">Menu</p>
           <nav className="space-y-2">
-            {sidebarItems.map((item) => {
+            {visibleItems.map((item) => {
               const isActive = isActiveRoute(item.href, pathname);
               const content = (
                 <>
@@ -203,10 +217,11 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           </nav>
         </div>
 
+        {visibleSupport.length > 0 ? (
         <div className="mt-5 border-t border-white/80 py-5">
           <p className="mb-2 px-4 text-xs font-medium text-white/80">Help</p>
           <div className="space-y-2">
-            {supportItems.map((item) => {
+            {visibleSupport.map((item) => {
               const isActive = isActiveRoute(item.href, pathname);
               const content = (
                 <>
@@ -244,10 +259,15 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             })}
           </div>
         </div>
+        ) : null}
       </div>
 
       <button
         type="button"
+        onClick={() => {
+          logout();
+          router.push("/");
+        }}
         className="mt-3 flex h-14 shrink-0 items-center justify-center gap-3 rounded-lg border-8 border-blue-200 bg-slate-100 text-sm font-bold text-red-500 transition-colors hover:bg-white"
       >
         <LogOut className="h-5 w-5" />
@@ -259,6 +279,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
 
 function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-[#F8FAFC]/95 px-4 backdrop-blur md:px-8">
@@ -290,14 +311,16 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-200">
             <Image
               src="/images/aboutImage.png"
-              alt="Jenny Wilson"
+              alt={user?.name ?? "Account"}
               fill
               className="object-cover object-top"
             />
           </div>
           <div className="pr-6">
-            <p className="text-sm font-bold text-indigo-900">Jenny Wilson</p>
-            <p className="text-xs font-medium text-slate-500">Admin</p>
+            <p className="text-sm font-bold text-indigo-900">{user?.name ?? "Guest"}</p>
+            <p className="text-xs font-medium capitalize text-slate-500">
+              {user?.role ?? "user"}
+            </p>
           </div>
         </div>
       </div>
