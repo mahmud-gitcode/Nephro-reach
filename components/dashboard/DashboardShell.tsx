@@ -5,9 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { UserRole } from "@/lib/auth";
 import {
-  Bell,
   BookOpen,
   CreditCard,
   FlaskConical,
@@ -120,6 +120,20 @@ function getBreadcrumb(pathname: string) {
   if (pathname.startsWith("/dashboard/support")) return "Support";
   if (pathname.startsWith("/dashboard/settings")) return "Setting";
   return "Breadcrumb";
+}
+
+function getBreadcrumbTrail(pathname: string) {
+  const current = getBreadcrumb(pathname);
+  if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    return ["Dashboard"];
+  }
+  if (
+    pathname.startsWith("/dashboard/personal-log/") &&
+    !pathname.startsWith("/dashboard/personal-log/dialysis-journal")
+  ) {
+    return ["Dashboard", "Personal Log", current];
+  }
+  return ["Dashboard", current];
 }
 
 function isActiveRoute(href: string, pathname: string) {
@@ -277,13 +291,32 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   );
 }
 
+function HeaderIcon({ src }: { src: string }) {
+  return (
+    <span className="relative block size-6 overflow-clip">
+      <img src={src} alt="" className="size-full" />
+    </span>
+  );
+}
+
 function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { language, setLanguage } = useLanguage();
+  const [langOpen, setLangOpen] = useState(false);
+  const isUser = user?.role === "user";
+  const trail = getBreadcrumbTrail(pathname);
+  const currentPage = getBreadcrumb(pathname);
+  const avatarSrc = isUser
+    ? "/images/dashboard-header/user-avatar.png"
+    : "/images/dashboard-header/admin-avatar.png";
+  const bellSrc = isUser
+    ? "/images/dashboard-header/user-bell.svg"
+    : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-[#F8FAFC]/95 px-4 backdrop-blur md:px-8">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 md:px-8">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={onMenuClick}
@@ -292,34 +325,95 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-3 text-sm font-semibold">
-          <span className="text-slate-500">Dashboard</span>
-          <span className="text-slate-400">/</span>
-          <span className="text-slate-900">{getBreadcrumb(pathname)}</span>
-        </div>
+        <nav className="flex min-w-0 flex-wrap items-center gap-4 text-base font-medium tracking-[0.08px]">
+          {isUser
+            ? trail.map((item, index) => {
+                const last = index === trail.length - 1;
+                return (
+                  <span key={`${item}-${index}`} className="flex items-center gap-4">
+                    {index > 0 ? (
+                      <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
+                    ) : null}
+                    <span className={last ? "text-[#141A21]" : "text-[#64748B]"}>{item}</span>
+                  </span>
+                );
+              })
+            : (
+              <>
+                <span className="text-[#64748B]">Dashboard</span>
+                <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
+                <span className="text-[#0F172A]">{currentPage}</span>
+              </>
+            )}
+        </nav>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-4">
+        {isUser ? (
+          <div className="relative hidden sm:block">
+            <button
+              type="button"
+              onClick={() => setLangOpen((open) => !open)}
+              className="flex items-center gap-2.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+              aria-label="Change language"
+            >
+              <span className="relative h-6 w-[33px] overflow-clip">
+                <img src="/images/dashboard-header/uk-flag.svg" alt="" className="size-full" />
+              </span>
+              <HeaderIcon src="/images/dashboard-header/arrow-down.svg" />
+            </button>
+            {langOpen ? (
+              <div className="absolute right-0 z-20 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-md">
+                {(["EN", "ES"] as const).map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    className={`block w-full px-3 py-1.5 text-left ${
+                      language === code ? "font-semibold text-blue-700" : "text-slate-700"
+                    }`}
+                    onClick={() => {
+                      setLanguage(code);
+                      setLangOpen(false);
+                    }}
+                  >
+                    {code === "EN" ? "English" : "Spanish"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm"
+          className="flex items-center rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-2 shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           aria-label="Notifications"
         >
-          <Bell className="h-5 w-5" />
+          <HeaderIcon src={bellSrc} />
         </button>
-        <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
-          <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-200">
-            <Image
-              src="/images/aboutImage.png"
-              alt={user?.name ?? "Account"}
-              fill
-              className="object-cover object-top"
-            />
+
+        <span className="hidden h-8 w-px bg-slate-300 sm:block" />
+
+        {isUser ? (
+          <Link
+            href="/dashboard/before-the-er"
+            className="hidden items-center gap-2 rounded bg-[#EF4444] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white sm:flex"
+          >
+            <HeaderIcon src="/images/dashboard-header/danger.svg" />
+            Emergency
+          </Link>
+        ) : null}
+
+        <div className="hidden items-center gap-3 rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] px-2 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] sm:flex">
+          <div className="relative h-10 w-[42px] overflow-hidden rounded-full bg-slate-200">
+            <Image src={avatarSrc} alt="" fill sizes="42px" className="object-cover" />
           </div>
-          <div className="pr-6">
-            <p className="text-sm font-bold text-indigo-900">{user?.name ?? "Guest"}</p>
-            <p className="text-xs font-medium capitalize text-slate-500">
-              {user?.role ?? "user"}
+          <div className="w-[174px] min-w-0">
+            <p className="truncate text-base font-medium leading-6 tracking-[0.08px] text-[#33358E]">
+              {user?.name ?? "Guest"}
+            </p>
+            <p className="truncate text-xs leading-4 tracking-[0.06px] text-[#4A4A68]">
+              {user?.role === "admin" ? "Admin" : "User"}
             </p>
           </div>
         </div>
