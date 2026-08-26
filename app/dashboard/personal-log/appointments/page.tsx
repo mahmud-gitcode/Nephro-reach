@@ -45,12 +45,24 @@ const appointments = [
   },
 ];
 
-function DateBadge({ month, day, weekday }: { month: string; day: string; weekday: string }) {
+function DateBadge({
+  month,
+  day,
+  weekday,
+}: {
+  month: string;
+  day: string;
+  weekday: string;
+}) {
   return (
     <div className="flex w-[78px] shrink-0 flex-col items-center gap-2 rounded-xl border border-slate-200 bg-[#F1F5FA] px-4 py-[18px] text-center text-slate-500">
-      <p className="text-2xl font-semibold leading-8 tracking-[0.12px]">{month}</p>
+      <p className="text-2xl font-semibold leading-8 tracking-[0.12px]">
+        {month}
+      </p>
       <p className="text-[28px] font-extrabold leading-none">{day}</p>
-      <p className="text-2xl font-normal leading-8 tracking-[0.12px]">{weekday}</p>
+      <p className="text-2xl font-normal leading-8 tracking-[0.12px]">
+        {weekday}
+      </p>
     </div>
   );
 }
@@ -67,15 +79,25 @@ function IconText({
   return (
     <div className="flex items-center gap-2 text-base font-medium leading-6 tracking-[0.08px] sm:text-lg sm:leading-7">
       <span className="text-slate-500">{icon}</span>
-      <span className={primary ? "text-blue-600" : "text-slate-950"}>{children}</span>
+      <span className={primary ? "text-blue-600" : "text-slate-950"}>
+        {children}
+      </span>
     </div>
   );
 }
 
-function AppointmentRow({ appointment }: { appointment: (typeof appointments)[number] }) {
+function AppointmentRow({
+  appointment,
+}: {
+  appointment: (typeof appointments)[number];
+}) {
   return (
     <article className="flex flex-col gap-5 border-b border-slate-200 bg-white p-3.5 last:border-b-0 sm:flex-row sm:items-center">
-      <DateBadge month={appointment.month} day={appointment.day} weekday={appointment.weekday} />
+      <DateBadge
+        month={appointment.month}
+        day={appointment.day}
+        weekday={appointment.weekday}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
@@ -86,7 +108,9 @@ function AppointmentRow({ appointment }: { appointment: (typeof appointments)[nu
             {appointment.doctor}
           </p>
           <div className="mt-1 space-y-1">
-            <IconText icon={<Clock3 className="h-5 w-5" />}>{appointment.time}</IconText>
+            <IconText icon={<Clock3 className="h-5 w-5" />}>
+              {appointment.time}
+            </IconText>
             <IconText icon={<MapPin className="h-5 w-5" />} primary>
               {appointment.location}
             </IconText>
@@ -94,10 +118,16 @@ function AppointmentRow({ appointment }: { appointment: (typeof appointments)[nu
         </div>
 
         <div className="shrink-0">
-          <p className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">Reminder</p>
+          <p className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+            Reminder
+          </p>
           <div className="mt-1 space-y-1 text-slate-700">
-            <IconText icon={<Clock3 className="h-5 w-5" />}>{appointment.reminderTime}</IconText>
-            <IconText icon={<MapPin className="h-5 w-5" />}>{appointment.reminderPlace}</IconText>
+            <IconText icon={<Clock3 className="h-5 w-5" />}>
+              {appointment.reminderTime}
+            </IconText>
+            <IconText icon={<MapPin className="h-5 w-5" />}>
+              {appointment.reminderPlace}
+            </IconText>
           </div>
         </div>
       </div>
@@ -121,7 +151,10 @@ function UpcomingAppointments() {
       </h2>
       <div className="mt-3 overflow-hidden rounded-xl border border-[#E9EEF4] bg-white">
         {appointments.map((appointment, index) => (
-          <AppointmentRow key={`${appointment.title}-${index}`} appointment={appointment} />
+          <AppointmentRow
+            key={`${appointment.title}-${index}`}
+            appointment={appointment}
+          />
         ))}
       </div>
       <button
@@ -144,7 +177,9 @@ function NextAppointment() {
       <div className="mt-3 rounded-xl border border-[#E9EEF4] bg-white p-3.5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-[18px] text-slate-500">
-            <p className="text-[60px] font-semibold leading-none tracking-[0.3px]">12</p>
+            <p className="text-[60px] font-semibold leading-none tracking-[0.3px]">
+              12
+            </p>
             <div className="text-2xl font-medium leading-8 tracking-[0.12px]">
               <p>SUN</p>
               <p>Fri</p>
@@ -152,11 +187,15 @@ function NextAppointment() {
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-[32px] font-medium leading-none text-slate-950">Nephrology</h3>
+            <h3 className="text-[32px] font-medium leading-none text-slate-950">
+              Nephrology
+            </h3>
             <p className="mt-1 text-xl font-medium leading-7 tracking-[0.1px] text-slate-700">
               Dr. Niro mia
             </p>
-            <IconText icon={<Clock3 className="h-5 w-5" />}>10:30AM - 11:15Am</IconText>
+            <IconText icon={<Clock3 className="h-5 w-5" />}>
+              10:30AM - 11:15Am
+            </IconText>
             <IconText icon={<MapPin className="h-5 w-5" />} primary>
               Zik Center
             </IconText>
@@ -164,7 +203,9 @@ function NextAppointment() {
         </div>
 
         <div className="mt-3 space-y-3">
-          <IconText icon={<Clock3 className="h-5 w-5" />}>10:30 AM - 11:15 AM</IconText>
+          <IconText icon={<Clock3 className="h-5 w-5" />}>
+            10:30 AM - 11:15 AM
+          </IconText>
           <div className="flex items-start gap-2 text-xl font-medium leading-7 tracking-[0.1px]">
             <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-blue-600" />
             <div>
@@ -206,10 +247,12 @@ function Disclaimer() {
       <div className="flex gap-2">
         <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
         <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">Important Disclaimer</h2>
+          <h2 className="text-lg font-medium leading-7 text-slate-950">
+            Important Disclaimer
+          </h2>
           <p className="mt-2 max-w-[760px] text-sm leading-5 text-slate-700">
-            This tool is for education and tracking only. Always discuss lab results and treatment
-            decisions with your nephrology provider.
+            This tool is for education and tracking only. Always discuss lab
+            results and treatment decisions with your nephrology provider.
           </p>
         </div>
       </div>
@@ -226,7 +269,8 @@ export default function AppointmentsPage() {
             Appointment Reminders
           </h1>
           <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-700">
-            Never miss an important. We&apos;ll remind you and show you were to go.
+            Never miss an important. We&apos;ll remind you and show you were to
+            go.
           </p>
         </div>
         <button

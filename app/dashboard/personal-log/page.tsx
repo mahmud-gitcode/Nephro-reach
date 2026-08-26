@@ -93,7 +93,9 @@ const logTiles: Array<{
 function LogTile({ tile }: { tile: (typeof logTiles)[number] }) {
   const content = (
     <>
-      <span className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${tile.iconBg}`}>
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${tile.iconBg}`}
+      >
         <tile.icon className={`h-6 w-6 ${tile.iconClass}`} />
       </span>
       <span className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
@@ -119,13 +121,7 @@ function LogTile({ tile }: { tile: (typeof logTiles)[number] }) {
   );
 }
 
-function EmptyPanel({
-  title,
-  action,
-}: {
-  title: string;
-  action?: string;
-}) {
+function EmptyPanel({ title, action }: { title: string; action?: string }) {
   return (
     <section className="rounded-xl border border-[#D6E6F2] bg-[#F1F5FA] p-3.5">
       <div className="mb-3 flex items-center gap-3">
@@ -178,7 +174,8 @@ function HealthcareTeam() {
       </div>
 
       <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-500">
-        Enter your clinician&apos;s email. They&apos;ll get an invite to register if they haven&apos;t already.
+        Enter your clinician&apos;s email. They&apos;ll get an invite to
+        register if they haven&apos;t already.
       </p>
 
       <div className="mt-3 flex min-h-[113px] items-center justify-center rounded-xl border border-[#E9EEF4] bg-white p-3.5">
