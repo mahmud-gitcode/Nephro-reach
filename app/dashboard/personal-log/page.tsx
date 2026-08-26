@@ -75,6 +75,7 @@ const logTiles: Array<{
     icon: FileHeart,
     iconClass: "text-blue-600",
     iconBg: "bg-blue-100",
+    href: "/dashboard/personal-log/dialysis-treatment",
   },
   {
     label: "Symptom Tracker",
@@ -87,6 +88,7 @@ const logTiles: Array<{
     icon: TestTube2,
     iconClass: "text-blue-600",
     iconBg: "bg-blue-100",
+    href: "/dashboard/personal-log/fluid-tracker",
   },
 ];
 
