@@ -1,0 +1,212 @@
+"use client";
+
+import React, { useState } from "react";
+import Image from "next/image";
+import { ChevronDown, Info, Plus, X } from "lucide-react";
+
+const moods = ["Positive", "Calm", "Reflective", "Challenging", "Anxious"];
+
+const journalEntries = [
+  {
+    id: "1",
+    date: "Friday, May 8, 2026",
+    preview:
+      "Today I learned about mindfulness techniques. The breathing exercises were particularly helpful during stressful moments at work.",
+    details:
+      "Completed week 4 of the curriculum. The material on emotional regulation resonated with me. I am practicing the daily check-in routine.",
+  },
+  {
+    id: "2",
+    date: "Wednesday, May 6, 2026",
+    preview:
+      "Had a productive session with my mentor today. We discussed goal-setting strategies and I feel more motivated to stick with my wellness plan.",
+    details:
+      "Logged my fluid intake on time and stayed within the limit. I want to keep this rhythm going through the weekend.",
+  },
+  {
+    id: "3",
+    date: "Monday, May 4, 2026",
+    preview:
+      "Feeling grateful for the support from my dialysis care team. The check-in call helped me stay on track with my fluid goals this week.",
+    details:
+      "Noted mild fatigue after treatment, but the afternoon walk helped. Planning an earlier bedtime tonight.",
+  },
+];
+
+function NewEntryModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [mood, setMood] = useState("Calm");
+  const [notes, setNotes] = useState("");
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-entry-title"
+        className="w-full max-w-[520px] rounded-[20px] border border-slate-200 bg-white p-[17px] pt-[19px] shadow-[0_4px_8px_rgba(15,23,42,0.03),0_8px_16px_rgba(15,23,42,0.05)]"
+      >
+        <div className="flex items-start gap-2.5">
+          <div className="min-w-0 flex-1">
+            <h2 id="new-entry-title" className="text-base font-medium leading-4 text-[#0A0A0A]">
+              New Entry
+            </h2>
+            <p className="mt-1.5 text-base leading-6 text-[#717182]">
+              How are you feeling today?
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100"
+            aria-label="Close new entry"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-sm font-medium leading-5 text-[#0A0A0A]">Mood (optional)</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {moods.map((option) => {
+              const selected = option === mood;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setMood(option)}
+                  className={`rounded-lg border px-[13px] py-[9px] text-sm font-medium tracking-[0.07px] transition-colors ${
+                    selected
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-black/10 bg-white text-[#0A0A0A] hover:bg-slate-50"
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <textarea
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          placeholder="Write your thoughts here..."
+          className="mt-4 min-h-16 w-full resize-y rounded-lg border-0 bg-[#F3F3F5] px-[13px] py-[9px] text-sm leading-5 text-slate-950 outline-none placeholder:text-[#717182] focus:ring-2 focus:ring-blue-100"
+          rows={3}
+        />
+
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-12 flex-1 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-3.5 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-12 flex-1 items-center justify-center rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+          >
+            Save Entry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JournalCard({
+  entry,
+}: {
+  entry: (typeof journalEntries)[number];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <article className="rounded-[20px] border border-slate-200 bg-white px-4 py-[18px] shadow-[0_4px_8px_rgba(15,23,42,0.03)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Image
+            src="/images/journal-avatar.png"
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-full object-cover"
+          />
+          <div>
+            <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#18181B]">
+              Dialysis Journal
+            </p>
+            <p className="text-sm font-medium leading-5 tracking-[0.07px] text-[#52525B]">
+              {entry.date}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="flex h-[46px] shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-[13px] py-[9px] text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white"
+        >
+          View details
+          <ChevronDown className={`h-6 w-6 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      <div className="mt-3 h-px bg-slate-200" />
+      <p className="mt-3 text-base leading-6 text-[#0A0A0A]">{entry.preview}</p>
+      {open && <p className="mt-2 text-base leading-6 text-[#0A0A0A]">{entry.details}</p>}
+    </article>
+  );
+}
+
+export default function DialysisJournalPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-[32px] font-medium leading-none text-slate-950">
+            Good morning, Sarah
+          </h1>
+          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-600">
+            Your personal log for each dialysis day
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+        >
+          <Plus className="h-6 w-6" />
+          New Entry
+        </button>
+      </header>
+
+      <aside className="flex items-start gap-2 rounded-xl border border-slate-200 bg-[#F1F5FA] p-3.5">
+        <Info className="mt-0.5 h-6 w-6 shrink-0 text-slate-600" />
+        <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#364153]">
+          NephroReach provides educational and self-tracking tools only. Always
+          follow the fluid and weight guidance provided by your dialysis care
+          team.
+        </p>
+      </aside>
+
+      <section className="space-y-4">
+        {journalEntries.map((entry) => (
+          <JournalCard key={entry.id} entry={entry} />
+        ))}
+      </section>
+
+      <NewEntryModal open={modalOpen} onClose={() => setModalOpen(false)} />
+    </div>
+  );
+}

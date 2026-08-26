@@ -16,6 +16,7 @@ import {
   Layers,
   LogOut,
   Menu,
+  Notebook,
   MessageCircle,
   Search,
   Settings,
@@ -31,6 +32,11 @@ const sidebarItems: Array<{ label: string; href: string; icon: IconType }> = [
   { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital },
   { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse },
   { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers },
+  {
+    label: "Dialysis Journal",
+    href: "/dashboard/personal-log/dialysis-journal",
+    icon: Notebook,
+  },
   { label: "Member", href: "/dashboard/members", icon: Users },
   {
     label: "Class Management",
@@ -88,6 +94,8 @@ function getBreadcrumb(pathname: string) {
     return "Dialysis Treatment";
   if (pathname.startsWith("/dashboard/personal-log/fluid-tracker"))
     return "Fluid Tracker";
+  if (pathname.startsWith("/dashboard/personal-log/dialysis-journal"))
+    return "Dialysis Journal";
   if (pathname.startsWith("/dashboard/personal-log")) return "Personal Log";
   if (pathname.startsWith("/dashboard/members")) return "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
@@ -104,6 +112,13 @@ function getBreadcrumb(pathname: string) {
 
 function isActiveRoute(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/dashboard/personal-log") {
+    return (
+      pathname === "/dashboard/personal-log" ||
+      (pathname.startsWith("/dashboard/personal-log/") &&
+        !pathname.startsWith("/dashboard/personal-log/dialysis-journal"))
+    );
+  }
   return href !== "#" && pathname.startsWith(href);
 }
 
