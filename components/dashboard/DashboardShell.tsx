@@ -18,6 +18,7 @@ import {
   Menu,
   Notebook,
   MessageCircle,
+  MessagesSquare,
   Search,
   Settings,
   Users,
@@ -49,6 +50,7 @@ const sidebarItems: Array<{ label: string; href: string; icon: IconType }> = [
     icon: BookOpen,
   },
   { label: "Live Class", href: "/dashboard/live-class", icon: Video },
+  { label: "Community", href: "/dashboard/community", icon: MessagesSquare },
   {
     label: "SMS Analytics",
     href: "/dashboard/sms-analytics",
@@ -103,6 +105,7 @@ function getBreadcrumb(pathname: string) {
   if (pathname.startsWith("/dashboard/education-center"))
     return "Education Center";
   if (pathname.startsWith("/dashboard/live-class")) return "Live Class";
+  if (pathname.startsWith("/dashboard/community")) return "Community";
   if (pathname.startsWith("/dashboard/sms-analytics")) return "SMS Analytics";
   if (pathname.startsWith("/dashboard/subscriptions")) return "Subscriptions";
   if (pathname.startsWith("/dashboard/support")) return "Support";
@@ -126,15 +129,15 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-[272px] shrink-0 flex-col bg-[#06265B] px-4 py-4 text-white">
-      <div className="mb-3 flex items-start justify-between gap-3 rounded bg-white p-3">
+    <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white">
+      <div className="mb-3 flex shrink-0 items-start justify-between gap-3 rounded bg-white p-3">
         <Image
           src="/images/logo.svg"
           alt="NephroReach"
           width={216}
           height={171}
           priority
-          className="h-auto w-full object-contain"
+          className="h-auto max-h-[92px] w-full object-contain"
         />
         {onClose && (
           <button
@@ -148,7 +151,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <label className="relative mb-8 block">
+      <label className="relative mb-4 block shrink-0">
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
         <input
           type="search"
@@ -157,93 +160,95 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         />
       </label>
 
-      <div className="border-t border-white/80 pt-5">
-        <p className="mb-2 px-4 text-xs font-medium text-white/80">Menu</p>
-        <nav className="space-y-2">
-          {sidebarItems.map((item) => {
-            const isActive = isActiveRoute(item.href, pathname);
-            const content = (
-              <>
-                <item.icon className="h-5 w-5 shrink-0" />
-                <span>{item.label}</span>
-              </>
-            );
+      <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="border-t border-white/80 pt-5">
+          <p className="mb-2 px-4 text-xs font-medium text-white/80">Menu</p>
+          <nav className="space-y-2">
+            {sidebarItems.map((item) => {
+              const isActive = isActiveRoute(item.href, pathname);
+              const content = (
+                <>
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </>
+              );
 
-            if (item.href === "#") {
+              if (item.href === "#") {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
               return (
-                <button
+                <Link
                   key={item.label}
-                  type="button"
-                  className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                    isActive
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-white hover:bg-white/10"
+                  }`}
                 >
                   {content}
-                </button>
+                </Link>
               );
-            }
+            })}
+          </nav>
+        </div>
 
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
-                  isActive
-                    ? "bg-white text-slate-700 shadow-sm"
-                    : "text-white hover:bg-white/10"
-                }`}
-              >
-                {content}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+        <div className="mt-5 border-t border-white/80 py-5">
+          <p className="mb-2 px-4 text-xs font-medium text-white/80">Help</p>
+          <div className="space-y-2">
+            {supportItems.map((item) => {
+              const isActive = isActiveRoute(item.href, pathname);
+              const content = (
+                <>
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </>
+              );
 
-      <div className="mt-auto border-y border-white/80 py-5">
-        <p className="mb-2 px-4 text-xs font-medium text-white/80">Help</p>
-        <div className="space-y-2">
-          {supportItems.map((item) => {
-            const isActive = isActiveRoute(item.href, pathname);
-            const content = (
-              <>
-                <item.icon className="h-5 w-5 shrink-0" />
-                <span>{item.label}</span>
-              </>
-            );
+              if (item.href === "#") {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    {content}
+                  </button>
+                );
+              }
 
-            if (item.href === "#") {
               return (
-                <button
+                <Link
                   key={item.label}
-                  type="button"
-                  className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                    isActive
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-white hover:bg-white/10"
+                  }`}
                 >
                   {content}
-                </button>
+                </Link>
               );
-            }
-
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
-                  isActive
-                    ? "bg-white text-slate-700 shadow-sm"
-                    : "text-white hover:bg-white/10"
-                }`}
-              >
-                {content}
-              </Link>
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
 
       <button
         type="button"
-        className="mt-5 flex h-16 items-center justify-center gap-3 rounded-lg border-8 border-blue-200 bg-slate-100 text-sm font-bold text-red-500 transition-colors hover:bg-white"
+        className="mt-3 flex h-14 shrink-0 items-center justify-center gap-3 rounded-lg border-8 border-blue-200 bg-slate-100 text-sm font-bold text-red-500 transition-colors hover:bg-white"
       >
         <LogOut className="h-5 w-5" />
         Log out
