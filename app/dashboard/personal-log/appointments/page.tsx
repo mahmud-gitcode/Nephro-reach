@@ -238,7 +238,7 @@ export default function AppointmentsPage() {
         </button>
       </header>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,633px)_minmax(360px,447px)]">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,447px)]">
         <UpcomingAppointments />
         <NextAppointment />
       </section>

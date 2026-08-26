@@ -27,18 +27,21 @@ const logTiles: Array<{
     icon: HeartPulse,
     iconClass: "text-red-500",
     iconBg: "bg-red-100",
+    href: "/dashboard/personal-log/blood-results",
   },
   {
     label: "Blood pressure",
     icon: HeartPulse,
     iconClass: "text-red-500",
     iconBg: "bg-red-100",
+    href: "/dashboard/personal-log/blood-pressure",
   },
   {
     label: "CKD Labs",
     icon: Droplet,
     iconClass: "text-red-500",
     iconBg: "bg-red-100",
+    href: "/dashboard/personal-log/lab-tracking",
   },
   {
     label: "Appointments",
@@ -52,12 +55,14 @@ const logTiles: Array<{
     icon: Pill,
     iconClass: "text-blue-600",
     iconBg: "bg-blue-100",
+    href: "/dashboard/personal-log/medications",
   },
   {
     label: "Nutrition",
     icon: Apple,
     iconClass: "text-emerald-600",
     iconBg: "bg-emerald-100",
+    href: "/dashboard/personal-log/nutrition",
   },
   {
     label: "Dialysis Monthly Labs",

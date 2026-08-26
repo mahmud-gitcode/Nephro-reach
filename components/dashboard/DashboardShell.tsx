@@ -48,7 +48,16 @@ function getBreadcrumb(pathname: string) {
   if (pathname === "/dashboard") return "Breadcrumb";
   if (pathname.startsWith("/dashboard/before-the-er")) return "Before-the-ER";
   if (pathname.startsWith("/dashboard/my-health")) return "MyHealth";
+  if (pathname.startsWith("/dashboard/personal-log/blood-results/add")) return "Add Blood Results";
+  if (pathname.startsWith("/dashboard/personal-log/blood-results")) return "Blood Results";
+  if (pathname.startsWith("/dashboard/personal-log/blood-pressure/add")) return "Add Blood Pressure";
+  if (pathname.startsWith("/dashboard/personal-log/blood-pressure")) return "Blood Pressure Log";
+  if (pathname.startsWith("/dashboard/personal-log/lab-tracking/add")) return "Add Lab Result";
+  if (pathname.startsWith("/dashboard/personal-log/lab-tracking")) return "Lab Tracking";
+  if (pathname.startsWith("/dashboard/personal-log/medications/add")) return "Add Medication";
+  if (pathname.startsWith("/dashboard/personal-log/medications")) return "Medication Log";
   if (pathname.startsWith("/dashboard/personal-log/appointments")) return "Appointments";
+  if (pathname.startsWith("/dashboard/personal-log/nutrition")) return "Nutrition";
   if (pathname.startsWith("/dashboard/personal-log")) return "Personal Log";
   if (pathname.startsWith("/dashboard/members")) return "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum")) return "Manage curriculum";
