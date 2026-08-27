@@ -101,23 +101,22 @@ export default function Header() {
   return (
     <>
       {/* Spacer to prevent layout shift since header is fixed */}
-      <div className="h-20 w-full shrink-0" />
-      <header className={`fixed top-0 left-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-transform duration-300 w-full px-15 ${
+      <div className="h-[101px] w-full shrink-0" />
+      <header className={`fixed top-0 left-0 z-50 w-full border-b border-slate-100 bg-white/90 backdrop-blur-md transition-transform duration-300 ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}>
-        <div className="w-full px-4 sm:px-6 lg:px-12 h-20 flex items-center justify-between">
+        <div className="mx-auto flex h-[101px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-[70px]">
 
         {/* Left Group: Logo + Language Selector */}
         <div className="flex items-center gap-4 sm:gap-6">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+          <Link href="/" className="flex items-center transition-opacity hover:opacity-90">
             <Image
-              src="/images/logo.svg"
+              src="/images/home/nav-logo.svg"
               alt="NephroReach Logo"
-              width={100}
-              height={50}
+              width={86}
+              height={68}
               priority
-              className="object-contain"
-              style={{ height: "auto" }}
+              className="h-[68px] w-[86px] object-contain"
             />
           </Link>
 
@@ -224,14 +223,14 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className={`text-sm font-semibold transition-colors px-1 py-2 ${isLinkActive("/login") ? "text-blue-600 font-bold" : "text-slate-700 hover:text-blue-600"
+                  className={`px-3.5 py-2 text-[15.5px] font-medium transition-colors ${isLinkActive("/login") ? "text-blue-600 font-bold" : "text-[#25221E] hover:text-blue-600"
                     }`}
                 >
                   {t("header.login")}
                 </Link>
                 <Link
                   href="/registration"
-                  className="bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                  className="inline-flex h-[52px] items-center justify-center rounded bg-[#2563EB] px-3.5 text-base font-bold text-white transition-colors hover:bg-[#1D4ED8]"
                 >
                   {t("header.tryItFree")}
                 </Link>

@@ -2,106 +2,79 @@
 
 import React from "react";
 import Image from "next/image";
-import { ChevronRight } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
+
+const steps = [
+  {
+    id: 1,
+    title: "Sign Up",
+    desc: "Choose your membership level and securely add your phone number.",
+    image: "/images/home/how-1.png",
+  },
+  {
+    id: 2,
+    title: "Get Your Member ID",
+    desc: "Receive a unique ID for your NephroReach account.",
+    image: "/images/home/how-2.png",
+  },
+  {
+    id: 3,
+    title: "Learn & Journal",
+    desc: "Use your journal, prompts, and 04-week education library.",
+    image: "/images/home/how-3.png",
+  },
+  {
+    id: 4,
+    title: "Receive SMS Check-Ins",
+    desc: "Receive automated weekly SMS check-ins and class reminders.",
+    image: "/images/home/how-4.png",
+  },
+];
 
 export default function HowItWorks() {
-  const { t } = useLanguage();
-
-  const steps = [
-    {
-      id: 1,
-      titleKey: "howItWorks.step1Title",
-      descKey: "howItWorks.step1Desc",
-      bgColor: "#E8F5E9",
-      iconSrc: "/images/signUp.png",
-      alt: "Sign Up Icon",
-    },
-    {
-      id: 2,
-      titleKey: "howItWorks.step2Title",
-      descKey: "howItWorks.step2Desc",
-      bgColor: "#F1F8E9",
-      iconSrc: "/images/getYourMemberID.png",
-      alt: "Get Your Member ID Icon",
-    },
-    {
-      id: 3,
-      titleKey: "howItWorks.step3Title",
-      descKey: "howItWorks.step3Desc",
-      bgColor: "#FFF8E1",
-      iconSrc: "/images/learn&journal.png",
-      alt: "Learn & Journal Icon",
-    },
-    {
-      id: 4,
-      titleKey: "howItWorks.step4Title",
-      descKey: "howItWorks.step4Desc",
-      bgColor: "#FBE9E7",
-      iconSrc: "/images/receiveSMSCheck-ins.png",
-      alt: "Receive SMS Check-Ins Icon",
-    },
-  ];
-
   return (
-    <section id="how-it-works" className="py-20 w-full text-center scroll-mt-20">
-      <div className="space-y-3 mb-16 px-4 sm:px-[60px]">
-        <span className="text-blue-600 text-sm font-bold tracking-widest uppercase">{t("howItWorks.badge")}</span>
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">{t("howItWorks.title")}</h2>
-        <p className="text-slate-500 text-base max-w-2xl mx-auto font-medium">
-          {t("howItWorks.subtitle")}
-        </p>
-      </div>
+    <section
+      id="how-it-works"
+      className="w-full scroll-mt-24 bg-white px-5 py-12 sm:px-10 lg:px-[120px] lg:py-12"
+    >
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h2 className="text-[28px] font-semibold leading-10 tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
+            How <span className="text-[#EF4444]">Nephro</span>
+            <span className="text-[#2563EB]">Reach</span> Works
+          </h2>
+          <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
+            Choose the path that fits your goals. Simple, transparent pricing.
+          </p>
+        </div>
 
-      {/* 4 Steps Container */}
-      <div className="w-full px-4 sm:px-[60px]">
-        {/* Grid container with 48px gap on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-[48px] relative justify-center w-full px-4 md:px-12">
-          {steps.map((step, index) => (
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-11">
+          {steps.map((step) => (
             <div
               key={step.id}
-              className="relative bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-visible flex flex-col group hover:border-slate-200 transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.04)] h-[258px] w-full"
+              className="flex flex-col items-center gap-6 rounded-lg border border-[#BBCFFD] bg-white px-6 py-4 sm:flex-row"
             >
-              {/* Top circular icon area */}
-              <div
-                style={{ backgroundColor: step.bgColor }}
-                className="h-[120px] rounded-t-3xl flex items-center justify-center p-4 transition-colors duration-300"
-              >
-                <div
-                  style={{ backgroundColor: step.bgColor }}
-                  className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
-                >
-                  <Image
-                    src={step.iconSrc}
-                    alt={step.alt}
-                    width={64}
-                    height={64}
-                    className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
+              <div className="relative size-[150px] shrink-0 overflow-hidden rounded">
+                <Image
+                  src={step.image}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="150px"
+                />
               </div>
-
-              {/* Details */}
-              <div className="p-5 flex-1 flex flex-col justify-start text-left">
-                <h3 className="text-base font-extrabold text-slate-900 mb-1">
-                  {t(step.titleKey)}
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <h3 className="pl-0 text-xl font-medium leading-7 tracking-[0.1px] text-[#0F172A] sm:pl-10">
+                  {step.title}
                 </h3>
-                <p className="text-slate-500 text-xs leading-relaxed font-semibold">
-                  {t(step.descKey)}
-                </p>
-              </div>
-
-              {/* Dotted Line & Arrow Button to Next Card (Only between cards on desktop) */}
-              {index < 3 && (
-                <div className="hidden lg:flex absolute -right-[48px] top-[129px] -translate-y-1/2 w-[48px] items-center justify-center z-30 pointer-events-none">
-                  {/* Dotted horizontal connecting line */}
-                  <div className="absolute left-0 right-0 border-t-2 border-dotted border-slate-300 top-1/2 -translate-y-1/2" />
-                  {/* Circular Arrow Button centered right in 48px gap */}
-                  <div className="relative z-40 w-9 h-9 rounded-full bg-[#1E293B] text-white flex items-center justify-center shadow-md shrink-0">
-                    <ChevronRight className="w-5 h-5 stroke-[2.5]" />
-                  </div>
+                <div className="flex items-start gap-4">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#EF4444] text-base font-medium leading-6 text-white">
+                    {step.id}
+                  </span>
+                  <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
+                    {step.desc}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>

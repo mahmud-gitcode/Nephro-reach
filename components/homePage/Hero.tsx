@@ -3,51 +3,35 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
 
 export default function Hero() {
-  const { t } = useLanguage();
-
   return (
-    <section className="relative pt-6 pb-16 px-4 sm:px-6 lg:px-12 w-full">
-      {/* Container Card with background image Container.png */}
-      <div className="relative rounded-[24px] border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.02)] overflow-hidden w-full min-h-[480px] sm:min-h-[550px] lg:h-[600px] flex items-center justify-end px-6 sm:px-12 md:px-16 lg:px-20">
-
-        {/* Background Image Container.png */}
+    <section className="w-full px-[18px] pb-0 pt-0">
+      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1404px] items-center justify-end overflow-hidden rounded-2xl sm:min-h-[500px] lg:h-[570px] lg:px-[71px]">
         <Image
-          src="/images/Container.png"
-          alt="NephroReach Banner Background"
+          src="/images/home/hero.png"
+          alt=""
           fill
           priority
-          className="object-cover object-center"
+          className="object-cover object-left"
+          sizes="100vw"
         />
-
-        {/* Text content aligned to the right */}
-        <div className="relative z-10 w-full lg:w-1/2 flex flex-col justify-center">
-          {/* Text Content */}
-          <div className="space-y-6 text-left bg-white/70 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none p-6 sm:p-8 lg:p-0 rounded-3xl border border-white/50 lg:border-none shadow-xl lg:shadow-none">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-xs font-bold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              {t("hero.badge")}
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
-              {t("hero.titleLine1")} <br className="hidden sm:inline" />
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{t("hero.titleLine2")}</span>
+        <div className="relative z-10 flex w-full max-w-[500px] flex-col items-start gap-8 bg-white/70 p-6 backdrop-blur-sm sm:bg-transparent sm:p-8 sm:backdrop-blur-none lg:w-[486px] lg:bg-transparent lg:p-0">
+          <div className="flex w-full flex-col gap-6">
+            <h1 className="text-[36px] font-medium leading-none tracking-[0.3px] text-[#0F172A] sm:text-[48px] lg:text-[60px]">
+              A space to reflect, learn, and grow.
             </h1>
-            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-medium whitespace-pre-wrap">
-              {t("hero.description")}
+            <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
+              Join Margin for daily SMS prompts, a private digital journal, and
+              monthly classes designed to help you build a more intentional life.
             </p>
-            <div className="pt-2">
-              <Link
-                href="/registration"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-4 rounded-xl shadow-lg shadow-blue-500/15 hover:shadow-blue-500/25 transition-all hover:translate-y-[-2px] active:translate-y-0 active:scale-98 text-base"
-              >
-                {t("hero.button")}
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
           </div>
+          <Link
+            href="/registration"
+            className="inline-flex h-[52px] items-center justify-center rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
+          >
+            Try it free
+          </Link>
         </div>
       </div>
     </section>

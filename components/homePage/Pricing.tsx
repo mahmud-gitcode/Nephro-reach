@@ -2,265 +2,149 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check, X } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
 
-export default function Pricing() {
-  const { t } = useLanguage();
+type Feature = { label: string; included: boolean };
+
+const features = [
+  "Digital Journal",
+  "8-week educational curriculum",
+  "Monthly live classes",
+  "Weekly SMS check-ins",
+  "Community support",
+] as const;
+
+const plans: Array<{
+  name: string;
+  price: string;
+  popular?: boolean;
+  included: boolean[];
+}> = [
+  {
+    name: "Class Purchase",
+    price: "$10",
+    included: [false, false, true, false, false],
+  },
+  {
+    name: "Full Membership",
+    price: "$10",
+    popular: true,
+    included: [true, true, true, true, true],
+  },
+  {
+    name: "Journal Only",
+    price: "$5",
+    included: [true, false, false, false, false],
+  },
+];
+
+function FeatureIcon({ included }: { included: boolean }) {
+  return (
+    <span className="relative block size-8 shrink-0 overflow-clip">
+      <img
+        src={
+          included
+            ? "/images/home/pricing-check.svg"
+            : "/images/home/pricing-x.svg"
+        }
+        alt=""
+        className="size-full"
+      />
+    </span>
+  );
+}
+
+function PlanCard({
+  name,
+  price,
+  included,
+}: {
+  name: string;
+  price: string;
+  included: boolean[];
+}) {
+  const list: Feature[] = features.map((label, index) => ({
+    label,
+    included: included[index],
+  }));
 
   return (
-    <section id="pricing" className="w-full bg-white py-16 px-4 md:px-12 md:py-24 scroll-mt-20">
-      <div className="w-full px-4 sm:px-6 lg:px-12">
+    <div className="flex h-full flex-col rounded-[50px] border border-[#E2E8F0] bg-[#F1F5FA] p-8">
+      <div className="space-y-2">
+        <h3 className="text-xl font-medium text-[#0F172A]">{name}</h3>
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold text-[#0F172A]">{price}</span>
+          <span className="text-base font-medium text-[#344056]">/Month</span>
+        </div>
+        <p className="text-base font-medium text-[#344056]">
+          Complete access to all platform features
+        </p>
+      </div>
 
-        {/* Section Title */}
-        <div className="text-center space-y-3 mb-16 max-w-3xl mx-auto">
-          <span className="text-[#2563EB] text-sm font-bold tracking-widest uppercase">
-            {t("pricing.badge")}
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-            {t("pricing.title")}
+      <Link
+        href="/registration"
+        className="mt-6 inline-flex h-12 items-center justify-center rounded bg-[#2563EB] px-3.5 text-base font-bold text-white transition-colors hover:bg-[#1D4ED8]"
+      >
+        Get Started
+      </Link>
+
+      <ul className="mt-8 space-y-4">
+        {list.map((feature) => (
+          <li key={feature.label} className="flex items-center gap-3">
+            <FeatureIcon included={feature.included} />
+            <span className="text-base font-medium text-[#0F172A]">
+              {feature.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function Pricing() {
+  return (
+    <section
+      id="pricing"
+      className="w-full scroll-mt-24 bg-white px-5 py-12 sm:px-10 lg:px-[71px] lg:py-[50px]"
+    >
+      <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-12">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h2 className="text-[28px] font-semibold leading-10 text-[#0F172A] sm:text-[36px]">
+            Membership Options
           </h2>
-          <p className="text-slate-500 text-base md:text-lg font-medium max-w-2xl mx-auto">
-            {t("pricing.description")}
+          <p className="text-lg font-medium leading-8 text-[#344056] sm:text-xl">
+            Choose the path that fits your goals. Simple, transparent pricing.
           </p>
         </div>
 
-        {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch w-full">
-
-          {/* Card 1: Class Purchase */}
-          <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="space-y-6">
-              <div className="space-y-2 text-left">
-                <h3 className="text-lg font-bold text-slate-800">{t("pricing.classPurchase")}</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900">$10</span>
-                  <span className="text-sm font-semibold text-slate-500">{t("pricing.perMonth")}</span>
+        <div className="grid grid-cols-1 items-end gap-6 lg:grid-cols-3 lg:gap-[30px]">
+          {plans.map((plan) =>
+            plan.popular ? (
+              <div key={plan.name} className="relative pt-10">
+                <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#2563EB] to-[#F52D2A] px-5 py-2 text-base font-bold text-white">
+                  Most Popular
                 </div>
-                <p className="text-sm text-slate-500 font-semibold pt-1">
-                  {t("pricing.accessText")}
-                </p>
-              </div>
-
-              <div>
-                <Link
-                  href="/registration"
-                  className="inline-block px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98]"
-                >
-                  {t("pricing.getStarted")}
-                </Link>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-t border-dotted border-slate-300/80 pt-6">
-                <ul className="space-y-4">
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.digitalJournal")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.curriculum")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.liveClasses")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.smsCheckIns")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.communitySupport")}</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Full Membership (Most Popular with Gradient Border & Top Bar) */}
-          <div className="relative rounded-[34px] p-[2px] bg-[linear-gradient(180deg,#67C7D3_0%,#78A7D6_36%,#A7A0E8_68%,#F1D56C_100%)] shadow-xl md:scale-105 z-10">
-            <div className="rounded-[32px] bg-white overflow-hidden flex flex-col justify-between h-full">
-              {/* Top Most Popular Banner */}
-              <div className="bg-[linear-gradient(90deg,#67C7D3_0%,#6A9AD6_100%)] text-white text-center py-2.5 text-xs font-bold tracking-wider uppercase">
-                {t("pricing.mostPopular")}
-              </div>
-
-              <div className="p-8 space-y-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-6">
-                  <div className="space-y-2 text-left">
-                    <h3 className="text-lg font-bold text-[#2563EB]">{t("pricing.fullMembership")}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-slate-900">$7.99</span>
-                      <span className="text-sm font-semibold text-slate-500">{t("pricing.perMonth")}</span>
+                <div className="rounded-[54px] bg-gradient-to-b from-[#2563EB] to-[#F52D2A] p-[2px]">
+                  <div className="h-full overflow-hidden rounded-[52px] bg-gradient-to-b from-white to-[#F2F7FF]">
+                    <div className="p-2">
+                      <PlanCard
+                        name={plan.name}
+                        price={plan.price}
+                        included={plan.included}
+                      />
                     </div>
-                    <p className="text-sm text-slate-500 font-semibold pt-1">
-                      {t("pricing.accessText")}
-                    </p>
-                  </div>
-
-                  <Link
-                    href="/registration"
-                    className="w-full inline-flex h-11 items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]"
-                  >
-                    {t("pricing.getStarted")}
-                  </Link>
-
-                  {/* Dotted Divider */}
-                  <div className="border-t border-dotted border-slate-300/80 pt-6">
-                    <ul className="space-y-4">
-                      <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </span>
-                        <span>{t("pricing.features.digitalJournal")}</span>
-                      </li>
-                      <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </span>
-                        <span>{t("pricing.features.curriculum")}</span>
-                      </li>
-                      <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </span>
-                        <span>{t("pricing.features.liveClasses")}</span>
-                      </li>
-                      <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </span>
-                        <span>{t("pricing.features.smsCheckIns")}</span>
-                      </li>
-                      <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </span>
-                        <span>{t("pricing.features.communitySupport")}</span>
-                      </li>
-                    </ul>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Card 3: Journal Only */}
-          <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="space-y-6">
-              <div className="space-y-2 text-left">
-                <h3 className="text-lg font-bold text-slate-800">{t("pricing.journalOnly")}</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900">$3.99</span>
-                  <span className="text-sm font-semibold text-slate-500">{t("pricing.perMonth")}</span>
-                </div>
-                <p className="text-sm text-slate-500 font-semibold pt-1">
-                  {t("pricing.accessText")}
-                </p>
-              </div>
-
-              <div>
-                <Link
-                  href="/registration"
-                  className="inline-block px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98]"
-                >
-                  {t("pricing.getStarted")}
-                </Link>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-t border-dotted border-slate-300/80 pt-6">
-                <ul className="space-y-4">
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.digitalJournal")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.curriculum")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.liveClasses")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.smsCheckIns")}</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-rose-500">
-                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>{t("pricing.features.communitySupport")}</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Dialysis Education */}
-          <div className="rounded-[32px] border border-slate-100 bg-[#F1F6FE] p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="space-y-6">
-              <div className="space-y-2 text-left">
-                <h3 className="text-lg font-bold text-slate-800">Dialysis Education</h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900">$49.99</span>
-                  <span className="text-sm font-semibold text-slate-500">once</span>
-                </div>
-                <p className="text-sm text-slate-500 font-semibold pt-1">
-                  4 week Dialysis Education class with lifetime access
-                </p>
-              </div>
-
-              <div>
-                <Link
-                  href="/registration"
-                  className="inline-block px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98]"
-                >
-                  {t("pricing.getStarted")}
-                </Link>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-t border-dotted border-slate-300/80 pt-6">
-                <ul className="space-y-4">
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>Lifetime Access</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </span>
-                    <span>4-week curriculum</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
+            ) : (
+              <PlanCard
+                key={plan.name}
+                name={plan.name}
+                price={plan.price}
+                included={plan.included}
+              />
+            ),
+          )}
         </div>
       </div>
     </section>

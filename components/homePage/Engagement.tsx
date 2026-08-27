@@ -1,146 +1,69 @@
 "use client";
 
 import React from "react";
-import { X, ChevronRight, Calendar, User, Flag, MoreHorizontal } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
+import Image from "next/image";
 
 export default function Engagement() {
-  const { t } = useLanguage();
-
   return (
-    <section className="w-full bg-white py-20 md:py-24 scroll-mt-20">
-      <div className="w-full flex flex-col items-center px-4 sm:px-8 md:px-[60px] gap-10 md:gap-14">
-
-        {/* Header Block */}
-        <div className="text-center space-y-3 max-w-[840px]">
-          <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
-            {t("engagement.badge")}
-          </span>
-          <h2 className="text-[31px] leading-[1.06] sm:text-[40px] md:text-[46px] font-semibold text-slate-900 tracking-tight">
-            {t("engagement.title")}
+    <section className="w-full bg-white px-5 py-12 sm:px-10 lg:px-[71px] lg:py-12">
+      <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-12">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h2 className="text-[28px] font-semibold leading-10 tracking-tight text-[#0F172A] sm:text-[36px]">
+            Your Health, All in One Place
           </h2>
-          <p className="mx-auto max-w-[760px] text-[15px] leading-6 md:text-[16px] md:leading-7 text-slate-500 font-normal">
-            {t("engagement.subtitle")}
+          <p className="text-lg font-medium leading-7 text-[#344056] sm:text-xl">
+            Track, learn, and stay on top of your kidney health with NephroReach.
           </p>
         </div>
 
-        {/* Content Row */}
-        <div className="grid w-full grid-cols-1 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] items-start gap-10 lg:gap-16">
-
-          {/* Left Column - Interactive UI Card Mockup */}
-          <div className="w-full flex justify-center lg:justify-start lg:pl-12 xl:pl-24">
-            <div className="relative w-full max-w-[345px] sm:max-w-[380px] aspect-[1.05] rounded-[10px] bg-[#FFF6DC] overflow-hidden">
-
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.85),transparent_34%),radial-gradient(circle_at_85%_80%,rgba(255,223,140,0.34),transparent_28%)]" />
-
-              {/* Mockup Card */}
-              <div className="absolute inset-0 flex items-center justify-center p-5 sm:p-6">
-                <div className="w-full bg-white rounded-[8px] border border-slate-100 shadow-[0_16px_45px_rgba(15,23,42,0.12)] overflow-hidden z-10">
-                  {/* Header */}
-                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-slate-400">check-in</span>
-                    <button className="text-slate-300 hover:text-slate-500">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Body */}
-                  <div className="px-4 py-4 space-y-4">
-                    {/* Selector chips */}
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <div className="border border-slate-200 bg-white rounded-[6px] px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium cursor-pointer">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Due date</span>
-                      </div>
-                      <div className="border border-slate-200 bg-white rounded-[6px] px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium cursor-pointer">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Assignee</span>
-                      </div>
-                      <div className="border border-slate-200 bg-white rounded-[6px] px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium cursor-pointer">
-                        <Flag className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Priority</span>
-                      </div>
-                      <div className="border border-slate-200 bg-white rounded-[6px] p-1.5 flex items-center justify-center text-slate-500 cursor-pointer">
-                        <MoreHorizontal className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </div>
-
-                    {/* Dropdown selectors */}
-                    <div className="border border-slate-200 rounded-[6px] px-3.5 py-2.5 text-[11px] font-medium text-slate-500 flex items-center justify-between bg-white cursor-pointer">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-5 h-5 rounded bg-amber-500/20 flex items-center justify-center">
-                          <span className="text-[10px] text-amber-600 font-bold">📥</span>
-                        </div>
-                        <span>Inbox</span>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                    </div>
-
-                    {/* Add task button */}
-                    <div className="flex justify-end pt-2">
-                      <button className="px-4 py-2 bg-[#2563EB] text-white font-semibold text-[11px] rounded-[6px] shadow-sm uppercase tracking-wide">
-                        Add task
-                      </button>
-                    </div>
-                  </div>
-                </div>
+        <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-stretch lg:justify-between lg:gap-8">
+          <div className="relative w-full max-w-[529px] overflow-hidden rounded-3xl">
+            <div className="relative aspect-[529/426] w-full">
+              <Image
+                src="/images/home/engagement.png"
+                alt="NephroReach dashboard preview"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 529px"
+              />
+            </div>
+            <div className="absolute left-1/2 top-1/2 w-[min(363px,86%)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[13px] border border-white/60 bg-white/95 shadow-[0_16px_40px_rgba(15,23,42,0.18)] backdrop-blur-sm">
+              <div className="space-y-2 px-4 py-3">
+                <p className="text-base font-medium leading-6 text-[#0F172A]">
+                  check-in
+                </p>
+                <p className="text-sm font-medium leading-5 text-[#344056]">
+                  Have you Taken Medication
+                </p>
+              </div>
+              <div className="mx-2 h-px bg-[#E2E8F0]" />
+              <div className="flex items-center justify-end gap-3 px-3 py-3">
+                <button
+                  type="button"
+                  className="rounded bg-[#F1F5FA] px-3 py-2 text-sm font-bold text-[#0F172A]"
+                >
+                  Not yet
+                </button>
+                <button
+                  type="button"
+                  className="rounded bg-[#2563EB] px-3 py-2 text-sm font-bold text-white"
+                >
+                  Yes, I have
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Step by Step engagement items */}
-          <div className="w-full space-y-12 text-left pt-1 lg:pt-4 lg:pr-12 xl:pr-24">
-
-            {/* Item 1 */}
-            <div className="space-y-2.5 w-full">
-              <span className="text-[#D97706] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item1Badge")}</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item1Title")}</h3>
-              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                {t("engagement.item1Desc")}
-              </p>
-            </div>
-
-            {/* Item 2 */}
-            <div className="space-y-2.5 w-full">
-              <span className="text-[#3E7C82] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item2Badge")}</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item2Title")}</h3>
-              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                {t("engagement.item2Desc")}
-              </p>
-            </div>
-
-            {/* Item 3 */}
-            <div className="space-y-2.5 w-full">
-              <span className="text-[#FB6A57] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item3Badge")}</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item3Title")}</h3>
-              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal">
-                {t("engagement.item3Desc")}
-              </p>
-            </div>
-
-            {/* Item 4 */}
-            <div className="space-y-2.5 w-full">
-              <span className="text-[#6C9F63] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item4Badge")}</span>
-              <h3 className="text-[26px] sm:text-[30px] leading-[1.08] font-medium text-slate-700 tracking-tight">{t("engagement.item4Title")}</h3>
-              <p className="text-[14px] sm:text-[15px] leading-6 text-slate-400 font-normal whitespace-pre-wrap">
-                {t("engagement.item4Desc")}
-              </p>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Item 5 - Centered at the bottom */}
-        <div className="w-full flex justify-center mt-8 md:mt-16">
-          <div className="space-y-3.5 w-full max-w-[840px] text-center bg-[#F8FAFC] rounded-2xl p-8 md:p-12 border border-slate-100">
-            <span className="text-[#8B5CF6] text-[12px] font-semibold uppercase tracking-wide">{t("engagement.item5Badge")}</span>
-            <h3 className="text-[26px] sm:text-[32px] leading-[1.1] font-medium text-slate-700 tracking-tight">{t("engagement.item5Title")}</h3>
-            <p className="text-[15px] sm:text-[16px] leading-7 text-slate-500 font-normal whitespace-pre-wrap max-w-[650px] mx-auto mt-3">
-              {t("engagement.item5Desc")}
+          <div className="flex w-full max-w-[500px] flex-col justify-center gap-6 lg:pt-20">
+            <h3 className="text-[32px] font-medium leading-[1.2] tracking-tight text-[#0F172A] sm:text-[40px] sm:leading-[48px]">
+              Create your account in minutes
+            </h3>
+            <p className="text-lg font-medium leading-7 text-[#344056] sm:text-xl sm:leading-8">
+              Sign up with your email and phone number, choose your membership
+              level, and receive your unique NephroReach member ID.
             </p>
           </div>
         </div>
-
       </div>
     </section>
   );

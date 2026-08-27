@@ -1,108 +1,76 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, BookOpen, Calendar, TrendingUp, Users, Shield } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
+
+const features = [
+  {
+    title: "Daily SMS Prompts",
+    desc: "Carefully crafted questions sent to your phone to spark reflection and mindfulness throughout your day.",
+    icon: "/images/home/feat-sms.svg",
+  },
+  {
+    title: "Digital Journal",
+    desc: "A beautiful, private space where all your SMS replies are automatically saved and organized by date.",
+    icon: "/images/home/feat-book.svg",
+  },
+  {
+    title: "Monthly Classes",
+    desc: "Live, expert-led sessions focusing on personal growth, habit building, and intentional living.",
+    icon: "/images/home/feat-calendar.svg",
+  },
+  {
+    title: "Progress Tracking",
+    desc: "Look back at your entries over time to see patterns, growth, and shifts in your perspective.",
+    icon: "/images/home/feat-chart.svg",
+  },
+  {
+    title: "Community Access",
+    desc: "Connect with other members in our moderated forum to share insights and discuss class topics.",
+    icon: "/images/home/feat-users.svg",
+  },
+  {
+    title: "Private & Secure",
+    desc: "Your reflections are yours alone. We use industry-standard encryption to keep your journal safe.",
+    icon: "/images/home/feat-lock.svg",
+  },
+];
 
 export default function WhatMembersGet() {
-  const { t } = useLanguage();
-
   return (
-    <section id="features" className="w-full border-y border-slate-100 bg-[#EEF3FA] py-16 md:py-24 px-4 md:px-12">
-      <div className="w-full px-4 sm:px-6 md:px-10 lg:px-12">
-        <div className="mb-12 md:mb-16 text-center space-y-3 max-w-[760px] mx-auto">
-          <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[13px] font-semibold text-blue-600">
-            {t("whatMembersGet.badge")}
-          </span>
-          <h2 className="text-[31px] leading-[1.06] sm:text-[40px] md:text-[46px] font-semibold text-slate-900 tracking-tight">
-            {t("whatMembersGet.title")}
+    <section
+      id="features"
+      className="w-full scroll-mt-24 bg-[#F1F5FA] px-5 py-16 sm:px-10 lg:px-[71px] lg:py-20"
+    >
+      <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-14">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-lg font-medium text-[#2563EB]">What You Get</p>
+          <h2 className="text-[28px] font-semibold leading-10 text-[#0F172A] sm:text-[36px]">
+            What Members Get
           </h2>
-          <p className="mx-auto max-w-[540px] text-[15px] leading-6 md:text-[16px] md:leading-7 text-slate-600 font-normal">
-            {t("whatMembersGet.subtitle")}
+          <p className="text-lg font-medium leading-8 text-[#344056] sm:text-xl">
+            everything you need to grow
           </p>
         </div>
 
-        {/* 3x2 Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          
-          {/* Card 1 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <MessageSquare className="w-5 h-5" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {features.map((feature) => (
+            <div
+              key={feature.title}
+              className="rounded-xl border border-[#E2E8F0] bg-white p-6"
+            >
+              <div className="mb-4 flex size-[52px] items-center justify-center rounded-lg bg-[#D7EDFF]">
+                <span className="relative block size-8 overflow-clip">
+                  <img src={feature.icon} alt="" className="size-full" />
+                </span>
+              </div>
+              <h3 className="mb-3 text-xl font-medium leading-8 text-[#0F172A]">
+                {feature.title}
+              </h3>
+              <p className="text-base font-medium leading-6 text-[#344056]">
+                {feature.desc}
+              </p>
             </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card1Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card1Desc")}
-            </p>
-          </div>
-
-          {/* Card 2 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card2Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card2Desc")}
-            </p>
-          </div>
-
-          {/* Card 3 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card3Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card3Desc")}
-            </p>
-          </div>
-
-          {/* Card 4 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card4Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card4Desc")}
-            </p>
-          </div>
-
-          {/* Card 5 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <Users className="w-5 h-5" />
-            </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card5Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card5Desc")}
-            </p>
-          </div>
-
-          {/* Card 6 */}
-          <div className="rounded-[10px] border border-slate-200/70 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-            <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#DCEBFF] text-[#2F69E8]">
-              <Shield className="w-5 h-5" />
-            </div>
-            <h3 className="mb-3 text-[18px] font-semibold text-slate-900">
-              {t("whatMembersGet.card6Title")}
-            </h3>
-            <p className="text-[15px] leading-6 text-slate-600 font-normal">
-              {t("whatMembersGet.card6Desc")}
-            </p>
-          </div>
-
+          ))}
         </div>
       </div>
     </section>
