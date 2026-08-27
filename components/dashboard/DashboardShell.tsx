@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { UserRole } from "@/lib/auth";
+import EmergencyModal from "@/components/dashboard/EmergencyModal";
 import {
   BookOpen,
   CreditCard,
@@ -162,10 +163,10 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         <Image
           src="/images/logo.svg"
           alt="NephroReach"
-          width={216}
-          height={171}
+          width={240}
+          height={190}
           priority
-          className="h-auto max-h-[92px] w-full object-contain"
+          className="h-[190px] w-[240px] shrink-0 object-contain"
         />
         {onClose && (
           <button
@@ -304,6 +305,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [langOpen, setLangOpen] = useState(false);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
   const isUser = user?.role === "user";
   const trail = getBreadcrumbTrail(pathname);
   const currentPage = getBreadcrumb(pathname);
@@ -395,13 +397,14 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <span className="hidden h-8 w-px bg-slate-300 sm:block" />
 
         {isUser ? (
-          <Link
-            href="/dashboard/before-the-er"
+          <button
+            type="button"
+            onClick={() => setEmergencyOpen(true)}
             className="hidden items-center gap-2 rounded bg-[#EF4444] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white sm:flex"
           >
             <HeaderIcon src="/images/dashboard-header/danger.svg" />
             Emergency
-          </Link>
+          </button>
         ) : null}
 
         <div className="hidden items-center gap-3 rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] px-2 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] sm:flex">
@@ -418,6 +421,11 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
       </div>
+
+      <EmergencyModal
+        open={emergencyOpen}
+        onClose={() => setEmergencyOpen(false)}
+      />
     </header>
   );
 }
