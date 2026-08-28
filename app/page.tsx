@@ -13,7 +13,7 @@ import Footer from "@/components/layout/Footer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-sans text-[#0F172A] selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen overflow-x-clip bg-white font-sans text-[#0F172A] selection:bg-blue-500 selection:text-white">
       <Header />
       <main>
         <Hero />
