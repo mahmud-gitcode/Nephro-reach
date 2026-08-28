@@ -6,8 +6,8 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="w-full px-[18px] pb-0 pt-0">
-      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1404px] items-center justify-end overflow-hidden rounded-2xl sm:min-h-[500px] lg:h-[570px] lg:px-[71px]">
+    <section className="flex w-full flex-col items-center justify-center p-5 sm:p-8 lg:p-12">
+      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1344px] items-center justify-end overflow-hidden rounded-[24px] sm:min-h-[500px] lg:h-[570px] lg:px-[71px]">
         <Image
           src="/images/home/hero.png"
           alt=""
@@ -18,8 +18,9 @@ export default function Hero() {
         />
         <div className="relative z-10 flex w-full max-w-[500px] flex-col items-start gap-8 bg-white/70 p-6 backdrop-blur-sm sm:bg-transparent sm:p-8 sm:backdrop-blur-none lg:w-[486px] lg:bg-transparent lg:p-0">
           <div className="flex w-full flex-col gap-6">
-            <h1 className="text-[36px] font-medium leading-none tracking-[0.3px] text-[#0F172A] sm:text-[48px] lg:text-[60px]">
-              A space to reflect, learn, and grow.
+            <h1 className="text-[36px] font-semibold leading-none tracking-[0.3px] text-[#0F172A] sm:text-[48px] lg:text-[60px]">
+              A space to reflect,{" "}
+              <span className="text-[#EF4444]">learn, and grow.</span>
             </h1>
             <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
               Join Margin for daily SMS prompts, a private digital journal, and
@@ -28,7 +29,7 @@ export default function Hero() {
           </div>
           <Link
             href="/registration"
-            className="inline-flex h-[52px] items-center justify-center rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
+            className="inline-flex h-[52px] w-[194px] items-center justify-center rounded-[4px] bg-[#2563EB] px-6 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
           >
             Try it free
           </Link>

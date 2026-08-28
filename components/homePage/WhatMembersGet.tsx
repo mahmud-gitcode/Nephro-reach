@@ -39,15 +39,14 @@ export default function WhatMembersGet() {
   return (
     <section
       id="features"
-      className="w-full scroll-mt-24 bg-[#F1F5FA] px-5 py-16 sm:px-10 lg:px-[71px] lg:py-20"
+      className="w-full scroll-mt-24 bg-[#F8FAFF] px-5 py-16 sm:px-10 lg:px-[72px] lg:py-20"
     >
-      <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-14">
+      <div className="mx-auto flex w-full max-w-[1296px] flex-col gap-10">
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-lg font-medium text-[#2563EB]">What You Get</p>
-          <h2 className="text-[28px] font-semibold leading-10 text-[#0F172A] sm:text-[36px]">
+          <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
             What Members Get
           </h2>
-          <p className="text-lg font-medium leading-8 text-[#344056] sm:text-xl">
+          <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
             everything you need to grow
           </p>
         </div>
@@ -56,19 +55,21 @@ export default function WhatMembersGet() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-xl border border-[#E2E8F0] bg-white p-6"
+              className="flex flex-col items-start gap-[14px] rounded-[12px] border border-[#E2E8F0] bg-white p-6"
             >
-              <div className="mb-4 flex size-[52px] items-center justify-center rounded-lg bg-[#D7EDFF]">
+              <div className="flex items-center rounded-lg bg-[#D7EDFF] p-2.5">
                 <span className="relative block size-8 overflow-clip">
                   <img src={feature.icon} alt="" className="size-full" />
                 </span>
               </div>
-              <h3 className="mb-3 text-xl font-medium leading-8 text-[#0F172A]">
-                {feature.title}
-              </h3>
-              <p className="text-base font-medium leading-6 text-[#344056]">
-                {feature.desc}
-              </p>
+              <div className="flex w-full flex-col gap-3">
+                <h3 className="text-xl font-medium leading-8 tracking-[0.12px] text-[#0F172A] sm:text-2xl">
+                  {feature.title}
+                </h3>
+                <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
+                  {feature.desc}
+                </p>
+              </div>
             </div>
           ))}
         </div>

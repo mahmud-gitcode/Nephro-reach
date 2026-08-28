@@ -41,14 +41,14 @@ export default function Testimonials() {
   ];
 
   return (
-    <section className="w-full bg-white px-5 py-16 sm:px-10 lg:px-20 lg:py-20">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-9">
+    <section className="w-full bg-white px-5 py-[42px] sm:px-10 lg:px-20">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-[900px] space-y-4">
-            <h2 className="text-[32px] font-semibold leading-[48px] text-[#0F172A] sm:text-[40px]">
+            <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
               What Our Customers Say
             </h2>
-            <p className="text-lg font-medium leading-7 text-[#344056] sm:text-xl">
+            <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
               Real stories from people around the world using our platform to
               build, grow, and connect.
             </p>
@@ -83,33 +83,42 @@ export default function Testimonials() {
           {visible.map((review, cardIndex) => (
             <article
               key={`${review.name}-${cardIndex}-${index}`}
-              className="flex flex-col gap-5 rounded-3xl border border-[#BBCFFD] bg-white p-5"
+              className="flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5"
             >
-              <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2.5 py-1 text-sm font-medium text-[#58BD7D]">
+              <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2 py-1 text-sm font-medium leading-5 text-[#58BD7D]">
                 {review.badge}
               </span>
-              <p className="text-base font-medium leading-6 text-[#0F172A]">
+              <p className="text-base font-medium leading-6 text-[#23262F]">
                 {review.quote}
               </p>
-              <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#E2E8F0] pt-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="/images/home/testimonial-avatar.png"
-                    alt=""
-                    className="size-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-[#0F172A]">
-                      {review.name}, {review.location}
-                    </p>
-                    <p className="text-sm text-[#344056]">{review.role}</p>
-                  </div>
+              <div className="flex h-7 w-[152px] items-center gap-2 py-0.5">
+                <div className="flex flex-1 items-start">
+                  {[0, 1, 2, 3, 4].map((star) => (
+                    <img
+                      key={star}
+                      src="/images/home/star.svg"
+                      alt=""
+                      className="size-6"
+                    />
+                  ))}
                 </div>
-                <div className="flex items-center gap-1">
-                  <img src="/images/home/star.svg" alt="" className="size-4" />
-                  <span className="text-sm font-semibold text-[#0F172A]">
-                    {review.rating}
-                  </span>
+                <span className="text-base font-semibold leading-6 text-[#6B7280]">
+                  {review.rating}
+                </span>
+              </div>
+              <div className="mt-auto flex w-full items-center gap-4">
+                <img
+                  src="/images/home/testimonial-avatar.png"
+                  alt=""
+                  className="size-12 shrink-0 rounded-full object-cover"
+                />
+                <div className="flex flex-1 flex-col gap-2">
+                  <p className="text-sm font-semibold leading-5 text-[#23262F]">
+                    {review.name}, {review.location}
+                  </p>
+                  <p className="text-sm font-normal leading-6 text-[#777E90]">
+                    {review.role}
+                  </p>
                 </div>
               </div>
             </article>

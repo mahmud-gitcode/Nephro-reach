@@ -1,45 +1,39 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function ContactUs() {
   return (
-    <section className="relative w-full overflow-hidden bg-[#D7EDFF]">
-      <div className="relative mx-auto flex min-h-[320px] w-full max-w-[1440px] items-center justify-center px-5 py-16 sm:min-h-[421px]">
-        <Image
-          src="/images/home/contact-decor.png"
-          alt=""
-          width={601}
-          height={420}
-          className="pointer-events-none absolute bottom-0 left-[-33px] hidden h-auto w-[320px] object-contain opacity-90 md:block lg:w-[420px]"
-        />
-        <Image
-          src="/images/home/contact-people.png"
-          alt=""
-          width={502}
-          height={421}
-          className="pointer-events-none absolute bottom-0 right-0 hidden h-auto w-[280px] object-contain md:block lg:w-[420px]"
-        />
-        <Image
-          src="/images/home/contact-arc.png"
-          alt=""
-          width={57}
-          height={121}
-          className="pointer-events-none absolute left-[30%] top-[20%] hidden md:block"
-        />
+    <section className="relative w-full overflow-hidden bg-white">
+      <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[1440px] -translate-x-1/2">
+        <div className="absolute left-[251px] top-[-611px] size-[992px] rounded-full bg-[#55A8F5] opacity-70 blur-[198px]" />
+        <div className="absolute left-[1034px] top-[-536px] size-[992px] rounded-full bg-red-500 opacity-70 blur-[198px]" />
+      </div>
 
-        <div className="relative z-10 flex max-w-[618px] flex-col items-center gap-7 text-center">
-          <h2 className="text-[28px] font-semibold leading-[1.2] text-[#0F172A] sm:text-[36px] sm:leading-[48px]">
-            Still have questions?
-          </h2>
-          <Link
-            href="/contact-us"
-            className="inline-flex h-[52px] items-center justify-center rounded bg-[#2563EB] px-3.5 text-base font-bold text-white transition-colors hover:bg-[#1D4ED8]"
-          >
-            Contact Us
-          </Link>
+      <div className="relative mx-auto flex min-h-[320px] w-full max-w-[1440px] items-center px-5 sm:px-10 lg:h-[376px] lg:px-[72px]">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="relative hidden h-[376px] w-[536px] shrink-0 overflow-hidden lg:block">
+            <div className="absolute inset-0 -scale-x-100">
+              <img
+                src="/images/home/contact-people.png"
+                alt=""
+                className="absolute left-[-140.4%] top-0 h-full w-[240.4%] max-w-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center gap-7 py-12 lg:py-0">
+            <h2 className="max-w-[618px] text-center text-[32px] font-normal leading-none tracking-[0.24px] text-black sm:text-[48px]">
+              Still have questions?
+            </h2>
+            <Link
+              href="/contact-us"
+              className="inline-flex h-[52px] w-[163px] items-center justify-center gap-2 rounded-[4px] bg-[#EF4444] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#DC2626]"
+            >
+              Contact Us
+            </Link>
+          </div>
         </div>
       </div>
     </section>
