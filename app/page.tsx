@@ -13,9 +13,9 @@ import Footer from "@/components/layout/Footer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen overflow-x-clip bg-white font-sans text-[#0F172A] selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen overflow-x-clip bg-white font-sf text-[#0F172A] selection:bg-blue-500 selection:text-white">
       <Header />
-      <main>
+      <main className="flex flex-col gap-16">
         <Hero />
         <HowItWorks />
         <Engagement />

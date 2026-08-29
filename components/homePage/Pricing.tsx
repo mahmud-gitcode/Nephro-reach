@@ -89,7 +89,7 @@ function PlanCard({
       <div className="flex flex-col gap-4">
         <h3
           className={[
-            "text-xl font-semibold leading-7 tracking-[0.1px]",
+            "flex h-8 items-center text-xl font-semibold leading-7 tracking-[0.1px]",
             popular ? "text-[#2563EB]" : "text-[#344056]",
           ].join(" ")}
         >
@@ -97,7 +97,7 @@ function PlanCard({
         </h3>
 
         <div className="flex flex-wrap items-baseline gap-1">
-          <span className="font-bold text-[36px] leading-[52px] text-[#0F172A]">
+          <span className="font-inter text-[36px] font-bold leading-[52px] text-[#0F172A]">
             {price}
           </span>
           <span className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
@@ -112,10 +112,9 @@ function PlanCard({
         <Link
           href="/registration"
           className={[
-            "inline-flex items-center justify-center gap-2 rounded bg-[#2563EB] px-3.5 py-3",
+            "inline-flex w-full items-center justify-center gap-2 rounded bg-[#2563EB] px-3.5 py-3",
             "text-base font-bold leading-6 tracking-[0.08px] text-white transition-colors",
             "shadow-[inset_0px_-1px_0px_0px_#DBE9FE] hover:bg-[#1D4ED8]",
-            popular ? "w-full" : "self-start",
           ].join(" ")}
         >
           Get Started

@@ -13,14 +13,16 @@ export default function Hero() {
           alt=""
           fill
           priority
-          className="object-cover object-left"
+          className="object-cover object-center"
           sizes="100vw"
         />
         <div className="relative z-10 flex w-full max-w-[500px] flex-col items-start gap-8 bg-white/70 p-6 backdrop-blur-sm sm:bg-transparent sm:p-8 sm:backdrop-blur-none lg:w-[486px] lg:bg-transparent lg:p-0">
           <div className="flex w-full flex-col gap-6">
             <h1 className="text-[36px] font-semibold leading-none tracking-[0.3px] text-[#0F172A] sm:text-[48px] lg:text-[60px]">
-              A space to reflect,{" "}
-              <span className="text-[#EF4444]">learn, and grow.</span>
+              <span className="block sm:whitespace-nowrap">A space to reflect,</span>
+              <span className="block text-[#EF4444] sm:whitespace-nowrap">
+                learn, and grow.
+              </span>
             </h1>
             <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
               Join Margin for daily SMS prompts, a private digital journal, and

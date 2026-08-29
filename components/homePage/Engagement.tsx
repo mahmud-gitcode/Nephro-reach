@@ -121,7 +121,7 @@ export default function Engagement() {
             </p>
           </div>
 
-          <div className="flex w-full flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-8 lg:px-[109px]">
+          <div className="flex w-full flex-col items-center gap-10 lg:flex-row lg:items-start lg:gap-8 lg:px-[109px]">
             <div className="relative w-full max-w-[529px] shrink-0 lg:h-[426px] lg:w-[529px]">
               <div className="relative aspect-[1332/1072] w-full overflow-hidden rounded-[24px] opacity-90 blur-[1.5px]">
                 <Image
@@ -161,9 +161,9 @@ export default function Engagement() {
               </div>
             </div>
 
-            <div className="flex w-full items-start gap-6 lg:w-[632px] lg:px-[66px]">
+            <div className="relative flex w-full items-start lg:w-[632px] lg:self-stretch lg:px-[66px] lg:pb-10 lg:pt-20">
               {isPinned && (
-                <div className="flex shrink-0 flex-col gap-2 pt-2">
+                <div className="absolute left-[26px] top-[82px] flex shrink-0 flex-col gap-2">
                   {steps.map((step, index) => (
                     <button
                       key={step.label}
@@ -186,7 +186,7 @@ export default function Engagement() {
                 </div>
               )}
 
-              <div className="relative w-full max-w-[500px]">
+              <div className="relative w-full lg:w-[500px]">
                 {steps.map((step, index) => (
                   <div
                     key={step.label}
@@ -211,7 +211,7 @@ export default function Engagement() {
                       <h3 className="text-[32px] font-normal leading-none tracking-[0.24px] text-[#0F172A] sm:text-[40px] xl:text-[48px]">
                         {step.title}
                       </h3>
-                      <p className="text-lg font-medium leading-[32.8px] text-[rgba(37,34,30,0.66)] sm:text-[20.5px]">
+                      <p className="font-inter text-lg font-medium leading-[32.8px] text-[rgba(37,34,30,0.66)] sm:text-[20.5px]">
                         {step.desc}
                       </p>
                     </div>

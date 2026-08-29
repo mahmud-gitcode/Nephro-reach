@@ -44,7 +44,7 @@ export default function Testimonials() {
     <section className="w-full bg-white px-5 py-[42px] sm:px-10 lg:px-20">
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-[900px] space-y-4">
+          <div className="w-full max-w-[1152px] space-y-4">
             <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
               What Our Customers Say
             </h2>
@@ -83,7 +83,7 @@ export default function Testimonials() {
           {visible.map((review, cardIndex) => (
             <article
               key={`${review.name}-${cardIndex}-${index}`}
-              className="flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5"
+              className="flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5 font-manrope"
             >
               <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2 py-1 text-sm font-medium leading-5 text-[#58BD7D]">
                 {review.badge}
@@ -116,7 +116,7 @@ export default function Testimonials() {
                   <p className="text-sm font-semibold leading-5 text-[#23262F]">
                     {review.name}, {review.location}
                   </p>
-                  <p className="text-sm font-normal leading-6 text-[#777E90]">
+                  <p className="font-inter text-sm font-normal leading-6 text-[#777E90]">
                     {review.role}
                   </p>
                 </div>
