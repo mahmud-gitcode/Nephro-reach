@@ -64,40 +64,43 @@ export default function FAQPage() {
           </div>
 
           {/* FAQ Accordion List */}
-          <div className="w-full px-4 sm:px-8 md:px-[60px] py-12 space-y-3">
+          <div className="mx-auto flex w-full max-w-[990px] flex-col gap-4 px-4 py-10 sm:px-8 lg:px-0">
             {faqItems.map((item) => {
               const isOpen = openId === item.id;
               return (
                 <div
                   key={item.id}
-                  className="bg-[#E4F2FE] transition-colors rounded-lg px-6 py-4"
+                  className="flex flex-col items-start gap-[7px] rounded-lg border border-[#E2E8F0] bg-[#D9E4FF] px-5 py-4 sm:px-7"
                 >
                   <button
                     onClick={() => toggleFAQ(item.id)}
-                    className="w-full flex items-center justify-between text-left gap-4 focus:outline-none group"
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between gap-4 text-left focus:outline-none"
                   >
-                    <span className="text-[15px] sm:text-base font-medium text-slate-800 transition-colors">
+                    <span className="font-poppins text-base font-medium leading-7 tracking-[0.1px] text-[#0F172A] sm:text-lg lg:text-xl">
                       {item.question}
                     </span>
-                    <div
-                      className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center transition-all duration-300 ${
+                    <span
+                      className={`flex size-12 shrink-0 items-center justify-center rounded-full shadow-[inset_0_-0.5px_0_0_#B8A4E3,inset_0_0.5px_0_0_rgba(255,255,255,0.12)] transition-colors duration-300 ${
                         isOpen
-                          ? "bg-[#2563EB] text-white shadow-sm"
-                          : "bg-white text-blue-600 shadow-sm"
+                          ? "bg-[#1D4ED8] text-white"
+                          : "bg-white text-[#2563EB]"
                       }`}
                     >
                       {isOpen ? (
-                        <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                        <ChevronDown className="size-4 stroke-2" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                        <ChevronRight className="size-4 stroke-2" />
                       )}
-                    </div>
+                    </span>
                   </button>
 
                   {/* Accordion Content */}
                   {isOpen && (
-                    <div className="mt-3 text-slate-500 text-sm sm:text-[15px] leading-relaxed font-normal whitespace-pre-wrap">
-                      {item.answer}
+                    <div className="flex w-full items-center justify-center rounded-lg bg-white p-5 sm:p-6">
+                      <p className="flex-1 whitespace-pre-wrap font-poppins text-base font-normal leading-7 tracking-[0.09px] text-[#344056] sm:text-lg">
+                        {item.answer}
+                      </p>
                     </div>
                   )}
                 </div>
