@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 const manrope = Manrope({
-  variable: "--font-manrope",
+  variable: "--font-manrope-src",
   subsets: ["latin"],
 });
 
 const inter = Inter({
-  variable: "--font-inter",
+  variable: "--font-inter-src",
   subsets: ["latin"],
 });
 

@@ -2,35 +2,62 @@
 
 import React from "react";
 
+// Each description is split into the same three lines as the Figma design.
+// The breaks are explicit so the card height stays exactly 254px no matter
+// which font the browser substitutes for SF Pro.
 const features = [
   {
     title: "Daily SMS Prompts",
-    desc: "Carefully crafted questions sent to your phone to spark reflection and mindfulness throughout your day.",
+    desc: [
+      "Carefully crafted questions sent to",
+      "your phone to spark reflection and",
+      "mindfulness throughout your day.",
+    ],
     icon: "/images/home/feat-sms.svg",
   },
   {
     title: "Digital Journal",
-    desc: "A beautiful, private space where all your SMS replies are automatically saved and organized by date.",
+    desc: [
+      "A beautiful, private space where all",
+      "your SMS replies are automatically",
+      "saved and organized by date.",
+    ],
     icon: "/images/home/feat-book.svg",
   },
   {
     title: "Monthly Classes",
-    desc: "Live, expert-led sessions focusing on personal growth, habit building, and intentional living.",
+    desc: [
+      "Live, expert-led sessions focusing",
+      "on personal growth, habit building,",
+      "and intentional living.",
+    ],
     icon: "/images/home/feat-calendar.svg",
   },
   {
     title: "Progress Tracking",
-    desc: "Look back at your entries over time to see patterns, growth, and shifts in your perspective.",
+    desc: [
+      "Look back at your entries over time",
+      "to see patterns, growth, and shifts",
+      "in your perspective.",
+    ],
     icon: "/images/home/feat-chart.svg",
   },
   {
     title: "Community Access",
-    desc: "Connect with other members in our moderated forum to share insights and discuss class topics.",
+    desc: [
+      "Connect with other members in our",
+      "moderated forum to share insights",
+      "and discuss class topics.",
+    ],
     icon: "/images/home/feat-users.svg",
   },
   {
     title: "Private & Secure",
-    desc: "Your reflections are yours alone. We use industry-standard encryption to keep your journal safe.",
+    desc: [
+      "Your reflections are yours alone. We",
+      "use industry-standard encryption",
+      "to keep your journal safe.",
+    ],
     icon: "/images/home/feat-lock.svg",
   },
 ];
@@ -55,7 +82,7 @@ export default function WhatMembersGet() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="flex flex-col items-start gap-[14px] rounded-[12px] border border-[#E2E8F0] bg-white p-6"
+              className="flex flex-col items-start gap-[14px] rounded-[12px] border border-[#E2E8F0] bg-white p-6 sm:h-[254px]"
             >
               <div className="flex items-center rounded-lg bg-[#D7EDFF] p-2.5">
                 <span className="relative block size-8 overflow-clip">
@@ -66,8 +93,13 @@ export default function WhatMembersGet() {
                 <h3 className="text-xl font-medium leading-8 tracking-[0.12px] text-[#0F172A] sm:text-2xl">
                   {feature.title}
                 </h3>
-                <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
-                  {feature.desc}
+                <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:h-24 sm:tracking-[-0.4px] min-[1440px]:text-2xl min-[1440px]:tracking-[-0.6px]">
+                  {feature.desc.map((line, lineIndex) => (
+                    <span key={line} className="sm:block">
+                      {line}
+                      {lineIndex < feature.desc.length - 1 ? " " : ""}
+                    </span>
+                  ))}
                 </p>
               </div>
             </div>
