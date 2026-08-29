@@ -19,7 +19,7 @@ export default function Home() {
         <Hero />
         <HowItWorks />
         <Engagement />
-        <Pricing />
+        <Pricing eyebrow="Pricing" sideCtaVariant="outline" />
         <Testimonials />
         <WhatMembersGet />
         <ContactUs />

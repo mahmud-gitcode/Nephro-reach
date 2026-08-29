@@ -8,7 +8,7 @@ export default function ContactUs() {
     <section className="relative w-full overflow-hidden bg-white">
       <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[1440px] -translate-x-1/2">
         <div className="absolute left-[251px] top-[-611px] size-[992px] rounded-full bg-[#55A8F5] opacity-70 blur-[198px]" />
-        <div className="absolute left-[1034px] top-[-536px] size-[992px] rounded-full bg-red-500 opacity-70 blur-[198px]" />
+        <div className="absolute left-[1034px] top-[-536px] size-[992px] rounded-full bg-[#FF0000] opacity-70 blur-[198px]" />
       </div>
 
       <div className="relative mx-auto flex min-h-[320px] w-full max-w-[1440px] items-center px-5 sm:px-10 lg:h-[376px] lg:px-[72px]">

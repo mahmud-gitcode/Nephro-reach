@@ -12,6 +12,7 @@
   --font-mono: var(--font-geist-mono);
   --font-manrope: var(--font-manrope-src), "Manrope", sans-serif;
   --font-inter: var(--font-inter-src), "Inter", sans-serif;
+  --font-poppins: var(--font-poppins-src), "Poppins", sans-serif;
   --font-sf: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
     "Segoe UI", system-ui, sans-serif;
 }

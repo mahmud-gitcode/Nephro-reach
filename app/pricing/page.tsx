@@ -3,17 +3,15 @@
 import React from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import PricingHero from "@/components/PricingHero";
 import Pricing from "@/components/homePage/Pricing";
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-between font-sans">
-      <div>
-        <Header />
-        <PricingHero />
-        <Pricing />
-      </div>
+    <div className="flex min-h-screen flex-col bg-white font-sf text-[#0F172A]">
+      <Header />
+      <main className="flex-grow">
+        <Pricing eyebrow="Pricing" sideCtaVariant="outline" />
+      </main>
       <Footer />
     </div>
   );

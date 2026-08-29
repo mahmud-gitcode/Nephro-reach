@@ -66,11 +66,13 @@ function PlanCard({
   price,
   included,
   popular = false,
+  ctaVariant = "primary",
 }: {
   name: string;
   price: string;
   included: boolean[];
   popular?: boolean;
+  ctaVariant?: "primary" | "outline";
 }) {
   const list: Feature[] = features.map((label, index) => ({
     label,
@@ -112,9 +114,11 @@ function PlanCard({
         <Link
           href="/registration"
           className={[
-            "inline-flex w-full items-center justify-center gap-2 rounded bg-[#2563EB] px-3.5 py-3",
-            "text-base font-bold leading-6 tracking-[0.08px] text-white transition-colors",
-            "shadow-[inset_0px_-1px_0px_0px_#DBE9FE] hover:bg-[#1D4ED8]",
+            "inline-flex w-full items-center justify-center gap-2 rounded px-3.5 py-3",
+            "text-base font-bold leading-6 tracking-[0.08px] transition-colors",
+            ctaVariant === "outline"
+              ? "border border-[#0F172A] bg-[#F1F5FA] text-[#0F172A] hover:bg-[#E2E8F0]"
+              : "bg-[#2563EB] text-white shadow-[inset_0px_-1px_0px_0px_#DBE9FE] hover:bg-[#1D4ED8]",
           ].join(" ")}
         >
           Get Started
@@ -137,20 +141,36 @@ function PlanCard({
   );
 }
 
-export default function Pricing() {
+export default function Pricing({
+  eyebrow,
+  sideCtaVariant = "primary",
+}: {
+  eyebrow?: string;
+  sideCtaVariant?: "primary" | "outline";
+}) {
   return (
     <section
       id="pricing"
-      className="w-full scroll-mt-24 bg-white px-5 py-12 sm:px-10 lg:px-[71px] lg:py-[50px]"
+      className={[
+        "w-full scroll-mt-24 bg-white px-5 sm:px-10 lg:px-[71px]",
+        eyebrow ? "py-16 lg:py-20" : "py-12 lg:py-[50px]",
+      ].join(" ")}
     >
       <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-10">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
-            Membership Options
-          </h2>
-          <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
-            Choose the path that fits your goals. Simple, transparent pricing.
-          </p>
+        <div className="flex flex-col items-center justify-center gap-6">
+          {eyebrow ? (
+            <p className="text-lg font-bold leading-7 tracking-[0.09px] text-[#2563EB]">
+              {eyebrow}
+            </p>
+          ) : null}
+          <div className="flex w-full flex-col items-center gap-3 text-center">
+            <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
+              Membership Options
+            </h2>
+            <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
+              Choose the path that fits your goals. Simple, transparent pricing.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col items-stretch justify-center gap-8 lg:flex-row lg:items-center lg:gap-[30px]">
@@ -180,6 +200,7 @@ export default function Pricing() {
                   name={plan.name}
                   price={plan.price}
                   included={plan.included}
+                  ctaVariant={sideCtaVariant}
                 />
               </div>
             ),

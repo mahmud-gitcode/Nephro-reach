@@ -41,9 +41,10 @@ function LoginForm() {
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute -left-[20%] -top-[30%] size-[70vmin] rounded-full bg-[#55A8F5] opacity-70 blur-[180px] sm:size-[992px] sm:blur-[198px]" />
-        <div className="absolute -right-[25%] -top-[20%] size-[70vmin] rounded-full bg-[#FF4D4D] opacity-70 blur-[180px] sm:size-[992px] sm:blur-[198px]" />
-        <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-white via-white/90 to-transparent" />
+        <div className="absolute left-1/2 top-0 h-full w-[1440px] -translate-x-1/2">
+          <div className="absolute left-[510px] top-[-217px] size-[992px] rounded-full bg-[#55A8F5] opacity-70 blur-[198px]" />
+          <div className="absolute left-[1293px] top-[-142px] size-[992px] rounded-full bg-[#FF0000] opacity-70 blur-[198px]" />
+        </div>
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1440px] items-center px-5 py-8 lg:px-8">

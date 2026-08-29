@@ -62,6 +62,14 @@ const languages: LanguageOption[] = [
   { code: "ES", label: "Spanish", FlagComponent: SpainFlag },
 ];
 
+const navLinkClass = (active: boolean) =>
+  [
+    "text-[15.5px] leading-[20.93px] tracking-[0.155px] transition-colors",
+    active
+      ? "font-inter font-bold text-[#1D4ED8] underline decoration-solid [text-decoration-skip-ink:none] [text-underline-position:from-font]"
+      : "font-medium text-[#25221E] hover:text-[#2563EB]",
+  ].join(" ");
+
 export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -163,40 +171,32 @@ export default function Header() {
 
         {/* Right Grouped Nav Links and Action Buttons */}
         <div className="hidden md:flex items-center gap-8">
-          <nav className="flex items-center gap-8 text-sm font-semibold">
+          <nav className="flex items-center gap-8">
             <Link
               href="/"
-              className={`transition-colors ${isLinkActive("/") && !pathname.includes("#")
-                ? "text-blue-600 font-bold"
-                : "text-slate-700 hover:text-blue-600"
-                }`}
+              aria-current={isLinkActive("/") ? "page" : undefined}
+              className={navLinkClass(isLinkActive("/"))}
             >
               {t("header.home")}
             </Link>
             <Link
               href="/faq"
-              className={`transition-colors ${isLinkActive("/faq")
-                ? "text-blue-600 font-bold"
-                : "text-slate-700 hover:text-blue-600"
-                }`}
+              aria-current={isLinkActive("/faq") ? "page" : undefined}
+              className={navLinkClass(isLinkActive("/faq"))}
             >
               {t("header.faq")}
             </Link>
             <Link
               href="/about-us"
-              className={`transition-colors ${isLinkActive("/about-us")
-                ? "text-blue-600 font-bold"
-                : "text-slate-700 hover:text-blue-600"
-                }`}
+              aria-current={isLinkActive("/about-us") ? "page" : undefined}
+              className={navLinkClass(isLinkActive("/about-us"))}
             >
               {t("header.aboutUs")}
             </Link>
             <Link
               href="/pricing"
-              className={`transition-colors ${isLinkActive("/pricing")
-                ? "text-blue-600 font-bold"
-                : "text-slate-700 hover:text-blue-600"
-                }`}
+              aria-current={isLinkActive("/pricing") ? "page" : undefined}
+              className={navLinkClass(isLinkActive("/pricing"))}
             >
               {t("header.pricing")}
             </Link>
@@ -223,8 +223,8 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className={`px-3.5 py-2 text-[15.5px] font-medium transition-colors ${isLinkActive("/login") ? "text-blue-600 font-bold" : "text-[#25221E] hover:text-blue-600"
-                    }`}
+                  aria-current={isLinkActive("/login") ? "page" : undefined}
+                  className={`px-3.5 py-2 ${navLinkClass(isLinkActive("/login"))}`}
                 >
                   {t("header.login")}
                 </Link>
@@ -255,28 +255,32 @@ export default function Header() {
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-slate-700 hover:text-blue-600"
+            aria-current={isLinkActive("/") ? "page" : undefined}
+            className={`block py-2 ${navLinkClass(isLinkActive("/"))}`}
           >
             {t("header.home")}
           </Link>
           <Link
             href="/faq"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-slate-700 hover:text-blue-600"
+            aria-current={isLinkActive("/faq") ? "page" : undefined}
+            className={`block py-2 ${navLinkClass(isLinkActive("/faq"))}`}
           >
             {t("header.faq")}
           </Link>
           <Link
             href="/about-us"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-slate-700 hover:text-blue-600"
+            aria-current={isLinkActive("/about-us") ? "page" : undefined}
+            className={`block py-2 ${navLinkClass(isLinkActive("/about-us"))}`}
           >
             {t("header.aboutUs")}
           </Link>
           <Link
             href="/pricing"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-slate-700 hover:text-blue-600"
+            aria-current={isLinkActive("/pricing") ? "page" : undefined}
+            className={`block py-2 ${navLinkClass(isLinkActive("/pricing"))}`}
           >
             {t("header.pricing")}
           </Link>
@@ -327,7 +331,8 @@ export default function Header() {
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 font-semibold text-slate-700 hover:text-blue-600"
+                  aria-current={isLinkActive("/login") ? "page" : undefined}
+                  className={`py-2.5 text-center ${navLinkClass(isLinkActive("/login"))}`}
                 >
                   {t("header.login")}
                 </Link>
