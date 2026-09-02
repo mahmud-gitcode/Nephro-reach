@@ -166,10 +166,10 @@ export default function Engagement() {
                 <div className="absolute left-[26px] top-[82px] flex shrink-0 flex-col gap-2">
                   {steps.map((step, index) => (
                     <button
-                      key={step.label}
+                      key={step.title}
                       type="button"
                       onClick={() => goToStep(index)}
-                      aria-label={`Go to step ${index + 1}: ${step.label}`}
+                      aria-label={`Go to step ${index + 1}: ${step.title}`}
                       aria-current={index === activeStep}
                       className="group flex h-8 w-4 items-center justify-center"
                     >
@@ -189,7 +189,7 @@ export default function Engagement() {
               <div className="relative w-full lg:w-[500px]">
                 {steps.map((step, index) => (
                   <div
-                    key={step.label}
+                    key={step.title}
                     aria-hidden={isPinned && index !== activeStep}
                     className={[
                       "flex w-full flex-col gap-4",
@@ -201,12 +201,6 @@ export default function Engagement() {
                         : "relative translate-y-0 opacity-100",
                     ].join(" ")}
                   >
-                    <p
-                      className="text-lg font-bold leading-7 tracking-[0.09px]"
-                      style={{ color: step.labelColor }}
-                    >
-                      {step.label}
-                    </p>
                     <div className="flex flex-col gap-6">
                       <h3 className="text-[32px] font-normal leading-none tracking-[0.24px] text-[#0F172A] sm:text-[40px] xl:text-[48px]">
                         {step.title}

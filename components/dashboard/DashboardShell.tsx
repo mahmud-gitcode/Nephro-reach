@@ -24,6 +24,7 @@ import {
   MessagesSquare,
   Search,
   Settings,
+  Trash2,
   Users,
   Video,
   X,
@@ -76,10 +77,12 @@ const sidebarItems: NavItem[] = [
 const supportItems: NavItem[] = [
   { label: "Support", href: "/dashboard/support", icon: HelpCircle, roles: ["user"] },
   { label: "Setting", href: "/dashboard/settings", icon: Settings, roles: ["user"] },
+  { label: "Trash", href: "/dashboard/trash", icon: Trash2, roles: ["user"] },
 ];
 
 function getBreadcrumb(pathname: string) {
   if (pathname === "/dashboard") return "Breadcrumb";
+  if (pathname.startsWith("/dashboard/trash")) return "Trash";
   if (pathname.startsWith("/dashboard/before-the-er")) return "Before-the-ER";
   if (pathname.startsWith("/dashboard/my-health")) return "MyHealth";
   if (pathname.startsWith("/dashboard/personal-log/blood-results/add"))
