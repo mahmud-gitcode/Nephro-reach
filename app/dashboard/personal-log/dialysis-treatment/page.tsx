@@ -1,229 +1,282 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import {
   Calendar,
   CalendarX,
-  ClipboardCheck,
+  CheckCircle2,
   Clock,
   Info,
+  Plus,
   Timer,
 } from "lucide-react";
+import AddDialysisEntryModal from "@/components/dashboard/AddDialysisEntryModal";
 
 const summaryCards = [
   {
     label: "Treatment attended",
     value: "90%",
-    icon: ClipboardCheck,
-    iconClass: "text-emerald-600",
-    iconBg: "bg-[#D7FFE4]",
+    icon: CheckCircle2,
+    iconColor: "text-emerald-600",
+    bgColor: "bg-emerald-50 border-emerald-100",
   },
   {
     label: "Arrived late",
     value: "2",
     icon: Clock,
-    iconClass: "text-amber-600",
-    iconBg: "bg-[#FEF3C7]",
+    iconColor: "text-amber-600",
+    bgColor: "bg-amber-50 border-amber-100",
   },
   {
     label: "Ended early",
     value: "4",
     icon: Timer,
-    iconClass: "text-red-500",
-    iconBg: "bg-[#FEE2E2]",
+    iconColor: "text-red-500",
+    bgColor: "bg-red-50 border-red-100",
   },
   {
     label: "Missed treatments",
     value: "2",
     icon: CalendarX,
-    iconClass: "text-red-500",
-    iconBg: "bg-[#FEE2E2]",
+    iconColor: "text-rose-500",
+    bgColor: "bg-rose-50 border-rose-100",
   },
 ];
 
-const attendanceMonths = [
-  { month: "Jan", attended: 40, missed: 16 },
-  { month: "Feb", attended: 50, missed: 38 },
-  { month: "Mar", attended: 36, missed: 58 },
-  { month: "Apr", attended: 53, missed: 39 },
-  { month: "May", attended: 79, missed: 41 },
-  { month: "Jun", attended: 90, missed: 66 },
-  { month: "Jul", attended: 64, missed: 49 },
-  { month: "Aug", attended: 98, missed: 74 },
-  { month: "Sep", attended: 100, missed: 74 },
+const recoveryPoints = [
+  { month: "Mar", good: 10, okay: 20, bad: 40 },
+  { month: "Apr", good: 68, okay: 55, bad: 27 },
+  { month: "May", good: 30, okay: 33, bad: 12 },
+  { month: "Jun", good: 60, okay: 20, bad: 70 },
 ];
 
 const symptomSlices = [
-  { label: "Cramping", count: 29, percent: 50, color: "#3B82F6" },
+  { label: "Cramping", count: 29, percent: 50, color: "#2563EB" },
   { label: "Low BP", count: 16, percent: 28, color: "#F59E0B" },
   { label: "Fatigue", count: 13, percent: 22, color: "#EF4444" },
-];
-
-const recoveryPoints = [
-  { month: "Mar", good: 40, okay: 10, bad: 20 },
-  { month: "Apr", good: 27, okay: 67, bad: 55 },
-  { month: "May", good: 12, okay: 30, bad: 33 },
-  { month: "Jun", good: 70, okay: 60, bad: 20 },
-];
-
-const treatmentHours = [
-  { month: "Jan", hours: 40 },
-  { month: "Feb", hours: 50 },
-  { month: "Mar", hours: 36 },
-  { month: "Apr", hours: 53 },
-  { month: "May", hours: 79 },
-  { month: "Jun", hours: 90 },
-  { month: "Jul", hours: 64 },
-  { month: "Aug", hours: 98 },
-  { month: "Sep", hours: 100 },
 ];
 
 function SummaryCards() {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {summaryCards.map((card) => (
-        <article
+        <div
           key={card.label}
-          className="flex items-start gap-5 rounded-[14px] border border-slate-200 bg-slate-50 p-4"
+          className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs"
         >
-          <span
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] ${card.iconBg}`}
+          <div
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor}`}
           >
-            <card.icon className={`h-6 w-6 ${card.iconClass}`} />
-          </span>
+            <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+          </div>
           <div>
-            <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#1A130D]">
-              {card.label}
-            </p>
-            <p className="mt-2 text-[32px] font-medium leading-none text-[#1A130D]">
+            <p className="text-sm font-semibold text-slate-600">{card.label}</p>
+            <p className="mt-0.5 text-3xl font-bold text-slate-900 tracking-tight">
               {card.value}
             </p>
           </div>
-        </article>
+        </div>
       ))}
     </section>
   );
 }
 
-function AttendanceRateChart() {
-  const maxHeight = 180;
+function RecoveryPatternChart() {
+  const width = 540;
+  const height = 210;
+  const paddingLeft = 35;
+  const paddingRight = 20;
+  const paddingTop = 15;
+  const paddingBottom = 30;
+
+  const chartW = width - paddingLeft - paddingRight;
+  const chartH = height - paddingTop - paddingBottom;
+
+  const getX = (index: number) =>
+    paddingLeft + (index / (recoveryPoints.length - 1)) * chartW;
+  const getY = (val: number) =>
+    paddingTop + chartH - (val / 100) * chartH;
+
+  const getCurvePath = (key: "good" | "okay" | "bad") => {
+    const coords = recoveryPoints.map((pt, idx) => ({
+      x: getX(idx),
+      y: getY(pt[key]),
+    }));
+
+    let path = `M ${coords[0].x} ${coords[0].y}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const curr = coords[i];
+      const next = coords[i + 1];
+      const cp1x = curr.x + (next.x - curr.x) / 2;
+      const cp1y = curr.y;
+      const cp2x = curr.x + (next.x - curr.x) / 2;
+      const cp2y = next.y;
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`;
+    }
+    return path;
+  };
 
   return (
-    <section className="flex h-full flex-col rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_1.57px_0.79px_rgba(0,0,0,0.05)]">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <Calendar className="h-6 w-6 text-blue-600" />
-        <h2 className="flex-1 text-lg font-medium leading-7 text-[#1A130D]">
-          Attendance Rate
+    <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-slate-900">
+          Recovery Pattern Tracking
         </h2>
-        <div className="flex items-center gap-4 text-sm font-medium text-[#454F5B]">
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#00A76F]" />
-            Attended
+        <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-full bg-[#2563EB]" />
+            Good
           </span>
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#EF4444]" />
-            Missed
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-full bg-[#F59E0B]" />
+            Okay
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-full bg-[#EF4444]" />
+            Bad
           </span>
         </div>
       </div>
 
-      <div className="mt-4 flex min-h-[230px] flex-1 gap-3">
-        <div className="flex flex-col justify-between pb-6 text-right text-sm text-[#454F5B]">
-          {["100%", "80%", "60%", "40%", "20%", "0"].map((label) => (
-            <span key={label}>{label}</span>
-          ))}
-        </div>
-        <div className="relative min-w-0 flex-1">
-          <div className="absolute inset-x-0 bottom-6 top-0 flex flex-col justify-between">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="border-t border-dashed border-slate-200" />
-            ))}
-          </div>
-          <div className="absolute inset-x-0 bottom-6 top-2 flex items-end justify-between px-1">
-            {attendanceMonths.map((item) => (
-              <div key={item.month} className="flex items-end gap-0.5">
-                <div
-                  className="w-4 rounded-t bg-[#00A76F]"
-                  style={{ height: `${(item.attended / 100) * maxHeight}px` }}
+      <div className="relative w-full overflow-x-auto">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto min-w-[420px]">
+          {[100, 80, 60, 40, 20, 0].map((tick) => {
+            const y = getY(tick);
+            return (
+              <g key={tick}>
+                <text
+                  x={paddingLeft - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  className="fill-slate-400 text-[11px] font-medium"
+                >
+                  {tick}
+                </text>
+                <line
+                  x1={paddingLeft}
+                  x2={width - paddingRight}
+                  y1={y}
+                  y2={y}
+                  stroke="#E2E8F0"
+                  strokeDasharray="3 3"
+                  strokeWidth="1"
                 />
-                <div
-                  className="w-4 rounded-t bg-[#EF4444]"
-                  style={{ height: `${(item.missed / 100) * maxHeight}px` }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 flex justify-between px-1 text-center text-sm text-[#1A130D]">
-            {attendanceMonths.map((item) => (
-              <span key={item.month} className="w-8">
-                {item.month}
-              </span>
-            ))}
-          </div>
-        </div>
+              </g>
+            );
+          })}
+
+          <path
+            d={getCurvePath("good")}
+            fill="none"
+            stroke="#2563EB"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <path
+            d={getCurvePath("okay")}
+            fill="none"
+            stroke="#F59E0B"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+          <path
+            d={getCurvePath("bad")}
+            fill="none"
+            stroke="#EF4444"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+
+          {recoveryPoints.map((pt, idx) => {
+            const cx = getX(idx);
+            return (
+              <g key={pt.month}>
+                <circle cx={cx} cy={getY(pt.good)} r="4" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
+                <circle cx={cx} cy={getY(pt.okay)} r="4" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
+                <circle cx={cx} cy={getY(pt.bad)} r="4" fill="#EF4444" stroke="#FFFFFF" strokeWidth="2" />
+
+                <text
+                  x={cx}
+                  y={height - 5}
+                  textAnchor="middle"
+                  className="fill-slate-500 text-[11px] font-medium"
+                >
+                  {pt.month}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </section>
   );
 }
 
 function SymptomsDonut() {
-  const radius = 78;
+  const size = 210;
+  const strokeWidth = 26;
+  const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+
+  let accumulatedOffset = 0;
 
   return (
-    <section className="flex h-full flex-col items-center rounded-xl border border-[#E3E6F0] bg-white p-4">
-      <h2 className="w-full text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+    <section className="flex flex-col justify-between rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
+      <h2 className="text-base font-bold text-slate-900">
         Symptoms During Treatment
       </h2>
-      <div className="relative my-3 size-[226px]">
-        <svg viewBox="0 0 226 226" className="size-full -rotate-90">
-          <circle
-            cx="113"
-            cy="113"
-            r={radius}
-            fill="none"
-            stroke="#E2E8F0"
-            strokeWidth="28"
-          />
-          {symptomSlices.map((slice) => {
-            const dash = (slice.percent / 100) * circumference;
-            const circle = (
-              <circle
-                key={slice.label}
-                cx="113"
-                cy="113"
-                r={radius}
-                fill="none"
-                stroke={slice.color}
-                strokeWidth="28"
-                strokeDasharray={`${dash} ${circumference - dash}`}
-                strokeDashoffset={-offset}
-                strokeLinecap="butt"
-              />
-            );
-            offset += dash;
-            return circle;
-          })}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <p className="text-[22px] font-medium leading-9 tracking-[0.11px] text-slate-950">
-            86%
-          </p>
-          <p className="text-[15px] leading-5 text-[#454F5B]">Overall</p>
+
+      <div className="relative flex justify-center items-center py-2">
+        <div className="relative" style={{ width: size, height: size }}>
+          <svg width={size} height={size} className="-rotate-90">
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="#F1F5F9"
+              strokeWidth={strokeWidth}
+            />
+            {symptomSlices.map((slice) => {
+              const strokeDasharray = `${(slice.percent / 100) * circumference} ${circumference}`;
+              const strokeDashoffset = -accumulatedOffset;
+              accumulatedOffset += (slice.percent / 100) * circumference;
+
+              return (
+                <circle
+                  key={slice.label}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  stroke={slice.color}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="butt"
+                />
+              );
+            })}
+          </svg>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-3xl font-bold text-slate-900">86%</span>
+            <span className="text-xs font-medium text-slate-500 mt-0.5">Overall</span>
+          </div>
         </div>
       </div>
-      <div className="mt-auto grid w-full grid-cols-3 gap-3.5">
+
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
         {symptomSlices.map((slice) => (
-          <div key={slice.label} className="text-center">
-            <div className="flex items-center justify-center gap-2">
+          <div key={slice.label} className="space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700">
               <span
-                className="h-4 w-4 shrink-0 rounded-full"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: slice.color }}
               />
-              <span className="text-base font-medium leading-6 tracking-[0.08px] text-[#454F5B]">
-                {slice.label}
-              </span>
+              <span>{slice.label}</span>
             </div>
-            <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-[#454F5B]">
+            <p className="text-xs font-bold text-slate-900">
               {slice.count} ({slice.percent}%)
             </p>
           </div>
@@ -233,184 +286,57 @@ function SymptomsDonut() {
   );
 }
 
-function RecoveryPatternChart() {
-  const width = 508;
-  const height = 245;
-  const left = 36;
-  const right = 16;
-  const top = 8;
-  const bottom = 8;
-  const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
-  const xFor = (index: number) =>
-    left + (index / (recoveryPoints.length - 1)) * plotWidth;
-  const yFor = (value: number) => top + ((100 - value) / 100) * plotHeight;
-  const pathFor = (key: "good" | "okay" | "bad") =>
-    recoveryPoints
-      .map((point, index) => `${xFor(index)},${yFor(point[key])}`)
-      .join(" ");
-
-  return (
-    <section className="flex h-full flex-col rounded-xl border border-[#DFE3E8] bg-[#FCFDFD] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
-          Recovery Pattern Tracking
-        </h2>
-        <div className="flex items-center gap-3 text-base font-medium text-[#454F5B]">
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#3B82F6]" />
-            Good
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#F59E0B]" />
-            Okay
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#EF4444]" />
-            Bad
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-3 min-h-0 flex-1">
-        <svg viewBox={`0 0 ${width} ${height + 22}`} className="h-full w-full">
-          {[0, 20, 40, 60, 80, 100].reverse().map((tick, index) => {
-            const y = top + (index / 5) * plotHeight;
-            return (
-              <g key={tick}>
-                <text
-                  x={28}
-                  y={y + 4}
-                  textAnchor="end"
-                  className="fill-black/70 text-[12px]"
-                >
-                  {tick}
-                </text>
-                <line
-                  x1={left}
-                  x2={width - right}
-                  y1={y}
-                  y2={y}
-                  stroke="#E2E8F0"
-                  strokeDasharray="4 4"
-                />
-              </g>
-            );
-          })}
-          <polyline
-            fill="none"
-            stroke="#EF4444"
-            strokeWidth="2.5"
-            points={pathFor("bad")}
-          />
-          <polyline
-            fill="none"
-            stroke="#F59E0B"
-            strokeWidth="2.5"
-            points={pathFor("okay")}
-          />
-          <polyline
-            fill="none"
-            stroke="#3B82F6"
-            strokeWidth="2.5"
-            points={pathFor("good")}
-          />
-          {recoveryPoints.map((point, index) => (
-            <g key={point.month}>
-              <circle cx={xFor(index)} cy={yFor(point.bad)} r="4" fill="#EF4444" />
-              <circle cx={xFor(index)} cy={yFor(point.okay)} r="4" fill="#F59E0B" />
-              <circle cx={xFor(index)} cy={yFor(point.good)} r="4" fill="#3B82F6" />
-              <text
-                x={xFor(index)}
-                y={height + 18}
-                textAnchor="middle"
-                className="fill-black/70 text-[12px]"
-              >
-                {point.month}
-              </text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    </section>
-  );
-}
-
-function TreatmentTimeChart() {
-  const maxHours = 100;
-
-  return (
-    <section className="flex h-full flex-col rounded-xl border border-[#DFE3E8] bg-[#FCFDFD] p-4">
-      <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
-        Dialysis Treatment Time
-      </h2>
-      <p className="mt-2 text-right text-xs text-slate-600">Hours</p>
-      <div className="mt-1 flex min-h-[220px] flex-1 gap-3">
-        <div className="flex flex-col justify-between pb-6 text-right text-sm font-medium text-slate-600">
-          {["100", "80", "60", "40", "20", "0"].map((label) => (
-            <span key={label} className="w-6">
-              {label}
-            </span>
-          ))}
-        </div>
-        <div className="relative min-w-0 flex-1">
-          <div className="absolute inset-x-0 bottom-6 top-0 flex flex-col justify-between">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="border-t border-dashed border-slate-200" />
-            ))}
-          </div>
-          <div className="absolute inset-x-0 bottom-6 top-1 flex items-end justify-between px-2">
-            {treatmentHours.map((item) => (
-              <div
-                key={item.month}
-                className="w-6 rounded-t bg-[#00A76F]"
-                style={{ height: `${(item.hours / maxHours) * 187}px` }}
-              />
-            ))}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 flex justify-between px-2 text-center text-sm text-[#1A130D]">
-            {treatmentHours.map((item) => (
-              <span key={item.month} className="w-8">
-                {item.month}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function DialysisTreatmentPage() {
+  const [selectedMonth, setSelectedMonth] = useState("Jun");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
   return (
-    <div className="space-y-[21px]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <aside className="flex items-start gap-2 rounded-xl border border-[#FEF9C3] bg-[#FFEA98] p-[13px]">
-          <Info className="mt-0.5 h-6 w-6 shrink-0 text-[#9C6200]" />
-          <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#9C6200]">
-            Completing prescribed treatments is important for dialysis adequacy
-          </p>
-        </aside>
-        <button
-          type="button"
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 shadow-[0_1px_1.5px_rgba(0,0,0,0.1)] transition-colors hover:bg-white"
-        >
-          <Calendar className="h-6 w-6" />
-          Jun
-        </button>
+    <div className="w-full space-y-6">
+      {/* TOP EDUCATIONAL BANNER, MONTH PICKER & ADD ENTRY BUTTON */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2.5 rounded-2xl border border-amber-200/80 bg-[#FFFBEB] px-4 py-3 text-xs sm:text-sm font-semibold text-[#92400E] shadow-2xs flex-1">
+          <Info className="h-5 w-5 shrink-0 text-[#B45309]" />
+          <span>Completing prescribed treatments is important for dialysis adequacy</span>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <Calendar className="h-4 w-4 text-slate-600" />
+            <span>{selectedMonth}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Entry</span>
+          </button>
+        </div>
       </div>
 
+      {/* TOP 4 SUMMARY CARDS */}
       <SummaryCards />
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(280px,352px)]">
-        <AttendanceRateChart />
-        <SymptomsDonut />
+      {/* MAIN CHARTS SECTION: RECOVERY PATTERN & SYMPTOMS DONUT */}
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+        <div className="xl:col-span-8">
+          <RecoveryPatternChart />
+        </div>
+        <div className="xl:col-span-4">
+          <SymptomsDonut />
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <RecoveryPatternChart />
-        <TreatmentTimeChart />
-      </section>
+      {/* ADD DIALYSIS ENTRY MODAL */}
+      <AddDialysisEntryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </div>
   );
 }
