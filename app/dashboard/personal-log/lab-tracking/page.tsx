@@ -12,6 +12,7 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Download,
   Droplets,
@@ -24,6 +25,21 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+
+import { GiKidneys } from "react-icons/gi";
+import {
+  FaFlask,
+  FaBone,
+  FaDroplet,
+  FaAppleWhole,
+  FaHeartPulse,
+  FaLayerGroup,
+  FaCalendarDays,
+  FaCircleCheck,
+  FaTriangleExclamation,
+  FaArrowTrendUp,
+  FaArrowTrendDown,
+} from "react-icons/fa6";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -50,7 +66,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "kidney-function",
     name: "KIDNEY FUNCTION",
-    icon: Activity,
+    icon: GiKidneys,
     tests: [
       {
         name: "BUN",
@@ -90,7 +106,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "electrolytes",
     name: "ELECTROLYTES",
-    icon: Droplets,
+    icon: FaFlask,
     tests: [
       {
         name: "Sodium",
@@ -141,7 +157,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "mineral-bone",
     name: "MINERAL & BONE",
-    icon: Bone,
+    icon: FaBone,
     tests: [
       {
         name: "Calcium",
@@ -192,7 +208,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "blood-counts",
     name: "BLOOD COUNTS",
-    icon: Droplets,
+    icon: FaDroplet,
     tests: [
       {
         name: "Hemoglobin",
@@ -243,7 +259,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "nutrition",
     name: "NUTRITION",
-    icon: Apple,
+    icon: FaAppleWhole,
     tests: [
       {
         name: "Albumin",
@@ -272,7 +288,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "dialysis-adequacy",
     name: "DIALYSIS ADEQUACY",
-    icon: Heart,
+    icon: FaHeartPulse,
     tests: [
       {
         name: "Kt/V",
@@ -345,18 +361,177 @@ function StatusBadge({ status }: { status: "In Range" | "High" | "Low" }) {
   );
 }
 
+function TrendLineCard({
+  testName,
+  unit,
+  data,
+  dates,
+  colorTheme = "purple",
+}: {
+  testName: string;
+  unit: string;
+  data: number[];
+  dates: string[];
+  colorTheme?: "purple" | "green" | "orange" | "blue" | "rose" | "teal";
+}) {
+  const themeMap = {
+    purple: { stroke: "#8B5CF6" },
+    green: { stroke: "#10B981" },
+    orange: { stroke: "#F59E0B" },
+    blue: { stroke: "#3B82F6" },
+    rose: { stroke: "#F43F5E" },
+    teal: { stroke: "#14B8A6" },
+  };
+
+  const theme = themeMap[colorTheme] || themeMap.purple;
+
+  const width = 300;
+  const height = 150;
+  const paddingLeft = 24;
+  const paddingRight = 12;
+  const paddingTop = 14;
+  const paddingBottom = 22;
+
+  const chartW = width - paddingLeft - paddingRight;
+  const chartH = height - paddingTop - paddingBottom;
+
+  const maxValRaw = Math.max(...data);
+
+  let yMax = 8;
+  if (maxValRaw > 8 && maxValRaw <= 15) yMax = 15;
+  else if (maxValRaw > 15 && maxValRaw <= 50) yMax = 50;
+  else if (maxValRaw > 50 && maxValRaw <= 200) yMax = 200;
+  else if (maxValRaw > 200) yMax = Math.ceil(maxValRaw * 1.1);
+
+  const yTicks = [yMax, Math.round(yMax * 0.75), Math.round(yMax * 0.5), Math.round(yMax * 0.25), 0];
+
+  const points = data.map((val, idx) => {
+    const x = paddingLeft + (idx / (data.length - 1)) * chartW;
+    const y = paddingTop + chartH - (val / yMax) * chartH;
+    return { x, y, val, date: dates[idx] };
+  });
+
+  let pathD = `M ${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const cx = (p0.x + p1.x) / 2;
+    pathD += ` C ${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`;
+  }
+  const lastP = points[points.length - 1];
+  const firstP = points[0];
+  const areaD = `${pathD} L ${lastP.x},${paddingTop + chartH} L ${firstP.x},${paddingTop + chartH} Z`;
+
+  const gradId = `grad-${testName.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+      {/* Title Header */}
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-bold text-slate-900">
+          {testName} <span className="text-xs font-normal text-slate-400">({unit})</span>
+        </h4>
+      </div>
+
+      {/* SVG Chart Container */}
+      <div className="w-full">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={theme.stroke} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={theme.stroke} stopOpacity="0.01" />
+            </linearGradient>
+          </defs>
+
+          {/* Y Axis Grid Lines & Ticks */}
+          {yTicks.map((tick, idx) => {
+            const tickY = paddingTop + chartH - (tick / yMax) * chartH;
+            return (
+              <g key={idx}>
+                <line
+                  x1={paddingLeft}
+                  y1={tickY}
+                  x2={width - paddingRight}
+                  y2={tickY}
+                  stroke="#E2E8F0"
+                  strokeDasharray="3 3"
+                  strokeWidth="0.75"
+                />
+                <text
+                  x={paddingLeft - 4}
+                  y={tickY + 2.5}
+                  textAnchor="end"
+                  className="fill-slate-400 text-xs font-medium"
+                >
+                  {tick}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Gradient Area Fill */}
+          <path d={areaD} fill={`url(#${gradId})`} />
+
+          {/* Smooth Line Curve */}
+          <path d={pathD} fill="none" stroke={theme.stroke} strokeWidth="1.5" strokeLinecap="round" />
+
+          {/* Data Points Circles */}
+          {points.map((p, idx) => (
+            <circle
+              key={idx}
+              cx={p.x}
+              cy={p.y}
+              r="2.2"
+              fill="#FFFFFF"
+              stroke={theme.stroke}
+              strokeWidth="1.2"
+            >
+              <title>{`${p.date}: ${p.val} ${unit}`}</title>
+            </circle>
+          ))}
+
+          {/* X Axis Start & End Dates */}
+          <text
+            x={paddingLeft}
+            y={height - 3}
+            textAnchor="start"
+            className="fill-slate-400 text-xs font-medium"
+          >
+            {dates[0]}
+          </text>
+          <text
+            x={width - paddingRight}
+            y={height - 3}
+            textAnchor="end"
+            className="fill-slate-400 text-xs font-medium"
+          >
+            {dates[dates.length - 1]}
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+
+
 const pastDrawDates = [
-  { id: "2024-04-30", label: "Apr 30, 2024 (Prev Draw)" },
-  { id: "2024-03-15", label: "Mar 15, 2024 (2 Mo Ago)" },
-  { id: "2024-02-01", label: "Feb 01, 2024 (3 Mo Ago)" },
-  { id: "2024-01-10", label: "Jan 10, 2024 (4 Mo Ago)" },
+  { id: "2024-04-30", label: "Apr 30, 2024", type: "draw" },
+  { id: "2024-03-15", label: "Mar 15, 2024", type: "draw" },
+  { id: "2024-02-01", label: "Feb 01, 2024", type: "draw" },
+  { id: "2024-01-10", label: "Jan 10, 2024", type: "draw" },
+  { id: "last-7-days", label: "Last 7 Days (1 Week)", type: "preset" },
+  { id: "last-30-days", label: "Last 30 Days (1 Month)", type: "preset" },
+  { id: "last-90-days", label: "Last 90 Days (3 Months)", type: "preset" },
+  { id: "last-6-months", label: "Last 6 Months", type: "preset" },
+  { id: "last-1-year", label: "Last 1 Year", type: "preset" },
 ];
 
 export default function MyLabsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "trends" | "history">("overview");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [compareDateId, setCompareDateId] = useState<string>("2024-04-30");
-  const [customData, setCustomData] = useState<{ date?: string; values?: { [key: string]: string } } | null>(null);
+  const [customData, setCustomData] = useState<{ date?: string; values?: { [key: string]: string }; notes?: string } | null>(null);
   const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(0);
 
   React.useEffect(() => {
@@ -370,8 +545,15 @@ export default function MyLabsPage() {
     }
   }, []);
 
-  const selectedPastDateLabel =
-    pastDrawDates.find((d) => d.id === compareDateId)?.label.split(" (")[0] || "Apr 30, 2024";
+  const selectedPastDateLabel = (() => {
+    if (compareDateId === "last-7-days") return "Last 7 Days";
+    if (compareDateId === "last-30-days") return "Last 30 Days";
+    if (compareDateId === "last-90-days") return "Last 90 Days";
+    if (compareDateId === "last-6-months") return "Last 6 Months";
+    if (compareDateId === "last-1-year") return "Last 1 Year";
+    const found = pastDrawDates.find((d) => d.id === compareDateId);
+    return found ? found.label : "Apr 30, 2024";
+  })();
 
   const latestDrawDate = customData?.date
     ? new Date(customData.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -402,195 +584,192 @@ export default function MyLabsPage() {
   return (
     <div className="w-full space-y-6">
       {/* 1. Top KPI Summary Cards */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Card 1: Latest Lab Date */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <Calendar className="h-5 w-5" />
+            <FaCalendarDays className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500">Latest Lab Date</p>
-            <p className="text-sm font-bold text-slate-900 truncate">{latestDrawDate}</p>
-          </div>
-        </article>
-
-        {/* Card 2: Lab Tests Tracked */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <TestTubes className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500">Tests Tracked</p>
-            <p className="text-xl font-bold text-slate-900">25</p>
+            <p className="text-sm font-semibold text-slate-600">Latest Lab Date</p>
+            <p className="text-xl font-bold text-slate-900 truncate">{latestDrawDate}</p>
           </div>
         </article>
 
         {/* Card 3: Values In Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-            <CheckCircle2 className="h-5 w-5" />
+            <FaCircleCheck className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-xs font-semibold text-slate-500">In Range</p>
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">64%</span>
+              <p className="text-sm font-semibold text-slate-600">In Range</p>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">64%</span>
             </div>
             <p className="text-xl font-bold text-slate-900">16 / 25</p>
           </div>
         </article>
 
         {/* Card 4: Values Out of Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-            <AlertTriangle className="h-5 w-5" />
+            <FaTriangleExclamation className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-xs font-semibold text-slate-500">Out of Range</p>
-              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">24%</span>
+              <p className="text-sm font-semibold text-slate-600">Out of Range</p>
+              <span className="text-xs font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">24%</span>
             </div>
             <p className="text-xl font-bold text-slate-900">6 / 25</p>
           </div>
         </article>
 
         {/* Card 5: Trending Up */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-            <TrendingUp className="h-5 w-5" />
+            <FaArrowTrendUp className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500">Trending Up</p>
+            <p className="text-sm font-semibold text-slate-600">Trending Up</p>
             <p className="text-xl font-bold text-slate-900">7</p>
           </div>
         </article>
 
         {/* Card 6: Trending Down */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5 shadow-sm">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-white p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
-            <TrendingDown className="h-5 w-5" />
+            <FaArrowTrendDown className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500">Trending Down</p>
+            <p className="text-sm font-semibold text-slate-600">Trending Down</p>
             <p className="text-xl font-bold text-slate-900">5</p>
           </div>
         </article>
       </section>
 
-      {/* 2. Navigation Tabs */}
-      <div className="border-b border-slate-200">
-        <nav className="flex gap-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab("overview")}
-            className={`pb-3 text-base font-semibold transition-colors border-b-2 ${activeTab === "overview"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
-          >
-            Lab Overview
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("trends")}
-            className={`pb-3 text-base font-semibold transition-colors border-b-2 ${activeTab === "trends"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
-          >
-            Trends
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("history")}
-            className={`pb-3 text-base font-semibold transition-colors border-b-2 ${activeTab === "history"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
-          >
-            History
-          </button>
-        </nav>
-      </div>
-
       {/* 3. Main Grid Layout (Left Content + Right Sidebar) */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
         {/* Left Column (Table Area) */}
         <div className="xl:col-span-3 space-y-4">
+          {/* Unified Top Control Bar (Segmented Tab Switcher + Category Filter + Action Buttons) */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-3">
+            {/* Left Controls Group: Tab Switcher + Category Filter */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Segmented Pill Tab Switcher */}
+              <div className="inline-flex items-center rounded-xl bg-[#F1F5F9] p-1 border border-slate-200/60">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("overview")}
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${activeTab === "overview"
+                    ? "bg-white text-blue-600 border border-slate-200/80"
+                    : "text-slate-700 hover:text-slate-900"
+                    }`}
+                >
+                  Lab Overview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("trends")}
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${activeTab === "trends"
+                    ? "bg-white text-blue-600 border border-slate-200/80"
+                    : "text-slate-700 hover:text-slate-900"
+                    }`}
+                >
+                  Trends
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("history")}
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${activeTab === "history"
+                    ? "bg-white text-blue-600 border border-slate-200/80"
+                    : "text-slate-700 hover:text-slate-900"
+                    }`}
+                >
+                  History
+                </button>
+              </div>
+
+              {/* Category Filter Dropdown (Overview & Trends) */}
+              {activeTab !== "history" && (
+                <select
+                  id="cat-filter"
+                  aria-label="Filter by category"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="kidney-function">Kidney Function</option>
+                  <option value="electrolytes">Electrolytes</option>
+                  <option value="mineral-bone">Mineral & Bone</option>
+                  <option value="blood-counts">Blood Counts</option>
+                  <option value="nutrition">Nutrition</option>
+                  <option value="dialysis-adequacy">Dialysis Adequacy</option>
+                </select>
+              )}
+            </div>
+
+            {/* Right Group: Action Buttons */}
+            <div className="flex items-center gap-3 print:hidden">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export PDF
+              </button>
+
+              <Link
+                href="/dashboard/personal-log/lab-tracking/add"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#2563EB] px-3.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Lab Result
+              </Link>
+            </div>
+          </div>
+
           {/* TAB 1: OVERVIEW & COMPARE VIEW */}
           {activeTab === "overview" && (
             <>
-              {/* Same Row: Category Filter & Compare Date (Left) + Action Buttons (Right) */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Left Controls Group */}
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Category Filter Dropdown */}
-                  <select
-                    id="cat-filter"
-                    aria-label="Filter by category"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none shadow-sm focus:border-blue-500"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="kidney-function">Kidney Function</option>
-                    <option value="electrolytes">Electrolytes</option>
-                    <option value="mineral-bone">Mineral & Bone</option>
-                    <option value="blood-counts">Blood Counts</option>
-                    <option value="nutrition">Nutrition</option>
-                    <option value="dialysis-adequacy">Dialysis Adequacy</option>
-                  </select>
-
-                  {/* Compare With Date Selector */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-slate-500">Compare With:</span>
-                    <select
-                      id="compare-date-select"
-                      aria-label="Select comparison lab date"
-                      value={compareDateId}
-                      onChange={(e) => setCompareDateId(e.target.value)}
-                      className="h-9 rounded-lg border border-blue-200 bg-blue-50/50 px-3 text-xs font-semibold text-blue-700 outline-none shadow-sm focus:border-blue-500"
-                    >
-                      {pastDrawDates.map((date) => (
-                        <option key={date.id} value={date.id}>
-                          {date.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export PDF
-                  </button>
-
-                  <Link
-                    href="/dashboard/personal-log/lab-tracking/add"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#2563EB] px-3.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Lab Result
-                  </Link>
-                </div>
-              </div>
 
               {/* Grouped Table */}
-              <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-[#F8FAFC] text-xs font-semibold text-slate-600 border-b border-slate-200">
+                    <thead className="bg-[#F8FAFC] text-sm font-semibold text-slate-600 border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3 min-w-[200px]">Test</th>
-                        <th className="px-4 py-3 min-w-[140px] bg-[#EFF6FF] border-l border-r border-blue-100 font-bold text-slate-900">
-                          Latest Result <span className="block text-[12px] font-normal text-slate-500">{latestDrawDate}</span>
+                        <th className="px-4 py-3 min-w-[140px] font-bold text-slate-900">
+                          Latest Result <span className="block text-sm font-semibold text-slate-600">{latestDrawDate}</span>
                         </th>
-                        <th className="px-4 py-3 min-w-[140px] bg-[#EFF6FF] border-r border-blue-100 font-bold text-slate-900">
-                          Previous Result <span className="block text-[12px] font-semibold text-blue-600">{selectedPastDateLabel}</span>
+                        <th className="px-4 py-3 min-w-[150px] font-bold text-slate-900">
+                          Previous Result
+                          <div className="relative flex items-center justify-between mt-0.5">
+                            <select
+                              aria-label="Select comparison lab draw date"
+                              value={compareDateId}
+                              onChange={(e) => setCompareDateId(e.target.value)}
+                              className="w-full appearance-none bg-transparent pr-4 text-xs font-semibold text-blue-600 outline-none cursor-pointer hover:underline"
+                            >
+                              <optgroup label="Past Lab Draw Dates" className="font-bold text-slate-900 bg-white">
+                                {pastDrawDates.filter(d => d.type === "draw").map((date) => (
+                                  <option key={date.id} value={date.id} className="text-slate-900 bg-white font-medium">
+                                    {date.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                              <optgroup label="Timeframe Presets" className="font-bold text-slate-900 bg-white">
+                                {pastDrawDates.filter(d => d.type === "preset").map((date) => (
+                                  <option key={date.id} value={date.id} className="text-slate-900 bg-white font-medium">
+                                    {date.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-blue-600" />
+                          </div>
                         </th>
                         <th className="px-4 py-3 min-w-[100px]">Change</th>
                         <th className="px-4 py-3 min-w-[150px]">Reference Range</th>
@@ -605,7 +784,7 @@ export default function MyLabsPage() {
                           <tr className="bg-[#F1F5FA]">
                             <td colSpan={7} className="px-4 py-2.5">
                               <div className="flex items-center gap-2 font-bold text-xs text-[#06265B] tracking-wider">
-                                <category.icon className="h-4 w-4 text-blue-600" />
+                                <category.icon className="h-4.5 w-4.5 fill-current text-blue-600 shrink-0" />
                                 {category.name}
                               </div>
                             </td>
@@ -615,8 +794,8 @@ export default function MyLabsPage() {
                           {category.tests.map((test) => (
                             <tr key={test.name} className="hover:bg-slate-50/80 transition-colors group">
                               <td className="px-4 py-3 font-semibold text-slate-900">{test.name}</td>
-                              <td className="px-4 py-3 font-semibold text-slate-900 bg-[#F0F9FF]/80 border-l border-r border-blue-100/60">{test.latestResult}</td>
-                              <td className="px-4 py-3 font-medium text-slate-800 bg-[#F0F9FF]/80 border-r border-blue-100/60">{test.previousResult}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-900">{test.latestResult}</td>
+                              <td className="px-4 py-3 font-medium text-slate-800">{test.previousResult}</td>
                               <td className="px-4 py-3 font-semibold text-xs">
                                 <span
                                   className={`inline-flex items-center gap-0.5 ${test.changeColor === "red"
@@ -639,10 +818,7 @@ export default function MyLabsPage() {
                                 <StatusBadge status={test.status} />
                               </td>
                               <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Sparkline data={test.sparkline} status={test.status} />
-                                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-600 transition-colors" />
-                                </div>
+                                <Sparkline data={test.sparkline} status={test.status} />
                               </td>
                             </tr>
                           ))}
@@ -651,7 +827,7 @@ export default function MyLabsPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-[11px] font-medium text-slate-500">
+                <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-xs font-medium text-slate-500">
                   * Reference ranges may vary slightly by lab. Always follow your healthcare team&apos;s guidance.
                 </div>
               </div>
@@ -661,99 +837,62 @@ export default function MyLabsPage() {
           {/* TAB 2: TRENDS VIEW */}
           {activeTab === "trends" && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                    Lab Longitudinal Trends & Analysis
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Track long-term trajectory of your critical kidney & electrolyte markers over time.
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/personal-log/lab-tracking/add"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#2563EB] px-3.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Lab Result
-                </Link>
-              </div>
 
-              {/* Trend Summary Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Trend Card 1: Kidney Function */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
-                      <Activity className="h-4 w-4 text-blue-600" />
-                      eGFR Trajectory (CKD Stage)
-                    </span>
-                    <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Low / Stage 5</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">9 <span className="text-xs font-semibold text-slate-500">mL/min/1.73m²</span></p>
-                  <div className="h-16 flex items-end gap-2 bg-slate-50 p-2 rounded-lg">
-                    {[12, 11, 11, 10, 9].map((val, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full bg-blue-500 rounded-t" style={{ height: `${val * 4}px` }} />
-                        <span className="text-[9px] font-bold text-slate-500">{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Trend Card 2: Creatinine */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
-                      <Activity className="h-4 w-4 text-blue-600" />
-                      Serum Creatinine Trend
-                    </span>
-                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">High (6.48)</span>
+
+              {/* Categorized Trend Cards Grid */}
+              <div className="space-y-6">
+                {filteredCategories.map((category) => (
+                  <div key={category.id} className="space-y-3">
+                    {/* Category Title Header */}
+                    <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                      <category.icon className="h-4.5 w-4.5 fill-current text-blue-600 shrink-0" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#06265B]">
+                        {category.name} ({category.tests.length} TESTS)
+                      </h3>
+                    </div>
+
+                    {/* Test Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {category.tests.map((test) => {
+                        let theme: "purple" | "green" | "orange" | "blue" | "rose" | "teal" = "purple";
+                        if (test.name.includes("Potassium")) theme = "purple";
+                        else if (test.name.includes("Phosphorus")) theme = "green";
+                        else if (test.name.includes("Calcium")) theme = "orange";
+                        else if (test.name.includes("Creatinine")) theme = "rose";
+                        else if (test.name.includes("eGFR")) theme = "blue";
+                        else if (test.name.includes("Sodium")) theme = "teal";
+                        else if (test.name.includes("Hemoglobin")) theme = "rose";
+                        else if (test.name.includes("Kt/V")) theme = "green";
+                        else if (test.name.includes("Albumin")) theme = "orange";
+                        else if (test.name.includes("BUN")) theme = "purple";
+                        else theme = "blue";
+
+                        const unitParts = test.latestResult.split(" ");
+                        const unit = unitParts.slice(1).join(" ") || "";
+                        const dates = ["Feb 4", "Mar 1", "Apr 10", "May 15", "Jun 12"];
+
+                        return (
+                          <TrendLineCard
+                            key={test.name}
+                            testName={test.name}
+                            unit={unit}
+                            data={test.sparkline}
+                            dates={dates}
+                            colorTheme={theme}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900">6.48 <span className="text-xs font-semibold text-slate-500">mg/dL</span></p>
-                  <div className="h-16 flex items-end gap-2 bg-slate-50 p-2 rounded-lg">
-                    {[5.2, 5.5, 5.8, 6.12, 6.48].map((val, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full bg-amber-500 rounded-t" style={{ height: `${val * 8}px` }} />
-                        <span className="text-[9px] font-bold text-slate-500">{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* TAB 3: DEDICATED HISTORY VIEW */}
           {activeTab === "history" && (
-            <div className="space-y-6">
-              {/* History Header & Search */}
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                    Past Lab Draw History Logs
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    View complete historical lab panel reports and chronological records.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export Full History
-                  </button>
-                  <Link
-                    href="/dashboard/personal-log/lab-tracking/add"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#2563EB] px-3.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Lab Result
-                  </Link>
-                </div>
-              </div>
+            <div className="space-y-4">
 
               {/* Historical Panels Timeline List */}
               <div className="space-y-4">
@@ -770,12 +909,33 @@ export default function MyLabsPage() {
                     k: "5.2",
                     phos: "5.6",
                     hgb: "10.2",
-                    detailedTests: [
-                      { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "48 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "6.48 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "9 mL/min", ref: "> 90 mL/min", status: "Low" }] },
-                      { category: "ELECTROLYTES", tests: [{ name: "Sodium", val: "138 mEq/L", ref: "135 – 145 mEq/L", status: "In Range" }, { name: "Potassium", val: "5.2 mEq/L", ref: "3.5 – 5.0 mEq/L", status: "High" }, { name: "Chloride", val: "99 mEq/L", ref: "98 – 107 mEq/L", status: "In Range" }, { name: "CO2 (Bicarbonate)", val: "22 mEq/L", ref: "22 – 29 mEq/L", status: "In Range" }] },
-                      { category: "MINERAL & BONE", tests: [{ name: "Calcium", val: "9.1 mg/dL", ref: "8.5 – 10.5 mg/dL", status: "In Range" }, { name: "Phosphorus", val: "5.6 mg/dL", ref: "2.5 – 4.5 mg/dL", status: "High" }, { name: "PTH (Intact)", val: "412 pg/mL", ref: "15 – 65 pg/mL", status: "High" }, { name: "Vitamin D 25-OH", val: "28 ng/mL", ref: "30 – 100 ng/mL", status: "Low" }] },
-                      { category: "BLOOD COUNTS", tests: [{ name: "Hemoglobin", val: "10.2 g/dL", ref: "11.0 – 16.0 g/dL", status: "Low" }, { name: "Hematocrit", val: "31 %", ref: "33 – 47 %", status: "Low" }, { name: "Ferritin", val: "456 ng/mL", ref: "30 – 400 ng/mL", status: "High" }, { name: "TSAT", val: "28 %", ref: "20 – 50 %", status: "In Range" }] },
-                    ],
+                    notes: customData?.notes || "Routine monthly blood draw. Discussed phosphorus binder dosage with care team.",
+                    detailedTests: customData?.values && Object.keys(customData.values).length > 0
+                      ? categoriesData
+                        .map((cat) => {
+                          const recordedForCat = cat.tests.filter((t) => customData.values?.[t.name]);
+                          if (recordedForCat.length === 0) return null;
+                          return {
+                            category: cat.name,
+                            tests: recordedForCat.map((t) => {
+                              const userVal = customData.values?.[t.name] || "";
+                              const unitParts = t.latestResult.split(" ");
+                              const unit = unitParts.slice(1).join(" ");
+                              const formattedVal = userVal.includes(" ") || !unit ? userVal : `${userVal} ${unit}`;
+                              return {
+                                name: t.name,
+                                val: formattedVal,
+                                ref: t.refRange,
+                                status: t.status,
+                              };
+                            }),
+                          };
+                        })
+                        .filter((g): g is { category: string; tests: any[] } => g !== null)
+                      : [
+                        { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "48 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "6.48 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "9 mL/min", ref: "> 90 mL/min", status: "Low" }] },
+                        { category: "ELECTROLYTES", tests: [{ name: "Potassium", val: "5.2 mEq/L", ref: "3.5 – 5.0 mEq/L", status: "High" }, { name: "Sodium", val: "138 mEq/L", ref: "135 – 145 mEq/L", status: "In Range" }] },
+                      ],
                   },
                   {
                     date: "Apr 30, 2024",
@@ -789,6 +949,7 @@ export default function MyLabsPage() {
                     k: "5.0",
                     phos: "5.3",
                     hgb: "10.0",
+                    notes: "Pre-dialysis lab check. Fasting draw at 8:00 AM.",
                     detailedTests: [
                       { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "46 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "6.12 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "10 mL/min", ref: "> 90 mL/min", status: "Low" }] },
                       { category: "ELECTROLYTES", tests: [{ name: "Sodium", val: "139 mEq/L", ref: "135 – 145 mEq/L", status: "In Range" }, { name: "Potassium", val: "5.0 mEq/L", ref: "3.5 – 5.0 mEq/L", status: "In Range" }, { name: "Chloride", val: "100 mEq/L", ref: "98 – 107 mEq/L", status: "In Range" }, { name: "CO2 (Bicarbonate)", val: "23 mEq/L", ref: "22 – 29 mEq/L", status: "In Range" }] },
@@ -808,6 +969,7 @@ export default function MyLabsPage() {
                     k: "4.9",
                     phos: "5.1",
                     hgb: "9.8",
+                    notes: "Monthly nephrology review panel.",
                     detailedTests: [
                       { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "42 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "5.80 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "11 mL/min", ref: "> 90 mL/min", status: "Low" }] },
                       { category: "ELECTROLYTES", tests: [{ name: "Sodium", val: "140 mEq/L", ref: "135 – 145 mEq/L", status: "In Range" }, { name: "Potassium", val: "4.9 mEq/L", ref: "3.5 – 5.0 mEq/L", status: "In Range" }] },
@@ -826,6 +988,7 @@ export default function MyLabsPage() {
                     k: "4.8",
                     phos: "5.0",
                     hgb: "9.7",
+                    notes: "Routine electrolyte & iron panel.",
                     detailedTests: [
                       { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "38 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "5.50 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "11 mL/min", ref: "> 90 mL/min", status: "Low" }] },
                       { category: "ELECTROLYTES", tests: [{ name: "Sodium", val: "141 mEq/L", ref: "135 – 145 mEq/L", status: "In Range" }, { name: "Potassium", val: "4.8 mEq/L", ref: "3.5 – 5.0 mEq/L", status: "In Range" }] },
@@ -843,6 +1006,7 @@ export default function MyLabsPage() {
                     k: "4.6",
                     phos: "4.8",
                     hgb: "9.5",
+                    notes: "Initial Stage 5 CKD baseline laboratory evaluation.",
                     detailedTests: [
                       { category: "KIDNEY FUNCTION", tests: [{ name: "BUN", val: "35 mg/dL", ref: "7 – 20 mg/dL", status: "High" }, { name: "Creatinine", val: "5.20 mg/dL", ref: "0.6 – 1.3 mg/dL", status: "High" }, { name: "eGFR (CKD-EPI)", val: "12 mL/min", ref: "> 90 mL/min", status: "Low" }] },
                     ],
@@ -852,7 +1016,7 @@ export default function MyLabsPage() {
                   return (
                     <div
                       key={idx}
-                      className={`rounded-xl border bg-white shadow-sm transition-all overflow-hidden ${isExpanded ? "border-blue-400 ring-1 ring-blue-400" : "border-slate-200 hover:border-blue-200"
+                      className={`rounded-xl border bg-white transition-all overflow-hidden ${isExpanded ? "border-blue-400 ring-1 ring-blue-400" : "border-slate-200 hover:border-blue-200"
                         }`}
                     >
                       {/* Card Header Bar */}
@@ -862,7 +1026,7 @@ export default function MyLabsPage() {
                       >
                         <div className="flex items-center gap-2.5">
                           <h3 className="text-sm font-bold text-slate-900">{draw.date}</h3>
-                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${draw.tagColor}`}>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${draw.tagColor}`}>
                             {draw.tag}
                           </span>
                         </div>
@@ -880,33 +1044,23 @@ export default function MyLabsPage() {
                         </div>
                       </div>
 
-                      {/* Summary Key Readings Bar */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 bg-slate-50/80 p-3 text-xs border-b border-slate-100">
-                        <div>
-                          <span className="block text-[12px] font-semibold text-slate-500">eGFR</span>
-                          <span className="font-bold text-slate-900">{draw.egfr} <span className="text-[9px] text-slate-500 font-normal">mL/min</span></span>
-                        </div>
-                        <div>
-                          <span className="block text-[12px] font-semibold text-slate-500">Creatinine</span>
-                          <span className="font-bold text-slate-900">{draw.cr} <span className="text-[9px] text-slate-500 font-normal">mg/dL</span></span>
-                        </div>
-                        <div>
-                          <span className="block text-[12px] font-semibold text-slate-500">BUN</span>
-                          <span className="font-bold text-slate-900">{draw.bun} <span className="text-[9px] text-slate-500 font-normal">mg/dL</span></span>
-                        </div>
-                        <div>
-                          <span className="block text-[12px] font-semibold text-slate-500">Potassium</span>
-                          <span className="font-bold text-slate-900">{draw.k} <span className="text-[9px] text-slate-500 font-normal">mEq/L</span></span>
-                        </div>
-                        <div>
-                          <span className="block text-[12px] font-semibold text-slate-500">Phosphorus</span>
-                          <span className="font-bold text-slate-900">{draw.phos} <span className="text-[9px] text-slate-500 font-normal">mg/dL</span></span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-semibold text-slate-500">Hemoglobin</span>
-                          <span className="font-bold text-slate-900">{draw.hgb} <span className="text-[9px] text-slate-500 font-normal">g/dL</span></span>
-                        </div>
+                      {/* Dynamic Key Readings Grid for All Recorded Tests */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 bg-slate-50/80 p-3 text-xs border-b border-slate-100">
+                        {draw.detailedTests.flatMap(g => g.tests).map((t, tIdx) => (
+                          <div key={tIdx}>
+                            <span className="block text-sm font-semibold text-slate-600 truncate">{t.name}</span>
+                            <span className="font-bold text-slate-900">{t.val}</span>
+                          </div>
+                        ))}
                       </div>
+
+                      {/* Notes Section */}
+                      {draw.notes && (
+                        <div className="bg-slate-50/90 border-b border-slate-100 px-4 py-2 flex items-start gap-2 text-xs text-slate-700">
+                          <span className="font-bold text-slate-900 shrink-0">Note:</span>
+                          <p className="font-medium text-slate-600 leading-normal">{draw.notes}</p>
+                        </div>
+                      )}
 
                       {/* EXPANDED DETAILED LAB VALUE TABLE BREAKDOWN */}
                       {isExpanded && (
@@ -955,7 +1109,7 @@ export default function MyLabsPage() {
         {/* Right Sidebar Column */}
         <div className="space-y-6">
           {/* Card 1: Latest Lab Summary */}
-          <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm space-y-4">
+          <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 LATEST LAB SUMMARY
@@ -967,28 +1121,28 @@ export default function MyLabsPage() {
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-lg bg-emerald-50 p-2.5 text-center">
                 <p className="text-xl font-bold text-emerald-600">16</p>
-                <p className="text-[11px] font-medium text-emerald-700">In Range</p>
+                <p className="text-xs font-medium text-emerald-700">In Range</p>
               </div>
               <div className="rounded-lg bg-amber-50 p-2.5 text-center">
                 <p className="text-xl font-bold text-amber-600">6</p>
-                <p className="text-[11px] font-medium text-amber-700">High</p>
+                <p className="text-xs font-medium text-amber-700">High</p>
               </div>
               <div className="rounded-lg bg-red-50 p-2.5 text-center">
                 <p className="text-xl font-bold text-red-600">3</p>
-                <p className="text-[11px] font-medium text-red-700">Low</p>
+                <p className="text-xs font-medium text-red-700">Low</p>
               </div>
             </div>
 
             {/* Encouragement Box */}
-            <div className="rounded-lg bg-blue-50/60 border border-blue-100 p-3.5 space-y-2">
-              <p className="text-xs font-bold text-blue-950">Keep up the good work!</p>
-              <p className="text-xs text-blue-800 leading-relaxed">
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3.5 space-y-2">
+              <p className="text-xs font-bold text-slate-900">Keep up the good work!</p>
+              <p className="text-xs text-slate-600 leading-relaxed">
                 Continue following your care plan and attend your dialysis treatments.
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab("trends")}
-                className="w-full mt-2 rounded-lg border border-blue-200 bg-white py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                className="w-full mt-2 rounded-lg border border-slate-200 bg-white py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 View Trends
               </button>
@@ -996,19 +1150,19 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 2: Lab Categories */}
-          <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm space-y-3">
+          <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 pb-2 border-b border-slate-100">
               LAB CATEGORIES
             </h2>
             <div className="space-y-1">
               {[
-                { name: "Kidney Function", count: "3 Tests", icon: Activity, key: "kidney-function" },
-                { name: "Electrolytes", count: "4 Tests", icon: Droplets, key: "electrolytes" },
-                { name: "Mineral & Bone", count: "4 Tests", icon: Bone, key: "mineral-bone" },
-                { name: "Blood Counts", count: "4 Tests", icon: Droplets, key: "blood-counts" },
-                { name: "Nutrition", count: "2 Tests", icon: Apple, key: "nutrition" },
-                { name: "Dialysis Adequacy", count: "1 Test", icon: Heart, key: "dialysis-adequacy" },
-                { name: "Other", count: "7 Tests", icon: Layers, key: "all" },
+                { name: "All Categories", count: "25 Tests", icon: FaLayerGroup, key: "all" },
+                { name: "Kidney Function", count: "3 Tests", icon: GiKidneys, key: "kidney-function" },
+                { name: "Electrolytes", count: "4 Tests", icon: FaFlask, key: "electrolytes" },
+                { name: "Mineral & Bone", count: "4 Tests", icon: FaBone, key: "mineral-bone" },
+                { name: "Blood Counts", count: "4 Tests", icon: FaDroplet, key: "blood-counts" },
+                { name: "Nutrition", count: "2 Tests", icon: FaAppleWhole, key: "nutrition" },
+                { name: "Dialysis Adequacy", count: "1 Test", icon: FaHeartPulse, key: "dialysis-adequacy" },
               ].map((cat) => (
                 <button
                   key={cat.name}
@@ -1020,10 +1174,10 @@ export default function MyLabsPage() {
                     }`}
                 >
                   <span className="flex items-center gap-2">
-                    <cat.icon className="h-3.5 w-3.5 text-slate-500" />
+                    <cat.icon className="h-4 w-4 fill-current text-slate-500 shrink-0" />
                     {cat.name}
                   </span>
-                  <span className="text-[11px] text-slate-400">{cat.count}</span>
+                  <span className="text-xs text-slate-400">{cat.count}</span>
                 </button>
               ))}
             </div>
@@ -1038,7 +1192,7 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 3: Understanding Your Labs */}
-          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 p-4 shadow-sm space-y-3">
+          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <BookOpen className="h-4 w-4" />
@@ -1052,7 +1206,7 @@ export default function MyLabsPage() {
             </p>
             <Link
               href="/dashboard/education-center"
-              className="block w-full text-center rounded-lg border border-blue-200 bg-white py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors shadow-sm"
+              className="block w-full text-center rounded-lg border border-blue-200 bg-white py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
             >
               Visit Education Center
             </Link>

@@ -8,8 +8,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { UserRole } from "@/lib/auth";
 import EmergencyModal from "@/components/dashboard/EmergencyModal";
+import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
 import {
   BookOpen,
+  Car,
   CreditCard,
   FlaskConical,
   HelpCircle,
@@ -36,6 +38,7 @@ type NavItem = { label: string; href: string; icon: IconType; roles: UserRole[] 
 
 const sidebarItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "user"] },
+  { label: "My Rides", href: "/dashboard/my-rides", icon: Car, roles: ["user"] },
   { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital, roles: ["user"] },
   { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse, roles: ["user"] },
   { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers, roles: ["user"] },
@@ -89,6 +92,7 @@ function getBreadcrumb(pathname: string) {
     return "Add Blood Results";
   if (pathname.startsWith("/dashboard/personal-log/blood-results"))
     return "Blood Results";
+  if (pathname.startsWith("/dashboard/my-rides")) return "My Rides";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure/add"))
     return "Add Blood Pressure";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure"))
@@ -152,7 +156,13 @@ function isActiveRoute(href: string, pathname: string) {
   return href !== "#" && pathname.startsWith(href);
 }
 
-function Sidebar({ onClose }: { onClose?: () => void }) {
+function Sidebar({
+  onClose,
+  onOpenRideModal,
+}: {
+  onClose?: () => void;
+  onOpenRideModal?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -161,7 +171,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const visibleSupport = supportItems.filter((item) => item.roles.includes(role));
 
   return (
-    <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white">
+    <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white print:hidden">
       <div className="mb-3 flex shrink-0 items-start justify-between gap-3 rounded bg-white p-3">
         <Image
           src="/images/logo.svg"
@@ -320,7 +330,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 md:px-8">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 md:px-8 print:hidden">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
@@ -334,20 +344,35 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           {isUser
             ? trail.map((item, index) => {
                 const last = index === trail.length - 1;
+                let href: string | null = null;
+                if (item === "Dashboard") href = "/dashboard";
+                else if (item === "Personal Log") href = "/dashboard/personal-log";
+
                 return (
                   <span key={`${item}-${index}`} className="flex items-center gap-4">
                     {index > 0 ? (
                       <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
                     ) : null}
-                    <span className={last ? "text-[#141A21]" : "text-[#64748B]"}>{item}</span>
+                    {href && !last ? (
+                      <Link
+                        href={href}
+                        className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors"
+                      >
+                        {item}
+                      </Link>
+                    ) : (
+                      <span className={last ? "text-[#141A21] font-semibold" : "text-[#64748B]"}>{item}</span>
+                    )}
                   </span>
                 );
               })
             : (
               <>
-                <span className="text-[#64748B]">Dashboard</span>
+                <Link href="/dashboard" className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors">
+                  Dashboard
+                </Link>
                 <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
-                <span className="text-[#0F172A]">{currentPage}</span>
+                <span className="text-[#0F172A] font-semibold">{currentPage}</span>
               </>
             )}
         </nav>
@@ -439,11 +464,12 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [rideModalOpen, setRideModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+    <div className="min-h-screen bg-white font-sans text-slate-900">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
-        <Sidebar />
+        <Sidebar onOpenRideModal={() => setRideModalOpen(true)} />
       </div>
 
       {sidebarOpen && (
@@ -455,7 +481,10 @@ export default function DashboardShell({
             aria-label="Close dashboard menu overlay"
           />
           <div className="relative h-full">
-            <Sidebar onClose={() => setSidebarOpen(false)} />
+            <Sidebar
+              onClose={() => setSidebarOpen(false)}
+              onOpenRideModal={() => setRideModalOpen(true)}
+            />
           </div>
         </div>
       )}
@@ -464,6 +493,11 @@ export default function DashboardShell({
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <main className="px-4 py-5 md:px-8 lg:px-8">{children}</main>
       </div>
+
+      <WheresMyRideModal
+        isOpen={rideModalOpen}
+        onClose={() => setRideModalOpen(false)}
+      />
     </div>
   );
 }

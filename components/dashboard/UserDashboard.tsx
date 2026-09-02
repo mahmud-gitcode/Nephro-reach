@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Phone, Pencil, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 
@@ -18,7 +20,7 @@ function Icon({ src, className }: { src: string; className?: string }) {
 const quickActions = [
   {
     label: "Where's My Ride",
-    href: "/dashboard/personal-log/appointments",
+    href: "/dashboard/my-rides",
     icon: "quick-car.svg",
     tone: "bg-[#DBEAFE]",
   },
@@ -95,6 +97,7 @@ export default function UserDashboard() {
   const { user } = useAuth();
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => greetingPrefix(), []);
+  const [isRideModalOpen, setIsRideModalOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -111,7 +114,7 @@ export default function UserDashboard() {
             <Link
               key={action.label}
               href={action.href}
-              className="flex min-h-[134px] flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-[25px]"
+              className="flex min-h-[134px] flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-[25px] hover:border-blue-300 hover:shadow-sm transition-all"
             >
               <span
                 className={`flex size-12 items-center justify-center rounded-[14px] ${action.tone}`}
@@ -233,6 +236,12 @@ export default function UserDashboard() {
           ))}
         </div>
       </section>
+
+      {/* Where's My Ride Modal */}
+      <WheresMyRideModal
+        isOpen={isRideModalOpen}
+        onClose={() => setIsRideModalOpen(false)}
+      />
     </div>
   );
 }

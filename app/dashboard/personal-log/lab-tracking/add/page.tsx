@@ -17,6 +17,15 @@ import {
   X,
 } from "lucide-react";
 
+import { GiKidneys } from "react-icons/gi";
+import {
+  FaFlask,
+  FaBone,
+  FaDroplet,
+  FaAppleWhole,
+  FaHeartPulse,
+} from "react-icons/fa6";
+
 interface TestItem {
   id: string;
   name: string;
@@ -36,7 +45,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "kidney-function",
     name: "KIDNEY FUNCTION",
-    icon: Activity,
+    icon: GiKidneys,
     tests: [
       { id: "bun", name: "BUN", unit: "mg/dL", refRange: "7 – 20 mg/dL", defaultVal: "48" },
       { id: "creatinine", name: "Creatinine", unit: "mg/dL", refRange: "0.6 – 1.3 mg/dL", defaultVal: "6.48" },
@@ -46,7 +55,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "electrolytes",
     name: "ELECTROLYTES",
-    icon: Droplets,
+    icon: FaFlask,
     tests: [
       { id: "sodium", name: "Sodium", unit: "mEq/L", refRange: "135 – 145 mEq/L", defaultVal: "138" },
       { id: "potassium", name: "Potassium", unit: "mEq/L", refRange: "3.5 – 5.0 mEq/L", defaultVal: "5.2" },
@@ -57,7 +66,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "mineral-bone",
     name: "MINERAL & BONE",
-    icon: Bone,
+    icon: FaBone,
     tests: [
       { id: "calcium", name: "Calcium", unit: "mg/dL", refRange: "8.5 – 10.5 mg/dL", defaultVal: "9.1" },
       { id: "phosphorus", name: "Phosphorus", unit: "mg/dL", refRange: "2.5 – 4.5 mg/dL", defaultVal: "5.6" },
@@ -68,7 +77,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "blood-counts",
     name: "BLOOD COUNTS",
-    icon: Droplets,
+    icon: FaDroplet,
     tests: [
       { id: "hemoglobin", name: "Hemoglobin", unit: "g/dL", refRange: "11.0 – 16.0 g/dL", defaultVal: "10.2" },
       { id: "hematocrit", name: "Hematocrit", unit: "%", refRange: "33 – 47 %", defaultVal: "31" },
@@ -79,7 +88,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "nutrition",
     name: "NUTRITION",
-    icon: Apple,
+    icon: FaAppleWhole,
     tests: [
       { id: "albumin", name: "Albumin", unit: "g/dL", refRange: "3.5 – 5.0 g/dL", defaultVal: "3.8" },
       { id: "bicarbonate", name: "Bicarbonate", unit: "mEq/L", refRange: "22 – 29 mEq/L", defaultVal: "22" },
@@ -88,7 +97,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "dialysis-adequacy",
     name: "DIALYSIS ADEQUACY",
-    icon: Heart,
+    icon: FaHeartPulse,
     tests: [
       { id: "ktv", name: "Kt/V", unit: "ratio", refRange: "≥ 1.20", defaultVal: "1.35" },
     ],
@@ -99,7 +108,7 @@ export default function AddLabTrackingPage() {
   const router = useRouter();
 
   const [labDate, setLabDate] = useState<string>("2024-05-31");
-  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>(["kidney-function"]);
+  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [selectedCatToAdd, setSelectedCatToAdd] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
@@ -159,9 +168,8 @@ export default function AddLabTrackingPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* Top Banner / Notification */}
       {savedSuccess && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-sm transition-all">
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 transition-all">
           <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
           <div>
             <p className="font-bold text-sm">Lab Results Saved Successfully!</p>
@@ -170,15 +178,10 @@ export default function AddLabTrackingPage() {
         </div>
       )}
 
-      {/* Main Form Container */}
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-        {/* Header */}
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Enter New Lab Results</h1>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">
-              Select date, choose categories, fill out readings, and save your entry.
-            </p>
+            <h1 className="text-xl font-bold text-slate-900">Add Lab Result</h1>
           </div>
           <Link
             href="/dashboard/personal-log/lab-tracking"
@@ -189,122 +192,89 @@ export default function AddLabTrackingPage() {
           </Link>
         </header>
 
-        {/* STEP 1: SELECT DATE */}
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
-              1
-            </span>
-            <label htmlFor="lab-date" className="text-xs font-bold text-slate-900">
-              Select Lab Draw Date:
-            </label>
-          </div>
+          <label htmlFor="lab-date" className="block text-xs font-bold text-slate-900">
+            Lab Draw Date
+          </label>
           <div className="max-w-xs">
             <input
               id="lab-date"
               type="date"
               value={labDate}
               onChange={(e) => setLabDate(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-500 shadow-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-500"
               required
             />
           </div>
         </div>
 
-        {/* STEP 2 & 3: CATEGORIES & FILLING OUT LAB VALUES */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
-                2
-              </span>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Fill Out Lab Category Results ({activeCategoryIds.length} Selected)
-              </h2>
-            </div>
-          </div>
-
-          {/* Active Category Input Tables */}
-          {activeCategoryIds.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-xs text-slate-500">
-              No categories selected yet. Pick a category below to start filling out results.
-            </div>
-          ) : (
+          {activeCategoryIds.length > 0 && (
             <div className="space-y-6">
               {designCategories
                 .filter((cat) => activeCategoryIds.includes(cat.id))
                 .map((category) => (
-                  <div key={category.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm space-y-0">
-                    {/* Category Header */}
+                  <div key={category.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white space-y-0">
                     <div className="flex items-center justify-between bg-[#F1F5FA] px-4 py-2.5 border-b border-slate-200">
                       <div className="flex items-center gap-2 font-bold text-xs text-[#06265B] tracking-wider">
-                        <category.icon className="h-4 w-4 text-blue-600" />
+                        <category.icon className="h-4.5 w-4.5 fill-current text-blue-600 shrink-0" />
                         {category.name}
                       </div>
-                      {activeCategoryIds.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCategorySection(category.id)}
-                          className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-600 transition-colors"
-                          title="Remove category section"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Remove
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCategorySection(category.id)}
+                        className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors"
+                      >
+                        Remove
+                      </button>
                     </div>
 
-                    {/* Test Inputs Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-                          <tr>
-                            <th className="px-4 py-2.5 min-w-[200px]">Test Name</th>
-                            <th className="px-4 py-2.5 min-w-[160px]">Reference Range</th>
-                            <th className="px-4 py-2.5 min-w-[180px]">New Result Value</th>
-                            <th className="px-4 py-2.5 min-w-[80px]">Unit</th>
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2.5">Test</th>
+                          <th className="px-4 py-2.5">Result Value</th>
+                          <th className="px-4 py-2.5">Unit</th>
+                          <th className="px-4 py-2.5">Reference Range</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {category.tests.map((t) => (
+                          <tr key={t.name} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2.5 font-bold text-slate-900">{t.name}</td>
+                            <td className="px-4 py-2.5">
+                              <input
+                                type="text"
+                                value={testValues[t.name] || ""}
+                                onChange={(e) => handleValueChange(t.name, e.target.value)}
+                                placeholder="Enter value"
+                                className="w-32 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-2.5 font-medium text-slate-500">{t.unit}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-500">{t.refRange}</td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {category.tests.map((test) => (
-                            <tr key={test.id} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="px-4 py-3 font-semibold text-slate-900">{test.name}</td>
-                              <td className="px-4 py-3 text-slate-500 font-medium">{test.refRange}</td>
-                              <td className="px-4 py-3">
-                                <input
-                                  type="text"
-                                  value={testValues[test.name] || ""}
-                                  onChange={(e) => handleValueChange(test.name, e.target.value)}
-                                  placeholder={`e.g. ${test.defaultVal}`}
-                                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="px-4 py-3 font-semibold text-slate-500">{test.unit}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ))}
             </div>
           )}
 
-          {/* STEP 4: ADD ANOTHER CATEGORY SELECTOR */}
           {availableCategoriesToAdd.length > 0 && (
             <div className="rounded-xl border border-slate-200 bg-[#F1F5FA] p-4 space-y-3">
               <label className="block text-xs font-bold text-[#06265B] tracking-wider uppercase">
-                + Select Category to Fill Out Next:
+                + Add Category:
               </label>
 
-              {/* Category Select Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 {availableCategoriesToAdd.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => handleAddCategorySection(cat.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition-all"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 hover:border-slate-300 hover:bg-slate-50 transition-all"
                   >
                     <Plus className="h-3.5 w-3.5 text-blue-600" />
                     {cat.name}
@@ -315,7 +285,6 @@ export default function AddLabTrackingPage() {
           )}
         </div>
 
-        {/* Clinical Notes Section */}
         <section className="space-y-2">
           <label htmlFor="notes-input" className="block text-xs font-bold text-slate-700">
             Notes & Observations (Optional)
@@ -330,17 +299,16 @@ export default function AddLabTrackingPage() {
           />
         </section>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
           <Link
             href="/dashboard/personal-log/lab-tracking"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-6 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition-colors"
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-6 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Save Entry

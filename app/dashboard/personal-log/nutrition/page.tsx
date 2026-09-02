@@ -369,9 +369,8 @@ function FluidTracker() {
           {Array.from({ length: 7 }).map((_, index) => (
             <span
               key={index}
-              className={`flex h-8 items-center justify-center rounded-lg ${
-                index < 5 ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-300"
-              }`}
+              className={`flex h-8 items-center justify-center rounded-lg ${index < 5 ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-300"
+                }`}
             >
               <Droplet className="h-4 w-4" />
             </span>
@@ -413,7 +412,7 @@ function ResourceCard() {
             <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-slate-950">
               {resource}
             </span>
-            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">
+            <span className="rounded bg-slate-100 px-2 py-1 text-sm font-semibold text-slate-600">
               PDF
             </span>
           </button>
