@@ -86,6 +86,12 @@ const supportItems: NavItem[] = [
 function getBreadcrumb(pathname: string) {
   if (pathname === "/dashboard") return "Breadcrumb";
   if (pathname.startsWith("/dashboard/trash")) return "Trash";
+  if (pathname.startsWith("/dashboard/before-the-er/")) {
+    const slug = pathname.split("/").pop() || "";
+    const formatted = slug.replace(/-/g, " ").replace(/%20/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return formatted || "Symptom Detail";
+  }
+  if (pathname.startsWith("/dashboard/before-the-er")) return "Before-the-ER";
   if (pathname.startsWith("/dashboard/before-the-er")) return "Before-the-ER";
   if (pathname.startsWith("/dashboard/my-health")) return "MyHealth";
   if (pathname.startsWith("/dashboard/personal-log/blood-results/add"))
@@ -134,6 +140,9 @@ function getBreadcrumbTrail(pathname: string) {
   const current = getBreadcrumb(pathname);
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
     return ["Dashboard"];
+  }
+  if (pathname.startsWith("/dashboard/before-the-er/")) {
+    return ["Dashboard", "Before-the-ER", current];
   }
   if (
     pathname.startsWith("/dashboard/personal-log/") &&

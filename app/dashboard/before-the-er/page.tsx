@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Bell, Check, Eye, X, Phone, Calendar, BookOpen, PlusCircle } from "lucide-react";
 
 interface ActionDetail {
@@ -196,6 +197,7 @@ const symptoms = [
 ];
 
 export default function BeforeTheErPage() {
+  const router = useRouter();
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [activeModalItem, setActiveModalItem] = useState<string | null>(null);
 
@@ -207,6 +209,14 @@ export default function BeforeTheErPage() {
         ? current.filter((item) => item !== label)
         : [...current, label],
     );
+  }
+
+  function handleGetGuidance() {
+    if (selectedSymptoms.length > 0) {
+      const firstSymptom = selectedSymptoms[0];
+      const slug = firstSymptom.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
+      router.push(`/dashboard/before-the-er/${slug}`);
+    }
   }
 
   const currentDetail = activeModalItem ? ACTION_DETAILS[activeModalItem] : null;
@@ -272,6 +282,7 @@ export default function BeforeTheErPage() {
           <button
             type="button"
             disabled={selectedCount === 0}
+            onClick={handleGetGuidance}
             className={`flex h-12 items-center justify-center rounded border px-4 text-base font-bold transition-colors ${
               selectedCount === 0
                 ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
