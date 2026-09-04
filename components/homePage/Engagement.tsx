@@ -3,36 +3,40 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-const steps = [
-  {
-    label: "Start with ease",
-    labelColor: "#C77B00",
-    title: "Create your account in minutes",
-    desc: "Sign up with your email and phone number, choose your membership level, and receive your unique NephroReach member ID.",
-  },
-  {
-    label: "Build consistency",
-    labelColor: "#497D7E",
-    title: "Stay connected through weekly texts",
-    desc: "Receive automated educational SMS check-ins, reminders, and follow-up messages that help you stay engaged without needing real-time human support.",
-  },
-  {
-    label: "Learn at your pace",
-    labelColor: "#E34432",
-    title: "Follow a guided 21 days education path",
-    desc: "Full members can access structured educational content designed to support steady learning, reflection, and continued engagement.",
-  },
-  {
-    label: "Reflect and participate",
-    labelColor: "#4C7A45",
-    title: "Journal, learn, and join live classes",
-    desc: "Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.",
-  },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 const VIEWPORTS_PER_STEP = 0.9;
 
 export default function Engagement() {
+  const { t } = useLanguage();
+
+  const steps = [
+    {
+      label: t("engagement.item1Badge"),
+      labelColor: "#C77B00",
+      title: t("engagement.item1Title"),
+      desc: t("engagement.item1Desc"),
+    },
+    {
+      label: t("engagement.item2Badge"),
+      labelColor: "#497D7E",
+      title: t("engagement.item2Title"),
+      desc: t("engagement.item2Desc"),
+    },
+    {
+      label: t("engagement.item3Badge"),
+      labelColor: "#E34432",
+      title: t("engagement.item3Title"),
+      desc: t("engagement.item3Desc"),
+    },
+    {
+      label: t("engagement.item4Badge"),
+      labelColor: "#4C7A45",
+      title: t("engagement.item4Title"),
+      desc: t("engagement.item4Desc"),
+    },
+  ];
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
@@ -113,11 +117,10 @@ export default function Engagement() {
         <div className="mx-auto flex w-full max-w-[1344px] flex-col items-center gap-12 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
           <div className="flex w-full flex-col items-center gap-3 text-center">
             <h2 className="text-[28px] font-semibold leading-10 tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
-              Your Health, All in One Place
+              {t("engagement.title")}
             </h2>
             <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
-              Track, learn, and stay on top of your kidney health with
-              NephroReach.
+              {t("engagement.subtitle")}
             </p>
           </div>
 

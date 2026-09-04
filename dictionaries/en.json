@@ -14,7 +14,8 @@
     "titleLine1": "Understand your kidneys.",
     "titleLine2": "Take control of your journey.",
     "description": "NephroReach gives you kidney education, personal health trackers, expert-led classes, and practical tools—all in one place to help you feel more informed, prepared, and confident.",
-    "button": "Try it free"
+    "button": "Get Membership",
+    "howItWorks": "How It Works"
   },
   "pricingHero": {
     "badge": "NephroReach",
@@ -57,8 +58,8 @@
   },
   "engagement": {
     "badge": "What's Included",
-    "title": "Everything members need to stay engaged",
-    "subtitle": "NephroReach combines automated SMS check-ins, digital journaling, guided education, and class access in one simple non-clinical membership platform.",
+    "title": "Your Health, All in One Place",
+    "subtitle": "Track, learn, and stay on top of your kidney health with NephroReach.",
     "item1Badge": "Start with ease",
     "item1Title": "Create your account in minutes",
     "item1Desc": "Sign up with your email and phone number, choose your membership level, and receive your unique NephroReach member ID.",
@@ -74,6 +75,19 @@
     "item5Badge": "Share With Your Provider",
     "item5Title": "Share With Your Provider",
     "item5Desc": "You control your information. Generate a summary of your tracked information to share during appointments and help your provider better understand your kidney health."
+  },
+  "testimonials": {
+    "title": "What Our Customers Say",
+    "subtitle": "Real stories from people around the world using our platform to build, grow, and connect.",
+    "badge1": "Kidney Health",
+    "quote1": "NephroReach transformed how I understand my lab values. The platform guided me step by step and the education was incredibly clear.",
+    "role1": "CKD Learner",
+    "badge2": "Dialysis Journey",
+    "quote2": "NephroReach helped me stay consistent with check-ins and journaling. I finally feel more in control of my kidney health journey.",
+    "role2": "Dialysis Member",
+    "badge3": "Support & Guidance",
+    "quote3": "The classes and SMS prompts keep me engaged without overwhelm. It's simple, private, and actually useful every week.",
+    "role3": "Family Caregiver"
   },
   "whatMembersGet": {
     "badge": "What You Get",
@@ -184,6 +198,9 @@
     "rights": "All rights reserved."
   },
   "aboutUsPage": {
+    "heroEyebrow": "ABOUT US",
+    "heroTitle": "Empowering Member Education Through Smart SMS Engagement",
+    "heroSubtitle": "We create scalable, user-friendly tools that automate check-ins, support digital journaling, and provide access to educational resources and live classes.",
     "founderTitle": "About the Founder",
     "founderP1": "Hello, I’m Joni Gathers, MSN, APRN, FNP-C, a board-certified Family Nurse Practitioner with a decade of nephrology and dialysis experience. Throughout my career as both a Dialysis Nurse and Practitioner, I’ve cared for hundreds of patients living with chronic kidney disease (CKD), end-stage kidney disease (ESKD), hypertension, diabetes, and those receiving dialysis.",
     "founderP2": "Working closely with patients and families, I recognized that many hospitalizations and emergency room visits happen because patients simply don’t have access to understandable, ongoing kidney education outside of their clinic visits. Many leave appointments overwhelmed, unsure of what their lab results mean, how to manage fluid intake, what symptoms require immediate attention, or how to confidently navigate life with kidney disease.",

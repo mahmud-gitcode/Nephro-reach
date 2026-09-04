@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
 
 import nephroReachImg from "@/public/images/home/NephroReach-clean.png";
 
-const LINE_1 = "Understand your kidneys.";
-const LINE_2 = "Take control of your journey.";
-
 export default function Hero() {
+  const { t } = useLanguage();
+  const line1 = t("hero.titleLine1");
+  const line2 = t("hero.titleLine2");
+
   const [text1, setText1] = useState("");
   const [text2, setText2] = useState("");
   const [activeLine, setActiveLine] = useState<1 | 2>(1);
@@ -17,14 +19,20 @@ export default function Hero() {
   const [, setIsTypingComplete] = useState(false);
 
   useEffect(() => {
+    setText1("");
+    setText2("");
+    setActiveLine(1);
+    setShowCursor(true);
+    setIsTypingComplete(false);
+
     let timeoutId: NodeJS.Timeout;
     let idx1 = 0;
     let idx2 = 0;
 
     const typeFirstLine = () => {
-      if (idx1 < LINE_1.length) {
+      if (idx1 < line1.length) {
         idx1++;
-        setText1(LINE_1.slice(0, idx1));
+        setText1(line1.slice(0, idx1));
         timeoutId = setTimeout(typeFirstLine, 45);
       } else {
         // Pause before typing Line 2
@@ -36,9 +44,9 @@ export default function Hero() {
     };
 
     const typeSecondLine = () => {
-      if (idx2 < LINE_2.length) {
+      if (idx2 < line2.length) {
         idx2++;
-        setText2(LINE_2.slice(0, idx2));
+        setText2(line2.slice(0, idx2));
         timeoutId = setTimeout(typeSecondLine, 45);
       } else {
         setIsTypingComplete(true);
@@ -53,14 +61,14 @@ export default function Hero() {
     timeoutId = setTimeout(typeFirstLine, 250);
 
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [line1, line2]);
 
   return (
     <section className="flex w-full flex-col items-center justify-center p-5 sm:p-8 lg:p-12">
       <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1344px] items-center justify-end overflow-hidden rounded-[24px] sm:min-h-[500px] lg:h-[570px] px-6 sm:px-10 lg:px-[71px]">
         <Image
           src={nephroReachImg}
-          alt="NephroReach - Understand your kidneys. Take control of your journey."
+          alt={`NephroReach - ${line1} ${line2}`}
           fill
           priority
           className="object-cover object-center"
@@ -70,7 +78,7 @@ export default function Hero() {
           <div className="flex w-full flex-col gap-5">
             <h1
               className="text-[26px] font-semibold leading-[1.25] tracking-[0.2px] text-[#0F172A] sm:text-[34px] md:text-[38px] lg:text-[42px] xl:text-[44px]"
-              aria-label={`${LINE_1} ${LINE_2}`}
+              aria-label={`${line1} ${line2}`}
             >
               {/* Line 1 with typewriter effect */}
               <span className="block min-h-[1.25em] sm:whitespace-nowrap" aria-hidden="true">
@@ -94,9 +102,7 @@ export default function Hero() {
               </span>
             </h1>
             <p className="w-full text-base sm:text-[17px] lg:text-lg font-normal leading-relaxed text-[#344056] animate-timed-subtext">
-              NephroReach gives you kidney education, personal health trackers,
-              expert-led classes, and practical tools—all in one place to help
-              you feel more informed, prepared, and confident.
+              {t("hero.description")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-6 pt-1 animate-timed-cta">
@@ -110,7 +116,7 @@ export default function Hero() {
                 href="/pricing"
                 className="relative inline-flex h-[52px] items-center justify-center rounded-lg bg-[#2563EB] px-7 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)] transition-all duration-300 hover:bg-[#1D4ED8] hover:shadow-[0_6px_20px_rgba(37,99,235,0.38)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
-                <span>Get Membership</span>
+                <span>{t("hero.button")}</span>
               </Link>
             </div>
             <a
@@ -126,7 +132,7 @@ export default function Hero() {
               }}
               className="inline-flex h-[52px] items-center justify-center rounded-lg border border-[#CBD5E1] bg-white px-6 py-3 text-base font-bold tracking-[0.08px] text-[#0F172A] shadow-xs transition-all duration-300 hover:bg-slate-50 hover:border-slate-400 hover:text-[#2563EB] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
             >
-              <span>How It Works</span>
+              <span>{t("hero.howItWorks")}</span>
             </a>
           </div>
         </div>

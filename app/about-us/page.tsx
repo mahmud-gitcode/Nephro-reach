@@ -26,7 +26,7 @@ const reviewItems = [
 ];
 
 export default function AboutUsPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white overflow-hidden">
@@ -34,13 +34,45 @@ export default function AboutUsPage() {
       
       <main className="flex-grow w-full">
         
-        {/* HERO SECTION (Image already contains text) */}
+        {/* HERO SECTION */}
         <section className="w-full px-4 sm:px-6 md:px-10">
-          <img 
-            src="/images/aboutHeroFrame.png" 
-            alt="About Us Hero" 
-            className="w-full h-auto object-contain"
-          />
+          <div className="relative w-full overflow-hidden rounded-2xl">
+            <img 
+              src="/images/aboutHeroFrame.png" 
+              alt={t("header.aboutUs")} 
+              className="w-full h-auto object-contain"
+            />
+            {language === "ES" && (
+              <div className="absolute inset-y-0 right-0 w-full md:w-[62%] lg:w-[58%] bg-white/95 backdrop-blur-[2px] flex flex-col justify-center items-center md:items-start px-6 md:px-10 lg:px-14 py-6 text-center md:text-left">
+                <span className="text-xs sm:text-sm font-bold tracking-widest text-[#2563EB] uppercase mb-2">
+                  {t("aboutUsPage.heroEyebrow")}
+                </span>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 leading-tight mb-3 sm:mb-4 max-w-xl">
+                  {t("aboutUsPage.heroTitle")}
+                </h1>
+                <p className="text-xs sm:text-sm lg:text-base text-slate-600 font-medium leading-relaxed max-w-lg mb-4 sm:mb-6">
+                  {t("aboutUsPage.heroSubtitle")}
+                </p>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-4">
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Membresía
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Diario
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Clases en Vivo
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* FOUNDER SECTION */}

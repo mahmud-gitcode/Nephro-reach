@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
 
 const socials = [
   { href: "#", label: "Twitter", icon: "/images/home/twitter.svg" },
@@ -11,20 +12,22 @@ const socials = [
   { href: "#", label: "YouTube", icon: "/images/home/youtube.svg" },
 ];
 
-const platformLinks = [
-  { label: "How it Works", href: "/#how-it-works" },
-  { label: "Product", href: "/#features" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Resources", href: "/about-us" },
-];
-
-const legalLinks = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Contact", href: "/contact-us" },
-];
-
 export default function Footer() {
+  const { t } = useLanguage();
+
+  const platformLinks = [
+    { label: t("footer.howItWorks"), href: "/#how-it-works" },
+    { label: t("footer.product"), href: "/#features" },
+    { label: t("footer.pricing"), href: "/pricing" },
+    { label: t("footer.aboutUs"), href: "/about-us" },
+  ];
+
+  const legalLinks = [
+    { label: t("footer.privacy"), href: "#" },
+    { label: t("footer.terms"), href: "#" },
+    { label: t("footer.contact"), href: "/contact-us" },
+  ];
+
   return (
     <footer className="w-full bg-[#F8FAFF] pb-[84px] pt-16 font-sf">
       <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
@@ -38,8 +41,7 @@ export default function Footer() {
               className="h-[67.882px] w-[86px] object-contain"
             />
             <p className="text-[14px] font-medium leading-5 tracking-[0.07px] text-[#344056]">
-              A non-clinical educational engagement platform for SMS check-ins,
-              digital journaling, structured learning, and monthly live classes.
+              {t("footer.description")}
             </p>
             <div className="flex h-9 items-start gap-3">
               {socials.map((social) => (
@@ -60,7 +62,7 @@ export default function Footer() {
           <div className="flex shrink-0 flex-col gap-8 self-stretch sm:flex-row sm:gap-[2px]">
             <div className="flex flex-col items-start gap-4">
               <h3 className="flex h-5 w-full items-start text-[14px] font-medium leading-5 tracking-[0.07px] text-[#0F172A] sm:w-[250px]">
-                Platform
+                {t("footer.platform")}
               </h3>
               <ul className="flex w-full flex-col items-start gap-3 sm:w-[250px]">
                 {platformLinks.map((link) => (
@@ -77,7 +79,7 @@ export default function Footer() {
             </div>
             <div className="flex flex-col items-start gap-4">
               <h3 className="flex h-5 w-full items-start text-[14px] font-medium leading-5 tracking-[0.07px] text-[#0F172A] sm:w-[250px]">
-                Legal
+                {t("footer.legal")}
               </h3>
               <ul className="flex flex-col items-start gap-3">
                 {legalLinks.map((link) => (
@@ -97,7 +99,7 @@ export default function Footer() {
 
         <div className="flex h-[53px] w-full items-center justify-center border-t border-[#DADADA] pt-px">
           <p className="text-[14px] font-medium leading-5 tracking-[0.07px] text-[#1D4ED8]">
-            © 2025 NephroReach. All rights reserved.
+            © {new Date().getFullYear()} NephroReach. {t("footer.rights")}
           </p>
         </div>
       </div>

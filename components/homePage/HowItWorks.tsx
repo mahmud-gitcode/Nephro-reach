@@ -2,35 +2,38 @@
 
 import React from "react";
 import Image from "next/image";
-
-const steps = [
-  {
-    id: 1,
-    title: "Sign Up",
-    desc: "Choose your membership level and securely add your phone number.",
-    image: "/images/home/how-1.png",
-  },
-  {
-    id: 2,
-    title: "Get Your Member ID",
-    desc: "Receive a unique ID for your NephroReach account.",
-    image: "/images/home/how-2.png",
-  },
-  {
-    id: 3,
-    title: "Learn & Journal",
-    desc: "Use your journal, prompts, and 04-week education library.",
-    image: "/images/home/how-3.png",
-  },
-  {
-    id: 4,
-    title: "Receive SMS Check-Ins",
-    desc: "Receive automated weekly SMS check-ins and class reminders.",
-    image: "/images/home/how-4.png",
-  },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function HowItWorks() {
+  const { t } = useLanguage();
+
+  const steps = [
+    {
+      id: 1,
+      title: t("howItWorks.step1Title"),
+      desc: t("howItWorks.step1Desc"),
+      image: "/images/home/how-1.png",
+    },
+    {
+      id: 2,
+      title: t("howItWorks.step2Title"),
+      desc: t("howItWorks.step2Desc"),
+      image: "/images/home/how-2.png",
+    },
+    {
+      id: 3,
+      title: t("howItWorks.step3Title"),
+      desc: t("howItWorks.step3Desc"),
+      image: "/images/home/how-3.png",
+    },
+    {
+      id: 4,
+      title: t("howItWorks.step4Title"),
+      desc: t("howItWorks.step4Desc"),
+      image: "/images/home/how-4.png",
+    },
+  ];
+
   return (
     <section
       id="how-it-works"
@@ -43,7 +46,7 @@ export default function HowItWorks() {
             <span className="text-[#2563EB]">Reach</span> Works
           </h2>
           <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
-            Choose the path that fits your goals. Simple, transparent pricing.
+            {t("howItWorks.subtitle")}
           </p>
         </div>
 

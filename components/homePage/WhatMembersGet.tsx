@@ -1,44 +1,44 @@
 "use client";
 
 import React from "react";
-
-// Each description is split into the same three lines as the Figma design.
-// The breaks are explicit so the card height stays exactly 254px no matter
-// which font the browser substitutes for SF Pro.
-const features = [
-  {
-    title: "Daily SMS Prompts",
-    desc: "Carefully crafted questions sent to your phone to spark reflection and mindfulness throughout your day.",
-    icon: "/images/home/feat-sms.svg",
-  },
-  {
-    title: "Digital Journal",
-    desc: "A beautiful, private space where all your SMS replies are automatically saved and organized by date.",
-    icon: "/images/home/feat-book.svg",
-  },
-  {
-    title: "Monthly Classes",
-    desc: "Live, expert-led sessions focusing on personal growth, habit building, and intentional living.",
-    icon: "/images/home/feat-calendar.svg",
-  },
-  {
-    title: "Progress Tracking",
-    desc: "Look back at your entries over time to see patterns, growth, and shifts in your perspective.",
-    icon: "/images/home/feat-chart.svg",
-  },
-  {
-    title: "Community Access",
-    desc: "Connect with other members in our moderated forum to share insights and discuss class topics.",
-    icon: "/images/home/feat-users.svg",
-  },
-  {
-    title: "Private & Secure",
-    desc: "Your reflections are yours alone. We use industry-standard encryption to keep your journal safe.",
-    icon: "/images/home/feat-lock.svg",
-  },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function WhatMembersGet() {
+  const { t } = useLanguage();
+
+  const features = [
+    {
+      title: t("whatMembersGet.card1Title"),
+      desc: t("whatMembersGet.card1Desc"),
+      icon: "/images/home/feat-sms.svg",
+    },
+    {
+      title: t("whatMembersGet.card2Title"),
+      desc: t("whatMembersGet.card2Desc"),
+      icon: "/images/home/feat-book.svg",
+    },
+    {
+      title: t("whatMembersGet.card3Title"),
+      desc: t("whatMembersGet.card3Desc"),
+      icon: "/images/home/feat-calendar.svg",
+    },
+    {
+      title: t("whatMembersGet.card4Title"),
+      desc: t("whatMembersGet.card4Desc"),
+      icon: "/images/home/feat-chart.svg",
+    },
+    {
+      title: t("whatMembersGet.card5Title"),
+      desc: t("whatMembersGet.card5Desc"),
+      icon: "/images/home/feat-users.svg",
+    },
+    {
+      title: t("whatMembersGet.card6Title"),
+      desc: t("whatMembersGet.card6Desc"),
+      icon: "/images/home/feat-lock.svg",
+    },
+  ];
+
   return (
     <section
       id="features"
@@ -47,10 +47,10 @@ export default function WhatMembersGet() {
       <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
         <div className="flex flex-col items-center gap-3 text-center landing-reveal">
           <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
-            What Members Get
+            {t("whatMembersGet.title")}
           </h2>
           <p className="text-lg font-normal leading-8 tracking-[0.12px] text-[#344056] sm:text-2xl">
-            everything you need to grow
+            {t("whatMembersGet.subtitle")}
           </p>
         </div>
 

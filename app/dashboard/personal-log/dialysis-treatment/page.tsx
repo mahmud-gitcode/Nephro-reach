@@ -3,14 +3,18 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   Calendar,
   CalendarX,
   CheckCircle2,
   Clock,
+  Droplets,
   Eye,
+  HeartPulse,
   Info,
   Pencil,
   Plus,
+  Scale,
   Timer,
 } from "lucide-react";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
@@ -80,6 +84,80 @@ function SummaryCards() {
           </div>
         </div>
       ))}
+    </section>
+  );
+}
+
+const clinicalMeasurements = [
+  {
+    label: "Fluid Removed",
+    value: "2.3",
+    unit: "Liters",
+    icon: Droplets,
+    iconColor: "text-blue-600",
+    bgColor: "bg-blue-50 border-blue-100",
+  },
+  {
+    label: "Post Weight",
+    value: "72.4",
+    unit: "kg (pre: 74.7)",
+    icon: Scale,
+    iconColor: "text-teal-600",
+    bgColor: "bg-teal-50 border-teal-100",
+  },
+  {
+    label: "Blood Pressure",
+    value: "118 / 72",
+    unit: "mmHg",
+    icon: Activity,
+    iconColor: "text-indigo-600",
+    bgColor: "bg-indigo-50 border-indigo-100",
+  },
+  {
+    label: "Heart Rate",
+    value: "78",
+    unit: "bpm",
+    icon: HeartPulse,
+    iconColor: "text-rose-500",
+    bgColor: "bg-rose-50 border-rose-100",
+  },
+];
+
+function ClinicalMeasurementsCards() {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-[#2563EB]" />
+          <span>Clinical Measurements</span>
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {clinicalMeasurements.map((card) => (
+          <div
+            key={card.label}
+            className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition-all"
+          >
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor}`}
+            >
+              <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-600">{card.label}</p>
+              <div className="mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-3xl font-bold tracking-tight text-slate-900">
+                  {card.value}
+                </span>
+                <span className="text-xs font-semibold text-slate-500">
+                  {card.unit}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -322,6 +400,9 @@ export default function DialysisTreatmentPage() {
 
       {/* TOP 4 SUMMARY CARDS */}
       <SummaryCards />
+
+      {/* CLINICAL MEASUREMENTS */}
+      <ClinicalMeasurementsCards />
 
       {/* MAIN CHARTS SECTION: RECOVERY PATTERN & SYMPTOMS DONUT */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
