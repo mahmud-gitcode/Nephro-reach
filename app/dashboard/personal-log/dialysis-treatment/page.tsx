@@ -430,7 +430,7 @@ export default function DialysisTreatmentPage() {
             className="flex items-center justify-center gap-2 rounded-2xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>{dt?.addEntry || "Add Entry"}</span>
+            <span>{dt?.addEntry || "Add Treatment"}</span>
           </Link>
         </div>
       </div>

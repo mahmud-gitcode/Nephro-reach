@@ -712,7 +712,7 @@
   "dialysisTreatment": {
     "pageTitle": "Tratamiento de Diálisis",
     "topBanner": "Completar los tratamientos prescritos es importante para la adecuación de la diálisis",
-    "addEntry": "Agregar Entrada",
+    "addEntry": "Agregar Tratamiento",
     "backToTreatment": "Volver al Tratamiento de Diálisis",
     "editEntry": "Editar Entrada",
     "summary": {

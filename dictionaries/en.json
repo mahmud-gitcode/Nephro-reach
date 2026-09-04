@@ -728,7 +728,7 @@
   "dialysisTreatment": {
     "pageTitle": "Dialysis Treatment",
     "topBanner": "Completing prescribed treatments is important for dialysis adequacy",
-    "addEntry": "Add Entry",
+    "addEntry": "Add Treatment",
     "backToTreatment": "Back to Dialysis Treatment",
     "editEntry": "Edit Entry",
     "summary": {
