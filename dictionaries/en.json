@@ -1655,5 +1655,49 @@
     },
     "inRange": "In Range",
     "slightlyHigh": "Slightly High"
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Access your nephrology care dashboard.",
+    "emailLabel": "Email or Phone Number",
+    "emailPlaceholder": "Example@email.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "at least 8 characters",
+    "forgotPassword": "Forgot Password?",
+    "signInButton": "Sign in",
+    "dividerOr": "Or",
+    "googleSignIn": "Sign in with Google",
+    "noAccount": "Don't you have an account?",
+    "signUpLink": "Sign up",
+    "errors": {
+      "invalid": "Use a demo account or an email you registered."
+    }
+  },
+  "signup": {
+    "title": "Personal Details",
+    "nameLabel": "Full Name",
+    "namePlaceholder": "Example",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "Example@email.com",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "Example123",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "at least 8 characters",
+    "confirmPasswordLabel": "Confirm Password",
+    "confirmPasswordPlaceholder": "at least 8 characters",
+    "agreeTerms": "I am 18 years or older and have read and agree to the",
+    "termsLink": "Terms & Conditions.",
+    "checkboxAria": "Agree to terms and conditions",
+    "signUpButton": "Sign up",
+    "dividerOr": "Or",
+    "googleSignUp": "Sign in with Google",
+    "haveAccount": "Already have an account?",
+    "signInLink": "Sign In",
+    "errors": {
+      "passwordLength": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "termsRequired": "Please agree to the terms to continue.",
+      "emailExists": "That email is already registered. Sign in instead."
+    }
   }
 }

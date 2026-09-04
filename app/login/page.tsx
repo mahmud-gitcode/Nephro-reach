@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { canAccessPath, DEMO_ACCOUNTS, homeForRole } from "@/lib/auth";
 
 const inputClassName =
@@ -22,7 +23,10 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const { login, loginAs } = useAuth();
+  const { language, setLanguage, dictionary } = useLanguage();
+  const l = dictionary?.login;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -37,6 +41,78 @@ function LoginForm() {
 
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden bg-white font-sans">
+      {/* Top right language switcher */}
+      <div className="absolute right-5 top-5 sm:right-8 sm:top-8 z-30">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsLangOpen(!isLangOpen)}
+            className="flex items-center gap-1.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100"
+            aria-label="Change language"
+          >
+            <img
+              src={
+                language === "ES"
+                  ? "/images/dashboard-header/spain-flag.svg"
+                  : "/images/dashboard-header/uk-flag.svg"
+              }
+              alt={language === "ES" ? "Español" : "English"}
+              className="h-6 w-[33px] rounded-xs object-cover"
+            />
+            <img
+              src="/images/dashboard-header/arrow-down.svg"
+              alt=""
+              className={`size-3 transition-transform duration-200 ${
+                isLangOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {isLangOpen && (
+            <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white py-1 shadow-lg z-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setLanguage("EN");
+                  setIsLangOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+                  language === "EN"
+                    ? "bg-blue-50 font-semibold text-blue-600"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <img
+                  src="/images/dashboard-header/uk-flag.svg"
+                  alt=""
+                  className="h-4 w-6 rounded-xs object-cover"
+                />
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLanguage("ES");
+                  setIsLangOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+                  language === "ES"
+                    ? "bg-blue-50 font-semibold text-blue-600"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <img
+                  src="/images/dashboard-header/spain-flag.svg"
+                  alt=""
+                  className="h-4 w-6 rounded-xs object-cover"
+                />
+                Español
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -68,10 +144,10 @@ function LoginForm() {
             <div className="flex w-full flex-col gap-10 px-0 sm:px-5">
               <div className="flex flex-col gap-2">
                 <h1 className="text-[36px] font-medium leading-10 tracking-[0.18px] text-[#0F172A]">
-                  Welcome Back
+                  {l?.title || "Welcome Back"}
                 </h1>
                 <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#0F172A]">
-                  Access your nephrology care dashboard.
+                  {l?.subtitle || "Access your nephrology care dashboard."}
                 </p>
               </div>
 
@@ -82,7 +158,8 @@ function LoginForm() {
                   const next = login(email, password);
                   if (!next) {
                     setError(
-                      "Use a demo account or an email you registered.",
+                      l?.errors?.invalid ||
+                        "Use a demo account or an email you registered."
                     );
                     return;
                   }
@@ -95,7 +172,7 @@ function LoginForm() {
                       htmlFor="login-email"
                       className="text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]"
                     >
-                      Email or Phone Number
+                      {l?.emailLabel || "Email or Phone Number"}
                     </label>
                     <div className="relative">
                       <FieldIcon src="/images/login/sms.svg" />
@@ -107,7 +184,7 @@ function LoginForm() {
                           setEmail(event.target.value);
                           setError("");
                         }}
-                        placeholder="Example@email.com"
+                        placeholder={l?.emailPlaceholder || "Example@email.com"}
                         className={inputClassName}
                         autoComplete="username"
                       />
@@ -119,7 +196,7 @@ function LoginForm() {
                       htmlFor="login-password"
                       className="text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]"
                     >
-                      Password
+                      {l?.passwordLabel || "Password"}
                     </label>
                     <div className="relative">
                       <FieldIcon src="/images/login/lock.svg" />
@@ -131,7 +208,9 @@ function LoginForm() {
                           setPassword(event.target.value);
                           setError("");
                         }}
-                        placeholder="at least 8 characters"
+                        placeholder={
+                          l?.passwordPlaceholder || "at least 8 characters"
+                        }
                         className={inputClassName}
                         autoComplete="current-password"
                       />
@@ -141,7 +220,7 @@ function LoginForm() {
                         href="#"
                         className="text-sm font-medium leading-5 tracking-[0.07px] text-[#1D4ED8] hover:underline"
                       >
-                        Forgot Password?
+                        {l?.forgotPassword || "Forgot Password?"}
                       </Link>
                     </div>
                   </div>
@@ -155,7 +234,7 @@ function LoginForm() {
                   type="submit"
                   className="relative flex h-12 w-full items-center justify-center rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
                 >
-                  Sign in
+                  {l?.signInButton || "Sign in"}
                 </button>
               </form>
 
@@ -163,7 +242,7 @@ function LoginForm() {
                 <div className="flex w-full items-center justify-center gap-4 py-2.5">
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
                   <span className="text-base font-medium leading-6 tracking-[0.08px] text-[#294957]">
-                    Or
+                    {l?.dividerOr || "Or"}
                   </span>
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
                 </div>
@@ -188,18 +267,18 @@ function LoginForm() {
                     />
                   </span>
                   <span className="text-base font-normal tracking-[0.16px] text-[#313957]">
-                    Sign in with Google
+                    {l?.googleSignIn || "Sign in with Google"}
                   </span>
                 </button>
               </div>
 
               <p className="w-full text-center text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]">
-                Don&apos;t you have an account?{" "}
+                {l?.noAccount || "Don't you have an account?"}{" "}
                 <Link
                   href="/registration"
                   className="text-[#1D4ED8] hover:underline"
                 >
-                  Sign up
+                  {l?.signUpLink || "Sign up"}
                 </Link>
               </p>
             </div>

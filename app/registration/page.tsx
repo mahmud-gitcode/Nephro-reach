@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { DEMO_ACCOUNTS, USER_HOME } from "@/lib/auth";
 
 const inputClassName =
@@ -21,11 +22,86 @@ export default function RegistrationPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const { register, loginAs } = useAuth();
+  const { language, setLanguage, dictionary } = useLanguage();
+  const s = dictionary?.signup;
   const router = useRouter();
 
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden bg-white font-sf">
+      {/* Top right language switcher */}
+      <div className="absolute right-5 top-5 sm:right-8 sm:top-8 z-30">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsLangOpen(!isLangOpen)}
+            className="flex items-center gap-1.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100"
+            aria-label="Change language"
+          >
+            <img
+              src={
+                language === "ES"
+                  ? "/images/dashboard-header/spain-flag.svg"
+                  : "/images/dashboard-header/uk-flag.svg"
+              }
+              alt={language === "ES" ? "Español" : "English"}
+              className="h-6 w-[33px] rounded-xs object-cover"
+            />
+            <img
+              src="/images/dashboard-header/arrow-down.svg"
+              alt=""
+              className={`size-3 transition-transform duration-200 ${
+                isLangOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {isLangOpen && (
+            <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white py-1 shadow-lg z-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setLanguage("EN");
+                  setIsLangOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+                  language === "EN"
+                    ? "bg-blue-50 font-semibold text-blue-600"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <img
+                  src="/images/dashboard-header/uk-flag.svg"
+                  alt=""
+                  className="h-4 w-6 rounded-xs object-cover"
+                />
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLanguage("ES");
+                  setIsLangOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+                  language === "ES"
+                    ? "bg-blue-50 font-semibold text-blue-600"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <img
+                  src="/images/dashboard-header/spain-flag.svg"
+                  alt=""
+                  className="h-4 w-6 rounded-xs object-cover"
+                />
+                Español
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -56,7 +132,7 @@ export default function RegistrationPage() {
           <div className="w-full max-w-[538px] shrink-0">
             <div className="flex w-full flex-col items-start gap-3 px-0 sm:px-5">
               <h1 className="text-[36px] font-medium leading-10 tracking-[0.18px] text-[#0F172A]">
-                Personal Details
+                {s?.title || "Personal Details"}
               </h1>
 
               <form
@@ -64,21 +140,31 @@ export default function RegistrationPage() {
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (password.length < 8) {
-                    setError("Password must be at least 8 characters.");
+                    setError(
+                      s?.errors?.passwordLength ||
+                        "Password must be at least 8 characters."
+                    );
                     return;
                   }
                   if (password !== confirmPassword) {
-                    setError("Passwords do not match.");
+                    setError(
+                      s?.errors?.passwordMismatch ||
+                        "Passwords do not match."
+                    );
                     return;
                   }
                   if (!agreed) {
-                    setError("Please agree to the terms to continue.");
+                    setError(
+                      s?.errors?.termsRequired ||
+                        "Please agree to the terms to continue."
+                    );
                     return;
                   }
                   const result = register({ name, email, password });
                   if (result === "exists") {
                     setError(
-                      "That email is already registered. Sign in instead.",
+                      s?.errors?.emailExists ||
+                        "That email is already registered. Sign in instead."
                     );
                     return;
                   }
@@ -88,7 +174,7 @@ export default function RegistrationPage() {
                 <div className="flex w-full flex-col gap-3.5">
                   <div className="flex w-full flex-col gap-2">
                     <label htmlFor="full-name" className={labelClassName}>
-                      Full Name
+                      {s?.nameLabel || "Full Name"}
                     </label>
                     <input
                       id="full-name"
@@ -98,7 +184,7 @@ export default function RegistrationPage() {
                         setName(event.target.value);
                         setError("");
                       }}
-                      placeholder="Example"
+                      placeholder={s?.namePlaceholder || "Example"}
                       className={inputClassName}
                       autoComplete="name"
                     />
@@ -106,7 +192,7 @@ export default function RegistrationPage() {
 
                   <div className="flex w-full flex-col gap-2">
                     <label htmlFor="email" className={labelClassName}>
-                      Email Address
+                      {s?.emailLabel || "Email Address"}
                     </label>
                     <input
                       id="email"
@@ -116,7 +202,7 @@ export default function RegistrationPage() {
                         setEmail(event.target.value);
                         setError("");
                       }}
-                      placeholder="Example@email.com"
+                      placeholder={s?.emailPlaceholder || "Example@email.com"}
                       className={inputClassName}
                       autoComplete="email"
                     />
@@ -124,14 +210,14 @@ export default function RegistrationPage() {
 
                   <div className="flex w-full flex-col gap-2">
                     <label htmlFor="phone" className={labelClassName}>
-                      Phone Number
+                      {s?.phoneLabel || "Phone Number"}
                     </label>
                     <input
                       id="phone"
                       type="tel"
                       value={phone}
                       onChange={(event) => setPhone(event.target.value)}
-                      placeholder="Example123"
+                      placeholder={s?.phonePlaceholder || "Example123"}
                       className={inputClassName}
                       autoComplete="tel"
                     />
@@ -139,7 +225,7 @@ export default function RegistrationPage() {
 
                   <div className="flex w-full flex-col gap-2">
                     <label htmlFor="password" className={labelClassName}>
-                      Password
+                      {s?.passwordLabel || "Password"}
                     </label>
                     <input
                       id="password"
@@ -149,7 +235,9 @@ export default function RegistrationPage() {
                         setPassword(event.target.value);
                         setError("");
                       }}
-                      placeholder="at least 8 characters"
+                      placeholder={
+                        s?.passwordPlaceholder || "at least 8 characters"
+                      }
                       className={inputClassName}
                       autoComplete="new-password"
                     />
@@ -160,7 +248,7 @@ export default function RegistrationPage() {
                       htmlFor="confirm-password"
                       className={labelClassName}
                     >
-                      Confirm Password
+                      {s?.confirmPasswordLabel || "Confirm Password"}
                     </label>
                     <input
                       id="confirm-password"
@@ -170,7 +258,9 @@ export default function RegistrationPage() {
                         setConfirmPassword(event.target.value);
                         setError("");
                       }}
-                      placeholder="at least 8 characters"
+                      placeholder={
+                        s?.confirmPasswordPlaceholder || "at least 8 characters"
+                      }
                       className={inputClassName}
                       autoComplete="new-password"
                     />
@@ -186,7 +276,9 @@ export default function RegistrationPage() {
                         setError("");
                       }}
                       className="relative size-6 shrink-0 overflow-clip"
-                      aria-label="Agree to terms and conditions"
+                      aria-label={
+                        s?.checkboxAria || "Agree to terms and conditions"
+                      }
                     >
                       {agreed ? (
                         <span className="absolute inset-[10.42%] flex items-center justify-center rounded-[4px] border-[1.5px] border-[#2563EB] bg-[#2563EB]">
@@ -215,9 +307,10 @@ export default function RegistrationPage() {
                       )}
                     </button>
                     <p className="flex-1 text-base font-medium leading-6 tracking-[0.08px] text-[#344056]">
-                      I am 18 years or older and have read and agree to the{" "}
+                      {s?.agreeTerms ||
+                        "I am 18 years or older and have read and agree to the"}{" "}
                       <Link href="#" className="text-[#1D4ED8] hover:underline">
-                        Terms &amp; Conditions.
+                        {s?.termsLink || "Terms & Conditions."}
                       </Link>
                     </p>
                   </div>
@@ -231,7 +324,7 @@ export default function RegistrationPage() {
                   type="submit"
                   className="relative flex h-12 w-full items-center justify-center gap-2 rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
                 >
-                  Sign in
+                  {s?.signUpButton || "Sign up"}
                 </button>
               </form>
 
@@ -239,7 +332,7 @@ export default function RegistrationPage() {
                 <div className="flex w-full items-center justify-center gap-4 py-2.5">
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
                   <span className="text-base font-medium leading-6 tracking-[0.08px] text-[#294957]">
-                    Or
+                    {s?.dividerOr || "Or"}
                   </span>
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
                 </div>
@@ -264,15 +357,15 @@ export default function RegistrationPage() {
                     />
                   </span>
                   <span className="text-base font-normal leading-none tracking-[0.16px] text-[#313957]">
-                    Sign in with Google
+                    {s?.googleSignUp || "Sign in with Google"}
                   </span>
                 </button>
               </div>
 
               <p className="w-full text-center text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]">
-                Already have an account?{" "}
+                {s?.haveAccount || "Already have an account?"}{" "}
                 <Link href="/login" className="text-[#1D4ED8] hover:underline">
-                  Sign In
+                  {s?.signInLink || "Sign In"}
                 </Link>
               </p>
             </div>
