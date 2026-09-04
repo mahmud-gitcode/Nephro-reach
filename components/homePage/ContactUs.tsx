@@ -11,7 +11,7 @@ export default function ContactUs() {
         <div className="absolute left-[1034px] top-[-536px] size-[992px] rounded-full bg-[#FF0000] opacity-70 blur-[198px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[320px] w-full max-w-[1440px] items-center px-5 sm:px-10 lg:h-[376px] lg:px-[72px]">
+      <div className="relative mx-auto flex min-h-[320px] w-full max-w-[1344px] items-center px-5 sm:px-8 lg:px-12 min-[1344px]:px-0 lg:h-[376px]">
         <div className="flex flex-1 items-center justify-center">
           <div className="relative hidden h-[376px] w-[536px] shrink-0 overflow-hidden lg:block">
             <div className="absolute inset-0 -scale-x-100">

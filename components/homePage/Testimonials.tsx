@@ -41,10 +41,10 @@ export default function Testimonials() {
   ];
 
   return (
-    <section className="w-full bg-white px-5 py-[42px] sm:px-10 lg:px-20">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8">
+    <section className="w-full bg-white py-16 lg:py-20">
+      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-8 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between landing-reveal">
-          <div className="w-full max-w-[1152px] space-y-4">
+          <div className="w-full space-y-4">
             <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
               What Our Customers Say
             </h2>

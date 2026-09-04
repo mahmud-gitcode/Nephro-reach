@@ -26,8 +26,8 @@ const legalLinks = [
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-[#F8FAFF] px-5 pb-[84px] pt-16 font-sf sm:px-10 lg:px-[71px]">
-      <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-10">
+    <footer className="w-full bg-[#F8FAFF] pb-[84px] pt-16 font-sf">
+      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
         <div className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
           <div className="flex w-full flex-col items-start gap-4 lg:w-[500px] lg:shrink-0">
             <Image

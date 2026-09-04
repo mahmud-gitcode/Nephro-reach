@@ -99,12 +99,36 @@ export default function Hero() {
               you feel more informed, prepared, and confident.
             </p>
           </div>
-          <Link
-            href="/registration"
-            className="inline-flex h-[52px] w-[194px] items-center justify-center rounded-[4px] bg-[#2563EB] px-6 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-all duration-300 hover:bg-[#1D4ED8] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:scale-[0.98] animate-timed-cta cursor-pointer"
-          >
-            <span>Try it free</span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-6 pt-1 animate-timed-cta">
+            <div className="relative group inline-flex">
+              {/* Subtle light ambient glow */}
+              <div
+                className="absolute -inset-0.5 rounded-lg bg-blue-500/25 blur-[6px] opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:bg-blue-500/40 group-hover:blur-[8px]"
+                aria-hidden="true"
+              />
+              <Link
+                href="/pricing"
+                className="relative inline-flex h-[52px] items-center justify-center rounded-lg bg-[#2563EB] px-7 py-3 text-base font-bold tracking-[0.08px] text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)] transition-all duration-300 hover:bg-[#1D4ED8] hover:shadow-[0_6px_20px_rgba(37,99,235,0.38)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+              >
+                <span>Get Membership</span>
+              </Link>
+            </div>
+            <a
+              href="#how-it-works"
+              onClick={(e) => {
+                e.preventDefault();
+                const el = document.getElementById("how-it-works");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.location.href = "/#how-it-works";
+                }
+              }}
+              className="inline-flex h-[52px] items-center justify-center rounded-lg border border-[#CBD5E1] bg-white px-6 py-3 text-base font-bold tracking-[0.08px] text-[#0F172A] shadow-xs transition-all duration-300 hover:bg-slate-50 hover:border-slate-400 hover:text-[#2563EB] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+            >
+              <span>How It Works</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>

@@ -113,7 +113,7 @@ export default function Header() {
       <header className={`fixed top-0 left-0 z-50 w-full border-b border-slate-100 bg-white/90 backdrop-blur-md transition-transform duration-300 ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}>
-        <div className="mx-auto flex h-[101px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-[70px]">
+        <div className="mx-auto flex h-[101px] w-full max-w-[1344px] items-center justify-between px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
 
         {/* Left Group: Logo + Language Selector */}
         <div className="flex items-center gap-4 sm:gap-6">

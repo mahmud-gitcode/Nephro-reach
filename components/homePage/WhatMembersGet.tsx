@@ -42,9 +42,9 @@ export default function WhatMembersGet() {
   return (
     <section
       id="features"
-      className="w-full scroll-mt-24 bg-[#F8FAFF] px-5 py-16 sm:px-10 lg:px-[72px] lg:py-20"
+      className="w-full scroll-mt-24 bg-[#F8FAFF] py-16 lg:py-20"
     >
-      <div className="mx-auto flex w-full max-w-[1296px] flex-col gap-10">
+      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
         <div className="flex flex-col items-center gap-3 text-center landing-reveal">
           <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
             What Members Get

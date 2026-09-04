@@ -106,11 +106,11 @@ export default function Engagement() {
     >
       <div
         className={[
-          "flex w-full flex-col justify-center px-5 py-12 sm:px-10 lg:px-[71px]",
+          "flex w-full flex-col justify-center py-12",
           isPinned ? "sticky top-0 h-screen overflow-hidden" : "",
         ].join(" ")}
       >
-        <div className="mx-auto flex w-full max-w-[1298px] flex-col items-center gap-12">
+        <div className="mx-auto flex w-full max-w-[1344px] flex-col items-center gap-12 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
           <div className="flex w-full flex-col items-center gap-3 text-center">
             <h2 className="text-[28px] font-semibold leading-10 tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
               Your Health, All in One Place
@@ -121,20 +121,20 @@ export default function Engagement() {
             </p>
           </div>
 
-          <div className="flex w-full flex-col items-center gap-10 lg:flex-row lg:items-start lg:gap-8 lg:px-[109px]">
-            <div className="relative w-full max-w-[529px] shrink-0 lg:h-[426px] lg:w-[529px]">
+          <div className="flex w-full flex-col items-center justify-between gap-10 lg:flex-row lg:items-center lg:gap-14">
+            <div className="relative w-full max-w-[580px] shrink-0 lg:w-[560px] xl:w-[600px]">
               <div className="relative aspect-[1332/1072] w-full overflow-hidden rounded-[24px] opacity-90 blur-[1.5px]">
                 <Image
                   src="/images/home/engagement.png"
                   alt="NephroReach dashboard preview"
                   fill
                   className="rounded-[24px] object-cover"
-                  sizes="(max-width: 1024px) 100vw, 529px"
+                  sizes="(max-width: 1024px) 100vw, 600px"
                 />
                 <div className="absolute inset-0 rounded-[24px] bg-[rgba(0,99,255,0.1)]" />
               </div>
 
-              <div className="absolute left-1/2 top-1/2 flex w-[min(363px,88%)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[7.915px] rounded-[12.861px] border-[0.989px] border-[rgba(37,34,30,0.18)] bg-white px-[0.989px] pb-[9.893px] pt-[0.989px] drop-shadow-[0_5.947px_7.434px_rgba(0,0,0,0.1)]">
+              <div className="absolute left-1/2 top-1/2 flex w-[min(380px,88%)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[7.915px] rounded-[12.861px] border-[0.989px] border-[rgba(37,34,30,0.18)] bg-white px-[0.989px] pb-[9.893px] pt-[0.989px] drop-shadow-[0_5.947px_7.434px_rgba(0,0,0,0.1)]">
                 <div className="flex w-full flex-col gap-[7.915px] p-[11.872px]">
                   <p className="text-[15.829px] font-medium leading-[23.744px] tracking-[0.079px] text-[#0F172A]">
                     check-in
@@ -161,9 +161,9 @@ export default function Engagement() {
               </div>
             </div>
 
-            <div className="relative flex w-full items-start lg:w-[632px] lg:self-stretch lg:px-[66px] lg:pb-10 lg:pt-20">
+            <div className="relative flex w-full flex-1 items-start lg:max-w-[620px] lg:self-stretch lg:pl-12 lg:pr-0 lg:py-16">
               {isPinned && (
-                <div className="absolute left-[26px] top-[82px] flex shrink-0 flex-col gap-2">
+                <div className="absolute left-0 top-[72px] flex shrink-0 flex-col gap-2">
                   {steps.map((step, index) => (
                     <button
                       key={step.title}
@@ -186,7 +186,7 @@ export default function Engagement() {
                 </div>
               )}
 
-              <div className="relative w-full lg:w-[500px]">
+              <div className="relative w-full">
                 {steps.map((step, index) => (
                   <div
                     key={step.title}

@@ -16,6 +16,8 @@ export const metadata: Metadata = {
     "Understand your kidneys. Take control of your journey with NephroReach.",
 };
 
+import LandingAnimationObserver from "@/components/homePage/LandingAnimationObserver";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +30,10 @@ export default function RootLayout({
     >
       <body className={`${inter.className} min-h-full flex flex-col`}>
         <LanguageProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <LandingAnimationObserver />
+            {children}
+          </AuthProvider>
         </LanguageProvider>
       </body>
     </html>
