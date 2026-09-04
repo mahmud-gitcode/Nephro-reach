@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Phone, Pencil } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function WheresMyRideModal({
   isOpen,
@@ -10,6 +11,7 @@ export default function WheresMyRideModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [driverName, setDriverName] = useState("Bobo boy");
   const [driverPhone, setDriverPhone] = useState("(684) 555-0102");
   const [isEditing, setIsEditing] = useState(false);
@@ -29,7 +31,7 @@ export default function WheresMyRideModal({
           {/* Form Field 1: My Ride Name */}
           <div className="space-y-2">
             <label className="block text-base font-bold text-slate-900">
-              My Ride Name
+              {t("myRides.driverNameLabel")}
             </label>
             <input
               type="text"
@@ -43,7 +45,7 @@ export default function WheresMyRideModal({
           {/* Form Field 2: Phone Number */}
           <div className="space-y-2">
             <label className="block text-base font-bold text-slate-900">
-              Phone Number
+              {t("myRides.phoneLabel")}
             </label>
             <input
               type="text"
@@ -61,14 +63,14 @@ export default function WheresMyRideModal({
               onClick={() => setIsEditing(false)}
               className="rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold px-6 py-3.5 text-base transition-colors shadow-sm cursor-pointer"
             >
-              Save info
+              {t("myRides.saveRide")}
             </button>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
               className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-3.5 text-base transition-colors cursor-pointer"
             >
-              Cancel
+              {t("myRides.cancel")}
             </button>
           </div>
         </div>
@@ -96,21 +98,21 @@ export default function WheresMyRideModal({
 
         {/* Title & Subtitle */}
         <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-slate-900">Need a ride?</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("myRides.title")}</h2>
           <p className="text-sm font-medium text-slate-600">
-            Quick access to your transportation options.
+            {t("myRides.subtitle")}
           </p>
         </div>
 
         {/* Card 1: My Ride */}
         <div className="rounded-2xl border border-blue-100 bg-[#F4F8FF] p-4 text-left space-y-3 relative">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">My Ride</h3>
+            <h3 className="text-base font-bold text-slate-900">{t("myRides.sectionTitle")}</h3>
             <button
               type="button"
               onClick={() => setIsEditing(true)}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0F172A] text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Edit Driver Details"
+              title={t("myRides.editDetails")}
             >
               <Pencil className="h-4 w-4" />
             </button>
@@ -126,13 +128,13 @@ export default function WheresMyRideModal({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] py-3.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Phone className="h-4 w-4" />
-            Call My Ride
+            {t("myRides.call")} {driverName}
           </a>
         </div>
 
         {/* Card 2: Ride share Apps */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-left space-y-3">
-          <h3 className="text-base font-bold text-slate-900">Ride share Apps</h3>
+          <h3 className="text-base font-bold text-slate-900">{t("myRides.rideshareTitle")}</h3>
 
           <a
             href="https://m.uber.com"
@@ -141,7 +143,7 @@ export default function WheresMyRideModal({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] py-3.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-sm"
           >
             <Phone className="h-4 w-4" />
-            Open Uber
+            {t("myRides.openUber")}
           </a>
 
           <a
@@ -151,7 +153,7 @@ export default function WheresMyRideModal({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF2B99] py-3.5 text-sm font-bold text-white hover:bg-pink-600 transition-colors shadow-sm"
           >
             <Phone className="h-4 w-4" />
-            Open Lyft
+            {t("myRides.openLyft")}
           </a>
         </div>
 
@@ -161,7 +163,7 @@ export default function WheresMyRideModal({
           onClick={onClose}
           className="w-full rounded-xl bg-[#F1F5F9] py-3.5 text-sm font-bold text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
         >
-          Close
+          {t("myRides.close")}
         </button>
       </div>
     </div>

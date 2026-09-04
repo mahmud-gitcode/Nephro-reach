@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -9,10 +11,12 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
-const readingGroups = [
+const readingGroupsData = [
   {
-    date: "May 5, 2026",
+    dateEn: "May 5, 2026",
+    dateEs: "5 de mayo de 2026",
     readings: [
       {
         time: "12:00 AM",
@@ -47,7 +51,8 @@ const readingGroups = [
     ],
   },
   {
-    date: "May 4, 2026",
+    dateEn: "May 4, 2026",
+    dateEs: "4 de mayo de 2026",
     readings: [
       {
         time: "07:45 AM",
@@ -82,7 +87,8 @@ const readingGroups = [
     ],
   },
   {
-    date: "May 3, 2026",
+    dateEn: "May 3, 2026",
+    dateEs: "3 de mayo de 2026",
     readings: [
       {
         time: "06:55 AM",
@@ -118,23 +124,19 @@ const readingGroups = [
   },
 ];
 
-const trendPoints = [
-  { day: "Sun", systolic: 146, diastolic: 92 },
-  { day: "Mon", systolic: 112, diastolic: 74 },
-  { day: "Tue", systolic: 101, diastolic: 70 },
-  { day: "Wed", systolic: 108, diastolic: 78 },
-  { day: "Thu", systolic: 148, diastolic: 88 },
-  { day: "Fri", systolic: 154, diastolic: 91 },
-  { day: "Set", systolic: 130, diastolic: 82 },
-];
-
-const guideRows = [
-  { label: "SYS > 140 or DIA > 90", status: "High", color: "bg-red-50 text-red-600" },
-  { label: "130-139 or 80-87", status: "Elevated", color: "bg-amber-50 text-amber-600" },
-  { label: "Under 130 and 80", status: "Normal", color: "bg-emerald-50 text-emerald-600" },
+const trendPointsBase = [
+  { dayEn: "Sun", dayEs: "Dom", systolic: 146, diastolic: 92 },
+  { dayEn: "Mon", dayEs: "Lun", systolic: 112, diastolic: 74 },
+  { dayEn: "Tue", dayEs: "Mar", systolic: 101, diastolic: 70 },
+  { dayEn: "Wed", dayEs: "Mié", systolic: 108, diastolic: 78 },
+  { dayEn: "Thu", dayEs: "Jue", systolic: 148, diastolic: 88 },
+  { dayEn: "Fri", dayEs: "Vie", systolic: 154, diastolic: 91 },
+  { dayEn: "Sat", dayEs: "Sáb", systolic: 130, diastolic: 82 },
 ];
 
 function ReadingStatus({ status }: { status: string }) {
+  const { t } = useLanguage();
+  const label = t(`bloodPressure.statuses.${status}`) || status;
   const className =
     status === "High"
       ? "bg-red-50 text-red-600"
@@ -144,17 +146,19 @@ function ReadingStatus({ status }: { status: string }) {
 
   return (
     <span className={`inline-flex h-6 items-center rounded px-2 text-xs font-semibold ${className}`}>
-      {status}
+      {label}
     </span>
   );
 }
 
 function DailyBloodPressureList() {
+  const { language, t } = useLanguage();
+
   return (
     <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-          Daily Blood Pressure List
+          {t("bloodPressure.listTitle")}
         </h1>
         <div className="flex flex-wrap gap-3">
           <Link
@@ -162,14 +166,14 @@ function DailyBloodPressureList() {
             className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
           >
             <Plus className="h-5 w-5" />
-            Add Reading
+            {t("bloodPressure.addReading")}
           </Link>
           <button
             type="button"
-            className="flex h-12 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
+            className="flex h-12 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer"
           >
             <Download className="h-5 w-5" />
-            Export
+            {t("bloodPressure.export")}
           </button>
         </div>
       </div>
@@ -179,75 +183,76 @@ function DailyBloodPressureList() {
           <table className="min-w-[1080px] w-full text-left text-sm">
             <thead className="bg-[#F1F5FA] text-sm font-medium leading-5 text-slate-950">
               <tr>
-                {[
-                  "Date",
-                  "Time",
-                  "Systolic",
-                  "Diastolic",
-                  "Pulse",
-                  "Position",
-                  "Symptoms",
-                  "Medication",
-                  "Action",
-                ].map((header) => (
-                  <th key={header} className="border-b border-slate-200 px-3 py-4">
-                    {header}
-                  </th>
-                ))}
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.date")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.time")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.systolic")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.diastolic")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.pulse")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.position")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.symptoms")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.medication")}</th>
+                <th className="border-b border-slate-200 px-3 py-4">{t("bloodPressure.tableHeaders.action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dashed divide-slate-200">
-              {readingGroups.map((group) =>
-                group.readings.map((reading, index) => (
-                  <tr key={`${group.date}-${reading.time}`}>
-                    {index === 0 && (
-                      <td
-                        rowSpan={group.readings.length}
-                        className="border-r border-dashed border-slate-200 px-3 py-3 align-top font-medium text-slate-800"
-                      >
-                        {group.date}
+              {readingGroupsData.map((group) => {
+                const dateLabel = language === "ES" ? group.dateEs : group.dateEn;
+                return group.readings.map((reading, index) => {
+                  const positionLabel = t(`bloodPressure.positions.${reading.position}`) || reading.position;
+                  const symptomsLabel = t(`bloodPressure.symptoms.${reading.symptoms}`) || reading.symptoms;
+                  const medicationLabel = t(`bloodPressure.medications.${reading.medication}`) || reading.medication;
+
+                  return (
+                    <tr key={`${dateLabel}-${reading.time}`}>
+                      {index === 0 && (
+                        <td
+                          rowSpan={group.readings.length}
+                          className="border-r border-dashed border-slate-200 px-3 py-3 align-top font-medium text-slate-800"
+                        >
+                          {dateLabel}
+                        </td>
+                      )}
+                      <td className="px-3 py-3 font-medium text-slate-800">{reading.time}</td>
+                      <td className="px-3 py-3 font-semibold text-slate-950">{reading.systolic}</td>
+                      <td className="px-3 py-3 font-semibold text-slate-950">{reading.diastolic}</td>
+                      <td className="px-3 py-3 font-medium text-slate-800">{reading.pulse}</td>
+                      <td className="px-3 py-3 font-medium text-slate-800">{positionLabel}</td>
+                      <td className="px-3 py-3 font-medium text-slate-800">{symptomsLabel}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <ReadingStatus status={reading.status} />
+                          <span className="text-sm font-medium text-slate-700">{medicationLabel}</span>
+                        </div>
                       </td>
-                    )}
-                    <td className="px-3 py-3 font-medium text-slate-800">{reading.time}</td>
-                    <td className="px-3 py-3 font-semibold text-slate-950">{reading.systolic}</td>
-                    <td className="px-3 py-3 font-semibold text-slate-950">{reading.diastolic}</td>
-                    <td className="px-3 py-3 font-medium text-slate-800">{reading.pulse}</td>
-                    <td className="px-3 py-3 font-medium text-slate-800">{reading.position}</td>
-                    <td className="px-3 py-3 font-medium text-slate-800">{reading.symptoms}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <ReadingStatus status={reading.status} />
-                        <span className="text-sm font-medium text-slate-700">{reading.medication}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100"
-                          aria-label={`Edit reading from ${group.date} at ${reading.time}`}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full p-1 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-600"
-                          aria-label={`Delete reading from ${group.date} at ${reading.time}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100"
-                          aria-label={`More actions for ${group.date} at ${reading.time}`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )),
-              )}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
+                            aria-label={`Edit reading from ${dateLabel} at ${reading.time}`}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                            aria-label={`Delete reading from ${dateLabel} at ${reading.time}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
+                            aria-label={`More actions for ${dateLabel} at ${reading.time}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                });
+              })}
             </tbody>
           </table>
         </div>
@@ -257,27 +262,29 @@ function DailyBloodPressureList() {
 }
 
 function TrendChart() {
+  const { language, t } = useLanguage();
+
   const chartWidth = 640;
   const chartHeight = 184;
   const xFor = (index: number) => 26 + index * 96;
   const yFor = (value: number) => 12 + ((160 - value) / 80) * 156;
-  const systolicLine = trendPoints.map((point, index) => `${xFor(index)},${yFor(point.systolic)}`).join(" ");
-  const diastolicLine = trendPoints.map((point, index) => `${xFor(index)},${yFor(point.diastolic)}`).join(" ");
+  const systolicLine = trendPointsBase.map((point, index) => `${xFor(index)},${yFor(point.systolic)}`).join(" ");
+  const diastolicLine = trendPointsBase.map((point, index) => `${xFor(index)},${yFor(point.diastolic)}`).join(" ");
 
   return (
     <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-          Blood Pressure Trends
+          {t("bloodPressure.trendsTitle")}
         </h2>
         <div className="flex flex-wrap items-center gap-4 text-xs font-medium leading-4 text-slate-600">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-[#6D5DFB]" />
-            Systolic(mmHg)
+            {t("bloodPressure.systolicLegend")}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-[#FF6F61]" />
-            Diastolic(mmHg)
+            {t("bloodPressure.diastolicLegend")}
           </span>
         </div>
       </div>
@@ -320,8 +327,8 @@ function TrendChart() {
                 strokeWidth="2"
                 vectorEffect="non-scaling-stroke"
               />
-              {trendPoints.map((point, index) => (
-                <React.Fragment key={point.day}>
+              {trendPointsBase.map((point, index) => (
+                <React.Fragment key={index}>
                   <circle cx={xFor(index)} cy={yFor(point.systolic)} r="4" fill="white" stroke="#6D5DFB" strokeWidth="2" />
                   <circle cx={xFor(index)} cy={yFor(point.diastolic)} r="4" fill="white" stroke="#FF6F61" strokeWidth="2" />
                 </React.Fragment>
@@ -331,10 +338,10 @@ function TrendChart() {
         </div>
         <div className="mt-2 grid grid-cols-[38px_minmax(0,1fr)] gap-3">
           <span />
-          <div className="flex justify-between px-3 text-xs leading-4 tracking-[0.06px] text-slate-700">
-            {trendPoints.map((point) => (
-              <span key={point.day} className="w-9 text-center">
-                {point.day}
+          <div className="flex justify-between px-3 text-xs leading-4 tracking-[0.06px] text-slate-700 font-medium">
+            {trendPointsBase.map((point, idx) => (
+              <span key={idx} className="w-9 text-center">
+                {language === "ES" ? point.dayEs : point.dayEn}
               </span>
             ))}
           </div>
@@ -345,6 +352,14 @@ function TrendChart() {
 }
 
 function ReadingGuide() {
+  const { t } = useLanguage();
+
+  const guideRows = [
+    { label: t("bloodPressure.guide.high"), status: t("bloodPressure.statuses.High"), color: "bg-red-50 text-red-600" },
+    { label: t("bloodPressure.guide.elevated"), status: t("bloodPressure.statuses.Elevated"), color: "bg-amber-50 text-amber-600" },
+    { label: t("bloodPressure.guide.normal"), status: t("bloodPressure.statuses.Normal"), color: "bg-emerald-50 text-emerald-600" },
+  ];
+
   return (
     <aside className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
       <div className="flex items-center gap-2">
@@ -352,13 +367,13 @@ function ReadingGuide() {
           <HeartPulse className="h-5 w-5" />
         </span>
         <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-          BP Guide
+          {t("bloodPressure.bpGuideTitle")}
         </h2>
       </div>
 
       <div className="mt-6 space-y-4">
         {guideRows.map((row) => (
-          <div key={row.status} className="rounded-lg border border-slate-200 bg-[#FCFDFD] p-3">
+          <div key={row.label} className="rounded-lg border border-slate-200 bg-[#FCFDFD] p-3">
             <p className="text-sm font-medium leading-5 text-slate-700">{row.label}</p>
             <span className={`mt-2 inline-flex h-7 items-center rounded px-2 text-sm font-semibold ${row.color}`}>
               {row.status}
@@ -371,16 +386,18 @@ function ReadingGuide() {
 }
 
 function Disclaimer() {
+  const { t } = useLanguage();
+
   return (
     <aside className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-orange-50 p-3.5">
       <div className="flex gap-2">
         <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
         <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">Important Disclaimer</h2>
+          <h2 className="text-lg font-medium leading-7 text-slate-950">
+            {t("bloodPressure.disclaimerTitle")}
+          </h2>
           <p className="mt-2 max-w-[840px] text-sm leading-5 text-slate-700">
-            This is not medical advice. If this is a medical emergency, contact your care team or
-            emergency services. Track readings consistently and review concerning trends with your
-            clinician.
+            {t("bloodPressure.disclaimerText")}
           </p>
         </div>
       </div>

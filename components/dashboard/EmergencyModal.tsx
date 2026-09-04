@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
-const SYMPTOMS = [
+const defaultSymptoms = [
   "Chest pain or pressure",
   "Trouble breathing",
   "Severe weakness or dizziness",
@@ -26,6 +27,9 @@ type EmergencyModalProps = {
 };
 
 export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
+  const { dictionary, language } = useLanguage();
+  const em = dictionary?.emergencyModal;
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -42,12 +46,17 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
 
   if (!open) return null;
 
+  const symptoms =
+    em?.symptoms && Array.isArray(em.symptoms) && em.symptoms.length > 0
+      ? em.symptoms
+      : defaultSymptoms;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-3 sm:p-4">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
-        aria-label="Close emergency dialog overlay"
+        aria-label={language === "ES" ? "Cerrar diálogo de emergencia" : "Close emergency dialog overlay"}
         onClick={onClose}
       />
       <div
@@ -69,10 +78,10 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
               id="emergency-modal-title"
               className="text-xl font-medium leading-7 tracking-[0.12px] text-[#0F172A] sm:text-2xl sm:leading-8"
             >
-              This may be a medical emergency.
+              {em?.title || "This may be a medical emergency."}
             </h2>
             <p className="text-sm font-medium leading-5 tracking-[0.08px] text-[#344056] sm:text-base sm:leading-6">
-              NephroReach does NOT provide emergency care.
+              {em?.subtitle || "NephroReach does NOT provide emergency care."}
             </p>
           </div>
 
@@ -82,7 +91,7 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
               className="relative flex h-12 w-full items-center justify-center gap-2 rounded bg-[#EF4444] px-3.5 text-base font-bold tracking-[0.08px] text-white transition-colors hover:bg-[#DC2626]"
             >
               <ModalIcon src="/images/emergency/call-white.svg" />
-              CALL 911
+              {em?.call911 || "CALL 911"}
             </a>
 
             <a
@@ -92,15 +101,15 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
               className="flex h-11 w-full items-center justify-center gap-2 rounded border border-[#E2E8F0] bg-[#F1F5FA] px-3.5 text-sm font-bold tracking-[0.08px] text-[#0F172A] transition-colors hover:bg-[#E8EEF6] sm:h-12 sm:text-base"
             >
               <ModalIcon src="/images/emergency/location.svg" />
-              Find Nearest Emergency Room
+              {em?.findEr || "Find Nearest Emergency Room"}
             </a>
 
             <button
               type="button"
-              className="flex h-11 w-full items-center justify-center gap-2 rounded border border-[#E2E8F0] bg-[#F1F5FA] px-3.5 text-sm font-bold tracking-[0.08px] text-[#0F172A] transition-colors hover:bg-[#E8EEF6] sm:h-12 sm:text-base"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded border border-[#E2E8F0] bg-[#F1F5FA] px-3.5 text-sm font-bold tracking-[0.08px] text-[#0F172A] transition-colors hover:bg-[#E8EEF6] sm:h-12 sm:text-base cursor-pointer"
             >
               <ModalIcon src="/images/emergency/call.svg" />
-              Emergency contact
+              {em?.emergencyContact || "Emergency contact"}
             </button>
           </div>
         </div>
@@ -108,10 +117,10 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
           <div className="flex w-full flex-col gap-3 rounded-[14px] border border-[#FFC9C9] bg-[#FEF2F2] p-4 sm:gap-3.5 sm:p-[17px]">
             <h3 className="text-base font-medium leading-6 tracking-[0.09px] text-[#0F172A] sm:text-lg sm:leading-7">
-              When to Seek Emergency Care
+              {em?.whenToSeekTitle || "When to Seek Emergency Care"}
             </h3>
             <ul className="flex flex-col gap-1.5 sm:gap-2">
-              {SYMPTOMS.map((item) => (
+              {symptoms.map((item) => (
                 <li
                   key={item}
                   className="text-sm font-medium leading-5 tracking-[0.07px] text-[#344056]"
@@ -121,14 +130,14 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
               ))}
             </ul>
             <p className="text-sm font-medium leading-5 tracking-[0.07px] text-[#0F172A]">
-              If you feel something is seriously wrong, do not wait. Call 911 or
-              go to the nearest emergency room immediately.
+              {em?.advisory ||
+                "If you feel something is seriously wrong, do not wait. Call 911 or go to the nearest emergency room immediately."}
             </p>
           </div>
 
           <p className="mt-4 text-center text-sm font-medium leading-5 tracking-[0.07px] text-[#6A7282]">
-            NephroReach is an education and support platform only. We do not
-            provide medical advice, diagnosis, or emergency services.
+            {em?.disclaimer ||
+              "NephroReach is an education and support platform only. We do not provide medical advice, diagnosis, or emergency services."}
           </p>
         </div>
 
@@ -136,9 +145,9 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded border border-[#E2E8F0] bg-[#F1F5FA] px-3.5 text-base font-bold tracking-[0.08px] text-[#0F172A] transition-colors hover:bg-[#E8EEF6] sm:h-12"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded border border-[#E2E8F0] bg-[#F1F5FA] px-3.5 text-base font-bold tracking-[0.08px] text-[#0F172A] transition-colors hover:bg-[#E8EEF6] sm:h-12 cursor-pointer"
           >
-            Close
+            {em?.closeButton || "Close"}
           </button>
         </div>
       </div>

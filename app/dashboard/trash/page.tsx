@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertCircle,
   ArrowDown,
@@ -148,6 +149,22 @@ const trendCards = [
 ];
 
 function SummaryCards() {
+  const { dictionary } = useLanguage();
+  const t = dictionary?.trash;
+
+  const getLabel = (label: string) => {
+    switch (label) {
+      case "Dialysis Center":
+        return t?.dialysisCenter || label;
+      case "Consultants":
+        return t?.consultants || label;
+      case "Schedule":
+        return t?.schedule || label;
+      default:
+        return label;
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       {summaryCards.map((card) => (
@@ -155,7 +172,7 @@ function SummaryCards() {
           <card.icon className="h-7 w-7 shrink-0 text-slate-800" />
           <div className="min-w-0">
             <p className="truncate text-xs font-medium leading-4 tracking-[0.06px] text-slate-600">
-              {card.label}
+              {getLabel(card.label)}
             </p>
             <p className="truncate text-lg font-semibold leading-7 tracking-[0.09px] text-slate-950">
               {card.value}
@@ -168,14 +185,19 @@ function SummaryCards() {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { dictionary } = useLanguage();
+  const t = dictionary?.trash;
+  const isHigh = status === "Slightly High";
+  const label = isHigh ? (t?.slightlyHigh || status) : (t?.inRange || status);
+
   const className =
-    status === "Slightly High"
+    isHigh
       ? "bg-amber-100 text-amber-600"
       : "bg-emerald-100 text-emerald-600";
 
   return (
     <span className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold tracking-[0.2px] ${className}`}>
-      {status}
+      {label}
     </span>
   );
 }
@@ -194,8 +216,19 @@ function TrendIcon({ direction }: { direction: string }) {
 }
 
 function LabTrackingTab() {
+  const { dictionary } = useLanguage();
+  const t = dictionary?.trash;
   const chartWidth = 305;
   const chartHeight = 176;
+
+  const tableHeaders = [
+    t?.headers?.test || "Test",
+    t?.headers?.goalRange || "Goal Range",
+    t?.headers?.previous || "Previous (Apr 20)",
+    t?.headers?.result || "Result",
+    t?.headers?.trend || "Trend",
+    t?.headers?.status || "Status",
+  ];
 
   return (
     <div className="space-y-6">
@@ -204,7 +237,9 @@ function LabTrackingTab() {
         <div className="my-6 border-t border-slate-200" />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="text-xl font-medium text-slate-950">Latest Lab Results</h2>
+            <h2 className="text-xl font-medium text-slate-950">
+              {t?.latestLabResults || "Latest Lab Results"}
+            </h2>
             <Info className="h-5 w-5 text-slate-500" />
             <p className="text-xs text-slate-500">May 4, 2026</p>
           </div>
@@ -219,7 +254,7 @@ function LabTrackingTab() {
               type="button"
               className="flex h-11 items-center gap-2 rounded bg-blue-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
             >
-              <Plus className="h-4 w-4" /> Add Result
+              <Plus className="h-4 w-4" /> {t?.addResult || "Add Result"}
             </button>
           </div>
         </div>
@@ -229,7 +264,7 @@ function LabTrackingTab() {
             <table className="w-full text-left text-sm">
               <thead className="bg-[#F1F5FA] text-slate-950">
                 <tr>
-                  {["Test", "Goal Range", "Previous (Apr 20)", "Result", "Trend", "Status"].map((header) => (
+                  {tableHeaders.map((header) => (
                     <th key={header} className="border-b border-slate-200 px-3 py-3 font-medium">
                       {header}
                     </th>
@@ -327,6 +362,9 @@ const bloodHistory = [
 ];
 
 function BloodResultsTab() {
+  const { dictionary } = useLanguage();
+  const t = dictionary?.trash;
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -340,12 +378,14 @@ function BloodResultsTab() {
           type="button"
           className="flex h-11 w-fit items-center gap-2 rounded bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"
         >
-          <Plus className="h-4 w-4" /> Add Results
+          <Plus className="h-4 w-4" /> {t?.addResult || "Add Results"}
         </button>
       </header>
 
       <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-4">
-        <h2 className="text-xl font-medium text-slate-950 mb-3">Latest Blood Results</h2>
+        <h2 className="text-xl font-medium text-slate-950 mb-3">
+          {t?.latestLabResults || "Latest Blood Results"}
+        </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {latestBloodResults.map((item) => (
             <article key={item.label} className="rounded-xl border border-[#E3E6F0] bg-white p-4">
@@ -383,13 +423,15 @@ function BloodResultsTab() {
         </div>
 
         <div className="rounded-[14px] border border-[#E3E6F0] bg-white p-4">
-          <h3 className="text-lg font-medium text-slate-950 mb-3">Test History</h3>
+          <h3 className="text-lg font-medium text-slate-950 mb-3">
+            {t?.testHistory || "Test History"}
+          </h3>
           <table className="w-full text-left text-sm">
             <thead className="bg-[#F1F5FA] text-slate-950">
               <tr>
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Label</th>
-                <th className="px-3 py-2">Action</th>
+                <th className="px-3 py-2">{t?.headers?.date || "Date"}</th>
+                <th className="px-3 py-2">{t?.headers?.label || "Label"}</th>
+                <th className="px-3 py-2">{t?.headers?.action || "Action"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -414,6 +456,8 @@ function BloodResultsTab() {
 // ==================== TRASH PAGE CONTAINER ====================
 
 export default function TrashPage() {
+  const { dictionary } = useLanguage();
+  const t = dictionary?.trash;
   const [activeTab, setActiveTab] = useState<"lab" | "blood">("lab");
 
   return (
@@ -421,10 +465,10 @@ export default function TrashPage() {
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#0F172A] flex items-center gap-2">
-            <Trash2 className="h-7 w-7 text-red-500" /> Trash (Backup Archives)
+            <Trash2 className="h-7 w-7 text-red-500" /> {t?.pageTitle || "Trash (Backup Archives)"}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Archived logs stored here for safety and easy reference.
+            {t?.pageDescription || "Archived logs stored here for safety and easy reference."}
           </p>
         </div>
 
@@ -439,7 +483,7 @@ export default function TrashPage() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Lab Tracking Log
+            {t?.tabs?.labTracking || "Lab Tracking Log"}
           </button>
           <button
             type="button"
@@ -450,7 +494,7 @@ export default function TrashPage() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Blood Results
+            {t?.tabs?.bloodResults || "Blood Results"}
           </button>
         </div>
       </header>

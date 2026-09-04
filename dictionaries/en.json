@@ -7,7 +7,12 @@
     "login": "Log in",
     "tryItFree": "Try it free",
     "logout": "Log out",
-    "openDashboard": "Open dashboard"
+    "openDashboard": "Open dashboard",
+    "language": "Language",
+    "changeLanguage": "Change language",
+    "toggleMenu": "Toggle Menu",
+    "english": "English",
+    "spanish": "Spanish"
   },
   "hero": {
     "badge": "NephroReach",
@@ -247,5 +252,1408 @@
     "review3Quote": "The tracking tools helped me notice patterns before my appointments. I could share clearer notes and make better use of my visit time.",
     "review3Name": "Cynthia L.",
     "review3Role": "CKD learner"
+  },
+  "myRides": {
+    "title": "Need a ride?",
+    "subtitle": "Quick access to your transportation options.",
+    "sectionTitle": "My Rides",
+    "savedDriverSingle": "saved driver",
+    "savedDriverPlural": "saved drivers",
+    "addRide": "Add Ride",
+    "noRides": "No personal rides saved yet.",
+    "addFirstRide": "Add your first ride",
+    "primaryBadge": "Primary",
+    "call": "Call",
+    "editDetails": "Edit Driver Details",
+    "removeRide": "Remove Ride",
+    "rideshareTitle": "Ride share Apps",
+    "openUber": "Open Uber",
+    "openLyft": "Open Lyft",
+    "addNewRideModal": "Add New Ride",
+    "editRideModal": "Edit Ride",
+    "driverNameLabel": "Ride / Driver Name",
+    "driverNamePlaceholder": "e.g. Bobo boy, Uncle David, Care Transit",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "(684) 555-0102",
+    "relationshipLabel": "Relationship or Label (Optional)",
+    "relationshipPlaceholder": "e.g. Family, Caregiver, Medical Transport",
+    "setPrimary": "Set as primary ride",
+    "saveRide": "Save Ride",
+    "updateInfo": "Update Info",
+    "cancel": "Cancel",
+    "close": "Close",
+    "errorName": "Please enter a driver or ride name.",
+    "errorPhone": "Please enter a phone number.",
+    "confirmDelete": "Are you sure you want to delete \"{name}\" from your rides?"
+  },
+  "beforeTheEr": {
+    "breadcrumb": "Before-the-ER",
+    "disclaimerTitle": "Important Disclaimer",
+    "disclaimerText": "Before The ER™ is an educational support feature only and does not provide medical advice, diagnosis, emergency services, or clinical triage. Information provided is general education and may not apply to every individual or situation. Always use your judgment and contact emergency services if you believe you are experiencing a medical emergency.",
+    "sectionTitle": "Important Before The ER™",
+    "viewDetailsFor": "View details for {item}",
+    "notFeelingBestTitle": "Not feeling your best?",
+    "notFeelingBestSubtitle": "Select the symptoms you're experiencing:",
+    "getGuidance": "Get Guidance",
+    "suggestedTopics": "Suggested Symptoms / Topics:",
+    "close": "Close",
+    "findSchedule": "Find My Dialysis Schedule",
+    "learnMoreEducation": "Learn More Education",
+    "urgentEducation": "Urgent Symptoms Education",
+    "callClinic": {
+      "title": "Call Dialysis Clinic First",
+      "purpose": "Educational prompts encouraging members to contact their dialysis team for non-life-threatening dialysis-related concerns that may potentially be addressed by the clinic.",
+      "reminder": "Your dialysis clinic may be able to help guide next steps for dialysis-related concerns.",
+      "callAction": "Tap to Call Clinic",
+      "symptoms": [
+        "Missed or shortened dialysis treatment",
+        "Questions about dry weight",
+        "Mild swelling in feet/legs",
+        "Mild shortness of breath while resting comfortably",
+        "Rapid fluid gain between treatments",
+        "Cramping during or after dialysis",
+        "Access soreness without severe bleeding",
+        "Mild redness near access",
+        "Questions about medications prescribed by dialysis provider",
+        "Feeling “more fluid overloaded than usual”",
+        "Difficulty reaching target weight",
+        "Dialysis machine alarms at home",
+        "Home dialysis supply concerns",
+        "Mild dizziness after treatment",
+        "Fatigue after missed treatments",
+        "Questions about phosphorus binders",
+        "Elevated blood pressure without emergency symptoms",
+        "Problems tolerating dialysis treatment",
+        "Increased thirst/fluid management struggles",
+        "Questions about potassium or diet choices",
+        "Transportation issues causing missed treatments",
+        "Questions about changing dialysis schedule",
+        "Access dressing concerns",
+        "Minor bruising near access",
+        "Increased interdialytic weight gains",
+        "Questions about dialysis-related labs",
+        "Mild nausea after dialysis",
+        "Questions about home dialysis training",
+        "Mild headaches after treatment",
+        "Difficulty completing treatments"
+      ]
+    },
+    "monitorSymptoms": {
+      "title": "Monitor Symptoms",
+      "purpose": "Educational awareness section for mild symptoms that may still require monitoring and communication if worsening.",
+      "reminder": "Monitor symptoms closely and contact your healthcare team if symptoms worsen or concern you.",
+      "callAction": "Log Symptom",
+      "symptoms": [
+        "Mild fatigue",
+        "Trouble sleeping",
+        "Mild itching",
+        "Mild restless legs",
+        "Occasional muscle cramps",
+        "Mild appetite changes",
+        "Mild constipation",
+        "Mild nausea",
+        "Mild dizziness when standing",
+        "Mild headaches",
+        "Feeling tired after dialysis",
+        "Mild swelling",
+        "Mild anxiety about treatments",
+        "Dry mouth",
+        "Mild metallic taste in mouth",
+        "Mild low energy",
+        "Difficulty sticking to fluid restrictions",
+        "Mild sadness/frustration",
+        "Mild cold intolerance",
+        "Mild weakness",
+        "Skin dryness",
+        "Mild access discomfort",
+        "Mild brain fog",
+        "Changes in sleep patterns",
+        "Mild stress related to dialysis"
+      ]
+    },
+    "seekMedical": {
+      "title": "Seek Medical Attention",
+      "purpose": "Educational prompts encouraging members to seek urgent medical evaluation for worsening or concerning symptoms.",
+      "reminder": "Some symptoms may require prompt medical evaluation.",
+      "callAction": "Contact Healthcare Provider",
+      "symptoms": [
+        "Fever or chills",
+        "Vomiting that won’t stop",
+        "Severe nausea",
+        "Increasing shortness of breath",
+        "Rapid swelling",
+        "Sudden large weight gain",
+        "Signs of infection near access",
+        "Access not working properly",
+        "Persistent chest discomfort",
+        "Severe weakness",
+        "Severe dehydration symptoms",
+        "Severe headaches",
+        "Very high or very low blood pressure symptoms",
+        "Confusion",
+        "New irregular heartbeat sensations",
+        "Severe abdominal pain",
+        "Fainting episodes",
+        "Significant bleeding from access",
+        "Oxygen levels dropping (if monitoring at home)",
+        "Unable to complete dialysis repeatedly",
+        "Severe diarrhea",
+        "Signs of severe fluid overload",
+        "Sudden inability to lie flat due to breathing issues",
+        "Worsening symptoms after missed treatments"
+      ]
+    },
+    "call911": {
+      "title": "Call 911 Immediately",
+      "purpose": "Emergency awareness section for potentially life-threatening symptoms.",
+      "reminder": "Call 911 immediately for life-threatening emergencies.",
+      "callAction": "Call 911 Now",
+      "symptoms": [
+        "Severe trouble breathing",
+        "Chest pain",
+        "Blue lips or face",
+        "Severe confusion",
+        "Loss of consciousness",
+        "Seizure",
+        "Signs of stroke",
+        "Severe bleeding that will not stop",
+        "Unresponsiveness",
+        "Severe allergic reaction",
+        "Unable to speak in full sentences due to breathing difficulty",
+        "Sudden collapse",
+        "Severe burns",
+        "Suicidal thoughts/emergency mental health crisis",
+        "Severe trauma or injury",
+        "Severe weakness on one side of body",
+        "Sudden vision loss",
+        "Severe oxygen deprivation symptoms",
+        "Choking",
+        "Cardiac arrest symptoms"
+      ]
+    },
+    "symptomsList": {
+      "chestPain": "Chest Pain",
+      "severeFluidOverload": "Severe Fluid Overload",
+      "signsOfStroke": "Signs of Stroke",
+      "lossOfConsciousness": "Loss of Consciousness",
+      "severeAllergicReactions": "Severe Allergic Reactions",
+      "severeShortnessOfBreath": "Severe Shortness of Breath",
+      "seizures": "Seizures",
+      "dialysisAccessEmergencies": "Dialysis Access Emergencies",
+      "severeBleeding": "Severe Bleeding",
+      "severeHyperkalemia": "Severe Hyperkalemia Symptoms",
+      "feverDialysisCatheter": "Fever With Dialysis Catheter",
+      "confusionMentalStatus": "CONFUSION OR MENTAL STATUS CHANGES"
+    },
+    "detail": {
+      "urgentNotice": "Seek Emergency Care Immediately",
+      "call911": "CALL 911",
+      "findNearestEr": "Find Nearest ER",
+      "callEmergencyFor": "Call emergency services immediately for:",
+      "importantIn": "Especially important in:",
+      "relatedEducation": "Related Education",
+      "video": "Video",
+      "article": "Article",
+      "readTime": "5 min read",
+      "videoTitle": "Managing Symptoms After Dialysis",
+      "articleTitle": "When to Contact Your Dialysis Clinic",
+      "emergencySymptomsList": {
+        "chestPressure": "Chest pressure",
+        "chestTightness": "Chest tightness",
+        "crushingChestPain": "Crushing chest pain",
+        "painSpreading": "Pain spreading to arm, jaw, neck, or back",
+        "chestPainNausea": "Chest pain with sweating or nausea",
+        "severeOnset": "Severe or sudden onset of symptoms",
+        "diffBreathing": "Difficulty breathing or chest discomfort",
+        "unusualWeakness": "Unusual weakness or dizziness",
+        "rapidWorsening": "Rapidly worsening pain or swelling"
+      },
+      "importantInList": {
+        "dialysisPatients": "Dialysis patients",
+        "kidneyFailure": "Kidney failure patients",
+        "diabetesHeart": "Patients with diabetes or heart disease",
+        "highRisk": "Patients with high risk factors"
+      }
+    }
+  },
+  "appointments": {
+    "title": "Appointment Reminders",
+    "subtitle": "Never miss an important appointment. We'll remind you and show you where to go.",
+    "addAppointment": "Add Appointment",
+    "upcomingTitle": "Upcoming Appointments",
+    "viewAll": "View All Appointments",
+    "nextTitle": "Next Appointment",
+    "reminder": "Reminder",
+    "getDirections": "Get Directions",
+    "mapAlt": "Map showing appointment location",
+    "openDetails": "Open {title} appointment details",
+    "kidneyCareCenter": "Kidney Care Center",
+    "addressLine1": "123 Health way, suite 400",
+    "addressLine2": "ABana, GA 30309",
+    "disclaimerTitle": "Important Disclaimer",
+    "disclaimerText": "This tool is for education and tracking only. Always discuss lab results and treatment decisions with your nephrology provider.",
+    "modalTitle": "Add New Appointment",
+    "specialtyLabel": "Specialty / Title",
+    "specialtyPlaceholder": "e.g. Nephrology, Vascular Surgeon, Nutritionist",
+    "doctorLabel": "Doctor / Provider Name",
+    "doctorPlaceholder": "e.g. Dr. Niro Mia",
+    "dateLabel": "Date",
+    "timeLabel": "Time",
+    "timePlaceholder": "e.g. 10:30 AM - 11:15 AM",
+    "locationLabel": "Location / Clinic",
+    "locationPlaceholder": "e.g. Kidney Care Center, Zik Center",
+    "save": "Save Appointment",
+    "cancel": "Cancel",
+    "close": "Close",
+    "sampleSpecialty": "Nephrology",
+    "sampleCenter": "Zik Center"
+  },
+  "medicationsLog": {
+    "title": "Medication Log",
+    "subtitle": "Track prescriptions, dose history, reminders, and medication reports.",
+    "addMedication": "Add Medication",
+    "backToLog": "Back to Medication Log",
+    "addNewMedication": "Add New Medication",
+    "addNewSubtitle": "Update your clinical records with a new prescription.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "today": "Today",
+    "section1": "Medication Master List",
+    "section2": "Dose Schedule",
+    "section3": "Adherence & Insights Dashboard",
+    "section4": "Alerts & Reminders",
+    "section5": "How I Feel",
+    "section6": "Export / Reporting",
+    "tableHeaders": {
+      "name": "Medication Name (Brand/Generic)",
+      "dose": "Dose/Strength",
+      "route": "Route",
+      "frequency": "Frequency",
+      "purpose": "Purpose",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "pharmacy": "Pharmacy",
+      "status": "Status",
+      "time": "Time",
+      "medication": "Medication",
+      "instructions": "Instructions",
+      "timeStamp": "Time Stamp",
+      "sideEffects": "Side Effects"
+    },
+    "statuses": {
+      "Active": "Active",
+      "PRN": "PRN",
+      "Stopped": "Stopped",
+      "Taken": "Taken",
+      "Late": "Late",
+      "Missed": "Missed"
+    },
+    "adherence": {
+      "overallTitle": "Overall Adherence (This Week)",
+      "totalDoses": "Total Doses: 12",
+      "overall": "Overall",
+      "taken": "Taken",
+      "late": "Late",
+      "missed": "Missed",
+      "missedTitle": "Missed Doses (This Week)",
+      "totalMissed": "Total Missed Doses:",
+      "bpVsAdherence": "BP vs. Medication Adherence",
+      "bp": "BP",
+      "adherencePercent": "Adherence(%)"
+    },
+    "days": {
+      "Sun": "Sun",
+      "Mon": "Mon",
+      "Tue": "Tue",
+      "Wed": "Wed",
+      "Thu": "Thu",
+      "Fri": "Fri",
+      "Sat": "Sat"
+    },
+    "mood": {
+      "howDoYouFeel": "How do you feel today?",
+      "veryGood": "Very Good",
+      "good": "Good",
+      "okay": "Okay",
+      "poor": "Poor",
+      "veryPoor": "Very Poor",
+      "notes": "Notes",
+      "notesPlaceholder": "Add how you feel, side effects, or symptoms...",
+      "save": "Save"
+    },
+    "reports": {
+      "weeklySummary": "Weekly Summary (PDF)",
+      "weeklySummaryDesc": "Detailed report on adherence, symptoms, and missed doses for your doctor.",
+      "fullList": "Full Medication List",
+      "fullListDesc": "A clean, high-density printout of all current medications and providers.",
+      "shareProvider": "Share with Provider",
+      "shareProviderDesc": "Securely share report with your care team.",
+      "generatePdf": "Generate PDF",
+      "shareNow": "Share Now"
+    },
+    "disclaimerTitle": "Important Disclaimer",
+    "disclaimerText": "This is not medical advice. If this is a medical emergency, contact your care team or emergency services. Always confirm medication changes with your clinician or pharmacist.",
+    "addForm": {
+      "nameLabel": "Medication Name: (Brand/Generics)",
+      "namePlaceholder": "e.g. Amlodipine (Norvasc)",
+      "nameHelper": "Start typing to see common kidney care medications.",
+      "doseLabel": "Dose/Strength",
+      "dosePlaceholder": "e.g. 10 mg or 800 mg",
+      "routeLabel": "Route",
+      "routePlaceholder": "PO (By Mouth)",
+      "frequencyLabel": "Frequency",
+      "frequencyPlaceholder": "Select frequency...",
+      "purposeLabel": "Purpose",
+      "purposePlaceholder": "e.g. Blood pressure control",
+      "startDateLabel": "Start Date",
+      "startDatePlaceholder": "mm/dd/yyyy",
+      "endDateLabel": "End Date (Optional)",
+      "endDatePlaceholder": "e.g. Blood pressure control",
+      "providerLabel": "Prescribing provider",
+      "providerPlaceholder": "e.g. Dr. Smith",
+      "pharmacyLabel": "Pharmacy",
+      "pharmacyPlaceholder": "e.g. Health Plus Pharmacy",
+      "instructionsLabel": "Special instruction",
+      "instructionsPlaceholder": "e.g. Take with food, avoid grapefruit..."
+    }
+  },
+  "bloodPressure": {
+    "listTitle": "Daily Blood Pressure List",
+    "addReading": "Add Reading",
+    "export": "Export",
+    "trendsTitle": "Blood Pressure Trends",
+    "systolicLegend": "Systolic(mmHg)",
+    "diastolicLegend": "Diastolic(mmHg)",
+    "bpGuideTitle": "BP Guide",
+    "disclaimerTitle": "Important Disclaimer",
+    "disclaimerText": "This is not medical advice. If this is a medical emergency, contact your care team or emergency services. Track readings consistently and review concerning trends with your clinician.",
+    "tableHeaders": {
+      "date": "Date",
+      "time": "Time",
+      "systolic": "Systolic",
+      "diastolic": "Diastolic",
+      "pulse": "Pulse",
+      "position": "Position",
+      "symptoms": "Symptoms",
+      "medication": "Medication",
+      "action": "Action"
+    },
+    "statuses": {
+      "Normal": "Normal",
+      "Elevated": "Elevated",
+      "High": "High"
+    },
+    "positions": {
+      "Sitting": "Sitting",
+      "Standing": "Standing"
+    },
+    "symptoms": {
+      "None": "None",
+      "Mild headache": "Mild headache",
+      "Dizzy": "Dizzy",
+      "Tired": "Tired",
+      "Short breath": "Short breath"
+    },
+    "medications": {
+      "Taken": "Taken",
+      "Late": "Late"
+    },
+    "guide": {
+      "high": "SYS > 140 or DIA > 90",
+      "elevated": "130-139 or 80-87",
+      "normal": "Under 130 and 80"
+    },
+    "add": {
+      "title": "Add Blood Pressure",
+      "closeAria": "Close add blood pressure",
+      "date": "Date",
+      "time": "Time",
+      "howIFelt": "1. How I Felt Today",
+      "systolic": "Systolic (mmHg)",
+      "diastolic": "Diastolic (mmHg)",
+      "pulse": "Pulse (BPM)",
+      "howIFeel": "How I Feel",
+      "selectCurrentState": "Select your current state",
+      "medicationQuestion": "Did I take my medications as prescribed today?",
+      "yes": "Yes",
+      "no": "No",
+      "notes": "Notes",
+      "notesPlaceholder": "Took all meds after session.",
+      "cancel": "Cancel",
+      "saveEntry": "Save Entry",
+      "moods": {
+        "great": "Great",
+        "greatMark": "Excellent",
+        "good": "Good",
+        "goodMark": "Stable",
+        "okay": "Okay",
+        "okayMark": "Average",
+        "tired": "Tired",
+        "tiredMark": "Low energy",
+        "stressed": "Stressed",
+        "stressedMark": "Tense"
+      }
+    }
+  },
+  "personalLogHub": {
+    "title": "Your personal log for each dialysis day",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
+    "tiles": {
+      "appointments": "Appointments",
+      "medications": "Medications",
+      "bloodPressure": "Blood pressure",
+      "myLabs": "My Labs",
+      "nutrition": "Nutrition",
+      "fluidTracker": "Weight & Fluid Tracker",
+      "dialysisTreatment": "Dialysis Treatment",
+      "dialysisJournal": "Dialysis Management"
+    },
+    "upcoming": {
+      "title": "Upcoming Appointments",
+      "viewAll": "View all",
+      "empty": "No upcoming appointments"
+    },
+    "team": {
+      "title": "My Healthcare Team",
+      "subtitle": "clinicians who can view your records",
+      "placeholder": "Example@hospital.com",
+      "add": "Add",
+      "note": "Enter your clinician's email. They'll get an invite to register if they haven't already.",
+      "empty": "No clinicians linked yet.",
+      "invited": "Invited"
+    }
+  },
+  "dialysisTreatment": {
+    "pageTitle": "Dialysis Treatment",
+    "topBanner": "Completing prescribed treatments is important for dialysis adequacy",
+    "addEntry": "Add Entry",
+    "backToTreatment": "Back to Dialysis Treatment",
+    "editEntry": "Edit Entry",
+    "summary": {
+      "attended": "Treatment attended",
+      "arrivedLate": "Arrived late",
+      "endedEarly": "Ended early",
+      "missed": "Missed treatments"
+    },
+    "clinicalMeasurements": {
+      "title": "Clinical Measurements",
+      "fluidRemoved": "Fluid Removed",
+      "postWeight": "Post Weight",
+      "bloodPressure": "Blood Pressure",
+      "heartRate": "Heart Rate",
+      "liters": "Liters",
+      "bpm": "bpm",
+      "mmHg": "mmHg"
+    },
+    "recoveryPattern": {
+      "title": "Recovery Pattern Tracking",
+      "good": "Good",
+      "okay": "Okay",
+      "bad": "Bad"
+    },
+    "symptomsDonut": {
+      "title": "Symptoms During Treatment",
+      "overall": "Overall",
+      "cramping": "Cramping",
+      "lowBp": "Low BP",
+      "fatigue": "Fatigue"
+    },
+    "table": {
+      "date": "Date",
+      "treatmentType": "Treatment Type",
+      "fluidRemoved": "Fluid Removed",
+      "weight": "Pre / Post Weight",
+      "bloodPressure": "Blood Pressure",
+      "symptoms": "Symptoms",
+      "status": "Status",
+      "actions": "Actions",
+      "none": "None",
+      "viewTooltip": "View Full Entry Details",
+      "editTooltip": "Edit Entry",
+      "statusAttended": "Attended",
+      "statusLate": "Arrived Late",
+      "statusEarly": "Ended Early",
+      "statusMissed": "Missed"
+    },
+    "detail": {
+      "loading": "Loading treatment details...",
+      "title": "Dialysis Day Log",
+      "dialysisDay": "Dialysis Day",
+      "yes": "Yes",
+      "no": "No",
+      "summaryBar": {
+        "treatmentType": "Treatment Type",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "location": "Location",
+        "careTeam": "Care Team",
+        "postWeight": "Post Weight"
+      },
+      "attendanceSchedule": {
+        "title": "Attendance & Schedule",
+        "attended": "Treatment attended",
+        "arrivedLate": "Arrived late",
+        "endedEarly": "Ended early",
+        "missed": "Missed treatments",
+        "rescheduled": "Rescheduled missed treatment"
+      },
+      "preTreatment": {
+        "title": "Pre-Treatment Condition",
+        "overallFeel": "Overall Feel",
+        "preSymptoms": "Pre-Dialysis Symptoms",
+        "noneReported": "None reported",
+        "severity": "Symptom Severity (0–10)"
+      },
+      "duringTreatment": {
+        "title": "During Treatment",
+        "cramping": "Cramping",
+        "lowBp": "Low BP",
+        "fatigue": "Fatigue",
+        "additionalSymptoms": "Additional Symptoms",
+        "sessionNotes": "Session Notes"
+      },
+      "recoveryVitals": {
+        "title": "Recovery & Clinical Vitals",
+        "recoveryTime": "Recovery time",
+        "medsTaken": "Prescribed medications taken",
+        "measurements": "Clinical Measurements",
+        "medsAdministered": "Medications Administered",
+        "noneRecorded": "None recorded",
+        "recoveryNotes": "Recovery Notes"
+      },
+      "moods": {
+        "great": "Great",
+        "good": "Good",
+        "okay": "Okay",
+        "low": "Low",
+        "poor": "Poor"
+      }
+    }
+  },
+  "nutrition": {
+    "header": {
+      "greeting": "Good morning, Sarah",
+      "subtitle": "Track your daily food and nutrients to support your kidney health.",
+      "logMeal": "Log Meal"
+    },
+    "keyMetrics": {
+      "dailyGoal": {
+        "title": "Daily Goal",
+        "description": "Stay within your daily nutrient goals",
+        "footer": "View Goals"
+      },
+      "mealsLogged": {
+        "title": "Meals Logged",
+        "description": "Good job!",
+        "value": "3 / 3"
+      },
+      "fluids": {
+        "title": "Fluids",
+        "description": "1,100 / 1,500 ml"
+      },
+      "sodium": {
+        "title": "Sodium",
+        "description": "1,280 / 2,000 mg"
+      }
+    },
+    "nutrientOverview": {
+      "title": "Nutrient Overview",
+      "statuses": {
+        "within": "Within Goal",
+        "near": "Near Limit",
+        "over": "Over Limit"
+      },
+      "nutrients": {
+        "sodium": "Sodium",
+        "potassium": "Potassium",
+        "phosphorus": "Phosphorus",
+        "protein": "Protein",
+        "calories": "Calories",
+        "carbs": "Carbs",
+        "fats": "Fats",
+        "fiber": "Fiber"
+      }
+    },
+    "mealsTable": {
+      "title": "Today's Meals",
+      "subtitle": "Review meals and key kidney-related nutrients.",
+      "addFood": "Add Food",
+      "headers": {
+        "food": "Food",
+        "portion": "Portion",
+        "calories": "Calories",
+        "sodium": "Sodium",
+        "potassium": "Potassium",
+        "phosphorus": "Phosphorus",
+        "action": "Action"
+      },
+      "mealNames": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner"
+      },
+      "foods": {
+        "oatmeal": "Oatmeal",
+        "blueberries": "Blueberries",
+        "grilledChickenSalad": "Grilled chicken salad",
+        "appleSlices": "Apple slices",
+        "bakedSalmon": "Baked salmon",
+        "whiteRice": "White rice",
+        "greenBeans": "Green beans"
+      },
+      "portions": {
+        "oneCup": "1 cup",
+        "halfCup": "1/2 cup",
+        "onePlate": "1 plate",
+        "oneMedium": "1 medium",
+        "threeOz": "3 oz"
+      },
+      "logMeal": "Log Meal"
+    },
+    "fluidTracker": {
+      "title": "Fluid Tracker",
+      "of": "of 1,500 ml",
+      "addWater": "Add Water"
+    },
+    "resources": {
+      "title": "Resources",
+      "viewAll": "View all",
+      "items": [
+        "CKD Renal Diet Guide",
+        "Phosphorus & Potassium Guide",
+        "Low Sodium Shopping List"
+      ]
+    },
+    "dietTips": {
+      "title": "Diet Tips",
+      "viewMore": "View More",
+      "items": [
+        "Choose fresh foods and cook at home to control sodium.",
+        "Avoid high potassium foods like bananas, oranges, and potatoes.",
+        "Choose lean proteins in the right portions.",
+        "Track your fluid intake every day."
+      ]
+    },
+    "disclaimer": {
+      "title": "Important Disclaimer",
+      "text": "This tool is for education and tracking only. Always discuss diet changes, lab results, and treatment decisions with your nephrology provider."
+    }
+  },
+  "weightFluidTracker": {
+    "title": "Weight & Fluid Management Center",
+    "metrics": {
+      "currentWeight": {
+        "label": "Current Weight",
+        "unit": "lbs",
+        "note": "↓ 1.2 lbs vs yesterday"
+      },
+      "avgFluidIntake": {
+        "label": "Avg. Fluid Intake",
+        "unit": "OZ",
+        "note": "↓ 1.2 lbs vs yesterday"
+      },
+      "daysGoalMet": {
+        "label": "Days Goal Met",
+        "note": "This Month"
+      },
+      "swellingReports": {
+        "label": "Swelling Reports",
+        "note": "↓ 2 vs last month"
+      },
+      "sobReports": {
+        "label": "SOB Reports",
+        "note": "↓ 1 vs last month"
+      }
+    },
+    "weightTrend": {
+      "title": "Weight Trend",
+      "subtitle": "(30 Day)"
+    },
+    "goalProgress": {
+      "title": "Goal & Progress",
+      "overall": "Overall",
+      "goalMet": "Goal Met",
+      "aboveGoal": "Above Goal",
+      "belowGoal": "Below Goal"
+    },
+    "fluidIntakeTrend": {
+      "title": "Fluid Intake Trend",
+      "subtitle": "(30 Day)"
+    },
+    "urinaryOutput": {
+      "title": "Urinary Output",
+      "subtitle": "(24 Hours)",
+      "date": "Date",
+      "trend": "Trend",
+      "trends": {
+        "increasing": "Increasing",
+        "decreasing": "Decreasing",
+        "noChange": "No Change"
+      }
+    },
+    "alerts": {
+      "title": "Alerts & Insights",
+      "items": {
+        "weightGain": {
+          "title": "Weight Gain Notice",
+          "body": "+2.6 lbs this month. Possible fluid retention — contact your nurse if swelling increases."
+        },
+        "missedLogging": {
+          "title": "Missed Logging",
+          "body": "3 days without logging detected. Consistent tracking helps your care team."
+        },
+        "fluidGoal": {
+          "title": "Fluid Goal On Track",
+          "body": "Average 42 oz/day, within your 48 oz limit. Keep it up."
+        },
+        "education": {
+          "title": "Education Tip",
+          "body": "Watch \"Understanding Fluid Retention\" module to learn practical daily tips."
+        }
+      }
+    },
+    "recentEntries": {
+      "title": "Recent Entries",
+      "addNewEntry": "Add New Entry",
+      "headers": {
+        "date": "Date",
+        "morning": "Morning",
+        "evening": "Evening",
+        "uo": "24h UO",
+        "fluidIntake": "Fluid Intake",
+        "goalStatus": "Goal Status",
+        "swelling": "Swelling",
+        "sob": "SOB",
+        "weakness": "Weakness",
+        "notes": "Notes"
+      },
+      "values": {
+        "high": "High",
+        "goalMet": "Goal Met",
+        "aboveGoal": "Above Goal",
+        "none": "None",
+        "mild": "Mild",
+        "no": "NO",
+        "yes": "YES"
+      },
+      "notes": {
+        "feltGood": "Felt good today",
+        "needToPush": "Need to push harder",
+        "strongFinish": "Strong finish",
+        "bestPerformance": "Best performance yet",
+        "feltTired": "Felt tired"
+      }
+    }
+  },
+  "labTracking": {
+    "pageTitle": "My Labs",
+    "kpis": {
+      "latestDate": "Latest Lab Date",
+      "inRange": "In Range",
+      "outOfRange": "Out of Range",
+      "trendingUp": "Trending Up",
+      "trendingDown": "Trending Down"
+    },
+    "tabs": {
+      "overview": "Lab Overview",
+      "trends": "Trends",
+      "history": "History"
+    },
+    "categories": {
+      "all": "All Categories",
+      "kidneyFunction": "Kidney Function",
+      "electrolytes": "Electrolytes",
+      "mineralBone": "Mineral & Bone",
+      "bloodCounts": "Blood Counts",
+      "nutrition": "Nutrition",
+      "dialysisAdequacy": "Dialysis Adequacy"
+    },
+    "actions": {
+      "exportPdf": "Export PDF",
+      "addLabResult": "Add Lab Result"
+    },
+    "overview": {
+      "headers": {
+        "test": "Test",
+        "latestResult": "Latest Result",
+        "previousResult": "Previous Result",
+        "change": "Change",
+        "refRange": "Reference Range",
+        "status": "Status",
+        "trend": "Trend"
+      },
+      "statuses": {
+        "inRange": "In Range",
+        "high": "High",
+        "low": "Low"
+      },
+      "compare": {
+        "pastDrawDatesGroup": "Past Lab Draw Dates",
+        "presetsGroup": "Timeframe Presets",
+        "last7Days": "Last 7 Days (1 Week)",
+        "last30Days": "Last 30 Days (1 Month)",
+        "last90Days": "Last 90 Days (3 Months)",
+        "last6Months": "Last 6 Months",
+        "last1Year": "Last 1 Year"
+      },
+      "footnote": "* Reference ranges may vary slightly by lab. Always follow your healthcare team's guidance."
+    },
+    "trends": {
+      "testsCount": "TESTS",
+      "refRange": "Ref Range",
+      "latest": "Latest"
+    },
+    "history": {
+      "latestDraw": "Latest Draw",
+      "previousDraw": "Previous Draw",
+      "twoMonthsAgo": "2 Months Ago",
+      "threeMonthsAgo": "3 Months Ago",
+      "fourMonthsAgo": "4 Months Ago",
+      "viewValues": "View Values ▾",
+      "hideValues": "Hide Values ▲",
+      "noteLabel": "Note:",
+      "tableHeaders": {
+        "test": "Test",
+        "recordedValue": "Recorded Value",
+        "refRange": "Reference Range",
+        "status": "Status"
+      },
+      "sampleNotes": {
+        "draw1": "Routine monthly blood draw. Discussed phosphorus binder dosage with care team.",
+        "draw2": "Pre-dialysis lab check. Fasting draw at 8:00 AM.",
+        "draw3": "Monthly nephrology review panel.",
+        "draw4": "Routine electrolyte & iron panel.",
+        "draw5": "Initial Stage 5 CKD baseline laboratory evaluation."
+      }
+    },
+    "sidebar": {
+      "latestSummary": {
+        "title": "LATEST LAB SUMMARY",
+        "inRange": "In Range",
+        "high": "High",
+        "low": "Low",
+        "keepUpTitle": "Keep up the good work!",
+        "keepUpDesc": "Continue following your care plan and attend your dialysis treatments.",
+        "viewTrends": "View Trends"
+      },
+      "categories": {
+        "title": "LAB CATEGORIES",
+        "tests": "Tests",
+        "test": "Test",
+        "viewAllTrends": "View All Trends"
+      },
+      "understanding": {
+        "title": "UNDERSTANDING YOUR LABS",
+        "desc": "Learn what your lab numbers mean and how they affect your health.",
+        "visitCenter": "Visit Education Center"
+      }
+    },
+    "addModal": {
+      "title": "Add Lab Result",
+      "successTitle": "Lab Results Saved Successfully!",
+      "successDesc": "Updating table info and redirecting to My Labs...",
+      "drawDateLabel": "Lab Draw Date",
+      "remove": "Remove",
+      "headers": {
+        "test": "Test",
+        "resultValue": "Result Value",
+        "unit": "Unit",
+        "refRange": "Reference Range"
+      },
+      "enterValuePlaceholder": "Enter value",
+      "addCategoryLabel": "+ Add Category:",
+      "notesLabel": "Notes & Observations (Optional)",
+      "notesPlaceholder": "Add any notes or questions about your phosphorus, potassium, or fluid levels...",
+      "cancel": "Cancel",
+      "saveEntry": "Save Entry"
+    },
+    "tests": {
+      "bun": "BUN",
+      "creatinine": "Creatinine",
+      "egfr": "eGFR (CKD-EPI)",
+      "sodium": "Sodium",
+      "potassium": "Potassium",
+      "chloride": "Chloride",
+      "co2": "CO2 (Bicarbonate)",
+      "calcium": "Calcium",
+      "phosphorus": "Phosphorus",
+      "pth": "PTH (Intact)",
+      "vitaminD": "Vitamin D 25-OH",
+      "hemoglobin": "Hemoglobin",
+      "hematocrit": "Hematocrit",
+      "ferritin": "Ferritin",
+      "tsat": "Iron Saturation (TSAT)",
+      "albumin": "Albumin",
+      "bicarbonate": "Bicarbonate",
+      "ktv": "Kt/V"
+    }
+  },
+  "myHealth": {
+    "pageTitle": "MyHealth",
+    "tabs": {
+      "allergies": "Allergies",
+      "history": "Medical History"
+    },
+    "allergies": {
+      "title": "Allergy",
+      "description": "List of substances, medications, foods or environmental factors you are allergic to.",
+      "addBtn": "Add Allergy",
+      "headers": {
+        "name": "Name",
+        "type": "Type",
+        "reaction": "Reaction",
+        "severity": "Severity",
+        "notes": "Notes",
+        "actions": "Actions"
+      },
+      "types": {
+        "medication": "Medication",
+        "food": "Food",
+        "environmental": "Environmental"
+      },
+      "severities": {
+        "severe": "Severe",
+        "moderate": "Moderate",
+        "mild": "Mild"
+      },
+      "reactions": {
+        "rashHives": "Rash, Hives",
+        "eczemaSwelling": "Eczema, Swelling",
+        "drySkinItching": "Dry Skin, Itching",
+        "rednessPeeling": "Redness, Peeling",
+        "blisteringSensitivity": "Blistering, Sensitivity",
+        "flakingCracking": "Flaking, Cracking",
+        "itchingRash": "Itching, Rash Extension",
+        "swellingHeat": "Swelling, Heat",
+        "dryPatches": "Dry Patches, Red Spots",
+        "discomfortTenderness": "Discomfort, Tenderness"
+      },
+      "sampleName": "Introduction to Wellness",
+      "weekPrefix": "Week"
+    },
+    "history": {
+      "title": "Medical History",
+      "description": "Your past and current medical conditions, surgeries and major health events.",
+      "addBtn": "Add Condition",
+      "headers": {
+        "condition": "CONDITION / HISTORY",
+        "status": "Status",
+        "diagnosed": "Diagnosed",
+        "notes": "Notes",
+        "actions": "Actions"
+      },
+      "statuses": {
+        "current": "Current",
+        "past": "Past"
+      },
+      "conditions": {
+        "ckd": "Chronic Kidney Disease (CKD)",
+        "hypertension": "Hypertension (High Blood Pressure)",
+        "diabetes": "Type 2 Diabetes",
+        "appendectomy": "Appendectomy",
+        "asthma": "Asthma"
+      }
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    }
+  },
+  "dialysisJournal": {
+    "pageTitle": "Dialysis Journal",
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "subtitle": "Your personal log for each dialysis day",
+    "newEntryBtn": "New Entry",
+    "disclaimer": "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team.",
+    "viewDetails": "View details",
+    "hideDetails": "Hide details",
+    "modal": {
+      "title": "New Entry",
+      "question": "How are you feeling today?",
+      "moodLabel": "Mood (optional)",
+      "moods": {
+        "positive": "Positive",
+        "calm": "Calm",
+        "reflective": "Reflective",
+        "challenging": "Challenging",
+        "anxious": "Anxious"
+      },
+      "placeholder": "Write your thoughts here...",
+      "cancel": "Cancel",
+      "saveEntry": "Save Entry"
+    },
+    "entries": [
+      {
+        "id": "1",
+        "date": "Friday, May 8, 2026",
+        "preview": "Today I learned about mindfulness techniques. The breathing exercises were particularly helpful during stressful moments at work.",
+        "details": "Completed week 4 of the curriculum. The material on emotional regulation resonated with me. I am practicing the daily check-in routine."
+      },
+      {
+        "id": "2",
+        "date": "Wednesday, May 6, 2026",
+        "preview": "Had a productive session with my mentor today. We discussed goal-setting strategies and I feel more motivated to stick with my wellness plan.",
+        "details": "Logged my fluid intake on time and stayed within the limit. I want to keep this rhythm going through the weekend."
+      },
+      {
+        "id": "3",
+        "date": "Monday, May 4, 2026",
+        "preview": "Feeling grateful for the support from my dialysis care team. The check-in call helped me stay on track with my fluid goals this week.",
+        "details": "Noted mild fatigue after treatment, but the afternoon walk helped. Planning an earlier bedtime tonight."
+      }
+    ]
+  },
+  "educationCenter": {
+    "pageTitle": "Education Center",
+    "searchPlaceholder": "Search...",
+    "categoriesLabel": "Categories",
+    "categories": [
+      "All Videos",
+      "Starting dialysis",
+      "What to expect before/during/after treatment",
+      "Diet & fluid control",
+      "Medications",
+      "Access care",
+      "Managing symptoms"
+    ],
+    "watchedBadge": "Watched",
+    "suggestedTitle": "Suggested for You",
+    "allVideosTitle": "All Videos",
+    "videoTitle": "Managing Fluid Intake",
+    "playAria": "Play",
+    "saveAria": "Save"
+  },
+  "community": {
+    "pageTitle": "Community",
+    "tabs": [
+      { "id": "all", "label": "All Posts" },
+      { "id": "general", "label": "General Kidney" },
+      { "id": "dialysis", "label": "Dialysis" },
+      { "id": "transplant", "label": "Kidney Transplant" },
+      { "id": "caregiver", "label": "Caregiver Support" },
+      { "id": "nutrition", "label": "Nutrition & Wellness" }
+    ],
+    "postOptionsAria": "Post options",
+    "hidePost": "Hide post",
+    "likePostAria": "Like post",
+    "createPostAria": "Create a new post",
+    "compose": {
+      "title": "New post",
+      "closeAria": "Close new post",
+      "placeholder": "Share an update with the community...",
+      "postButton": "Post",
+      "justNow": "Just now",
+      "memberBadge": "Member"
+    },
+    "posts": [
+      {
+        "id": "1",
+        "author": "Charles D. Xavier",
+        "badge": "Milestone",
+        "time": "Posted 3m ago",
+        "paragraphs": [
+          "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
+          "The personalized recommendation is simply a beast!! "
+        ],
+        "hashtags": "#glute4eva #letsgetfit 💪🙀",
+        "likes": 215,
+        "categoryId": "all"
+      },
+      {
+        "id": "2",
+        "author": "Charles D. Xavier",
+        "badge": "Milestone",
+        "time": "Posted 3m ago",
+        "paragraphs": [
+          "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
+          "The personalized recommendation is simply a beast!! "
+        ],
+        "hashtags": "#glute4eva #letsgetfit 💪🙀",
+        "likes": 215,
+        "categoryId": "general"
+      },
+      {
+        "id": "3",
+        "author": "Charles D. Xavier",
+        "badge": "Milestone",
+        "time": "Posted 3m ago",
+        "paragraphs": [
+          "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
+          "The personalized recommendation is simply a beast!! "
+        ],
+        "hashtags": "#glute4eva #letsgetfit 💪🙀",
+        "likes": 215,
+        "categoryId": "dialysis"
+      },
+      {
+        "id": "4",
+        "author": "Charles D. Xavier",
+        "badge": "Milestone",
+        "time": "Posted 3m ago",
+        "paragraphs": [
+          "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
+          "The personalized recommendation is simply a beast!! "
+        ],
+        "hashtags": "#glute4eva #letsgetfit 💪🙀",
+        "likes": 215,
+        "categoryId": "transplant"
+      }
+    ]
+  },
+  "support": {
+    "pageTitle": "My Tickets",
+    "newTicketButton": "New Ticket",
+    "categoryLabel": "Category",
+    "replyPlaceholder": "Type your reply...",
+    "sendReplyButton": "Send Reply",
+    "ticketResolved": "This ticket has been resolved",
+    "oneReply": "1 reply",
+    "repliesCount": "{count} replies",
+    "status": {
+      "new": "New",
+      "inProgress": "In Progress",
+      "resolved": "Resolved"
+    },
+    "modal": {
+      "title": "Create New Ticket",
+      "closeAria": "Close dialog",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "What do you need help with?",
+      "categoryLabel": "Category",
+      "categories": ["General Inquiry", "Technical Issue", "Account & Billing", "Treatment Records"],
+      "messageLabel": "Message",
+      "messagePlaceholder": "Describe your issue in detail...",
+      "cancelButton": "Cancel",
+      "submitButton": "Submit Ticket"
+    },
+    "tickets": [
+      {
+        "id": "T-001",
+        "status": "new",
+        "title": "Auto-Approve Bookings",
+        "category": "General Inquiry",
+        "date": "15 May 26 8:00 pm",
+        "replies": "1 reply"
+      },
+      {
+        "id": "T-002",
+        "status": "inProgress",
+        "title": "AM2 Checklist Data Reset",
+        "category": "Technical Issue",
+        "date": "15 May 26 8:00 pm",
+        "comments": [
+          {
+            "author": "Deja Brady",
+            "date": "15 May 2026 8:00 pm",
+            "message": "I filled in Section 2 of the AM2 checklist yesterday but when I logged in today it was all blank again. I have tried on Chrome and Firefox.",
+            "tone": "user"
+          },
+          {
+            "author": "Support Team",
+            "date": "15 May 2026 8:05 pm",
+            "message": "Hi Deja, we are looking into this. Could you try clearing your browser cache and trying again?",
+            "tone": "support"
+          }
+        ]
+      },
+      {
+        "id": "T-003",
+        "status": "resolved",
+        "title": "Prescription Refill Sync",
+        "category": "Treatment Records",
+        "date": "15 May 26 8:00 pm",
+        "comments": [
+          {
+            "author": "Deja Brady",
+            "date": "15 May 26 8:00 pm",
+            "message": "My pharmacy confirmed the refill, but it was not showing in my personal log. Updating now.",
+            "tone": "user"
+          },
+          {
+            "author": "Support Team",
+            "date": "15 May 26 8:20 pm",
+            "message": "We refreshed your pharmacy connector sync. Your refill is now successfully visible in your records.",
+            "tone": "support"
+          }
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "generalHeader": "General",
+    "tabs": {
+      "profile": "Profile",
+      "notification": "Notification",
+      "password": "Change Password"
+    },
+    "profile": {
+      "title": "Profile Information",
+      "fullName": "Full Name",
+      "emailAddress": "Email Address",
+      "phoneNumber": "Phone Number",
+      "memberId": "Member ID",
+      "saveButton": "Save Profile Changes",
+      "savedMessage": "Profile saved successfully!"
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "saveButton": "Save Notification Settings",
+      "savedMessage": "Preferences saved successfully!",
+      "items": [
+        {
+          "id": "weeklyCheckIn",
+          "title": "Weekly Check-In Reminders",
+          "description": "Get reminded to complete your weekly check-in"
+        },
+        {
+          "id": "liveClass",
+          "title": "Live Class Reminders",
+          "description": "Notifications about upcoming live classes"
+        },
+        {
+          "id": "journal",
+          "title": "Journal Reminders",
+          "description": "Daily reminder to log your journal entries"
+        },
+        {
+          "id": "education",
+          "title": "New Education Content",
+          "description": "Alerts when new videos or articles are available"
+        },
+        {
+          "id": "community",
+          "title": "Community Activity",
+          "description": "Notifications for replies and mentions in community"
+        }
+      ]
+    },
+    "password": {
+      "title": "Change Your Password",
+      "currentPassword": "Current Password",
+      "currentPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPlaceholder": "Create a new secure password",
+      "confirmPassword": "Confirm Password",
+      "confirmPlaceholder": "Re-enter new password to confirm",
+      "updateButton": "Update Password",
+      "updatedMessage": "Password updated successfully!"
+    }
+  },
+  "sidebar": {
+    "searchPlaceholder": "Search...",
+    "menuHeader": "Menu",
+    "helpHeader": "Help",
+    "logoutButton": "Log out",
+    "closeAria": "Close dashboard menu",
+    "openAria": "Open dashboard menu",
+    "emergency": "Emergency",
+    "admin": "Admin",
+    "user": "User",
+    "items": {
+      "dashboard": "Dashboard",
+      "myRides": "My Rides",
+      "beforeTheEr": "Before-the-ER",
+      "myHealth": "MyHealth",
+      "personalLog": "Personal Log",
+      "dialysisJournal": "Dialysis Journal",
+      "member": "Member",
+      "classManagement": "Class Management",
+      "educationCenter": "Education Center",
+      "liveClass": "Live Class",
+      "community": "Community",
+      "smsAnalytics": "SMS Analytics",
+      "subscriptions": "Subscriptions",
+      "support": "Support",
+      "setting": "Setting",
+      "trash": "Trash"
+    }
+  },
+  "dashboardHome": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "quickActionTitle": "Quick Action",
+    "quickActions": {
+      "wheresMyRide": "Where's My Ride",
+      "educationCenter": "Education Center",
+      "community": "Community",
+      "beforeTheEr": "Before the ER™"
+    },
+    "curriculum": {
+      "title": "Curriculum Progress",
+      "weekBadge": "Week 1 of 8",
+      "weekLabel": "Week 1",
+      "moduleTitle": "Foundations of Awareness",
+      "completed": "25% complete",
+      "description": "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."
+    },
+    "stats": {
+      "journalEntries": "Journal Entries",
+      "smsCheckIns": "SMS Check-ins",
+      "curriculumProgress": "Curriculum Progress",
+      "classesAttended": "Classes Attended"
+    },
+    "upcomingClass": {
+      "badge": "Upcoming Live Class",
+      "title": "Managing Dialysis Symptoms",
+      "datetime": "May 5, 2026 at 2:00 PM EST",
+      "joinButton": "Join Class"
+    },
+    "testimonials": {
+      "title": "Testimonials - You're Not Alone",
+      "storyTitle": "From Fear to Hope: My Dialysis Journey"
+    }
+  },
+  "emergencyModal": {
+    "title": "This may be a medical emergency.",
+    "subtitle": "NephroReach does NOT provide emergency care.",
+    "call911": "CALL 911",
+    "findEr": "Find Nearest Emergency Room",
+    "emergencyContact": "Emergency contact",
+    "whenToSeekTitle": "When to Seek Emergency Care",
+    "symptoms": [
+      "Chest pain or pressure",
+      "Trouble breathing",
+      "Severe weakness or dizziness",
+      "Bleeding that won't stop",
+      "Fainting or passing out",
+      "Severe swelling or sudden weight gain",
+      "Confusion or inability to stay awake"
+    ],
+    "advisory": "If you feel something is seriously wrong, do not wait. Call 911 or go to the nearest emergency room immediately.",
+    "disclaimer": "NephroReach is an education and support platform only. We do not provide medical advice, diagnosis, or emergency services.",
+    "closeButton": "Close"
+  },
+  "trash": {
+    "pageTitle": "Trash (Backup Archives)",
+    "pageDescription": "Archived logs stored here for safety and easy reference.",
+    "tabs": {
+      "labTracking": "Lab Tracking Log",
+      "bloodResults": "Blood Results"
+    },
+    "dialysisCenter": "Dialysis Center",
+    "consultants": "Consultants",
+    "schedule": "Schedule",
+    "latestLabResults": "Latest Lab Results",
+    "addResult": "Add Result",
+    "testHistory": "Test History",
+    "headers": {
+      "test": "Test",
+      "goalRange": "Goal Range",
+      "previous": "Previous (Apr 20)",
+      "result": "Result",
+      "trend": "Trend",
+      "status": "Status",
+      "date": "Date",
+      "label": "Label",
+      "action": "Action"
+    },
+    "inRange": "In Range",
+    "slightlyHigh": "Slightly High"
   }
 }

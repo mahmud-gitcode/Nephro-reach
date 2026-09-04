@@ -2,146 +2,171 @@
 
 import React from "react";
 import { Edit3, Plus, Trash2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 type HealthTab = "allergies" | "history";
 
-const allergyRows = [
+const rawAllergyRows = [
   {
-    name: "Introduction to Wellness",
-    type: "Medication",
-    reaction: "Rash, Hives",
-    severity: "Severe",
-    notes: "Week 1",
+    type: "Medication" as const,
+    reactionKey: "rashHives",
+    reactionDefault: "Rash, Hives",
+    severity: "Severe" as const,
+    week: 1,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Food",
-    reaction: "Eczema, Swelling",
-    severity: "Moderate",
-    notes: "Week 2",
+    type: "Food" as const,
+    reactionKey: "eczemaSwelling",
+    reactionDefault: "Eczema, Swelling",
+    severity: "Moderate" as const,
+    week: 2,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Environmental",
-    reaction: "Dry Skin, Itching",
-    severity: "Severe",
-    notes: "Week 3",
+    type: "Environmental" as const,
+    reactionKey: "drySkinItching",
+    reactionDefault: "Dry Skin, Itching",
+    severity: "Severe" as const,
+    week: 3,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Food",
-    reaction: "Redness, Peeling",
-    severity: "Mild",
-    notes: "Week 4",
+    type: "Food" as const,
+    reactionKey: "rednessPeeling",
+    reactionDefault: "Redness, Peeling",
+    severity: "Mild" as const,
+    week: 4,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Environmental",
-    reaction: "Blistering, Sensitivity",
-    severity: "Mild",
-    notes: "Week 5",
+    type: "Environmental" as const,
+    reactionKey: "blisteringSensitivity",
+    reactionDefault: "Blistering, Sensitivity",
+    severity: "Mild" as const,
+    week: 5,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Medication",
-    reaction: "Flaking, Cracking",
-    severity: "Moderate",
-    notes: "Week 6",
+    type: "Medication" as const,
+    reactionKey: "flakingCracking",
+    reactionDefault: "Flaking, Cracking",
+    severity: "Moderate" as const,
+    week: 6,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Food",
-    reaction: "Itching, Rash Extension",
-    severity: "Mild",
-    notes: "Week 7",
+    type: "Food" as const,
+    reactionKey: "itchingRash",
+    reactionDefault: "Itching, Rash Extension",
+    severity: "Mild" as const,
+    week: 7,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Medication",
-    reaction: "Swelling, Heat",
-    severity: "Moderate",
-    notes: "Week 8",
+    type: "Medication" as const,
+    reactionKey: "swellingHeat",
+    reactionDefault: "Swelling, Heat",
+    severity: "Moderate" as const,
+    week: 8,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Environmental",
-    reaction: "Dry Patches, Red Spots",
-    severity: "Mild",
-    notes: "Week 9",
+    type: "Environmental" as const,
+    reactionKey: "dryPatches",
+    reactionDefault: "Dry Patches, Red Spots",
+    severity: "Mild" as const,
+    week: 9,
   },
   {
-    name: "Introduction to Wellness",
-    type: "Environmental",
-    reaction: "Discomfort, Tenderness",
-    severity: "Mild",
-    notes: "Week 10",
+    type: "Environmental" as const,
+    reactionKey: "discomfortTenderness",
+    reactionDefault: "Discomfort, Tenderness",
+    severity: "Mild" as const,
+    week: 10,
   },
 ];
 
-const historyRows = [
+const rawHistoryRows = [
   {
-    condition: "Chronic Kidney Disease (CKD)",
-    status: "Current",
+    conditionKey: "ckd",
+    conditionDefault: "Chronic Kidney Disease (CKD)",
+    status: "Current" as const,
     diagnosed: "07/05/2016",
-    notes: "Week 1",
+    week: 1,
   },
   {
-    condition: "Hypertension (High Blood Pressure)",
-    status: "Current",
+    conditionKey: "hypertension",
+    conditionDefault: "Hypertension (High Blood Pressure)",
+    status: "Current" as const,
     diagnosed: "18/09/2016",
-    notes: "Week 2",
+    week: 2,
   },
   {
-    condition: "Type 2 Diabetes",
-    status: "Current",
+    conditionKey: "diabetes",
+    conditionDefault: "Type 2 Diabetes",
+    status: "Current" as const,
     diagnosed: "16/08/2013",
-    notes: "Week 3",
+    week: 3,
   },
   {
-    condition: "Appendectomy",
-    status: "Current",
+    conditionKey: "appendectomy",
+    conditionDefault: "Appendectomy",
+    status: "Current" as const,
     diagnosed: "15/08/2017",
-    notes: "Week 4",
+    week: 4,
   },
   {
-    condition: "Asthma",
-    status: "Current",
+    conditionKey: "asthma",
+    conditionDefault: "Asthma",
+    status: "Current" as const,
     diagnosed: "28/10/2012",
-    notes: "Week 5",
+    week: 5,
   },
   {
-    condition: "Hypertension (High Blood Pressure)",
-    status: "Past",
+    conditionKey: "hypertension",
+    conditionDefault: "Hypertension (High Blood Pressure)",
+    status: "Past" as const,
     diagnosed: "07/05/2016",
-    notes: "Week 2",
+    week: 2,
   },
   {
-    condition: "Type 2 Diabetes",
-    status: "Past",
+    conditionKey: "diabetes",
+    conditionDefault: "Type 2 Diabetes",
+    status: "Past" as const,
     diagnosed: "28/10/2012",
-    notes: "Week 3",
+    week: 3,
   },
   {
-    condition: "Appendectomy",
-    status: "Past",
+    conditionKey: "appendectomy",
+    conditionDefault: "Appendectomy",
+    status: "Past" as const,
     diagnosed: "16/08/2013",
-    notes: "Week 4",
+    week: 4,
   },
   {
-    condition: "Chronic Kidney Disease (CKD)",
-    status: "Past",
+    conditionKey: "ckd",
+    conditionDefault: "Chronic Kidney Disease (CKD)",
+    status: "Past" as const,
     diagnosed: "12/06/2020",
-    notes: "Week 1",
+    week: 1,
   },
   {
-    condition: "Hypertension (High Blood Pressure)",
-    status: "Past",
+    conditionKey: "hypertension",
+    conditionDefault: "Hypertension (High Blood Pressure)",
+    status: "Past" as const,
     diagnosed: "28/10/2012",
-    notes: "Week 2",
+    week: 2,
   },
 ];
 
-function Badge({ value }: { value: string }) {
+function Badge({
+  typeKey,
+  label,
+}: {
+  typeKey:
+    | "Medication"
+    | "Food"
+    | "Environmental"
+    | "Severe"
+    | "Moderate"
+    | "Mild"
+    | "Current"
+    | "Past";
+  label: string;
+}) {
   const styles: Record<string, string> = {
     Medication: "bg-[#F9CFFF] text-[#AF14C7]",
     Food: "bg-emerald-100 text-emerald-600",
@@ -154,26 +179,38 @@ function Badge({ value }: { value: string }) {
   };
 
   return (
-    <span className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${styles[value]}`}>
-      {value}
+    <span
+      className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${
+        styles[typeKey] || "bg-slate-100 text-slate-700"
+      }`}
+    >
+      {label}
     </span>
   );
 }
 
-function RowActions({ label }: { label: string }) {
+function RowActions({
+  label,
+  editLabel,
+  deleteLabel,
+}: {
+  label: string;
+  editLabel?: string;
+  deleteLabel?: string;
+}) {
   return (
     <div className="flex items-center justify-center gap-4">
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50"
-        aria-label={`Edit ${label}`}
+        className="flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 cursor-pointer"
+        aria-label={`${editLabel || "Edit"} ${label}`}
       >
         <Edit3 className="h-5 w-5" />
       </button>
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition-colors hover:bg-red-50"
-        aria-label={`Delete ${label}`}
+        className="flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+        aria-label={`${deleteLabel || "Delete"} ${label}`}
       >
         <Trash2 className="h-5 w-5" />
       </button>
@@ -184,13 +221,17 @@ function RowActions({ label }: { label: string }) {
 function Tabs({
   activeTab,
   onTabChange,
+  allergiesLabel,
+  historyLabel,
 }: {
   activeTab: HealthTab;
   onTabChange: (tab: HealthTab) => void;
+  allergiesLabel?: string;
+  historyLabel?: string;
 }) {
   const tabs: Array<{ id: HealthTab; label: string }> = [
-    { id: "allergies", label: "Allergies" },
-    { id: "history", label: "Medical History" },
+    { id: "allergies", label: allergiesLabel || "Allergies" },
+    { id: "history", label: historyLabel || "Medical History" },
   ];
 
   return (
@@ -208,9 +249,9 @@ function Tabs({
           aria-controls={`${tab.id}-panel`}
           id={`${tab.id}-tab`}
           onClick={() => onTabChange(tab.id)}
-          className={`h-12 border-b-[3px] px-6 text-center text-sm font-medium tracking-[0.07px] transition-colors ${
+          className={`h-12 border-b-[3px] px-6 text-center text-sm font-medium tracking-[0.07px] transition-colors cursor-pointer ${
             activeTab === tab.id
-              ? "border-blue-600 text-slate-950 shadow-[0_1px_1px_rgba(0,0,0,0.05)]"
+              ? "border-blue-600 text-slate-950 shadow-[0_1px_1px_rgba(0,0,0,0.05)] font-bold"
               : "border-transparent text-slate-600 hover:text-slate-900"
           }`}
         >
@@ -233,14 +274,16 @@ function SectionHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">{title}</h1>
+        <h1 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+          {title}
+        </h1>
         <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-900 sm:text-base sm:leading-6">
           {description}
         </p>
       </div>
       <button
         type="button"
-        className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+        className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
       >
         <Plus className="h-5 w-5" />
         {buttonLabel}
@@ -250,17 +293,56 @@ function SectionHeader({
 }
 
 function AllergiesTable() {
+  const { dictionary } = useLanguage();
+  const h = dictionary?.myHealth;
+
+  const getTypeName = (type: "Medication" | "Food" | "Environmental") => {
+    if (type === "Medication")
+      return h?.allergies?.types?.medication || "Medication";
+    if (type === "Food") return h?.allergies?.types?.food || "Food";
+    return h?.allergies?.types?.environmental || "Environmental";
+  };
+
+  const getSeverityName = (severity: "Severe" | "Moderate" | "Mild") => {
+    if (severity === "Severe")
+      return h?.allergies?.severities?.severe || "Severe";
+    if (severity === "Moderate")
+      return h?.allergies?.severities?.moderate || "Moderate";
+    return h?.allergies?.severities?.mild || "Mild";
+  };
+
+  const getReaction = (key: string, fallback: string) => {
+    const reactions = h?.allergies?.reactions;
+    if (reactions && typeof reactions === "object" && key in reactions) {
+      return (reactions as Record<string, string>)[key] || fallback;
+    }
+    return fallback;
+  };
+
+  const headers = [
+    h?.allergies?.headers?.name || "Name",
+    h?.allergies?.headers?.type || "Type",
+    h?.allergies?.headers?.reaction || "Reaction",
+    h?.allergies?.headers?.severity || "Severity",
+    h?.allergies?.headers?.notes || "Notes",
+    h?.allergies?.headers?.actions || "Actions",
+  ];
+
+  const sampleName =
+    h?.allergies?.sampleName || "Introduction to Wellness";
+  const weekPrefix = h?.allergies?.weekPrefix || "Week";
+
   return (
     <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
       <table className="w-full min-w-[1080px] border-collapse text-sm">
         <thead className="bg-[#F4F6F8]">
           <tr>
-            {["Name", "Type", "Reaction", "Severity", "Notes", "Actions"].map((header) => (
+            {headers.map((header) => (
               <th
                 key={header}
                 className={`h-[55px] border-b border-[#C4CDD5] px-3 text-left font-medium tracking-[0.07px] text-slate-950 ${
-                  header === "Name" ? "w-[358px]" : ""
-                } ${header === "Actions" ? "text-center" : ""}`}
+                  header === headers[0] ? "w-[358px]" : ""
+                } ${header === headers[5] ? "text-center" : ""}`}
               >
                 <span className="block border-l border-[#C4CDD5] pl-3 first:border-l-0">
                   {header}
@@ -270,22 +352,46 @@ function AllergiesTable() {
           </tr>
         </thead>
         <tbody>
-          {allergyRows.map((row, index) => (
-            <tr key={`${row.reaction}-${index}`} className="border-b border-dashed border-[#C4CDD5] last:border-0">
-              <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">{row.name}</td>
-              <td className="h-[54px] px-3 py-2">
-                <Badge value={row.type} />
-              </td>
-              <td className="h-[54px] max-w-[160px] truncate px-3 py-2 text-slate-800">{row.reaction}</td>
-              <td className="h-[54px] px-3 py-2">
-                <Badge value={row.severity} />
-              </td>
-              <td className="h-[54px] px-3 py-2 text-slate-800">{row.notes}</td>
-              <td className="h-[54px] px-3 py-2">
-                <RowActions label={row.name} />
-              </td>
-            </tr>
-          ))}
+          {rawAllergyRows.map((row, index) => {
+            const reactionText = getReaction(row.reactionKey, row.reactionDefault);
+            const notesText = `${weekPrefix} ${row.week}`;
+
+            return (
+              <tr
+                key={`${row.reactionKey}-${index}`}
+                className="border-b border-dashed border-[#C4CDD5] last:border-0"
+              >
+                <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
+                  {sampleName}
+                </td>
+                <td className="h-[54px] px-3 py-2">
+                  <Badge
+                    typeKey={row.type}
+                    label={getTypeName(row.type)}
+                  />
+                </td>
+                <td className="h-[54px] max-w-[160px] truncate px-3 py-2 text-slate-800">
+                  {reactionText}
+                </td>
+                <td className="h-[54px] px-3 py-2">
+                  <Badge
+                    typeKey={row.severity}
+                    label={getSeverityName(row.severity)}
+                  />
+                </td>
+                <td className="h-[54px] px-3 py-2 text-slate-800">
+                  {notesText}
+                </td>
+                <td className="h-[54px] px-3 py-2">
+                  <RowActions
+                    label={sampleName}
+                    editLabel={h?.actions?.edit}
+                    deleteLabel={h?.actions?.delete}
+                  />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -293,17 +399,44 @@ function AllergiesTable() {
 }
 
 function MedicalHistoryTable() {
+  const { dictionary } = useLanguage();
+  const h = dictionary?.myHealth;
+
+  const getConditionName = (key: string, fallback: string) => {
+    const conditions = h?.history?.conditions;
+    if (conditions && typeof conditions === "object" && key in conditions) {
+      return (conditions as Record<string, string>)[key] || fallback;
+    }
+    return fallback;
+  };
+
+  const getStatusName = (status: "Current" | "Past") => {
+    if (status === "Current")
+      return h?.history?.statuses?.current || "Current";
+    return h?.history?.statuses?.past || "Past";
+  };
+
+  const headers = [
+    h?.history?.headers?.condition || "CONDITION / HISTORY",
+    h?.history?.headers?.status || "Status",
+    h?.history?.headers?.diagnosed || "Diagnosed",
+    h?.history?.headers?.notes || "Notes",
+    h?.history?.headers?.actions || "Actions",
+  ];
+
+  const weekPrefix = h?.allergies?.weekPrefix || "Week";
+
   return (
     <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
       <table className="w-full min-w-[1080px] border-collapse text-sm">
         <thead className="bg-[#F8FAFC]">
           <tr>
-            {["CONDITION / HISTORY", "Status", "Diagnosed", "Notes", "Actions"].map((header) => (
+            {headers.map((header) => (
               <th
                 key={header}
                 className={`h-[55px] border-b border-[#C4CDD5] px-3 text-left font-medium tracking-[0.07px] text-slate-950 ${
-                  header === "CONDITION / HISTORY" ? "w-[358px]" : ""
-                } ${header === "Actions" ? "text-center" : ""}`}
+                  header === headers[0] ? "w-[358px]" : ""
+                } ${header === headers[4] ? "text-center" : ""}`}
               >
                 <span className="block border-l border-[#C4CDD5] pl-3 first:border-l-0">
                   {header}
@@ -313,19 +446,43 @@ function MedicalHistoryTable() {
           </tr>
         </thead>
         <tbody>
-          {historyRows.map((row, index) => (
-            <tr key={`${row.condition}-${index}`} className="border-b border-dashed border-[#C4CDD5] last:border-0">
-              <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">{row.condition}</td>
-              <td className="h-[54px] px-3 py-2">
-                <Badge value={row.status} />
-              </td>
-              <td className="h-[54px] px-3 py-2 text-slate-800">{row.diagnosed}</td>
-              <td className="h-[54px] px-3 py-2 text-slate-800">{row.notes}</td>
-              <td className="h-[54px] px-3 py-2">
-                <RowActions label={row.condition} />
-              </td>
-            </tr>
-          ))}
+          {rawHistoryRows.map((row, index) => {
+            const conditionText = getConditionName(
+              row.conditionKey,
+              row.conditionDefault
+            );
+            const notesText = `${weekPrefix} ${row.week}`;
+
+            return (
+              <tr
+                key={`${row.conditionKey}-${index}`}
+                className="border-b border-dashed border-[#C4CDD5] last:border-0"
+              >
+                <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
+                  {conditionText}
+                </td>
+                <td className="h-[54px] px-3 py-2">
+                  <Badge
+                    typeKey={row.status}
+                    label={getStatusName(row.status)}
+                  />
+                </td>
+                <td className="h-[54px] px-3 py-2 text-slate-800">
+                  {row.diagnosed}
+                </td>
+                <td className="h-[54px] px-3 py-2 text-slate-800">
+                  {notesText}
+                </td>
+                <td className="h-[54px] px-3 py-2">
+                  <RowActions
+                    label={conditionText}
+                    editLabel={h?.actions?.edit}
+                    deleteLabel={h?.actions?.delete}
+                  />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -334,10 +491,17 @@ function MedicalHistoryTable() {
 
 export default function MyHealthPage() {
   const [activeTab, setActiveTab] = React.useState<HealthTab>("allergies");
+  const { dictionary } = useLanguage();
+  const h = dictionary?.myHealth;
 
   return (
     <div className="space-y-6">
-      <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <Tabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        allergiesLabel={h?.tabs?.allergies}
+        historyLabel={h?.tabs?.history}
+      />
 
       <section
         id={`${activeTab}-panel`}
@@ -348,18 +512,24 @@ export default function MyHealthPage() {
         {activeTab === "allergies" ? (
           <div className="space-y-3.5">
             <SectionHeader
-              title="Allergy"
-              description="List of substances, medications, foods or environmental factors you are allergic to."
-              buttonLabel="Add Allergy"
+              title={h?.allergies?.title || "Allergy"}
+              description={
+                h?.allergies?.description ||
+                "List of substances, medications, foods or environmental factors you are allergic to."
+              }
+              buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
             />
             <AllergiesTable />
           </div>
         ) : (
           <div className="space-y-3.5">
             <SectionHeader
-              title="Medical History"
-              description="Your past and current medical conditions, surgeries and major health events."
-              buttonLabel="Add Condition"
+              title={h?.history?.title || "Medical History"}
+              description={
+                h?.history?.description ||
+                "Your past and current medical conditions, surgeries and major health events."
+              }
+              buttonLabel={h?.history?.addBtn || "Add Condition"}
             />
             <MedicalHistoryTable />
           </div>

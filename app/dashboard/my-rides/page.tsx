@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Phone, Pencil, Plus, Trash2, X, Check, Car } from "lucide-react";
+import { Phone, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface RideContact {
   id: string;
@@ -21,6 +22,8 @@ const DEFAULT_RIDES: RideContact[] = [
 ];
 
 export default function MyRidesPage() {
+  const { t } = useLanguage();
+
   const [rides, setRides] = useState<RideContact[]>(DEFAULT_RIDES);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -97,11 +100,11 @@ export default function MyRidesPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      setFormError("Please enter a driver or ride name.");
+      setFormError(t("myRides.errorName"));
       return;
     }
     if (!formPhone.trim()) {
-      setFormError("Please enter a phone number.");
+      setFormError(t("myRides.errorPhone"));
       return;
     }
 
@@ -140,7 +143,8 @@ export default function MyRidesPage() {
   };
 
   const handleDeleteRide = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}" from your rides?`)) {
+    const confirmMsg = t("myRides.confirmDelete").replace("{name}", name);
+    if (confirm(confirmMsg)) {
       const remaining = rides.filter((r) => r.id !== id);
       if (remaining.length > 0 && !remaining.some((r) => r.isPrimary)) {
         remaining[0].isPrimary = true;
@@ -165,9 +169,9 @@ export default function MyRidesPage() {
 
           {/* Title & Subtitle */}
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-slate-900">Need a ride?</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{t("myRides.title")}</h1>
             <p className="text-sm font-medium text-slate-600">
-              Quick access to your transportation options.
+              {t("myRides.subtitle")}
             </p>
           </div>
 
@@ -175,9 +179,12 @@ export default function MyRidesPage() {
           <div className="space-y-3.5">
             <div className="flex items-center justify-between px-1">
               <div className="text-left">
-                <h2 className="text-base font-bold text-slate-900">My Rides</h2>
+                <h2 className="text-base font-bold text-slate-900">{t("myRides.sectionTitle")}</h2>
                 <p className="text-xs font-medium text-slate-500">
-                  {rides.length} saved {rides.length === 1 ? "driver" : "drivers"}
+                  {rides.length}{" "}
+                  {rides.length === 1
+                    ? t("myRides.savedDriverSingle")
+                    : t("myRides.savedDriverPlural")}
                 </p>
               </div>
 
@@ -186,24 +193,24 @@ export default function MyRidesPage() {
                 type="button"
                 onClick={handleOpenAdd}
                 className="flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-3.5 py-2 text-xs sm:text-sm font-bold text-white transition-all shadow-xs hover:shadow-sm cursor-pointer active:scale-98"
-                title="Add a new ride"
+                title={t("myRides.addRide")}
               >
                 <Plus className="h-4 w-4 stroke-[2.5]" />
-                <span>Add Ride</span>
+                <span>{t("myRides.addRide")}</span>
               </button>
             </div>
 
             {/* List of Rides */}
             {rides.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center space-y-3">
-                <p className="text-sm text-slate-500">No personal rides saved yet.</p>
+                <p className="text-sm text-slate-500">{t("myRides.noRides")}</p>
                 <button
                   type="button"
                   onClick={handleOpenAdd}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>Add your first ride</span>
+                  <span>{t("myRides.addFirstRide")}</span>
                 </button>
               </div>
             ) : (
@@ -225,7 +232,7 @@ export default function MyRidesPage() {
                           </p>
                           {ride.isPrimary && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-0.5">
-                              Primary
+                              {t("myRides.primaryBadge")}
                             </span>
                           )}
                           {ride.note && (!ride.isPrimary || !/primary/i.test(ride.note)) && (
@@ -245,7 +252,7 @@ export default function MyRidesPage() {
                           type="button"
                           onClick={() => handleOpenEdit(ride)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
-                          title="Edit Driver Details"
+                          title={t("myRides.editDetails")}
                           aria-label={`Edit ${ride.name}`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -255,7 +262,7 @@ export default function MyRidesPage() {
                             type="button"
                             onClick={() => handleDeleteRide(ride.id, ride.name)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
-                            title="Remove Ride"
+                            title={t("myRides.removeRide")}
                             aria-label={`Remove ${ride.name}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -270,7 +277,7 @@ export default function MyRidesPage() {
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 py-3 text-sm font-bold text-white transition-colors shadow-xs active:scale-[0.99]"
                     >
                       <Phone className="h-4 w-4" />
-                      <span>Call {ride.name}</span>
+                      <span>{t("myRides.call")} {ride.name}</span>
                     </a>
                   </div>
                 ))}
@@ -280,7 +287,7 @@ export default function MyRidesPage() {
 
           {/* Card 2: Ride share Apps */}
           <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-left space-y-3">
-            <h2 className="text-base font-bold text-slate-900">Ride share Apps</h2>
+            <h2 className="text-base font-bold text-slate-900">{t("myRides.rideshareTitle")}</h2>
 
             <a
               href="https://m.uber.com"
@@ -289,7 +296,7 @@ export default function MyRidesPage() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] py-3.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-sm"
             >
               <Phone className="h-4 w-4" />
-              Open Uber
+              {t("myRides.openUber")}
             </a>
 
             <a
@@ -299,7 +306,7 @@ export default function MyRidesPage() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF2B99] py-3.5 text-sm font-bold text-white hover:bg-pink-600 transition-colors shadow-sm"
             >
               <Phone className="h-4 w-4" />
-              Open Lyft
+              {t("myRides.openLyft")}
             </a>
           </div>
         </div>
@@ -312,13 +319,13 @@ export default function MyRidesPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-bold text-slate-900">
-                {modalMode === "add" ? "Add New Ride" : "Edit Ride"}
+                {modalMode === "add" ? t("myRides.addNewRideModal") : t("myRides.editRideModal")}
               </h3>
               <button
                 type="button"
                 onClick={handleCloseModal}
                 className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                title="Close"
+                title={t("myRides.close")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -334,41 +341,41 @@ export default function MyRidesPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-sm font-bold text-slate-900">
-                  Ride / Driver Name <span className="text-rose-500">*</span>
+                  {t("myRides.driverNameLabel")} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Bobo boy, Uncle David, Care Transit"
+                  placeholder={t("myRides.driverNamePlaceholder")}
                   autoFocus
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-sm font-bold text-slate-900">
-                  Phone Number <span className="text-rose-500">*</span>
+                  {t("myRides.phoneLabel")} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="tel"
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="(684) 555-0102"
+                  placeholder={t("myRides.phonePlaceholder")}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-sm font-bold text-slate-900">
-                  Relationship or Label (Optional)
+                  {t("myRides.relationshipLabel")}
                 </label>
                 <input
                   type="text"
                   value={formNote}
                   onChange={(e) => setFormNote(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Family, Caregiver, Medical Transport"
+                  placeholder={t("myRides.relationshipPlaceholder")}
                 />
               </div>
 
@@ -380,7 +387,7 @@ export default function MyRidesPage() {
                   className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
                 />
                 <span className="text-sm font-semibold text-slate-700">
-                  Set as primary ride
+                  {t("myRides.setPrimary")}
                 </span>
               </label>
 
@@ -390,14 +397,14 @@ export default function MyRidesPage() {
                   type="submit"
                   className="flex-1 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 text-sm transition-colors shadow-sm cursor-pointer"
                 >
-                  {modalMode === "add" ? "Save Ride" : "Update Info"}
+                  {modalMode === "add" ? t("myRides.saveRide") : t("myRides.updateInfo")}
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseModal}
                   className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-3 text-sm transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t("myRides.cancel")}
                 </button>
               </div>
             </form>

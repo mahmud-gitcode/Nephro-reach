@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Phone, Pencil, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
@@ -86,18 +87,50 @@ const testimonials = [
   },
 ];
 
-function greetingPrefix() {
+function getGreeting(dh?: any) {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return dh?.greetingMorning || "Good morning";
+  if (hour < 17) return dh?.greetingAfternoon || "Good afternoon";
+  return dh?.greetingEvening || "Good evening";
 }
 
 export default function UserDashboard() {
   const { user } = useAuth();
+  const { language, dictionary } = useLanguage();
+  const dh = dictionary?.dashboardHome;
   const firstName = user?.name.split(" ")[0] || "Sarah";
-  const greeting = useMemo(() => greetingPrefix(), []);
+  const greeting = useMemo(() => getGreeting(dh), [dh]);
   const [isRideModalOpen, setIsRideModalOpen] = useState(false);
+
+  const getQuickActionLabel = (action: (typeof quickActions)[0]) => {
+    switch (action.href) {
+      case "/dashboard/my-rides":
+        return dh?.quickActions?.wheresMyRide || action.label;
+      case "/dashboard/education-center":
+        return dh?.quickActions?.educationCenter || action.label;
+      case "/dashboard/community":
+        return dh?.quickActions?.community || action.label;
+      case "/dashboard/before-the-er":
+        return dh?.quickActions?.beforeTheEr || action.label;
+      default:
+        return action.label;
+    }
+  };
+
+  const getStatLabel = (statKey: string, fallback: string) => {
+    switch (statKey) {
+      case "Journal Entries":
+        return dh?.stats?.journalEntries || fallback;
+      case "SMS Check-ins":
+        return dh?.stats?.smsCheckIns || fallback;
+      case "Curriculum Progress":
+        return dh?.stats?.curriculumProgress || fallback;
+      case "Classes Attended":
+        return dh?.stats?.classesAttended || fallback;
+      default:
+        return fallback;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -107,25 +140,29 @@ export default function UserDashboard() {
 
       <section>
         <h2 className="mb-3 text-lg font-medium tracking-[0.09px] text-[#344056]">
-          Quick Action
+          {dh?.quickActionTitle || (language === "ES" ? "Acción Rápida" : "Quick Action")}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.label}
-              href={action.href}
-              className="flex min-h-[134px] flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-[25px] hover:border-blue-300 hover:shadow-sm transition-all"
-            >
-              <span
-                className={`flex size-12 items-center justify-center rounded-[14px] ${action.tone}`}
+          {quickActions.map((action) => {
+            const label = getQuickActionLabel(action);
+
+            return (
+              <Link
+                key={action.label}
+                href={action.href}
+                className="flex min-h-[134px] flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-[25px] hover:border-blue-300 hover:shadow-sm transition-all"
               >
-                <Icon src={asset(action.icon)} />
-              </span>
-              <p className="text-base font-medium tracking-[0.08px] text-[#0F172A]">
-                {action.label}
-              </p>
-            </Link>
-          ))}
+                <span
+                  className={`flex size-12 items-center justify-center rounded-[14px] ${action.tone}`}
+                >
+                  <Icon src={asset(action.icon)} />
+                </span>
+                <p className="text-base font-medium tracking-[0.08px] text-[#0F172A]">
+                  {label}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -133,33 +170,35 @@ export default function UserDashboard() {
         <article className="rounded-xl border border-[#D6E6F2] bg-white p-3.5">
           <div className="flex items-center gap-2 py-2">
             <p className="flex-1 text-base font-medium tracking-[0.08px] text-[#0F172A]">
-              Curriculum Progress
+              {dh?.curriculum?.title || "Curriculum Progress"}
             </p>
             <Link
               href="/dashboard/education-center"
               className="flex items-center gap-2 text-sm font-medium tracking-[0.07px] text-[#2563EB]"
             >
-              Week 1 of 8
+              {dh?.curriculum?.weekBadge || "Week 1 of 8"}
               <Icon src={asset("arrow-right.svg")} />
             </Link>
           </div>
           <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5">
-            <p className="text-base font-medium tracking-[0.08px] text-[#2563EB]">Week 1</p>
+            <p className="text-base font-medium tracking-[0.08px] text-[#2563EB]">
+              {dh?.curriculum?.weekLabel || "Week 1"}
+            </p>
             <div className="mt-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-lg font-medium tracking-[0.09px] text-[#344056]">
-                  Foundations of Awareness
+                  {dh?.curriculum?.moduleTitle || "Foundations of Awareness"}
                 </p>
                 <p className="shrink-0 text-sm font-medium tracking-[0.07px] text-[#4A4A68]">
-                  25% complete
+                  {dh?.curriculum?.completed || "25% complete"}
                 </p>
               </div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#D7EDFF]">
                 <div className="h-full w-1/4 rounded-full bg-[#2563EB]" />
               </div>
               <p className="mt-4 text-sm font-medium leading-5 tracking-[0.07px] text-[#344056]">
-                You&apos;ve started reading the materials. Don&apos;t forget to complete the
-                reflection exercise in your journal.
+                {dh?.curriculum?.description ||
+                  "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}
               </p>
             </div>
           </div>
@@ -173,7 +212,7 @@ export default function UserDashboard() {
             >
               <div className="flex items-center justify-between px-6 pt-3">
                 <p className="text-base font-medium tracking-[0.08px] text-[#344056]">
-                  {stat.label}
+                  {getStatLabel(stat.label, stat.label)}
                 </p>
                 <span
                   className={`flex size-10 items-center justify-center rounded-[10px] ${stat.tone}`}
@@ -194,23 +233,27 @@ export default function UserDashboard() {
           <Icon src={asset("class-video.svg")} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-5 text-[#4A5565]">Upcoming Live Class</p>
-          <p className="text-lg font-medium tracking-[0.09px] text-[#0A0A0A]">
-            Managing Dialysis Symptoms
+          <p className="text-sm font-medium leading-5 text-[#4A5565]">
+            {dh?.upcomingClass?.badge || "Upcoming Live Class"}
           </p>
-          <p className="text-sm leading-5 text-[#4A5565]">May 5, 2026 at 2:00 PM EST</p>
+          <p className="text-lg font-medium tracking-[0.09px] text-[#0A0A0A]">
+            {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
+          </p>
+          <p className="text-sm leading-5 text-[#4A5565]">
+            {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
+          </p>
         </div>
         <button
           type="button"
-          className="rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white"
+          className="rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white hover:bg-blue-700 transition-colors"
         >
-          Join Class
+          {dh?.upcomingClass?.joinButton || "Join Class"}
         </button>
       </section>
 
       <section>
         <h2 className="mb-4 text-xl font-medium leading-7 text-[#0A0A0A]">
-          Testimonials - You&apos;re Not Alone
+          {dh?.testimonials?.title || "Testimonials - You're Not Alone"}
         </h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {testimonials.map((item, index) => (
@@ -231,7 +274,9 @@ export default function UserDashboard() {
                 </span>
               </div>
               <p className="mt-4 text-sm leading-5 text-[#0A0A0A]">{item.name}</p>
-              <p className="mt-1 text-xs leading-4 text-[#4A5565]">{item.title}</p>
+              <p className="mt-1 text-xs leading-4 text-[#4A5565]">
+                {dh?.testimonials?.storyTitle || item.title}
+              </p>
             </article>
           ))}
         </div>

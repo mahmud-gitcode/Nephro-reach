@@ -131,13 +131,21 @@ export default function Header() {
           {/* Left-aligned Language Selector */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-blue-600 px-2.5 py-1.5 rounded-lg border border-slate-200/80 hover:border-blue-200 bg-slate-50/50 hover:bg-blue-50/30 transition-all focus:outline-none"
-              aria-label="Select Language"
+              className="flex items-center gap-2.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer focus:outline-none"
+              aria-label={t("header.changeLanguage") || "Change language"}
             >
-              <selectedLang.FlagComponent />
-              <span>{selectedLang.code}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+              <span className="relative h-6 w-[33px] overflow-clip rounded-[2px]">
+                <img
+                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                  alt={language === "ES" ? (t("header.spanish") || "Spanish") : (t("header.english") || "English")}
+                  className="size-full"
+                />
+              </span>
+              <span className="relative block size-6 overflow-clip">
+                <img src="/images/dashboard-header/arrow-down.svg" alt="" className="size-full" />
+              </span>
             </button>
 
             {langDropdownOpen && (
@@ -146,21 +154,33 @@ export default function Header() {
                   className="fixed inset-0 z-40"
                   onClick={() => setLangDropdownOpen(false)}
                 />
-                <div className="absolute left-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="absolute left-0 mt-2 w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                   {languages.map((lang) => (
                     <button
                       key={lang.code}
+                      type="button"
                       onClick={() => {
                         setLanguage(lang.code);
                         setLangDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-left transition-colors ${selectedLang.code === lang.code
-                        ? "text-blue-600 bg-blue-50/70 font-bold"
-                        : "text-slate-700 hover:bg-slate-50"
-                        }`}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-left transition-colors cursor-pointer ${
+                        selectedLang.code === lang.code
+                          ? "text-blue-600 bg-blue-50/70 font-bold"
+                          : "text-slate-700 hover:bg-slate-50"
+                      }`}
                     >
-                      <lang.FlagComponent />
-                      <span>{lang.label}</span>
+                      <span className="relative h-4 w-[22px] overflow-clip rounded-[2px] shrink-0">
+                        <img
+                          src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      </span>
+                      <span>
+                        {lang.code === "ES"
+                          ? (t("header.spanish") || "Spanish")
+                          : (t("header.english") || "English")}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -242,8 +262,8 @@ export default function Header() {
         {/* Mobile Hamburger Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          aria-label="Toggle Menu"
+          className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+          aria-label={t("header.toggleMenu") || "Toggle Menu"}
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -286,20 +306,34 @@ export default function Header() {
           </Link>
 
           {/* Mobile Language Select */}
-          <div className="py-2 border-t border-b border-slate-100">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Language</span>
+          <div className="py-2.5 border-t border-b border-slate-100">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+              {t("header.language") || "Language"}
+            </span>
             <div className="flex gap-2">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
+                  type="button"
                   onClick={() => setLanguage(lang.code)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${selectedLang.code === lang.code
-                    ? "bg-blue-50 border-blue-200 text-blue-600 font-bold"
-                    : "bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100"
-                    }`}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    selectedLang.code === lang.code
+                      ? "border-b-2 border-[#111827] bg-[#F1F5FA] text-blue-700 font-bold shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                      : "bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100"
+                  }`}
                 >
-                  <lang.FlagComponent />
-                  <span>{lang.label}</span>
+                  <span className="relative h-4 w-[22px] overflow-clip rounded-[2px] shrink-0">
+                    <img
+                      src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  </span>
+                  <span>
+                    {lang.code === "ES"
+                      ? (t("header.spanish") || "Spanish")
+                      : (t("header.english") || "English")}
+                  </span>
                 </button>
               ))}
             </div>

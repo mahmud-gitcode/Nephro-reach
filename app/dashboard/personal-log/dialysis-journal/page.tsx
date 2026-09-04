@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { ChevronDown, Info, Plus, X } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 
-const moods = ["Positive", "Calm", "Reflective", "Challenging", "Anxious"];
-
-const journalEntries = [
+const defaultJournalEntries = [
   {
     id: "1",
     date: "Friday, May 8, 2026",
@@ -40,8 +40,19 @@ function NewEntryModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { dictionary } = useLanguage();
+  const dj = dictionary?.dialysisJournal;
+
   const [mood, setMood] = useState("Calm");
   const [notes, setNotes] = useState("");
+
+  const moodOptions = [
+    { key: "Positive", label: dj?.modal?.moods?.positive || "Positive" },
+    { key: "Calm", label: dj?.modal?.moods?.calm || "Calm" },
+    { key: "Reflective", label: dj?.modal?.moods?.reflective || "Reflective" },
+    { key: "Challenging", label: dj?.modal?.moods?.challenging || "Challenging" },
+    { key: "Anxious", label: dj?.modal?.moods?.anxious || "Anxious" },
+  ];
 
   if (!open) return null;
 
@@ -55,40 +66,45 @@ function NewEntryModal({
       >
         <div className="flex items-start gap-2.5">
           <div className="min-w-0 flex-1">
-            <h2 id="new-entry-title" className="text-base font-medium leading-4 text-[#0A0A0A]">
-              New Entry
+            <h2
+              id="new-entry-title"
+              className="text-base font-medium leading-4 text-[#0A0A0A]"
+            >
+              {dj?.modal?.title || "New Entry"}
             </h2>
             <p className="mt-1.5 text-base leading-6 text-[#717182]">
-              How are you feeling today?
+              {dj?.modal?.question || "How are you feeling today?"}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100"
-            aria-label="Close new entry"
+            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
+            aria-label={dj?.modal?.cancel || "Close"}
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         <div className="mt-4">
-          <p className="text-sm font-medium leading-5 text-[#0A0A0A]">Mood (optional)</p>
+          <p className="text-sm font-medium leading-5 text-[#0A0A0A]">
+            {dj?.modal?.moodLabel || "Mood (optional)"}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {moods.map((option) => {
-              const selected = option === mood;
+            {moodOptions.map((option) => {
+              const selected = option.key === mood;
               return (
                 <button
-                  key={option}
+                  key={option.key}
                   type="button"
-                  onClick={() => setMood(option)}
-                  className={`rounded-lg border px-[13px] py-[9px] text-sm font-medium tracking-[0.07px] transition-colors ${
+                  onClick={() => setMood(option.key)}
+                  className={`rounded-lg border px-[13px] py-[9px] text-sm font-medium tracking-[0.07px] transition-colors cursor-pointer ${
                     selected
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      ? "border-blue-600 bg-blue-50 text-blue-700 font-bold"
                       : "border-black/10 bg-white text-[#0A0A0A] hover:bg-slate-50"
                   }`}
                 >
-                  {option}
+                  {option.label}
                 </button>
               );
             })}
@@ -98,7 +114,9 @@ function NewEntryModal({
         <textarea
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
-          placeholder="Write your thoughts here..."
+          placeholder={
+            dj?.modal?.placeholder || "Write your thoughts here..."
+          }
           className="mt-4 min-h-16 w-full resize-y rounded-lg border-0 bg-[#F3F3F5] px-[13px] py-[9px] text-sm leading-5 text-slate-950 outline-none placeholder:text-[#717182] focus:ring-2 focus:ring-blue-100"
           rows={3}
         />
@@ -107,16 +125,16 @@ function NewEntryModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-12 flex-1 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-3.5 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
+            className="flex h-12 flex-1 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-3.5 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer"
           >
-            Cancel
+            {dj?.modal?.cancel || "Cancel"}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-12 flex-1 items-center justify-center rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+            className="flex h-12 flex-1 items-center justify-center rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
           >
-            Save Entry
+            {dj?.modal?.saveEntry || "Save Entry"}
           </button>
         </div>
       </div>
@@ -127,8 +145,15 @@ function NewEntryModal({
 function JournalCard({
   entry,
 }: {
-  entry: (typeof journalEntries)[number];
+  entry: {
+    id: string;
+    date: string;
+    preview: string;
+    details: string;
+  };
 }) {
+  const { dictionary } = useLanguage();
+  const dj = dictionary?.dialysisJournal;
   const [open, setOpen] = useState(false);
 
   return (
@@ -144,7 +169,7 @@ function JournalCard({
           />
           <div>
             <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#18181B]">
-              Dialysis Journal
+              {dj?.pageTitle || "Dialysis Journal"}
             </p>
             <p className="text-sm font-medium leading-5 tracking-[0.07px] text-[#52525B]">
               {entry.date}
@@ -154,54 +179,79 @@ function JournalCard({
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="flex h-[46px] shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-[13px] py-[9px] text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white"
+          className="flex h-[46px] shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-[13px] py-[9px] text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white cursor-pointer"
         >
-          View details
-          <ChevronDown className={`h-6 w-6 transition-transform ${open ? "rotate-180" : ""}`} />
+          {open
+            ? dj?.hideDetails || "Hide details"
+            : dj?.viewDetails || "View details"}
+          <ChevronDown
+            className={`h-6 w-6 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
         </button>
       </div>
       <div className="mt-3 h-px bg-slate-200" />
       <p className="mt-3 text-base leading-6 text-[#0A0A0A]">{entry.preview}</p>
-      {open && <p className="mt-2 text-base leading-6 text-[#0A0A0A]">{entry.details}</p>}
+      {open && (
+        <p className="mt-2 text-base leading-6 text-[#0A0A0A]">{entry.details}</p>
+      )}
     </article>
   );
 }
 
 export default function DialysisJournalPage() {
+  const { user } = useAuth();
+  const { dictionary } = useLanguage();
+  const dj = dictionary?.dialysisJournal;
   const [modalOpen, setModalOpen] = useState(false);
+
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return dj?.greetingMorning || "Good morning";
+    if (hour < 18) return dj?.greetingAfternoon || "Good afternoon";
+    return dj?.greetingEvening || "Good evening";
+  })();
+
+  const userName = user?.name ? `, ${user.name}` : ", Sarah";
+
+  const entries =
+    dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0
+      ? dj.entries
+      : defaultJournalEntries;
 
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[32px] font-medium leading-none text-slate-950">
-            Good morning, Sarah
+            {greeting}
+            {userName}
           </h1>
           <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-600">
-            Your personal log for each dialysis day
+            {dj?.subtitle || "Your personal log for each dialysis day"}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
         >
           <Plus className="h-6 w-6" />
-          New Entry
+          {dj?.newEntryBtn || "New Entry"}
         </button>
       </header>
 
       <aside className="flex items-start gap-2 rounded-xl border border-slate-200 bg-[#F1F5FA] p-3.5">
         <Info className="mt-0.5 h-6 w-6 shrink-0 text-slate-600" />
         <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#364153]">
-          NephroReach provides educational and self-tracking tools only. Always
-          follow the fluid and weight guidance provided by your dialysis care
-          team.
+          {dj?.disclaimer ||
+            "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team."}
         </p>
       </aside>
 
       <section className="space-y-4">
-        {journalEntries.map((entry) => (
+        {entries.map((entry) => (
           <JournalCard key={entry.id} entry={entry} />
         ))}
       </section>

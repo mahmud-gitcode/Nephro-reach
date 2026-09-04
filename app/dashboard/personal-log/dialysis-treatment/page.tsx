@@ -18,37 +18,7 @@ import {
   Timer,
 } from "lucide-react";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
-
-const summaryCards = [
-  {
-    label: "Treatment attended",
-    value: "90%",
-    icon: CheckCircle2,
-    iconColor: "text-emerald-600",
-    bgColor: "bg-emerald-50 border-emerald-100",
-  },
-  {
-    label: "Arrived late",
-    value: "2",
-    icon: Clock,
-    iconColor: "text-amber-600",
-    bgColor: "bg-amber-50 border-amber-100",
-  },
-  {
-    label: "Ended early",
-    value: "4",
-    icon: Timer,
-    iconColor: "text-red-500",
-    bgColor: "bg-red-50 border-red-100",
-  },
-  {
-    label: "Missed treatments",
-    value: "2",
-    icon: CalendarX,
-    iconColor: "text-rose-500",
-    bgColor: "bg-rose-50 border-rose-100",
-  },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 const recoveryPoints = [
   { month: "Mar", good: 10, okay: 20, bad: 40 },
@@ -57,13 +27,40 @@ const recoveryPoints = [
   { month: "Jun", good: 60, okay: 20, bad: 70 },
 ];
 
-const symptomSlices = [
-  { label: "Cramping", count: 29, percent: 50, color: "#2563EB" },
-  { label: "Low BP", count: 16, percent: 28, color: "#F59E0B" },
-  { label: "Fatigue", count: 13, percent: 22, color: "#EF4444" },
-];
-
 function SummaryCards() {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+  const summaryCards = [
+    {
+      label: dt?.summary?.attended || "Treatment attended",
+      value: "90%",
+      icon: CheckCircle2,
+      iconColor: "text-emerald-600",
+      bgColor: "bg-emerald-50 border-emerald-100",
+    },
+    {
+      label: dt?.summary?.arrivedLate || "Arrived late",
+      value: "2",
+      icon: Clock,
+      iconColor: "text-amber-600",
+      bgColor: "bg-amber-50 border-amber-100",
+    },
+    {
+      label: dt?.summary?.endedEarly || "Ended early",
+      value: "4",
+      icon: Timer,
+      iconColor: "text-red-500",
+      bgColor: "bg-red-50 border-red-100",
+    },
+    {
+      label: dt?.summary?.missed || "Missed treatments",
+      value: "2",
+      icon: CalendarX,
+      iconColor: "text-rose-500",
+      bgColor: "bg-rose-50 border-rose-100",
+    },
+  ];
+
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {summaryCards.map((card) => (
@@ -88,48 +85,50 @@ function SummaryCards() {
   );
 }
 
-const clinicalMeasurements = [
-  {
-    label: "Fluid Removed",
-    value: "2.3",
-    unit: "Liters",
-    icon: Droplets,
-    iconColor: "text-blue-600",
-    bgColor: "bg-blue-50 border-blue-100",
-  },
-  {
-    label: "Post Weight",
-    value: "72.4",
-    unit: "kg (pre: 74.7)",
-    icon: Scale,
-    iconColor: "text-teal-600",
-    bgColor: "bg-teal-50 border-teal-100",
-  },
-  {
-    label: "Blood Pressure",
-    value: "118 / 72",
-    unit: "mmHg",
-    icon: Activity,
-    iconColor: "text-indigo-600",
-    bgColor: "bg-indigo-50 border-indigo-100",
-  },
-  {
-    label: "Heart Rate",
-    value: "78",
-    unit: "bpm",
-    icon: HeartPulse,
-    iconColor: "text-rose-500",
-    bgColor: "bg-rose-50 border-rose-100",
-  },
-];
-
 function ClinicalMeasurementsCards() {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+  const clinicalMeasurements = [
+    {
+      label: dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed",
+      value: "2.3",
+      unit: dt?.clinicalMeasurements?.liters || "Liters",
+      icon: Droplets,
+      iconColor: "text-blue-600",
+      bgColor: "bg-blue-50 border-blue-100",
+    },
+    {
+      label: dt?.clinicalMeasurements?.postWeight || "Post Weight",
+      value: "72.4",
+      unit: "kg (pre: 74.7)",
+      icon: Scale,
+      iconColor: "text-teal-600",
+      bgColor: "bg-teal-50 border-teal-100",
+    },
+    {
+      label: dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure",
+      value: "118 / 72",
+      unit: dt?.clinicalMeasurements?.mmHg || "mmHg",
+      icon: Activity,
+      iconColor: "text-indigo-600",
+      bgColor: "bg-indigo-50 border-indigo-100",
+    },
+    {
+      label: dt?.clinicalMeasurements?.heartRate || "Heart Rate",
+      value: "78",
+      unit: dt?.clinicalMeasurements?.bpm || "bpm",
+      icon: HeartPulse,
+      iconColor: "text-rose-500",
+      bgColor: "bg-rose-50 border-rose-100",
+    },
+  ];
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
           <Activity className="h-4 w-4 text-[#2563EB]" />
-          <span>Clinical Measurements</span>
+          <span>{dt?.clinicalMeasurements?.title || "Clinical Measurements"}</span>
         </h2>
       </div>
 
@@ -163,6 +162,8 @@ function ClinicalMeasurementsCards() {
 }
 
 function RecoveryPatternChart() {
+  const { language, dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
   const width = 540;
   const height = 210;
   const paddingLeft = 35;
@@ -172,6 +173,11 @@ function RecoveryPatternChart() {
 
   const chartW = width - paddingLeft - paddingRight;
   const chartH = height - paddingTop - paddingBottom;
+
+  const localizedMonths: Record<string, string> =
+    language === "ES"
+      ? { Mar: "Mar", Apr: "Abr", May: "May", Jun: "Jun" }
+      : { Mar: "Mar", Apr: "Apr", May: "May", Jun: "Jun" };
 
   const getX = (index: number) =>
     paddingLeft + (index / (recoveryPoints.length - 1)) * chartW;
@@ -201,20 +207,20 @@ function RecoveryPatternChart() {
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-bold text-slate-900">
-          Recovery Pattern Tracking
+          {dt?.recoveryPattern?.title || "Recovery Pattern Tracking"}
         </h2>
         <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-[#2563EB]" />
-            Good
+            {dt?.recoveryPattern?.good || "Good"}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-[#F59E0B]" />
-            Okay
+            {dt?.recoveryPattern?.okay || "Okay"}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-[#EF4444]" />
-            Bad
+            {dt?.recoveryPattern?.bad || "Bad"}
           </span>
         </div>
       </div>
@@ -282,7 +288,7 @@ function RecoveryPatternChart() {
                   textAnchor="middle"
                   className="fill-slate-500 text-[11px] font-medium"
                 >
-                  {pt.month}
+                  {localizedMonths[pt.month] || pt.month}
                 </text>
               </g>
             );
@@ -294,6 +300,29 @@ function RecoveryPatternChart() {
 }
 
 function SymptomsDonut() {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+  const symptomSlices = [
+    {
+      label: dt?.symptomsDonut?.cramping || "Cramping",
+      count: 29,
+      percent: 50,
+      color: "#2563EB",
+    },
+    {
+      label: dt?.symptomsDonut?.lowBp || "Low BP",
+      count: 16,
+      percent: 28,
+      color: "#F59E0B",
+    },
+    {
+      label: dt?.symptomsDonut?.fatigue || "Fatigue",
+      count: 13,
+      percent: 22,
+      color: "#EF4444",
+    },
+  ];
+
   const size = 210;
   const strokeWidth = 26;
   const radius = (size - strokeWidth) / 2;
@@ -304,7 +333,7 @@ function SymptomsDonut() {
   return (
     <section className="flex flex-col justify-between rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
       <h2 className="text-base font-bold text-slate-900">
-        Symptoms During Treatment
+        {dt?.symptomsDonut?.title || "Symptoms During Treatment"}
       </h2>
 
       <div className="relative flex justify-center items-center py-2">
@@ -342,7 +371,9 @@ function SymptomsDonut() {
 
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-3xl font-bold text-slate-900">86%</span>
-            <span className="text-xs font-medium text-slate-500 mt-0.5">Overall</span>
+            <span className="text-xs font-medium text-slate-500 mt-0.5">
+              {dt?.symptomsDonut?.overall || "Overall"}
+            </span>
           </div>
         </div>
       </div>
@@ -368,7 +399,10 @@ function SymptomsDonut() {
 }
 
 export default function DialysisTreatmentPage() {
-  const [selectedMonth, setSelectedMonth] = useState("Jun");
+  const { language, dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+  const [selectedMonth] = useState("Jun");
+  const displayMonth = language === "ES" ? "Jun" : selectedMonth;
 
   return (
     <div className="w-full space-y-6">
@@ -376,7 +410,10 @@ export default function DialysisTreatmentPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2.5 rounded-2xl border border-amber-200/80 bg-[#FFFBEB] px-4 py-3 text-xs sm:text-sm font-semibold text-[#92400E] shadow-2xs flex-1">
           <Info className="h-5 w-5 shrink-0 text-[#B45309]" />
-          <span>Completing prescribed treatments is important for dialysis adequacy</span>
+          <span>
+            {dt?.topBanner ||
+              "Completing prescribed treatments is important for dialysis adequacy"}
+          </span>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
@@ -385,7 +422,7 @@ export default function DialysisTreatmentPage() {
             className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <Calendar className="h-4 w-4 text-slate-600" />
-            <span>{selectedMonth}</span>
+            <span>{displayMonth}</span>
           </button>
 
           <Link
@@ -393,7 +430,7 @@ export default function DialysisTreatmentPage() {
             className="flex items-center justify-center gap-2 rounded-2xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>Add Entry</span>
+            <span>{dt?.addEntry || "Add Entry"}</span>
           </Link>
         </div>
       </div>
@@ -421,6 +458,8 @@ export default function DialysisTreatmentPage() {
 }
 
 function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] }) {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
   const styles = {
     Attended: "bg-emerald-50 text-emerald-700 border-emerald-200",
     "Arrived Late": "bg-amber-50 text-amber-700 border-amber-200",
@@ -428,16 +467,26 @@ function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] })
     Missed: "bg-rose-50 text-rose-700 border-rose-200",
   }[status];
 
+  const labels: Record<DialysisLogEntry["attendance"], string> = {
+    Attended: dt?.table?.statusAttended || "Attended",
+    "Arrived Late": dt?.table?.statusLate || "Arrived Late",
+    "Ended Early": dt?.table?.statusEarly || "Ended Early",
+    Missed: dt?.table?.statusMissed || "Missed",
+  };
+
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${styles}`}
     >
-      {status}
+      {labels[status] || status}
     </span>
   );
 }
 
 function TreatmentEntriesTable() {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs">
       {/* Table Content */}
@@ -446,14 +495,14 @@ function TreatmentEntriesTable() {
           <table className="min-w-[900px] w-full text-left text-xs">
             <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3.5">Date</th>
-                <th className="px-4 py-3.5">Treatment Type</th>
-                <th className="px-4 py-3.5">Fluid Removed</th>
-                <th className="px-4 py-3.5">Pre / Post Weight</th>
-                <th className="px-4 py-3.5">Blood Pressure</th>
-                <th className="px-4 py-3.5">Symptoms</th>
-                <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5 text-center w-24">Actions</th>
+                <th className="px-4 py-3.5">{dt?.table?.date || "Date"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.treatmentType || "Treatment Type"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.fluidRemoved || "Fluid Removed"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.weight || "Pre / Post Weight"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.bloodPressure || "Blood Pressure"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.symptoms || "Symptoms"}</th>
+                <th className="px-4 py-3.5">{dt?.table?.status || "Status"}</th>
+                <th className="px-4 py-3.5 text-center w-24">{dt?.table?.actions || "Actions"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -515,7 +564,9 @@ function TreatmentEntriesTable() {
                             </span>
                           ))
                         ) : (
-                          <span className="text-slate-400 text-[11px]">None</span>
+                          <span className="text-slate-400 text-[11px]">
+                            {dt?.table?.none || "None"}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -532,7 +583,7 @@ function TreatmentEntriesTable() {
                         <Link
                           href={`/dashboard/personal-log/dialysis-treatment/view?id=${entry.id}`}
                           className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
-                          title="View Full Entry Details"
+                          title={dt?.table?.viewTooltip || "View Full Entry Details"}
                           aria-label={`View full entry for ${entry.displayDate}`}
                         >
                           <Eye className="size-4" />
@@ -542,7 +593,7 @@ function TreatmentEntriesTable() {
                         <Link
                           href={`/dashboard/personal-log/dialysis-treatment/add?edit=${entry.id}`}
                           className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
-                          title="Edit Entry"
+                          title={dt?.table?.editTooltip || "Edit Entry"}
                           aria-label={`Edit entry for ${entry.displayDate}`}
                         >
                           <Pencil className="size-3.5" />
