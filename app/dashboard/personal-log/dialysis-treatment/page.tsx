@@ -12,8 +12,8 @@ import {
   Pencil,
   Plus,
   Timer,
-  X,
 } from "lucide-react";
+import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
 
 const summaryCards = [
   {
@@ -291,7 +291,6 @@ function SymptomsDonut() {
 
 export default function DialysisTreatmentPage() {
   const [selectedMonth, setSelectedMonth] = useState("Jun");
-  const [viewingEntry, setViewingEntry] = useState<DialysisLogEntry | null>(null);
 
   return (
     <div className="w-full space-y-6">
@@ -335,154 +334,10 @@ export default function DialysisTreatmentPage() {
       </section>
 
       {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
-      <TreatmentEntriesTable onSelectEntry={setViewingEntry} />
-
-      {/* VIEW ENTRY DETAIL MODAL */}
-      {viewingEntry && (
-        <EntryDetailModal
-          entry={viewingEntry}
-          onClose={() => setViewingEntry(null)}
-        />
-      )}
+      <TreatmentEntriesTable />
     </div>
   );
 }
-
-interface DialysisLogEntry {
-  id: string;
-  entryNumber: string;
-  date: string;
-  fullDate: string;
-  timeRange: string;
-  duration: string;
-  treatmentType: string;
-  location: string;
-  careTeam: string;
-  fluidRemoved: string;
-  preWeight: string;
-  postWeight: string;
-  weightDiff: string;
-  bloodPressure: string;
-  heartRate: string;
-  symptoms: string[];
-  attendance: "Attended" | "Arrived Late" | "Ended Early" | "Missed";
-  recoveryFeel: "Great" | "Good" | "Okay" | "Low" | "Poor";
-  notes?: string;
-  medications?: string[];
-}
-
-const mockDialysisEntries: DialysisLogEntry[] = [
-  {
-    id: "entry-01",
-    entryNumber: "#05",
-    date: "Jun 24, 2026",
-    fullDate: "Wednesday, Jun 24, 2026",
-    timeRange: "7:30 AM – 11:30 AM",
-    duration: "4h 00m",
-    treatmentType: "Hemodialysis",
-    location: "ABC Dialysis Center",
-    careTeam: "Jane Smith, RN",
-    fluidRemoved: "2.6 L",
-    preWeight: "74.8 kg",
-    postWeight: "72.2 kg",
-    weightDiff: "-2.6 kg",
-    bloodPressure: "126/82 mmHg",
-    heartRate: "72 bpm",
-    symptoms: ["Better / No Symptoms"],
-    attendance: "Attended",
-    recoveryFeel: "Good",
-    notes: "Session completed smoothly without alarms. Target dry weight reached.",
-    medications: ["EPO / Mircera", "Heparin"],
-  },
-  {
-    id: "entry-02",
-    entryNumber: "#04",
-    date: "Jun 22, 2026",
-    fullDate: "Monday, Jun 22, 2026",
-    timeRange: "8:00 AM – 11:30 AM",
-    duration: "3h 30m",
-    treatmentType: "Hemodialysis",
-    location: "ABC Dialysis Center",
-    careTeam: "Jane Smith, RN",
-    fluidRemoved: "2.1 L",
-    preWeight: "74.5 kg",
-    postWeight: "72.4 kg",
-    weightDiff: "-2.1 kg",
-    bloodPressure: "118/76 mmHg",
-    heartRate: "76 bpm",
-    symptoms: ["Cramping"],
-    attendance: "Arrived Late",
-    recoveryFeel: "Okay",
-    notes: "Traffic delay caused 30 min late arrival. Experienced mild calf cramps in last 30 minutes.",
-    medications: ["Heparin"],
-  },
-  {
-    id: "entry-03",
-    entryNumber: "#03",
-    date: "Jun 19, 2026",
-    fullDate: "Friday, Jun 19, 2026",
-    timeRange: "7:30 AM – 10:45 AM",
-    duration: "3h 15m",
-    treatmentType: "Hemodialysis",
-    location: "ABC Dialysis Center",
-    careTeam: "Robert Chen, RN",
-    fluidRemoved: "2.4 L",
-    preWeight: "75.1 kg",
-    postWeight: "72.7 kg",
-    weightDiff: "-2.4 kg",
-    bloodPressure: "106/68 mmHg",
-    heartRate: "80 bpm",
-    symptoms: ["Low BP", "Fatigue"],
-    attendance: "Ended Early",
-    recoveryFeel: "Low",
-    notes: "BP dropped at 10:30 AM. Nurse reduced UF rate and gave saline bolus. Session ended 45m early for safety.",
-    medications: ["Iron", "Heparin"],
-  },
-  {
-    id: "entry-04",
-    entryNumber: "#02",
-    date: "Jun 17, 2026",
-    fullDate: "Wednesday, Jun 17, 2026",
-    timeRange: "7:30 AM – 11:30 AM",
-    duration: "4h 00m",
-    treatmentType: "Hemodialysis",
-    location: "ABC Dialysis Center",
-    careTeam: "Jane Smith, RN",
-    fluidRemoved: "2.8 L",
-    preWeight: "75.4 kg",
-    postWeight: "72.6 kg",
-    weightDiff: "-2.8 kg",
-    bloodPressure: "130/84 mmHg",
-    heartRate: "70 bpm",
-    symptoms: ["Better / No Symptoms"],
-    attendance: "Attended",
-    recoveryFeel: "Great",
-    notes: "Tolerated high fluid removal very well. Felt energetic after treatment.",
-    medications: ["EPO / Mircera", "Zemplar / Hectorol", "Heparin"],
-  },
-  {
-    id: "entry-05",
-    entryNumber: "#01",
-    date: "Jun 15, 2026",
-    fullDate: "Monday, Jun 15, 2026",
-    timeRange: "7:30 AM – 11:30 AM",
-    duration: "4h 00m",
-    treatmentType: "Hemodialysis",
-    location: "ABC Dialysis Center",
-    careTeam: "Robert Chen, RN",
-    fluidRemoved: "2.5 L",
-    preWeight: "74.9 kg",
-    postWeight: "72.4 kg",
-    weightDiff: "-2.5 kg",
-    bloodPressure: "128/80 mmHg",
-    heartRate: "74 bpm",
-    symptoms: ["Mild Cramping"],
-    attendance: "Attended",
-    recoveryFeel: "Good",
-    notes: "Mild cramping resolved with stretching. Access site clean with strong bruit and thrill.",
-    medications: ["Heparin"],
-  },
-];
 
 function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] }) {
   const styles = {
@@ -501,11 +356,7 @@ function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] })
   );
 }
 
-function TreatmentEntriesTable({
-  onSelectEntry,
-}: {
-  onSelectEntry: (entry: DialysisLogEntry) => void;
-}) {
+function TreatmentEntriesTable() {
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs">
       {/* Table Content */}
@@ -525,240 +376,105 @@ function TreatmentEntriesTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockDialysisEntries.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className="hover:bg-slate-50/70 transition-colors group"
-                >
-                  {/* Date & Time */}
-                  <td className="px-4 py-3.5">
-                    <div className="font-bold text-slate-900">{entry.date}</div>
-                    <div className="text-[11px] text-slate-500 font-medium">{entry.timeRange}</div>
-                  </td>
+              {mockDialysisEntries.map((entry) => {
+                const symptomsList = entry.preSymptoms
+                  .concat(entry.intraSymptoms)
+                  .filter((s) => s !== "None / Comfortable")
+                  .slice(0, 2);
 
-                  {/* Treatment Type */}
-                  <td className="px-4 py-3.5 font-medium text-slate-800">
-                    {entry.treatmentType}
-                  </td>
+                return (
+                  <tr
+                    key={entry.id}
+                    className="hover:bg-slate-50/70 transition-colors group"
+                  >
+                    {/* Date & Time */}
+                    <td className="px-4 py-3.5">
+                      <div className="font-bold text-slate-900">{entry.displayDate.split(",")[1]}</div>
+                      <div className="text-[11px] text-slate-500 font-medium">{entry.startTime} – {entry.endTime}</div>
+                    </td>
 
-                  {/* Fluid Removed */}
-                  <td className="px-4 py-3.5">
-                    <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                      {entry.fluidRemoved}
-                    </span>
-                  </td>
+                    {/* Treatment Type */}
+                    <td className="px-4 py-3.5 font-medium text-slate-800">
+                      {entry.treatmentType}
+                    </td>
 
-                  {/* Pre / Post Weight */}
-                  <td className="px-4 py-3.5">
-                    <div className="font-semibold text-slate-800">
-                      {entry.preWeight} → {entry.postWeight}
-                    </div>
-                    <div className="text-[11px] text-emerald-600 font-bold">
-                      {entry.weightDiff}
-                    </div>
-                  </td>
+                    {/* Fluid Removed */}
+                    <td className="px-4 py-3.5">
+                      <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        {entry.fluidRemoved}
+                      </span>
+                    </td>
 
-                  {/* Blood Pressure */}
-                  <td className="px-4 py-3.5">
-                    <div className="font-semibold text-slate-800">{entry.bloodPressure}</div>
-                    <div className="text-[11px] text-slate-500 font-medium">{entry.heartRate}</div>
-                  </td>
+                    {/* Pre / Post Weight */}
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-slate-800">
+                        {entry.preWeight} → {entry.postWeight}
+                      </div>
+                      <div className="text-[11px] text-emerald-600 font-bold">
+                        {entry.weightDiff}
+                      </div>
+                    </td>
 
-                  {/* Symptoms */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex flex-wrap gap-1 max-w-[180px]">
-                      {entry.symptoms.map((s) => (
-                        <span
-                          key={s}
-                          className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                    {/* Blood Pressure */}
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-slate-800">{entry.bloodPressurePost}</div>
+                      <div className="text-[11px] text-slate-500 font-medium">{entry.heartRatePost}</div>
+                    </td>
+
+                    {/* Symptoms */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-wrap gap-1 max-w-[180px]">
+                        {symptomsList.length > 0 ? (
+                          symptomsList.map((s) => (
+                            <span
+                              key={s}
+                              className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                            >
+                              {s}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">None</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Attendance Status */}
+                    <td className="px-4 py-3.5">
+                      <AttendanceBadge status={entry.attendance} />
+                    </td>
+
+                    {/* Actions: View (Full Page) & Edit */}
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* View Icon Button (Links to dedicated full page!) */}
+                        <Link
+                          href={`/dashboard/personal-log/dialysis-treatment/view?id=${entry.id}`}
+                          className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
+                          title="View Full Entry Details"
+                          aria-label={`View full entry for ${entry.displayDate}`}
                         >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
+                          <Eye className="size-4" />
+                        </Link>
 
-                  {/* Attendance Status */}
-                  <td className="px-4 py-3.5">
-                    <AttendanceBadge status={entry.attendance} />
-                  </td>
-
-                  {/* Actions: View & Edit */}
-                  <td className="px-4 py-3.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {/* View Icon Button */}
-                      <button
-                        type="button"
-                        onClick={() => onSelectEntry(entry)}
-                        className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
-                        title="View Entry Details"
-                        aria-label={`View entry for ${entry.date}`}
-                      >
-                        <Eye className="size-4" />
-                      </button>
-
-                      {/* Edit Icon Button */}
-                      <Link
-                        href={`/dashboard/personal-log/dialysis-treatment/add?edit=${entry.id}`}
-                        className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
-                        title="Edit Entry"
-                        aria-label={`Edit entry for ${entry.date}`}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {/* Edit Icon Button */}
+                        <Link
+                          href={`/dashboard/personal-log/dialysis-treatment/add?edit=${entry.id}`}
+                          className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-2xs transition-colors cursor-pointer"
+                          title="Edit Entry"
+                          aria-label={`Edit entry for ${entry.displayDate}`}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
     </section>
-  );
-}
-
-function EntryDetailModal({
-  entry,
-  onClose,
-}: {
-  entry: DialysisLogEntry;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs transition-opacity"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-200/80 p-6 space-y-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-100">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h3 className="text-lg font-bold text-slate-900">
-                Dialysis Treatment Entry Details
-              </h3>
-              <AttendanceBadge status={entry.attendance} />
-            </div>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              {entry.fullDate} • {entry.timeRange} ({entry.duration})
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {/* Clinical Summary Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
-          <div>
-            <p className="text-[11px] font-medium text-slate-500">Treatment Type</p>
-            <p className="font-bold text-slate-900 mt-0.5">{entry.treatmentType}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500">Care Team</p>
-            <p className="font-bold text-slate-900 mt-0.5">{entry.careTeam}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500">Location</p>
-            <p className="font-bold text-slate-900 mt-0.5 truncate">{entry.location}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500">Post-Feel Mood</p>
-            <p className="font-bold text-emerald-600 mt-0.5">{entry.recoveryFeel}</p>
-          </div>
-        </div>
-
-        {/* Vitals & Measurements */}
-        <div className="space-y-2">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Clinical Measurements & Vitals
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-0.5 shadow-2xs">
-              <span className="text-[11px] font-medium text-slate-500">Fluid Removed</span>
-              <p className="text-base font-bold text-blue-700">{entry.fluidRemoved}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-0.5 shadow-2xs">
-              <span className="text-[11px] font-medium text-slate-500">Weight Loss</span>
-              <p className="text-base font-bold text-slate-900">{entry.weightDiff}</p>
-              <p className="text-[10px] text-slate-500">{entry.preWeight} → {entry.postWeight}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-0.5 shadow-2xs">
-              <span className="text-[11px] font-medium text-slate-500">Blood Pressure</span>
-              <p className="text-base font-bold text-slate-900">{entry.bloodPressure}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-0.5 shadow-2xs">
-              <span className="text-[11px] font-medium text-slate-500">Heart Rate</span>
-              <p className="text-base font-bold text-slate-900">{entry.heartRate}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Symptoms & Medications */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5 space-y-2">
-            <h5 className="text-xs font-bold text-slate-800">Reported Symptoms</h5>
-            <div className="flex flex-wrap gap-1.5">
-              {entry.symptoms.map((sym) => (
-                <span
-                  key={sym}
-                  className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs"
-                >
-                  {sym}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5 space-y-2">
-            <h5 className="text-xs font-bold text-slate-800">Administered Medications</h5>
-            <div className="flex flex-wrap gap-1.5">
-              {entry.medications?.map((med) => (
-                <span
-                  key={med}
-                  className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs"
-                >
-                  {med}
-                </span>
-              )) || <span className="text-xs text-slate-400">None recorded</span>}
-            </div>
-          </div>
-        </div>
-
-        {/* Session Notes */}
-        {entry.notes && (
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5 space-y-1">
-            <h5 className="text-xs font-bold text-slate-800">Session & Recovery Notes</h5>
-            <p className="text-xs text-slate-700 leading-relaxed">{entry.notes}</p>
-          </div>
-        )}
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-          <Link
-            href={`/dashboard/personal-log/dialysis-treatment/add?edit=${entry.id}`}
-            className="flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
-          >
-            <Pencil className="size-3.5" />
-            <span>Edit Entry</span>
-          </Link>
-        </div>
-      </div>
-    </div>
   );
 }
