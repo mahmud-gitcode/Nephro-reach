@@ -11,17 +11,17 @@
   },
   "hero": {
     "badge": "NephroReach",
-    "titleLine1": "Empowering Every",
-    "titleLine2": "Kidney Journey.",
-    "description": "NephroReach provides trusted education, practical tools, and ongoing support to help people with chronic kidney disease, dialysis, and kidney transplants make informed decisions and live healthier lives. \n\nYour trusted resource for expert kidney education, symptom guidance, health tracking, and compassionate support—every step of your kidney journey.",
+    "titleLine1": "Understand your kidneys.",
+    "titleLine2": "Take control of your journey.",
+    "description": "NephroReach gives you kidney education, personal health trackers, expert-led classes, and practical tools—all in one place to help you feel more informed, prepared, and confident.",
     "button": "Try it free"
   },
   "pricingHero": {
-    "badge": "Clear your mind",
-    "titleLine1": "A space to reflect,",
-    "titleLine2": "learn, and grow.",
-    "description": "Join Margin for daily SMS prompts, a private digital journal, and monthly classes designed to help you build a more intentional life.",
-    "button": "Button"
+    "badge": "NephroReach",
+    "titleLine1": "Understand your kidneys.",
+    "titleLine2": "Take control of your journey.",
+    "description": "NephroReach gives you kidney education, personal health trackers, expert-led classes, and practical tools—all in one place to help you feel more informed, prepared, and confident.",
+    "button": "Get Started"
   },
   "pricing": {
     "badge": "Pricing",

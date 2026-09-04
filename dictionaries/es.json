@@ -10,18 +10,18 @@
     "openDashboard": "Abrir panel"
   },
   "hero": {
-    "badge": "Despeja tu mente",
-    "titleLine1": "Un espacio para reflexionar,",
-    "titleLine2": "aprender y crecer.",
-    "description": "Únete a Margin para recibir mensajes SMS diarios, un diario digital privado y clases mensuales diseñadas para ayudarte a construir una vida más intencional.",
+    "badge": "NephroReach",
+    "titleLine1": "Entiende tus riñones.",
+    "titleLine2": "Toma el control de tu camino.",
+    "description": "NephroReach te brinda educación sobre los riñones, herramientas de seguimiento de salud personal, clases dirigidas por expertos y herramientas prácticas, todo en un solo lugar para ayudarte a sentirte más informado, preparado y seguro.",
     "button": "Pruébalo gratis"
   },
   "pricingHero": {
-    "badge": "Despeja tu mente",
-    "titleLine1": "Un espacio para reflexionar,",
-    "titleLine2": "aprender y crecer.",
-    "description": "Únete a Margin para recibir mensajes SMS diarios, un diario digital privado y clases mensuales diseñadas para ayudarte a construir una vida más intencional.",
-    "button": "Boton"
+    "badge": "NephroReach",
+    "titleLine1": "Entiende tus riñones.",
+    "titleLine2": "Toma el control de tu camino.",
+    "description": "NephroReach te brinda educación sobre los riñones, herramientas de seguimiento de salud personal, clases dirigidas por expertos y herramientas prácticas, todo en un solo lugar para ayudarte a sentirte más informado, preparado y seguro.",
+    "button": "Comenzar"
   },
   "pricing": {
     "badge": "Precios",

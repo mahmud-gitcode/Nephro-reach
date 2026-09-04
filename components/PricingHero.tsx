@@ -40,7 +40,7 @@ export default function PricingHero() {
             <div className="relative w-full">
               <Image
                 src="/images/pricing.png"
-                alt="A space to reflect, learn, and grow"
+                alt="NephroReach - Understand your kidneys. Take control of your journey."
                 width={800}
                 height={550}
                 priority

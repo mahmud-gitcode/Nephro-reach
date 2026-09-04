@@ -4,29 +4,32 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import nephroReachImg from "@/public/images/home/NephroReach-clean.png";
+
 export default function Hero() {
   return (
     <section className="flex w-full flex-col items-center justify-center p-5 sm:p-8 lg:p-12">
-      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1344px] items-center justify-end overflow-hidden rounded-[24px] sm:min-h-[500px] lg:h-[570px] lg:px-[71px]">
+      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1344px] items-center justify-end overflow-hidden rounded-[24px] sm:min-h-[500px] lg:h-[570px] px-6 sm:px-10 lg:px-[71px]">
         <Image
-          src="/images/home/hero.png"
-          alt=""
+          src={nephroReachImg}
+          alt="NephroReach - Understand your kidneys. Take control of your journey."
           fill
           priority
           className="object-cover object-center"
           sizes="100vw"
         />
-        <div className="relative z-10 flex w-full max-w-[500px] flex-col items-start gap-8 bg-white/70 p-6 backdrop-blur-sm sm:bg-transparent sm:p-8 sm:backdrop-blur-none lg:w-[486px] lg:bg-transparent lg:p-0">
-          <div className="flex w-full flex-col gap-6">
-            <h1 className="text-[36px] font-semibold leading-none tracking-[0.3px] text-[#0F172A] sm:text-[48px] lg:text-[60px]">
-              <span className="block sm:whitespace-nowrap">A space to reflect,</span>
+        <div className="relative z-10 flex w-full max-w-[560px] flex-col items-start gap-7 bg-white/75 p-6 backdrop-blur-sm sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:mr-2 md:mr-6 lg:mr-8 xl:mr-12 lg:w-[560px]">
+          <div className="flex w-full flex-col gap-5">
+            <h1 className="text-[26px] font-semibold leading-[1.2] tracking-[0.2px] text-[#0F172A] sm:text-[34px] md:text-[38px] lg:text-[42px] xl:text-[44px]">
+              <span className="block sm:whitespace-nowrap">Understand your kidneys.</span>
               <span className="block text-[#EF4444] sm:whitespace-nowrap">
-                learn, and grow.
+                Take control of your journey.
               </span>
             </h1>
-            <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
-              Join Margin for daily SMS prompts, a private digital journal, and
-              monthly classes designed to help you build a more intentional life.
+            <p className="text-base sm:text-lg font-normal leading-relaxed text-[#344056]">
+              NephroReach gives you kidney education, personal health trackers,
+              expert-led classes, and practical tools—all in one place to help
+              you feel more informed, prepared, and confident.
             </p>
           </div>
           <Link

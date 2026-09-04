@@ -12,7 +12,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "NephroReach",
-  description: "A space to reflect, learn, and grow.",
+  description:
+    "Understand your kidneys. Take control of your journey with NephroReach.",
 };
 
 export default function RootLayout({
