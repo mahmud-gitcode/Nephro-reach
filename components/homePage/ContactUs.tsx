@@ -23,13 +23,13 @@ export default function ContactUs() {
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-7 py-12 lg:py-0">
+          <div className="flex flex-1 flex-col items-center justify-center gap-7 py-12 lg:py-0 landing-reveal">
             <h2 className="max-w-[618px] text-center text-[32px] font-normal leading-none tracking-[0.24px] text-black sm:text-[48px]">
               Still have questions?
             </h2>
             <Link
               href="/contact-us"
-              className="inline-flex h-[52px] w-[163px] items-center justify-center gap-2 rounded-[4px] bg-[#EF4444] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#DC2626]"
+              className="inline-flex h-[52px] w-[163px] items-center justify-center gap-2 rounded-[4px] bg-[#EF4444] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-all duration-300 hover:bg-[#DC2626] hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-red-500/25 cursor-pointer"
             >
               Contact Us
             </Link>

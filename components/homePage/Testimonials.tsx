@@ -43,7 +43,7 @@ export default function Testimonials() {
   return (
     <section className="w-full bg-white px-5 py-[42px] sm:px-10 lg:px-20">
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between landing-reveal">
           <div className="w-full max-w-[1152px] space-y-4">
             <h2 className="text-[28px] font-semibold leading-10 tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
               What Our Customers Say
@@ -60,7 +60,7 @@ export default function Testimonials() {
               onClick={() =>
                 setIndex((value) => (value - 1 + reviews.length) % reviews.length)
               }
-              className="flex size-12 items-center justify-center rounded-full bg-[#1D4ED8]"
+              className="flex size-12 items-center justify-center rounded-full bg-[#1D4ED8] transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md"
             >
               <img src="/images/home/arrow-left.svg" alt="" className="size-6" />
             </button>
@@ -68,7 +68,7 @@ export default function Testimonials() {
               type="button"
               aria-label="Next testimonials"
               onClick={() => setIndex((value) => (value + 1) % reviews.length)}
-              className="flex size-12 items-center justify-center rounded-full bg-[#1D4ED8]"
+              className="flex size-12 items-center justify-center rounded-full bg-[#1D4ED8] transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md"
             >
               <img
                 src="/images/home/arrow-right.svg"
@@ -80,17 +80,19 @@ export default function Testimonials() {
         </div>
 
         <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((review, cardIndex) => (
-            <article
-              key={`${review.name}-${cardIndex}-${index}`}
-              className="flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5 font-manrope"
-            >
-              <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2 py-1 text-sm font-medium leading-5 text-[#58BD7D]">
-                {review.badge}
-              </span>
-              <p className="text-base font-medium leading-6 text-[#23262F]">
-                {review.quote}
-              </p>
+          {visible.map((review, cardIndex) => {
+            const delays = ["delay-75", "delay-150", "delay-225"];
+            return (
+              <article
+                key={`${review.name}-${cardIndex}-${index}`}
+                className={`flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5 font-manrope hover:shadow-lg hover:border-blue-300 landing-reveal card-smooth-hover ${delays[cardIndex] || ""}`}
+              >
+                <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2 py-1 text-sm font-medium leading-5 text-[#58BD7D]">
+                  {review.badge}
+                </span>
+                <p className="text-base font-medium leading-6 text-[#23262F]">
+                  {review.quote}
+                </p>
               <div className="flex h-7 w-[152px] items-center gap-2 py-0.5">
                 <div className="flex flex-1 items-start">
                   {[0, 1, 2, 3, 4].map((star) => (
@@ -122,7 +124,8 @@ export default function Testimonials() {
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

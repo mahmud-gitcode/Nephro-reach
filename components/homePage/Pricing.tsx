@@ -115,9 +115,9 @@ function PlanCard({
           href="/registration"
           className={[
             "inline-flex w-full items-center justify-center gap-2 rounded px-3.5 py-3",
-            "text-base font-bold leading-6 tracking-[0.08px] transition-colors",
+            "text-base font-bold leading-6 tracking-[0.08px] transition-all duration-200",
             ctaVariant === "outline"
-              ? "border border-[#0F172A] bg-[#F1F5FA] text-[#0F172A] hover:bg-[#E2E8F0]"
+              ? "border border-[#0F172A] bg-white text-[#0F172A] hover:bg-slate-50 hover:border-slate-800 shadow-xs"
               : "bg-[#2563EB] text-white shadow-[inset_0px_-1px_0px_0px_#DBE9FE] hover:bg-[#1D4ED8]",
           ].join(" ")}
         >
@@ -157,7 +157,7 @@ export default function Pricing({
       ].join(" ")}
     >
       <div className="mx-auto flex w-full max-w-[1298px] flex-col gap-10">
-        <div className="flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center gap-6 landing-reveal">
           {eyebrow ? (
             <p className="text-lg font-bold leading-7 tracking-[0.09px] text-[#2563EB]">
               {eyebrow}
@@ -174,11 +174,12 @@ export default function Pricing({
         </div>
 
         <div className="flex flex-col items-stretch justify-center gap-8 lg:flex-row lg:items-center lg:gap-[30px]">
-          {plans.map((plan) =>
-            plan.popular ? (
+          {plans.map((plan, index) => {
+            const delays = ["delay-75", "delay-150", "delay-225"];
+            return plan.popular ? (
               <div
                 key={plan.name}
-                className="flex flex-1 flex-col items-center justify-end gap-2 rounded-[54px] px-1 pb-1 pt-2 drop-shadow-[0px_1px_2px_rgba(0,0,0,0.1)]"
+                className={`flex flex-1 flex-col items-center justify-end gap-2 rounded-[54px] px-1 pb-1 pt-2 drop-shadow-[0px_1px_2px_rgba(0,0,0,0.1)] hover:shadow-2xl landing-reveal card-smooth-hover ${delays[index] || ""}`}
                 style={{
                   backgroundImage:
                     "linear-gradient(133.85deg, #2563EB 0.83%, #F52D2A 82.15%)",
@@ -195,7 +196,10 @@ export default function Pricing({
                 />
               </div>
             ) : (
-              <div key={plan.name} className="flex flex-1">
+              <div
+                key={plan.name}
+                className={`flex flex-1 hover:shadow-xl rounded-[50px] landing-reveal card-smooth-hover ${delays[index] || ""}`}
+              >
                 <PlanCard
                   name={plan.name}
                   price={plan.price}
@@ -203,8 +207,8 @@ export default function Pricing({
                   ctaVariant={sideCtaVariant}
                 />
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
     </section>
