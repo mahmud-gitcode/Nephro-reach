@@ -115,6 +115,8 @@ function getBreadcrumb(pathname: string) {
     return "Appointments";
   if (pathname.startsWith("/dashboard/personal-log/nutrition"))
     return "Nutrition";
+  if (pathname.startsWith("/dashboard/personal-log/dialysis-treatment/add"))
+    return "Log Dialysis Treatment";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-treatment"))
     return "Dialysis Treatment";
   if (pathname.startsWith("/dashboard/personal-log/fluid-tracker"))
