@@ -143,6 +143,8 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Control de Peso y Líquidos" : "Weight & Fluid Tracker";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-journal"))
     return language === "ES" ? "Diario de Diálisis" : "Dialysis Journal";
+  if (pathname.startsWith("/dashboard/personal-log/dialysis-management"))
+    return language === "ES" ? "Gestión de Diálisis" : "Dialysis Management";
   if (pathname.startsWith("/dashboard/personal-log"))
     return language === "ES" ? "Registro Personal" : "Personal Log";
   if (pathname.startsWith("/dashboard/members"))

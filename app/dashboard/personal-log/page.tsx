@@ -80,7 +80,7 @@ const tileConfigs: LogTileConfig[] = [
     icon: Notebook,
     iconClass: "text-[#2563EB]",
     iconBg: "bg-[#DBEAFE]",
-    href: "/dashboard/personal-log/dialysis-journal",
+    href: "/dashboard/personal-log/dialysis-management",
   },
 ];
 
