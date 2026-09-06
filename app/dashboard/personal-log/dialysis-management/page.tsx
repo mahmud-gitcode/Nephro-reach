@@ -223,6 +223,35 @@ export default function DialysisManagementPage() {
     return initial;
   });
 
+  type SectionTabId = "all" | "medications" | "orders" | "symptoms" | "common-meds";
+  const [activeTab, setActiveTab] = useState<SectionTabId>("all");
+
+  const sectionTabs: {
+    id: SectionTabId;
+    label: string;
+  }[] = [
+    {
+      id: "all",
+      label: language === "ES" ? "Todas" : "All",
+    },
+    {
+      id: "medications",
+      label: language === "ES" ? "Medicamentos" : "Medications Given",
+    },
+    {
+      id: "orders",
+      label: language === "ES" ? "Órdenes Médicas" : "Provider Orders",
+    },
+    {
+      id: "symptoms",
+      label: language === "ES" ? "Síntomas" : "Symptoms",
+    },
+    {
+      id: "common-meds",
+      label: language === "ES" ? "Medicamentos Comunes" : "Common Medications",
+    },
+  ];
+
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
   const [formMedication, setFormMedication] = useState("");
@@ -394,276 +423,305 @@ export default function DialysisManagementPage() {
         ))}
       </div>
 
+      {/* SECTION TABS */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
+        {sectionTabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer select-none active:scale-[0.98] ${
+                isActive
+                  ? "bg-[#2563EB] text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* SECTION 1: MEDICATIONS GIVEN DURING DIALYSIS TABLE */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-              {language === "ES"
-                ? "Medicamentos Administrados Durante la Diálisis"
-                : "Medications Given During Dialysis"}
-            </h2>
+      {(activeTab === "all" || activeTab === "medications") && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+                {language === "ES"
+                  ? "Medicamentos Administrados Durante la Diálisis"
+                  : "Medications Given During Dialysis"}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddMedModal}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>{language === "ES" ? "Agregar Medicamento" : "Add Medication"}</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpenAddMedModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>{language === "ES" ? "Agregar Medicamento" : "Add Medication"}</span>
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                <th className="py-3.5 px-4">{language === "ES" ? "Fecha" : "Date"}</th>
-                <th className="py-3.5 px-4">{language === "ES" ? "Medicamento" : "Medication"}</th>
-                <th className="py-3.5 px-4">{language === "ES" ? "Dosis" : "Dose"}</th>
-                <th className="py-3.5 px-4">{language === "ES" ? "Razón" : "Reason"}</th>
-                <th className="py-3.5 px-4 text-center">{language === "ES" ? "Administrado" : "Given"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {medications.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3.5 px-4 text-slate-900 whitespace-nowrap font-semibold">
-                    {item.date}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-900 font-bold whitespace-nowrap">
-                    {item.medication}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap font-semibold">
-                    {item.dose}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
-                    {item.reason}
-                  </td>
-                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                    {item.given ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-base">
-                        <Check className="h-5 w-5 stroke-[3] text-emerald-600 inline" />
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 font-semibold text-xs">Pending</span>
-                    )}
-                  </td>
+          {/* Table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                  <th className="py-3.5 px-4">{language === "ES" ? "Fecha" : "Date"}</th>
+                  <th className="py-3.5 px-4">{language === "ES" ? "Medicamento" : "Medication"}</th>
+                  <th className="py-3.5 px-4">{language === "ES" ? "Dosis" : "Dose"}</th>
+                  <th className="py-3.5 px-4">{language === "ES" ? "Razón" : "Reason"}</th>
+                  <th className="py-3.5 px-4 text-center">{language === "ES" ? "Administrado" : "Given"}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* SECTION 2: PROVIDER ORDERS & INSTRUCTIONS */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-              {language === "ES"
-                ? "Órdenes e Instrucciones del Proveedor"
-                : "Provider Orders & Instructions"}
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleOpenAddOrderModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>{language === "ES" ? "Agregar Orden" : "Add Order"}</span>
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                <th className="py-3.5 px-4 sm:px-6 w-36 sm:w-48">
-                  {language === "ES" ? "Fecha" : "Date"}
-                </th>
-                <th className="py-3.5 px-4 sm:px-6">
-                  {language === "ES" ? "Orden / Instrucción" : "Order / Instruction"}
-                </th>
-                <th className="py-3.5 px-4 sm:px-6 text-center w-28 sm:w-36">
-                  {language === "ES" ? "Completado" : "Completed"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {providerOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-8 text-center text-xs text-slate-400">
-                    {language === "ES"
-                      ? "No hay órdenes ni instrucciones registradas."
-                      : "No orders or instructions recorded yet."}
-                  </td>
-                </tr>
-              ) : (
-                providerOrders.map((item) => (
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {medications.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] whitespace-nowrap font-bold text-sm">
+                    <td className="py-3.5 px-4 text-slate-900 whitespace-nowrap font-semibold">
                       {item.date}
                     </td>
-                    <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] font-semibold text-sm leading-snug">
-                      {item.order}
+                    <td className="py-3.5 px-4 text-slate-900 font-bold whitespace-nowrap">
+                      {item.medication}
                     </td>
-                    <td className="py-4 px-4 sm:px-6 text-center whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => toggleOrderCompleted(item.id)}
-                        aria-label={item.completed ? "Mark as incomplete" : "Mark as completed"}
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
-                          item.completed
-                            ? "bg-[#2563EB] border-[#2563EB] text-white"
-                            : "bg-white border-slate-300 hover:border-slate-400"
-                        }`}
-                      >
-                        {item.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                      </button>
+                    <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap font-semibold">
+                      {item.dose}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                      {item.reason}
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      {item.given ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-base">
+                          <Check className="h-5 w-5 stroke-[3] text-emerald-600 inline" />
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-semibold text-xs">Pending</span>
+                      )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 2: PROVIDER ORDERS & INSTRUCTIONS */}
+      {(activeTab === "all" || activeTab === "orders") && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+                {language === "ES"
+                  ? "Órdenes e Instrucciones del Proveedor"
+                  : "Provider Orders & Instructions"}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddOrderModal}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>{language === "ES" ? "Agregar Orden" : "Add Order"}</span>
+            </button>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                  <th className="py-3.5 px-4 sm:px-6 w-36 sm:w-48">
+                    {language === "ES" ? "Fecha" : "Date"}
+                  </th>
+                  <th className="py-3.5 px-4 sm:px-6">
+                    {language === "ES" ? "Orden / Instrucción" : "Order / Instruction"}
+                  </th>
+                  <th className="py-3.5 px-4 sm:px-6 text-center w-28 sm:w-36">
+                    {language === "ES" ? "Completado" : "Completed"}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {providerOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-8 text-center text-xs text-slate-400">
+                      {language === "ES"
+                        ? "No hay órdenes ni instrucciones registradas."
+                        : "No orders or instructions recorded yet."}
+                    </td>
+                  </tr>
+                ) : (
+                  providerOrders.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] whitespace-nowrap font-bold text-sm">
+                        {item.date}
+                      </td>
+                      <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] font-semibold text-sm leading-snug">
+                        {item.order}
+                      </td>
+                      <td className="py-4 px-4 sm:px-6 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => toggleOrderCompleted(item.id)}
+                          aria-label={item.completed ? "Mark as incomplete" : "Mark as completed"}
+                          className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
+                            item.completed
+                              ? "bg-[#2563EB] border-[#2563EB] text-white"
+                              : "bg-white border-slate-300 hover:border-slate-400"
+                          }`}
+                        >
+                          {item.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* SECTION 3: SYMPTOMS BETWEEN TREATMENTS */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="pb-3 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-            {language === "ES"
-              ? "Síntomas Entre Tratamientos"
-              : "Symptoms Between Treatments"}
-          </h2>
-          <p className="text-xs font-medium text-slate-500 mt-1">
-            {language === "ES"
-              ? "Seleccione todos los que correspondan"
-              : "Select all that apply"}
-          </p>
-        </div>
+      {(activeTab === "all" || activeTab === "symptoms") && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="pb-3 border-b border-slate-100">
+            <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+              {language === "ES"
+                ? "Síntomas Entre Tratamientos"
+                : "Symptoms Between Treatments"}
+            </h2>
+            <p className="text-xs font-medium text-slate-500 mt-1">
+              {language === "ES"
+                ? "Seleccione todos los que correspondan"
+                : "Select all that apply"}
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
-          {SYMPTOM_COLUMNS.map((col, colIdx) => (
-            <div key={colIdx} className="space-y-3.5">
-              {col.map((item) => {
-                const isChecked = Boolean(symptoms[item.id]);
-                return (
-                  <div key={item.id} className="space-y-2">
-                    <label
-                      onClick={() => toggleSymptom(item.id)}
-                      className="flex items-center gap-3 cursor-pointer select-none group"
-                    >
-                      <div
-                        className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
-                          isChecked
-                            ? "bg-[#2563EB] border-[#2563EB] text-white"
-                            : "bg-white border-slate-300 group-hover:border-slate-400"
-                        }`}
-                      >
-                        {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
-                      </div>
-                      <span className="text-sm font-semibold text-[#1e3a8a] group-hover:text-blue-900 transition-colors">
-                        {language === "ES" ? item.labelEs : item.label}
-                      </span>
-                    </label>
-
-                    {item.id === "other" && (
-                      <div className="pt-1">
-                        <input
-                          type="text"
-                          value={otherSymptomText}
-                          onChange={(e) => {
-                            setOtherSymptomText(e.target.value);
-                            if (!symptoms["other"] && e.target.value.trim()) {
-                              setSymptoms((prev) => ({ ...prev, other: true }));
-                            }
-                          }}
-                          placeholder={
-                            language === "ES"
-                              ? "Por favor especifique"
-                              : "Please specify"
-                          }
-                          className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SECTION 4: COMMON DIALYSIS MEDICATIONS */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-        <div className="pb-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
-            {language === "ES"
-              ? "Medicamentos Comunes de Diálisis"
-              : "Common Dialysis Medications"}
-          </h2>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
-            {language === "ES"
-              ? "Selecciona y consulta medicamentos comunes organizados por categoría terapéutica"
-              : "Select and review standard medications organized by therapeutic category"}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {COMMON_MEDICATION_GROUPS.map((group) => (
-            <div
-              key={group.title}
-              className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-3"
-            >
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60">
-                <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
-                <h3 className="text-sm font-bold text-slate-900 truncate" title={group.title}>
-                  {group.title}
-                </h3>
-              </div>
-
-              <div className="space-y-2.5">
-                {group.items.map((item) => {
-                  const isChecked = Boolean(checkedCommonMeds[item.id]);
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
+            {SYMPTOM_COLUMNS.map((col, colIdx) => (
+              <div key={colIdx} className="space-y-3.5">
+                {col.map((item) => {
+                  const isChecked = Boolean(symptoms[item.id]);
                   return (
-                    <label
-                      key={item.id}
-                      onClick={() => toggleCommonMed(item.id)}
-                      className="flex items-center gap-2.5 cursor-pointer select-none group"
-                    >
-                      <div
-                        className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
-                          isChecked
-                            ? "bg-blue-600 border-blue-600 text-white"
-                            : "bg-white border-slate-300 group-hover:border-slate-400"
-                        }`}
+                    <div key={item.id} className="space-y-2">
+                      <label
+                        onClick={() => toggleSymptom(item.id)}
+                        className="flex items-center gap-3 cursor-pointer select-none group"
                       >
-                        {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                      </div>
-                      <span
-                        className={`text-xs font-semibold transition-colors ${
-                          isChecked ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
-                        }`}
-                      >
-                        {item.name}
-                      </span>
-                    </label>
+                        <div
+                          className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
+                            isChecked
+                              ? "bg-[#2563EB] border-[#2563EB] text-white"
+                              : "bg-white border-slate-300 group-hover:border-slate-400"
+                          }`}
+                        >
+                          {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                        </div>
+                        <span className="text-sm font-semibold text-[#1e3a8a] group-hover:text-blue-900 transition-colors">
+                          {language === "ES" ? item.labelEs : item.label}
+                        </span>
+                      </label>
+
+                      {item.id === "other" && (
+                        <div className="pt-1">
+                          <input
+                            type="text"
+                            value={otherSymptomText}
+                            onChange={(e) => {
+                              setOtherSymptomText(e.target.value);
+                              if (!symptoms["other"] && e.target.value.trim()) {
+                                setSymptoms((prev) => ({ ...prev, other: true }));
+                              }
+                            }}
+                            placeholder={
+                              language === "ES"
+                                ? "Por favor especifique"
+                                : "Please specify"
+                            }
+                            className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                          />
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 4: COMMON DIALYSIS MEDICATIONS */}
+      {(activeTab === "all" || activeTab === "common-meds") && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="pb-4 border-b border-slate-100">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+              {language === "ES"
+                ? "Medicamentos Comunes de Diálisis"
+                : "Common Dialysis Medications"}
+            </h2>
+            <p className="text-xs font-medium text-slate-500 mt-0.5">
+              {language === "ES"
+                ? "Selecciona y consulta medicamentos comunes organizados por categoría terapéutica"
+                : "Select and review standard medications organized by therapeutic category"}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            {COMMON_MEDICATION_GROUPS.map((group) => (
+              <div
+                key={group.title}
+                className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-3"
+              >
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60">
+                  <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
+                  <h3 className="text-sm font-bold text-slate-900 truncate" title={group.title}>
+                    {group.title}
+                  </h3>
+                </div>
+
+                <div className="space-y-2.5">
+                  {group.items.map((item) => {
+                    const isChecked = Boolean(checkedCommonMeds[item.id]);
+                    return (
+                      <label
+                        key={item.id}
+                        onClick={() => toggleCommonMed(item.id)}
+                        className="flex items-center gap-2.5 cursor-pointer select-none group"
+                      >
+                        <div
+                          className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
+                            isChecked
+                              ? "bg-blue-600 border-blue-600 text-white"
+                              : "bg-white border-slate-300 group-hover:border-slate-400"
+                          }`}
+                        >
+                          {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                        </div>
+                        <span
+                          className={`text-xs font-semibold transition-colors ${
+                            isChecked ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
+                          }`}
+                        >
+                          {item.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ADD MEDICATION MODAL */}
       {isMedModalOpen && (
