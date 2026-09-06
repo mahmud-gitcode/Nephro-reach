@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -623,6 +623,12 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Above EDW",
+    fluidStatusMsg: "Possible Fluid Overload",
     notes: "--",
     noteKey: null,
   },
@@ -631,13 +637,19 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     dateEn: "May 31, 2024",
     dateEs: "31 May, 2024",
     morning: "123",
-    evening: "136",
+    evening: "122",
     uo: "High",
     intake: "40",
     goal: "Goal Met",
     swelling: "Mild",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Near EDW",
+    fluidStatusMsg: "Appears On Target",
     notes: "Felt good today",
     noteKey: "feltGood",
   },
@@ -653,6 +665,12 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Above EDW",
+    fluidStatusMsg: "Possible Fluid Overload",
     notes: "Need to push harder",
     noteKey: "needToPush",
   },
@@ -668,6 +686,12 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Above EDW",
+    fluidStatusMsg: "Possible Fluid Overload",
     notes: "Strong finish",
     noteKey: "strongFinish",
   },
@@ -683,6 +707,12 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Above EDW",
+    fluidStatusMsg: "Possible Fluid Overload",
     notes: "Best performance yet",
     noteKey: "bestPerformance",
   },
@@ -691,13 +721,19 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     dateEn: "June 28, 2024",
     dateEs: "28 Jun, 2024",
     morning: "102",
-    evening: "140",
+    evening: "120",
     uo: "High",
     intake: "35",
     goal: "Goal Met",
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Below EDW",
+    fluidStatusMsg: "Possible Too Much Fluid Removed",
     notes: "Felt tired",
     noteKey: "feltTired",
   },
@@ -713,6 +749,12 @@ const INITIAL_ENTRIES: WeightFluidEntry[] = [
     swelling: "None",
     sob: "NO",
     weakness: "NO",
+    rapidGain: "NO",
+    dizziness: "NO",
+    cramping: "NO",
+    nausea: "NO",
+    fluidStatus: "Above EDW",
+    fluidStatusMsg: "Possible Fluid Overload",
     notes: "--",
     noteKey: null,
   },
@@ -727,12 +769,42 @@ interface AddWeightLogModalProps {
 function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) {
   const { language } = useLanguage();
 
-  const [formDate, setFormDate] = useState("08/12/2026");
-  const [formMorning, setFormMorning] = useState("123");
-  const [formEvening, setFormEvening] = useState("123");
-  const [formIntake, setFormIntake] = useState("48 OZ");
+  const getTodayDateString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const [formDate, setFormDate] = useState(getTodayDateString);
+  const [formMorning, setFormMorning] = useState("");
+  const [formEvening, setFormEvening] = useState("");
+  const [formIntake, setFormIntake] = useState("");
   const [formGoal, setFormGoal] = useState("48 OZ");
   const [formGoalMet, setFormGoalMet] = useState(true);
+
+  // Reset inputs when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormDate(getTodayDateString());
+      setFormMorning("");
+      setFormEvening("");
+      setFormIntake("");
+      setFormGoal("48 OZ");
+      setFormGoalMet(true);
+      setFormSwelling(false);
+      setFormSob(false);
+      setFormRapidGain(false);
+      setFormDizziness(false);
+      setFormCramping(false);
+      setFormWeakness(false);
+      setFormNausea(false);
+      setFormUoAmount("Moderate");
+      setFormUoTrend("decreasing");
+      setFormNotes("");
+    }
+  }, [isOpen]);
 
   // Symptoms: Possible Fluid Overload
   const [formSwelling, setFormSwelling] = useState(false);
@@ -747,66 +819,76 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
 
   const [formUoAmount, setFormUoAmount] = useState("Moderate");
   const [formUoTrend, setFormUoTrend] = useState<"decreasing" | "noChange" | "increasing">("decreasing");
-  const [formNotes, setFormNotes] = useState("Took all meds after session.");
+  const [formNotes, setFormNotes] = useState("");
 
   // Estimated Dry Weight (EDW) Connection Logic
-  const patientEdw = 122; // Target Estimated Dry Weight in lbs
+  const [patientEdw] = useState("122");
+  const [weightCompareMode, setWeightCompareMode] = useState<"evening" | "morning">("evening");
+
+  const edwNum = parseFloat(patientEdw.replace(/[^0-9.]/g, "")) || 122;
   const morningWeightNum = parseFloat(formMorning.replace(/[^0-9.]/g, "")) || 0;
   const eveningWeightNum = parseFloat(formEvening.replace(/[^0-9.]/g, "")) || 0;
-  const currentWeightNum = eveningWeightNum || morningWeightNum || 123;
-  const weightDiff = parseFloat((currentWeightNum - patientEdw).toFixed(1));
+
+  // Active weight being evaluated against EDW
+  const currentWeightNum =
+    weightCompareMode === "morning"
+      ? (morningWeightNum || eveningWeightNum)
+      : (eveningWeightNum || morningWeightNum);
+
+  const weightDiff = currentWeightNum > 0 ? parseFloat((currentWeightNum - edwNum).toFixed(1)) : 0;
 
   const overloadCount = [formSwelling, formSob, formRapidGain].filter(Boolean).length;
   const deficitCount = [formDizziness, formCramping, formWeakness, formNausea].filter(Boolean).length;
 
   let fluidStatus: "Above EDW" | "Near EDW" | "Below EDW" = "Near EDW";
   let fluidStatusMsg = "Appears On Target";
-  let statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
 
-  if (weightDiff > 1.0 || (weightDiff >= 0 && overloadCount >= 2)) {
+  if (weightDiff > 0.5 || (weightDiff >= 0 && overloadCount >= 2)) {
     fluidStatus = "Above EDW";
     fluidStatusMsg = "Possible Fluid Overload";
-    statusBadgeClass = "bg-amber-50 text-amber-700 border border-amber-200";
-  } else if (weightDiff < -1.0 || (weightDiff <= 0 && deficitCount >= 2)) {
+  } else if (weightDiff < -0.5 || (weightDiff <= 0 && deficitCount >= 2)) {
     fluidStatus = "Below EDW";
     fluidStatusMsg = "Possible Too Much Fluid Removed";
-    statusBadgeClass = "bg-sky-50 text-sky-700 border border-sky-200";
   } else {
-    fluidStatus = "Near EDW";
-    fluidStatusMsg = "Appears On Target";
-    statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+    // Near EDW range (-0.5 to +0.5)
+    if (overloadCount >= 2) {
+      fluidStatus = "Above EDW";
+      fluidStatusMsg = "Possible Fluid Overload";
+    } else if (deficitCount >= 2) {
+      fluidStatus = "Below EDW";
+      fluidStatusMsg = "Possible Too Much Fluid Removed";
+    } else {
+      fluidStatus = "Near EDW";
+      fluidStatusMsg = "Appears On Target";
+    }
   }
-
-  const statusLabel =
-    language === "ES"
-      ? fluidStatus === "Above EDW"
-        ? "Por Encima de EDW"
-        : fluidStatus === "Below EDW"
-        ? "Por Debajo de EDW"
-        : "Cerca de EDW"
-      : fluidStatus;
-
-  const supportingMsg =
-    language === "ES"
-      ? fluidStatusMsg === "Possible Fluid Overload"
-        ? "Posible Sobrecarga de Líquidos"
-        : fluidStatusMsg === "Possible Too Much Fluid Removed"
-        ? "Posible Exceso de Líquido Eliminado"
-        : "Parece estar en el objetivo"
-      : fluidStatusMsg;
 
   if (!isOpen) return null;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+
+    let dateEn = "Today";
+    let dateEs = "Hoy";
+    if (formDate) {
+      const parts = formDate.split("-").map(Number);
+      if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+        const [y, m, d] = parts;
+        const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthsEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        dateEn = `${monthsEn[m - 1]} ${d}, ${y}`;
+        dateEs = `${d} ${monthsEs[m - 1]}, ${y}`;
+      }
+    }
+
     const newEntry: WeightFluidEntry = {
       id: Date.now().toString(),
-      dateEn: formDate.trim() || "Today",
-      dateEs: formDate.trim() || "Hoy",
-      morning: formMorning.replace(/[^0-9.]/g, "") || "123",
-      evening: formEvening.replace(/[^0-9.]/g, "") || "123",
+      dateEn,
+      dateEs,
+      morning: formMorning.trim() || "--",
+      evening: formEvening.trim() || "--",
       uo: formUoAmount,
-      intake: formIntake.replace(/[^0-9.]/g, "") || "48",
+      intake: formIntake.replace(/[^0-9.]/g, "") || "0",
       goal: formGoalMet ? "Goal Met" : "Above Goal",
       swelling: formSwelling ? "YES" : "NO",
       sob: formSob ? "YES" : "NO",
@@ -827,79 +909,82 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
       <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-150 no-scrollbar">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-          <h2 className="text-lg sm:text-xl font-bold text-[#1E3A8A] tracking-tight underline decoration-[#2563EB] decoration-2 underline-offset-4">
-            {language === "ES" ? "Registrar Nuevo Control de Peso" : "Entry New Weight Log"}
-          </h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <Scale className="h-6 w-6 text-blue-600" />
+            <h3 className="text-xl font-bold text-slate-900">
+              {language === "ES" ? "Registrar Nuevo Control de Peso" : "Entry New Weight Log"}
+            </h3>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
             aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="space-y-3.5">
-          {/* Top 3 KPI Cards: Date, Morning Weight, Evening Weight */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* Date */}
-            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
-                <Calendar className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <label className="text-[11px] font-semibold text-slate-500 block leading-tight">
-                  {language === "ES" ? "Fecha" : "Date"}
-                </label>
-                <input
-                  type="text"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
-                />
-              </div>
+          {/* Row 1: Date Input Box */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-800 block">
+              {language === "ES" ? "Fecha" : "Date"}
+            </label>
+            <input
+              type="date"
+              value={formDate}
+              onChange={(e) => setFormDate(e.target.value)}
+              onClick={(e) => {
+                try {
+                  (e.target as HTMLInputElement).showPicker?.();
+                } catch {}
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
+            />
+          </div>
+
+          {/* Row 2: Morning Weight & Evening Weight Inputs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800 block">
+                {language === "ES" ? "Peso Mañana (Lbs)" : "Morning Weight (Lbs)"}
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={formMorning}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, "");
+                  setFormMorning(val);
+                  setWeightCompareMode("morning");
+                }}
+                placeholder={language === "ES" ? "ej. 125" : "e.g. 125"}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              />
             </div>
 
-            {/* Morning Weight */}
-            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
-                <Scale className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <label className="text-[11px] font-semibold text-slate-500 block leading-tight truncate">
-                  {language === "ES" ? "Peso Mañana" : "Morning Weight (Lbs)"}
-                </label>
-                <input
-                  type="text"
-                  value={formMorning}
-                  onChange={(e) => setFormMorning(e.target.value)}
-                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
-                />
-              </div>
-            </div>
-
-            {/* Evening Weight */}
-            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
-                <Scale className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <label className="text-[11px] font-semibold text-slate-500 block leading-tight truncate">
-                  {language === "ES" ? "Peso Tarde" : "Evening Weight (Lbs)"}
-                </label>
-                <input
-                  type="text"
-                  value={formEvening}
-                  onChange={(e) => setFormEvening(e.target.value)}
-                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800 block">
+                {language === "ES" ? "Peso Tarde (Lbs)" : "Evening Weight (Lbs)"}
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={formEvening}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, "");
+                  setFormEvening(val);
+                  setWeightCompareMode("evening");
+                }}
+                placeholder={language === "ES" ? "ej. 122" : "e.g. 122"}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              />
             </div>
           </div>
 
-          {/* Fluid Intake & Fluid Goal */}
+          {/* Row 3: Fluid Intake & Fluid Goal Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-800 block">
@@ -909,8 +994,8 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
                 type="text"
                 value={formIntake}
                 onChange={(e) => setFormIntake(e.target.value)}
-                placeholder="48 OZ"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                placeholder={language === "ES" ? "ej. 48 OZ" : "e.g. 48 OZ"}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
               />
             </div>
 
@@ -923,7 +1008,7 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
                 value={formGoal}
                 onChange={(e) => setFormGoal(e.target.value)}
                 placeholder="48 OZ"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
               />
             </div>
           </div>
@@ -978,42 +1063,7 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
               </p>
             </div>
 
-            {/* Live EDW Comparison Card */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-blue-100/70 bg-[#F0F5FF]/80 p-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
-                  <Scale className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="text-xs font-bold text-slate-900">
-                      {language === "ES" ? "Peso Seco Estimado (EDW):" : "Estimated Dry Weight (EDW):"}
-                    </span>
-                    <span className="text-xs font-bold text-blue-700">
-                      {patientEdw} lbs
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      ({weightDiff >= 0 ? `+${weightDiff}` : `${weightDiff}`} lbs)
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-medium text-slate-600 mt-0.5">
-                    {language === "ES"
-                      ? "Evaluación automática por peso y síntomas (sin fines de diagnóstico):"
-                      : "Automatic evaluation via weight & symptoms (non-diagnostic):"}
-                  </p>
-                </div>
-              </div>
 
-              <div className="self-start sm:self-center shrink-0 flex flex-col items-start sm:items-end">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${statusBadgeClass}`}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  {statusLabel}
-                </span>
-                <span className="text-[11px] font-bold text-slate-700 mt-0.5">
-                  {supportingMsg}
-                </span>
-              </div>
-            </div>
 
             {/* Subsection 1: Possible Fluid Overload */}
             <div className="space-y-2 pt-1 border-t border-slate-100">
@@ -1359,8 +1409,8 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
               onChange={(e) => setFormNotes(e.target.value)}
               placeholder={
                 language === "ES"
-                  ? "Tomé todos los medicamentos después de la sesión."
-                  : "Took all meds after session."
+                  ? "ej. Tomé todos los medicamentos después de la sesión."
+                  : "e.g. Took all meds after session."
               }
               className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
             />
@@ -1498,7 +1548,29 @@ function RecentEntries({
                     </td>
                     <td className="px-3 py-3 text-[#1C252E]">{entry.intake}</td>
                     <td className="px-3 py-3">
-                      <GoalBadge status={goalLabel} isGoalMet={isGoalMet} />
+                      <div className="flex flex-col gap-1">
+                        <GoalBadge status={goalLabel} isGoalMet={isGoalMet} />
+                        {entry.fluidStatus && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold w-fit ${
+                              entry.fluidStatus === "Above EDW"
+                                ? "bg-amber-50 text-amber-700"
+                                : entry.fluidStatus === "Below EDW"
+                                ? "bg-sky-50 text-sky-700"
+                                : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            <span className="h-1 w-1 rounded-full bg-current" />
+                            {language === "ES"
+                              ? entry.fluidStatus === "Above EDW"
+                                ? "Sobre EDW"
+                                : entry.fluidStatus === "Below EDW"
+                                ? "Bajo EDW"
+                                : "En EDW"
+                              : entry.fluidStatus}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-[#1C252E]">{swellingLabel}</td>
                     <td className="px-3 py-3 text-[#1C252E]">{sobLabel}</td>
