@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
-import nephroReachImg from "@/public/images/home/NephroReach-clean.png";
+import nephroReachImg from "@/public/images/home/NephroReach-clean.jpg";
 
 export default function Hero() {
   const { t } = useLanguage();
@@ -64,16 +64,16 @@ export default function Hero() {
   }, [line1, line2]);
 
   return (
-    <section className="relative flex w-full min-h-[480px] sm:min-h-[540px] lg:h-[600px] xl:h-[640px] items-center justify-center overflow-hidden">
+    <section className="relative flex w-full min-h-[calc(100vh-101px)] lg:h-[calc(100vh-101px)] items-center justify-center overflow-hidden">
       <Image
         src={nephroReachImg}
         alt={`NephroReach - ${line1} ${line2}`}
         fill
         priority
-        className="object-cover object-[35%_center] xl:object-[40%_center] 2xl:object-center"
+        className="object-cover object-[30%_center] xl:object-[35%_center] 2xl:object-center"
         sizes="100vw"
       />
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] xl:max-w-[1680px] items-center justify-end px-6 sm:px-10 lg:px-12 xl:px-16 py-12 sm:py-16">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] xl:max-w-[1680px] items-center justify-end px-6 sm:px-10 lg:px-12 xl:px-16 py-8 sm:py-10">
         <div className="relative z-10 flex w-full sm:w-[550px] max-w-[550px] flex-col items-start gap-7 rounded-2xl bg-white/80 p-6 backdrop-blur-sm sm:rounded-none sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:mr-[164px]">
           <div className="flex w-full flex-col gap-5">
             <h1

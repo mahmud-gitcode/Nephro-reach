@@ -37,7 +37,7 @@ export default function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="w-full scroll-mt-24 bg-[#F8FAFF] py-16 lg:py-20"
+      className="w-full scroll-mt-24 bg-[#F8FAFF] pt-8 pb-16 lg:pt-10 lg:pb-20"
     >
       <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
         <div className="flex flex-col items-center gap-2 text-center landing-reveal">
