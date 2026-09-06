@@ -138,7 +138,7 @@ export default function Header() {
             >
               <span className="relative h-6 w-[33px] overflow-clip rounded-[2px]">
                 <img
-                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
                   alt={language === "ES" ? (t("header.spanish") || "Spanish") : (t("header.english") || "English")}
                   className="size-full"
                 />
@@ -171,7 +171,7 @@ export default function Header() {
                     >
                       <span className="relative h-4 w-[22px] overflow-clip rounded-[2px] shrink-0">
                         <img
-                          src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                          src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
                           alt=""
                           className="size-full object-cover"
                         />
@@ -324,7 +324,7 @@ export default function Header() {
                 >
                   <span className="relative h-4 w-[22px] overflow-clip rounded-[2px] shrink-0">
                     <img
-                      src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                      src={lang.code === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
                       alt=""
                       className="size-full object-cover"
                     />

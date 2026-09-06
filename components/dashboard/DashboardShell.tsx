@@ -471,7 +471,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             >
               <span className="relative h-6 w-[33px] overflow-clip rounded-[2px]">
                 <img
-                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/uk-flag.svg"}
+                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
                   alt=""
                   className="size-full"
                 />

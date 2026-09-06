@@ -54,7 +54,7 @@ function LoginForm() {
               src={
                 language === "ES"
                   ? "/images/dashboard-header/spain-flag.svg"
-                  : "/images/dashboard-header/uk-flag.svg"
+                  : "/images/dashboard-header/usa-flag.svg"
               }
               alt={language === "ES" ? "Español" : "English"}
               className="h-6 w-[33px] rounded-xs object-cover"
@@ -83,7 +83,7 @@ function LoginForm() {
                 }`}
               >
                 <img
-                  src="/images/dashboard-header/uk-flag.svg"
+                  src="/images/dashboard-header/usa-flag.svg"
                   alt=""
                   className="h-4 w-6 rounded-xs object-cover"
                 />
