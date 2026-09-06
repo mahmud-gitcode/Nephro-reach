@@ -245,21 +245,22 @@ function Sidebar({
 
   return (
     <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white print:hidden">
-      <div className="mb-3 flex shrink-0 items-start justify-between gap-3 rounded bg-white p-3">
-        <Image
-          src="/images/logo.svg"
-          alt="NephroReach"
-          width={240}
-          height={190}
-          priority
-          style={{ width: "auto", height: "auto" }}
-          className="max-h-[190px] max-w-[240px] shrink-0 object-contain"
-        />
+      <div className="relative mb-3 flex shrink-0 items-center justify-center rounded bg-white p-3">
+        <Link href="/dashboard" className="flex items-center justify-center w-full">
+          <Image
+            src="/images/logo.svg"
+            alt="NephroReach"
+            width={240}
+            height={190}
+            priority
+            className="h-[190px] w-full shrink-0 object-contain"
+          />
+        </Link>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="absolute top-2 right-2 rounded-md p-1 text-slate-500 hover:bg-slate-100 lg:hidden"
             aria-label="Close dashboard menu"
           >
             <X className="h-5 w-5" />
