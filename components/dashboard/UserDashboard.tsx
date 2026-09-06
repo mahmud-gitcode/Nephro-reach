@@ -53,7 +53,7 @@ const stats = [
     tone: "bg-[#DBEAFE]",
   },
   {
-    label: "SMS Check-ins",
+    label: "Notification Check-ins",
     value: "78%",
     icon: "stat-clipboard.svg",
     tone: "bg-[#EDFF9F]",
@@ -121,6 +121,7 @@ export default function UserDashboard() {
     switch (statKey) {
       case "Journal Entries":
         return dh?.stats?.journalEntries || fallback;
+      case "Notification Check-ins":
       case "SMS Check-ins":
         return dh?.stats?.smsCheckIns || fallback;
       case "Curriculum Progress":

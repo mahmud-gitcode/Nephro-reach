@@ -36,14 +36,27 @@ function FeatureIcon({ included }: { included: boolean }) {
 function PlanCard({
   plan,
   ctaVariant = "primary",
-  ctaText = "Get Started",
+  ctaText,
   className = "",
+  language = "EN",
 }: {
   plan: SubscriptionPlan;
   ctaVariant?: "primary" | "outline";
   ctaText?: string;
   className?: string;
+  language?: string;
 }) {
+  const hasTrial = !!plan.trialDays;
+  const buttonLabel =
+    ctaText ||
+    (hasTrial
+      ? language === "ES"
+        ? "Probar 7 Días Gratis"
+        : "Try 7 Days Free"
+      : language === "ES"
+      ? "Comenzar"
+      : "Get Started");
+
   return (
     <div
       className={[
@@ -81,14 +94,14 @@ function PlanCard({
           <Link
             href="/registration"
             className={[
-              "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3",
+              "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-center",
               "text-sm font-bold leading-5 tracking-[0.05px] transition-all duration-200 cursor-pointer",
               ctaVariant === "outline" && !plan.popular
                 ? "border border-[#0F172A] bg-white text-[#0F172A] hover:bg-slate-50 hover:border-slate-800 shadow-xs"
                 : "bg-[#2563EB] text-white shadow-[inset_0px_-1px_0px_0px_#DBE9FE] hover:bg-[#1D4ED8] hover:shadow-md hover:shadow-blue-500/20",
             ].join(" ")}
           >
-            {ctaText}
+            {buttonLabel}
           </Link>
         </div>
 
@@ -176,11 +189,35 @@ export default function Pricing({
       "One-time purchase": "Compra única",
       "One-time pass": "Pase único",
     };
+    const featureMap: Record<string, string> = {
+      "7-day free trial included": "Prueba gratis de 7 días incluida",
+      "Core NephroReach platform": "Plataforma central NephroReach",
+      "Education library access": "Acceso a biblioteca educativa",
+      "Patient logs & tracking tools": "Registros y herramientas de seguimiento",
+      "Dialysis resources & guides": "Recursos y guías de diálisis",
+      "Live classes & Q&A": "Clases en vivo y preguntas",
+      "Live classes & expert Q&A": "Clases en vivo y preguntas de expertos",
+      "21-Day Journey curriculum": "Plan de estudios de 21 días",
+      "Premium educational features": "Funciones educativas prémium",
+      "Access to 1 selected live class": "Acceso a 1 clase en vivo seleccionada",
+      "Live Q&A participation": "Participación en preguntas en vivo",
+      "No recurring subscription": "Sin suscripción recurrente",
+      "Lifetime access to 21-Day curriculum": "Acceso de por vida al plan de 21 días",
+      "Full Membership platform access (21 days)": "Acceso a Membresía Completa (21 días)",
+      "Complete patient logs & trackers (21 days)": "Registros y seguimiento completos (21 días)",
+      "Dialysis resources & guides (21 days)": "Recursos y guías de diálisis (21 días)",
+      "Live classes & Q&A access (21 days)": "Acceso a clases en vivo y preguntas (21 días)",
+      "Prompts to continue at $4.99 or $7.99": "Recordatorios para continuar a $4.99 o $7.99",
+    };
     return {
       ...plan,
       name: nameMap[plan.name] || plan.name,
       billing: plan.billing ? billingMap[plan.billing] || plan.billing : plan.billing,
       badge: plan.badge === "Most Popular" ? "Más Popular" : plan.badge,
+      features: plan.features.map((f) => ({
+        ...f,
+        label: featureMap[f.label] || f.label,
+      })),
     };
   };
 
@@ -209,6 +246,12 @@ export default function Pricing({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
           {plans.map((p, idx) => {
             const plan = translatePlan(p);
+            const ctaText = plan.trialDays
+              ? language === "ES"
+                ? "Probar 7 Días Gratis"
+                : "Try 7 Days Free"
+              : t("pricing.getStarted");
+
             return plan.popular ? (
               <div
                 key={plan.id || plan.name}
@@ -228,8 +271,9 @@ export default function Pricing({
                 <div className="flex h-full flex-1 flex-col">
                   <PlanCard
                     plan={plan}
-                    ctaText={t("pricing.getStarted")}
+                    ctaText={ctaText}
                     className="h-full flex-1"
+                    language={language}
                   />
                 </div>
               </div>
@@ -247,8 +291,9 @@ export default function Pricing({
                 <PlanCard
                   plan={plan}
                   ctaVariant={sideCtaVariant}
-                  ctaText={t("pricing.getStarted")}
+                  ctaText={ctaText}
                   className="h-full flex-1"
+                  language={language}
                 />
               </div>
             );

@@ -122,12 +122,16 @@ function EditPlanModal({
   const [accessDays, setAccessDays] = useState<string>(
     !isNew && plan.accessDays ? String(plan.accessDays) : ""
   );
+  const [trialDays, setTrialDays] = useState<string>(
+    !isNew && plan.trialDays ? String(plan.trialDays) : ""
+  );
   const [description, setDescription] = useState(isNew ? "" : plan.description);
   const [popular, setPopular] = useState(isNew ? false : !!plan.popular);
   const [badge, setBadge] = useState(isNew ? "" : plan.badge || "");
   const [features, setFeatures] = useState<Array<{ label: string; included: boolean }>>(
     isNew
       ? [
+          { label: "7-day free trial included", included: true },
           { label: "Core NephroReach platform", included: true },
           { label: "Education library access", included: true },
           { label: "Patient logs & tracking tools", included: true },
@@ -149,6 +153,8 @@ function EditPlanModal({
       billingType,
       billingPeriodLabel: billingPeriodLabel.trim(),
       accessDays: accessDays ? parseInt(accessDays, 10) || null : null,
+      trialDays: trialDays ? parseInt(trialDays, 10) || null : null,
+      trialLabel: trialDays ? `${trialDays}-Day Free Trial` : undefined,
       description: description.trim(),
       popular,
       badge: badge.trim() || undefined,
@@ -267,6 +273,23 @@ function EditPlanModal({
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
               />
             </div>
+          </div>
+
+          {/* Free Trial Period */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700">
+              Free Trial Period (Days)
+            </label>
+            <input
+              type="number"
+              value={trialDays}
+              onChange={(e) => setTrialDays(e.target.value)}
+              placeholder="e.g. 7 (leave blank if no trial)"
+              className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+            />
+            <p className="mt-1 text-[11px] text-slate-500">
+              Grants free trial days before recurring payment begins (e.g. 7 days).
+            </p>
           </div>
 
           {/* Description */}

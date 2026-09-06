@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Phone, Pencil } from "lucide-react";
+import { Phone, Pencil, Car } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function WheresMyRideModal({
@@ -140,21 +140,32 @@ export default function WheresMyRideModal({
             href="https://m.uber.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] py-3.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-sm"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] py-3.5 px-4 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-sm"
           >
-            <Phone className="h-4 w-4" />
-            {t("myRides.openUber")}
+            <Car className="h-4 w-4 shrink-0" />
+            <span>{t("myRides.openUber")}</span>
           </a>
 
           <a
             href="https://www.lyft.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF2B99] py-3.5 text-sm font-bold text-white hover:bg-pink-600 transition-colors shadow-sm"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF2B99] py-3.5 px-4 text-sm font-bold text-white hover:bg-pink-600 transition-colors shadow-sm"
           >
-            <Phone className="h-4 w-4" />
-            {t("myRides.openLyft")}
+            <Car className="h-4 w-4 shrink-0" />
+            <span>{t("myRides.openLyft")}</span>
           </a>
+        </div>
+
+        {/* Third-Party Transportation Disclaimer */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 text-left text-xs leading-relaxed text-slate-500">
+          <span className="font-semibold text-slate-700">
+            {t("myRides.disclaimerTitle") || "Third-Party Transportation Disclaimer:"}{" "}
+          </span>
+          <span>
+            {t("myRides.disclaimerText") ||
+              "NephroReach does not provide, arrange, operate, endorse, or guarantee transportation services offered by third-party providers. Transportation availability, eligibility, pricing, scheduling, safety, and services are determined solely by the transportation provider. By selecting a transportation link, you will leave NephroReach and be subject to the third party's terms and privacy practices."}
+          </span>
         </div>
 
         {/* Close Button */}

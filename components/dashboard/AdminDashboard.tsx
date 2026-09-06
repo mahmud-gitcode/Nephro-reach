@@ -45,7 +45,7 @@ const metricCards: Array<{
     iconTone: "text-emerald-600",
   },
   {
-    title: "SMS Response Rate",
+    title: "Notification Response Rate",
     value: "78%",
     growth: "+ 36%",
     icon: MessageCircle,

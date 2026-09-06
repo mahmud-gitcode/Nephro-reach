@@ -19,7 +19,7 @@
     "titleLine1": "Understand your kidneys.",
     "titleLine2": "Take control of your journey.",
     "description": "NephroReach gives you kidney education, personal health trackers, expert-led classes, and practical tools—all in one place to help you feel more informed, prepared, and confident.",
-    "button": "Get Membership",
+    "button": "Try free 7 Days",
     "howItWorks": "How It Works"
   },
   "pricingHero": {
@@ -44,7 +44,7 @@
       "digitalJournal": "Digital Journal",
       "curriculum": "4-week educational curriculum",
       "liveClasses": "Monthly live classes",
-      "smsCheckIns": "Weekly SMS check-ins",
+      "smsCheckIns": "Weekly Notification check-ins",
       "communitySupport": "Community support"
     }
   },
@@ -58,8 +58,8 @@
     "step2Desc": "Receive a unique ID for your NephroReach account.",
     "step3Title": "Learn & Journal",
     "step3Desc": "Use your journal, prompts, and 04-week education library.",
-    "step4Title": "Receive SMS Check-Ins",
-    "step4Desc": "Receive automated weekly SMS check-ins and class reminders."
+    "step4Title": "Receive Notification Check-Ins",
+    "step4Desc": "Receive automated weekly notification check-ins and class reminders."
   },
   "engagement": {
     "badge": "What's Included",
@@ -70,13 +70,13 @@
     "item1Desc": "Sign up with your email and phone number, choose your membership level, and receive your unique NephroReach member ID.",
     "item2Badge": "Build consistency",
     "item2Title": "Stay connected through weekly texts",
-    "item2Desc": "Receive automated educational SMS check-ins, reminders, and follow-up messages that help you stay engaged without needing real-time human support.",
+    "item2Desc": "Receive automated educational notification check-ins, reminders, and follow-up messages that help you stay engaged without needing real-time human support.",
     "item3Badge": "Learn at your pace",
-    "item3Title": "Follow a guided 4-week education path",
+    "item3Title": "Follow a guided 21-day education path",
     "item3Desc": "Full members can access structured educational content designed to support steady learning, reflection, and continued engagement.",
     "item4Badge": "Reflect and participate",
     "item4Title": "Journal, learn, and join live classes",
-    "item4Desc": "Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.\n\n* 4 week Dialysis Education class $49.99 once with a lifetime access",
+    "item4Desc": "Use your digital journal, respond to guided prompts, and register for monthly live educational classes based on your membership access.\n\n* 21-day Dialysis Education class $49.99 once with a lifetime access",
     "item5Badge": "Share With Your Provider",
     "item5Title": "Share With Your Provider",
     "item5Desc": "You control your information. Generate a summary of your tracked information to share during appointments and help your provider better understand your kidney health."
@@ -91,17 +91,17 @@
     "quote2": "NephroReach helped me stay consistent with check-ins and journaling. I finally feel more in control of my kidney health journey.",
     "role2": "Dialysis Member",
     "badge3": "Support & Guidance",
-    "quote3": "The classes and SMS prompts keep me engaged without overwhelm. It's simple, private, and actually useful every week.",
+    "quote3": "The classes and notification prompts keep me engaged without overwhelm. It's simple, private, and actually useful every week.",
     "role3": "Family Caregiver"
   },
   "whatMembersGet": {
     "badge": "What You Get",
     "title": "What Members Get",
     "subtitle": "Everything you need to grow",
-    "card1Title": "Daily SMS Prompts",
+    "card1Title": "Daily Notification Prompts",
     "card1Desc": "Carefully crafted questions sent to your phone to spark reflection and mindfulness throughout your day.",
     "card2Title": "Digital Journal",
-    "card2Desc": "A beautiful, private space where all your SMS replies are automatically saved and organized by date.",
+    "card2Desc": "A beautiful, private space where all your notification replies are automatically saved and organized by date.",
     "card3Title": "Monthly Classes",
     "card3Desc": "Live, expert-led sessions focusing on personal growth, habit building, and intentional living.",
     "card4Title": "Progress Tracking",
@@ -189,7 +189,7 @@
     "continueUser": "Continue as User"
   },
   "footer": {
-    "description": "A non-clinical educational engagement platform for SMS check-ins, digital journaling, structured learning, and monthly live classes.",
+    "description": "A non-clinical educational engagement platform for notification check-ins, digital journaling, structured learning, and monthly live classes.",
     "platform": "Platform",
     "howItWorks": "How it Works",
     "product": "Product",
@@ -204,7 +204,7 @@
   },
   "aboutUsPage": {
     "heroEyebrow": "ABOUT US",
-    "heroTitle": "Empowering Member Education Through Smart SMS Engagement",
+    "heroTitle": "Empowering Member Education Through Smart Notification Engagement",
     "heroSubtitle": "We create scalable, user-friendly tools that automate check-ins, support digital journaling, and provide access to educational resources and live classes.",
     "founderTitle": "About the Founder",
     "founderP1": "Hello, I’m Joni Gathers, MSN, APRN, FNP-C, a board-certified Family Nurse Practitioner with a decade of nephrology and dialysis experience. Throughout my career as both a Dialysis Nurse and Practitioner, I’ve cared for hundreds of patients living with chronic kidney disease (CKD), end-stage kidney disease (ESKD), hypertension, diabetes, and those receiving dialysis.",
@@ -267,8 +267,15 @@
     "editDetails": "Edit Driver Details",
     "removeRide": "Remove Ride",
     "rideshareTitle": "Ride share Apps",
-    "openUber": "Open Uber",
-    "openLyft": "Open Lyft",
+    "rideshareSub": "Instant on-demand rideshare transport",
+    "openUber": "Request a Ride with Uber →",
+    "openLyft": "Request a Ride with Lyft →",
+    "savedDriversHeading": "Saved Drivers & Contacts",
+    "savedDriversSub": "Call your trusted family members, caregivers, or transit drivers.",
+    "clinicTransportTitle": "Need Clinic Transportation?",
+    "clinicTransportText": "Many dialysis clinics offer scheduled medical vans or Non-Emergency Medical Transportation (NEMT) through your insurance or Medicare/Medicaid. Inquire with your clinic care team or social worker to add your dedicated driver here.",
+    "disclaimerTitle": "Third-Party Transportation Disclaimer:",
+    "disclaimerText": "NephroReach does not provide, arrange, operate, endorse, or guarantee transportation services offered by third-party providers. Transportation availability, eligibility, pricing, scheduling, safety, and services are determined solely by the transportation provider. By selecting a transportation link, you will leave NephroReach and be subject to the third party's terms and privacy practices.",
     "addNewRideModal": "Add New Ride",
     "editRideModal": "Edit Ride",
     "driverNameLabel": "Ride / Driver Name",
@@ -1556,7 +1563,7 @@
     "user": "User",
     "items": {
       "dashboard": "Dashboard",
-      "myRides": "My Rides",
+      "myRides": "Where's My Ride",
       "beforeTheEr": "Before-the-ER",
       "myHealth": "MyHealth",
       "personalLog": "Personal Log",
@@ -1566,7 +1573,7 @@
       "educationCenter": "Education Center",
       "liveClass": "Live Class",
       "community": "Community",
-      "smsAnalytics": "SMS Analytics",
+      "smsAnalytics": "Notification Analytics",
       "subscriptions": "Subscriptions",
       "support": "Support",
       "setting": "Setting",
@@ -1594,7 +1601,7 @@
     },
     "stats": {
       "journalEntries": "Journal Entries",
-      "smsCheckIns": "SMS Check-ins",
+      "smsCheckIns": "Notification Check-ins",
       "curriculumProgress": "Curriculum Progress",
       "classesAttended": "Classes Attended"
     },

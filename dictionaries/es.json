@@ -19,7 +19,7 @@
     "titleLine1": "Entiende tus riñones.",
     "titleLine2": "Toma el control de tu camino.",
     "description": "NephroReach te brinda educación sobre los riñones, herramientas de seguimiento de salud personal, clases dirigidas por expertos y herramientas prácticas, todo en un solo lugar para ayudarte a sentirte más informado, preparado y seguro.",
-    "button": "Obtener Membresía",
+    "button": "Prueba 7 días gratis",
     "howItWorks": "Cómo Funciona"
   },
   "pricingHero": {
@@ -44,7 +44,7 @@
       "digitalJournal": "Diario Digital",
       "curriculum": "Plan de estudios de 8 semanas",
       "liveClasses": "Clases en vivo mensuales",
-      "smsCheckIns": "Controles semanales por SMS",
+      "smsCheckIns": "Controles semanales por notificaciones",
       "communitySupport": "Soporte comunitario"
     }
   },
@@ -58,8 +58,8 @@
     "step2Desc": "Recibe un ID único para tu cuenta de NephroReach.",
     "step3Title": "Aprende y Escribe en tu Diario",
     "step3Desc": "Usa tu diario, notificaciones e historias educativas de 4 semanas.",
-    "step4Title": "Recibe Controles por SMS",
-    "step4Desc": "Recibe controles automatizados por SMS semanales y recordatorios de clases."
+    "step4Title": "Recibe Controles por Notificación",
+    "step4Desc": "Recibe controles automatizados por notificaciones semanales y recordatorios de clases."
   },
   "engagement": {
     "badge": "Lo Que Incluye",
@@ -70,13 +70,13 @@
     "item1Desc": "Regístrate con tu correo y número de teléfono, elige tu nivel de membresía y recibe tu ID de miembro único de NephroReach.",
     "item2Badge": "Construye consistencia",
     "item2Title": "Mantente conectado a través de mensajes semanales",
-    "item2Desc": "Recibe mensajes automatizados de control educativo por SMS, recordatorios y mensajes de seguimiento para mantenerte comprometido.",
+    "item2Desc": "Recibe mensajes automatizados de control educativo por notificación, recordatorios y mensajes de seguimiento para mantenerte comprometido.",
     "item3Badge": "Aprende a tu ritmo",
     "item3Title": "Sigue una ruta educativa guiada de 21 días",
     "item3Desc": "Los miembros completos pueden acceder a contenido educativo estructurado diseñado para respaldar el aprendizaje constante.",
     "item4Badge": "Reflexiona y participa",
     "item4Title": "Escribe en tu diario, aprende y únete a clases en vivo",
-    "item4Desc": "Usa tu diario digital, responde a notificaciones guiadas y regístrate en clases educativas en vivo mensuales según tu membresía.",
+    "item4Desc": "Usa tu diario digital, responde a notificaciones guiadas y regístrate en clases educativas en vivo mensuales según tu membresía.\n\n* Clase de Educación sobre Diálisis de 21 días $49.99 una vez con acceso de por vida",
     "item5Badge": "Comparte con tu médico",
     "item5Title": "Comparte con tu médico",
     "item5Desc": "Tú controlas tu información. Genera un resumen de tu información registrada para compartir durante las citas y ayudar a tu proveedor a comprender mejor tu salud renal."
@@ -91,17 +91,17 @@
     "quote2": "NephroReach me ayudó a mantener la constancia con mis registros diarios. Por fin siento mayor control sobre mi salud renal.",
     "role2": "Miembro en Diálisis",
     "badge3": "Apoyo y Guía",
-    "quote3": "Las clases y los recordatorios por SMS me mantienen motivado sin abrumarme. Es simple, privado y realmente útil cada semana.",
+    "quote3": "Las clases y los recordatorios por notificación me mantienen motivado sin abrumarme. Es simple, privado y realmente útil cada semana.",
     "role3": "Cuidador Familiar"
   },
   "whatMembersGet": {
     "badge": "Lo Que Obtienes",
     "title": "Lo Que Obtienen los Miembros",
     "subtitle": "Todo lo que necesitas para crecer",
-    "card1Title": "Indicaciones Diarias por SMS",
-    "card1Desc": "Preguntas elaboradas cuidadosamente enviadas a tu teléfono para inspirar reflexión y atención plena a lo largo de tu día.",
+    "card1Title": "Indicaciones Diarias por Notificación",
+    "card1Desc": "Preguntas cuidadosamente diseñadas enviadas a tu teléfono para fomentar la reflexión durante todo el día.",
     "card2Title": "Diario Digital",
-    "card2Desc": "Un espacio hermoso y privado donde todas tus respuestas SMS se guardan automáticamente y se organizan por fecha.",
+    "card2Desc": "Un espacio hermoso y privado donde todas tus respuestas de notificaciones se guardan automáticamente y se organizan por fecha.",
     "card3Title": "Clases Mensuales",
     "card3Desc": "Sesiones en vivo dirigidas por expertos centradas en el crecimiento personal y desarrollo de hábitos.",
     "card4Title": "Seguimiento del Progreso",
@@ -173,7 +173,7 @@
     "continueUser": "Continuar como Usuario"
   },
   "footer": {
-    "description": "Una plataforma no clínica de compromiso educativo para controles por SMS, diario digital, aprendizaje estructurado y clases en vivo mensuales.",
+    "description": "Una plataforma no clínica de compromiso educativo para controles por notificación, diario digital, aprendizaje estructurado y clases en vivo mensuales.",
     "platform": "Plataforma",
     "howItWorks": "Cómo Funciona",
     "product": "Producto",
@@ -251,8 +251,15 @@
     "editDetails": "Editar detalles del conductor",
     "removeRide": "Eliminar conductor",
     "rideshareTitle": "Aplicaciones de Transporte",
-    "openUber": "Abrir Uber",
-    "openLyft": "Abrir Lyft",
+    "rideshareSub": "Transporte instantáneo bajo demanda",
+    "openUber": "Solicitar un viaje con Uber →",
+    "openLyft": "Solicitar un viaje con Lyft →",
+    "savedDriversHeading": "Conductores y Contactos Guardados",
+    "savedDriversSub": "Llama rápidamente a tus familiares, cuidadores o transporte médico.",
+    "clinicTransportTitle": "¿Necesitas Transporte a la Clínica?",
+    "clinicTransportText": "Muchas clínicas de diálisis ofrecen transporte médico programado (NEMT) a través de tu seguro o Medicare/Medicaid. Consulta con el equipo de atención de tu clínica o trabajador social para agregar aquí a tu conductor dedicado.",
+    "disclaimerTitle": "Descargo de responsabilidad sobre transporte de terceros:",
+    "disclaimerText": "NephroReach no proporciona, organiza, opera, respalda ni garantiza los servicios de transporte ofrecidos por proveedores externos. La disponibilidad, elegibilidad, precios, horarios, seguridad y servicios de transporte son determinados únicamente por el proveedor de transporte. Al seleccionar un enlace de transporte, saldrá de NephroReach y estará sujeto a los términos y prácticas de privacidad del tercero.",
     "addNewRideModal": "Agregar Nuevo Conductor",
     "editRideModal": "Editar Conductor",
     "driverNameLabel": "Nombre del Conductor / Transporte",
@@ -1540,7 +1547,7 @@
     "user": "Usuario",
     "items": {
       "dashboard": "Panel",
-      "myRides": "Mis Conductores",
+      "myRides": "¿Dónde está mi conductor?",
       "beforeTheEr": "Antes de Urgencias",
       "myHealth": "Mi Salud",
       "personalLog": "Registro Personal",
@@ -1550,7 +1557,7 @@
       "educationCenter": "Centro Educativo",
       "liveClass": "Clases en Vivo",
       "community": "Comunidad",
-      "smsAnalytics": "Análisis de SMS",
+      "smsAnalytics": "Análisis de Notificaciones",
       "subscriptions": "Suscripciones",
       "support": "Soporte",
       "setting": "Configuración",
@@ -1578,7 +1585,7 @@
     },
     "stats": {
       "journalEntries": "Entradas del Diario",
-      "smsCheckIns": "Chequeos por SMS",
+      "smsCheckIns": "Chequeos por Notificación",
       "curriculumProgress": "Progreso del Currículo",
       "classesAttended": "Clases Asistidas"
     },

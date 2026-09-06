@@ -11,6 +11,8 @@ export type SubscriptionPlan = {
   billingType: "recurring" | "one_time";
   billingPeriodLabel: string;
   accessDays?: number | null;
+  trialDays?: number | null;
+  trialLabel?: string;
   description: string;
   popular?: boolean;
   badge?: string;
@@ -26,10 +28,13 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     billingType: "recurring",
     billingPeriodLabel: "Recurring monthly",
     accessDays: null,
+    trialDays: 7,
+    trialLabel: "7-Day Free Trial",
     description:
       "Core NephroReach platform, education library, patient logs, tracking tools, dialysis resources.",
     popular: false,
     features: [
+      { label: "7-day free trial included", included: true },
       { label: "Core NephroReach platform", included: true },
       { label: "Education library access", included: true },
       { label: "Patient logs & tracking tools", included: true },
@@ -46,11 +51,14 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     billingType: "recurring",
     billingPeriodLabel: "Recurring monthly",
     accessDays: null,
+    trialDays: 7,
+    trialLabel: "7-Day Free Trial",
     description:
       "Everything in Essential + access to NephroReach live classes/Q&A and premium educational features.",
     popular: true,
     badge: "Most Popular",
     features: [
+      { label: "7-day free trial included", included: true },
       { label: "Core NephroReach platform", included: true },
       { label: "Education library access", included: true },
       { label: "Patient logs & tracking tools", included: true },
@@ -67,10 +75,13 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     billingType: "one_time",
     billingPeriodLabel: "One-time pass",
     accessDays: null,
+    trialDays: 7,
+    trialLabel: "7-Day Free Trial",
     description:
       "Access to one selected live NephroReach class; no monthly membership required.",
     popular: false,
     features: [
+      { label: "7-day free trial included", included: true },
       { label: "Access to 1 selected live class", included: true },
       { label: "Live Q&A participation", included: true },
       { label: "No recurring subscription", included: true },
@@ -87,10 +98,13 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     billingType: "one_time",
     billingPeriodLabel: "One-time purchase",
     accessDays: 21,
+    trialDays: 7,
+    trialLabel: "7-Day Free Trial",
     description:
       "Lifetime access to the complete 21-Day Dialysis Journey curriculum plus Full Membership platform access for 21 days.",
     popular: false,
     features: [
+      { label: "7-day free trial included", included: true },
       { label: "Lifetime access to 21-Day curriculum", included: true },
       { label: "Full Membership platform access (21 days)", included: true },
       { label: "Complete patient logs & trackers (21 days)", included: true },
@@ -101,7 +115,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
 ];
 
-const STORAGE_KEY = "nephroreach_subscription_plans_v2";
+const STORAGE_KEY = "nephroreach_subscription_plans_v4";
 
 export function getStoredSubscriptionPlans(): SubscriptionPlan[] {
   if (typeof window === "undefined") return DEFAULT_SUBSCRIPTION_PLANS;

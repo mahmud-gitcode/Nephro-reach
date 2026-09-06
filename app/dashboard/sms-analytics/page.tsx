@@ -201,7 +201,7 @@ function TemplateModal({
             </button>
           </div>
           <p className="mt-2 text-sm leading-5 text-slate-700">
-            {isEdit ? "Update this SMS template automation" : "Add a new SMS template for automation"}
+            {isEdit ? "Update this notification template automation" : "Add a new notification template for automation"}
           </p>
         </div>
 
@@ -290,7 +290,7 @@ export default function SmsAnalyticsPage() {
       <section className="rounded-[14px] border border-[#E3E6F0] bg-white px-3 py-4 shadow-sm">
         <div className="mb-[14px] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-medium leading-8 text-slate-900">SMS Configuration</h1>
+            <h1 className="text-2xl font-medium leading-8 text-slate-900">Notification Configuration</h1>
             <p className="mt-2 text-base font-medium leading-6 text-slate-700">
               Configure automated messages and check-ins
             </p>

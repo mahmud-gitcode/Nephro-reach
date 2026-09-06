@@ -64,17 +64,17 @@ export default function Hero() {
   }, [line1, line2]);
 
   return (
-    <section className="flex w-full flex-col items-center justify-center p-5 sm:p-8 lg:p-12">
-      <div className="relative mx-auto flex min-h-[420px] w-full max-w-[1344px] items-center justify-end overflow-hidden rounded-[24px] sm:min-h-[500px] lg:h-[570px] px-6 sm:px-10 lg:px-[71px]">
-        <Image
-          src={nephroReachImg}
-          alt={`NephroReach - ${line1} ${line2}`}
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        />
-        <div className="relative z-10 flex w-full sm:w-[585px] max-w-[585px] flex-col items-start gap-7 bg-white/75 p-6 backdrop-blur-sm sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:mr-1 md:mr-3 lg:mr-5 xl:mr-8">
+    <section className="relative flex w-full min-h-[480px] sm:min-h-[540px] lg:h-[600px] xl:h-[640px] items-center justify-center overflow-hidden">
+      <Image
+        src={nephroReachImg}
+        alt={`NephroReach - ${line1} ${line2}`}
+        fill
+        priority
+        className="object-cover object-[35%_center] xl:object-[40%_center] 2xl:object-center"
+        sizes="100vw"
+      />
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] xl:max-w-[1680px] items-center justify-end px-6 sm:px-10 lg:px-12 xl:px-16 py-12 sm:py-16">
+        <div className="relative z-10 flex w-full sm:w-[550px] max-w-[550px] flex-col items-start gap-7 rounded-2xl bg-white/80 p-6 backdrop-blur-sm sm:rounded-none sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:mr-[164px]">
           <div className="flex w-full flex-col gap-5">
             <h1
               className="text-[26px] font-semibold leading-[1.25] tracking-[0.2px] text-[#0F172A] sm:text-[34px] md:text-[38px] lg:text-[42px] xl:text-[44px]"

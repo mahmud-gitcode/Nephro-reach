@@ -38,7 +38,7 @@ type NavItem = { label: string; href: string; icon: IconType; roles: UserRole[] 
 
 const sidebarItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "user"] },
-  { label: "My Rides", href: "/dashboard/my-rides", icon: Car, roles: ["user"] },
+  { label: "Where's My Ride", href: "/dashboard/my-rides", icon: Car, roles: ["user"] },
   { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital, roles: ["user"] },
   { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse, roles: ["user"] },
   { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers, roles: ["user"] },
@@ -64,7 +64,7 @@ const sidebarItems: NavItem[] = [
   { label: "Live Class", href: "/dashboard/live-class", icon: Video, roles: ["admin"] },
   { label: "Community", href: "/dashboard/community", icon: MessagesSquare, roles: ["user"] },
   {
-    label: "SMS Analytics",
+    label: "Notification Analytics",
     href: "/dashboard/sms-analytics",
     icon: MessageCircle,
     roles: ["admin"],
@@ -116,7 +116,7 @@ function getBreadcrumb(pathname: string, language?: string) {
     return "Add Blood Results";
   if (pathname.startsWith("/dashboard/personal-log/blood-results"))
     return "Blood Results";
-  if (pathname.startsWith("/dashboard/my-rides")) return language === "ES" ? "Mis Conductores" : "My Rides";
+  if (pathname.startsWith("/dashboard/my-rides")) return language === "ES" ? "¿Dónde está mi conductor?" : "Where's My Ride";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure/add"))
     return language === "ES" ? "Agregar Presión Arterial" : "Add Blood Pressure";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure"))
@@ -158,7 +158,7 @@ function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/community"))
     return language === "ES" ? "Comunidad" : "Community";
   if (pathname.startsWith("/dashboard/sms-analytics"))
-    return language === "ES" ? "Análisis de SMS" : "SMS Analytics";
+    return language === "ES" ? "Análisis de Notificaciones" : "Notification Analytics";
   if (pathname.startsWith("/dashboard/subscriptions"))
     return language === "ES" ? "Suscripciones" : "Subscriptions";
   if (pathname.startsWith("/dashboard/support"))
@@ -172,7 +172,7 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
   if (language !== "ES") return defaultLabel;
   const spanishLabels: Record<string, string> = {
     "/dashboard": "Panel",
-    "/dashboard/my-rides": "Mis Conductores",
+    "/dashboard/my-rides": "¿Dónde está mi conductor?",
     "/dashboard/before-the-er": "Antes de Urgencias",
     "/dashboard/my-health": "Mi Salud",
     "/dashboard/personal-log": "Registro Personal",
@@ -182,7 +182,7 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
     "/dashboard/education-center": "Centro Educativo",
     "/dashboard/live-class": "Clases en Vivo",
     "/dashboard/community": "Comunidad",
-    "/dashboard/sms-analytics": "Análisis de SMS",
+    "/dashboard/sms-analytics": "Análisis de Notificaciones",
     "/dashboard/subscriptions": "Suscripciones",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",
