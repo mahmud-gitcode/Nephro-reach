@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -8,12 +8,14 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   Droplets,
   FileText,
   Minus,
   Plus,
   Scale,
   Wind,
+  X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -586,110 +588,815 @@ function AlertsInsights() {
   );
 }
 
-function RecentEntries() {
+interface WeightFluidEntry {
+  id: string;
+  dateEn: string;
+  dateEs: string;
+  morning: string;
+  evening: string;
+  uo: string;
+  intake: string;
+  goal: string;
+  swelling: string;
+  sob: string;
+  weakness: string;
+  notes: string;
+  noteKey: string | null;
+  rapidGain?: string;
+  dizziness?: string;
+  cramping?: string;
+  nausea?: string;
+  fluidStatus?: "Above EDW" | "Near EDW" | "Below EDW";
+  fluidStatusMsg?: string;
+}
+
+const INITIAL_ENTRIES: WeightFluidEntry[] = [
+  {
+    id: "1",
+    dateEn: "May 10, 2024",
+    dateEs: "10 May, 2024",
+    morning: "100",
+    evening: "182",
+    uo: "High",
+    intake: "50",
+    goal: "Above Goal",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "--",
+    noteKey: null,
+  },
+  {
+    id: "2",
+    dateEn: "May 31, 2024",
+    dateEs: "31 May, 2024",
+    morning: "123",
+    evening: "136",
+    uo: "High",
+    intake: "40",
+    goal: "Goal Met",
+    swelling: "Mild",
+    sob: "NO",
+    weakness: "NO",
+    notes: "Felt good today",
+    noteKey: "feltGood",
+  },
+  {
+    id: "3",
+    dateEn: "June 7, 2024",
+    dateEs: "7 Jun, 2024",
+    morning: "95",
+    evening: "150",
+    uo: "High",
+    intake: "45",
+    goal: "Above Goal",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "Need to push harder",
+    noteKey: "needToPush",
+  },
+  {
+    id: "4",
+    dateEn: "June 14, 2024",
+    dateEs: "14 Jun, 2024",
+    morning: "110",
+    evening: "170",
+    uo: "High",
+    intake: "55",
+    goal: "Goal Met",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "Strong finish",
+    noteKey: "strongFinish",
+  },
+  {
+    id: "5",
+    dateEn: "June 21, 2024",
+    dateEs: "21 Jun, 2024",
+    morning: "118",
+    evening: "190",
+    uo: "High",
+    intake: "60",
+    goal: "Above Goal",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "Best performance yet",
+    noteKey: "bestPerformance",
+  },
+  {
+    id: "6",
+    dateEn: "June 28, 2024",
+    dateEs: "28 Jun, 2024",
+    morning: "102",
+    evening: "140",
+    uo: "High",
+    intake: "35",
+    goal: "Goal Met",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "Felt tired",
+    noteKey: "feltTired",
+  },
+  {
+    id: "7",
+    dateEn: "July 5, 2024",
+    dateEs: "5 Jul, 2024",
+    morning: "115",
+    evening: "165",
+    uo: "High",
+    intake: "50",
+    goal: "Above Goal",
+    swelling: "None",
+    sob: "NO",
+    weakness: "NO",
+    notes: "--",
+    noteKey: null,
+  },
+];
+
+interface AddWeightLogModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (entry: WeightFluidEntry) => void;
+}
+
+function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) {
+  const { language } = useLanguage();
+
+  const [formDate, setFormDate] = useState("08/12/2026");
+  const [formMorning, setFormMorning] = useState("123");
+  const [formEvening, setFormEvening] = useState("123");
+  const [formIntake, setFormIntake] = useState("48 OZ");
+  const [formGoal, setFormGoal] = useState("48 OZ");
+  const [formGoalMet, setFormGoalMet] = useState(true);
+
+  // Symptoms: Possible Fluid Overload
+  const [formSwelling, setFormSwelling] = useState(false);
+  const [formSob, setFormSob] = useState(false);
+  const [formRapidGain, setFormRapidGain] = useState(false);
+
+  // Symptoms: Possible Too Much Fluid Removed
+  const [formDizziness, setFormDizziness] = useState(false);
+  const [formCramping, setFormCramping] = useState(false);
+  const [formWeakness, setFormWeakness] = useState(false);
+  const [formNausea, setFormNausea] = useState(false);
+
+  const [formUoAmount, setFormUoAmount] = useState("Moderate");
+  const [formUoTrend, setFormUoTrend] = useState<"decreasing" | "noChange" | "increasing">("decreasing");
+  const [formNotes, setFormNotes] = useState("Took all meds after session.");
+
+  // Estimated Dry Weight (EDW) Connection Logic
+  const patientEdw = 122; // Target Estimated Dry Weight in lbs
+  const morningWeightNum = parseFloat(formMorning.replace(/[^0-9.]/g, "")) || 0;
+  const eveningWeightNum = parseFloat(formEvening.replace(/[^0-9.]/g, "")) || 0;
+  const currentWeightNum = eveningWeightNum || morningWeightNum || 123;
+  const weightDiff = parseFloat((currentWeightNum - patientEdw).toFixed(1));
+
+  const overloadCount = [formSwelling, formSob, formRapidGain].filter(Boolean).length;
+  const deficitCount = [formDizziness, formCramping, formWeakness, formNausea].filter(Boolean).length;
+
+  let fluidStatus: "Above EDW" | "Near EDW" | "Below EDW" = "Near EDW";
+  let fluidStatusMsg = "Appears On Target";
+  let statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+
+  if (weightDiff > 1.0 || (weightDiff >= 0 && overloadCount >= 2)) {
+    fluidStatus = "Above EDW";
+    fluidStatusMsg = "Possible Fluid Overload";
+    statusBadgeClass = "bg-amber-50 text-amber-700 border border-amber-200";
+  } else if (weightDiff < -1.0 || (weightDiff <= 0 && deficitCount >= 2)) {
+    fluidStatus = "Below EDW";
+    fluidStatusMsg = "Possible Too Much Fluid Removed";
+    statusBadgeClass = "bg-sky-50 text-sky-700 border border-sky-200";
+  } else {
+    fluidStatus = "Near EDW";
+    fluidStatusMsg = "Appears On Target";
+    statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  }
+
+  const statusLabel =
+    language === "ES"
+      ? fluidStatus === "Above EDW"
+        ? "Por Encima de EDW"
+        : fluidStatus === "Below EDW"
+        ? "Por Debajo de EDW"
+        : "Cerca de EDW"
+      : fluidStatus;
+
+  const supportingMsg =
+    language === "ES"
+      ? fluidStatusMsg === "Possible Fluid Overload"
+        ? "Posible Sobrecarga de Líquidos"
+        : fluidStatusMsg === "Possible Too Much Fluid Removed"
+        ? "Posible Exceso de Líquido Eliminado"
+        : "Parece estar en el objetivo"
+      : fluidStatusMsg;
+
+  if (!isOpen) return null;
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEntry: WeightFluidEntry = {
+      id: Date.now().toString(),
+      dateEn: formDate.trim() || "Today",
+      dateEs: formDate.trim() || "Hoy",
+      morning: formMorning.replace(/[^0-9.]/g, "") || "123",
+      evening: formEvening.replace(/[^0-9.]/g, "") || "123",
+      uo: formUoAmount,
+      intake: formIntake.replace(/[^0-9.]/g, "") || "48",
+      goal: formGoalMet ? "Goal Met" : "Above Goal",
+      swelling: formSwelling ? "YES" : "NO",
+      sob: formSob ? "YES" : "NO",
+      weakness: formWeakness ? "YES" : "NO",
+      rapidGain: formRapidGain ? "YES" : "NO",
+      dizziness: formDizziness ? "YES" : "NO",
+      cramping: formCramping ? "YES" : "NO",
+      nausea: formNausea ? "YES" : "NO",
+      fluidStatus,
+      fluidStatusMsg,
+      notes: formNotes.trim() || "--",
+      noteKey: null,
+    };
+    onSave(newEntry);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-150 no-scrollbar">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h2 className="text-lg sm:text-xl font-bold text-[#1E3A8A] tracking-tight underline decoration-[#2563EB] decoration-2 underline-offset-4">
+            {language === "ES" ? "Registrar Nuevo Control de Peso" : "Entry New Weight Log"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-3.5">
+          {/* Top 3 KPI Cards: Date, Morning Weight, Evening Weight */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* Date */}
+            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <label className="text-[11px] font-semibold text-slate-500 block leading-tight">
+                  {language === "ES" ? "Fecha" : "Date"}
+                </label>
+                <input
+                  type="text"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
+                />
+              </div>
+            </div>
+
+            {/* Morning Weight */}
+            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
+                <Scale className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <label className="text-[11px] font-semibold text-slate-500 block leading-tight truncate">
+                  {language === "ES" ? "Peso Mañana" : "Morning Weight (Lbs)"}
+                </label>
+                <input
+                  type="text"
+                  value={formMorning}
+                  onChange={(e) => setFormMorning(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
+                />
+              </div>
+            </div>
+
+            {/* Evening Weight */}
+            <div className="rounded-2xl bg-[#F0F5FF] border border-blue-100/60 p-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
+                <Scale className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <label className="text-[11px] font-semibold text-slate-500 block leading-tight truncate">
+                  {language === "ES" ? "Peso Tarde" : "Evening Weight (Lbs)"}
+                </label>
+                <input
+                  type="text"
+                  value={formEvening}
+                  onChange={(e) => setFormEvening(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none mt-0.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Fluid Intake & Fluid Goal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800 block">
+                {language === "ES" ? "Ingesta de Líquidos" : "Fluid Intake"}
+              </label>
+              <input
+                type="text"
+                value={formIntake}
+                onChange={(e) => setFormIntake(e.target.value)}
+                placeholder="48 OZ"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800 block">
+                {language === "ES" ? "Meta de Líquidos" : "Fluid Goal"}
+              </label>
+              <input
+                type="text"
+                value={formGoal}
+                onChange={(e) => setFormGoal(e.target.value)}
+                placeholder="48 OZ"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              />
+            </div>
+          </div>
+
+          {/* Goal Met Row */}
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5">
+            <span className="text-xs sm:text-sm font-bold text-slate-800">
+              {language === "ES" ? "Meta Cumplida" : "Goal Met"}
+            </span>
+            <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+              <button
+                type="button"
+                onClick={() => setFormGoalMet(true)}
+                className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  formGoalMet
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-700 hover:text-slate-900"
+                }`}
+              >
+                {language === "ES" ? "Sí" : "Yes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormGoalMet(false)}
+                className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  !formGoalMet
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-700 hover:text-slate-900"
+                }`}
+              >
+                {language === "ES" ? "No" : "No"}
+              </button>
+            </div>
+          </div>
+
+          {/* Fluid Status Check Section */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-3 shadow-2xs">
+            {/* Section Header */}
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <Droplets className="h-3.5 w-3.5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {language === "ES" ? "Control del Estado Hídrico" : "Fluid Status Check"}
+                </h3>
+              </div>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                {language === "ES"
+                  ? "Ayúdenos a comprender cómo se siente después de la diálisis."
+                  : "Help us understand how you’re feeling after dialysis."}
+              </p>
+            </div>
+
+            {/* Live EDW Comparison Card */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-blue-100/70 bg-[#F0F5FF]/80 p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
+                  <Scale className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="text-xs font-bold text-slate-900">
+                      {language === "ES" ? "Peso Seco Estimado (EDW):" : "Estimated Dry Weight (EDW):"}
+                    </span>
+                    <span className="text-xs font-bold text-blue-700">
+                      {patientEdw} lbs
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      ({weightDiff >= 0 ? `+${weightDiff}` : `${weightDiff}`} lbs)
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-600 mt-0.5">
+                    {language === "ES"
+                      ? "Evaluación automática por peso y síntomas (sin fines de diagnóstico):"
+                      : "Automatic evaluation via weight & symptoms (non-diagnostic):"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="self-start sm:self-center shrink-0 flex flex-col items-start sm:items-end">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${statusBadgeClass}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {statusLabel}
+                </span>
+                <span className="text-[11px] font-bold text-slate-700 mt-0.5">
+                  {supportingMsg}
+                </span>
+              </div>
+            </div>
+
+            {/* Subsection 1: Possible Fluid Overload */}
+            <div className="space-y-2 pt-1 border-t border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-600" />
+                <h4 className="text-xs font-bold text-slate-800">
+                  {language === "ES" ? "Posible Sobrecarga de Líquidos" : "Possible Fluid Overload"}
+                </h4>
+              </div>
+
+              <div className="space-y-1.5">
+                {/* Swelling */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Hinchazón" : "Swelling"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormSwelling(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formSwelling
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormSwelling(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formSwelling
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Shortness of Breath */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Falta de Aire" : "Shortness of Breath"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormSob(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formSob
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormSob(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formSob
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sudden / Rapid Weight Gain */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Aumento de Peso Repentino / Rápido" : "Sudden / Rapid Weight Gain"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormRapidGain(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formRapidGain
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormRapidGain(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formRapidGain
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Subsection 2: Possible Too Much Fluid Removed */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                <h4 className="text-xs font-bold text-slate-800">
+                  {language === "ES" ? "Posible Exceso de Líquido Eliminado" : "Possible Too Much Fluid Removed"}
+                </h4>
+              </div>
+
+              <div className="space-y-1.5">
+                {/* Dizziness */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Mareos" : "Dizziness"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormDizziness(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formDizziness
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDizziness(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formDizziness
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cramping */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Calambres" : "Cramping"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormCramping(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formCramping
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormCramping(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formCramping
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weakness (Reused existing field) */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Debilidad" : "Weakness"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormWeakness(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formWeakness
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormWeakness(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formWeakness
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Nausea */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                    {language === "ES" ? "Náuseas" : "Nausea"}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormNausea(true)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        formNausea
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "Sí" : "Yes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormNausea(false)}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !formNausea
+                          ? "bg-white text-slate-900 shadow-xs"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                    >
+                      {language === "ES" ? "No" : "No"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Urinary Output (24 Hours) Card */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-2.5">
+            <div className="flex items-baseline gap-1.5">
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                {language === "ES" ? "Gasto Urinario" : "Urinary Output"}
+              </h3>
+              <span className="text-[11px] font-semibold text-slate-500">
+                {language === "ES" ? "(24 Horas)" : "(24 Hours)"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-2.5">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-500 block">
+                  {language === "ES" ? "Cantidad" : "Amount"}
+                </label>
+                <div className="relative">
+                  <select
+                    value={formUoAmount}
+                    onChange={(e) => setFormUoAmount(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 cursor-pointer pr-7 shadow-2xs"
+                  >
+                    <option value="Moderate">{language === "ES" ? "Moderada" : "Moderate"}</option>
+                    <option value="Low">{language === "ES" ? "Baja" : "Low"}</option>
+                    <option value="Normal">{language === "ES" ? "Normal" : "Normal"}</option>
+                    <option value="High">{language === "ES" ? "Alta" : "High"}</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-500 block">
+                  {language === "ES" ? "Tendencia" : "Trend"}
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormUoTrend("decreasing")}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formUoTrend === "decreasing"
+                        ? "bg-red-50 border-2 border-red-500 text-red-700 shadow-2xs"
+                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-white">
+                      <ArrowDown className="h-2.5 w-2.5 stroke-[3]" />
+                    </span>
+                    <span className="truncate text-[11px] sm:text-xs">
+                      {language === "ES" ? "Disminuyendo" : "Decreasing"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormUoTrend("noChange")}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formUoTrend === "noChange"
+                        ? "bg-blue-50 border-2 border-blue-500 text-blue-700 shadow-2xs"
+                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                      <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                    </span>
+                    <span className="truncate text-[11px] sm:text-xs">
+                      {language === "ES" ? "Sin Cambios" : "No Change"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormUoTrend("increasing")}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formUoTrend === "increasing"
+                        ? "bg-emerald-50 border-2 border-emerald-500 text-emerald-700 shadow-2xs"
+                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                      <ArrowUp className="h-2.5 w-2.5 stroke-[3]" />
+                    </span>
+                    <span className="truncate text-[11px] sm:text-xs">
+                      {language === "ES" ? "Aumentando" : "Increasing"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes (Optional) Card */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-1.5">
+            <label className="text-xs font-bold text-slate-800 block">
+              {language === "ES" ? "Notas (Opcional)" : "Notes (Optional)"}
+            </label>
+            <textarea
+              rows={2}
+              value={formNotes}
+              onChange={(e) => setFormNotes(e.target.value)}
+              placeholder={
+                language === "ES"
+                  ? "Tomé todos los medicamentos después de la sesión."
+                  : "Took all meds after session."
+              }
+              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
+            />
+          </div>
+
+          {/* Footer Actions */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-11 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+            >
+              {language === "ES" ? "Cancelar" : "Cancel"}
+            </button>
+            <button
+              type="submit"
+              className="flex h-11 items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-xs hover:shadow cursor-pointer active:scale-[0.98]"
+            >
+              {language === "ES" ? "Guardar Registro" : "Save Entry"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function RecentEntries({
+  entries,
+  onOpenAddModal,
+}: {
+  entries: WeightFluidEntry[];
+  onOpenAddModal: () => void;
+}) {
   const { language, dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
-
-  const rawEntries = [
-    {
-      dateEn: "May 10, 2024",
-      dateEs: "10 May, 2024",
-      morning: "100",
-      evening: "182",
-      uo: "High",
-      intake: "50",
-      goal: "Above Goal",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "--",
-      noteKey: null,
-    },
-    {
-      dateEn: "May 31, 2024",
-      dateEs: "31 May, 2024",
-      morning: "123",
-      evening: "136",
-      uo: "High",
-      intake: "40",
-      goal: "Goal Met",
-      swelling: "Mild",
-      sob: "NO",
-      weakness: "NO",
-      notes: "Felt good today",
-      noteKey: "feltGood",
-    },
-    {
-      dateEn: "June 7, 2024",
-      dateEs: "7 Jun, 2024",
-      morning: "95",
-      evening: "150",
-      uo: "High",
-      intake: "45",
-      goal: "Above Goal",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "Need to push harder",
-      noteKey: "needToPush",
-    },
-    {
-      dateEn: "June 14, 2024",
-      dateEs: "14 Jun, 2024",
-      morning: "110",
-      evening: "170",
-      uo: "High",
-      intake: "55",
-      goal: "Goal Met",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "Strong finish",
-      noteKey: "strongFinish",
-    },
-    {
-      dateEn: "June 21, 2024",
-      dateEs: "21 Jun, 2024",
-      morning: "118",
-      evening: "190",
-      uo: "High",
-      intake: "60",
-      goal: "Above Goal",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "Best performance yet",
-      noteKey: "bestPerformance",
-    },
-    {
-      dateEn: "June 28, 2024",
-      dateEs: "28 Jun, 2024",
-      morning: "102",
-      evening: "140",
-      uo: "High",
-      intake: "35",
-      goal: "Goal Met",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "Felt tired",
-      noteKey: "feltTired",
-    },
-    {
-      dateEn: "July 5, 2024",
-      dateEs: "5 Jul, 2024",
-      morning: "115",
-      evening: "165",
-      uo: "High",
-      intake: "50",
-      goal: "Above Goal",
-      swelling: "None",
-      sob: "NO",
-      weakness: "NO",
-      notes: "--",
-      noteKey: null,
-    },
-  ];
 
   const translateGoal = (goal: string) => {
     if (goal === "Goal Met") return w?.recentEntries?.values?.goalMet || "Goal Met";
@@ -698,8 +1405,11 @@ function RecentEntries() {
   };
 
   const translateSwelling = (swelling: string) => {
-    if (swelling === "None") return w?.recentEntries?.values?.none || "None";
+    if (swelling === "None" || swelling === "NO") return w?.recentEntries?.values?.none || (language === "ES" ? "Ninguna" : "None");
+    if (swelling === "YES") return language === "ES" ? "Sí" : "Yes";
     if (swelling === "Mild") return w?.recentEntries?.values?.mild || "Mild";
+    if (swelling === "Moderate") return language === "ES" ? "Moderada" : "Moderate";
+    if (swelling === "Severe") return language === "ES" ? "Grave" : "Severe";
     return swelling;
   };
 
@@ -739,7 +1449,8 @@ function RecentEntries() {
         </h2>
         <button
           type="button"
-          className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
+          onClick={onOpenAddModal}
+          className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98]"
         >
           <Plus className="h-5 w-5" />
           {w?.recentEntries?.addNewEntry || "Add New Entry"}
@@ -761,7 +1472,7 @@ function RecentEntries() {
               </tr>
             </thead>
             <tbody>
-              {rawEntries.map((entry) => {
+              {entries.map((entry, index) => {
                 const dateLabel = language === "ES" ? entry.dateEs : entry.dateEn;
                 const isGoalMet = entry.goal === "Goal Met";
                 const goalLabel = translateGoal(entry.goal);
@@ -773,10 +1484,10 @@ function RecentEntries() {
 
                 return (
                   <tr
-                    key={entry.dateEn}
-                    className="border-b border-dashed border-[#C4CDD5] last:border-b-0"
+                    key={entry.id || `${entry.dateEn}-${index}`}
+                    className="border-b border-dashed border-[#C4CDD5] last:border-b-0 hover:bg-slate-50/60 transition-colors"
                   >
-                    <td className="px-3 py-3 text-[#1C252E]">{dateLabel}</td>
+                    <td className="px-3 py-3 text-[#1C252E] font-semibold">{dateLabel}</td>
                     <td className="px-3 py-3 text-[#1C252E]">{entry.morning}</td>
                     <td className="px-3 py-3 text-[#1C252E]">{entry.evening}</td>
                     <td className="px-3 py-3">
@@ -808,19 +1519,37 @@ export default function FluidTrackerPage() {
   const { dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
 
+  const [entries, setEntries] = useState<WeightFluidEntry[]>(INITIAL_ENTRIES);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleSaveEntry = (newEntry: WeightFluidEntry) => {
+    setEntries([newEntry, ...entries]);
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
           {w?.title || "Weight & Fluid Management Center"}
         </h1>
-        <button
-          type="button"
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
-        >
-          <Calendar className="h-6 w-6" />
-          Jun
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-xs transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98]"
+          >
+            <Plus className="h-5 w-5" />
+            <span>{w?.recentEntries?.addNewEntry || "Add New Entry"}</span>
+          </button>
+          <button
+            type="button"
+            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer"
+          >
+            <Calendar className="h-6 w-6" />
+            Jun
+          </button>
+        </div>
       </div>
 
       <MetricCards />
@@ -836,7 +1565,17 @@ export default function FluidTrackerPage() {
         <AlertsInsights />
       </section>
 
-      <RecentEntries />
+      <RecentEntries
+        entries={entries}
+        onOpenAddModal={() => setIsModalOpen(true)}
+      />
+
+      {/* Entry New Weight Log Modal */}
+      <AddWeightLogModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEntry}
+      />
     </div>
   );
 }
