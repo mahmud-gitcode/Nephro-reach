@@ -155,6 +155,7 @@ export default function SymptomDetailPage() {
                 alt="NephroReach"
                 width={48}
                 height={32}
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain p-1"
               />
             </div>
@@ -180,6 +181,7 @@ export default function SymptomDetailPage() {
                 alt="NephroReach"
                 width={48}
                 height={32}
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain p-1"
               />
             </div>

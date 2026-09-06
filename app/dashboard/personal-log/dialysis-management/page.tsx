@@ -151,11 +151,67 @@ const COMMON_MEDICATION_GROUPS: CommonMedCategory[] = [
   },
 ];
 
+interface SymptomItem {
+  id: string;
+  label: string;
+  labelEs: string;
+  defaultChecked: boolean;
+}
+
+const SYMPTOM_COLUMNS: SymptomItem[][] = [
+  // Column 1
+  [
+    { id: "swelling", label: "Swelling", labelEs: "Hinchazón", defaultChecked: true },
+    { id: "shortness_breath", label: "Shortness of Breath", labelEs: "Falta de aire", defaultChecked: true },
+    { id: "diff_sleeping_flat", label: "Difficulty Sleeping Flat", labelEs: "Dificultad para dormir plano", defaultChecked: false },
+    { id: "rapid_weight_gain", label: "Rapid Weight Gain", labelEs: "Aumento rápido de peso", defaultChecked: false },
+    { id: "decreased_appetite", label: "Decreased Appetite", labelEs: "Disminución del apetito", defaultChecked: false },
+    { id: "fatigue", label: "Fatigue", labelEs: "Fatiga", defaultChecked: true },
+    { id: "itching", label: "Itching", labelEs: "Picazón", defaultChecked: true },
+  ],
+  // Column 2
+  [
+    { id: "restless_legs", label: "Restless Legs", labelEs: "Piernas inquietas", defaultChecked: false },
+    { id: "constipation", label: "Constipation", labelEs: "Estreñimiento", defaultChecked: false },
+    { id: "diarrhea", label: "Diarrhea", labelEs: "Diarrea", defaultChecked: false },
+    { id: "nausea", label: "Nausea", labelEs: "Náuseas", defaultChecked: false },
+    { id: "access_redness", label: "Access Redness", labelEs: "Enrojecimiento del acceso", defaultChecked: false },
+    { id: "access_bleeding", label: "Access Bleeding", labelEs: "Sangrado del acceso", defaultChecked: false },
+    { id: "fever", label: "Fever", labelEs: "Fiebre", defaultChecked: false },
+  ],
+  // Column 3
+  [
+    { id: "chills", label: "Chills", labelEs: "Escalofríos", defaultChecked: false },
+    { id: "muscle_aches", label: "Muscle Aches", labelEs: "Dolores musculares", defaultChecked: false },
+    { id: "anxiety", label: "Anxiety", labelEs: "Ansiedad", defaultChecked: false },
+    { id: "depression", label: "Depression", labelEs: "Depresión", defaultChecked: false },
+    { id: "other", label: "Other", labelEs: "Otro", defaultChecked: false },
+  ],
+];
+
 export default function DialysisManagementPage() {
   const { language } = useLanguage();
 
   const [medications, setMedications] = useState<TreatmentMedication[]>(INITIAL_MEDICATIONS);
   const [providerOrders, setProviderOrders] = useState<ProviderOrder[]>(INITIAL_PROVIDER_ORDERS);
+
+  const [symptoms, setSymptoms] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    SYMPTOM_COLUMNS.forEach((col) => {
+      col.forEach((item) => {
+        initial[item.id] = item.defaultChecked;
+      });
+    });
+    return initial;
+  });
+  const [otherSymptomText, setOtherSymptomText] = useState("");
+
+  const toggleSymptom = (id: string) => {
+    setSymptoms((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   const [checkedCommonMeds, setCheckedCommonMeds] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -479,7 +535,75 @@ export default function DialysisManagementPage() {
         </div>
       </section>
 
-      {/* SECTION 3: COMMON DIALYSIS MEDICATIONS */}
+      {/* SECTION 3: SYMPTOMS BETWEEN TREATMENTS */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="pb-3 border-b border-slate-100">
+          <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+            {language === "ES"
+              ? "Síntomas Entre Tratamientos"
+              : "Symptoms Between Treatments"}
+          </h2>
+          <p className="text-xs font-medium text-slate-500 mt-1">
+            {language === "ES"
+              ? "Seleccione todos los que correspondan"
+              : "Select all that apply"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
+          {SYMPTOM_COLUMNS.map((col, colIdx) => (
+            <div key={colIdx} className="space-y-3.5">
+              {col.map((item) => {
+                const isChecked = Boolean(symptoms[item.id]);
+                return (
+                  <div key={item.id} className="space-y-2">
+                    <label
+                      onClick={() => toggleSymptom(item.id)}
+                      className="flex items-center gap-3 cursor-pointer select-none group"
+                    >
+                      <div
+                        className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
+                          isChecked
+                            ? "bg-[#2563EB] border-[#2563EB] text-white"
+                            : "bg-white border-slate-300 group-hover:border-slate-400"
+                        }`}
+                      >
+                        {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
+                      <span className="text-sm font-semibold text-[#1e3a8a] group-hover:text-blue-900 transition-colors">
+                        {language === "ES" ? item.labelEs : item.label}
+                      </span>
+                    </label>
+
+                    {item.id === "other" && (
+                      <div className="pt-1">
+                        <input
+                          type="text"
+                          value={otherSymptomText}
+                          onChange={(e) => {
+                            setOtherSymptomText(e.target.value);
+                            if (!symptoms["other"] && e.target.value.trim()) {
+                              setSymptoms((prev) => ({ ...prev, other: true }));
+                            }
+                          }}
+                          placeholder={
+                            language === "ES"
+                              ? "Por favor especifique"
+                              : "Please specify"
+                          }
+                          className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 4: COMMON DIALYSIS MEDICATIONS */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
         <div className="pb-4 border-b border-slate-100">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">

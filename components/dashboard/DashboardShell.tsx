@@ -252,7 +252,8 @@ function Sidebar({
           width={240}
           height={190}
           priority
-          className="h-[190px] w-[240px] shrink-0 object-contain"
+          style={{ width: "auto", height: "auto" }}
+          className="max-h-[190px] max-w-[240px] shrink-0 object-contain"
         />
         {onClose && (
           <button
