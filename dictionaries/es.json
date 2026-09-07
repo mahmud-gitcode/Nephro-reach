@@ -434,7 +434,7 @@
       "severeBleeding": "Sangrado Intenso",
       "severeHyperkalemia": "Síntomas de Hiperpotasemia Grave",
       "feverDialysisCatheter": "Fiebre con Catéter de Diálisis",
-      "confusionMentalStatus": "CONFUSIÓN O CAMBIOS EN EL ESTADO MENTAL"
+      "confusionMentalStatus": "Confusión o Cambios en el Estado Mental"
     },
     "detail": {
       "urgentNotice": "Busque Atención de Emergencia Inmediatamente",
@@ -1497,6 +1497,11 @@
       "savedMessage": "¡Preferencias guardadas con éxito!",
       "items": [
         {
+          "id": "medicationReminders",
+          "title": "Recordatorios de Medicamentos",
+          "description": "Notificaciones y alertas diarias para tus horarios de medicamentos programados"
+        },
+        {
           "id": "weeklyCheckIn",
           "title": "Recordatorios de Chequeo Semanal",
           "description": "Reciba recordatorios para completar su chequeo semanal"
@@ -1578,8 +1583,8 @@
     },
     "curriculum": {
       "title": "Progreso del Currículo",
-      "weekBadge": "Semana 1 de 8",
-      "weekLabel": "Semana 1",
+      "weekBadge": "Día 1 de 21",
+      "weekLabel": "Día 1",
       "moduleTitle": "Fundamentos de Concientización",
       "completed": "25% completado",
       "description": "Has comenzado a leer los materiales. No olvides completar el ejercicio de reflexión en tu diario."

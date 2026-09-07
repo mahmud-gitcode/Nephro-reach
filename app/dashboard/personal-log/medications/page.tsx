@@ -1,19 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
+  Bell,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
   FileText,
   Plus,
   Share2,
   Smile,
   UserPlus,
+  X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+
+export interface MedicationReminder {
+  id: string;
+  medicationName: string;
+  time: string;
+  frequency: string;
+  channels: ("in_app" | "sms")[];
+  enabled: boolean;
+  notes?: string;
+}
 
 const medicationsData = [
   {
@@ -93,6 +107,45 @@ const medicationsData = [
     endDate: "16/08/2013",
     pharmacy: "HealthPlus",
     status: "Stopped",
+  },
+];
+
+const INITIAL_REMINDERS: MedicationReminder[] = [
+  {
+    id: "r1",
+    medicationName: "Potassium",
+    time: "08:00 AM",
+    frequency: "Daily",
+    channels: ["in_app", "sms"],
+    enabled: true,
+    notes: "Take with breakfast",
+  },
+  {
+    id: "r2",
+    medicationName: "Norvasc",
+    time: "08:00 AM",
+    frequency: "Daily",
+    channels: ["in_app", "sms"],
+    enabled: true,
+    notes: "Hold morning dose on dialysis days until after run",
+  },
+  {
+    id: "r3",
+    medicationName: "Sevelamer",
+    time: "12:30 PM",
+    frequency: "With meals",
+    channels: ["in_app", "sms"],
+    enabled: true,
+    notes: "Chew thoroughly with first bite of lunch",
+  },
+  {
+    id: "r4",
+    medicationName: "Calcitriol",
+    time: "07:00 PM",
+    frequency: "Mon/Wed/Fri",
+    channels: ["in_app"],
+    enabled: true,
+    notes: "Take with evening meal",
   },
 ];
 
@@ -179,24 +232,16 @@ const alertsData = [
   {
     titleEn: "Doctor's Appointment Reminder",
     titleEs: "Recordatorio de Cita Médica",
-    timeEn: "Tomorrow at 3:00 PM",
-    timeEs: "Mañana a las 3:00 PM",
-    bodyEn: "Don't forget your appointment with Dr. Smith regarding your hypertension treatment.",
-    bodyEs: "No olvide su cita con el Dr. Smith con respecto a su tratamiento de hipertensión.",
-  },
-  {
-    titleEn: "Refill Alert",
-    titleEs: "Alerta de Resurtido",
-    timeEn: "2 days left",
-    timeEs: "Faltan 2 días",
-    bodyEn: "Your prescription for Atorvastatin 20 mg will run out soon.",
-    bodyEs: "Su receta de Atorvastatina 20 mg se terminará pronto.",
+    timeEn: "Tomorrow",
+    timeEs: "Mañana",
+    bodyEn: "Nephrology follow-up at 10:00 AM.",
+    bodyEs: "Seguimiento de nefrología a las 10:00 AM.",
   },
 ];
 
 const statusClass: Record<string, string> = {
   Active: "bg-emerald-50 text-emerald-600",
-  PRN: "bg-amber-50 text-amber-600",
+  PRN: "bg-blue-50 text-blue-600",
   Stopped: "bg-red-50 text-red-500",
   Taken: "bg-emerald-50 text-emerald-600",
   Late: "bg-amber-50 text-amber-600",
@@ -224,25 +269,41 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function MedicationMasterList() {
+function MedicationMasterList({
+  reminders,
+  onOpenReminderModal,
+}: {
+  reminders: MedicationReminder[];
+  onOpenReminderModal: (medName?: string) => void;
+}) {
   const { language, t } = useLanguage();
 
   return (
     <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SectionTitle number="1" title={t("medicationsLog.section1")} />
-        <Link
-          href="/dashboard/personal-log/medications/add"
-          className="flex h-12 w-fit items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700"
-        >
-          <Plus className="h-5 w-5" />
-          {t("medicationsLog.addMedication")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => onOpenReminderModal()}
+            className="flex h-12 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50/80 px-4 text-sm sm:text-base font-bold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer shadow-2xs"
+          >
+            <Bell className="h-4 w-4 text-blue-600" />
+            <span>{language === "ES" ? "Configurar Recordatorios" : "Set Medication Reminders"}</span>
+          </button>
+          <Link
+            href="/dashboard/personal-log/medications/add"
+            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm sm:text-base font-bold tracking-[0.08px] text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+          >
+            <Plus className="h-5 w-5" />
+            <span>{t("medicationsLog.addMedication")}</span>
+          </Link>
+        </div>
       </div>
 
       <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-[1080px] w-full text-left text-sm">
+          <table className="min-w-[1140px] w-full text-left text-sm">
             <thead className="bg-[#F1F5FA] text-sm font-medium text-slate-950">
               <tr>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.name")}</th>
@@ -250,6 +311,9 @@ function MedicationMasterList() {
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.route")}</th>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.frequency")}</th>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.purpose")}</th>
+                <th className="border-b border-slate-200 px-3 py-3 text-center">
+                  {language === "ES" ? "Hora Recordatorio" : "Reminder Alert"}
+                </th>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.startDate")}</th>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.endDate")}</th>
                 <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.pharmacy")}</th>
@@ -257,25 +321,53 @@ function MedicationMasterList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-dashed divide-slate-200">
-              {medicationsData.map((medication) => (
-                <tr key={`${medication.name}-${medication.startDate}`}>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{medication.name}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{medication.dose}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-950">{medication.route}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">
-                    {language === "ES" ? medication.frequencyEs : medication.frequencyEn}
-                  </td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">
-                    {language === "ES" ? medication.purposeEs : medication.purposeEn}
-                  </td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{medication.startDate}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{medication.endDate}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{medication.pharmacy}</td>
-                  <td className="px-3 py-2.5">
-                    <StatusBadge status={medication.status} />
-                  </td>
-                </tr>
-              ))}
+              {medicationsData.map((medication) => {
+                const rem = reminders.find(
+                  (r) => r.medicationName.toLowerCase() === medication.name.toLowerCase() && r.enabled
+                );
+
+                return (
+                  <tr key={`${medication.name}-${medication.startDate}`} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.name}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.dose}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-950">{medication.route}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">
+                      {language === "ES" ? medication.frequencyEs : medication.frequencyEn}
+                    </td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">
+                      {language === "ES" ? medication.purposeEs : medication.purposeEn}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {rem ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpenReminderModal(medication.name)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer"
+                          title="Click to edit reminder time and notification"
+                        >
+                          <Bell className="h-3 w-3 text-blue-600" />
+                          <span>{rem.time}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onOpenReminderModal(medication.name)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-blue-600 hover:underline cursor-pointer"
+                        >
+                          <Bell className="h-3 w-3" />
+                          <span>{language === "ES" ? "+ Recordatorio" : "+ Set Alert"}</span>
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.startDate}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.endDate}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.pharmacy}</td>
+                    <td className="px-3 py-2.5">
+                      <StatusBadge status={medication.status} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -284,7 +376,13 @@ function MedicationMasterList() {
   );
 }
 
-function DoseSchedule() {
+function DoseSchedule({
+  reminders,
+  onOpenReminderModal,
+}: {
+  reminders: MedicationReminder[];
+  onOpenReminderModal: (medName?: string) => void;
+}) {
   const { language, t } = useLanguage();
 
   return (
@@ -323,30 +421,45 @@ function DoseSchedule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-dashed divide-slate-200">
-              {doseScheduleData.map((dose, idx) => (
-                <tr key={`${dose.time}-${idx}`}>
-                  <td className="px-3 py-3 font-medium text-slate-800">{dose.time}</td>
-                  <td className="px-3 py-3">
-                    <p className="font-medium text-slate-950">{dose.medication}</p>
-                    <p className="text-xs text-slate-600">{dose.generic}</p>
-                  </td>
-                  <td className="px-3 py-3 font-medium text-slate-950">
-                    {language === "ES" ? dose.instructionsEs : dose.instructionsEn}
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge status={dose.status} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <p className={`font-medium ${dose.status === "Late" ? "text-amber-600" : "text-slate-800"}`}>
-                      {dose.stamp}
-                    </p>
-                    <p className="text-xs text-slate-600">{t("medicationsLog.today")}</p>
-                  </td>
-                  <td className="px-3 py-3 font-medium text-slate-800">
-                    {language === "ES" ? dose.sideEffectsEs : dose.sideEffectsEn}
-                  </td>
-                </tr>
-              ))}
+              {doseScheduleData.map((dose, idx) => {
+                const rem = reminders.find(
+                  (r) => r.medicationName.toLowerCase() === dose.medication.toLowerCase() && r.enabled
+                );
+
+                return (
+                  <tr key={`${dose.time}-${idx}`}>
+                    <td className="px-3 py-3 font-medium text-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <span>{dose.time}</span>
+                        {rem && (
+                          <span title={`Reminder set for ${rem.time}`}>
+                            <Bell className="h-3 w-3 text-blue-600 shrink-0" />
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <p className="font-medium text-slate-950">{dose.medication}</p>
+                      <p className="text-xs text-slate-600">{dose.generic}</p>
+                    </td>
+                    <td className="px-3 py-3 font-medium text-slate-950">
+                      {language === "ES" ? dose.instructionsEs : dose.instructionsEn}
+                    </td>
+                    <td className="px-3 py-3">
+                      <StatusBadge status={dose.status} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <p className={`font-medium ${dose.status === "Late" ? "text-amber-600" : "text-slate-800"}`}>
+                        {dose.stamp}
+                      </p>
+                      <p className="text-xs text-slate-600">{t("medicationsLog.today")}</p>
+                    </td>
+                    <td className="px-3 py-3 font-medium text-slate-800">
+                      {language === "ES" ? dose.sideEffectsEs : dose.sideEffectsEn}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -575,7 +688,13 @@ function AdherenceChart() {
   );
 }
 
-function AlertsAndMood() {
+function AlertsAndMood({
+  reminders,
+  onOpenReminderModal,
+}: {
+  reminders: MedicationReminder[];
+  onOpenReminderModal: (medName?: string) => void;
+}) {
   const { language, t } = useLanguage();
   const [selectedMood, setSelectedMood] = useState(1);
   const [notes, setNotes] = useState("");
@@ -591,10 +710,49 @@ function AlertsAndMood() {
   return (
     <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <div className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-        <SectionTitle number="4" title={t("medicationsLog.section4")} />
-        <div className="mt-3 max-h-[342px] space-y-1 overflow-y-auto pr-1">
+        <div className="flex items-center justify-between">
+          <SectionTitle number="4" title={t("medicationsLog.section4")} />
+          <button
+            type="button"
+            onClick={() => onOpenReminderModal()}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            <span>{language === "ES" ? "+ Nuevo Recordatorio" : "+ Add Reminder"}</span>
+          </button>
+        </div>
+
+        {/* Scheduled Reminders Ribbon */}
+        {reminders && reminders.filter((r) => r.enabled).length > 0 && (
+          <div className="mt-3 p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 space-y-1.5">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5 text-blue-600" />
+              <span>{language === "ES" ? "Recordatorios Programados Activos" : "Active Scheduled Dose Reminders"}</span>
+            </p>
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              {reminders
+                .filter((r) => r.enabled)
+                .map((rem) => (
+                  <button
+                    key={rem.id}
+                    type="button"
+                    onClick={() => onOpenReminderModal(rem.medicationName)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-xs font-semibold text-slate-800 hover:border-blue-400 hover:shadow-2xs transition-all cursor-pointer"
+                  >
+                    <span className="font-bold text-blue-700">{rem.medicationName}</span>
+                    <span className="text-slate-500">• {rem.time}</span>
+                    <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1 rounded">
+                      {rem.channels.includes("sms") ? "SMS+App" : "App"}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 max-h-[290px] space-y-1 overflow-y-auto pr-1">
           {alertsData.map((alert, idx) => (
-            <article key={idx} className="rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors">
+            <article key={idx} className="rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-medium leading-5 text-slate-950">
                   {language === "ES" ? alert.titleEs : alert.titleEn}
@@ -649,7 +807,7 @@ function AlertsAndMood() {
             type="button"
             className="mt-3 flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
           >
-            {t("medicationsLog.mood.save")}
+            {t("medicationsLog.mood.saveLog")}
           </button>
         </div>
       </div>
@@ -662,24 +820,21 @@ function ExportReporting() {
 
   const reports = [
     {
-      title: t("medicationsLog.reports.weeklySummary"),
-      body: t("medicationsLog.reports.weeklySummaryDesc"),
-      action: t("medicationsLog.reports.generatePdf"),
-      icon: FileText,
+      title: t("medicationsLog.export.pdfTitle"),
+      desc: t("medicationsLog.export.pdfDesc"),
+      action: t("medicationsLog.export.downloadPdf"),
       isShare: false,
     },
     {
-      title: t("medicationsLog.reports.fullList"),
-      body: t("medicationsLog.reports.fullListDesc"),
-      action: t("medicationsLog.reports.generatePdf"),
-      icon: FileText,
+      title: t("medicationsLog.export.excelTitle"),
+      desc: t("medicationsLog.export.excelDesc"),
+      action: t("medicationsLog.export.downloadExcel"),
       isShare: false,
     },
     {
-      title: t("medicationsLog.reports.shareProvider"),
-      body: t("medicationsLog.reports.shareProviderDesc"),
-      action: t("medicationsLog.reports.shareNow"),
-      icon: UserPlus,
+      title: t("medicationsLog.export.shareTitle"),
+      desc: t("medicationsLog.export.shareDesc"),
+      action: t("medicationsLog.export.shareReport"),
       isShare: true,
     },
   ];
@@ -687,16 +842,24 @@ function ExportReporting() {
   return (
     <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
       <SectionTitle number="6" title={t("medicationsLog.section6")} />
+
       <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {reports.map((report) => (
-          <article key={report.title} className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
-                <report.icon className="h-5 w-5 text-slate-800" />
-              </span>
-              <div>
-                <h3 className="text-xl font-medium leading-8 text-slate-950">{report.title}</h3>
-                <p className="mt-2 text-base leading-6 text-slate-600">{report.body}</p>
+          <article
+            key={report.title}
+            className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5"
+          >
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  {report.isShare ? <UserPlus className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+                </span>
+                <h3 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+                  {report.title}
+                </h3>
+              </div>
+              <div className="mt-4 border-t border-slate-200 pt-2">
+                <p className="text-sm leading-5 tracking-[0.07px] text-slate-500">{report.desc}</p>
               </div>
             </div>
             <button
@@ -733,8 +896,335 @@ function Disclaimer() {
   );
 }
 
+function SetMedicationReminderModal({
+  isOpen,
+  onClose,
+  medicationList,
+  initialMedication,
+  existingReminder,
+  onSaveReminder,
+  onDeleteReminder,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  medicationList: string[];
+  initialMedication?: string;
+  existingReminder?: MedicationReminder | null;
+  onSaveReminder: (reminder: MedicationReminder) => void;
+  onDeleteReminder?: (medicationName: string) => void;
+}) {
+  const { language } = useLanguage();
+
+  const [selectedMed, setSelectedMed] = useState(initialMedication || medicationList[0] || "Potassium");
+  const [reminderTime, setReminderTime] = useState(existingReminder?.time || "08:00 AM");
+  const [frequency, setFrequency] = useState(existingReminder?.frequency || "Daily");
+  const [channels, setChannels] = useState<("in_app" | "sms")[]>(existingReminder?.channels || ["in_app", "sms"]);
+  const [enabled, setEnabled] = useState(existingReminder ? existingReminder.enabled : true);
+  const [notes, setNotes] = useState(existingReminder?.notes || "");
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (initialMedication) {
+      setSelectedMed(initialMedication);
+    }
+    if (existingReminder) {
+      setReminderTime(existingReminder.time);
+      setFrequency(existingReminder.frequency);
+      setChannels(existingReminder.channels);
+      setEnabled(existingReminder.enabled);
+      setNotes(existingReminder.notes || "");
+    }
+  }, [initialMedication, existingReminder]);
+
+  if (!isOpen) return null;
+
+  const toggleChannel = (ch: "in_app" | "sms") => {
+    if (channels.includes(ch)) {
+      if (channels.length > 1) {
+        setChannels(channels.filter((c) => c !== ch));
+      }
+    } else {
+      setChannels([...channels, ch]);
+    }
+  };
+
+  const presetTimes = [
+    { label: language === "ES" ? "Mañana (8:00 AM)" : "Morning (8:00 AM)", value: "08:00 AM" },
+    { label: language === "ES" ? "Mediodía (12:30 PM)" : "Midday (12:30 PM)", value: "12:30 PM" },
+    { label: language === "ES" ? "Tarde (6:30 PM)" : "Evening (6:30 PM)", value: "06:30 PM" },
+    { label: language === "ES" ? "Noche (10:00 PM)" : "Bedtime (10:00 PM)", value: "10:00 PM" },
+  ];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSaveReminder({
+      id: existingReminder?.id || Date.now().toString(),
+      medicationName: selectedMed,
+      time: reminderTime,
+      frequency,
+      channels,
+      enabled,
+      notes,
+    });
+    setSavedSuccess(true);
+    setTimeout(() => {
+      setSavedSuccess(false);
+      onClose();
+    }, 600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-7 text-left shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-600">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {language === "ES" ? "Configurar Recordatorio de Medicamento" : "Set Medication Reminder"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {language === "ES"
+                  ? "Programa alertas y notificaciones SMS para tus horarios de medicamentos."
+                  : "Schedule notifications and SMS alerts for your medication times."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {savedSuccess && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-semibold text-emerald-700 flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            <span>{language === "ES" ? "¡Recordatorio guardado exitosamente!" : "Reminder saved successfully!"}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              {language === "ES" ? "Medicamento" : "Medication"}
+            </label>
+            <select
+              value={selectedMed}
+              onChange={(e) => setSelectedMed(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              {medicationList.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              {language === "ES" ? "Horario del Recordatorio" : "Reminder Time"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {presetTimes.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setReminderTime(preset.value)}
+                  className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                    reminderTime === preset.value
+                      ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="pt-1 flex items-center gap-2">
+              <span className="text-xs text-slate-500">{language === "ES" ? "O ingresa hora exacta:" : "Or exact time:"}</span>
+              <input
+                type="text"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                placeholder="e.g. 08:30 AM"
+                className="w-32 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              {language === "ES" ? "Canales de Notificación" : "Notification Channels"}
+            </label>
+            <div className="flex flex-col gap-2 pt-0.5">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={channels.includes("in_app")}
+                  onChange={() => toggleChannel("in_app")}
+                  className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+                <span>{language === "ES" ? "Alerta en la Aplicación (Banner y Campana)" : "In-App Alert (Banner & Notification Bell)"}</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={channels.includes("sms")}
+                  onChange={() => toggleChannel("sms")}
+                  className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+                <span>{language === "ES" ? "Mensaje de Texto SMS al teléfono del paciente" : "SMS Text Message Alert to registered phone"}</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              {language === "ES" ? "Frecuencia de Repetición" : "Repeat Frequency"}
+            </label>
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="Daily">{language === "ES" ? "Todos los días (Daily)" : "Daily"}</option>
+              <option value="Mon/Wed/Fri">{language === "ES" ? "Días de diálisis (Lun/Mié/Vie)" : "Mon/Wed/Fri (Dialysis Days)"}</option>
+              <option value="Tue/Thu/Sat">{language === "ES" ? "Mar/Jue/Sáb" : "Tue/Thu/Sat"}</option>
+              <option value="Non-Dialysis Days">{language === "ES" ? "Días sin diálisis" : "Non-Dialysis Days Only"}</option>
+              <option value="PRN">{language === "ES" ? "Según sea necesario (PRN)" : "As Needed (PRN)"}</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              {language === "ES" ? "Notas o Instrucción Especial (Opcional)" : "Special Instructions / Notes (Optional)"}
+            </label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Take with a meal, avoid with calcium pills"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-medium text-slate-800 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+                className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+              <span>{language === "ES" ? "Recordatorio Activo" : "Reminder Active"}</span>
+            </label>
+
+            {existingReminder && onDeleteReminder && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteReminder(selectedMed);
+                  onClose();
+                }}
+                className="text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
+              >
+                {language === "ES" ? "Eliminar Recordatorio" : "Delete Reminder"}
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="submit"
+              className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 text-sm transition-colors shadow-sm cursor-pointer"
+            >
+              {language === "ES" ? "Guardar Recordatorio" : "Save Reminder"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer"
+            >
+              {language === "ES" ? "Cancelar" : "Cancel"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const LOCAL_STORAGE_REMINDERS_KEY = "nephroreach_medication_reminders_v1";
+
 export default function MedicationLogPage() {
   const { t } = useLanguage();
+
+  const [reminders, setReminders] = useState<MedicationReminder[]>(INITIAL_REMINDERS);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [selectedMedForReminder, setSelectedMedForReminder] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_REMINDERS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setReminders(parsed);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  const saveReminders = (updated: MedicationReminder[]) => {
+    setReminders(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_REMINDERS_KEY, JSON.stringify(updated));
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleOpenReminderModal = (medName?: string) => {
+    setSelectedMedForReminder(medName || medicationsData[0]?.name || "Potassium");
+    setIsReminderModalOpen(true);
+  };
+
+  const handleSaveReminder = (reminder: MedicationReminder) => {
+    const existingIndex = reminders.findIndex(
+      (r) => r.medicationName.toLowerCase() === reminder.medicationName.toLowerCase()
+    );
+    let updated: MedicationReminder[];
+    if (existingIndex >= 0) {
+      updated = [...reminders];
+      updated[existingIndex] = reminder;
+    } else {
+      updated = [reminder, ...reminders];
+    }
+    saveReminders(updated);
+  };
+
+  const handleDeleteReminder = (medicationName: string) => {
+    const updated = reminders.filter(
+      (r) => r.medicationName.toLowerCase() !== medicationName.toLowerCase()
+    );
+    saveReminders(updated);
+  };
+
+  const activeExistingReminder = selectedMedForReminder
+    ? reminders.find(
+        (r) => r.medicationName.toLowerCase() === selectedMedForReminder.toLowerCase()
+      )
+    : null;
+
+  const allMedNames = medicationsData.map((m) => m.name);
 
   return (
     <div className="space-y-6">
@@ -747,12 +1237,31 @@ export default function MedicationLogPage() {
         </p>
       </header>
 
-      <MedicationMasterList />
-      <DoseSchedule />
+      <MedicationMasterList
+        reminders={reminders}
+        onOpenReminderModal={handleOpenReminderModal}
+      />
+      <DoseSchedule
+        reminders={reminders}
+        onOpenReminderModal={handleOpenReminderModal}
+      />
       <AdherenceChart />
-      <AlertsAndMood />
+      <AlertsAndMood
+        reminders={reminders}
+        onOpenReminderModal={handleOpenReminderModal}
+      />
       <ExportReporting />
       <Disclaimer />
+
+      <SetMedicationReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+        medicationList={allMedNames}
+        initialMedication={selectedMedForReminder}
+        existingReminder={activeExistingReminder}
+        onSaveReminder={handleSaveReminder}
+        onDeleteReminder={handleDeleteReminder}
+      />
     </div>
   );
 }

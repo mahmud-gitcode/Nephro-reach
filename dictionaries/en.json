@@ -450,7 +450,7 @@
       "severeBleeding": "Severe Bleeding",
       "severeHyperkalemia": "Severe Hyperkalemia Symptoms",
       "feverDialysisCatheter": "Fever With Dialysis Catheter",
-      "confusionMentalStatus": "CONFUSION OR MENTAL STATUS CHANGES"
+      "confusionMentalStatus": "Confusion or Mental Status Changes"
     },
     "detail": {
       "urgentNotice": "Seek Emergency Care Immediately",
@@ -1513,6 +1513,11 @@
       "savedMessage": "Preferences saved successfully!",
       "items": [
         {
+          "id": "medicationReminders",
+          "title": "Medication Reminders",
+          "description": "Daily notifications and alerts for your scheduled medication times"
+        },
+        {
           "id": "weeklyCheckIn",
           "title": "Weekly Check-In Reminders",
           "description": "Get reminded to complete your weekly check-in"
@@ -1594,8 +1599,8 @@
     },
     "curriculum": {
       "title": "Curriculum Progress",
-      "weekBadge": "Week 1 of 8",
-      "weekLabel": "Week 1",
+      "weekBadge": "Day 1 of 21",
+      "weekLabel": "Day 1",
       "moduleTitle": "Foundations of Awareness",
       "completed": "25% complete",
       "description": "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."

@@ -1,73 +1,152 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { AlertTriangle, Phone, MapPin, PlayCircle, FileText } from "lucide-react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  Phone,
+  MapPin,
+  PlayCircle,
+  FileText,
+  ArrowLeft,
+  ShieldAlert,
+  CheckCircle2,
+  ChevronRight,
+  ListFilter,
+  Activity,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  BEFORE_THE_ER_TOPICS,
+  getBeforeTheErTopic,
+  SLUG_LIST,
+} from "@/lib/beforeTheErData";
 
-const SLUG_TO_KEY: Record<string, string> = {
-  "chest-pain": "chestPain",
-  "severe-fluid-overload": "severeFluidOverload",
-  "signs-of-stroke": "signsOfStroke",
-  "loss-of-consciousness": "lossOfConsciousness",
-  "severe-allergic-reactions": "severeAllergicReactions",
-  "severe-shortness-of-breath": "severeShortnessOfBreath",
-  "seizures": "seizures",
-  "dialysis-access-emergencies": "dialysisAccessEmergencies",
-  "severe-bleeding": "severeBleeding",
-  "severe-hyperkalemia-symptoms": "severeHyperkalemia",
-  "fever-with-dialysis-catheter": "feverDialysisCatheter",
-  "confusion-or-mental-status-changes": "confusionMentalStatus",
-};
-
-export default function SymptomDetailPage() {
+function SymptomDetailContent() {
   const params = useParams();
-  const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { language, t } = useLanguage();
+  const isEs = language === "ES";
 
   const rawSlug = (params?.slug as string) || "chest-pain";
-  const slug = rawSlug.toLowerCase().replace(/%20/g, "-");
+  const currentSlug = rawSlug.toLowerCase().replace(/%20/g, "-");
 
-  const symptomKey = SLUG_TO_KEY[slug];
-  const formattedTitle = symptomKey
-    ? t(`beforeTheEr.symptomsList.${symptomKey}`)
-    : rawSlug
-        .replace(/-/g, " ")
-        .replace(/%20/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
+  const currentTopic = useMemo(() => {
+    return getBeforeTheErTopic(currentSlug) || BEFORE_THE_ER_TOPICS["chest-pain"];
+  }, [currentSlug]);
 
-  const isChestPain = slug === "chest-pain";
+  const selectedParam = searchParams.get("selected");
+  const selectedSlugList = useMemo(() => {
+    if (!selectedParam) return [];
+    return selectedParam
+      .split(",")
+      .map((s) => s.trim().toLowerCase().replace(/%20/g, "-"))
+      .filter((s) => !!BEFORE_THE_ER_TOPICS[s]);
+  }, [selectedParam]);
 
-  const emergencySymptoms = isChestPain
-    ? [
-        t("beforeTheEr.detail.emergencySymptomsList.chestPressure"),
-        t("beforeTheEr.detail.emergencySymptomsList.chestTightness"),
-        t("beforeTheEr.detail.emergencySymptomsList.crushingChestPain"),
-        t("beforeTheEr.detail.emergencySymptomsList.painSpreading"),
-        t("beforeTheEr.detail.emergencySymptomsList.chestPainNausea"),
-      ]
-    : [
-        t("beforeTheEr.detail.emergencySymptomsList.severeOnset"),
-        t("beforeTheEr.detail.emergencySymptomsList.diffBreathing"),
-        t("beforeTheEr.detail.emergencySymptomsList.unusualWeakness"),
-        t("beforeTheEr.detail.emergencySymptomsList.rapidWorsening"),
-      ];
+  const title = isEs ? currentTopic.titleEs : currentTopic.titleEn;
+  const whatToWatchForFull = isEs
+    ? currentTopic.whatToWatchForFullEs
+    : currentTopic.whatToWatchForFullEn;
+  const symptomsList = isEs
+    ? currentTopic.symptomsListEs
+    : currentTopic.symptomsListEn;
+  const actionNote = isEs ? currentTopic.actionNoteEs : currentTopic.actionNoteEn;
+  const importantInList = isEs
+    ? currentTopic.importantInEs
+    : currentTopic.importantInEn;
 
-  const importantIn = isChestPain
-    ? [
-        t("beforeTheEr.detail.importantInList.dialysisPatients"),
-        t("beforeTheEr.detail.importantInList.kidneyFailure"),
-        t("beforeTheEr.detail.importantInList.diabetesHeart"),
-      ]
-    : [
-        t("beforeTheEr.detail.importantInList.dialysisPatients"),
-        t("beforeTheEr.detail.importantInList.kidneyFailure"),
-        t("beforeTheEr.detail.importantInList.highRisk"),
-      ];
+  function handleSelectTopic(newSlug: string) {
+    const query = selectedParam
+      ? `?selected=${encodeURIComponent(selectedParam)}`
+      : "";
+    router.push(`/dashboard/before-the-er/${newSlug}${query}`);
+  }
 
   return (
     <div className="w-full space-y-6">
+      {/* Top Breadcrumb & Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <Link
+          href="/dashboard/before-the-er"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>{isEs ? "Volver a Antes de Urgencias" : "Back to Before-the-ER"}</span>
+        </Link>
+
+        {/* Quick Topic Switcher Dropdown */}
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="topic-selector"
+            className="text-xs font-bold text-slate-500 hidden sm:inline-flex items-center gap-1"
+          >
+            <ListFilter className="h-3.5 w-3.5" />
+            <span>{isEs ? "Cambiar Tema:" : "Switch Topic:"}</span>
+          </label>
+          <select
+            id="topic-selector"
+            value={currentTopic.slug}
+            onChange={(e) => handleSelectTopic(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+          >
+            {SLUG_LIST.map((slug) => {
+              const item = BEFORE_THE_ER_TOPICS[slug];
+              const itemTitle = isEs ? item.titleEs : item.titleEn;
+              return (
+                <option key={slug} value={slug}>
+                  {itemTitle}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      </div>
+
+      {/* MULTIPLE SELECTED SYMPTOMS SWITCHER BAR (if patient selected > 1) */}
+      {selectedSlugList.length > 1 && (
+        <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+              <Activity className="h-4 w-4 text-blue-600" />
+              <span>
+                {isEs
+                  ? `Síntomas Seleccionados para Orientación (${selectedSlugList.length})`
+                  : `Selected Symptoms for Guidance (${selectedSlugList.length})`}
+              </span>
+            </p>
+            <span className="text-[11px] font-medium text-blue-700">
+              {isEs ? "Toca para ver cada guía" : "Tap any to view guide"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {selectedSlugList.map((slug) => {
+              const item = BEFORE_THE_ER_TOPICS[slug];
+              const itemTitle = isEs ? item.titleEs : item.titleEn;
+              const isActive = slug === currentTopic.slug;
+              return (
+                <button
+                  key={slug}
+                  type="button"
+                  onClick={() => handleSelectTopic(slug)}
+                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-700 border border-blue-200/80 hover:bg-blue-100/60"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span>{itemTitle}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* TOP EMERGENCY WARNING ALERT CARD */}
       <section className="rounded-3xl border border-red-200 bg-[#FFF5F5] p-6 space-y-4 shadow-xs">
         <div className="flex items-center gap-2.5 text-red-950 font-bold text-lg">
@@ -102,48 +181,161 @@ export default function SymptomDetailPage() {
 
       {/* MAIN SYMPTOM DETAILS CARD */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 space-y-6 shadow-xs">
-        <h1 className="text-2xl font-bold text-slate-900">{formattedTitle}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+              {isEs ? "Guía Antes de Urgencias™" : "Before-the-ER™ Guidance"}
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-0.5">
+              {title}
+            </h1>
+          </div>
 
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 space-y-5">
-          {/* Subsection 1 */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {t("beforeTheEr.detail.callEmergencyFor")}
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold ${
+              currentTopic.urgent
+                ? "bg-red-100 text-red-800 border border-red-200"
+                : "bg-amber-100 text-amber-800 border border-amber-200"
+            }`}
+          >
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span>
+              {currentTopic.urgent
+                ? isEs
+                  ? "Atención de Emergencia"
+                  : "Emergency Warning"
+                : isEs
+                ? "Atención Urgente"
+                : "Urgent Warning"}
+            </span>
+          </span>
+        </div>
+
+        {/* What to Watch For Section */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-5">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-black">
+                1
+              </span>
+              <span>{isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}</span>
             </h2>
-            <ul className="space-y-1.5 pl-6 text-xs font-medium text-slate-700 list-disc">
-              {emergencySymptoms.map((item, idx) => (
-                <li key={idx} className="leading-relaxed">
-                  {item}
+            <p className="text-xs text-slate-600 mt-1 pl-8">
+              {isEs
+                ? "Signos clínicos clave y señales de advertencia que requieren atención médica:"
+                : "Key clinical warning signs and symptoms that require medical evaluation:"}
+            </p>
+          </div>
+
+          {/* Full Reference Summary Box */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs sm:text-sm font-medium text-slate-800 leading-relaxed shadow-2xs">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              {isEs ? "Descripción Completa del Tema" : "Complete Guidance Overview"}
+            </p>
+            <p className="text-slate-900 font-semibold">{whatToWatchForFull}</p>
+          </div>
+
+          {/* Structured Warning Signs Checklist */}
+          <div className="space-y-2.5 pt-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 pl-1">
+              {isEs ? "Signos de Alarma a Vigilar:" : "Specific Warning Signs to Watch For:"}
+            </h3>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {symptomsList.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm font-medium text-slate-800 shadow-2xs leading-snug"
+                >
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Subsection 2 */}
-          <div className="space-y-3 pt-2">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {t("beforeTheEr.detail.importantIn")}
-            </h2>
-            <ul className="space-y-1.5 pl-6 text-xs font-medium text-slate-700 list-disc">
-              {importantIn.map((item, idx) => (
-                <li key={idx} className="leading-relaxed">
-                  {item}
+          {/* Emergency Directive Action Banner */}
+          {actionNote && (
+            <div className="rounded-xl border-2 border-red-200 bg-red-50/80 p-4 text-xs sm:text-sm font-bold text-red-950 flex items-start gap-3 shadow-xs">
+              <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="block text-[11px] uppercase tracking-wider text-red-700 font-extrabold mb-0.5">
+                  {isEs ? "Acción de Emergencia Inmediata" : "Immediate Action Directive"}
+                </span>
+                <p className="text-sm font-bold text-red-900 leading-snug">
+                  {actionNote}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Subsection 2: Especially Important In */}
+          <div className="space-y-3 pt-3 border-t border-slate-200/80">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-black">
+                  2
+                </span>
+                <span>{t("beforeTheEr.detail.importantIn")}</span>
+              </h2>
+              <p className="text-xs text-slate-600 mt-1 pl-8">
+                {isEs
+                  ? "Poblaciones de pacientes con mayor vulnerabilidad para este síntoma:"
+                  : "Patient populations with higher vulnerability for this condition:"}
+              </p>
+            </div>
+
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pl-0 sm:pl-8">
+              {importantInList.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 text-xs font-semibold text-emerald-950 flex items-start gap-2 leading-relaxed"
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
         </div>
+
+        {/* Bottom Action Footer */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <Link
+            href="/dashboard/before-the-er"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>
+              {isEs ? "Comprobar Otros Síntomas" : "Check Another Symptom"}
+            </span>
+          </Link>
+
+          <a
+            href="tel:911"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#EF4444] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-red-600 transition-colors"
+          >
+            <Phone className="h-4 w-4" />
+            <span>{t("beforeTheEr.detail.call911")}</span>
+          </a>
+        </div>
       </section>
 
       {/* RELATED EDUCATION CARD */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
-        <h2 className="text-lg font-bold text-slate-900">
-          {t("beforeTheEr.detail.relatedEducation")}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">
+            {t("beforeTheEr.detail.relatedEducation")}
+          </h2>
+          <Link
+            href="/dashboard/education-center"
+            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+          >
+            <span>{isEs ? "Ver Todos los Videos" : "View All Videos"}</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Video Item */}
           <Link
             href="/dashboard/education-center"
@@ -198,5 +390,19 @@ export default function SymptomDetailPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function SymptomDetailPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex h-64 w-full items-center justify-center text-slate-500 font-medium">
+          Loading Before-the-ER guidance...
+        </div>
+      }
+    >
+      <SymptomDetailContent />
+    </React.Suspense>
   );
 }

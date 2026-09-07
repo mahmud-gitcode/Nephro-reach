@@ -101,7 +101,11 @@ export default function BeforeTheErPage() {
   function handleGetGuidance() {
     if (selectedSymptoms.length > 0) {
       const slug = selectedSymptoms[0];
-      router.push(`/dashboard/before-the-er/${slug}`);
+      const query =
+        selectedSymptoms.length > 1
+          ? `?selected=${encodeURIComponent(selectedSymptoms.join(","))}`
+          : "";
+      router.push(`/dashboard/before-the-er/${slug}${query}`);
     }
   }
 

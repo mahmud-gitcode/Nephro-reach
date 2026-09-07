@@ -10,6 +10,11 @@ type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 const defaultNotifications = [
   {
+    id: "medicationReminders",
+    title: "Medication Reminders",
+    description: "Daily notifications and alerts for scheduled medication times",
+  },
+  {
     id: "weeklyCheckIn",
     title: "Weekly Check-In Reminders",
     description: "Get reminded to complete your weekly check-in",

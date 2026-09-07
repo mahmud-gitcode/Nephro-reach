@@ -177,13 +177,13 @@ export default function UserDashboard() {
               href="/dashboard/education-center"
               className="flex items-center gap-2 text-sm font-medium tracking-[0.07px] text-[#2563EB]"
             >
-              {dh?.curriculum?.weekBadge || "Week 1 of 8"}
+              {dh?.curriculum?.weekBadge || "Day 1 of 21"}
               <Icon src={asset("arrow-right.svg")} />
             </Link>
           </div>
           <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5">
             <p className="text-base font-medium tracking-[0.08px] text-[#2563EB]">
-              {dh?.curriculum?.weekLabel || "Week 1"}
+              {dh?.curriculum?.weekLabel || "Day 1"}
             </p>
             <div className="mt-4">
               <div className="flex items-center justify-between gap-3">

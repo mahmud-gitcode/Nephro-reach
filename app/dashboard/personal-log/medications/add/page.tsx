@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Bell,
   BriefcaseMedical,
   ChevronDown,
   Plus,
@@ -47,7 +48,9 @@ const FIELD_CONFIGS: FieldConfig[] = [
 ];
 
 export default function AddMedicationPage() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const [enableReminder, setEnableReminder] = useState(true);
+  const [reminderTime, setReminderTime] = useState("08:00 AM");
 
   return (
     <div className="mx-auto max-w-[672px]">
@@ -110,6 +113,78 @@ export default function AddMedicationPage() {
               </label>
             ))}
           </div>
+        </div>
+
+        {/* Medication Reminder & Notification Schedule */}
+        <div className="mt-5 rounded-lg bg-white p-4 border border-blue-100/90 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100/70 text-blue-600">
+                <Bell className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-slate-950">
+                  {language === "ES" ? "Configurar Recordatorio de Medicamento" : "Set Medication Reminder"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {language === "ES"
+                    ? "Recibe alertas de notificación y avisos SMS para tus horarios de toma"
+                    : "Receive notifications and SMS alerts for each scheduled dose"}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableReminder}
+                onChange={(e) => setEnableReminder(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {enableReminder && (
+            <div className="space-y-3 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {language === "ES" ? "Horario del Recordatorio" : "Select Reminder Time"}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: "8:00 AM", value: "08:00 AM" },
+                    { label: "12:30 PM", value: "12:30 PM" },
+                    { label: "6:30 PM", value: "06:30 PM" },
+                    { label: "10:00 PM", value: "10:00 PM" },
+                  ].map((slot) => (
+                    <button
+                      key={slot.value}
+                      type="button"
+                      onClick={() => setReminderTime(slot.value)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        reminderTime === slot.value
+                          ? "bg-blue-50 border-blue-600 text-blue-700 shadow-2xs"
+                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700 pt-1">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" defaultChecked className="rounded text-blue-600 h-4 w-4" />
+                  <span>{language === "ES" ? "Alerta en la Aplicación" : "In-App Notification"}</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" defaultChecked className="rounded text-blue-600 h-4 w-4" />
+                  <span>{language === "ES" ? "Mensaje de Texto SMS" : "SMS Text Alert"}</span>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">

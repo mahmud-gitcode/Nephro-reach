@@ -7,6 +7,7 @@ import {
   Activity,
   ArrowLeft,
   ArrowRight,
+  Bell,
   Calendar,
   Check,
   ChevronLeft,
@@ -845,11 +846,23 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
               />
 
               {/* Medication Prescribed Compliance */}
-              <BinaryToggle
-                label="Prescribed medications taken"
-                value={medsTakenPrescribed}
-                onChange={setMedsTakenPrescribed}
-              />
+              <div className="space-y-1.5">
+                <BinaryToggle
+                  label="Prescribed medications taken"
+                  value={medsTakenPrescribed}
+                  onChange={setMedsTakenPrescribed}
+                />
+                <div className="flex items-center justify-between text-xs px-1 text-slate-500">
+                  <span>Need a prompt for your doses?</span>
+                  <Link
+                    href="/dashboard/personal-log/medications"
+                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    <Bell className="size-3.5 text-blue-600" />
+                    <span>Set Medication Reminders</span>
+                  </Link>
+                </div>
+              </div>
             </div>
 
             {/* Clinical Vitals Cards */}
@@ -932,7 +945,25 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                 <span>Medications Administered</span>
               </h3>
               <div className="flex flex-wrap gap-2">
-                {["EPO / Mircera", "Iron", "Zemplar / Hectorol", "Heparin", "Other"].map((med) => {
+                {[
+                  "Heparin",
+                  "Venofer",
+                  "Epogen",
+                  "Mircera",
+                  "Calcitriol",
+                  "Hectorol",
+                  "Zemplar",
+                  "Sensipar",
+                  "Parsabiv",
+                  "Clonidine",
+                  "Midodrine",
+                  "Korsuva",
+                  "Zofran",
+                  "Tylenol",
+                  "Benadryl",
+                  "Antibiotics",
+                  "Other",
+                ].map((med) => {
                   const sel = meds.includes(med);
                   return (
                     <button

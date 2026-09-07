@@ -108,45 +108,70 @@ const INITIAL_PROVIDER_ORDERS: ProviderOrder[] = [
   },
 ];
 
+export const COMMON_DIALYSIS_MEDICATIONS = [
+  "Heparin",
+  "Clonidine",
+  "Midodrine",
+  "Calcitriol",
+  "Hectorol",
+  "Zemplar",
+  "Venofer",
+  "Mircera",
+  "Epogen",
+  "Sensipar",
+  "Parsabiv",
+  "Korsuva",
+  "Tylenol",
+  "Benadryl",
+  "Zofran",
+  "Antibiotics",
+] as const;
+
 interface CommonMedCategory {
   title: string;
+  titleEs: string;
   items: { id: string; name: string; defaultChecked: boolean }[];
 }
 
 const COMMON_MEDICATION_GROUPS: CommonMedCategory[] = [
   {
-    title: "Anemia Management",
+    title: "Anemia & Iron Management",
+    titleEs: "Manejo de Anemia y Hierro",
     items: [
-      { id: "epogen", name: "Epogen / Epoetin Alfa", defaultChecked: true },
-      { id: "mircera", name: "Mircera", defaultChecked: true },
-      { id: "aranesp", name: "Aranesp", defaultChecked: false },
-    ],
-  },
-  {
-    title: "Iron Therapy",
-    items: [
-      { id: "venofer", name: "Venofer (Iron Sucrose)", defaultChecked: true },
-      { id: "ferrlecit", name: "Ferrlecit", defaultChecked: false },
-      { id: "injectafer", name: "Injectafer", defaultChecked: false },
+      { id: "epogen", name: "Epogen", defaultChecked: true },
+      { id: "mircera", name: "Mircera", defaultChecked: false },
+      { id: "venofer", name: "Venofer", defaultChecked: true },
     ],
   },
   {
     title: "Bone & Mineral Management",
+    titleEs: "Salud Ósea y Mineral",
     items: [
+      { id: "calcitriol", name: "Calcitriol", defaultChecked: false },
       { id: "hectorol", name: "Hectorol", defaultChecked: true },
       { id: "zemplar", name: "Zemplar", defaultChecked: false },
-      { id: "calcitriol", name: "Calcitriol", defaultChecked: false },
+      { id: "sensipar", name: "Sensipar", defaultChecked: false },
+      { id: "parsabiv", name: "Parsabiv", defaultChecked: false },
     ],
   },
   {
-    title: "Other Dialysis Medications",
+    title: "Blood Pressure & Anticoagulation",
+    titleEs: "Presión Arterial y Anticoagulación",
     items: [
-      { id: "albumin", name: "Albumin", defaultChecked: false },
-      { id: "antibiotics", name: "Antibiotics", defaultChecked: false },
-      { id: "benadryl", name: "Benadryl", defaultChecked: false },
       { id: "heparin", name: "Heparin", defaultChecked: true },
+      { id: "clonidine", name: "Clonidine", defaultChecked: false },
       { id: "midodrine", name: "Midodrine", defaultChecked: false },
-      { id: "other", name: "Other", defaultChecked: false },
+    ],
+  },
+  {
+    title: "Symptom Relief & Supportive Care",
+    titleEs: "Alivio de Síntomas y Cuidado de Soporte",
+    items: [
+      { id: "korsuva", name: "Korsuva", defaultChecked: false },
+      { id: "tylenol", name: "Tylenol", defaultChecked: false },
+      { id: "benadryl", name: "Benadryl", defaultChecked: false },
+      { id: "zofran", name: "Zofran", defaultChecked: false },
+      { id: "antibiotics", name: "Antibiotics", defaultChecked: false },
     ],
   },
 ];
@@ -662,17 +687,24 @@ export default function DialysisManagementPage() {
       {/* SECTION 4: COMMON DIALYSIS MEDICATIONS */}
       {(activeTab === "all" || activeTab === "common-meds") && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="pb-4 border-b border-slate-100">
-            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
-              {language === "ES"
-                ? "Medicamentos Comunes de Diálisis"
-                : "Common Dialysis Medications"}
-            </h2>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">
-              {language === "ES"
-                ? "Selecciona y consulta medicamentos comunes organizados por categoría terapéutica"
-                : "Select and review standard medications organized by therapeutic category"}
-            </p>
+          <div className="pb-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+                  {language === "ES"
+                    ? "Medicamentos Comunes de Diálisis"
+                    : "Common Dialysis Medications"}
+                </h2>
+                <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
+                  16
+                </span>
+              </div>
+              <p className="text-xs font-medium text-slate-500 mt-0.5">
+                {language === "ES"
+                  ? "Consulta y selecciona los 16 medicamentos estándar organizados por categoría terapéutica"
+                  : "Review and select from the 16 standard dialysis medications organized by category"}
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -683,8 +715,11 @@ export default function DialysisManagementPage() {
               >
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60">
                   <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
-                  <h3 className="text-sm font-bold text-slate-900 truncate" title={group.title}>
-                    {group.title}
+                  <h3
+                    className="text-sm font-bold text-slate-900 truncate"
+                    title={language === "ES" ? group.titleEs : group.title}
+                  >
+                    {language === "ES" ? group.titleEs : group.title}
                   </h3>
                 </div>
 
