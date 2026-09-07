@@ -48,7 +48,7 @@ const sidebarItems: NavItem[] = [
     icon: Notebook,
     roles: ["user"],
   },
-  { label: "Team Questions", href: "/dashboard/team-questions", icon: HelpCircle, roles: ["user"] },
+  { label: "Care Team Questions", href: "/dashboard/team-questions", icon: HelpCircle, roles: ["user"] },
   { label: "Member", href: "/dashboard/members", icon: Users, roles: ["admin"] },
   {
     label: "Class Management",
@@ -147,7 +147,7 @@ function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/personal-log/dialysis-management"))
     return language === "ES" ? "Gestión de Diálisis" : "Dialysis Management";
   if (pathname.startsWith("/dashboard/team-questions"))
-    return language === "ES" ? "Preguntas al Equipo" : "Team Questions";
+    return language === "ES" ? "Preguntas al Equipo" : "Care Team Questions";
   if (pathname.startsWith("/dashboard/personal-log"))
     return language === "ES" ? "Registro Personal" : "Personal Log";
   if (pathname.startsWith("/dashboard/members"))
