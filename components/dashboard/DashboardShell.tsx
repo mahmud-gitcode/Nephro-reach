@@ -48,7 +48,6 @@ const sidebarItems: NavItem[] = [
     icon: Notebook,
     roles: ["user"],
   },
-  { label: "Care Team Questions", href: "/dashboard/team-questions", icon: HelpCircle, roles: ["user"] },
   { label: "Member", href: "/dashboard/members", icon: Users, roles: ["admin"] },
   {
     label: "Class Management",

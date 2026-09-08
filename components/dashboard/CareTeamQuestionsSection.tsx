@@ -1,0 +1,648 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Plus, X, PenLine, Search, Trash2, HelpCircle } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+
+export type CareTeamRole = "Provider" | "Dietitian" | "Social Worker" | "Nurse";
+export type QuestionStatus = "Answered" | "Discussed" | "Submitted";
+
+export interface CareTeamQuestion {
+  id: string;
+  role: CareTeamRole;
+  question: string;
+  status: QuestionStatus;
+  answer?: string;
+}
+
+const INITIAL_QUESTIONS: CareTeamQuestion[] = [
+  {
+    id: "q1",
+    role: "Provider",
+    question: "Why was my dry weight changed?",
+    status: "Answered",
+    answer:
+      "Dr. Miller explained that your blood pressure was dropping below 95/60 towards the end of treatments with mild leg cramping. Target dry weight was raised by 0.5 kg to 72.5 kg to evaluate comfort and avoid excessive fluid removal.",
+  },
+  {
+    id: "q2",
+    role: "Provider",
+    question: "Am I a transplant candidate?",
+    status: "Discussed",
+    answer:
+      "Reviewed initial health criteria with Dr. Miller. Cardiac clearance test referral and evaluation package submitted to the regional transplant center. Awaiting intake interview scheduling.",
+  },
+  {
+    id: "q3",
+    role: "Provider",
+    question: "Can I switch to home dialysis?",
+    status: "Submitted",
+    answer: "",
+  },
+  {
+    id: "q4",
+    role: "Provider",
+    question: "Why is my phosphorus high?",
+    status: "Answered",
+    answer:
+      "Advised taking prescribed phosphate binders with every meal and snack, not after. Recommended avoiding dark sodas and packaged processed meats which contain hidden inorganic phosphate additives.",
+  },
+  {
+    id: "q5",
+    role: "Dietitian",
+    question: "What are low-potassium fruits I can enjoy safely?",
+    status: "Answered",
+    answer:
+      "Dietitian recommended apples, berries (strawberries, blueberries), grapes, and pineapple as excellent low-potassium choices. Limit high-potassium fruits like bananas, oranges, and melons.",
+  },
+  {
+    id: "q6",
+    role: "Dietitian",
+    question: "How much fluid am I allowed on non-dialysis days?",
+    status: "Discussed",
+    answer:
+      "Daily fluid target is 32 oz (about 1 liter) on non-dialysis days to keep interdialytic weight gains under 2.0 kg. Suggested using ice chips or freezing grapes to help control thirst.",
+  },
+  {
+    id: "q7",
+    role: "Dietitian",
+    question: "What protein-rich snacks can I safely eat between dialysis days?",
+    status: "Answered",
+    answer:
+      "Egg whites, Greek yogurt (monitored for potassium), renal-friendly protein bars, and roasted unsalted chicken strips are great low-phosphorus high-protein options.",
+  },
+  {
+    id: "q8",
+    role: "Social Worker",
+    question: "How do I apply for clinic transportation assistance?",
+    status: "Answered",
+    answer:
+      "Social worker completed the regional non-emergency medical transportation application. Door-to-door clinic shuttle ride service is confirmed to begin next Monday.",
+  },
+  {
+    id: "q9",
+    role: "Social Worker",
+    question: "Are there support groups for newly started dialysis patients?",
+    status: "Discussed",
+    answer:
+      "Connected with our clinic's monthly peer support group (every 2nd Tuesday at 5:00 PM) and provided the National Kidney Foundation peer mentoring program materials.",
+  },
+  {
+    id: "q10",
+    role: "Social Worker",
+    question: "Can the clinic social worker help with prescription co-pay assistance?",
+    status: "Answered",
+    answer:
+      "Social worker enrolled you in the non-profit medication foundation co-pay relief program, covering up to 90% of binder and calcitriol costs.",
+  },
+  {
+    id: "q11",
+    role: "Nurse",
+    question: "My fistula access site has a slight tingling sensation after treatment",
+    status: "Answered",
+    answer:
+      "Nurse assessed thrill and bruit; blood flow is strong and clear. Tingling was determined to be transient nerve sensitivity from arm positioning during the run. Advised warm compress and to report any throbbing.",
+  },
+  {
+    id: "q12",
+    role: "Nurse",
+    question: "Is mild cramping normal after removing 2.5L?",
+    status: "Discussed",
+    answer:
+      "Rapid fluid shifts towards the end of a session can trigger muscle cramps. Team adjusted the machine ultrafiltration profile and sodium ramp. Advised alerting the tech immediately if cramping starts.",
+  },
+];
+
+const LOCAL_STORAGE_KEY = "nephroreach_care_team_questions_v7";
+
+export default function CareTeamQuestionsSection() {
+  const { language } = useLanguage();
+
+  const [questions, setQuestions] = useState<CareTeamQuestion[]>(INITIAL_QUESTIONS);
+  const [selectedRole, setSelectedRole] = useState<CareTeamRole | "All">("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | QuestionStatus>("All");
+
+  // Modal State for Add / Edit
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formRole, setFormRole] = useState<CareTeamRole>("Provider");
+  const [formQuestion, setFormQuestion] = useState("");
+  const [formAnswer, setFormAnswer] = useState("");
+  const [formStatus, setFormStatus] = useState<QuestionStatus>("Submitted");
+  const [formError, setFormError] = useState("");
+
+  // Load questions from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setQuestions(parsed);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  const saveQuestions = (updated: CareTeamQuestion[]) => {
+    setQuestions(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // fallback
+    }
+  };
+
+  // Cycle status: Submitted -> Discussed -> Answered -> Submitted
+  const cycleStatus = (id: string) => {
+    const updated = questions.map((q) => {
+      if (q.id === id) {
+        const nextStatusMap: Record<QuestionStatus, QuestionStatus> = {
+          Submitted: "Discussed",
+          Discussed: "Answered",
+          Answered: "Submitted",
+        };
+        return { ...q, status: nextStatusMap[q.status] || "Answered" };
+      }
+      return q;
+    });
+    saveQuestions(updated);
+  };
+
+  // Open modal to Add Question
+  const handleOpenAddModal = () => {
+    setEditingId(null);
+    setFormRole(selectedRole === "All" ? "Provider" : selectedRole);
+    setFormQuestion("");
+    setFormAnswer("");
+    setFormStatus("Submitted");
+    setFormError("");
+    setIsModalOpen(true);
+  };
+
+  // Open modal to Edit Question / Answer
+  const handleOpenEditModal = (q: CareTeamQuestion) => {
+    setEditingId(q.id);
+    setFormRole(q.role || "Provider");
+    setFormQuestion(q.question);
+    setFormAnswer(q.answer || "");
+    setFormStatus(q.status);
+    setFormError("");
+    setIsModalOpen(true);
+  };
+
+  // Save Add or Edit
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formQuestion.trim()) {
+      setFormError(
+        language === "ES" ? "Por favor escribe la pregunta." : "Please enter the question."
+      );
+      return;
+    }
+
+    if (editingId) {
+      // Edit existing
+      const updated = questions.map((q) => {
+        if (q.id === editingId) {
+          return {
+            ...q,
+            role: formRole,
+            question: formQuestion.trim(),
+            answer: formAnswer.trim(),
+            status: formStatus,
+          };
+        }
+        return q;
+      });
+      saveQuestions(updated);
+    } else {
+      // Add new
+      const hasAnswer = Boolean(formAnswer.trim());
+      const newQuestion: CareTeamQuestion = {
+        id: Date.now().toString(),
+        role: formRole,
+        question: formQuestion.trim(),
+        answer: formAnswer.trim(),
+        status: hasAnswer && formStatus === "Submitted" ? "Answered" : formStatus,
+      };
+      saveQuestions([newQuestion, ...questions]);
+    }
+
+    setIsModalOpen(false);
+  };
+
+  // Delete question
+  const handleDeleteQuestion = (id: string) => {
+    const confirmMsg =
+      language === "ES"
+        ? "¿Seguro que deseas eliminar esta pregunta?"
+        : "Are you sure you want to delete this question?";
+    if (window.confirm(confirmMsg)) {
+      const updated = questions.filter((q) => q.id !== id);
+      saveQuestions(updated);
+    }
+  };
+
+  // Segmented Pill Tabs: All, Provider, Dietitian, Social Worker, Nurse
+  const roleTabs: {
+    id: CareTeamRole | "All";
+    label: string;
+  }[] = [
+    {
+      id: "All",
+      label: language === "ES" ? "Todas" : "All",
+    },
+    {
+      id: "Provider",
+      label: language === "ES" ? "Proveedor" : "Provider",
+    },
+    {
+      id: "Dietitian",
+      label: language === "ES" ? "Dietista" : "Dietitian",
+    },
+    {
+      id: "Social Worker",
+      label: language === "ES" ? "Trabajador Social" : "Social Worker",
+    },
+    {
+      id: "Nurse",
+      label: language === "ES" ? "Enfermero/a" : "Nurse",
+    },
+  ];
+
+  // Filter questions by Role, Status, and Search Query
+  const filteredQuestions = questions.filter((q) => {
+    const matchesRole = selectedRole === "All" || q.role === selectedRole;
+    const matchesStatus = statusFilter === "All" || q.status === statusFilter;
+    const query = searchQuery.toLowerCase().trim();
+    const matchesQuery =
+      !query ||
+      q.question.toLowerCase().includes(query) ||
+      (q.answer && q.answer.toLowerCase().includes(query));
+
+    return matchesRole && matchesStatus && matchesQuery;
+  });
+
+  const getStatusBadgeStyle = (status: QuestionStatus) => {
+    switch (status) {
+      case "Answered":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+      case "Discussed":
+        return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+      case "Submitted":
+        return "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+  };
+
+  return (
+    <div className="w-full space-y-6">
+      {/* Section Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+            {language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"}
+          </h2>
+          <p className="text-xs font-medium text-slate-500 mt-0.5">
+            {language === "ES"
+              ? "Preguntas y respuestas registradas con tu equipo de atención médica"
+              : "Questions and answers documented with your medical care team"}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleOpenAddModal}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>{language === "ES" ? "Hacer Pregunta" : "Ask a Question"}</span>
+        </button>
+      </div>
+
+      {/* SEGMENTED TAB BAR (All, Provider, Dietitian, Social Worker, Nurse) */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
+        {roleTabs.map((tab) => {
+          const isActive = selectedRole === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSelectedRole(tab.id)}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer select-none active:scale-[0.98] ${
+                isActive
+                  ? "bg-[#2563EB] text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search Bar & Status Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              language === "ES"
+                ? "Buscar preguntas o respuestas..."
+                : "Search questions or answers..."
+            }
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Status Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-semibold">
+          {[
+            { id: "All", label: language === "ES" ? "Todos" : "All" },
+            { id: "Answered", label: language === "ES" ? "Respondidas" : "Answered" },
+            { id: "Discussed", label: language === "ES" ? "Discutidas" : "Discussed" },
+            { id: "Submitted", label: language === "ES" ? "Pendientes" : "Submitted" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                statusFilter === tab.id
+                  ? "bg-slate-900 border-slate-900 text-white shadow-2xs"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Clean Q & Ans Card List */}
+      <div className="space-y-3.5">
+        {filteredQuestions.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-400 space-y-2">
+            <HelpCircle className="h-8 w-8 mx-auto text-slate-300" />
+            <p className="text-sm font-semibold text-slate-600">
+              {language === "ES"
+                ? "No se encontraron preguntas para este miembro o filtro."
+                : "No questions found for this care team member or filter."}
+            </p>
+            <p className="text-xs text-slate-400">
+              {language === "ES"
+                ? "Haz clic en 'Hacer Pregunta' para agregar una nueva duda o consulta."
+                : "Click 'Ask a Question' to add a question for your care team."}
+            </p>
+          </div>
+        ) : (
+          filteredQuestions.map((q) => (
+            <div
+              key={q.id}
+              className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-shadow space-y-3"
+            >
+              {/* Question Row with Status Tag, Edit Button, and Delete */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5 flex-1">
+                  <span className="text-base font-bold text-blue-600 shrink-0 select-none">
+                    Q :
+                  </span>
+                  <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                    {q.question}
+                  </h3>
+                </div>
+
+                {/* Status Tag, Edit Button & Delete */}
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  {/* Status Tag */}
+                  <button
+                    type="button"
+                    onClick={() => cycleStatus(q.id)}
+                    title={
+                      language === "ES"
+                        ? "Clic para cambiar estado (Pendiente → Discutida → Respondida)"
+                        : "Click to cycle status (Submitted → Discussed → Answered)"
+                    }
+                    className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${getStatusBadgeStyle(
+                      q.status
+                    )}`}
+                  >
+                    {q.status === "Answered"
+                      ? language === "ES"
+                        ? "Respondida"
+                        : "Answered"
+                      : q.status === "Discussed"
+                      ? language === "ES"
+                        ? "Discutida"
+                        : "Discussed"
+                      : language === "ES"
+                      ? "Pendiente"
+                      : "Submitted"}
+                  </button>
+
+                  {/* Edit Button beside Status Tag */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditModal(q)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95"
+                    title={
+                      language === "ES"
+                        ? "Editar pregunta y respuesta"
+                        : "Edit question and answer"
+                    }
+                  >
+                    <PenLine className="h-3.5 w-3.5 text-slate-500" />
+                    <span>{language === "ES" ? "Editar" : "Edit"}</span>
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteQuestion(q.id)}
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title={language === "ES" ? "Eliminar" : "Delete"}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Answer Row */}
+              <div className="pt-3 border-t border-slate-100 flex items-start gap-2.5">
+                <span className="text-sm font-bold text-slate-700 shrink-0 select-none">
+                  Ans:
+                </span>
+                {q.answer && q.answer.trim().length > 0 ? (
+                  <p className="text-sm text-slate-600 leading-relaxed font-normal flex-1">
+                    {q.answer}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-slate-400 italic">
+                    <span>
+                      {language === "ES"
+                        ? "Aún no se ha documentado una respuesta."
+                        : "No answer documented yet."}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(q)}
+                      className="text-blue-600 font-semibold not-italic hover:underline cursor-pointer"
+                    >
+                      {language === "ES" ? "+ Agregar Respuesta" : "+ Add Answer"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ADD / EDIT MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-7 text-left shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingId
+                  ? language === "ES"
+                    ? "Editar Pregunta y Respuesta"
+                    : "Edit Question & Answer"
+                  : language === "ES"
+                  ? "Hacer Pregunta al Equipo"
+                  : "Ask Care Team a Question"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {language === "ES" ? "Destinatario / Especialidad" : "Care Team Member"}{" "}
+                  <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formRole}
+                  onChange={(e) => setFormRole(e.target.value as CareTeamRole)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="Provider">
+                    {language === "ES" ? "Proveedor (Provider)" : "Provider"}
+                  </option>
+                  <option value="Dietitian">
+                    {language === "ES" ? "Dietista (Dietitian)" : "Dietitian"}
+                  </option>
+                  <option value="Social Worker">
+                    {language === "ES" ? "Trabajador Social (Social Worker)" : "Social Worker"}
+                  </option>
+                  <option value="Nurse">
+                    {language === "ES" ? "Enfermero/a (Nurse)" : "Nurse"}
+                  </option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {language === "ES" ? "Pregunta" : "Question"} <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={formQuestion}
+                  onChange={(e) => setFormQuestion(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder={
+                    language === "ES"
+                      ? "p.ej. ¿Por qué cambiaron mi peso seco?"
+                      : "e.g. Why was my dry weight changed?"
+                  }
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {language === "ES" ? "Respuesta (Ans)" : "Answer (Ans)"}
+                </label>
+                <textarea
+                  rows={4}
+                  value={formAnswer}
+                  onChange={(e) => setFormAnswer(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder={
+                    language === "ES"
+                      ? "Documenta la respuesta o indicaciones que te dio el equipo médico..."
+                      : "Document what the care team member answered or instructed..."
+                  }
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {language === "ES" ? "Estado" : "Status"}
+                </label>
+                <select
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as QuestionStatus)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="Answered">
+                    {language === "ES" ? "Respondida (Answered)" : "Answered"}
+                  </option>
+                  <option value="Discussed">
+                    {language === "ES" ? "Discutida (Discussed)" : "Discussed"}
+                  </option>
+                  <option value="Submitted">
+                    {language === "ES" ? "Pendiente (Submitted)" : "Submitted"}
+                  </option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 text-sm transition-colors shadow-sm cursor-pointer"
+                >
+                  {editingId
+                    ? language === "ES"
+                      ? "Guardar Cambios"
+                      : "Save Changes"
+                    : language === "ES"
+                    ? "Guardar Pregunta"
+                    : "Save Question"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer"
+                >
+                  {language === "ES" ? "Cancelar" : "Cancel"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

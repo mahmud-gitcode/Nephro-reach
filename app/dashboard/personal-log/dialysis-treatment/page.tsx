@@ -19,13 +19,7 @@ import {
 } from "lucide-react";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
-
-const recoveryPoints = [
-  { month: "Mar", good: 10, okay: 20, bad: 40 },
-  { month: "Apr", good: 68, okay: 55, bad: 27 },
-  { month: "May", good: 30, okay: 33, bad: 12 },
-  { month: "Jun", good: 60, okay: 20, bad: 70 },
-];
+import MedicationsGivenSection from "@/components/dashboard/MedicationsGivenSection";
 
 function SummaryCards() {
   const { dictionary } = useLanguage();
@@ -156,144 +150,6 @@ function ClinicalMeasurementsCards() {
             </div>
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function RecoveryPatternChart() {
-  const { language, dictionary } = useLanguage();
-  const dt = dictionary.dialysisTreatment;
-  const width = 540;
-  const height = 210;
-  const paddingLeft = 35;
-  const paddingRight = 20;
-  const paddingTop = 15;
-  const paddingBottom = 30;
-
-  const chartW = width - paddingLeft - paddingRight;
-  const chartH = height - paddingTop - paddingBottom;
-
-  const localizedMonths: Record<string, string> =
-    language === "ES"
-      ? { Mar: "Mar", Apr: "Abr", May: "May", Jun: "Jun" }
-      : { Mar: "Mar", Apr: "Apr", May: "May", Jun: "Jun" };
-
-  const getX = (index: number) =>
-    paddingLeft + (index / (recoveryPoints.length - 1)) * chartW;
-  const getY = (val: number) =>
-    paddingTop + chartH - (val / 100) * chartH;
-
-  const getCurvePath = (key: "good" | "okay" | "bad") => {
-    const coords = recoveryPoints.map((pt, idx) => ({
-      x: getX(idx),
-      y: getY(pt[key]),
-    }));
-
-    let path = `M ${coords[0].x} ${coords[0].y}`;
-    for (let i = 0; i < coords.length - 1; i++) {
-      const curr = coords[i];
-      const next = coords[i + 1];
-      const cp1x = curr.x + (next.x - curr.x) / 2;
-      const cp1y = curr.y;
-      const cp2x = curr.x + (next.x - curr.x) / 2;
-      const cp2y = next.y;
-      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`;
-    }
-    return path;
-  };
-
-  return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-bold text-slate-900">
-          {dt?.recoveryPattern?.title || "Recovery Pattern Tracking"}
-        </h2>
-        <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-[#2563EB]" />
-            {dt?.recoveryPattern?.good || "Good"}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-[#F59E0B]" />
-            {dt?.recoveryPattern?.okay || "Okay"}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-[#EF4444]" />
-            {dt?.recoveryPattern?.bad || "Bad"}
-          </span>
-        </div>
-      </div>
-
-      <div className="relative w-full overflow-x-auto">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto min-w-[420px]">
-          {[100, 80, 60, 40, 20, 0].map((tick) => {
-            const y = getY(tick);
-            return (
-              <g key={tick}>
-                <text
-                  x={paddingLeft - 8}
-                  y={y + 4}
-                  textAnchor="end"
-                  className="fill-slate-400 text-[11px] font-medium"
-                >
-                  {tick}
-                </text>
-                <line
-                  x1={paddingLeft}
-                  x2={width - paddingRight}
-                  y1={y}
-                  y2={y}
-                  stroke="#E2E8F0"
-                  strokeDasharray="3 3"
-                  strokeWidth="1"
-                />
-              </g>
-            );
-          })}
-
-          <path
-            d={getCurvePath("good")}
-            fill="none"
-            stroke="#2563EB"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path
-            d={getCurvePath("okay")}
-            fill="none"
-            stroke="#F59E0B"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          <path
-            d={getCurvePath("bad")}
-            fill="none"
-            stroke="#EF4444"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-
-          {recoveryPoints.map((pt, idx) => {
-            const cx = getX(idx);
-            return (
-              <g key={pt.month}>
-                <circle cx={cx} cy={getY(pt.good)} r="4" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-                <circle cx={cx} cy={getY(pt.okay)} r="4" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
-                <circle cx={cx} cy={getY(pt.bad)} r="4" fill="#EF4444" stroke="#FFFFFF" strokeWidth="2" />
-
-                <text
-                  x={cx}
-                  y={height - 5}
-                  textAnchor="middle"
-                  className="fill-slate-500 text-[11px] font-medium"
-                >
-                  {localizedMonths[pt.month] || pt.month}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
       </div>
     </section>
   );
@@ -441,10 +297,10 @@ export default function DialysisTreatmentPage() {
       {/* CLINICAL MEASUREMENTS */}
       <ClinicalMeasurementsCards />
 
-      {/* MAIN CHARTS SECTION: RECOVERY PATTERN & SYMPTOMS DONUT */}
+      {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
         <div className="xl:col-span-8">
-          <RecoveryPatternChart />
+          <MedicationsGivenSection />
         </div>
         <div className="xl:col-span-4">
           <SymptomsDonut />
