@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, PenLine, Search, Trash2, HelpCircle } from "lucide-react";
+import { Plus, X, PenLine, Search, Trash2, HelpCircle, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
 export type CareTeamRole = "Provider" | "Dietitian" | "Social Worker" | "Nurse";
@@ -115,7 +115,13 @@ const INITIAL_QUESTIONS: CareTeamQuestion[] = [
 
 const LOCAL_STORAGE_KEY = "nephroreach_care_team_questions_v7";
 
-export default function CareTeamQuestionsSection() {
+interface CareTeamQuestionsSectionProps {
+  hideTitle?: boolean;
+}
+
+export default function CareTeamQuestionsSection({
+  hideTitle = false,
+}: CareTeamQuestionsSectionProps = {}) {
   const { language } = useLanguage();
 
   const [questions, setQuestions] = useState<CareTeamQuestion[]>(INITIAL_QUESTIONS);
@@ -132,19 +138,27 @@ export default function CareTeamQuestionsSection() {
   const [formStatus, setFormStatus] = useState<QuestionStatus>("Submitted");
   const [formError, setFormError] = useState("");
 
-  // Load questions from localStorage on mount
+  // Load questions from localStorage on mount & listen for custom updates
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setQuestions(parsed);
+    const loadStored = () => {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setQuestions(parsed);
+          }
         }
+      } catch {
+        // fallback
       }
-    } catch {
-      // fallback
-    }
+    };
+
+    loadStored();
+    window.addEventListener("care_team_questions_updated", loadStored);
+    return () => {
+      window.removeEventListener("care_team_questions_updated", loadStored);
+    };
   }, []);
 
   const saveQuestions = (updated: CareTeamQuestion[]) => {
@@ -247,14 +261,14 @@ export default function CareTeamQuestionsSection() {
     }
   };
 
-  // Segmented Pill Tabs: All, Provider, Dietitian, Social Worker, Nurse
+  // Segmented Options for Role Filter Dropdown: All, Provider, Dietitian, Social Worker, Nurse
   const roleTabs: {
     id: CareTeamRole | "All";
     label: string;
   }[] = [
     {
       id: "All",
-      label: language === "ES" ? "Todas" : "All",
+      label: language === "ES" ? "Todos los Roles" : "All Roles",
     },
     {
       id: "Provider",
@@ -302,89 +316,84 @@ export default function CareTeamQuestionsSection() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
-        <div>
+      {/* Optional Section Title (if !hideTitle) */}
+      {!hideTitle && (
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
             {language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"}
           </h2>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
-            {language === "ES"
-              ? "Preguntas y respuestas registradas con tu equipo de atención médica"
-              : "Questions and answers documented with your medical care team"}
-          </p>
+        </div>
+      )}
+
+      {/* SINGLE UNIFIED ROW: Search (Small & First), Role Dropdown, Status Dropdown, and Add Question Button */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Left cluster: Search Input (Small) followed by the 2 Dropdowns */}
+        <div className="flex items-center gap-3 flex-wrap flex-1">
+          {/* 1. Search Bar (Small, placed before dropdowns) */}
+          <div className="relative w-48 sm:w-56">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                language === "ES"
+                  ? "Buscar preguntas..."
+                  : "Search questions..."
+              }
+              className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+            />
+          </div>
+
+          {/* 2. Role Filter Dropdown */}
+          <div className="relative min-w-[140px] sm:min-w-[160px]">
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as CareTeamRole | "All")}
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 pr-8 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
+            >
+              {roleTabs.map((tab) => (
+                <option key={tab.id} value={tab.id} className="font-semibold text-slate-800">
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[2.5]" />
+          </div>
+
+          {/* 3. Status Filter Dropdown (All, Answered, Discussed, Submitted) */}
+          <div className="relative min-w-[130px] sm:min-w-[150px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "All" | QuestionStatus)}
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 pr-8 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
+            >
+              <option value="All" className="font-semibold text-slate-800">
+                {language === "ES" ? "Todos los Estados" : "All Status"}
+              </option>
+              <option value="Answered" className="font-semibold text-slate-800">
+                {language === "ES" ? "Respondidas" : "Answered"}
+              </option>
+              <option value="Discussed" className="font-semibold text-slate-800">
+                {language === "ES" ? "Discutidas" : "Discussed"}
+              </option>
+              <option value="Submitted" className="font-semibold text-slate-800">
+                {language === "ES" ? "Pendientes" : "Submitted"}
+              </option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[2.5]" />
+          </div>
         </div>
 
+        {/* 4. Add Question Button (Right aligned) */}
         <button
           type="button"
           onClick={handleOpenAddModal}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0 ml-auto"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>{language === "ES" ? "Hacer Pregunta" : "Ask a Question"}</span>
+          <span>{language === "ES" ? "Hacer Pregunta" : "Add Question"}</span>
         </button>
-      </div>
-
-      {/* SEGMENTED TAB BAR (All, Provider, Dietitian, Social Worker, Nurse) */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
-        {roleTabs.map((tab) => {
-          const isActive = selectedRole === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setSelectedRole(tab.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer select-none active:scale-[0.98] ${
-                isActive
-                  ? "bg-[#2563EB] text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search Bar & Status Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              language === "ES"
-                ? "Buscar preguntas o respuestas..."
-                : "Search questions or answers..."
-            }
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Status Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-semibold">
-          {[
-            { id: "All", label: language === "ES" ? "Todos" : "All" },
-            { id: "Answered", label: language === "ES" ? "Respondidas" : "Answered" },
-            { id: "Discussed", label: language === "ES" ? "Discutidas" : "Discussed" },
-            { id: "Submitted", label: language === "ES" ? "Pendientes" : "Submitted" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id as any)}
-              className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                statusFilter === tab.id
-                  ? "bg-slate-900 border-slate-900 text-white shadow-2xs"
-                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Clean Q & Ans Card List */}

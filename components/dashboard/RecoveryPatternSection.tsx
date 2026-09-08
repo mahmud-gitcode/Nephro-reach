@@ -4,16 +4,79 @@ import React from "react";
 import { Activity, TrendingUp, Clock, Smile } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
-const recoveryPoints = [
-  { month: "Mar", good: 10, okay: 20, bad: 40 },
-  { month: "Apr", good: 68, okay: 55, bad: 27 },
-  { month: "May", good: 30, okay: 33, bad: 12 },
-  { month: "Jun", good: 60, okay: 20, bad: 70 },
+export interface RecoveryPoint {
+  day: string;
+  good: number;
+  okay: number;
+  bad: number;
+}
+
+const DEFAULT_DAYS_BY_TREATMENT: Record<string, RecoveryPoint[]> = {
+  "tx-1": [
+    { day: "Fri", good: 35, okay: 45, bad: 20 },
+    { day: "Sat", good: 65, okay: 25, bad: 10 },
+    { day: "Sun", good: 80, okay: 15, bad: 5 },
+  ],
+  "tx-2": [
+    { day: "Mon", good: 40, okay: 45, bad: 15 },
+    { day: "Tue", good: 70, okay: 20, bad: 10 },
+    { day: "Wed", good: 80, okay: 15, bad: 5 },
+  ],
+  "tx-3": [
+    { day: "Wed", good: 45, okay: 35, bad: 20 },
+    { day: "Thu", good: 65, okay: 25, bad: 10 },
+    { day: "Fri", good: 80, okay: 15, bad: 5 },
+  ],
+  "tx-4": [
+    { day: "Fri", good: 35, okay: 45, bad: 20 },
+    { day: "Sat", good: 65, okay: 25, bad: 10 },
+    { day: "Sun", good: 75, okay: 20, bad: 5 },
+  ],
+};
+
+const DEFAULT_POINTS: RecoveryPoint[] = [
+  { day: "Fri", good: 35, okay: 45, bad: 20 },
+  { day: "Sat", good: 65, okay: 25, bad: 10 },
+  { day: "Sun", good: 80, okay: 15, bad: 5 },
 ];
 
-export default function RecoveryPatternSection() {
+const LOCALIZED_DAYS: Record<string, Record<string, string>> = {
+  ES: {
+    Fri: "Vie",
+    Sat: "Sáb",
+    Sun: "Dom",
+    Mon: "Lun",
+    Tue: "Mar",
+    Wed: "Mié",
+    Thu: "Jue",
+  },
+  EN: {
+    Fri: "Fri",
+    Sat: "Sat",
+    Sun: "Sun",
+    Mon: "Mon",
+    Tue: "Tue",
+    Wed: "Wed",
+    Thu: "Thu",
+  },
+};
+
+interface RecoveryPatternSectionProps {
+  treatmentId?: string;
+  points?: RecoveryPoint[];
+}
+
+export default function RecoveryPatternSection({
+  treatmentId,
+  points,
+}: RecoveryPatternSectionProps) {
   const { language, dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
+
+  const recoveryPoints =
+    points ||
+    (treatmentId ? DEFAULT_DAYS_BY_TREATMENT[treatmentId] : null) ||
+    DEFAULT_POINTS;
 
   const width = 640;
   const height = 230;
@@ -25,17 +88,15 @@ export default function RecoveryPatternSection() {
   const chartW = width - paddingLeft - paddingRight;
   const chartH = height - paddingTop - paddingBottom;
 
-  const localizedMonths: Record<string, string> =
-    language === "ES"
-      ? { Mar: "Mar", Apr: "Abr", May: "May", Jun: "Jun" }
-      : { Mar: "Mar", Apr: "Apr", May: "May", Jun: "Jun" };
-
   const getX = (index: number) =>
-    paddingLeft + (index / (recoveryPoints.length - 1)) * chartW;
+    recoveryPoints.length <= 1
+      ? paddingLeft + chartW / 2
+      : paddingLeft + (index / (recoveryPoints.length - 1)) * chartW;
   const getY = (val: number) =>
     paddingTop + chartH - (val / 100) * chartH;
 
   const getCurvePath = (key: "good" | "okay" | "bad") => {
+    if (recoveryPoints.length === 0) return "";
     const coords = recoveryPoints.map((pt, idx) => ({
       x: getX(idx),
       y: getY(pt[key]),
@@ -57,21 +118,11 @@ export default function RecoveryPatternSection() {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-              {dt?.recoveryPattern?.title || "Recovery Pattern Tracking"}
-            </h2>
-            <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-              {language === "ES" ? "Tendencias" : "Trends"}
-            </span>
-          </div>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
-            {language === "ES"
-              ? "Monitoreo del tiempo de recuperación y sensación post-diálisis a lo largo del tiempo"
-              : "Monitor recovery time, energy levels, and overall feeling post-treatment over time"}
-          </p>
+          <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+            {dt?.recoveryPattern?.title || "Recovery Pattern Tracking"}
+          </h2>
         </div>
 
         <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-3.5 py-2 rounded-2xl shrink-0">
@@ -143,7 +194,7 @@ export default function RecoveryPatternSection() {
           {recoveryPoints.map((pt, idx) => {
             const cx = getX(idx);
             return (
-              <g key={pt.month}>
+              <g key={pt.day + idx}>
                 <circle cx={cx} cy={getY(pt.good)} r="4.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
                 <circle cx={cx} cy={getY(pt.okay)} r="4.5" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
                 <circle cx={cx} cy={getY(pt.bad)} r="4.5" fill="#EF4444" stroke="#FFFFFF" strokeWidth="2" />
@@ -154,7 +205,7 @@ export default function RecoveryPatternSection() {
                   textAnchor="middle"
                   className="fill-slate-600 text-xs font-bold"
                 >
-                  {localizedMonths[pt.month] || pt.month}
+                  {LOCALIZED_DAYS[language]?.[pt.day] || pt.day}
                 </text>
               </g>
             );

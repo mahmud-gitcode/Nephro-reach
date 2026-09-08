@@ -2,26 +2,19 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  Syringe,
-  Droplets,
-  Pill,
-  FileText,
-  RotateCcw,
+  Calendar,
   Check,
   Plus,
   X,
   ShieldCheck,
-  Calendar,
-  Scale,
-  Activity,
-  HeartPulse,
+  FileText,
+  Save,
+  CheckCircle2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
-import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
 
 interface ProviderOrder {
   id: string;
@@ -33,33 +26,27 @@ interface ProviderOrder {
 const INITIAL_PROVIDER_ORDERS: ProviderOrder[] = [
   {
     id: "ord-1",
-    date: "May 31, 2024",
+    date: "Jun 19, 2026",
     order: "Start phosphate binder with meals",
     completed: true,
   },
   {
     id: "ord-2",
-    date: "May 28, 2024",
+    date: "Jun 20, 2026",
     order: "Schedule access ultrasound",
     completed: false,
   },
   {
     id: "ord-3",
-    date: "May 24, 2024",
-    order: "Increase protein intake",
+    date: "Jun 22, 2026",
+    order: "Increase dietary protein intake",
     completed: false,
   },
   {
     id: "ord-4",
-    date: "May 20, 2024",
-    order: "Limit fluid intake to 48 oz/day",
+    date: "Jun 23, 2026",
+    order: "Limit fluid intake to 32 oz/day",
     completed: true,
-  },
-  {
-    id: "ord-5",
-    date: "May 15, 2024",
-    order: "Take iron supplement daily",
-    completed: false,
   },
 ];
 
@@ -123,7 +110,7 @@ const SYMPTOM_COLUMNS: SymptomItem[][] = [
   // Column 1
   [
     { id: "swelling", label: "Swelling", labelEs: "Hinchazón", defaultChecked: true },
-    { id: "shortness_breath", label: "Shortness of Breath", labelEs: "Falta de aire", defaultChecked: true },
+    { id: "shortness_breath", label: "Shortness of Breath", labelEs: "Falta de aire", defaultChecked: false },
     { id: "diff_sleeping_flat", label: "Difficulty Sleeping Flat", labelEs: "Dificultad para dormir plano", defaultChecked: false },
     { id: "rapid_weight_gain", label: "Rapid Weight Gain", labelEs: "Aumento rápido de peso", defaultChecked: false },
     { id: "decreased_appetite", label: "Decreased Appetite", labelEs: "Disminución del apetito", defaultChecked: false },
@@ -150,23 +137,101 @@ const SYMPTOM_COLUMNS: SymptomItem[][] = [
   ],
 ];
 
+interface IntervalInfo {
+  name: string;
+  label: string;
+  dates: { dateStr: string; dayLabel: string; shortDate: string }[];
+}
+
+const TREATMENT_INTERVAL_DATES: Record<string, IntervalInfo> = {
+  "tx-1": {
+    name: "Treatment 1",
+    label: "Treatment 1 ➔ Treatment 2",
+    dates: [
+      { dateStr: "Friday, Jun 19, 2026", dayLabel: "Friday", shortDate: "Jun 19" },
+      { dateStr: "Saturday, Jun 20, 2026", dayLabel: "Saturday", shortDate: "Jun 20" },
+      { dateStr: "Sunday, Jun 21, 2026", dayLabel: "Sunday", shortDate: "Jun 21" },
+      { dateStr: "Monday, Jun 22, 2026", dayLabel: "Monday", shortDate: "Jun 22" },
+    ],
+  },
+  "tx-2": {
+    name: "Treatment 2",
+    label: "Treatment 2 ➔ Treatment 3",
+    dates: [
+      { dateStr: "Monday, Jun 22, 2026", dayLabel: "Monday", shortDate: "Jun 22" },
+      { dateStr: "Tuesday, Jun 23, 2026", dayLabel: "Tuesday", shortDate: "Jun 23" },
+      { dateStr: "Wednesday, Jun 24, 2026", dayLabel: "Wednesday", shortDate: "Jun 24" },
+    ],
+  },
+  "tx-3": {
+    name: "Treatment 3",
+    label: "Treatment 3 ➔ Treatment 4",
+    dates: [
+      { dateStr: "Wednesday, Jun 24, 2026", dayLabel: "Wednesday", shortDate: "Jun 24" },
+      { dateStr: "Thursday, Jun 25, 2026", dayLabel: "Thursday", shortDate: "Jun 25" },
+      { dateStr: "Friday, Jun 26, 2026", dayLabel: "Friday", shortDate: "Jun 26" },
+      { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27" },
+    ],
+  },
+  "tx-4": {
+    name: "Treatment 4",
+    label: "Treatment 4 ➔ Next Week Treatment 1",
+    dates: [
+      { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27" },
+      { dateStr: "Sunday, Jun 28, 2026", dayLabel: "Sunday", shortDate: "Jun 28" },
+      { dateStr: "Monday, Jun 29, 2026", dayLabel: "Monday", shortDate: "Jun 29" },
+      { dateStr: "Tuesday, Jun 30, 2026", dayLabel: "Tuesday", shortDate: "Jun 30" },
+    ],
+  },
+};
+
 function AddRecordContent() {
-  const { language } = useLanguage();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
+  const treatmentParam = searchParams.get("treatment") || "tx-1";
+  const activeTreatmentKey = TREATMENT_INTERVAL_DATES[treatmentParam] ? treatmentParam : "tx-1";
+  const currentIntervalInfo = TREATMENT_INTERVAL_DATES[activeTreatmentKey];
 
-  const [providerOrders, setProviderOrders] = useState<ProviderOrder[]>(INITIAL_PROVIDER_ORDERS);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
-  const [symptoms, setSymptoms] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    SYMPTOM_COLUMNS.forEach((col) => {
-      col.forEach((item) => {
-        initial[item.id] = item.defaultChecked;
-      });
-    });
-    return initial;
+  // Selected date state strictly from the interval dates:
+  const [selectedDateStr, setSelectedDateStr] = useState(
+    currentIntervalInfo.dates[0].dateStr
+  );
+
+  useEffect(() => {
+    if (currentIntervalInfo.dates.length > 0) {
+      setSelectedDateStr(currentIntervalInfo.dates[0].dateStr);
+    }
+  }, [treatmentParam]);
+
+  // Provider Orders State
+  const [providerOrders, setProviderOrders] = useState<ProviderOrder[]>(
+    INITIAL_PROVIDER_ORDERS
+  );
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [formOrderText, setFormOrderText] = useState("");
+  const [formOrderCompleted, setFormOrderCompleted] = useState(false);
+  const [formOrderError, setFormOrderError] = useState("");
+
+  // Symptoms State
+  const [symptoms, setSymptoms] = useState<Record<string, boolean>>({
+    swelling: true,
+    fatigue: true,
   });
   const [otherSymptomText, setOtherSymptomText] = useState("");
+
+  // Common Medications State
+  const [checkedCommonMeds, setCheckedCommonMeds] = useState<Record<string, boolean>>({
+    epogen: true,
+    venofer: true,
+    heparin: true,
+    hectorol: true,
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const toggleSymptom = (id: string) => {
     setSymptoms((prev) => ({
@@ -174,75 +239,6 @@ function AddRecordContent() {
       [id]: !prev[id],
     }));
   };
-
-  const [checkedCommonMeds, setCheckedCommonMeds] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    COMMON_MEDICATION_GROUPS.forEach((group) => {
-      group.items.forEach((item) => {
-        initial[item.id] = item.defaultChecked;
-      });
-    });
-    return initial;
-  });
-
-  type SectionTabId =
-    | "all"
-    | "recovery-pattern"
-    | "orders"
-    | "symptoms"
-    | "common-meds"
-    | "questions";
-  const [activeTab, setActiveTab] = useState<SectionTabId>("all");
-
-  useEffect(() => {
-    if (tabParam === "questions" || tabParam === "team-questions") {
-      setActiveTab("questions");
-    } else if (tabParam === "recovery-pattern" || tabParam === "recovery") {
-      setActiveTab("recovery-pattern");
-    } else if (
-      tabParam &&
-      ["all", "recovery-pattern", "orders", "symptoms", "common-meds", "questions"].includes(tabParam)
-    ) {
-      setActiveTab(tabParam as SectionTabId);
-    }
-  }, [tabParam]);
-
-  const sectionTabs: {
-    id: SectionTabId;
-    label: string;
-  }[] = [
-    {
-      id: "all",
-      label: language === "ES" ? "Todas" : "All",
-    },
-    {
-      id: "recovery-pattern",
-      label: language === "ES" ? "Patrón de Recuperación" : "Recovery Pattern",
-    },
-    {
-      id: "orders",
-      label: language === "ES" ? "Órdenes Médicas" : "Provider Orders",
-    },
-    {
-      id: "symptoms",
-      label: language === "ES" ? "Síntomas" : "Symptoms",
-    },
-    {
-      id: "common-meds",
-      label: language === "ES" ? "Medicamentos Comunes" : "Common Medications",
-    },
-    {
-      id: "questions",
-      label: language === "ES" ? "Preguntas al Equipo" : "Care Team Questions",
-    },
-  ];
-
-  // Add Provider Order Modal State
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [formOrderDate, setFormOrderDate] = useState("Jun 23, 2026");
-  const [formOrderText, setFormOrderText] = useState("");
-  const [formOrderCompleted, setFormOrderCompleted] = useState(false);
-  const [formOrderError, setFormOrderError] = useState("");
 
   const toggleCommonMed = (id: string) => {
     setCheckedCommonMeds((prev) => ({
@@ -259,19 +255,11 @@ function AddRecordContent() {
     );
   };
 
-  const handleOpenAddOrderModal = () => {
-    setFormOrderDate("Jun 23, 2026");
-    setFormOrderText("");
-    setFormOrderCompleted(false);
-    setFormOrderError("");
-    setIsOrderModalOpen(true);
-  };
-
   const handleAddOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formOrderText.trim()) {
       setFormOrderError(
-        language === "ES"
+        isEs
           ? "Por favor ingrese la orden o instrucción."
           : "Please enter the order or instruction."
       );
@@ -280,421 +268,336 @@ function AddRecordContent() {
 
     const newOrder: ProviderOrder = {
       id: Date.now().toString(),
-      date: formOrderDate.trim() || "Today",
+      date: selectedDateStr.split(",")[1]?.trim() || selectedDateStr,
       order: formOrderText.trim(),
       completed: formOrderCompleted,
     };
 
     setProviderOrders([newOrder, ...providerOrders]);
+    setFormOrderText("");
     setIsOrderModalOpen(false);
   };
 
-  // KPI stats
-  const kpiStats = [
-    {
-      label: language === "ES" ? "Dosis ESA Este Mes" : "ESA Doses This Month",
-      value: 5,
-      icon: Syringe,
-      color: "text-purple-600",
-      bg: "bg-purple-50 border-purple-100",
-    },
-    {
-      label: language === "ES" ? "Administraciones de Hierro IV" : "IV Iron Administrations",
-      value: 3,
-      icon: Droplets,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50 border-indigo-100",
-    },
-    {
-      label: language === "ES" ? "Tratamientos de Vitamina D" : "Vitamin D Treatments",
-      value: 4,
-      icon: Pill,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50 border-emerald-100",
-    },
-    {
-      label: language === "ES" ? "Cambios de Medicación" : "Medication Changes",
-      value: 3,
-      icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50 border-blue-100",
-    },
-    {
-      label: language === "ES" ? "Medicamentos Omitidos" : "Missed Medications",
-      value: 0,
-      icon: RotateCcw,
-      color: "text-rose-600",
-      bg: "bg-rose-50 border-rose-100",
-    },
-  ];
+  const handleSaveRecord = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        router.push(`/dashboard/personal-log/dialysis-management/view?treatment=${activeTreatmentKey}`);
+      }, 700);
+    }, 400);
+  };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-7 pb-12">
+    <div className="w-full max-w-7xl mx-auto space-y-7 pb-16">
       {/* Top Navigation */}
-      <div>
+      <div className="flex items-center justify-between">
         <Link
           href="/dashboard/personal-log/dialysis-management"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          {language === "ES"
-            ? "Volver a Gestión de Diálisis"
-            : "Back to Dialysis Management"}
+          {isEs ? "Volver a Gestión de Diálisis" : "Back to Dialysis Management"}
         </Link>
+
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-[#2563EB] border border-blue-100">
+          {currentIntervalInfo.name} ({currentIntervalInfo.label})
+        </span>
       </div>
 
       {/* ========================================================================= */}
-      {/* TREATMENT RELATED INFO CARD (REQUIRED AT TOP OF ADD NEW RECORD PAGE)       */}
+      {/* 1. DATE SELECTOR (ONLY SHOWS VALID DATES FOR THIS TREATMENT INTERVAL)     */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-b from-white to-blue-50/20 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-100/80">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-blue-100 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-[#2563EB]">
-                {language === "ES"
-                  ? "Contexto del Tratamiento"
-                  : "Treatment Interval Context"}
-              </span>
-              <span className="text-xs font-bold text-slate-700">
-                Between Treatment 2 ➔ Treatment 3
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-slate-400" />
-              Start Date:{" "}
-              <strong className="text-slate-800">Monday, Jun 22, 2026</strong> •
-              End Date:{" "}
-              <strong className="text-slate-800">Wednesday, Jun 24, 2026</strong>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-              ✓ Normal Fluid Range (+1.4 kg)
-            </span>
-          </div>
-        </div>
-
-        {/* Previous Treatment Exit Vitals Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 space-y-0.5">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {language === "ES" ? "Peso Post-Tx 2" : "Post-Weight (Tx 2)"}
-            </p>
-            <p className="text-base font-bold text-slate-900">72.4 kg</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 space-y-0.5">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {language === "ES" ? "Presión Post-Tx 2" : "Post-BP (Tx 2)"}
-            </p>
-            <p className="text-base font-bold text-slate-900">118/76 mmHg</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 space-y-0.5">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {language === "ES" ? "Peso Seco Meta" : "Target Dry Weight"}
-            </p>
-            <p className="text-base font-bold text-slate-900">72.0 kg</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3 space-y-0.5">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              {language === "ES" ? "Peso Casa (Hoy)" : "Current Home Weight"}
-            </p>
-            <p className="text-base font-bold text-[#2563EB]">
-              73.8 kg <span className="text-xs text-emerald-600 font-bold">(+1.4 kg)</span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 5 KPI Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {kpiStats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs hover:shadow-xs transition-shadow"
-          >
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${stat.bg}`}
-            >
-              <stat.icon className={`h-6 w-6 ${stat.color}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-500 truncate" title={stat.label}>
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
-                {stat.value}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* SECTION TABS */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
-        {sectionTabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer select-none active:scale-[0.98] ${
-                isActive
-                  ? "bg-[#2563EB] text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* SECTION 1: RECOVERY PATTERN TRACKING */}
-      {(activeTab === "all" || activeTab === "recovery-pattern") && (
-        <RecoveryPatternSection />
-      )}
-
-      {/* SECTION 2: PROVIDER ORDERS & INSTRUCTIONS */}
-      {(activeTab === "all" || activeTab === "orders") && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div>
-              <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-                {language === "ES"
-                  ? "Órdenes e Instrucciones del Proveedor"
-                  : "Provider Orders & Instructions"}
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleOpenAddOrderModal}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0"
-            >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
-              <span>{language === "ES" ? "Agregar Orden" : "Add Order"}</span>
-            </button>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                  <th className="py-3.5 px-4 sm:px-6 w-36 sm:w-48">
-                    {language === "ES" ? "Fecha" : "Date"}
-                  </th>
-                  <th className="py-3.5 px-4 sm:px-6">
-                    {language === "ES" ? "Orden / Instrucción" : "Order / Instruction"}
-                  </th>
-                  <th className="py-3.5 px-4 sm:px-6 text-center w-28 sm:w-36">
-                    {language === "ES" ? "Completado" : "Completed"}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {providerOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="py-8 text-center text-xs text-slate-400">
-                      {language === "ES"
-                        ? "No hay órdenes ni instrucciones registradas."
-                        : "No orders or instructions recorded yet."}
-                    </td>
-                  </tr>
-                ) : (
-                  providerOrders.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] whitespace-nowrap font-bold text-sm">
-                        {item.date}
-                      </td>
-                      <td className="py-4 px-4 sm:px-6 text-[#1e3a8a] font-semibold text-sm leading-snug">
-                        {item.order}
-                      </td>
-                      <td className="py-4 px-4 sm:px-6 text-center whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => toggleOrderCompleted(item.id)}
-                          aria-label={item.completed ? "Mark as incomplete" : "Mark as completed"}
-                          className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
-                            item.completed
-                              ? "bg-[#2563EB] border-[#2563EB] text-white"
-                              : "bg-white border-slate-300 hover:border-slate-400"
-                          }`}
-                        >
-                          {item.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* SECTION 3: SYMPTOMS BETWEEN TREATMENTS */}
-      {(activeTab === "all" || activeTab === "symptoms") && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="pb-3 border-b border-slate-100">
-            <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
-              {language === "ES"
-                ? "Síntomas Entre Tratamientos"
-                : "Symptoms Between Treatments"}
+      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="h-4 w-4 text-[#2563EB]" />
+            <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              {isEs ? "Seleccionar Fecha del Registro" : "Select Record Date"}
             </h2>
-            <p className="text-xs font-medium text-slate-500 mt-1">
-              {language === "ES"
-                ? "Seleccione todos los que correspondan"
-                : "Select all that apply"}
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            {isEs
+              ? `Mostrando solo las fechas pertenecientes a ${currentIntervalInfo.name}:`
+              : `Showing only dates belonging to ${currentIntervalInfo.name}:`}
+          </p>
+        </div>
+
+        {/* Date Selector Chips */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          {currentIntervalInfo.dates.map((d) => {
+            const isSelected = selectedDateStr === d.dateStr;
+            return (
+              <button
+                key={d.dateStr}
+                type="button"
+                onClick={() => setSelectedDateStr(d.dateStr)}
+                className={`flex flex-col items-start p-3.5 rounded-2xl border text-left transition-all cursor-pointer select-none active:scale-[0.98] ${
+                  isSelected
+                    ? "border-[#2563EB] bg-blue-50/40 ring-2 ring-[#2563EB]/20 shadow-xs"
+                    : "border-slate-200/90 bg-white hover:border-blue-300 hover:bg-slate-50/50"
+                }`}
+              >
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-wider ${
+                    isSelected ? "text-[#2563EB]" : "text-slate-400"
+                  }`}
+                >
+                  {d.dayLabel}
+                </span>
+                <span
+                  className={`text-sm sm:text-base font-bold tracking-tight mt-0.5 ${
+                    isSelected ? "text-[#2563EB]" : "text-slate-800"
+                  }`}
+                >
+                  {d.shortDate}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 2. PROVIDER ORDERS & INSTRUCTIONS                                         */}
+      {/* ========================================================================= */}
+      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              {isEs ? "Órdenes e Instrucciones del Proveedor" : "Provider Orders & Instructions"}
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">
+              {isEs
+                ? "Agrega o marca las indicaciones médicas recibidas para este intervalo"
+                : "Add or review medical instructions received for this interval"}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
-            {SYMPTOM_COLUMNS.map((col, colIdx) => (
-              <div key={colIdx} className="space-y-3.5">
-                {col.map((item) => {
-                  const isChecked = Boolean(symptoms[item.id]);
-                  return (
-                    <div key={item.id} className="space-y-2">
-                      <label
-                        onClick={() => toggleSymptom(item.id)}
-                        className="flex items-center gap-3 cursor-pointer select-none group"
-                      >
-                        <div
-                          className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
-                            isChecked
-                              ? "bg-[#2563EB] border-[#2563EB] text-white"
-                              : "bg-white border-slate-300 group-hover:border-slate-400"
-                          }`}
-                        >
-                          {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
-                        </div>
-                        <span className="text-sm font-semibold text-[#1e3a8a] group-hover:text-blue-900 transition-colors">
-                          {language === "ES" ? item.labelEs : item.label}
-                        </span>
-                      </label>
+          <button
+            type="button"
+            onClick={() => {
+              setFormOrderText("");
+              setFormOrderError("");
+              setIsOrderModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+            <span>{isEs ? "Nueva Orden" : "Add Order"}</span>
+          </button>
+        </div>
 
-                      {item.id === "other" && (
-                        <div className="pt-1">
-                          <input
-                            type="text"
-                            value={otherSymptomText}
-                            onChange={(e) => {
-                              setOtherSymptomText(e.target.value);
-                              if (!symptoms["other"] && e.target.value.trim()) {
-                                setSymptoms((prev) => ({ ...prev, other: true }));
-                              }
-                            }}
-                            placeholder={
-                              language === "ES"
-                                ? "Por favor especifique"
-                                : "Please specify"
+        {/* Orders Table */}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                <th className="py-3 px-4 w-36">{isEs ? "Fecha" : "Date"}</th>
+                <th className="py-3 px-4">{isEs ? "Orden / Instrucción" : "Order / Instruction"}</th>
+                <th className="py-3 px-4 text-center w-28">{isEs ? "Completado" : "Completed"}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {providerOrders.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="py-3 px-4 text-[#2563EB] whitespace-nowrap font-bold text-xs sm:text-sm">
+                    {item.date}
+                  </td>
+                  <td className="py-3 px-4 font-semibold text-slate-800 text-xs sm:text-sm leading-snug">
+                    {item.order}
+                  </td>
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => toggleOrderCompleted(item.id)}
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
+                        item.completed
+                          ? "bg-[#2563EB] border-[#2563EB] text-white"
+                          : "bg-white border-slate-300 hover:border-slate-400"
+                      }`}
+                    >
+                      {item.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. SYMPTOMS BETWEEN TREATMENTS                                            */}
+      {/* ========================================================================= */}
+      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
+        <div className="pb-3 border-b border-slate-100">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            {isEs ? "Síntomas Entre Tratamientos" : "Symptoms Between Treatments"}
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {isEs
+              ? `Selecciona los síntomas experimentados el ${selectedDateStr}:`
+              : `Select symptoms experienced on ${selectedDateStr}:`}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3.5 gap-x-8">
+          {SYMPTOM_COLUMNS.map((col, colIdx) => (
+            <div key={colIdx} className="space-y-3">
+              {col.map((item) => {
+                const isChecked = Boolean(symptoms[item.id]);
+                return (
+                  <div key={item.id} className="space-y-1.5">
+                    <label
+                      onClick={() => toggleSymptom(item.id)}
+                      className="flex items-center gap-2.5 cursor-pointer select-none group"
+                    >
+                      <div
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                          isChecked
+                            ? "bg-[#2563EB] border-[#2563EB] text-white"
+                            : "bg-white border-slate-300 group-hover:border-slate-400"
+                        }`}
+                      >
+                        {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-900 transition-colors">
+                        {isEs ? item.labelEs : item.label}
+                      </span>
+                    </label>
+
+                    {item.id === "other" && (
+                      <div className="pt-1">
+                        <input
+                          type="text"
+                          value={otherSymptomText}
+                          onChange={(e) => {
+                            setOtherSymptomText(e.target.value);
+                            if (!symptoms["other"] && e.target.value.trim()) {
+                              setSymptoms((prev) => ({ ...prev, other: true }));
                             }
-                            className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
-                          />
-                        </div>
-                      )}
-                    </div>
+                          }}
+                          placeholder={isEs ? "Especificar otro..." : "Please specify..."}
+                          className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. COMMON DIALYSIS MEDICATIONS                                            */}
+      {/* ========================================================================= */}
+      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
+        <div className="pb-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              {isEs ? "Medicamentos Comunes de Diálisis" : "Common Dialysis Medications"}
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {isEs
+                ? `Marca los medicamentos administrados o tomados el ${selectedDateStr}:`
+                : `Select medications taken or administered on ${selectedDateStr}:`}
+            </p>
+          </div>
+          <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
+            16 Standard Meds
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {COMMON_MEDICATION_GROUPS.map((group) => (
+            <div
+              key={group.title}
+              className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-2.5"
+            >
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60">
+                <ShieldCheck className="h-4 w-4 text-[#2563EB] shrink-0" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate" title={isEs ? group.titleEs : group.title}>
+                  {isEs ? group.titleEs : group.title}
+                </h4>
+              </div>
+
+              <div className="space-y-2">
+                {group.items.map((item) => {
+                  const isChecked = Boolean(checkedCommonMeds[item.id]);
+                  return (
+                    <label
+                      key={item.id}
+                      onClick={() => toggleCommonMed(item.id)}
+                      className="flex items-center gap-2.5 cursor-pointer select-none group"
+                    >
+                      <div
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                          isChecked
+                            ? "bg-[#2563EB] border-[#2563EB] text-white"
+                            : "bg-white border-slate-300 group-hover:border-slate-400"
+                        }`}
+                      >
+                        {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
+                      <span
+                        className={`text-xs font-semibold transition-colors ${
+                          isChecked ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
+                        }`}
+                      >
+                        {item.name}
+                      </span>
+                    </label>
                   );
                 })}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* SECTION 4: COMMON DIALYSIS MEDICATIONS */}
-      {(activeTab === "all" || activeTab === "common-meds") && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="pb-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
-                  {language === "ES"
-                    ? "Medicamentos Comunes de Diálisis"
-                    : "Common Dialysis Medications"}
-                </h2>
-                <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-                  16
-                </span>
-              </div>
-              <p className="text-xs font-medium text-slate-500 mt-0.5">
-                {language === "ES"
-                  ? "Consulta y selecciona los 16 medicamentos estándar organizados por categoría terapéutica"
-                  : "Review and select from the 16 standard dialysis medications organized by category"}
-              </p>
             </div>
-          </div>
+          ))}
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {COMMON_MEDICATION_GROUPS.map((group) => (
-              <div
-                key={group.title}
-                className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-3"
-              >
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60">
-                  <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
-                  <h3
-                    className="text-sm font-bold text-slate-900 truncate"
-                    title={language === "ES" ? group.titleEs : group.title}
-                  >
-                    {language === "ES" ? group.titleEs : group.title}
-                  </h3>
-                </div>
+      {/* ========================================================================= */}
+      {/* 5. SUBMIT / SAVE RECORD BUTTON                                            */}
+      {/* ========================================================================= */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+        <Link
+          href="/dashboard/personal-log/dialysis-management"
+          className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          {isEs ? "Cancelar" : "Cancel"}
+        </Link>
 
-                <div className="space-y-2.5">
-                  {group.items.map((item) => {
-                    const isChecked = Boolean(checkedCommonMeds[item.id]);
-                    return (
-                      <label
-                        key={item.id}
-                        onClick={() => toggleCommonMed(item.id)}
-                        className="flex items-center gap-2.5 cursor-pointer select-none group"
-                      >
-                        <div
-                          className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-colors ${
-                            isChecked
-                              ? "bg-blue-600 border-blue-600 text-white"
-                              : "bg-white border-slate-300 group-hover:border-slate-400"
-                          }`}
-                        >
-                          {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </div>
-                        <span
-                          className={`text-xs font-semibold transition-colors ${
-                            isChecked ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
-                          }`}
-                        >
-                          {item.name}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        <button
+          type="button"
+          onClick={handleSaveRecord}
+          disabled={isSaving}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-7 py-3 text-sm font-bold text-white shadow-xs hover:shadow transition-all active:scale-[0.98] cursor-pointer"
+        >
+          {saveSuccess ? (
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              <span>{isEs ? "¡Guardado con Éxito!" : "Saved Successfully!"}</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span>{isEs ? `Guardar Registro (${selectedDateStr.split(",")[0]})` : `Save Record (${selectedDateStr.split(",")[0]})`}</span>
+            </>
+          )}
+        </button>
+      </div>
 
-      {/* SECTION 5: CARE TEAM QUESTIONS */}
-      {(activeTab === "all" || activeTab === "questions") && (
-        <CareTeamQuestionsSection />
-      )}
-
-      {/* Add Provider Order Modal */}
+      {/* Add Order Modal */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-5">
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">
-                {language === "ES" ? "Agregar Nueva Orden" : "Add New Order"}
-              </h3>
+              <h4 className="text-base font-bold text-slate-900">
+                {isEs ? "Agregar Nueva Orden" : "Add New Order"}
+              </h4>
               <button
                 type="button"
                 onClick={() => setIsOrderModalOpen(false)}
@@ -707,19 +610,19 @@ function AddRecordContent() {
             <form onSubmit={handleAddOrderSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  {language === "ES" ? "Fecha" : "Date"}
+                  {isEs ? "Fecha Asignada" : "Assigned Date"}
                 </label>
                 <input
                   type="text"
-                  value={formOrderDate}
-                  onChange={(e) => setFormOrderDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  readOnly
+                  value={selectedDateStr}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  {language === "ES" ? "Orden / Instrucción" : "Order / Instruction"}
+                  {isEs ? "Orden / Instrucción" : "Order / Instruction"}
                 </label>
                 <textarea
                   rows={3}
@@ -729,11 +632,11 @@ function AddRecordContent() {
                     if (formOrderError) setFormOrderError("");
                   }}
                   placeholder={
-                    language === "ES"
-                      ? "Ej: Tomar suplemento de hierro diariamente..."
-                      : "e.g. Schedule access ultrasound..."
+                    isEs
+                      ? "Ej: Tomar aglutinante de fosfato con las comidas..."
+                      : "e.g. Schedule access ultrasound or take supplement..."
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
                 />
                 {formOrderError && (
                   <p className="text-xs font-medium text-rose-500 mt-1">
@@ -750,7 +653,7 @@ function AddRecordContent() {
                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
                 />
                 <span className="text-xs font-semibold text-slate-700">
-                  {language === "ES" ? "Marcar como completado" : "Mark as completed"}
+                  {isEs ? "Marcar como completado" : "Mark as completed"}
                 </span>
               </label>
 
@@ -760,13 +663,13 @@ function AddRecordContent() {
                   onClick={() => setIsOrderModalOpen(false)}
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  {language === "ES" ? "Cancelar" : "Cancel"}
+                  {isEs ? "Cancelar" : "Cancel"}
                 </button>
                 <button
                   type="submit"
                   className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition-colors shadow-2xs"
                 >
-                  {language === "ES" ? "Guardar Orden" : "Save Order"}
+                  {isEs ? "Guardar Orden" : "Save Order"}
                 </button>
               </div>
             </form>
