@@ -83,7 +83,7 @@ const SYMPTOMS: SymptomConfig[] = [
 
 export default function BeforeTheErPage() {
   const router = useRouter();
-  const { t, dictionary } = useLanguage();
+  const { t, dictionary, language } = useLanguage();
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [activeModalKey, setActiveModalKey] = useState<ActionConfig["key"] | null>(null);
@@ -133,7 +133,7 @@ export default function BeforeTheErPage() {
             <h1 className="text-lg font-medium leading-7 text-[#0A0A0A]">
               {t("beforeTheEr.disclaimerTitle")}
             </h1>
-            <p className="mt-2 text-sm font-normal leading-5 text-slate-700">
+            <p className="mt-2 text-sm sm:text-base font-normal leading-relaxed text-slate-700">
               {t("beforeTheEr.disclaimerText")}
             </p>
           </div>

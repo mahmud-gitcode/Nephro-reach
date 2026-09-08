@@ -1,9 +1,77 @@
+export type NextStepLevel = "call911" | "urgentMedical" | "callDialysis" | "monitor";
+
+export interface NextStepConfig {
+  level: NextStepLevel;
+  badgeEn: string;
+  badgeEs: string;
+  descriptionEn: string;
+  descriptionEs: string;
+  dotColor: string;
+  badgeClass: string;
+  cardBorder: string;
+  cardBg: string;
+}
+
+export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
+  call911: {
+    level: "call911",
+    badgeEn: "CALL 911 NOW",
+    badgeEs: "LLAME AL 911 AHORA",
+    descriptionEn:
+      "Your answers may indicate a medical emergency. Do not wait for your next dialysis treatment.",
+    descriptionEs:
+      "Sus respuestas pueden indicar una emergencia médica. No espere a su próximo tratamiento de diálisis.",
+    dotColor: "bg-red-500",
+    badgeClass: "bg-red-100 text-red-800 border-red-200",
+    cardBorder: "border-red-200",
+    cardBg: "bg-red-50/50",
+  },
+  urgentMedical: {
+    level: "urgentMedical",
+    badgeEn: "Urgent Medical Evaluation",
+    badgeEs: "Evaluación Médica Urgente",
+    descriptionEn: "Your symptoms need prompt medical evaluation.",
+    descriptionEs: "Sus síntomas necesitan una pronta evaluación médica.",
+    dotColor: "bg-orange-500",
+    badgeClass: "bg-orange-100 text-orange-800 border-orange-200",
+    cardBorder: "border-orange-200",
+    cardBg: "bg-orange-50/40",
+  },
+  callDialysis: {
+    level: "callDialysis",
+    badgeEn: "Call Your Dialysis Center Now",
+    badgeEs: "Llame a su Centro de Diálisis Ahora",
+    descriptionEn:
+      "This may be something your dialysis team needs to assess before you go to the ER.",
+    descriptionEs:
+      "Esto puede ser algo que su equipo de diálisis deba evaluar antes de ir a urgencias.",
+    dotColor: "bg-amber-500",
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    cardBorder: "border-amber-200",
+    cardBg: "bg-amber-50/40",
+  },
+  monitor: {
+    level: "monitor",
+    badgeEn: "Monitor & Recheck",
+    badgeEs: "Monitorear y Volver a Revisar",
+    descriptionEn:
+      "Symptoms are mild and there are no emergency warning signs.",
+    descriptionEs:
+      "Los síntomas son leves y no hay señales de advertencia de emergencia.",
+    dotColor: "bg-emerald-500",
+    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    cardBorder: "border-emerald-200",
+    cardBg: "bg-emerald-50/40",
+  },
+};
+
 export interface BeforeTheErTopicInfo {
   slug: string;
   key: string;
   titleEn: string;
   titleEs: string;
   urgent: boolean;
+  nextStepLevel: NextStepLevel;
   whatToWatchForFullEn: string;
   whatToWatchForFullEs: string;
   symptomsListEn: string[];
@@ -21,8 +89,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Chest Pain",
     titleEs: "Dolor de Pecho",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
-      "Pressure, squeezing, heaviness or tightness; pain spreading to arm, jaw, back, neck or stomach; shortness of breath; sweating; nausea; dizziness/lightheadedness; new or worsening chest discomfort. New/severe chest pain or heart-attack-type symptoms → Call 911.",
+      "Pressure, squeezing, heaviness or tightness; pain spreading to arm, jaw, back, neck or stomach; shortness of breath; sweating; nausea; dizziness/lightheadedness; new or worsening chest discomfort. New/severe chest pain or heart-attack-type symptoms → Call 911. ([www.heart.org](https://www.heart.org/en/about-us/heart-attack-and-stroke-symptoms?linkId=118155972&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Presión, opresión, pesadez o tirantez; dolor que se extiende al brazo, mandíbula, espalda, cuello o estómago; dificultad para respirar; sudoración; náuseas; mareo o aturdimiento; malestar en el pecho nuevo o que empeora. Dolor de pecho nuevo/grave o síntomas de tipo infarto → Llame al 911.",
     symptomsListEn: [
@@ -63,8 +132,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Severe Fluid Overload",
     titleEs: "Sobrecarga de Líquidos Grave",
     urgent: true,
+    nextStepLevel: "callDialysis",
     whatToWatchForFullEn:
-      "Rapid weight gain above usual dry weight; increasing ankle/leg/face swelling; worsening shortness of breath; difficulty lying flat; needing extra pillows to breathe; cough; abdominal swelling/tightness; missed or shortened dialysis treatment. Severe trouble breathing → 911. Dialysis patients should report significant swelling and breathing problems promptly.",
+      "Rapid weight gain above usual dry weight; increasing ankle/leg/face swelling; worsening shortness of breath; difficulty lying flat; needing extra pillows to breathe; cough; abdominal swelling/tightness; missed or shortened dialysis treatment. Severe trouble breathing → 911. Dialysis patients should report significant swelling and breathing problems promptly. ([National Kidney Foundation](https://www.kidney.org/sites/default/files/2026-09/441-0518_2608-patflyer_checklist_hemodialysis-v2.pdf?utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Aumento rápido de peso por encima del peso seco habitual; hinchazón creciente en tobillos, piernas o cara; empeoramiento de la dificultad para respirar; dificultad para acostarse plano; necesidad de almohadas adicionales para respirar; tos; hinchazón o tirantez abdominal; tratamiento de diálisis omitido o acortado. Dificultad grave para respirar → 911. Los pacientes en diálisis deben informar de inmediato la hinchazón significativa y los problemas respiratorios.",
     symptomsListEn: [
@@ -107,8 +177,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Signs of Stroke",
     titleEs: "Signos de Accidente Cerebrovascular",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
-      "Balance suddenly off; Eyes/vision suddenly changed; Face drooping; Arm weakness/numbness; Speech slurred/confused; Time to call 911. Also watch for sudden severe headache. Do not wait to see if symptoms improve. Call 911.",
+      "Balance suddenly off; Eyes/vision suddenly changed; Face drooping; Arm weakness/numbness; Speech slurred/confused; Time to call 911. Also watch for sudden severe headache. Do not wait to see if symptoms improve. Call 911. ([American Heart Association](https://newsroom.heart.org/news/knowing-stroke-signs-can-save-a-life-when-every-minute-counts?utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Pérdida repentina del equilibrio; cambios repentinos en ojos o visión; rostro caído; debilidad o entumecimiento en el brazo; habla arrastrada o confundida; hora de llamar al 911. Esté alerta a dolor de cabeza repentino e intenso. No espere a ver si los síntomas mejoran. Llame al 911.",
     symptomsListEn: [
@@ -149,8 +220,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Loss of Consciousness",
     titleEs: "Pérdida del Conocimiento",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
-      "Fainting/unresponsiveness; inability to wake normally; abnormal or absent breathing; seizure-like activity; chest pain or severe breathing difficulty before/after episode. Unresponsive or not breathing normally → Call 911.",
+      "Fainting/unresponsiveness; inability to wake normally; abnormal or absent breathing; seizure-like activity; chest pain or severe breathing difficulty before/after episode. Unresponsive or not breathing normally → Call 911. ([www.heart.org](https://www.heart.org/en/about-us/heart-attack-and-stroke-symptoms?linkId=118155972&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Desmayo o falta de respuesta; incapacidad para despertar normalmente; respiración anormal o ausente; actividad similar a convulsiones; dolor de pecho o dificultad respiratoria grave antes o después del episodio. Inconsciente o sin respiración normal → Llame al 911.",
     symptomsListEn: [
@@ -187,6 +259,7 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Severe Allergic Reaction",
     titleEs: "Reacción Alérgica Grave",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
       "Swelling of lips, tongue, face or throat; difficulty breathing; wheezing; trouble swallowing; widespread hives with breathing/swelling symptoms; dizziness, fainting or sudden weakness. Suspected anaphylaxis → 911.",
     whatToWatchForFullEs:
@@ -225,8 +298,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Severe Shortness of Breath",
     titleEs: "Dificultad Respiratoria Grave",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
-      "Unable to speak normally because of breathlessness; struggling/gasping for air; sudden worsening; chest pain; fainting/confusion; severe weakness; rapidly worsening swelling/fluid overload. Severe breathing difficulty → 911.",
+      "Unable to speak normally because of breathlessness; struggling/gasping for air; sudden worsening; chest pain; fainting/confusion; severe weakness; rapidly worsening swelling/fluid overload. Severe breathing difficulty → 911. ([Nkf](https://nkf.li/kidney-topics/hemodialysis?utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Incapaz de hablar normalmente debido a la falta de aire; lucha o jadeo por respirar; empeoramiento repentino; dolor de pecho; desmayos o confusión; debilidad grave; hinchazón o sobrecarga de líquidos que empeora rápidamente. Dificultad respiratoria grave → 911.",
     symptomsListEn: [
@@ -265,6 +339,7 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Seizures",
     titleEs: "Convulsiones",
     urgent: true,
+    nextStepLevel: "urgentMedical",
     whatToWatchForFullEn:
       "Loss of awareness; stiffening/jerking; staring/unresponsiveness; unusual movements; confusion afterward. Emergency triggers include prolonged seizure, repeated seizures without recovery, injury, breathing difficulty, or first known seizure.",
     whatToWatchForFullEs:
@@ -305,8 +380,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Dialysis Access Emergencies",
     titleEs: "Emergencias del Acceso de Diálisis",
     urgent: true,
+    nextStepLevel: "callDialysis",
     whatToWatchForFullEn:
-      "Fistula/graft: absent or significantly changed thrill/buzz, increasing redness/warmth/swelling/pain, drainage, or bleeding. Catheter: redness, drainage, pain, wet/loose dressing, catheter moved/cracked/leaking, fever/chills. Heavy/spurting bleeding → 911.",
+      "Fistula/graft: absent or significantly changed thrill/buzz, increasing redness/warmth/swelling/pain, drainage, or bleeding. Catheter: redness, drainage, pain, wet/loose dressing, catheter moved/cracked/leaking, fever/chills. Heavy/spurting bleeding → 911. ([National Kidney Foundation](https://www.kidney.org/kidney-topics/hemodialysis-access?page=2&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Fístula/injerto: ausencia o cambio significativo en el frémito/vibración (thrill), enrojecimiento/calor/hinchazón/dolor crecientes, secreción o sangrado. Catéter: enrojecimiento, secreción, dolor, vendaje húmedo o suelto, catéter desplazado/agrietado/con fugas, fiebre o escalofríos. Sangrado abundante o en chorro → 911.",
     symptomsListEn: [
@@ -347,8 +423,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Severe Bleeding",
     titleEs: "Sangrado Intenso",
     urgent: true,
+    nextStepLevel: "call911",
     whatToWatchForFullEn:
-      "Bleeding that will not stop with firm direct pressure; blood soaking through gauze/towels; spurting/pulsating bleeding; dizziness, weakness or fainting. Dialysis-access bleeding that is heavy, spurting, or will not stop requires emergency help.",
+      "Bleeding that will not stop with firm direct pressure; blood soaking through gauze/towels; spurting/pulsating bleeding; dizziness, weakness or fainting. Dialysis-access bleeding that is heavy, spurting, or will not stop requires emergency help. ([Nkf](https://nkf.li/kidney-topics/hemodialysis-access?page=0&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Sangrado que no se detiene con presión directa y firme; sangre que empapa gasas o toallas; sangrado en chorro o pulsátil; mareos, debilidad o desmayos. El sangrado del acceso de diálisis que es abundante, en chorro o que no se detiene requiere ayuda de emergencia inmediata.",
     symptomsListEn: [
@@ -384,11 +461,12 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
   "severe-hyperkalemia-symptoms": {
     slug: "severe-hyperkalemia-symptoms",
     key: "severeHyperkalemia",
-    titleEn: "Severe Hyperkalemia Symptoms",
-    titleEs: "Síntomas de Hiperpotasemia Grave",
+    titleEn: "High Potassium Warning Signs",
+    titleEs: "Signos de Alarma de Potasio Alto",
     urgent: true,
+    nextStepLevel: "urgentMedical",
     whatToWatchForFullEn:
-      "New muscle weakness; numbness/tingling; nausea/vomiting; pounding, racing or irregular heartbeat; chest pain; shortness of breath. Important: high potassium may cause few or no symptoms, so a known critically high potassium result should not be judged by symptoms alone. Sudden/severe hyperkalemia requires immediate care.",
+      "New muscle weakness; numbness/tingling; nausea/vomiting; pounding, racing or irregular heartbeat; chest pain; shortness of breath. Important: high potassium may cause few or no symptoms, so a known critically high potassium result should not be judged by symptoms alone. Sudden/severe hyperkalemia requires immediate care. ([National Kidney Foundation](https://www.kidney.org/kidney-topics/hyperkalemia-high-potassium?page=1&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Debilidad muscular nueva; entumecimiento o hormigueo; náuseas o vómitos; latidos cardíacos fuertes, acelerados o irregulares; dolor de pecho; dificultad para respirar. Importante: el potasio alto puede causar pocos o ningún síntoma, por lo que un resultado conocido de potasio críticamente alto no debe juzgarse solo por los síntomas. La hiperpotasemia repentina o grave requiere atención inmediata.",
     symptomsListEn: [
@@ -429,8 +507,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Fever With Dialysis Catheter",
     titleEs: "Fiebre con Catéter de Diálisis",
     urgent: true,
+    nextStepLevel: "callDialysis",
     whatToWatchForFullEn:
-      "Fever/chills; shaking chills; redness/warmth/swelling around catheter; pain/tenderness; drainage; feeling suddenly ill or weak, particularly during or after dialysis. Catheter infection can become serious quickly, so this should direct the patient to contact the dialysis team immediately and receive urgent assessment based on symptoms.",
+      "Fever/chills; shaking chills; redness/warmth/swelling around catheter; pain/tenderness; drainage; feeling suddenly ill or weak, particularly during or after dialysis. Catheter infection can become serious quickly, so this should direct the patient to contact the dialysis team immediately and receive urgent assessment based on symptoms. ([National Kidney Foundation](https://www.kidney.org/kidney-topics/hemodialysis-access?page=2&utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Fiebre o escalofríos; escalofríos con temblores intensos; enrojecimiento, calor o hinchazón alrededor del catéter; dolor o sensibilidad; secreción; sentirse repentinamente enfermo o débil, especialmente durante o después de la diálisis. La infección del catéter puede volverse grave rápidamente, por lo que debe comunicarse con el equipo de diálisis de inmediato y recibir una evaluación urgente según los síntomas.",
     symptomsListEn: [
@@ -471,8 +550,9 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     titleEn: "Confusion or Mental Status Changes",
     titleEs: "Confusión o Cambios en el Estado Mental",
     urgent: true,
+    nextStepLevel: "urgentMedical",
     whatToWatchForFullEn:
-      "New confusion; unusual sleepiness; difficult to awaken; not knowing person/place/time; new trouble speaking; unusual behavior; severe weakness; confusion after missed dialysis; confusion associated with fever, breathing difficulty, chest pain or neurologic changes. Sudden confusion—especially with stroke signs → 911.",
+      "New confusion; unusual sleepiness; difficult to awaken; not knowing person/place/time; new trouble speaking; unusual behavior; severe weakness; confusion after missed dialysis; confusion associated with fever, breathing difficulty, chest pain or neurologic changes. Sudden confusion—especially with stroke signs → 911. ([American Heart Association](https://newsroom.heart.org/facts/stroke?utm_source=chatgpt.com))",
     whatToWatchForFullEs:
       "Confusión nueva; somnolencia inusual; dificultad para despertar; no reconocer personas, lugares o tiempo; nuevos problemas para hablar; comportamiento inusual; debilidad severa; confusión después de una diálisis omitida; confusión asociada con fiebre, dificultad respiratoria, dolor en el pecho o cambios neurológicos. Confusión repentina, especialmente con signos de ACV → 911.",
     symptomsListEn: [
