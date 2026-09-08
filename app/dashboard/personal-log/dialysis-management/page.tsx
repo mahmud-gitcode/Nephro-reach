@@ -614,9 +614,9 @@ function DialysisManagementDashboard() {
 
           {/* 2 Buttons placed below - full width to fill right side */}
           <div className="flex flex-col gap-2.5 w-full">
-            {/* Button 1: Add New Record */}
+            {/* Button 1: Add New Record (Opens View Details Page) */}
             <Link
-              href="/dashboard/personal-log/dialysis-management/add"
+              href="/dashboard/personal-log/dialysis-management/view?treatment=tx-4"
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" />
@@ -836,7 +836,7 @@ function DialysisManagementDashboard() {
                 return (
                   <div
                     key={card.id}
-                    className="min-h-[370px] sm:min-h-[390px] w-full rounded-3xl border border-purple-200 bg-purple-50/20 p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md hover:border-purple-400"
+                    className="min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border border-purple-200 bg-purple-50/20 p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md hover:border-purple-400"
                   >
                     {/* Content: Text 1 & Text 2 (Normal layout, no tag, pure purple color) */}
                     <div className="space-y-1.5">
@@ -884,20 +884,12 @@ function DialysisManagementDashboard() {
                       </div>
                     </div>
 
-                    {/* 2 Purple Buttons Inside Card: New Record & View Details on 2 Separate Rows */}
-                    <div className="flex flex-col gap-2.5 w-full">
-                      <Link
-                        href={`/dashboard/personal-log/dialysis-management/add?treatment=${card.intervalId}&extra=${card.title.replace(/\s+/g, "_")}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 py-2.5 sm:py-3 px-3 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
-                      >
-                        <span>{isEs ? "Nuevo Registro" : "New Record"}</span>
-                      </Link>
-
+                    {/* View Details Button Inside Extra Card */}
+                    <div className="w-full pt-1">
                       <Link
                         href={`/dashboard/personal-log/dialysis-management/view?treatment=${card.intervalId}&extra=${card.title.replace(/\s+/g, "_")}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full inline-flex items-center justify-center rounded-xl border border-purple-200 bg-white hover:bg-purple-50 py-2.5 px-3 text-xs sm:text-sm font-bold text-purple-800 shadow-2xs hover:border-purple-300 transition-all active:scale-[0.98] cursor-pointer text-center"
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
                       >
                         <span>{isEs ? "Ver Detalles" : "View Details"}</span>
                       </Link>
@@ -909,7 +901,7 @@ function DialysisManagementDashboard() {
               return (
                 <div
                   key={card.id}
-                  className={`min-h-[370px] sm:min-h-[390px] w-full rounded-3xl border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md ${isSelected
+                  className={`min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md ${isSelected
                       ? "border-[#2563EB] bg-blue-50/20 ring-2 ring-[#2563EB]/20"
                       : "border-slate-200/90 bg-white hover:border-blue-300"
                     }`}
@@ -963,20 +955,12 @@ function DialysisManagementDashboard() {
                     </div>
                   </div>
 
-                  {/* 2 Buttons Inside Card: New Record & View Details on 2 Separate Rows */}
-                  <div className="flex flex-col gap-2.5 w-full">
-                    <Link
-                      href={`/dashboard/personal-log/dialysis-management/add?treatment=${card.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full inline-flex items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-3 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
-                    >
-                      <span>{isEs ? "Nuevo Registro" : "New Record"}</span>
-                    </Link>
-
+                  {/* View Details Button Inside Treatment Card */}
+                  <div className="w-full pt-1">
                     <Link
                       href={`/dashboard/personal-log/dialysis-management/view?treatment=${card.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2.5 px-3 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs hover:border-slate-300 transition-all active:scale-[0.98] cursor-pointer text-center"
+                      className="w-full inline-flex items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
                     >
                       <span>{isEs ? "Ver Detalles" : "View Details"}</span>
                     </Link>
@@ -988,10 +972,154 @@ function DialysisManagementDashboard() {
         </section>
       )}
 
-      {/* Tab 2: Analytics */}
+      {/* Tab 2: Analytics (Week-by-week aggregated analytics) */}
       {activeTab === "analytics" && (
         <section className="space-y-6 animate-in fade-in duration-200">
-          <RecoveryPatternSection treatmentId={selectedCard} />
+          <RecoveryPatternSection mode="weekly" />
+
+          {/* Weekly Performance Breakdown */}
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {isEs ? "Desglose de Desempeño Semanal" : "Weekly Performance Breakdown"}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {isEs
+                    ? "Historial de tratamientos y recuperación organizado por semanas"
+                    : "Treatment completion and recovery outcomes aggregated week-by-week"}
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                    <th className="py-3 px-4 w-32">{isEs ? "Semana" : "Week"}</th>
+                    <th className="py-3 px-4 w-44">{isEs ? "Período" : "Period"}</th>
+                    <th className="py-3 px-4">{isEs ? "Tratamientos" : "Treatments Completed"}</th>
+                    <th className="py-3 px-4">{isEs ? "Tiempo Promedio" : "Avg Recovery Time"}</th>
+                    <th className="py-3 px-4">{isEs ? "Tasa de Recuperación" : "Good Recovery Rate"}</th>
+                    <th className="py-3 px-4 text-center">{isEs ? "Estado" : "Status"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      {isEs ? "Semana 4 (Actual)" : "Week 4 (Current)"}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                      Jun 22, 2026 - Jun 28, 2026
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      2.4 hrs
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "85%" }} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">85%</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        {isEs ? "En Objetivo" : "On Target"}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      {isEs ? "Semana 3" : "Week 3"}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                      Jun 15, 2026 - Jun 21, 2026
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      2.9 hrs
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "74%" }} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">74%</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                        {isEs ? "Estable" : "Stable"}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      {isEs ? "Semana 2" : "Week 2"}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                      Jun 08, 2026 - Jun 14, 2026
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3.2 hrs
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "64%" }} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">64%</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
+                        {isEs ? "Mejorando" : "Improving"}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      {isEs ? "Semana 1" : "Week 1"}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                      Jun 01, 2026 - Jun 07, 2026
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                      3.8 hrs
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "52%" }} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">52%</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                        {isEs ? "Monitoreado" : "Monitored"}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
       )}
 
@@ -1390,10 +1518,10 @@ function DialysisManagementDashboard() {
                 {isEs ? "Cerrar" : "Close"}
               </button>
               <Link
-                href={`/dashboard/personal-log/dialysis-management/add?treatment=${selectedCard}`}
+                href={`/dashboard/personal-log/dialysis-management/view?treatment=${selectedCard}`}
                 className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-2.5 text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer"
               >
-                {isEs ? "Agregar Registro" : "Add Record"}
+                {isEs ? "Ver Detalles Completos" : "View Full Details"}
               </Link>
             </div>
           </div>

@@ -420,10 +420,7 @@ export default function CareTeamQuestionsSection({
             >
               {/* Question Row with Status Tag, Edit Button, and Delete */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5 flex-1">
-                  <span className="text-base font-bold text-blue-600 shrink-0 select-none">
-                    Q :
-                  </span>
+                <div className="flex-1">
                   <h3 className="text-base font-semibold text-slate-900 leading-snug">
                     {q.question}
                   </h3>

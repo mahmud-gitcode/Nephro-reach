@@ -703,13 +703,11 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* 2. PROVIDER ORDERS & INSTRUCTIONS                                         */}
       {/* ========================================================================= */}
-      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-              {isEs ? "Órdenes e Instrucciones del Proveedor" : "Provider Orders & Instructions"}
-            </h2>
-          </div>
+      <section className="space-y-3.5 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            {isEs ? "Órdenes e Instrucciones del Proveedor" : "Provider Orders & Instructions"}
+          </h2>
 
           <button
             type="button"
@@ -722,7 +720,7 @@ function ViewRecordContent() {
         </div>
 
         {/* Orders Table - Matched with Add Page format */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
@@ -770,13 +768,11 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* 3. SYMPTOMS BETWEEN TREATMENTS                                            */}
       {/* ========================================================================= */}
-      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-              {isEs ? "Síntomas Entre Tratamientos" : "Symptoms Between Treatments"}
-            </h2>
-          </div>
+      <section className="space-y-3.5 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            {isEs ? "Síntomas Entre Tratamientos" : "Symptoms Between Treatments"}
+          </h2>
 
           <button
             type="button"
@@ -789,7 +785,7 @@ function ViewRecordContent() {
         </div>
 
         {/* Symptoms Table - Normal Clean Design (Day, Date, Symptoms, Edit Icon) */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
@@ -843,13 +839,11 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* 4. COMMON DIALYSIS MEDICATIONS                                            */}
       {/* ========================================================================= */}
-      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in duration-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-              {isEs ? "Medicamentos Comunes de Diálisis" : "Common Dialysis Medications"}
-            </h2>
-          </div>
+      <section className="space-y-3.5 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            {isEs ? "Medicamentos Comunes de Diálisis" : "Common Dialysis Medications"}
+          </h2>
 
           <button
             type="button"
@@ -862,7 +856,7 @@ function ViewRecordContent() {
         </div>
 
         {/* Medications Table - Same Simple Clean Design as Symptoms & Orders */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
