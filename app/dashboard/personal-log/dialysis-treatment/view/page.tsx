@@ -280,7 +280,13 @@ function TreatmentDetailContent() {
             {dt?.detail?.duringTreatment?.title || "During Treatment"}
           </h2>
 
-          {/* 3 Core 5-state intra symptoms */}
+          {/* Sequential for extra fluid removal */}
+          <DetailRow
+            label={dt?.detail?.duringTreatment?.sequential || "Sequential for extra fluid removal"}
+            value={formatYesNo(entry.sequentialFluidRemoval || "No")}
+          />
+
+          {/* Core 5-state intra symptoms */}
           <div className="space-y-2">
             <DetailRow
               label={dt?.detail?.duringTreatment?.cramping || "Cramping"}
@@ -289,6 +295,10 @@ function TreatmentDetailContent() {
             <DetailRow
               label={dt?.detail?.duringTreatment?.lowBp || "Low BP"}
               value={formatYesNo(entry.lowBp)}
+            />
+            <DetailRow
+              label={dt?.detail?.duringTreatment?.highBp || "High BP"}
+              value={formatYesNo(entry.highBp || "No")}
             />
             <DetailRow
               label={dt?.detail?.duringTreatment?.fatigue || "Fatigue"}

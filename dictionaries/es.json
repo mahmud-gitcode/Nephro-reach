@@ -799,8 +799,10 @@
       },
       "duringTreatment": {
         "title": "Durante el Tratamiento",
+        "sequential": "Secuencial para extracción adicional de líquidos",
         "cramping": "Calambres",
         "lowBp": "PA Baja",
+        "highBp": "PA Alta",
         "fatigue": "Fatiga",
         "additionalSymptoms": "Síntomas Adicionales",
         "sessionNotes": "Notas de la Sesión"

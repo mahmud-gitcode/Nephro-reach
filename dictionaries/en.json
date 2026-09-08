@@ -815,8 +815,10 @@
       },
       "duringTreatment": {
         "title": "During Treatment",
+        "sequential": "Sequential for extra fluid removal",
         "cramping": "Cramping",
         "lowBp": "Low BP",
+        "highBp": "High BP",
         "fatigue": "Fatigue",
         "additionalSymptoms": "Additional Symptoms",
         "sessionNotes": "Session Notes"

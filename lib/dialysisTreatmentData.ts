@@ -23,8 +23,10 @@ export interface DialysisLogEntry {
   preSeverity: Record<string, number>;
   // Intra-Treatment Symptoms
   hadIntraSymptoms: boolean;
+  sequentialFluidRemoval?: "Yes" | "No";
   cramping: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   lowBp: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
+  highBp?: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   fatigue: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   intraSymptoms: string[];
   intraSeverity: Record<string, number>;

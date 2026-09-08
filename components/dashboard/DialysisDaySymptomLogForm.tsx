@@ -41,8 +41,10 @@ export interface DialysisDayLogData {
   // Specific 5-level Symptoms
   cramping: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   lowBp: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
+  highBp?: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   fatigue: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   recoveryTime: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
+  sequentialFluidRemoval?: "Yes" | "No";
   // Medication Adherence
   medsTakenPrescribed: "Yes" | "No";
   // Pre-treatment
@@ -303,8 +305,12 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
   // Specific 5-level severity symptoms
   const [crampingSeverity, setCrampingSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("Yes");
   const [lowBpSeverity, setLowBpSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
+  const [highBpSeverity, setHighBpSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
   const [fatigueSeverity, setFatigueSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
   const [recoverySeverity, setRecoverySeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("Yes");
+
+  // Sequential for extra fluid removal
+  const [sequentialFluidRemoval, setSequentialFluidRemoval] = useState<"Yes" | "No">("No");
 
   // Medication compliance
   const [medsTakenPrescribed, setMedsTakenPrescribed] = useState<"Yes" | "No">("Yes");
@@ -393,8 +399,10 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
       rescheduled,
       cramping: crampingSeverity,
       lowBp: lowBpSeverity,
+      highBp: highBpSeverity,
       fatigue: fatigueSeverity,
       recoveryTime: recoverySeverity,
+      sequentialFluidRemoval,
       medsTakenPrescribed,
       preOverallFeel: preFeel,
       preSymptoms,
@@ -443,6 +451,8 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
     "High BP",
     "Cramps",
     "Nausea",
+    "Vomiting",
+    "Headache",
     "Dizziness",
     "Chest Discomfort",
     "Itching",
@@ -763,6 +773,15 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
               During Treatment
             </h2>
 
+            {/* Sequential for extra fluid removal (yes/no) */}
+            <div className="space-y-1.5">
+              <BinaryToggle
+                label="Sequential for extra fluid removal"
+                value={sequentialFluidRemoval}
+                onChange={setSequentialFluidRemoval}
+              />
+            </div>
+
             {/* Core 5-state symptoms from user reference image */}
             <div className="space-y-3">
               <h3 className="text-base font-bold tracking-tight text-slate-900">
@@ -779,6 +798,11 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   label="Low BP"
                   value={lowBpSeverity}
                   onChange={setLowBpSeverity}
+                />
+                <SeverityFiveToggle
+                  label="High BP"
+                  value={highBpSeverity}
+                  onChange={setHighBpSeverity}
                 />
                 <SeverityFiveToggle
                   label="Fatigue"
