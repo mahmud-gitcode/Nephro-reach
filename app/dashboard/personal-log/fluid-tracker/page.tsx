@@ -12,6 +12,7 @@ import {
   Droplets,
   FileText,
   Minus,
+  Pencil,
   Plus,
   Scale,
   Wind,
@@ -61,103 +62,307 @@ function TrendIcon({ type }: { type: "up" | "down" | "level" }) {
   );
 }
 
-function MetricCards() {
+function BathroomScaleIcon({ className = "h-9 w-9" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      {/* Outer Scale Base */}
+      <rect
+        x="4"
+        y="4"
+        width="36"
+        height="36"
+        rx="9"
+        fill="#0D47A1"
+        stroke="#1E40AF"
+        strokeWidth="1.5"
+      />
+      {/* Subtle Inner Frame */}
+      <rect
+        x="6.5"
+        y="6.5"
+        width="31"
+        height="31"
+        rx="7"
+        stroke="#60A5FA"
+        strokeWidth="1"
+        strokeOpacity="0.4"
+      />
+      {/* Top Dial / Display Window */}
+      <circle cx="22" cy="14" r="5.5" fill="#FFFFFF" />
+      <circle cx="22" cy="14" r="5.5" stroke="#93C5FD" strokeWidth="1" />
+      {/* Dial Needle */}
+      <line
+        x1="22"
+        y1="14"
+        x2="22"
+        y2="10"
+        stroke="#0D47A1"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="22" cy="14" r="1.2" fill="#0D47A1" />
+      {/* Platform footpad indicator groove */}
+      <rect
+        x="13"
+        y="27"
+        width="18"
+        height="2"
+        rx="1"
+        fill="#FFFFFF"
+        fillOpacity="0.45"
+      />
+    </svg>
+  );
+}
+
+function MetricCards({
+  unit,
+  edwKg,
+  todayWeightKg,
+  edwNote,
+  todayDateStr,
+  onOpenEdwModal,
+}: {
+  unit: "kg" | "lbs";
+  edwKg: number;
+  todayWeightKg: number;
+  edwNote: string;
+  todayDateStr: string;
+  onOpenEdwModal: () => void;
+}) {
   const { language, dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
 
+  // Conversions based on active unit
+  const isKg = unit === "kg";
+  const displayEdw = isKg ? edwKg.toFixed(1) : (edwKg * 2.20462).toFixed(1);
+  const displayToday = isKg
+    ? todayWeightKg.toFixed(1)
+    : (todayWeightKg * 2.20462).toFixed(1);
+
+  const diffVal = Number(displayToday) - Number(displayEdw);
+  const diffPct =
+    Number(displayEdw) > 0
+      ? ((Math.abs(diffVal) / Number(displayEdw)) * 100).toFixed(1)
+      : "0.0";
+
+  const isAbove = diffVal > 0.0001;
+  const isBelow = diffVal < -0.0001;
+  const isTarget = !isAbove && !isBelow;
+
+  let statusTitle = w?.edwMetrics?.aboveEdw || "Above EDW";
+  let statusSubtitle = `${diffPct}% ${w?.edwMetrics?.aboveEdwSuffix || "above EDW"}`;
+  let diffSign = "+";
+  let statusTextColor = "text-red-600";
+  let statusIconBg = "bg-[#FEF2F2] border border-red-100";
+  let StatusIcon = () => (
+    <ArrowUp className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 stroke-[2.5]" />
+  );
+
+  if (isBelow) {
+    statusTitle = w?.edwMetrics?.belowEdw || "Below EDW";
+    statusSubtitle = `${diffPct}% ${w?.edwMetrics?.belowEdwSuffix || "below EDW"}`;
+    diffSign = "-";
+    statusTextColor = "text-amber-600";
+    statusIconBg = "bg-amber-50 border border-amber-100";
+    StatusIcon = () => (
+      <ArrowDown className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 stroke-[2.5]" />
+    );
+  } else if (isTarget) {
+    statusTitle = w?.edwMetrics?.atEdw || "At Target EDW";
+    statusSubtitle = w?.edwMetrics?.atEdwSuffix || "On target with EDW";
+    diffSign = "";
+    statusTextColor = "text-emerald-600";
+    statusIconBg = "bg-emerald-50 border border-emerald-100";
+    StatusIcon = () => (
+      <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600" />
+    );
+  }
+
   const dateStr = language === "ES" ? "31 May, 7:30 AM" : "May 31, 7:30 AM";
 
-  const metricCards = [
-    {
-      label: w?.metrics?.currentWeight?.label || "Current Weight",
-      value: "80",
-      unit: w?.metrics?.currentWeight?.unit || "lbs",
-      date: dateStr,
-      note: w?.metrics?.currentWeight?.note || "↓ 1.2 lbs vs yesterday",
-      noteClass: "text-emerald-600",
-      icon: Scale,
-      iconBg: "bg-blue-100",
-      iconClass: "text-blue-600",
-    },
+  const secondaryCards = [
     {
       label: w?.metrics?.avgFluidIntake?.label || "Avg. Fluid Intake",
       value: "18",
       unit: w?.metrics?.avgFluidIntake?.unit || "OZ",
-      date: dateStr,
-      note: w?.metrics?.avgFluidIntake?.note || "↓ 1.2 lbs vs yesterday",
-      noteClass: "text-emerald-600",
+      subtitle: w?.metrics?.avgFluidIntake?.note || "↓ 1.2 lbs vs yesterday",
+      subtitleClass: "text-emerald-600 font-bold",
       icon: Droplets,
-      iconBg: "bg-sky-100",
+      iconBg: "bg-sky-50 border border-sky-100",
       iconClass: "text-sky-600",
     },
     {
       label: w?.metrics?.daysGoalMet?.label || "Days Goal Met",
       value: "21 / 30",
-      date: dateStr,
-      note: w?.metrics?.daysGoalMet?.note || "This Month",
-      extra: "60%",
+      unit: "60%",
+      subtitle: w?.metrics?.daysGoalMet?.note || "This Month",
+      subtitleClass: "text-slate-500 font-medium",
       icon: CheckCircle2,
-      iconBg: "bg-emerald-100",
+      iconBg: "bg-emerald-50 border border-emerald-100",
       iconClass: "text-emerald-600",
     },
     {
       label: w?.metrics?.swellingReports?.label || "Swelling Reports",
       value: "5",
-      date: dateStr,
-      note: w?.metrics?.swellingReports?.note || "↓ 2 vs last month",
-      noteClass: "text-emerald-600",
+      unit: "",
+      subtitle: w?.metrics?.swellingReports?.note || "↓ 2 vs last month",
+      subtitleClass: "text-emerald-600 font-bold",
       icon: FileText,
-      iconBg: "bg-amber-100",
+      iconBg: "bg-amber-50 border border-amber-100",
       iconClass: "text-amber-600",
     },
     {
       label: w?.metrics?.sobReports?.label || "SOB Reports",
       value: "3",
-      date: dateStr,
-      note: w?.metrics?.sobReports?.note || "↓ 1 vs last month",
-      noteClass: "text-emerald-600",
+      unit: "",
+      subtitle: w?.metrics?.sobReports?.note || "↓ 1 vs last month",
+      subtitleClass: "text-emerald-600 font-bold",
       icon: Wind,
-      iconBg: "bg-red-100",
-      iconClass: "text-red-500",
+      iconBg: "bg-rose-50 border border-rose-100",
+      iconClass: "text-rose-500",
     },
   ];
 
   return (
-    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      {metricCards.map((card) => (
-        <article
-          key={card.label}
-          className="rounded-[14px] border border-slate-200 bg-white p-[15px]"
+    <section className="space-y-3.5">
+      {/* Primary EDW Comparison Cards - Exactly matching the screenshot */}
+      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+        {/* Card 1: Estimated Dry Weight */}
+        <div
+          onClick={onOpenEdwModal}
+          className="group relative flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md cursor-pointer"
         >
-          <div className="flex items-start gap-3">
-            <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}
-            >
-              <card.icon className={`h-6 w-6 ${card.iconClass}`} />
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] border border-blue-100 shadow-2xs group-hover:scale-105 transition-transform">
+              <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
+            </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-500">{card.label}</p>
-              <p className="mt-0.5 text-[22px] font-medium leading-7 text-slate-950">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"}
+              </p>
+              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+                {displayEdw}
+                <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                  {unit}
+                </span>
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">
+                {edwNote || (w?.edwMetrics?.edwSetBy || "Set by care team.")}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenEdwModal();
+            }}
+            className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
+            title="Edit EDW"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Card 2: Today's Weight */}
+        <div
+          onClick={onOpenEdwModal}
+          className="group relative flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] border border-blue-100 shadow-2xs group-hover:scale-105 transition-transform">
+              <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                {w?.edwMetrics?.todaysWeight || "Today's Weight"}
+              </p>
+              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+                {displayToday}
+                <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                  {unit}
+                </span>
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">
+                {todayDateStr}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenEdwModal();
+            }}
+            className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
+            title="Update Weight"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Card 3: Difference Above / Below EDW */}
+        <div className="flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:shadow-md">
+          <div
+            className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${statusIconBg} shadow-2xs`}
+          >
+            <StatusIcon />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+              {statusTitle}
+            </p>
+            <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+              {diffSign}
+              {Math.abs(diffVal).toFixed(1)}
+              <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                {unit}
+              </span>
+            </p>
+            <p className={`mt-0.5 text-xs sm:text-[13px] font-bold ${statusTextColor}`}>
+              {statusSubtitle}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Supporting Symptom & Fluid Tracking Cards - Identical Font Size & Colors to New Cards */}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        {secondaryCards.map((card) => (
+          <article
+            key={card.label}
+            className="group relative flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md"
+          >
+            <div
+              className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ${card.iconBg} shadow-2xs group-hover:scale-105 transition-transform`}
+            >
+              <card.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconClass}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                {card.label}
+              </p>
+              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
                 {card.value}
                 {card.unit && (
-                  <span className="ml-1 text-xs font-medium text-slate-500">
+                  <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
                     {card.unit}
                   </span>
                 )}
               </p>
+              <p className={`mt-0.5 text-xs sm:text-[13px] truncate ${card.subtitleClass}`}>
+                {card.subtitle}
+              </p>
             </div>
-          </div>
-          <p className="mt-3 text-xs text-slate-500">{card.date}</p>
-          <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-            <span className={card.noteClass ?? "text-slate-500"}>
-              {card.note}
-            </span>
-            {card.extra && (
-              <span className="font-medium text-slate-700">{card.extra}</span>
-            )}
-          </div>
-        </article>
-      ))}
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -165,6 +370,29 @@ function MetricCards() {
 function WeightTrendChart() {
   const { language, dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = React.useState<number>(550);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const measured = containerRef.current.clientWidth;
+        if (measured > 0) setContainerWidth(measured);
+      }
+    };
+    updateWidth();
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setContainerWidth(Math.round(entry.contentRect.width));
+        }
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const weightTrend = [
     { day: "May 1", value: 1.0 },
@@ -177,12 +405,13 @@ function WeightTrendChart() {
     { day: "May 8", value: 1.3 },
   ];
 
-  const width = 500;
+  // Inner usable width inside container (subtracting p-3.5 = 14px * 2 = 28px padding)
+  const width = Math.max(containerWidth - 28, 300);
   const height = 200;
   const left = 24;
-  const right = 8;
-  const top = 8;
-  const bottom = 8;
+  const right = 10;
+  const top = 10;
+  const bottom = 10;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
   const xFor = (index: number) =>
@@ -198,7 +427,10 @@ function WeightTrendChart() {
       : ["May 1", "May 2", "May 3", "May 4", "May 5", "May 6"];
 
   return (
-    <section className="h-full rounded-xl border border-[#DFE3E8] bg-[#FCFDFD] p-3.5">
+    <section
+      ref={containerRef}
+      className="h-full rounded-2xl border border-[#DFE3E8] bg-[#FCFDFD] p-3.5"
+    >
       <div className="flex items-center gap-1.5">
         <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
           {w?.weightTrend?.title || "Weight Trend"}
@@ -208,7 +440,7 @@ function WeightTrendChart() {
         </span>
       </div>
       <svg
-        viewBox={`0 0 ${width} ${height + 22}`}
+        viewBox={`0 0 ${width} ${height + 26}`}
         className="mt-3 h-[236px] w-full"
       >
         {[8, 6, 4, 2, 0].map((tick, index) => {
@@ -216,7 +448,7 @@ function WeightTrendChart() {
           return (
             <g key={tick}>
               <text
-                x={16}
+                x={left - 8}
                 y={y + 4}
                 textAnchor="end"
                 className="fill-black/70 text-[12px]"
@@ -255,7 +487,7 @@ function WeightTrendChart() {
           <text
             key={label}
             x={left + (index / (labels.length - 1)) * plotWidth}
-            y={height + 18}
+            y={height + 20}
             textAnchor="middle"
             className="fill-black/70 text-[12px]"
           >
@@ -764,9 +996,17 @@ interface AddWeightLogModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (entry: WeightFluidEntry) => void;
+  edwKg?: number;
+  unit?: "kg" | "lbs";
 }
 
-function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) {
+function AddWeightLogModal({
+  isOpen,
+  onClose,
+  onSave,
+  edwKg = 72.5,
+  unit = "kg",
+}: AddWeightLogModalProps) {
   const { language } = useLanguage();
 
   const getTodayDateString = () => {
@@ -822,10 +1062,8 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
   const [formNotes, setFormNotes] = useState("");
 
   // Estimated Dry Weight (EDW) Connection Logic
-  const [patientEdw] = useState("122");
+  const edwNum = unit === "kg" ? edwKg : parseFloat((edwKg * 2.20462).toFixed(1));
   const [weightCompareMode, setWeightCompareMode] = useState<"evening" | "morning">("evening");
-
-  const edwNum = parseFloat(patientEdw.replace(/[^0-9.]/g, "")) || 122;
   const morningWeightNum = parseFloat(formMorning.replace(/[^0-9.]/g, "")) || 0;
   const eveningWeightNum = parseFloat(formEvening.replace(/[^0-9.]/g, "")) || 0;
 
@@ -949,7 +1187,9 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-800 block">
-                {language === "ES" ? "Peso Mañana (Lbs)" : "Morning Weight (Lbs)"}
+                {language === "ES"
+                  ? `Peso Mañana (${unit.toUpperCase()})`
+                  : `Morning Weight (${unit.toUpperCase()})`}
               </label>
               <input
                 type="text"
@@ -960,14 +1200,20 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
                   setFormMorning(val);
                   setWeightCompareMode("morning");
                 }}
-                placeholder={language === "ES" ? "ej. 125" : "e.g. 125"}
+                placeholder={
+                  unit === "kg"
+                    ? (language === "ES" ? "ej. 72.9" : "e.g. 72.9")
+                    : (language === "ES" ? "ej. 125" : "e.g. 125")
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-800 block">
-                {language === "ES" ? "Peso Tarde (Lbs)" : "Evening Weight (Lbs)"}
+                {language === "ES"
+                  ? `Peso Tarde (${unit.toUpperCase()})`
+                  : `Evening Weight (${unit.toUpperCase()})`}
               </label>
               <input
                 type="text"
@@ -978,7 +1224,11 @@ function AddWeightLogModal({ isOpen, onClose, onSave }: AddWeightLogModalProps) 
                   setFormEvening(val);
                   setWeightCompareMode("evening");
                 }}
-                placeholder={language === "ES" ? "ej. 122" : "e.g. 122"}
+                placeholder={
+                  unit === "kg"
+                    ? (language === "ES" ? "ej. 73.2" : "e.g. 73.2")
+                    : (language === "ES" ? "ej. 122" : "e.g. 122")
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
               />
             </div>
@@ -1587,25 +1837,274 @@ function RecentEntries({
   );
 }
 
+function EditEdwModal({
+  isOpen,
+  onClose,
+  edwKg,
+  todayWeightKg,
+  edwNote,
+  todayDateStr,
+  unit,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  edwKg: number;
+  todayWeightKg: number;
+  edwNote: string;
+  todayDateStr: string;
+  unit: "kg" | "lbs";
+  onSave: (data: {
+    edwKg: number;
+    todayWeightKg: number;
+    edwNote: string;
+    todayDateStr: string;
+  }) => void;
+}) {
+  const { language, dictionary } = useLanguage();
+  const w = dictionary?.weightFluidTracker;
+
+  const isKg = unit === "kg";
+  const [formEdw, setFormEdw] = useState(
+    isKg ? edwKg.toString() : (edwKg * 2.20462).toFixed(1)
+  );
+  const [formToday, setFormToday] = useState(
+    isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
+  );
+  const [formNote, setFormNote] = useState(edwNote);
+  const [formDate, setFormDate] = useState(todayDateStr);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormEdw(isKg ? edwKg.toString() : (edwKg * 2.20462).toFixed(1));
+      setFormToday(
+        isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
+      );
+      setFormNote(edwNote);
+      setFormDate(todayDateStr);
+    }
+  }, [isOpen, isKg, edwKg, todayWeightKg, edwNote, todayDateStr]);
+
+  if (!isOpen) return null;
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsedEdw = parseFloat(formEdw) || edwKg;
+    const parsedToday = parseFloat(formToday) || todayWeightKg;
+
+    const finalEdwKg = isKg ? parsedEdw : parsedEdw / 2.20462;
+    const finalTodayKg = isKg ? parsedToday : parsedToday / 2.20462;
+
+    onSave({
+      edwKg: parseFloat(finalEdwKg.toFixed(2)),
+      todayWeightKg: parseFloat(finalTodayKg.toFixed(2)),
+      edwNote:
+        formNote.trim() ||
+        (language === "ES"
+          ? "Establecido por el equipo de atención."
+          : "Set by care team."),
+      todayDateStr:
+        formDate.trim() ||
+        (language === "ES" ? "31 May, 7:30 AM" : "May 31, 7:30 AM"),
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-100">
+              <BathroomScaleIcon className="h-5 w-5" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">
+              {w?.edwMetrics?.editSettings ||
+                (language === "ES"
+                  ? "Configuración de Peso y EDW"
+                  : "Weight & EDW Settings")}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-3.5">
+          <div>
+            <label className="text-xs font-bold text-slate-800 block mb-1">
+              {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"} ({unit})
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={formEdw}
+              onChange={(e) => setFormEdw(e.target.value.replace(/[^0-9.]/g, ""))}
+              placeholder={isKg ? "72.5" : "159.8"}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-800 block mb-1">
+              {language === "ES"
+                ? "Nota de EDW / Proveedor"
+                : "EDW Care Team Note"}
+            </label>
+            <input
+              type="text"
+              value={formNote}
+              onChange={(e) => setFormNote(e.target.value)}
+              placeholder={
+                language === "ES"
+                  ? "ej. Establecido por el equipo de atención."
+                  : "e.g. Set by care team."
+              }
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-800 block mb-1">
+              {w?.edwMetrics?.todaysWeight || "Today's Weight"} ({unit})
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={formToday}
+              onChange={(e) =>
+                setFormToday(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              placeholder={isKg ? "72.9" : "160.7"}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-800 block mb-1">
+              {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
+            </label>
+            <input
+              type="text"
+              value={formDate}
+              onChange={(e) => setFormDate(e.target.value)}
+              placeholder="May 31, 7:30 AM"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-11 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+            >
+              {language === "ES" ? "Cancelar" : "Cancel"}
+            </button>
+            <button
+              type="submit"
+              className="flex h-11 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-xs hover:shadow cursor-pointer active:scale-[0.98]"
+            >
+              {w?.edwMetrics?.saveSettings ||
+                (language === "ES" ? "Guardar" : "Save Settings")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function FluidTrackerPage() {
-  const { dictionary } = useLanguage();
+  const { language, dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
 
   const [entries, setEntries] = useState<WeightFluidEntry[]>(INITIAL_ENTRIES);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEdwModalOpen, setIsEdwModalOpen] = useState(false);
+
+  // Unit toggle state: "kg" or "lbs", defaulting to "kg" as in screenshot
+  const [unit, setUnit] = useState<"kg" | "lbs">("kg");
+
+  // EDW and Today's weight values stored in kg
+  const [edwKg, setEdwKg] = useState<number>(72.5);
+  const [todayWeightKg, setTodayWeightKg] = useState<number>(72.9);
+  const [edwNote, setEdwNote] = useState<string>("Set by care team.");
+  const [todayDateStr, setTodayDateStr] = useState<string>("May 31, 7:30 AM");
 
   const handleSaveEntry = (newEntry: WeightFluidEntry) => {
     setEntries([newEntry, ...entries]);
     setIsModalOpen(false);
+    // If a morning weight is logged, sync it as Today's weight
+    const weightVal = parseFloat(newEntry.morning);
+    if (!isNaN(weightVal) && weightVal > 0) {
+      if (unit === "kg") {
+        setTodayWeightKg(parseFloat(weightVal.toFixed(1)));
+      } else {
+        setTodayWeightKg(parseFloat((weightVal / 2.20462).toFixed(1)));
+      }
+      setTodayDateStr(
+        language === "ES"
+          ? "Hoy, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      );
+    }
+  };
+
+  const handleSaveEdwSettings = (data: {
+    edwKg: number;
+    todayWeightKg: number;
+    edwNote: string;
+    todayDateStr: string;
+  }) => {
+    setEdwKg(data.edwKg);
+    setTodayWeightKg(data.todayWeightKg);
+    setEdwNote(data.edwNote);
+    setTodayDateStr(data.todayDateStr);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
-          {w?.title || "Weight & Fluid Management Center"}
-        </h1>
+        <div>
+          <h1 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
+            {w?.title || "Weight & Fluid Management Center"}
+          </h1>
+          <p className="mt-2 text-sm font-medium text-slate-500">
+            {w?.subtitle || "Track symptoms & compare weights. Understand your fluid patterns."}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
+          {/* Unit Switcher: kg / lbs */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-[#F1F5F9] p-1 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setUnit("kg")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                unit === "kg"
+                  ? "bg-white text-blue-600 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              kg
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnit("lbs")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                unit === "lbs"
+                  ? "bg-white text-blue-600 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              lbs
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
@@ -1624,7 +2123,14 @@ export default function FluidTrackerPage() {
         </div>
       </div>
 
-      <MetricCards />
+      <MetricCards
+        unit={unit}
+        edwKg={edwKg}
+        todayWeightKg={todayWeightKg}
+        edwNote={edwNote}
+        todayDateStr={todayDateStr}
+        onOpenEdwModal={() => setIsEdwModalOpen(true)}
+      />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <WeightTrendChart />
@@ -1647,6 +2153,20 @@ export default function FluidTrackerPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEntry}
+        edwKg={edwKg}
+        unit={unit}
+      />
+
+      {/* Quick Edit EDW & Weight Settings Modal */}
+      <EditEdwModal
+        isOpen={isEdwModalOpen}
+        onClose={() => setIsEdwModalOpen(false)}
+        edwKg={edwKg}
+        todayWeightKg={todayWeightKg}
+        edwNote={edwNote}
+        todayDateStr={todayDateStr}
+        unit={unit}
+        onSave={handleSaveEdwSettings}
       />
     </div>
   );

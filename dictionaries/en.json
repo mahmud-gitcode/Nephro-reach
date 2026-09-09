@@ -952,6 +952,22 @@
   },
   "weightFluidTracker": {
     "title": "Weight & Fluid Management Center",
+    "subtitle": "Track symptoms & compare weights. Understand your fluid patterns.",
+    "edwMetrics": {
+      "estimatedDryWeight": "Estimated Dry Weight",
+      "edwSetBy": "Set by care team.",
+      "todaysWeight": "Today's Weight",
+      "aboveEdw": "Above EDW",
+      "belowEdw": "Below EDW",
+      "atEdw": "At Target EDW",
+      "aboveEdwSuffix": "above EDW",
+      "belowEdwSuffix": "below EDW",
+      "atEdwSuffix": "On target with EDW",
+      "editSettings": "Weight & EDW Settings",
+      "edwLabel": "Estimated Dry Weight (EDW)",
+      "edwNotePlaceholder": "e.g. Set by care team.",
+      "saveSettings": "Save Settings"
+    },
     "metrics": {
       "currentWeight": {
         "label": "Current Weight",

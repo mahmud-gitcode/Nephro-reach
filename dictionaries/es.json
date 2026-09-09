@@ -936,6 +936,22 @@
   },
   "weightFluidTracker": {
     "title": "Centro de Control de Peso y Líquidos",
+    "subtitle": "Haga un seguimiento de los síntomas y compare los pesos. Comprenda sus patrones de líquidos.",
+    "edwMetrics": {
+      "estimatedDryWeight": "Peso Seco Estimado",
+      "edwSetBy": "Establecido por el equipo de atención.",
+      "todaysWeight": "Peso de Hoy",
+      "aboveEdw": "Por Encima del EDW",
+      "belowEdw": "Por Debajo del EDW",
+      "atEdw": "En el EDW Objetivo",
+      "aboveEdwSuffix": "por encima del EDW",
+      "belowEdwSuffix": "por debajo del EDW",
+      "atEdwSuffix": "En el objetivo con el EDW",
+      "editSettings": "Configuración de Peso y EDW",
+      "edwLabel": "Peso Seco Estimado (EDW)",
+      "edwNotePlaceholder": "ej. Establecido por el equipo de atención.",
+      "saveSettings": "Guardar Configuración"
+    },
     "metrics": {
       "currentWeight": {
         "label": "Peso Actual",

@@ -69,7 +69,6 @@ export default function MedicationsGivenSection() {
   const [formDose, setFormDose] = useState("");
   const [formReason, setFormReason] = useState("");
   const [formDate, setFormDate] = useState("May 31, 2024");
-  const [formGiven, setFormGiven] = useState(true);
   const [formMedError, setFormMedError] = useState("");
 
   // Load from localStorage on mount
@@ -101,9 +100,15 @@ export default function MedicationsGivenSection() {
     setFormDose("");
     setFormReason("");
     setFormDate("May 31, 2024");
-    setFormGiven(true);
     setFormMedError("");
     setIsMedModalOpen(true);
+  };
+
+  const handleToggleGiven = (id: string) => {
+    const updated = medications.map((m) =>
+      m.id === id ? { ...m, given: !m.given } : m
+    );
+    saveMedications(updated);
   };
 
   const handleAddMedicationSubmit = (e: React.FormEvent) => {
@@ -127,7 +132,7 @@ export default function MedicationsGivenSection() {
       medication: formMedication.trim(),
       dose: formDose.trim(),
       reason: formReason.trim() || "Dialysis Support",
-      given: formGiven,
+      given: true,
     };
 
     saveMedications([newEntry, ...medications]);
@@ -203,13 +208,26 @@ export default function MedicationsGivenSection() {
                     {item.reason}
                   </td>
                   <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                    {item.given ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-xs">
-                        <Check className="h-4 w-4 stroke-[3] text-emerald-600 inline" />
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 font-semibold text-xs">Pending</span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleGiven(item.id)}
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
+                        item.given
+                          ? "bg-[#2563EB] border-[#2563EB] text-white shadow-2xs"
+                          : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
+                      }`}
+                      title={
+                        item.given
+                          ? language === "ES"
+                            ? "Desmarcar medicamento"
+                            : "Uncheck medication"
+                          : language === "ES"
+                          ? "Marcar como administrado"
+                          : "Mark as given"
+                      }
+                    >
+                      {item.given && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    </button>
                   </td>
                   <td className="py-2.5 px-2 text-center whitespace-nowrap">
                     <button
@@ -307,18 +325,6 @@ export default function MedicationsGivenSection() {
                   placeholder="e.g. Anemia"
                 />
               </div>
-
-              <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={formGiven}
-                  onChange={(e) => setFormGiven(e.target.checked)}
-                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                />
-                <span className="text-sm font-semibold text-slate-700">
-                  {language === "ES" ? "Administrado durante el tratamiento" : "Given during treatment"}
-                </span>
-              </label>
 
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
                 <button

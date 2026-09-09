@@ -60,16 +60,16 @@ function SummaryCards() {
       {summaryCards.map((card) => (
         <div
           key={card.label}
-          className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs"
+          className="flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md"
         >
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor}`}
+            className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor} shadow-2xs`}
           >
-            <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+            <card.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconColor}`} />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-600">{card.label}</p>
-            <p className="mt-0.5 text-3xl font-bold text-slate-900 tracking-tight">
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{card.label}</p>
+            <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
               {card.value}
             </p>
           </div>
@@ -130,20 +130,20 @@ function ClinicalMeasurementsCards() {
         {clinicalMeasurements.map((card) => (
           <div
             key={card.label}
-            className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition-all"
+            className="flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md"
           >
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor}`}
+              className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl border ${card.bgColor} shadow-2xs`}
             >
-              <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+              <card.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconColor}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-600">{card.label}</p>
-              <div className="mt-0.5 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-3xl font-bold tracking-tight text-slate-900">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{card.label}</p>
+              <div className="mt-0.5 flex items-baseline">
+                <span className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
                   {card.value}
                 </span>
-                <span className="text-xs font-semibold text-slate-500">
+                <span className="ml-1.5 text-sm sm:text-base font-bold text-slate-800">
                   {card.unit}
                 </span>
               </div>
