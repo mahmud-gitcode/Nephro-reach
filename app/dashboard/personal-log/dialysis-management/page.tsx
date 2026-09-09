@@ -149,13 +149,13 @@ const INITIAL_RECORDS: IntervalRecord[] = [
 ];
 
 const ALL_WEEKDAYS = [
-  "Saturday",
   "Sunday",
   "Monday",
   "Tuesday",
   "Wednesday",
   "Thursday",
   "Friday",
+  "Saturday",
 ];
 
 function DialysisManagementDashboard() {
@@ -174,12 +174,11 @@ function DialysisManagementDashboard() {
   const [records, setRecords] = useState<IntervalRecord[]>(INITIAL_RECORDS);
 
   // Section 2 State: Week Setting
-  // User requested: "Weekly 3 tretment = saturday, tusday , trusday"
   const [treatmentFrequency, setTreatmentFrequency] = useState(3);
   const [selectedDays, setSelectedDays] = useState<string[]>([
-    "Saturday",
     "Tuesday",
     "Thursday",
+    "Saturday",
   ]);
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string>("tx-4");
@@ -205,9 +204,9 @@ function DialysisManagementDashboard() {
   // Temp state for editing week
   const [tempFrequency, setTempFrequency] = useState(3);
   const [tempDays, setTempDays] = useState<string[]>([
-    "Saturday",
     "Tuesday",
     "Thursday",
+    "Saturday",
   ]);
 
   // Section 2: Quick Note State with Undo / Redo / Clean
@@ -411,8 +410,11 @@ function DialysisManagementDashboard() {
 
   const handleSaveWeekSetting = (e: React.FormEvent) => {
     e.preventDefault();
-    setTreatmentFrequency(tempDays.length);
-    setSelectedDays([...tempDays]);
+    const sorted = [...tempDays].sort(
+      (a, b) => ALL_WEEKDAYS.indexOf(a) - ALL_WEEKDAYS.indexOf(b)
+    );
+    setTreatmentFrequency(sorted.length);
+    setSelectedDays(sorted);
     setIsEditWeekModalOpen(false);
   };
 

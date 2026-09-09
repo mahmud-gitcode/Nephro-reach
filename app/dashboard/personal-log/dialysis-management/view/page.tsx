@@ -34,15 +34,8 @@ interface LoggedSymptomEntry {
   dayLabel: string;
   symptoms: string[];
   severity: "Mild" | "Moderate" | "Severe";
+  recoveryTime?: string;
   notes: string;
-}
-
-interface LoggedMedicationEntry {
-  id: string;
-  date: string;
-  category: string;
-  medications: string[];
-  status: "Taken" | "Administered" | "Scheduled";
 }
 
 interface TreatmentIntervalMeta {
@@ -53,7 +46,6 @@ interface TreatmentIntervalMeta {
   endDate: string;
   orders: ProviderOrder[];
   symptomEntries: LoggedSymptomEntry[];
-  medEntries: LoggedMedicationEntry[];
   isExtra?: boolean;
   clinicalReason?: string;
   additionalNotes?: string;
@@ -67,8 +59,6 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     startDate: "Friday, Jun 19, 2026",
     endDate: "Monday, Jun 22, 2026",
     isExtra: false,
-    clinicalReason: "Fluid Overload (Extra Ultrafiltration needed)",
-    additionalNotes: "Patient presented with +2.2 kg fluid gain and trace bilateral pedal edema. Prescribed standard 3.5-hour ultrafiltration run.",
     orders: [
       {
         id: "ord-1",
@@ -114,6 +104,7 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 1 (Post-Tx)",
         symptoms: ["Fatigue", "Mild dizziness"],
         severity: "Mild",
+        recoveryTime: "2 – 4 hours",
         notes: "Rested for 3 hours after clinic. Felt back to baseline by evening.",
       },
       {
@@ -122,6 +113,7 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 2 (Interdialytic)",
         symptoms: ["Mild ankle swelling", "Itching"],
         severity: "Mild",
+        recoveryTime: "< 2 hours",
         notes: "Elevated legs while watching TV. Applied prescribed moisturizing cream.",
       },
       {
@@ -130,30 +122,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 3 (Interdialytic)",
         symptoms: ["Restless legs", "Difficulty sleeping flat"],
         severity: "Moderate",
+        recoveryTime: "4 – 6 hours",
         notes: "Used an extra pillow. Mentioned to care team log.",
-      },
-    ],
-    medEntries: [
-      {
-        id: "med-1",
-        date: "Friday, Jun 19, 2026",
-        category: "Anemia & Iron Management",
-        medications: ["Epogen", "Venofer"],
-        status: "Administered",
-      },
-      {
-        id: "med-2",
-        date: "Saturday, Jun 20, 2026",
-        category: "Bone & Mineral Management",
-        medications: ["Hectorol", "Sensipar"],
-        status: "Taken",
-      },
-      {
-        id: "med-3",
-        date: "Sunday, Jun 21, 2026",
-        category: "Blood Pressure & Anticoagulation",
-        medications: ["Heparin", "Clonidine"],
-        status: "Taken",
       },
     ],
   },
@@ -164,8 +134,6 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     startDate: "Monday, Jun 22, 2026",
     endDate: "Wednesday, Jun 24, 2026",
     isExtra: false,
-    clinicalReason: "Routine Maintenance & Access Assessment",
-    additionalNotes: "Access ultrasound review requested due to arterial flutter. Pre-dialysis BP monitored closely.",
     orders: [
       {
         id: "ord-201",
@@ -211,6 +179,7 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 1 (Post-Tx)",
         symptoms: ["Fatigue", "Muscle cramping"],
         severity: "Moderate",
+        recoveryTime: "4 – 6 hours",
         notes: "Calf cramps resolved after warm compress.",
       },
       {
@@ -219,23 +188,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 2 (Interdialytic)",
         symptoms: ["Mild swelling"],
         severity: "Mild",
+        recoveryTime: "< 2 hours",
         notes: "Morning weight within target dry weight range (+1.4 kg).",
-      },
-    ],
-    medEntries: [
-      {
-        id: "med-201",
-        date: "Monday, Jun 22, 2026",
-        category: "Anemia & Iron Management",
-        medications: ["Epogen"],
-        status: "Administered",
-      },
-      {
-        id: "med-202",
-        date: "Tuesday, Jun 23, 2026",
-        category: "Bone & Mineral Management",
-        medications: ["Hectorol"],
-        status: "Taken",
       },
     ],
   },
@@ -246,8 +200,6 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     startDate: "Wednesday, Jun 24, 2026",
     endDate: "Saturday, Jun 27, 2026",
     isExtra: false,
-    clinicalReason: "High Potassium Alert / Dietary Follow-up",
-    additionalNotes: "Pre-dialysis serum potassium elevated at 5.7 mEq/L. Dialysate bath adjusted per protocol and dietary counseling provided.",
     orders: [
       {
         id: "ord-301",
@@ -287,16 +239,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 2 (Interdialytic)",
         symptoms: ["Fatigue", "Decreased appetite"],
         severity: "Mild",
+        recoveryTime: "2 – 4 hours",
         notes: "Ate protein snack in evening.",
-      },
-    ],
-    medEntries: [
-      {
-        id: "med-301",
-        date: "Wednesday, Jun 24, 2026",
-        category: "Anemia & Iron Management",
-        medications: ["Venofer"],
-        status: "Administered",
       },
     ],
   },
@@ -307,8 +251,6 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     startDate: "Saturday, Jun 27, 2026",
     endDate: "Tuesday, Jun 30, 2026",
     isExtra: false,
-    clinicalReason: "Make-up Session & Pre-Weekend Clearance",
-    additionalNotes: "Extended weekend interval clearance. Patient advised on strict 32 oz fluid management and iron supplement adherence.",
     orders: [
       {
         id: "ord-401",
@@ -348,16 +290,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Day 2 (Weekend Gap)",
         symptoms: ["Mild ankle tightness"],
         severity: "Mild",
+        recoveryTime: "< 2 hours",
         notes: "Weekend fluid control maintained under 32 oz.",
-      },
-    ],
-    medEntries: [
-      {
-        id: "med-401",
-        date: "Saturday, Jun 27, 2026",
-        category: "Symptom Relief & Supportive Care",
-        medications: ["Hectorol", "Tylenol"],
-        status: "Taken",
       },
     ],
   },
@@ -397,16 +331,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         dayLabel: "Extra Session Day",
         symptoms: ["Shortness of breath", "Pedal edema"],
         severity: "Moderate",
+        recoveryTime: "2 – 4 hours",
         notes: "Breathing significantly improved following 2.1 L fluid removal.",
-      },
-    ],
-    medEntries: [
-      {
-        id: "med-ext-1",
-        date: "Friday, Jun 26, 2026",
-        category: "Blood Pressure & Anticoagulation",
-        medications: ["Heparin"],
-        status: "Administered",
       },
     ],
   },
@@ -485,34 +411,21 @@ const LOCALIZED_SYMPTOMS: Record<string, string> = {
   "Dry mouth": "Boca seca",
 };
 
-interface MedicationCategoryGroup {
-  category: string;
-  categoryEs: string;
-  medications: string[];
-}
-
-const COMMON_MEDICATION_GROUPS: MedicationCategoryGroup[] = [
-  {
-    category: "Anemia & Iron Management",
-    categoryEs: "Manejo de Anemia y Hierro",
-    medications: ["Epogen", "Mircera", "Venofer"],
-  },
-  {
-    category: "Bone & Mineral Management",
-    categoryEs: "Salud Ósea y Mineral",
-    medications: ["Calcitriol", "Hectorol", "Zemplar", "Sensipar", "Parsabiv"],
-  },
-  {
-    category: "Blood Pressure & Anticoagulation",
-    categoryEs: "Presión Arterial y Anticoagulación",
-    medications: ["Heparin", "Clonidine", "Midodrine"],
-  },
-  {
-    category: "Symptom Relief & Supportive Care",
-    categoryEs: "Alivio de Síntomas y Cuidado de Soporte",
-    medications: ["Korsuva", "Tylenol", "Benadryl", "Zofran", "Antibiotics"],
-  },
+const RECOVERY_TIME_OPTIONS = [
+  "< 2 hours",
+  "2 – 4 hours",
+  "4 – 6 hours",
+  "> 6 hours",
+  "Next morning / Overnight",
 ];
+
+const LOCALIZED_RECOVERY_TIME: Record<string, string> = {
+  "< 2 hours": "< 2 horas",
+  "2 – 4 hours": "2 – 4 horas",
+  "4 – 6 hours": "4 – 6 horas",
+  "> 6 hours": "> 6 horas",
+  "Next morning / Overnight": "A la mañana siguiente / Durante la noche",
+};
 
 function parseDayAndDate(str: string) {
   const commaIndex = str.indexOf(",");
@@ -598,8 +511,8 @@ function ViewRecordContent() {
   const isEs = language === "ES";
 
   const isExtra = isExtraQuery || Boolean(baseData.isExtra);
-  const clinicalReason = queryReason || baseData.clinicalReason || "";
-  const additionalNotes = queryNotes || baseData.additionalNotes || "";
+  const clinicalReason = isExtra ? (queryReason || baseData.clinicalReason || "") : "";
+  const additionalNotes = isExtra ? (queryNotes || baseData.additionalNotes || "") : "";
 
   const intervalData: TreatmentIntervalMeta = {
     ...baseData,
@@ -667,6 +580,7 @@ function ViewRecordContent() {
   const [formSymptomDate, setFormSymptomDate] = useState(availableDates[0].shortDate);
   const [formSelectedSymptoms, setFormSelectedSymptoms] = useState<string[]>([]);
   const [formCustomSymptom, setFormCustomSymptom] = useState("");
+  const [formRecoveryTime, setFormRecoveryTime] = useState<string>("2 – 4 hours");
   const [symptomFormError, setSymptomFormError] = useState("");
 
   const handleOpenAddSymptom = () => {
@@ -674,6 +588,7 @@ function ViewRecordContent() {
     setFormSymptomDate(availableDates[0].shortDate);
     setFormSelectedSymptoms([]);
     setFormCustomSymptom("");
+    setFormRecoveryTime("2 – 4 hours");
     setSymptomFormError("");
     setIsSymptomModalOpen(true);
   };
@@ -683,6 +598,7 @@ function ViewRecordContent() {
     setFormSymptomDate(entry.date);
     setFormSelectedSymptoms([...entry.symptoms]);
     setFormCustomSymptom("");
+    setFormRecoveryTime(entry.recoveryTime || "2 – 4 hours");
     setSymptomFormError("");
     setIsSymptomModalOpen(true);
   };
@@ -716,7 +632,12 @@ function ViewRecordContent() {
       setSymptomsList((prev) =>
         prev.map((s) =>
           s.id === editingSymptomId
-            ? { ...s, date: formSymptomDate, symptoms: formSelectedSymptoms }
+            ? {
+                ...s,
+                date: formSymptomDate,
+                symptoms: formSelectedSymptoms,
+                recoveryTime: formRecoveryTime,
+              }
             : s
         )
       );
@@ -727,26 +648,13 @@ function ViewRecordContent() {
         dayLabel: "",
         symptoms: formSelectedSymptoms,
         severity: "Mild",
+        recoveryTime: formRecoveryTime,
         notes: "",
       };
       setSymptomsList((prev) => [newEntry, ...prev]);
     }
     setIsSymptomModalOpen(false);
   };
-
-  // Medications state & handlers:
-  const [medicationsList, setMedicationsList] = useState<LoggedMedicationEntry[]>(() =>
-    intervalData.medEntries.map((m) => ({
-      ...m,
-      date: m.date.includes(",") ? m.date.slice(m.date.indexOf(",") + 1).trim() : m.date,
-    }))
-  );
-  const [isMedModalOpen, setIsMedModalOpen] = useState(false);
-  const [editingMedId, setEditingMedId] = useState<string | null>(null);
-  const [formMedDate, setFormMedDate] = useState(availableDates[0].shortDate);
-  const [formSelectedMeds, setFormSelectedMeds] = useState<string[]>([]);
-  const [formCustomMed, setFormCustomMed] = useState("");
-  const [medFormError, setMedFormError] = useState("");
 
   useEffect(() => {
     setOrders(intervalData.orders);
@@ -756,78 +664,7 @@ function ViewRecordContent() {
         date: s.date.includes(",") ? s.date.slice(s.date.indexOf(",") + 1).trim() : s.date,
       }))
     );
-    setMedicationsList(
-      intervalData.medEntries.map((m) => ({
-        ...m,
-        date: m.date.includes(",") ? m.date.slice(m.date.indexOf(",") + 1).trim() : m.date,
-      }))
-    );
   }, [activeKey]);
-
-  const handleOpenAddMed = () => {
-    setEditingMedId(null);
-    setFormMedDate(availableDates[0].shortDate);
-    setFormSelectedMeds([]);
-    setFormCustomMed("");
-    setMedFormError("");
-    setIsMedModalOpen(true);
-  };
-
-  const handleOpenEditMed = (entry: LoggedMedicationEntry) => {
-    setEditingMedId(entry.id);
-    const parsed = getDayAndDate(entry.date, false);
-    setFormMedDate(parsed.date);
-    setFormSelectedMeds([...entry.medications]);
-    setFormCustomMed("");
-    setMedFormError("");
-    setIsMedModalOpen(true);
-  };
-
-  const toggleMedSelection = (medName: string) => {
-    setFormSelectedMeds((prev) =>
-      prev.includes(medName) ? prev.filter((m) => m !== medName) : [...prev, medName]
-    );
-    if (medFormError) setMedFormError("");
-  };
-
-  const handleAddCustomMed = () => {
-    const trimmed = formCustomMed.trim();
-    if (trimmed && !formSelectedMeds.includes(trimmed)) {
-      setFormSelectedMeds((prev) => [...prev, trimmed]);
-      setFormCustomMed("");
-      if (medFormError) setMedFormError("");
-    }
-  };
-
-  const handleMedSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formSelectedMeds.length === 0) {
-      setMedFormError(
-        isEs ? "Selecciona al menos un medicamento" : "Please select at least one medication"
-      );
-      return;
-    }
-
-    if (editingMedId) {
-      setMedicationsList((prev) =>
-        prev.map((m) =>
-          m.id === editingMedId
-            ? { ...m, date: formMedDate, medications: formSelectedMeds }
-            : m
-        )
-      );
-    } else {
-      const newEntry: LoggedMedicationEntry = {
-        id: `med-${Date.now()}`,
-        date: formMedDate,
-        category: "General",
-        medications: formSelectedMeds,
-        status: "Administered",
-      };
-      setMedicationsList((prev) => [newEntry, ...prev]);
-    }
-    setIsMedModalOpen(false);
-  };
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 pb-16">
@@ -888,93 +725,64 @@ function ViewRecordContent() {
       </section>
 
       {/* ========================================================================= */}
-      {/* CLINICAL REASON & ADDITIONAL NOTES / SYMPTOMS CARD                        */}
+      {/* CLINICAL REASON & ADDITIONAL NOTES CARD (ONLY FOR EXTRA TREATMENTS)       */}
       {/* ========================================================================= */}
-      {(intervalData.clinicalReason || intervalData.additionalNotes) && (
-        <section
-          className={`rounded-2xl sm:rounded-3xl border p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in duration-200 ${
-            intervalData.isExtra
-              ? "border-purple-200 bg-gradient-to-br from-purple-50/40 via-white to-white"
-              : "border-slate-200/90 bg-white"
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      {intervalData.isExtra && (intervalData.clinicalReason || intervalData.additionalNotes) && (
+        <section className="rounded-2xl sm:rounded-3xl border border-purple-200 bg-gradient-to-br from-purple-50/40 via-white to-white p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-100">
             <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
-                  intervalData.isExtra
-                    ? "bg-purple-100/70 border-purple-200 text-purple-700"
-                    : "bg-blue-50 border-blue-100 text-[#2563EB]"
-                }`}
-              >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-purple-100/70 border-purple-200 text-purple-700">
                 <Activity className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  {isEs ? "Información Clínica de la Sesión" : "Clinical Reason & Symptoms"}
+                  {isEs ? "Información Clínica de la Sesión Extra" : "Clinical Reason & Additional Notes"}
                 </h2>
                 <p className="text-xs font-medium text-slate-500">
                   {isEs
-                    ? "Motivo médico registrado y notas adicionales o síntomas del paciente"
-                    : "Physician documented clinical indication and reported patient symptoms / notes"}
+                    ? "Motivo médico registrado y notas adicionales o síntomas para esta sesión extra"
+                    : "Physician documented clinical indication and patient notes for this extra session"}
                 </p>
               </div>
             </div>
 
-            {intervalData.isExtra ? (
-              <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200/80 shadow-2xs">
-                <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
-                {isEs ? "Sesión de Tratamiento Extra" : "Extra Treatment Session"}
-              </span>
-            ) : (
-              <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
-                <Check className="h-3.5 w-3.5 stroke-[2.5] text-emerald-600" />
-                {isEs ? "Sesión Programada" : "Scheduled Session"}
-              </span>
-            )}
+            <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200/80 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+              {isEs ? "Sesión de Tratamiento Extra" : "Extra Treatment Session"}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
             {/* Box 1: Clinical Reason */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-2">
-                <AlertCircle
-                  className={`h-4 w-4 shrink-0 ${
-                    intervalData.isExtra ? "text-purple-600" : "text-[#2563EB]"
-                  }`}
-                />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <AlertCircle className="h-4 w-4 shrink-0 text-purple-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
                   {isEs ? "Motivo Clínico" : "Clinical Reason"}
                 </span>
               </div>
               <div className="pt-1">
-                <span
-                  className={`inline-flex items-center px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-bold border shadow-2xs ${
-                    intervalData.isExtra
-                      ? "bg-purple-50/80 text-purple-900 border-purple-200"
-                      : "bg-white text-slate-900 border-slate-200"
-                  }`}
-                >
+                <span className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-bold border shadow-2xs bg-white text-purple-900 border-purple-200">
                   {intervalData.clinicalReason ||
-                    (isEs ? "Diálisis de Rutina" : "Standard Dialysis Clearance")}
+                    (isEs ? "Motivo no especificado" : "Reason not specified")}
                 </span>
               </div>
             </div>
 
             {/* Box 2: Additional Notes / Symptoms */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <FileText className="h-4 w-4 text-purple-600 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
                   {isEs ? "Notas Adicionales / Síntomas" : "Additional Notes / Symptoms"}
                 </span>
               </div>
               <div className="pt-1">
-                <p className="text-sm sm:text-base font-medium text-slate-800 leading-relaxed bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-2xs">
+                <p className="text-sm sm:text-base font-medium text-slate-800 leading-relaxed bg-white border border-purple-100 rounded-xl p-3 sm:p-3.5 shadow-2xs">
                   {intervalData.additionalNotes ||
                     (isEs
-                      ? "Sin notas adicionales registradas para esta sesión."
-                      : "No additional notes or symptoms recorded for this session.")}
+                      ? "Sin notas adicionales registradas para esta sesión extra."
+                      : "No additional notes or symptoms recorded for this extra session.")}
                 </p>
               </div>
             </div>
@@ -1073,7 +881,7 @@ function ViewRecordContent() {
           </button>
         </div>
 
-        {/* Symptoms Table - Normal Clean Design (Day, Date, Symptoms, Edit Icon) */}
+        {/* Symptoms Table - Clean Design (Day, Date, Symptoms, Recovery Time, Edit Icon) */}
         <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -1081,6 +889,7 @@ function ViewRecordContent() {
                 <th className="py-3 px-4 w-28 sm:w-32">{isEs ? "Día" : "Day"}</th>
                 <th className="py-3 px-4 w-32 sm:w-36">{isEs ? "Fecha" : "Date"}</th>
                 <th className="py-3 px-4">{isEs ? "Síntomas" : "Symptoms"}</th>
+                <th className="py-3 px-4 w-44">{isEs ? "Tiempo de Recuperación" : "Recovery Time"}</th>
                 <th className="py-3 px-4 text-center w-24">{isEs ? "Editar" : "Edit"}</th>
               </tr>
             </thead>
@@ -1107,6 +916,18 @@ function ViewRecordContent() {
                         ))}
                       </div>
                     </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {entry.recoveryTime ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                          <Clock className="h-3 w-3 text-emerald-600" />
+                          {isEs ? LOCALIZED_RECOVERY_TIME[entry.recoveryTime] || entry.recoveryTime : entry.recoveryTime}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium italic">
+                          {isEs ? "No registrado" : "Not logged"}
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <button
                         type="button"
@@ -1126,84 +947,7 @@ function ViewRecordContent() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. COMMON DIALYSIS MEDICATIONS                                            */}
-      {/* ========================================================================= */}
-      <section className="space-y-3.5 animate-in fade-in duration-200">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            {isEs ? "Medicamentos Comunes de Diálisis" : "Common Dialysis Medications"}
-          </h2>
-
-          <button
-            type="button"
-            onClick={handleOpenAddMed}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-            <span>{isEs ? "Agregar Nuevo" : "Add New"}</span>
-          </button>
-        </div>
-
-        {/* Medications Table - Same Simple Clean Design as Symptoms & Orders */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                <th className="py-3 px-4 w-28 sm:w-32">{isEs ? "Día" : "Day"}</th>
-                <th className="py-3 px-4 w-32 sm:w-36">{isEs ? "Fecha" : "Date"}</th>
-                <th className="py-3 px-4">{isEs ? "Medicamentos Administrados" : "Medications Confirmed"}</th>
-                <th className="py-3 px-4 text-center w-24">{isEs ? "Editar" : "Edit"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {medicationsList.map((entry) => {
-                const { day, date } = getDayAndDate(entry.date, isEs);
-                return (
-                  <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-900 whitespace-nowrap font-bold text-xs sm:text-sm">
-                      {day}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap font-medium text-xs sm:text-sm">
-                      {date}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {entry.medications.length === 0 ? (
-                          <span className="text-xs text-slate-400 italic">
-                            {isEs ? "Ninguno seleccionado" : "None selected"}
-                          </span>
-                        ) : (
-                          entry.medications.map((m, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200"
-                            >
-                              {m}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditMed(entry)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-slate-600 hover:text-[#2563EB] transition-colors cursor-pointer select-none active:scale-95"
-                        title={isEs ? "Editar Medicamentos" : "Edit Medications"}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. CARE TEAM QUESTIONS                                                    */}
+      {/* 4. CARE TEAM QUESTIONS                                                    */}
       {/* ========================================================================= */}
       <section className="space-y-3">
         <CareTeamQuestionsSection />
@@ -1397,7 +1141,7 @@ function ViewRecordContent() {
               {/* Step 3: Custom Symptom Input */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {isEs ? "Otro Síntoma (Opcional)" : "Other Symptom (Optional)"}
+                  {isEs ? "3. Otro Síntoma (Opcional)" : "3. Other Symptom (Optional)"}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -1417,6 +1161,31 @@ function ViewRecordContent() {
                     {isEs ? "Agregar" : "Add"}
                   </button>
                 </div>
+              </div>
+
+              {/* Step 4: Recovery Time Tracking */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  {isEs
+                    ? "4. ¿Cuánto tiempo te tomó sentirte mejor? (Tiempo de Recuperación)"
+                    : "4. How long did it take you to feel better? (Recovery Time)"}
+                </label>
+                <select
+                  value={formRecoveryTime}
+                  onChange={(e) => setFormRecoveryTime(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
+                >
+                  {RECOVERY_TIME_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {isEs ? LOCALIZED_RECOVERY_TIME[opt] || opt : opt}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] font-medium text-slate-500">
+                  {isEs
+                    ? "Este dato alimenta el seguimiento del patrón de recuperación del paciente."
+                    : "This entry directly tracks your recovery pattern across dialysis treatments."}
+                </p>
               </div>
 
               {/* Form Buttons */}
@@ -1439,162 +1208,6 @@ function ViewRecordContent() {
                     : isEs
                     ? "Guardar"
                     : "Save Symptoms"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* ========================================================================= */}
-      {/* ADD / EDIT MEDICATIONS MODAL                                              */}
-      {/* ========================================================================= */}
-      {isMedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-2xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xl">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100">
-              <h4 className="text-base font-bold text-slate-900">
-                {editingMedId
-                  ? isEs
-                    ? "Editar Medicamentos de Diálisis"
-                    : "Edit Dialysis Medications"
-                  : isEs
-                  ? "Registrar Medicamentos de Diálisis"
-                  : "Log Dialysis Medications"}
-              </h4>
-              <button
-                type="button"
-                onClick={() => setIsMedModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body - Scrollable */}
-            <form onSubmit={handleMedSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Step 1: Select Date */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  {isEs ? "1. Seleccionar Fecha del Intervalo" : "1. Select Treatment Interval Date"}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {availableDates.map((d) => {
-                    const isSelected = formMedDate === d.shortDate;
-                    return (
-                      <button
-                        key={d.shortDate}
-                        type="button"
-                        onClick={() => setFormMedDate(d.shortDate)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer select-none ${
-                          isSelected
-                            ? "border-[#2563EB] bg-blue-50/80 ring-2 ring-[#2563EB]/20 text-[#2563EB]"
-                            : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">
-                          {isEs && SPANISH_DAYS[d.dayLabel] ? SPANISH_DAYS[d.dayLabel] : d.dayLabel}
-                        </span>
-                        <span className="block text-[11px] font-semibold text-slate-500">
-                          {d.shortDate}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Step 2: Select/Mark Medications */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700">
-                    {isEs
-                      ? "2. Marcar Medicamentos Administrados / Tomados"
-                      : "2. Mark Administered / Taken Medications"}
-                  </label>
-                  <span className="text-xs text-slate-500 font-semibold">
-                    {formSelectedMeds.length} {isEs ? "seleccionados" : "selected"}
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {COMMON_MEDICATION_GROUPS.map((grp, gIdx) => (
-                    <div key={gIdx} className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 space-y-2.5">
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                        {isEs ? grp.categoryEs : grp.category}
-                      </span>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {grp.medications.map((med) => {
-                          const isSelected = formSelectedMeds.includes(med);
-                          return (
-                            <button
-                              key={med}
-                              type="button"
-                              onClick={() => toggleMedSelection(med)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer select-none ${
-                                isSelected
-                                  ? "bg-[#2563EB] text-white border-[#2563EB] shadow-2xs"
-                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                              }`}
-                            >
-                              <span>{med}</span>
-                              {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Custom Medication Input */}
-                <div className="pt-1">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {isEs ? "Otro Medicamento (Opcional)" : "Other Medication (Optional)"}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formCustomMed}
-                      onChange={(e) => setFormCustomMed(e.target.value)}
-                      placeholder={isEs ? "Escribir otro medicamento..." : "Type other medication..."}
-                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 shadow-2xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomMed}
-                      className="rounded-xl bg-slate-800 hover:bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
-                    >
-                      {isEs ? "Agregar" : "Add"}
-                    </button>
-                  </div>
-                </div>
-
-                {medFormError && (
-                  <p className="text-xs font-semibold text-rose-500">{medFormError}</p>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsMedModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {isEs ? "Cancelar" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-2xs transition-colors cursor-pointer"
-                >
-                  {editingMedId
-                    ? isEs
-                      ? "Actualizar"
-                      : "Update Medications"
-                    : isEs
-                    ? "Guardar"
-                    : "Save Medications"}
                 </button>
               </div>
             </form>
