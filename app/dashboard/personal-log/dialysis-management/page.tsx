@@ -70,6 +70,7 @@ interface TreatmentCardItem {
   endDate: string;
   isExtra?: boolean;
   extraReason?: string;
+  notes?: string;
 }
 
 const DEFAULT_INTERVALS: TreatmentInterval[] = [
@@ -197,6 +198,7 @@ function DialysisManagementDashboard() {
       endDate: "Saturday, Jun 27, 2026",
       isExtra: true,
       extraReason: "Fluid Overload",
+      notes: "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg).",
     },
   ]);
 
@@ -451,6 +453,7 @@ function DialysisManagementDashboard() {
       endDate: targetInterval?.endDate || extraTxDate,
       isExtra: true,
       extraReason: extraTxReason,
+      notes: extraTxNotes.trim(),
     };
 
     setExtraTreatments((prev) => [...prev, newExtraCard]);
@@ -853,13 +856,13 @@ function DialysisManagementDashboard() {
                       </p>
                     </div>
 
-                    {/* Date Section: Start and End blocks inside an inner purple card */}
+                    {/* Date & Reason Section: Single Date when extra treatment was taken + Reason underneath */}
                     <div className="my-5 rounded-2xl bg-purple-50/60 border border-purple-100 p-3.5 sm:p-4 space-y-3.5">
-                      {/* Start Block */}
+                      {/* Treatment Date Block */}
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-xs sm:text-[13px] font-bold text-purple-800">
-                            {isEs ? "Inicio" : "Start"}
+                            {isEs ? "Fecha" : "Date"}
                           </span>
                           <div className="h-px bg-purple-200 flex-1" />
                         </div>
@@ -869,17 +872,18 @@ function DialysisManagementDashboard() {
                         </div>
                       </div>
 
-                      {/* End Block */}
+                      {/* Reason Block */}
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-xs sm:text-[13px] font-bold text-purple-800">
-                            {isEs ? "Fin" : "End"}
+                            {isEs ? "Motivo" : "Reason"}
                           </span>
                           <div className="h-px bg-purple-200 flex-1" />
                         </div>
-                        <div className="flex items-center justify-between text-sm sm:text-base font-bold text-purple-950 pt-0.5">
-                          <span>{endInfo.day}</span>
-                          <span className="text-right">{endInfo.date}</span>
+                        <div className="pt-0.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs sm:text-[13px] font-bold bg-white text-purple-900 border border-purple-200/80 shadow-2xs leading-snug">
+                            {card.extraReason || (isEs ? "Sobrecarga de Líquidos" : "Fluid Overload")}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -887,7 +891,15 @@ function DialysisManagementDashboard() {
                     {/* View Details Button Inside Extra Card */}
                     <div className="w-full pt-1">
                       <Link
-                        href={`/dashboard/personal-log/dialysis-management/view?treatment=${card.intervalId}&extra=${card.title.replace(/\s+/g, "_")}`}
+                        href={
+                          card.isExtra
+                            ? `/dashboard/personal-log/dialysis-management/view?treatment=${encodeURIComponent(
+                                card.id
+                              )}&title=${encodeURIComponent(card.title)}&reason=${encodeURIComponent(
+                                card.extraReason || ""
+                              )}&notes=${encodeURIComponent(card.notes || "")}&isExtra=true`
+                            : `/dashboard/personal-log/dialysis-management/view?treatment=${card.id}`
+                        }
                         onClick={(e) => e.stopPropagation()}
                         className="w-full inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
                       >

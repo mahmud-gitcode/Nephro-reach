@@ -54,6 +54,9 @@ interface TreatmentIntervalMeta {
   orders: ProviderOrder[];
   symptomEntries: LoggedSymptomEntry[];
   medEntries: LoggedMedicationEntry[];
+  isExtra?: boolean;
+  clinicalReason?: string;
+  additionalNotes?: string;
 }
 
 const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
@@ -63,6 +66,9 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     label: "Treatment 1 ➔ Treatment 2",
     startDate: "Friday, Jun 19, 2026",
     endDate: "Monday, Jun 22, 2026",
+    isExtra: false,
+    clinicalReason: "Fluid Overload (Extra Ultrafiltration needed)",
+    additionalNotes: "Patient presented with +2.2 kg fluid gain and trace bilateral pedal edema. Prescribed standard 3.5-hour ultrafiltration run.",
     orders: [
       {
         id: "ord-1",
@@ -72,14 +78,32 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       },
       {
         id: "ord-2",
+        date: "Jun 19, 2026",
+        order: "Keep vascular access dressing clean and dry for 6 hours post-treatment",
+        completed: true,
+      },
+      {
+        id: "ord-3",
+        date: "Jun 20, 2026",
+        order: "Record morning dry weight before breakfast and log in portal",
+        completed: true,
+      },
+      {
+        id: "ord-4",
         date: "Jun 21, 2026",
         order: "Check standing BP before taking evening beta-blocker",
         completed: true,
       },
       {
-        id: "ord-3",
+        id: "ord-5",
+        date: "Jun 21, 2026",
+        order: "Maintain daily sodium restriction under 2,000 mg",
+        completed: false,
+      },
+      {
+        id: "ord-6",
         date: "Jun 22, 2026",
-        order: "Report any access thrill changes immediately",
+        order: "Report any access thrill or bruit changes immediately",
         completed: false,
       },
     ],
@@ -139,18 +163,45 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     label: "Treatment 2 ➔ Treatment 3",
     startDate: "Monday, Jun 22, 2026",
     endDate: "Wednesday, Jun 24, 2026",
+    isExtra: false,
+    clinicalReason: "Routine Maintenance & Access Assessment",
+    additionalNotes: "Access ultrasound review requested due to arterial flutter. Pre-dialysis BP monitored closely.",
     orders: [
       {
         id: "ord-201",
         date: "Jun 22, 2026",
-        order: "Schedule access ultrasound review",
+        order: "Schedule access ultrasound review with vascular surgeon",
         completed: false,
       },
       {
         id: "ord-202",
-        date: "Jun 23, 2026",
-        order: "Limit fluid intake to 32 oz/day",
+        date: "Jun 22, 2026",
+        order: "Verify fistula thrill/bruit morning and evening",
         completed: true,
+      },
+      {
+        id: "ord-203",
+        date: "Jun 23, 2026",
+        order: "Limit interdialytic fluid intake to 32 oz (1,000 mL) per day",
+        completed: true,
+      },
+      {
+        id: "ord-204",
+        date: "Jun 23, 2026",
+        order: "Hold morning antihypertensive if pre-dialysis systolic BP < 110 mmHg",
+        completed: true,
+      },
+      {
+        id: "ord-205",
+        date: "Jun 24, 2026",
+        order: "Review monthly lab Kt/V clearance results with dialysis nurse",
+        completed: false,
+      },
+      {
+        id: "ord-206",
+        date: "Jun 24, 2026",
+        order: "Apply cool compress to cannulation sites if mild tenderness occurs",
+        completed: false,
       },
     ],
     symptomEntries: [
@@ -194,11 +245,38 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     label: "Treatment 3 ➔ Treatment 4",
     startDate: "Wednesday, Jun 24, 2026",
     endDate: "Saturday, Jun 27, 2026",
+    isExtra: false,
+    clinicalReason: "High Potassium Alert / Dietary Follow-up",
+    additionalNotes: "Pre-dialysis serum potassium elevated at 5.7 mEq/L. Dialysate bath adjusted per protocol and dietary counseling provided.",
     orders: [
       {
         id: "ord-301",
         date: "Jun 24, 2026",
-        order: "Increase dietary protein intake",
+        order: "Increase dietary protein intake with high biological value snacks",
+        completed: false,
+      },
+      {
+        id: "ord-302",
+        date: "Jun 24, 2026",
+        order: "Take active Vitamin D analog (Hectorol) with dinner meal",
+        completed: true,
+      },
+      {
+        id: "ord-303",
+        date: "Jun 25, 2026",
+        order: "Elevate lower extremities for 30 minutes twice daily to reduce edema",
+        completed: true,
+      },
+      {
+        id: "ord-304",
+        date: "Jun 26, 2026",
+        order: "Avoid lifting heavy objects (> 10 lbs) with vascular access arm",
+        completed: true,
+      },
+      {
+        id: "ord-305",
+        date: "Jun 27, 2026",
+        order: "Check and log access arterial flow rate during treatment setup",
         completed: false,
       },
     ],
@@ -228,12 +306,39 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     label: "Treatment 4 ➔ Next Week Treatment 1",
     startDate: "Saturday, Jun 27, 2026",
     endDate: "Tuesday, Jun 30, 2026",
+    isExtra: false,
+    clinicalReason: "Make-up Session & Pre-Weekend Clearance",
+    additionalNotes: "Extended weekend interval clearance. Patient advised on strict 32 oz fluid management and iron supplement adherence.",
     orders: [
       {
         id: "ord-401",
         date: "Jun 27, 2026",
         order: "Take iron supplement daily with Vitamin C",
         completed: true,
+      },
+      {
+        id: "ord-402",
+        date: "Jun 28, 2026",
+        order: "Strict adherence to 3-day weekend fluid restriction (< 1.5 L total)",
+        completed: true,
+      },
+      {
+        id: "ord-403",
+        date: "Jun 28, 2026",
+        order: "Inspect access puncture sites daily for erythema, warmth, or drainage",
+        completed: true,
+      },
+      {
+        id: "ord-404",
+        date: "Jun 29, 2026",
+        order: "Take renal multivitamin in the morning after breakfast",
+        completed: false,
+      },
+      {
+        id: "ord-405",
+        date: "Jun 30, 2026",
+        order: "Notify on-call nephrologist if weekend weight gain exceeds 2.5 kg",
+        completed: false,
       },
     ],
     symptomEntries: [
@@ -253,6 +358,55 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         category: "Symptom Relief & Supportive Care",
         medications: ["Hectorol", "Tylenol"],
         status: "Taken",
+      },
+    ],
+  },
+  "tx-extra-3-1": {
+    id: "tx-extra-3-1",
+    name: "Treatment 3.1",
+    label: "Between Treatment 3.1 to 4",
+    startDate: "Friday, Jun 26, 2026",
+    endDate: "Saturday, Jun 27, 2026",
+    isExtra: true,
+    clinicalReason: "Fluid Overload (Extra Ultrafiltration needed)",
+    additionalNotes: "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg) and alleviate shortness of breath.",
+    orders: [
+      {
+        id: "ord-ext-1",
+        date: "Jun 26, 2026",
+        order: "Complete 3.5-hour ultrafiltration-only cycle to achieve target dry weight",
+        completed: true,
+      },
+      {
+        id: "ord-ext-2",
+        date: "Jun 26, 2026",
+        order: "Monitor standing BP every 30 minutes during fluid removal",
+        completed: true,
+      },
+      {
+        id: "ord-ext-3",
+        date: "Jun 27, 2026",
+        order: "Strict adherence to 32 oz interdialytic fluid limit over the weekend",
+        completed: false,
+      },
+    ],
+    symptomEntries: [
+      {
+        id: "sym-ext-1",
+        date: "Friday, Jun 26, 2026",
+        dayLabel: "Extra Session Day",
+        symptoms: ["Shortness of breath", "Pedal edema"],
+        severity: "Moderate",
+        notes: "Breathing significantly improved following 2.1 L fluid removal.",
+      },
+    ],
+    medEntries: [
+      {
+        id: "med-ext-1",
+        date: "Friday, Jun 26, 2026",
+        category: "Blood Pressure & Anticoagulation",
+        medications: ["Heparin"],
+        status: "Administered",
       },
     ],
   },
@@ -294,6 +448,10 @@ const TREATMENT_VALID_DATES: Record<
     { dateStr: "Sunday, Jun 28, 2026", dayLabel: "Sunday", shortDate: "Jun 28, 2026" },
     { dateStr: "Monday, Jun 29, 2026", dayLabel: "Monday", shortDate: "Jun 29, 2026" },
     { dateStr: "Tuesday, Jun 30, 2026", dayLabel: "Tuesday", shortDate: "Jun 30, 2026" },
+  ],
+  "tx-extra-3-1": [
+    { dateStr: "Friday, Jun 26, 2026", dayLabel: "Friday", shortDate: "Jun 26, 2026" },
+    { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27, 2026" },
   ],
 };
 
@@ -427,12 +585,33 @@ function getDayAndDate(dateStr: string, isEs: boolean) {
 function ViewRecordContent() {
   const searchParams = useSearchParams();
   const treatmentParam = searchParams.get("treatment") || "tx-1";
+  const queryTitle = searchParams.get("title");
+  const queryReason = searchParams.get("reason");
+  const queryNotes = searchParams.get("notes");
+  const isExtraQuery = searchParams.get("isExtra") === "true" || treatmentParam.toLowerCase().includes("extra");
+
   const activeKey = INTERVAL_VIEW_DATA[treatmentParam] ? treatmentParam : "tx-1";
-  const intervalData = INTERVAL_VIEW_DATA[activeKey];
+  const baseData = INTERVAL_VIEW_DATA[activeKey] || INTERVAL_VIEW_DATA["tx-1"];
   const availableDates = TREATMENT_VALID_DATES[activeKey] || TREATMENT_VALID_DATES["tx-1"];
 
   const { language } = useLanguage();
   const isEs = language === "ES";
+
+  const isExtra = isExtraQuery || Boolean(baseData.isExtra);
+  const clinicalReason = queryReason || baseData.clinicalReason || "";
+  const additionalNotes = queryNotes || baseData.additionalNotes || "";
+
+  const intervalData: TreatmentIntervalMeta = {
+    ...baseData,
+    id: treatmentParam,
+    name: queryTitle || baseData.name,
+    label: isExtra && !INTERVAL_VIEW_DATA[treatmentParam]
+      ? (isEs ? "Sesión Extra de Diálisis" : "Extra Dialysis Session")
+      : baseData.label,
+    isExtra,
+    clinicalReason,
+    additionalNotes,
+  };
 
   const startParsed = parseDayAndDate(intervalData.startDate);
   const endParsed = parseDayAndDate(intervalData.endDate);
@@ -673,25 +852,135 @@ function ViewRecordContent() {
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               {intervalData.name}
             </h1>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-[#2563EB] border border-blue-100">
-              {intervalData.label}
-            </span>
+            {intervalData.isExtra ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                {intervalData.label}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-[#2563EB] border border-blue-100">
+                {intervalData.label}
+              </span>
+            )}
           </div>
 
           {/* Right: Date block in place of the removed record button */}
           <div className="flex items-center gap-3 text-xs sm:text-sm">
-            <div className="leading-snug">
-              <span className="block font-bold text-slate-900">{startParsed.day}</span>
-              <span className="block text-slate-600 font-medium">{startParsed.date}</span>
-            </div>
-            <span className="text-slate-400 font-bold text-base select-none">-</span>
-            <div className="leading-snug">
-              <span className="block font-bold text-slate-900">{endParsed.day}</span>
-              <span className="block text-slate-600 font-medium">{endParsed.date}</span>
-            </div>
+            {intervalData.isExtra ? (
+              <div className="leading-snug text-right">
+                <span className="block font-bold text-slate-900">{startParsed.day}</span>
+                <span className="block text-purple-700 font-semibold">{startParsed.date}</span>
+              </div>
+            ) : (
+              <>
+                <div className="leading-snug">
+                  <span className="block font-bold text-slate-900">{startParsed.day}</span>
+                  <span className="block text-slate-600 font-medium">{startParsed.date}</span>
+                </div>
+                <span className="text-slate-400 font-bold text-base select-none">-</span>
+                <div className="leading-snug">
+                  <span className="block font-bold text-slate-900">{endParsed.day}</span>
+                  <span className="block text-slate-600 font-medium">{endParsed.date}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* CLINICAL REASON & ADDITIONAL NOTES / SYMPTOMS CARD                        */}
+      {/* ========================================================================= */}
+      {(intervalData.clinicalReason || intervalData.additionalNotes) && (
+        <section
+          className={`rounded-2xl sm:rounded-3xl border p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in duration-200 ${
+            intervalData.isExtra
+              ? "border-purple-200 bg-gradient-to-br from-purple-50/40 via-white to-white"
+              : "border-slate-200/90 bg-white"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                  intervalData.isExtra
+                    ? "bg-purple-100/70 border-purple-200 text-purple-700"
+                    : "bg-blue-50 border-blue-100 text-[#2563EB]"
+                }`}
+              >
+                <Activity className="h-5 w-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  {isEs ? "Información Clínica de la Sesión" : "Clinical Reason & Symptoms"}
+                </h2>
+                <p className="text-xs font-medium text-slate-500">
+                  {isEs
+                    ? "Motivo médico registrado y notas adicionales o síntomas del paciente"
+                    : "Physician documented clinical indication and reported patient symptoms / notes"}
+                </p>
+              </div>
+            </div>
+
+            {intervalData.isExtra ? (
+              <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200/80 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+                {isEs ? "Sesión de Tratamiento Extra" : "Extra Treatment Session"}
+              </span>
+            ) : (
+              <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
+                <Check className="h-3.5 w-3.5 stroke-[2.5] text-emerald-600" />
+                {isEs ? "Sesión Programada" : "Scheduled Session"}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* Box 1: Clinical Reason */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle
+                  className={`h-4 w-4 shrink-0 ${
+                    intervalData.isExtra ? "text-purple-600" : "text-[#2563EB]"
+                  }`}
+                />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  {isEs ? "Motivo Clínico" : "Clinical Reason"}
+                </span>
+              </div>
+              <div className="pt-1">
+                <span
+                  className={`inline-flex items-center px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-bold border shadow-2xs ${
+                    intervalData.isExtra
+                      ? "bg-purple-50/80 text-purple-900 border-purple-200"
+                      : "bg-white text-slate-900 border-slate-200"
+                  }`}
+                >
+                  {intervalData.clinicalReason ||
+                    (isEs ? "Diálisis de Rutina" : "Standard Dialysis Clearance")}
+                </span>
+              </div>
+            </div>
+
+            {/* Box 2: Additional Notes / Symptoms */}
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  {isEs ? "Notas Adicionales / Síntomas" : "Additional Notes / Symptoms"}
+                </span>
+              </div>
+              <div className="pt-1">
+                <p className="text-sm sm:text-base font-medium text-slate-800 leading-relaxed bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-2xs">
+                  {intervalData.additionalNotes ||
+                    (isEs
+                      ? "Sin notas adicionales registradas para esta sesión."
+                      : "No additional notes or symptoms recorded for this session.")}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ========================================================================= */}
       {/* 1. RECOVERY PATTERN TRACKING                                              */}
