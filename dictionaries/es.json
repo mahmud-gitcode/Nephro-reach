@@ -1025,7 +1025,7 @@
     },
     "recentEntries": {
       "title": "Entradas Recientes",
-      "addNewEntry": "Agregar Nueva Entrada",
+      "addNewEntry": "Nueva Entrada",
       "headers": {
         "date": "Fecha",
         "morning": "Mañana",

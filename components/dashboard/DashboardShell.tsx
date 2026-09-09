@@ -385,9 +385,9 @@ function Sidebar({
   );
 }
 
-function HeaderIcon({ src }: { src: string }) {
+function HeaderIcon({ src, className = "size-6" }: { src: string; className?: string }) {
   return (
-    <span className="relative block size-6 overflow-clip">
+    <span className={`relative block overflow-clip shrink-0 ${className}`}>
       <img src={src} alt="" className="size-full" />
     </span>
   );
@@ -410,75 +410,85 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 md:px-8 print:hidden">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 sm:px-4 sm:py-3 md:px-8 print:hidden">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
-          className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 shadow-sm lg:hidden cursor-pointer"
+          className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-700 shadow-sm sm:p-2 lg:hidden cursor-pointer shrink-0"
           aria-label={language === "ES" ? "Abrir menú del panel" : "Open dashboard menu"}
         >
           <Menu className="h-5 w-5" />
         </button>
-        <nav className="flex min-w-0 flex-wrap items-center gap-4 text-base font-medium tracking-[0.08px]">
-          {isUser
-            ? trail.map((item, index) => {
-                const last = index === trail.length - 1;
-                let href: string | null = null;
-                if (item === "Dashboard" || item === "Panel") href = "/dashboard";
-                else if (item === "Before-the-ER" || item === "Antes de Urgencias") href = "/dashboard/before-the-er";
-                else if (item === "Personal Log" || item === "Registro Personal") href = "/dashboard/personal-log";
+        <nav className="flex min-w-0 items-center gap-2 sm:gap-4 text-xs sm:text-base font-medium tracking-[0.08px] overflow-hidden">
+          {isUser ? (
+            <>
+              {/* Mobile: concise active page title */}
+              <span className="truncate text-xs sm:hidden font-semibold text-[#141A21]">
+                {trail[trail.length - 1] ?? "Dashboard"}
+              </span>
+              {/* Tablet/Desktop: full breadcrumbs trail */}
+              <div className="hidden sm:flex items-center gap-3 md:gap-4 truncate">
+                {trail.map((item, index) => {
+                  const last = index === trail.length - 1;
+                  let href: string | null = null;
+                  if (item === "Dashboard" || item === "Panel") href = "/dashboard";
+                  else if (item === "Before-the-ER" || item === "Antes de Urgencias") href = "/dashboard/before-the-er";
+                  else if (item === "Personal Log" || item === "Registro Personal") href = "/dashboard/personal-log";
 
-                return (
-                  <span key={`${item}-${index}`} className="flex items-center gap-4">
-                    {index > 0 ? (
-                      <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
-                    ) : null}
-                    {href && !last ? (
-                      <Link
-                        href={href}
-                        className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors"
-                      >
-                        {item}
-                      </Link>
-                    ) : (
-                      <span className={last ? "text-[#141A21] font-semibold" : "text-[#64748B]"}>{item}</span>
-                    )}
-                  </span>
-                );
-              })
-            : (
-              <>
-                <Link href="/dashboard" className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors">
-                  {language === "ES" ? "Panel" : "Dashboard"}
-                </Link>
-                <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
-                <span className="text-[#0F172A] font-semibold">{currentPage}</span>
-              </>
-            )}
+                  return (
+                    <span key={`${item}-${index}`} className="flex items-center gap-3 md:gap-4">
+                      {index > 0 ? (
+                        <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
+                      ) : null}
+                      {href && !last ? (
+                        <Link
+                          href={href}
+                          className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {item}
+                        </Link>
+                      ) : (
+                        <span className={last ? "text-[#141A21] font-semibold" : "text-[#64748B]"}>{item}</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <Link href="/dashboard" className="hidden sm:inline text-[#64748B] hover:text-blue-600 hover:underline transition-colors">
+                {language === "ES" ? "Panel" : "Dashboard"}
+              </Link>
+              <span className="hidden sm:inline text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
+              <span className="text-[#0F172A] font-semibold truncate text-xs sm:text-base">{currentPage}</span>
+            </>
+          )}
         </nav>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-4">
+        {/* Language Switcher - Compact on mobile, full on desktop */}
         {isUser ? (
-          <div className="relative hidden sm:block">
+          <div className="relative">
             <button
               type="button"
               onClick={() => setLangOpen((open) => !open)}
-              className="flex items-center gap-2.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-2.5 rounded-lg sm:rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer"
               aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
             >
-              <span className="relative h-6 w-[33px] overflow-clip rounded-[2px]">
+              <span className="relative h-4.5 w-6 sm:h-6 sm:w-[33px] overflow-clip rounded-[2px] shrink-0">
                 <img
                   src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
                   alt=""
-                  className="size-full"
+                  className="size-full object-cover"
                 />
               </span>
-              <HeaderIcon src="/images/dashboard-header/arrow-down.svg" />
+              <HeaderIcon src="/images/dashboard-header/arrow-down.svg" className="size-3 sm:size-4" />
             </button>
             {langOpen ? (
-              <div className="absolute right-0 z-20 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-md">
+              <div className="absolute right-0 z-50 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-md">
                 {(["EN", "ES"] as const).map((code) => (
                   <button
                     key={code}
@@ -499,32 +509,41 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         ) : null}
 
+        {/* Notifications Button */}
         <button
           type="button"
-          className="flex items-center rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-2 shadow-[0_1px_2px_rgba(0,0,0,0.1)] cursor-pointer"
+          className="flex items-center rounded-lg sm:rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2 shadow-[0_1px_2px_rgba(0,0,0,0.1)] cursor-pointer"
           aria-label={language === "ES" ? "Notificaciones" : "Notifications"}
         >
-          <HeaderIcon src={bellSrc} />
+          <HeaderIcon src={bellSrc} className="size-4 sm:size-5" />
         </button>
 
-        <span className="hidden h-8 w-px bg-slate-300 sm:block" />
+        <span className="hidden h-6 w-px bg-slate-300 sm:block" />
 
+        {/* Emergency Button - Compact on mobile, full on desktop */}
         {isUser ? (
           <button
             type="button"
             onClick={() => setEmergencyOpen(true)}
-            className="hidden items-center gap-2 rounded bg-[#EF4444] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white transition-colors hover:bg-red-600 sm:flex cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 rounded-lg sm:rounded bg-[#EF4444] px-2 py-1.5 sm:px-3.5 sm:py-3 text-xs sm:text-base font-bold tracking-[0.08px] text-white transition-colors hover:bg-red-600 shadow-xs cursor-pointer active:scale-95 shrink-0"
+            title={language === "ES" ? "Emergencia" : "Emergency"}
           >
-            <HeaderIcon src="/images/dashboard-header/danger.svg" />
-            {language === "ES" ? "Emergencia" : "Emergency"}
+            <HeaderIcon src="/images/dashboard-header/danger.svg" className="size-3.5 sm:size-5" />
+            <span className="hidden min-[440px]:inline">
+              {language === "ES" ? "Emergencia" : "Emergency"}
+            </span>
+            <span className="min-[440px]:hidden">
+              {language === "ES" ? "SOS" : "SOS"}
+            </span>
           </button>
         ) : null}
 
-        <div className="hidden items-center gap-3 rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] px-2 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] sm:flex">
-          <div className="relative h-10 w-[42px] overflow-hidden rounded-full bg-slate-200">
+        {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
+        <div className="flex items-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] p-1 sm:px-2 sm:py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] shrink-0">
+          <div className="relative h-7 w-7 sm:h-10 sm:w-[42px] overflow-hidden rounded-full bg-slate-200 shrink-0">
             <Image src={avatarSrc} alt="" fill sizes="42px" className="object-cover" />
           </div>
-          <div className="w-[174px] min-w-0">
+          <div className="hidden lg:block w-[140px] xl:w-[174px] min-w-0">
             <p className="truncate text-base font-medium leading-6 tracking-[0.08px] text-[#33358E]">
               {user?.name ?? (language === "ES" ? "Invitado" : "Guest")}
             </p>

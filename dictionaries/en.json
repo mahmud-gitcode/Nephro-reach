@@ -1041,7 +1041,7 @@
     },
     "recentEntries": {
       "title": "Recent Entries",
-      "addNewEntry": "Add New Entry",
+      "addNewEntry": "New Entry",
       "headers": {
         "date": "Date",
         "morning": "Morning",

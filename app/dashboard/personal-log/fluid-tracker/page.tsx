@@ -263,10 +263,10 @@ function MetricCards({
               e.stopPropagation();
               onOpenEdwModal();
             }}
-            className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
-            title="Edit EDW"
+            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 cursor-pointer shadow-2xs active:scale-95 shrink-0"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3 w-3" />
+            <span>{language === "ES" ? "Editar" : "Edit"}</span>
           </button>
         </div>
 
@@ -300,10 +300,10 @@ function MetricCards({
               e.stopPropagation();
               onOpenEdwModal();
             }}
-            className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100"
-            title="Update Weight"
+            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 cursor-pointer shadow-2xs active:scale-95 shrink-0"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3 w-3" />
+            <span>{language === "ES" ? "Editar" : "Edit"}</span>
           </button>
         </div>
 
@@ -1753,7 +1753,7 @@ function RecentEntries({
           className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98]"
         >
           <Plus className="h-5 w-5" />
-          {w?.recentEntries?.addNewEntry || "Add New Entry"}
+          {w?.recentEntries?.addNewEntry || "New Entry"}
         </button>
       </div>
       <div className="mt-4 overflow-hidden rounded-lg border border-[#C4CDD5]">
@@ -2078,13 +2078,13 @@ export default function FluidTrackerPage() {
             {w?.subtitle || "Track symptoms & compare weights. Understand your fluid patterns."}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
           {/* Unit Switcher: kg / lbs */}
-          <div className="flex items-center rounded-xl border border-slate-200 bg-[#F1F5F9] p-1 shadow-2xs">
+          <div className="flex h-10 sm:h-12 items-center rounded-xl border border-slate-200 bg-[#F1F5F9] p-1 shadow-2xs">
             <button
               type="button"
               onClick={() => setUnit("kg")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 unit === "kg"
                   ? "bg-white text-blue-600 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -2095,7 +2095,7 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setUnit("lbs")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 unit === "lbs"
                   ? "bg-white text-blue-600 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -2108,16 +2108,16 @@ export default function FluidTrackerPage() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-xs transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98]"
+            className="flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-blue-600 px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-white shadow-xs transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98] whitespace-nowrap"
           >
-            <Plus className="h-5 w-5" />
-            <span>{w?.recentEntries?.addNewEntry || "Add New Entry"}</span>
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span>{w?.recentEntries?.addNewEntry || "New Entry"}</span>
           </button>
           <button
             type="button"
-            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer"
+            className="flex h-10 sm:h-12 shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-[#F9F9F9] px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer whitespace-nowrap"
           >
-            <Calendar className="h-6 w-6" />
+            <Calendar className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" />
             Jun
           </button>
         </div>
