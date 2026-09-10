@@ -189,17 +189,17 @@ export default function AboutUsPage() {
         {/* 05 — FOUNDER STORY: THE EMOTIONAL CORE */}
         <section id="founder" className="w-full bg-[#FCFDFD] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-28 border-t border-slate-200/80">
           <div className="mx-auto max-w-5xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-10 lg:gap-12 items-stretch">
 
               {/* Founder Image Column */}
-              <div className="lg:col-span-5 flex justify-center lg:justify-start">
-                <div className="relative w-full max-w-[380px] sm:max-w-[420px] lg:max-w-none h-full min-h-[440px] sm:min-h-[460px] flex flex-col justify-between">
-                  <div className="relative w-full h-full min-h-[420px] sm:min-h-[440px]">
+              <div className="flex justify-center lg:justify-start">
+                <div className="relative w-full max-w-[420px] sm:max-w-[450px] lg:max-w-none h-full min-h-[480px] sm:min-h-[540px] flex flex-col justify-between">
+                  <div className="relative w-full h-full min-h-[460px] sm:min-h-[520px]">
                     <Image
                       src={aboutImages.founder}
                       alt="Joni Gathers, MSN, APRN, FNP-C - Founder of NephroReach"
                       fill
-                      className="object-contain object-top"
+                      className="object-cover object-top"
                       priority
                     />
                   </div>
@@ -216,7 +216,7 @@ export default function AboutUsPage() {
               </div>
 
               {/* Editorial Biography Column */}
-              <div className="lg:col-span-7 flex flex-col justify-between space-y-6 pt-1 lg:pt-0">
+              <div className="flex flex-col justify-between space-y-6 pt-1 lg:pt-0">
                 <div>
                   <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight inline-block relative pb-2 mb-2">
                     {isEs ? "Sobre la Fundadora" : "About the Founder"}
@@ -539,54 +539,63 @@ export default function AboutUsPage() {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Story 1 */}
-              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
-                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
-                  &ldquo;The lessons helped me understand what questions to bring to my dialysis team. I felt more organized and less overwhelmed after the first week.&rdquo;
-                </p>
-                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-xs">
-                    AR
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">Angela R.</h4>
-                    <p className="text-xs text-slate-500 font-medium">Dialysis Member</p>
-                  </div>
-                </div>
-              </article>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[
+                {
+                  initials: "AR",
+                  bgInitials: "bg-blue-100 text-blue-700",
+                  quoteEn: "“The lessons helped me understand what questions to bring to my dialysis team. I felt more organized and less overwhelmed after the first week.”",
+                  quoteEs: "“Las lecciones me ayudaron a entender qué preguntas llevar a mi equipo de diálisis. Me sentí más organizada y menos abrumada después de la primera semana.”",
+                  name: "Angela R.",
+                  roleEn: "Dialysis Member",
+                  roleEs: "Miembro en diálisis",
+                },
+                {
+                  initials: "MJ",
+                  bgInitials: "bg-teal-100 text-teal-800",
+                  quoteEn: "“As a caregiver, having simple explanations and reminders made a real difference. It gave our family a calmer way to talk about kidney health.”",
+                  quoteEs: "“Como cuidador, tener explicaciones simples y recordatorios hizo una verdadera diferencia. Le dio a nuestra familia una forma más tranquila de hablar sobre la salud renal.”",
+                  name: "Marcus J.",
+                  roleEn: "Family Caregiver",
+                  roleEs: "Cuidador familiar",
+                },
+                {
+                  initials: "CL",
+                  bgInitials: "bg-emerald-100 text-emerald-800",
+                  quoteEn: "“The tracking tools helped me notice patterns before my appointments. I could share clearer notes and make better use of my visit time.”",
+                  quoteEs: "“Las herramientas de seguimiento me ayudaron a notar patrones antes de mis citas. Pude compartir notas más claras y aprovechar mejor el tiempo de la visita.”",
+                  name: "Cynthia L.",
+                  roleEn: "CKD Learner",
+                  roleEs: "Estudiante de ERC",
+                },
+              ].map((story, idx) => (
+                <article
+                  key={idx}
+                  className="group flex flex-col justify-between rounded-2xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-xl hover:border-blue-300 hover:-translate-y-1 transition-all duration-300"
+                >
+                  {/* Quote Body - matches What Makes Us Different card body text */}
+                  <p className="text-slate-600 font-medium text-sm leading-relaxed mb-6">
+                    {isEs ? story.quoteEs : story.quoteEn}
+                  </p>
 
-              {/* Story 2 */}
-              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
-                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
-                  &ldquo;As a caregiver, having simple explanations and reminders made a real difference. It gave our family a calmer way to talk about kidney health.&rdquo;
-                </p>
-                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-bold text-xs">
-                    MJ
+                  {/* Member Footer */}
+                  <div className="flex items-center gap-3.5 border-t border-slate-100 pt-5 mt-auto">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold text-sm ${story.bgInitials}`}>
+                      {story.initials}
+                    </div>
+                    <div>
+                      {/* Name - matches What Makes Us Different card title text */}
+                      <h4 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
+                        {story.name}
+                      </h4>
+                      {/* Role - matches What Makes Us Different card body text */}
+                      <p className="text-sm font-medium text-slate-500 leading-relaxed mt-0.5">
+                        {isEs ? story.roleEs : story.roleEn}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">Marcus J.</h4>
-                    <p className="text-xs text-slate-500 font-medium">Family Caregiver</p>
-                  </div>
-                </div>
-              </article>
-
-              {/* Story 3 */}
-              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
-                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
-                  &ldquo;The tracking tools helped me notice patterns before my appointments. I could share clearer notes and make better use of my visit time.&rdquo;
-                </p>
-                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
-                    CL
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">Cynthia L.</h4>
-                    <p className="text-xs text-slate-500 font-medium">CKD Learner</p>
-                  </div>
-                </div>
-              </article>
+                </article>
+              ))}
             </div>
           </div>
         </section>

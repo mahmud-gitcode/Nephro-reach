@@ -104,7 +104,6 @@ export default function Header() {
   const isLinkActive = (path: string) => {
     if (path === "/") return pathname === "/";
     if (path === "/about-us") return pathname === "/about-us";
-    if (path === "/about-us-2") return pathname === "/about-us-2";
     return pathname.startsWith(path);
   };
 
@@ -216,13 +215,6 @@ export default function Header() {
               {t("header.aboutUs")}
             </Link>
             <Link
-              href="/about-us-2"
-              aria-current={isLinkActive("/about-us-2") ? "page" : undefined}
-              className={navLinkClass(isLinkActive("/about-us-2"))}
-            >
-              About 2
-            </Link>
-            <Link
               href="/pricing"
               aria-current={isLinkActive("/pricing") ? "page" : undefined}
               className={navLinkClass(isLinkActive("/pricing"))}
@@ -305,14 +297,7 @@ export default function Header() {
           >
             {t("header.aboutUs")}
           </Link>
-          <Link
-            href="/about-us-2"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-current={isLinkActive("/about-us-2") ? "page" : undefined}
-            className={`block py-2 ${navLinkClass(isLinkActive("/about-us-2"))}`}
-          >
-            About 2
-          </Link>
+
           <Link
             href="/pricing"
             onClick={() => setMobileMenuOpen(false)}
