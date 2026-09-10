@@ -1,44 +1,84 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Review, getApprovedReviews, REVIEWS_EVENT } from "@/lib/reviews";
 
 export default function Testimonials() {
   const { t } = useLanguage();
   const [index, setIndex] = useState(0);
+  const [approvedList, setApprovedList] = useState<Review[]>([]);
 
-  const reviews = [
-    {
-      badge: t("testimonials.badge1"),
-      quote: t("testimonials.quote1"),
-      rating: "4.9",
-      name: "Marcus J.",
-      location: "United States",
-      role: t("testimonials.role1"),
-    },
-    {
-      badge: t("testimonials.badge2"),
-      quote: t("testimonials.quote2"),
-      rating: "4.8",
-      name: "Angela R.",
-      location: "United States",
-      role: t("testimonials.role2"),
-    },
-    {
-      badge: t("testimonials.badge3"),
-      quote: t("testimonials.quote3"),
-      rating: "5.0",
-      name: "Cynthia L.",
-      location: "United States",
-      role: t("testimonials.role3"),
-    },
-  ];
+  useEffect(() => {
+    const syncReviews = () => {
+      setApprovedList(getApprovedReviews());
+    };
+    syncReviews();
+    window.addEventListener(REVIEWS_EVENT, syncReviews);
+    window.addEventListener("storage", syncReviews);
+    return () => {
+      window.removeEventListener(REVIEWS_EVENT, syncReviews);
+      window.removeEventListener("storage", syncReviews);
+    };
+  }, []);
 
-  const visible = [
-    reviews[index % reviews.length],
-    reviews[(index + 1) % reviews.length],
-    reviews[(index + 2) % reviews.length],
-  ];
+  const defaultReviews = useMemo(
+    () => [
+      {
+        id: "default-1",
+        badge: t("testimonials.badge1") || "Dialysis Journey",
+        quote: t("testimonials.quote1"),
+        rating: "4.9",
+        name: "Marcus J.",
+        location: "United States",
+        role: t("testimonials.role1"),
+      },
+      {
+        id: "default-2",
+        badge: t("testimonials.badge2") || "Caregiver Support",
+        quote: t("testimonials.quote2"),
+        rating: "4.8",
+        name: "Angela R.",
+        location: "United States",
+        role: t("testimonials.role2"),
+      },
+      {
+        id: "default-3",
+        badge: t("testimonials.badge3") || "CKD Management",
+        quote: t("testimonials.quote3"),
+        rating: "5.0",
+        name: "Cynthia L.",
+        location: "United States",
+        role: t("testimonials.role3"),
+      },
+    ],
+    [t]
+  );
+
+  const reviews = useMemo(() => {
+    if (approvedList.length > 0) {
+      return approvedList.map((r) => ({
+        id: r.id,
+        badge: r.role || "Member Review",
+        quote: r.comment.startsWith("“") ? r.comment : `“${r.comment}”`,
+        rating: (r.rating || 5).toFixed(1),
+        name: r.userName,
+        location: r.location || "United States",
+        role: r.role || "Community Member",
+      }));
+    }
+    return defaultReviews;
+  }, [approvedList, defaultReviews]);
+
+  const len = reviews.length;
+  const visible =
+    len <= 3
+      ? reviews
+      : [
+          reviews[index % len],
+          reviews[(index + 1) % len],
+          reviews[(index + 2) % len],
+        ];
 
   return (
     <section className="w-full bg-white py-16 lg:py-20">
@@ -99,7 +139,11 @@ export default function Testimonials() {
                         key={star}
                         src="/images/home/star.svg"
                         alt=""
-                        className="size-6"
+                        className={`size-6 ${
+                          star < Math.round(Number(review.rating))
+                            ? "opacity-100"
+                            : "opacity-25 grayscale"
+                        }`}
                       />
                     ))}
                   </div>

@@ -26,6 +26,7 @@ import {
   MessagesSquare,
   Search,
   Settings,
+  Star,
   Trash2,
   Users,
   Video,
@@ -73,6 +74,13 @@ const sidebarItems: NavItem[] = [
     label: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
+    roles: ["admin"],
+  },
+  { label: "Reviews", href: "/dashboard/reviews", icon: Star, roles: ["user"] },
+  {
+    label: "Reviews Moderation",
+    href: "/dashboard/admin-reviews",
+    icon: Star,
     roles: ["admin"],
   },
 ];
@@ -163,6 +171,10 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Análisis de Notificaciones" : "Notification Analytics";
   if (pathname.startsWith("/dashboard/subscriptions"))
     return language === "ES" ? "Suscripciones" : "Subscriptions";
+  if (pathname.startsWith("/dashboard/admin-reviews"))
+    return language === "ES" ? "Moderación de Reseñas" : "Reviews Moderation";
+  if (pathname.startsWith("/dashboard/reviews"))
+    return language === "ES" ? "Reseñas" : "Reviews";
   if (pathname.startsWith("/dashboard/support"))
     return language === "ES" ? "Soporte" : "Support";
   if (pathname.startsWith("/dashboard/settings"))
@@ -187,6 +199,8 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
     "/dashboard/community": "Comunidad",
     "/dashboard/sms-analytics": "Análisis de Notificaciones",
     "/dashboard/subscriptions": "Suscripciones",
+    "/dashboard/reviews": "Reseñas",
+    "/dashboard/admin-reviews": "Moderación de Reseñas",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",
     "/dashboard/trash": "Papelera",

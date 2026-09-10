@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Droplets,
   FileText,
+  Info,
   Minus,
   Pencil,
   Plus,
@@ -2277,6 +2278,15 @@ export default function FluidTrackerPage() {
           </div>
         </div>
       </div>
+
+      {/* Educational & Self-Tracking Disclaimer */}
+      <aside className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-[#F1F5FA] p-3.5 sm:p-4">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
+        <p className="text-sm sm:text-base font-medium leading-relaxed tracking-[0.08px] text-[#364153]">
+          {w?.disclaimer ||
+            "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team."}
+        </p>
+      </aside>
 
       <MetricCards
         unit={unit}

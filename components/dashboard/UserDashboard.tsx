@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Phone, Pencil, X } from "lucide-react";
+import { Phone, Pencil, Star, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
@@ -253,9 +253,18 @@ export default function UserDashboard() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-xl font-medium leading-7 text-[#0A0A0A]">
-          {dh?.testimonials?.title || "Testimonials - You're Not Alone"}
-        </h2>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-medium leading-7 text-[#0A0A0A]">
+            {dh?.testimonials?.title || "Testimonials - You're Not Alone"}
+          </h2>
+          <Link
+            href="/dashboard/reviews"
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+          >
+            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            {language === "ES" ? "Dejar una Reseña" : "Leave a Review"}
+          </Link>
+        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {testimonials.map((item, index) => (
             <article

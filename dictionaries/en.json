@@ -953,6 +953,7 @@
   "weightFluidTracker": {
     "title": "Weight & Fluid Management Center",
     "subtitle": "Track symptoms & compare weights. Understand your fluid patterns.",
+    "disclaimer": "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team.",
     "edwMetrics": {
       "estimatedDryWeight": "Estimated Dry Weight",
       "edwSetBy": "Set by care team.",
@@ -1291,9 +1292,15 @@
     "greetingMorning": "Good morning",
     "greetingAfternoon": "Good afternoon",
     "greetingEvening": "Good evening",
-    "subtitle": "Your personal log for each dialysis day",
+    "subtitle": "Your personal journal for each dialysis day",
     "newEntryBtn": "New Entry",
-    "disclaimer": "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team.",
+    "introCard": {
+      "title": "My Dialysis Journal",
+      "subtitle": "A private space to reflect on your dialysis journey.",
+      "body": "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember.",
+      "promptsPrefix": "You can write about:",
+      "prompts": "how you felt today • your energy level • your dialysis experience • changes in your routine • good or difficult days • personal goals • milestones and progress"
+    },
     "viewDetails": "View details",
     "hideDetails": "Hide details",
     "modal": {

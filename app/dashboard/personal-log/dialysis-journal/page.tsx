@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { ChevronDown, Info, Plus, X } from "lucide-react";
+import { BookOpen, ChevronDown, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -36,11 +36,13 @@ const defaultJournalEntries = [
 function NewEntryModal({
   open,
   onClose,
+  onSave,
 }: {
   open: boolean;
   onClose: () => void;
+  onSave?: (entry: { preview: string; details: string }) => void;
 }) {
-  const { dictionary } = useLanguage();
+  const { language, dictionary } = useLanguage();
   const dj = dictionary?.dialysisJournal;
 
   const [mood, setMood] = useState("Calm");
@@ -55,6 +57,23 @@ function NewEntryModal({
   ];
 
   if (!open) return null;
+
+  const handleSave = () => {
+    if (notes.trim()) {
+      const selectedMoodLabel =
+        moodOptions.find((m) => m.key === mood)?.label || mood;
+      const moodPrefix =
+        language === "ES"
+          ? `Estado de ánimo: ${selectedMoodLabel}.`
+          : `Mood: ${selectedMoodLabel}.`;
+      onSave?.({
+        preview: notes.trim(),
+        details: `${moodPrefix} ${notes.trim()}`,
+      });
+      setNotes("");
+    }
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
@@ -131,7 +150,7 @@ function NewEntryModal({
           </button>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleSave}
             className="flex h-12 flex-1 items-center justify-center rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
           >
             {dj?.modal?.saveEntry || "Save Entry"}
@@ -202,9 +221,35 @@ function JournalCard({
 
 export default function DialysisJournalPage() {
   const { user } = useAuth();
-  const { dictionary } = useLanguage();
+  const { language, dictionary } = useLanguage();
   const dj = dictionary?.dialysisJournal;
   const [modalOpen, setModalOpen] = useState(false);
+
+  const [entries, setEntries] = useState(() =>
+    dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0
+      ? dj.entries
+      : defaultJournalEntries
+  );
+
+  React.useEffect(() => {
+    if (dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0) {
+      setEntries(dj.entries);
+    }
+  }, [dj?.entries]);
+
+  const handleAddEntry = (newEntryData: { preview: string; details: string }) => {
+    const formattedDate = new Date().toLocaleDateString(
+      language === "ES" ? "es-ES" : "en-US",
+      { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+    );
+    const newEntry = {
+      id: String(Date.now()),
+      date: formattedDate,
+      preview: newEntryData.preview,
+      details: newEntryData.details,
+    };
+    setEntries((prev) => [newEntry, ...prev]);
+  };
 
   const greeting = (() => {
     const hour = new Date().getHours();
@@ -215,11 +260,6 @@ export default function DialysisJournalPage() {
 
   const userName = user?.name ? `, ${user.name}` : ", Sarah";
 
-  const entries =
-    dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0
-      ? dj.entries
-      : defaultJournalEntries;
-
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -229,7 +269,7 @@ export default function DialysisJournalPage() {
             {userName}
           </h1>
           <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-600">
-            {dj?.subtitle || "Your personal log for each dialysis day"}
+            {dj?.subtitle || "Your personal journal for each dialysis day"}
           </p>
         </div>
         <button
@@ -242,13 +282,38 @@ export default function DialysisJournalPage() {
         </button>
       </header>
 
-      <aside className="flex items-start gap-2 rounded-xl border border-slate-200 bg-[#F1F5FA] p-3.5">
-        <Info className="mt-0.5 h-6 w-6 shrink-0 text-slate-600" />
-        <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#364153]">
-          {dj?.disclaimer ||
-            "NephroReach provides educational and self-tracking tools only. Always follow the fluid and weight guidance provided by your dialysis care team."}
-        </p>
-      </aside>
+      {/* Journal Purpose & Logging Guidance Card */}
+      <section className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-5 sm:p-6 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+        <div className="flex items-start gap-3.5 sm:gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+            <BookOpen className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              {dj?.introCard?.title || "My Dialysis Journal"}
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-blue-600 sm:text-base">
+              {dj?.introCard?.subtitle ||
+                "A private space to reflect on your dialysis journey."}
+            </p>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
+              {dj?.introCard?.body ||
+                "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
+            </p>
+            <div className="mt-4 rounded-xl border border-blue-100 bg-white/90 p-3.5 sm:p-4">
+              <p className="text-xs font-semibold leading-relaxed text-slate-700 sm:text-sm">
+                <span className="font-bold text-slate-900">
+                  {dj?.introCard?.promptsPrefix || "You can write about:"}
+                </span>{" "}
+                <span className="text-slate-600 font-medium">
+                  {dj?.introCard?.prompts ||
+                    "how you felt today • your energy level • your dialysis experience • changes in your routine • good or difficult days • personal goals • milestones and progress"}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="space-y-4">
         {entries.map((entry) => (
@@ -256,7 +321,11 @@ export default function DialysisJournalPage() {
         ))}
       </section>
 
-      <NewEntryModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewEntryModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleAddEntry}
+      />
     </div>
   );
 }

@@ -937,6 +937,7 @@
   "weightFluidTracker": {
     "title": "Centro de Control de Peso y Líquidos",
     "subtitle": "Haga un seguimiento de los síntomas y compare los pesos. Comprenda sus patrones de líquidos.",
+    "disclaimer": "NephroReach proporciona únicamente herramientas educativas y de seguimiento personal. Siga siempre las indicaciones de líquidos y peso proporcionadas por su equipo de atención de diálisis.",
     "edwMetrics": {
       "estimatedDryWeight": "Peso Seco Estimado",
       "edwSetBy": "Establecido por el equipo de atención.",
@@ -1275,9 +1276,15 @@
     "greetingMorning": "Buenos días",
     "greetingAfternoon": "Buenas tardes",
     "greetingEvening": "Buenas noches",
-    "subtitle": "Su registro personal para cada día de diálisis",
+    "subtitle": "Su diario personal para cada día de diálisis",
     "newEntryBtn": "Nueva Entrada",
-    "disclaimer": "NephroReach proporciona únicamente herramientas educativas y de seguimiento personal. Siga siempre las indicaciones de líquidos y peso proporcionadas por su equipo de atención de diálisis.",
+    "introCard": {
+      "title": "Mi Diario de Diálisis",
+      "subtitle": "Un espacio privado para reflexionar sobre su proceso de diálisis.",
+      "body": "Use su diario para registrar cómo la diálisis afecta su vida cotidiana. Escriba sobre cómo se sintió después del tratamiento, cambios que haya notado, desafíos que esté superando, logros de los que esté orgulloso o cualquier aspecto de su proceso de diálisis que desee recordar.",
+      "promptsPrefix": "Puede escribir sobre:",
+      "prompts": "cómo se sintió hoy • su nivel de energía • su experiencia con la diálisis • cambios en su rutina • días buenos o difíciles • objetivos personales • metas y progresos"
+    },
     "viewDetails": "Ver detalles",
     "hideDetails": "Ocultar detalles",
     "modal": {

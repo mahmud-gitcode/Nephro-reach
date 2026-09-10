@@ -18,6 +18,7 @@ const ADMIN_PREFIXES = [
   "/dashboard/live-class",
   "/dashboard/sms-analytics",
   "/dashboard/subscriptions",
+  "/dashboard/admin-reviews",
 ];
 
 export const DEMO_ACCOUNTS = [
