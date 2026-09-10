@@ -1,365 +1,622 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import Image from "next/image";
-import { CheckCircle2, Quote, Star } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  BellRing,
+  ChevronDown,
+  GraduationCap,
+  HeartHandshake,
+  Stethoscope,
+  Video,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
-const reviewItems = [
+export const USE_PLACEHOLDER_IMAGES = false;
+
+export const aboutImages = {
+  founder: "/images/about us/New/aboutImage.png",
+  panelist: "/images/about us/New/panelListMember.png",
+  nutritionist: "/images/about us/New/annette-weseman1.png",
+};
+
+const heroFeatureCards = [
   {
-    quoteKey: "aboutUsPage.review1Quote",
-    nameKey: "aboutUsPage.review1Name",
-    roleKey: "aboutUsPage.review1Role",
+    id: "membership",
+    titleEn: "Membership",
+    titleEs: "Membresía",
+    descEn: "Plans & 7-Day Free Trial",
+    descEs: "Planes y 7 Días Gratis",
+    bgGradient: "from-blue-50/90 via-blue-50/40 to-white",
+    hangingRotation: "-rotate-[2.5deg]",
+    stringClass: "h-3.5 sm:h-4.5",
   },
   {
-    quoteKey: "aboutUsPage.review2Quote",
-    nameKey: "aboutUsPage.review2Name",
-    roleKey: "aboutUsPage.review2Role",
+    id: "journal",
+    titleEn: "Digital Journal",
+    titleEs: "Diario Digital",
+    descEn: "Daily Reflections & Notes",
+    descEs: "Reflexión Diaria y Notas",
+    bgGradient: "from-emerald-50/90 via-emerald-50/40 to-white",
+    hangingRotation: "-rotate-[1.5deg]",
+    stringClass: "h-5 sm:h-6.5",
   },
   {
-    quoteKey: "aboutUsPage.review3Quote",
-    nameKey: "aboutUsPage.review3Name",
-    roleKey: "aboutUsPage.review3Role",
+    id: "live-classes",
+    titleEn: "Live Classes",
+    titleEs: "Clases en Vivo",
+    descEn: "Expert Sessions & Q&A",
+    descEs: "Sesiones con Expertos",
+    bgGradient: "from-purple-50/90 via-purple-50/40 to-white",
+    hangingRotation: "-rotate-[0.5deg]",
+    stringClass: "h-6.5 sm:h-8",
+  },
+  {
+    id: "education-center",
+    titleEn: "Education Center",
+    titleEs: "Centro Educativo",
+    descEn: "Videos & CKD Library",
+    descEs: "Videos y Biblioteca Renal",
+    bgGradient: "from-amber-50/90 via-amber-50/40 to-white",
+    hangingRotation: "rotate-0",
+    stringClass: "h-7 sm:h-9",
+  },
+  {
+    id: "health-trackers",
+    titleEn: "Health Trackers",
+    titleEs: "Monitor de Salud",
+    descEn: "BP, Fluids, Weight & Labs",
+    descEs: "Presión, Líquidos y Labs",
+    bgGradient: "from-rose-50/90 via-rose-50/40 to-white",
+    hangingRotation: "rotate-[0.5deg]",
+    stringClass: "h-6.5 sm:h-8",
+  },
+  {
+    id: "before-the-er",
+    titleEn: "Before-the-ER",
+    titleEs: "Antes de Urgencias",
+    descEn: "Symptom Alerts & Guidance",
+    descEs: "Alertas y Signos Clave",
+    bgGradient: "from-sky-50/90 via-sky-50/40 to-white",
+    hangingRotation: "rotate-[1.5deg]",
+    stringClass: "h-5 sm:h-6.5",
+  },
+  {
+    id: "21-day-journey",
+    titleEn: "21-Day Journey",
+    titleEs: "Jornada de 21 Días",
+    descEn: "Guided Dialysis Curriculum",
+    descEs: "Curso Guiado de Diálisis",
+    bgGradient: "from-teal-50/90 via-teal-50/40 to-white",
+    hangingRotation: "rotate-[2.5deg]",
+    stringClass: "h-3.5 sm:h-4.5",
   },
 ];
 
-// Flag to toggle between placeholder images and real images.
-// Set to false when user requests to unhide/import real images.
-export const USE_PLACEHOLDER_IMAGES = true;
-
-export const aboutImages = {
-  founder: USE_PLACEHOLDER_IMAGES
-    ? "/images/about us/placeholders/founder-placeholder.svg"
-    : "/images/about us/aboutImage.png",
-  panelist: USE_PLACEHOLDER_IMAGES
-    ? "/images/about us/placeholders/panelist-placeholder.svg"
-    : "/images/about us/panelListMember1.png",
-  nutritionist: USE_PLACEHOLDER_IMAGES
-    ? "/images/about us/placeholders/nutritionist-placeholder.svg"
-    : "/images/about us/annette-weseman.png",
-  mission: USE_PLACEHOLDER_IMAGES
-    ? "/images/about us/placeholders/mission-placeholder.svg"
-    : "/images/about us/our-mission.png",
-};
-
 export default function AboutUsPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+
+  const [expandedMatilta, setExpandedMatilta] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-white overflow-hidden">
+    <div className="min-h-screen flex flex-col font-sans bg-white text-slate-900 selection:bg-teal-100 selection:text-teal-900">
       <Header />
-      
+
       <main className="flex-grow w-full">
-        
-        {/* HERO SECTION (Text Only - No Image) */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-14 sm:py-18 lg:py-20 bg-gradient-to-b from-[#F0F7FF] via-[#F8FAFC] to-white border-b border-slate-100">
-          <div className="max-w-4xl">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold tracking-widest text-[#2563EB] bg-blue-50 border border-blue-100 uppercase mb-4 shadow-2xs">
-              {t("aboutUsPage.heroEyebrow")}
-            </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15] mb-5">
-              {t("aboutUsPage.heroTitle")}
+
+        {/* 01 — EDITORIAL HERO: BRAND PURPOSE */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-[#F2F8FD] via-[#F9FBFC] to-white pt-14 pb-16 sm:pt-20 sm:pb-20">
+          <div className="mx-auto max-w-5xl text-center flex flex-col items-center px-4 sm:px-8 md:px-[60px] lg:px-12 xl:px-16">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] xl:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.18] mb-6 max-w-5xl lg:whitespace-nowrap">
+              {isEs ? (
+                <>
+                  La atención renal no debería detenerse{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-teal-600">
+                    en la puerta de la clínica.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Kidney care shouldn’t stop{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-teal-600">
+                    at the clinic.
+                  </span>
+                </>
+              )}
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mb-8">
-              {t("aboutUsPage.heroSubtitle")}
+
+            <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 font-medium leading-relaxed max-w-3xl mb-8">
+              {isEs
+                ? "NephroReach ayuda a personas que viven con enfermedad renal y a sus cuidadores a aprender, organizarse y sentirse más preparados entre consultas y durante todo su camino de salud."
+                : "NephroReach helps people living with kidney disease and their caregivers learn, stay organized, and feel more prepared between appointments and throughout their care journey."}
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
-                <span className="h-2 w-2 rounded-full bg-blue-600" />
-                <span className="text-xs sm:text-sm font-bold text-slate-800">
-                  {language === "ES" ? "Membresía" : "Membership"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
-                <span className="h-2 w-2 rounded-full bg-emerald-600" />
-                <span className="text-xs sm:text-sm font-bold text-slate-800">
-                  {language === "ES" ? "Diario" : "Journal"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                <span className="text-xs sm:text-sm font-bold text-slate-800">
-                  {language === "ES" ? "Clases en Vivo" : "Live Classes"}
-                </span>
-              </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <a
+                href="#experts"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-base font-bold text-white shadow-md shadow-blue-500/15 transition-all hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+              >
+                <span>{isEs ? "Conocer a Nuestros Expertos" : "Meet Our Experts"}</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
           </div>
-        </section>
 
-        {/* FOUNDER SECTION */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 lg:py-28">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1">
-              <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-6 leading-tight inline-block relative">
-                {t("aboutUsPage.founderTitle")}
-                <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
-                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
-                </svg>
-              </h2>
-              
-              <div className="space-y-6 text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium">
-                <p>{t("aboutUsPage.founderP1")}</p>
-                <p>{t("aboutUsPage.founderP2")}</p>
-                <p className="font-bold text-[#1a7f80] text-lg">
-                  {t("aboutUsPage.founderP3")}
-                </p>
-              </div>
-            </div>
-            
-            <div className="order-1 lg:order-2 flex justify-center">
-              <div className="relative w-full aspect-square lg:aspect-[4/5]">
-                <Image
-                  src={aboutImages.founder}
-                  alt={t("aboutUsPage.founderImageAlt")}
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+          {/* 7 Key Feature Cards (Full Width Hanging / Suspended Cards across Left to Right) */}
+          <div className="relative w-full mt-10 sm:mt-14 pt-2 pb-6 overflow-hidden">
+            {/* Hanging Wire across full width */}
+            <div className="absolute top-[22px] sm:top-[26px] left-0 right-0 h-[1.5px] bg-slate-300/80 pointer-events-none z-0" />
 
-        {/* WHAT WE OFFER */}
-        <section className="w-full bg-[#F8FAFC] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 text-center">{t("aboutUsPage.whatWeOfferTitle")}</h2>
-            <p className="text-slate-600 text-[17px] leading-relaxed font-medium mb-10 text-center">
-              {t("aboutUsPage.whatWeOfferSubtitle")}
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-              {[
-                t("aboutUsPage.offer1"),
-                t("aboutUsPage.offer2"),
-                t("aboutUsPage.offer3"),
-                t("aboutUsPage.offer4"),
-                t("aboutUsPage.offer5"),
-                t("aboutUsPage.offer6")
-              ].map((item, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  <CheckCircle2 className="w-6 h-6 text-[#3AA5A5] shrink-0 mt-0.5" />
-                  <p className="text-slate-600 font-medium leading-relaxed">
-                    {item}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* PANELISTS SECTION */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24 bg-white">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-4 inline-block relative">
-              {t("aboutUsPage.panelistTitle")}
-              <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
-                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
-              </svg>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            <div className="order-1 lg:order-1 flex justify-center">
-              <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-100 bg-slate-50 flex items-center justify-center p-2">
-                <img
-                  src={aboutImages.panelist}
-                  alt={t("aboutUsPage.panelistName")}
-                  className="w-full h-auto object-contain rounded-xl"
-                />
-              </div>
-            </div>
-
-            <div className="order-2 lg:order-2">
-              <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">{t("aboutUsPage.panelistName")}</h3>
-              <p className="text-[#1a7f80] font-semibold text-lg mb-6">
-                {t("aboutUsPage.panelistDesignation")}
-              </p>
-              
-              <div className="space-y-4 text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium mb-8">
-                <p>
-                  {t("aboutUsPage.panelistP1")}
-                </p>
-                <p>
-                  {t("aboutUsPage.panelistP2")}
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-slate-800 text-lg mb-4">{t("aboutUsPage.panelistTopicsTitle")}</h4>
-                <ul className="space-y-3">
-                  {[
-                    t("aboutUsPage.panelistTopic1"),
-                    t("aboutUsPage.panelistTopic2"),
-                    t("aboutUsPage.panelistTopic3"),
-                    t("aboutUsPage.panelistTopic4"),
-                    t("aboutUsPage.panelistTopic5"),
-                    t("aboutUsPage.panelistTopic6"),
-                    t("aboutUsPage.panelistTopic7")
-                  ].map((topic, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[#3AA5A5] shrink-0 mt-0.5" />
-                      <span className="text-slate-600 font-medium">{topic}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* RENAL NUTRITION EXPERT SECTION */}
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24 bg-[#F8FAFC]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-16 items-center">
-            <div className="order-2 lg:order-1">
-              <p className="text-[#1a7f80] font-bold uppercase tracking-[0.18em] text-xs mb-3">
-                {t("aboutUsPage.nutritionistBadge")}
-              </p>
-              <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-3 leading-tight inline-block relative">
-                {t("aboutUsPage.nutritionistName")}
-                <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
-                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
-                </svg>
-              </h2>
-              <p className="text-[#1a7f80] font-semibold text-lg mb-6">
-                {t("aboutUsPage.nutritionistDesignation")}
-              </p>
-              
-              <p className="text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium mb-8">
-                {t("aboutUsPage.nutritionistBio")}
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  t("aboutUsPage.nutritionistHighlight1"),
-                  t("aboutUsPage.nutritionistHighlight2"),
-                  t("aboutUsPage.nutritionistHighlight3")
-                ].map((item, index) => (
-                  <div key={index} className="rounded-2xl border border-teal-100 bg-white px-4 py-4 shadow-sm">
-                    <CheckCircle2 className="mb-3 h-5 w-5 text-[#3AA5A5]" />
-                    <p className="text-sm font-semibold leading-snug text-slate-700">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="order-1 lg:order-2 flex justify-center">
-              <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 shadow-lg">
-                <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-slate-100">
-                  <Image
-                    src={aboutImages.nutritionist}
-                    alt={t("aboutUsPage.nutritionistImageAlt")}
-                    fill
-                    className="object-cover object-center"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* REVIEWS SECTION */}
-        <section className="w-full bg-white px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-16 md:py-24">
-          <div className="max-w-6xl mx-auto">
-            <div className="max-w-3xl mx-auto text-center mb-12">
-              <p className="text-[#1a7f80] font-bold uppercase tracking-[0.18em] text-xs mb-3">
-                {t("aboutUsPage.reviewsBadge")}
-              </p>
-              <h2 className="text-3xl md:text-[40px] font-bold text-slate-800 mb-4 leading-tight">
-                {t("aboutUsPage.reviewsTitle")}
-              </h2>
-              <p className="text-slate-600 text-[16px] md:text-[17px] leading-relaxed font-medium">
-                {t("aboutUsPage.reviewsSubtitle")}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-              {reviewItems.map((review, index) => (
-                <article
-                  key={review.nameKey}
-                  className="relative flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+            <div className="flex items-start justify-start lg:justify-between overflow-x-auto no-scrollbar pt-2 pb-4 px-4 sm:px-8 md:px-12 lg:px-14 xl:px-20 gap-3 sm:gap-4 lg:gap-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {heroFeatureCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="group flex flex-col items-center flex-1 min-w-[130px] sm:min-w-[140px] md:min-w-[150px] lg:min-w-0 max-w-[200px] shrink-0 lg:shrink select-none cursor-default"
                 >
-                  <div className="mb-5 flex items-center justify-between gap-4">
-                    <div className="flex gap-1 text-[#E5A8A3]" aria-label="5 star review">
-                      {Array.from({ length: 5 }).map((_, starIndex) => (
-                        <Star key={starIndex} className="h-4 w-4 fill-current" />
-                      ))}
-                    </div>
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E9F7F7] text-[#1a7f80]">
-                      <Quote className="h-5 w-5" />
-                    </span>
+                  {/* Hanging String from wire down to card */}
+                  <div
+                    className={`w-[1.5px] bg-slate-300/90 ${card.stringClass} transition-colors duration-300 group-hover:bg-blue-400`}
+                  />
+
+                  {/* Hanging Clip / Pin */}
+                  <div className="relative -mb-1.5 z-10 flex items-center justify-center">
+                    <div className="w-3 h-3 rounded-full bg-slate-400 border-2 border-white shadow-xs group-hover:bg-blue-600 transition-colors" />
                   </div>
 
-                  <p className="mb-6 flex-grow text-slate-600 text-[15px] leading-relaxed font-medium">
-                    &ldquo;{t(review.quoteKey)}&rdquo;
-                  </p>
-
-                  <div className="flex items-center gap-3 border-t border-slate-100 pt-5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1a7f80] text-sm font-bold text-white">
-                      {index === 0 ? "AR" : index === 1 ? "MJ" : "CL"}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800">{t(review.nameKey)}</h3>
-                      <p className="text-sm font-medium text-slate-500">{t(review.roleKey)}</p>
-                    </div>
+                  {/* Hanging Card Body */}
+                  <div
+                    className={`w-full min-h-[102px] sm:min-h-[114px] rounded-2xl bg-gradient-to-b ${card.bgGradient} p-3.5 sm:p-4 shadow-md hover:shadow-xl border border-slate-200/90 transition-all duration-300 transform ${card.hangingRotation} group-hover:rotate-0 group-hover:scale-105 group-hover:-translate-y-1 flex flex-col justify-center text-center`}
+                  >
+                    <h4 className="text-sm sm:text-[15px] lg:text-base font-bold text-slate-900 leading-snug">
+                      {isEs ? card.titleEs : card.titleEn}
+                    </h4>
+                    <p className="mt-1 text-xs sm:text-[13px] font-medium text-slate-500 leading-snug">
+                      {isEs ? card.descEs : card.descEn}
+                    </p>
                   </div>
-                </article>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ZIGZAG LIST: MISSION, VISION, NOTICE (Hidden until panelist photos/statements are ready) */}
-        {false && (
-        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 lg:py-28 space-y-24">
-          
-          {/* Item 1: Mission */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src={aboutImages.mission} alt="Our Mission" fill className="object-cover" />
-            </div>
-            <div>
-              <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Mission</h3>
-              <div className="space-y-4 text-slate-600 text-[16px] leading-relaxed font-medium">
-                <p>
-                  NephroReach is an educational platform dedicated to empowering individuals living with kidney disease and the caregivers who support them. Our mission is to provide easy-to-understand, reliable kidney education that helps people make informed decisions, build confidence, and better manage their health every day.
-                </p>
-                <p>
-                  We believe education leads to empowerment, and empowered patients experience better outcomes.
-                </p>
+        {/* 05 — FOUNDER STORY: THE EMOTIONAL CORE */}
+        <section id="founder" className="w-full bg-[#FCFDFD] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-28 border-t border-slate-200/80">
+          <div className="mx-auto max-w-5xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-stretch">
+
+              {/* Founder Image Column */}
+              <div className="lg:col-span-5 flex justify-center lg:justify-start">
+                <div className="relative w-full max-w-[380px] sm:max-w-[420px] lg:max-w-none h-full min-h-[440px] sm:min-h-[460px] flex flex-col justify-between">
+                  <div className="relative w-full h-full min-h-[420px] sm:min-h-[440px]">
+                    <Image
+                      src={aboutImages.founder}
+                      alt="Joni Gathers, MSN, APRN, FNP-C - Founder of NephroReach"
+                      fill
+                      className="object-contain object-top"
+                      priority
+                    />
+                  </div>
+
+                  {/* Overlaid Name & Designation Card on top of image */}
+                  <div className="absolute bottom-0 left-2 right-2 sm:bottom-0 sm:left-3 sm:right-3 z-10 rounded-2xl bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-lg border border-slate-100/90 text-left">
+                    <h3 className="text-xl sm:text-[22px] font-bold text-slate-900 leading-tight">Joni Gathers</h3>
+                    <p className="text-sm sm:text-base font-semibold text-slate-500 mt-0.5">MSN, APRN, FNP-C</p>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
+                      {isEs ? "Fundadora · FNP-C" : "Founder · Board-Certified Family Nurse Practitioner"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editorial Biography Column */}
+              <div className="lg:col-span-7 flex flex-col justify-between space-y-6 pt-1 lg:pt-0">
+                <div>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight inline-block relative pb-2 mb-2">
+                    {isEs ? "Sobre la Fundadora" : "About the Founder"}
+                    <svg className="absolute w-full h-3 -bottom-0.5 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
+                      <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="transparent" />
+                    </svg>
+                  </h2>
+                </div>
+
+                <div className="space-y-4 text-slate-600 text-base leading-relaxed font-medium">
+                  <p className="text-justify">
+                    {isEs
+                      ? "Hola, soy Joni Gathers, MSN, APRN, FNP-C, una enfermera especialista familiar certificada con una década de experiencia en nefrología y diálisis. A lo largo de mi carrera como enfermera de diálisis y proveedora médica, he atendido a cientos de pacientes que viven con enfermedad renal crónica (ERC), insuficiencia renal terminal (ESKD), hipertensión, diabetes y aquellos que reciben diálisis."
+                      : "Hello, I’m Joni Gathers, MSN, APRN, FNP-C, a board-certified Family Nurse Practitioner with a decade of nephrology and dialysis experience. Throughout my career as both a Dialysis Nurse and Practitioner, I’ve cared for hundreds of patients living with chronic kidney disease (CKD), end-stage kidney disease (ESKD), hypertension, diabetes, and those receiving dialysis."}
+                  </p>
+                  <p className="text-justify">
+                    {isEs
+                      ? "Al trabajar en estrecha colaboración con los pacientes y sus familias, reconocí que muchas hospitalizaciones y visitas a la sala de emergencias ocurren porque los pacientes simplemente no tienen acceso a una educación renal comprensible y continua fuera de sus consultas clínicas. Muchos salen de sus citas abrumados, sin estar seguros de qué significan sus resultados de laboratorio, cómo controlar la ingesta de líquidos, qué síntomas requieren atención inmediata o cómo afrontar con confianza la vida con una enfermedad renal."
+                      : "Working closely with patients and families, I recognized that many hospitalizations and emergency room visits happen because patients simply don’t have access to understandable, ongoing kidney education outside of their clinic visits. Many leave appointments overwhelmed, unsure of what their lab results mean, how to manage fluid intake, what symptoms require immediate attention, or how to confidently navigate life with kidney disease."}
+                  </p>
+                  <p className="font-semibold text-slate-900 text-lg pt-1">
+                    {isEs
+                      ? "Creé NephroReach para cerrar esa brecha."
+                      : "I created NephroReach to bridge that gap."}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Item 2: Vision */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="order-2 md:order-1">
-              <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Vision</h3>
-              <p className="text-slate-600 text-[16px] leading-relaxed font-medium">
-                Our vision is to become the leading kidney education platform that supports patients and caregivers through every stage of kidney disease. We strive to improve health literacy, reduce preventable hospitalizations, encourage active participation in care, and help individuals live healthier, more confident lives.
-              </p>
-            </div>
-            <div className="order-1 md:order-2 relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src={aboutImages.mission} alt="Our Vision" fill className="object-cover" />
-            </div>
-          </div>
-
-          {/* Item 3: Important Notice */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src={aboutImages.mission} alt="Important Notice" fill className="object-cover" />
-            </div>
-            <div>
-              <h3 className="text-[28px] lg:text-3xl font-bold text-[#bd3d44] mb-6">Important Notice</h3>
-              <p className="text-slate-600 text-[16px] leading-relaxed font-medium">
-                NephroReach is an educational platform only. The information provided on this website is intended for educational purposes and should not replace medical advice, diagnosis, or treatment from your physician, nephrologist, dialysis care team, or other qualified healthcare provider. Always consult your healthcare provider regarding your individual medical care.
-              </p>
-            </div>
-          </div>
-          
         </section>
-        )}
+
+        {/* 06 — WHAT MAKES US DIFFERENT */}
+        <section className="w-full bg-[#F8FAFC] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-24 border-t border-slate-200/80">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight inline-block relative pb-2">
+                {isEs ? "Lo Que Nos Hace Diferentes" : "What Makes Us Different"}
+                <svg className="absolute w-full h-3 -bottom-0.5 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
+                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2.5" fill="transparent" />
+                </svg>
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[
+                {
+                  icon: Video,
+                  titleEn: "On-Demand Video Learning",
+                  titleEs: "Biblioteca de Video Educativa",
+                  descEn: "On-demand educational videos covering CKD, dialysis, nutrition, medications, lab values, and kidney health.",
+                  descEs: "Videos educativos a pedido que cubren ERC, diálisis, nutrición, medicamentos, valores de laboratorio y salud renal.",
+                },
+                {
+                  icon: GraduationCap,
+                  titleEn: "Live Expert Sessions",
+                  titleEs: "Sesiones en Vivo con Expertos",
+                  descEn: "Live educational sessions with experienced kidney care professionals.",
+                  descEs: "Sesiones educativas en vivo con profesionales experimentados en el cuidado de los riñones.",
+                },
+                {
+                  icon: Activity,
+                  titleEn: "Interactive Health Tracking",
+                  titleEs: "Seguimiento Interactivo de Salud",
+                  descEn: "Interactive health tracking tools, including blood pressure, weight, medications, labs, dialysis treatments, and symptoms.",
+                  descEs: "Herramientas interactivas de seguimiento de la salud, que incluyen presión arterial, peso, medicamentos, laboratorios, tratamientos de diálisis y síntomas.",
+                },
+                {
+                  icon: HeartHandshake,
+                  titleEn: "Dedicated Caregiver Support",
+                  titleEs: "Apoyo Dedicado para Cuidadores",
+                  descEn: "Resources designed specifically for caregivers.",
+                  descEs: "Recursos diseñados específicamente para cuidadores.",
+                },
+                {
+                  icon: Stethoscope,
+                  titleEn: "Dialysis & Treatment Preparation",
+                  titleEs: "Preparación para Diálisis y Tratamientos",
+                  descEn: "Educational programs that help patients prepare for dialysis and better understand treatment options.",
+                  descEs: "Programas educativos que ayudan a los pacientes a prepararse para la diálisis y comprender mejor las opciones de tratamiento.",
+                },
+                {
+                  icon: BellRing,
+                  titleEn: "Symptom Awareness & Action Guidance",
+                  titleEs: "Guía Práctica y Alertas de Síntomas",
+                  descEn: "Practical guidance to help patients recognize concerning symptoms, know when to contact their dialysis or nephrology team, and understand when emergency care may be necessary.",
+                  descEs: "Orientación práctica para ayudar a los pacientes a reconocer síntomas preocupantes, saber cuándo comunicarse con su equipo de diálisis o nefrología y comprender cuándo puede ser necesaria la atención de emergencia.",
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="group flex flex-col items-start gap-4 p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-xl hover:border-blue-300 hover:-translate-y-1 transition-all duration-300"
+                >
+                  {/* Icon */}
+                  <div
+                    className="flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-[#EAF0F8] text-blue-600 border border-slate-200/80 group-hover:scale-105 group-hover:bg-[#DFEAF5] group-hover:text-blue-700 transition-all duration-200"
+                  >
+                    <item.icon className="h-6 w-6 stroke-[2.2]" />
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
+                    {isEs ? item.titleEs : item.titleEn}
+                  </h3>
+
+                  {/* Body */}
+                  <p className="text-slate-600 font-medium text-sm leading-relaxed">
+                    {isEs ? item.descEs : item.descEn}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 07 — MEET OUR EXPERTS: CREDIBLE & ACCESSIBLE */}
+        <section id="experts" className="w-full bg-[#FCFDFD] px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-28 border-t border-slate-200/80">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-left max-w-3xl mb-16">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight inline-block relative pb-2">
+                {isEs ? "Conozca a Nuestro Panel de Expertos" : "Meet Our Expert Panel"}
+                <svg className="absolute w-full h-3 -bottom-0.5 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
+                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2.5" fill="transparent" />
+                </svg>
+              </h2>
+              <p className="mt-4 text-slate-600 text-sm sm:text-base font-medium leading-relaxed">
+                {isEs
+                  ? "Nuestros miembros del panel aportan décadas de experiencia dedicada en trabajo social de nefrología, defensa de cuidadores y nutrición clínica renal."
+                  : "Our panel members bring decades of dedicated experience in nephrology social work, caregiver advocacy, and clinical renal nutrition."}
+              </p>
+            </div>
+
+            <div className="max-w-5xl mx-auto space-y-20 sm:space-y-24">
+
+              {/* Expert 01: Matilta Coleman */}
+              <div
+                className={`grid grid-cols-1 lg:grid-cols-[255px_1fr] gap-8 lg:gap-10 ${expandedMatilta ? "items-start" : "items-start lg:items-center"
+                  }`}
+              >
+                {/* Expert Image Column */}
+                <div className="flex justify-center lg:justify-start">
+                  <div className="relative w-full max-w-[260px] sm:max-w-[280px] rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-xl border border-slate-200/90 bg-gradient-to-b from-[#FBF8F4] via-[#FDFBFA] to-[#EFF3FA]">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden">
+                      <Image
+                        src={aboutImages.panelist}
+                        alt="Matilta Coleman, LMSW · LPLC"
+                        fill
+                        className="object-cover object-top"
+                      />
+                    </div>
+
+                    {/* Overlaid Name & Designation Card on top of image */}
+                    <div className="absolute bottom-3 left-3 right-3 sm:bottom-3.5 sm:left-3.5 sm:right-3.5 z-10 rounded-2xl bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-lg border border-slate-100/90 text-left">
+                      <h3 className="text-lg sm:text-[19px] font-bold text-slate-900 leading-tight">Matilta Coleman</h3>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5">LMSW · LPLC</p>
+                      <p className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
+                        {isEs ? "Coach de Salud Renal" : "Kidney Health Coach"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editorial Biography Column */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-[26px] sm:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
+                      {isEs ? "Coach de Salud Renal" : "Kidney Health Coach"}
+                    </h3>
+                  </div>
+
+                  {/* Bio Paragraphs */}
+                  <div className="space-y-4 text-slate-600 text-base leading-relaxed font-medium">
+                    <p className="text-justify">
+                      {isEs
+                        ? "He ejercido profesionalmente en el campo durante más de 3 décadas y he desarrollado mi carrera apoyando a personas, familias y comunidades mientras navegan por los desafíos de la atención médica y trabajan hacia un mayor bienestar. Con experiencia en atención compasiva, defensa, educación y coordinación de la atención, me comprometo a ayudar a las personas a comprender sus necesidades de salud y acceder al apoyo necesario para prosperar."
+                        : "I have been practicing professionally in the field for over 3 decades and have built my career supporting individuals, families, and communities as they navigate healthcare challenges and work toward improved well-being. With experience in compassionate care, advocacy, education, and care coordination, I am committed to helping people understand their health needs and access the support they need to thrive."}
+                    </p>
+
+                    {!expandedMatilta ? (
+                      <p className="text-justify">
+                        {isEs
+                          ? "Creo que el cambio significativo comienza con la educación, la autodefensa y los recursos confiables. Me apasiona promover la alfabetización en salud y capacitar a las personas para que tomen decisiones informadas"
+                          : "I believe meaningful change begins with education, self-advocacy, and trusted resources. I am passionate about promoting health literacy and empowering individuals to make informed decisions"}
+                        {"... "}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedMatilta(true)}
+                          className="inline font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer focus:outline-none"
+                        >
+                          {isEs ? "Ver más" : "See more"}
+                        </button>
+                      </p>
+                    ) : (
+                      <div className="space-y-4 pt-1">
+                        <p className="text-justify">
+                          {isEs
+                            ? "Creo que el cambio significativo comienza con la educación, la autodefensa y los recursos confiables. Me apasiona promover la alfabetización en salud y capacitar a las personas para que tomen decisiones informadas, especialmente cuando enfrentan condiciones médicas complejas y sistemas de salud difíciles. Apoyar a organizaciones que sirven a personas con enfermedad renal es especialmente importante para mí porque la educación y defensa del paciente pueden mejorar en gran medida la calidad de vida y los resultados de salud. A través de la colaboración, la empatía y un enfoque centrado en la persona, me esfuerzo por ayudar a los pacientes y familias a convertirse en socios informados en la atención y contribuir a comunidades más saludables y empoderadas."
+                            : "I believe meaningful change begins with education, self-advocacy, and trusted resources. I am passionate about promoting health literacy and empowering individuals to make informed decisions, especially when facing complex medical conditions and healthcare systems. Supporting organizations that serve individuals living with kidney disease is especially important to me because patient education and advocacy can greatly improve quality of life and health outcomes. Through collaboration, empathy, and a person-centered approach, I strive to help patients and families become informed partners in care and contribute to healthier, more empowered communities."}
+                        </p>
+
+                        {/* Bullet Points Section */}
+                        <div className="pt-4 border-t border-slate-200/80 space-y-3 animate-in fade-in duration-300">
+                          <p className="text-base font-bold text-slate-900">
+                            {isEs
+                              ? "Durante las sesiones abordo temas como:"
+                              : "During sessions I cater to my audience discussing topics such as"}
+                          </p>
+                          <ul className="space-y-2.5 text-sm text-slate-600 font-medium">
+                            {[
+                              {
+                                en: "Navigating familial changes with end stage renal disease",
+                                es: "Manejo de cambios familiares ante la enfermedad renal terminal",
+                              },
+                              {
+                                en: "Addressing and Resolving marital issues with a spouse that has end stage renal disease",
+                                es: "Abordar y resolver problemas matrimoniales con un cónyuge que tiene enfermedad renal terminal",
+                              },
+                              {
+                                en: "Self care for caregivers",
+                                es: "Autocuidado para cuidadores",
+                              },
+                              {
+                                en: "Family Connections: Normalizing household discussions about health, health literacy and healthy outcomes",
+                                es: "Conexiones Familiares: Normalizar las conversaciones del hogar sobre salud, alfabetización médica y resultados saludables",
+                              },
+                              {
+                                en: "Respite, Short-Term/Long-Term Care",
+                                es: "Cuidados de relevo, a corto y largo plazo",
+                              },
+                              {
+                                en: "Caregivers the one’s that are forgotten",
+                                es: "Los cuidadores: aquellos que suelen ser olvidados",
+                              },
+                              {
+                                en: "And more bonus topics!..",
+                                es: "¡Y más temas adicionales!..",
+                              },
+                            ].map((item, i) => (
+                              <li key={i} className="flex items-start gap-2.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 shrink-0 mt-2" />
+                                <span>{isEs ? item.es : item.en}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* See less button */}
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedMatilta(false)}
+                            className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer group focus:outline-none"
+                          >
+                            <span>{isEs ? "Ver menos" : "See less"}</span>
+                            <ChevronDown className="h-4 w-4 transition-transform duration-300 rotate-180" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Expert 02: Annette Weseman */}
+              <div className="grid grid-cols-1 lg:grid-cols-[255px_1fr] gap-8 lg:gap-10 items-start lg:items-center pt-20 border-t border-slate-200/80">
+                {/* Expert Image Column */}
+                <div className="flex justify-center lg:justify-start">
+                  <div className="relative w-full max-w-[260px] sm:max-w-[280px] rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-xl border border-slate-200/90 bg-gradient-to-b from-[#FBF8F4] via-[#FDFBFA] to-[#EFF3FA]">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden">
+                      <Image
+                        src={aboutImages.nutritionist}
+                        alt="Annette Weseman, RD, LD - Renal Nutrition Expert"
+                        fill
+                        className="object-cover object-top"
+                      />
+                    </div>
+
+                    {/* Overlaid Name & Designation Card on top of image */}
+                    <div className="absolute bottom-3 left-3 right-3 sm:bottom-3.5 sm:left-3.5 sm:right-3.5 z-10 rounded-2xl bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-lg border border-slate-100/90 text-left">
+                      <h3 className="text-lg sm:text-[19px] font-bold text-slate-900 leading-tight">Annette Weseman</h3>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5">RD, LD</p>
+                      <p className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
+                        {isEs ? "Nutricionista Renal Experta" : "Renal Nutrition Expert"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editorial Biography Column */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-[26px] sm:text-[32px] font-extrabold text-slate-900 tracking-tight leading-tight">
+                      {isEs ? "Nutricionista Renal Experta" : "Renal Nutrition Expert"}
+                    </h3>
+                  </div>
+
+                  {/* Bio Paragraph */}
+                  <div className="text-slate-600 text-base leading-relaxed font-medium">
+                    <p className="text-justify">
+                      {isEs
+                        ? "Annette Weseman es una dietista registrada y licenciada con 25 años de experiencia en nutrición clínica. Tiene amplia experiencia ayudando a personas a controlar la diabetes y se ha especializado en nutrición renal durante los últimos 12 años. A Annette le apasiona capacitar a los pacientes con enfermedad renal crónica para que tomen decisiones informadas sobre alimentos, medicamentos y opciones de estilo de vida saludable. Cuenta con licencia en Carolina del Sur y está registrada en la Comisión de Registro Dietético (CDR)."
+                        : "Annette Weseman is a licensed registered dietitian with 25 years experience in clinical nutrition. She has extensive experience helping individuals manage diabetes and has specialized in renal nutrition for the past 12 years. Annette is passionate about empowering patients with chronic kidney disease to make informed decisions about food, medicine, and healthy lifestyle choices. She is licensed in South Carolina and registered with the Commission on Dietetic Registration (CDR)."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* 10 — MEMBER STORIES: REAL SUPPORT, REAL EXPERIENCES */}
+        <section className="w-full bg-white px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-24 border-t border-slate-100">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center max-w-2xl mx-auto mb-14">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight inline-block relative pb-2">
+                {isEs ? "Lo Que Dicen Nuestros Miembros" : "What Our Members Say"}
+                <svg className="absolute w-full h-3 -bottom-0.5 left-0 text-[#E5A8A3]" viewBox="0 0 100 10" preserveAspectRatio="none">
+                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2.5" fill="transparent" />
+                </svg>
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Story 1 */}
+              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
+                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
+                  &ldquo;The lessons helped me understand what questions to bring to my dialysis team. I felt more organized and less overwhelmed after the first week.&rdquo;
+                </p>
+                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-xs">
+                    AR
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Angela R.</h4>
+                    <p className="text-xs text-slate-500 font-medium">Dialysis Member</p>
+                  </div>
+                </div>
+              </article>
+
+              {/* Story 2 */}
+              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
+                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
+                  &ldquo;As a caregiver, having simple explanations and reminders made a real difference. It gave our family a calmer way to talk about kidney health.&rdquo;
+                </p>
+                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-bold text-xs">
+                    MJ
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Marcus J.</h4>
+                    <p className="text-xs text-slate-500 font-medium">Family Caregiver</p>
+                  </div>
+                </div>
+              </article>
+
+              {/* Story 3 */}
+              <article className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-6 sm:p-7 shadow-2xs hover:shadow-sm transition-shadow">
+                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-6 italic">
+                  &ldquo;The tracking tools helped me notice patterns before my appointments. I could share clearer notes and make better use of my visit time.&rdquo;
+                </p>
+                <div className="flex items-center gap-3 border-t border-slate-200/60 pt-4">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
+                    CL
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Cynthia L.</h4>
+                    <p className="text-xs text-slate-500 font-medium">CKD Learner</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* 11 — FINAL CTA: CALM, REASSURING, OPTIMISTIC */}
+        <section className="w-full bg-gradient-to-b from-white via-blue-50/40 to-blue-50/80 px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-20 sm:py-28 border-t border-slate-200/80 text-center">
+          <div className="mx-auto max-w-3xl space-y-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              {isEs
+                ? "No tienes que recorrer este camino renal en soledad."
+                : "You don’t have to navigate kidney care alone."}
+            </h2>
+
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/registration"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 text-base font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+              >
+                <span>{isEs ? "Probar por 7 días" : "Try for 7 days"}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/faq"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-6 text-base font-bold text-slate-800 transition-colors hover:bg-slate-50 cursor-pointer"
+              >
+                <span>{isEs ? "Preguntas Frecuentes" : "Questions & Answers"}</span>
+              </Link>
+            </div>
+          </div>
+        </section>
 
       </main>
 
