@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -2067,6 +2067,53 @@ export default function FluidTrackerPage() {
     setTodayDateStr(data.todayDateStr);
   };
 
+  // Date Picker filter state: "today" or "custom"
+  const [selectedDateFilter, setSelectedDateFilter] = useState<"today" | "custom">("today");
+  const [selectedCustomDate, setSelectedCustomDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setIsDatePickerOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsDatePickerOpen(false);
+      }
+    }
+    if (isDatePickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDatePickerOpen]);
+
+  const displayDateText = useMemo(() => {
+    if (selectedDateFilter === "today") {
+      return language === "ES" ? "Hoy" : "Today";
+    }
+    if (selectedDateFilter === "custom" && selectedCustomDate) {
+      const parts = selectedCustomDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return d.toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      }
+    }
+    return language === "ES" ? "Hoy" : "Today";
+  }, [selectedDateFilter, selectedCustomDate, language]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2074,9 +2121,6 @@ export default function FluidTrackerPage() {
           <h1 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
             {w?.title || "Weight & Fluid Management Center"}
           </h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            {w?.subtitle || "Track symptoms & compare weights. Understand your fluid patterns."}
-          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
           {/* Unit Switcher: kg / lbs */}
@@ -2113,13 +2157,124 @@ export default function FluidTrackerPage() {
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
             <span>{w?.recentEntries?.addNewEntry || "New Entry"}</span>
           </button>
-          <button
-            type="button"
-            className="flex h-10 sm:h-12 shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-[#F9F9F9] px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer whitespace-nowrap"
-          >
-            <Calendar className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" />
-            Jun
-          </button>
+
+          {/* Date Picker Selector with Today & Custom Date Options */}
+          <div className="relative" ref={datePickerRef}>
+            <button
+              type="button"
+              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+              className={`flex h-10 sm:h-12 shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] transition-all cursor-pointer whitespace-nowrap ${
+                isDatePickerOpen
+                  ? "border-blue-500 bg-blue-50/50 text-blue-700 shadow-xs"
+                  : "border-slate-200 bg-[#F9F9F9] text-slate-950 hover:bg-white"
+              }`}
+            >
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-slate-700" />
+              <span>{displayDateText}</span>
+              <ChevronDown
+                className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-500 transition-transform duration-200 ${
+                  isDatePickerOpen ? "rotate-180 text-blue-600" : ""
+                }`}
+              />
+            </button>
+
+            {/* Floating Date Picker Dropdown Popover */}
+            {isDatePickerOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-72 sm:w-80 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                {/* Header with Title and Close */}
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2.5">
+                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+                    {language === "ES" ? "Seleccionar Fecha" : "Select Date"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen(false)}
+                    className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {/* Quick Selection: Today Option */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDateFilter("today");
+                      setIsDatePickerOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all cursor-pointer ${
+                      selectedDateFilter === "today"
+                        ? "bg-blue-50 border border-blue-200 text-blue-800"
+                        : "hover:bg-slate-50 border border-transparent text-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
+                          selectedDateFilter === "today"
+                            ? "bg-blue-600 text-white shadow-xs"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs sm:text-sm font-bold leading-tight">
+                          {language === "ES" ? "Hoy (Fecha actual)" : "Today (Current Date)"}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          {new Date().toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    {selectedDateFilter === "today" && (
+                      <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Divider: Custom Date Picker */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                    {language === "ES" ? "Elegir Fecha (Date Picker):" : "Pick Date (Date Picker):"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={selectedCustomDate}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedCustomDate(e.target.value);
+                          setSelectedDateFilter("custom");
+                        }
+                      }}
+                      onClick={(e) => {
+                        try {
+                          (e.target as HTMLInputElement).showPicker?.();
+                        } catch {}
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDateFilter("custom");
+                      setIsDatePickerOpen(false);
+                    }}
+                    className="mt-2.5 w-full flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
+                  >
+                    {language === "ES" ? "Aplicar Fecha" : "Apply Date"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

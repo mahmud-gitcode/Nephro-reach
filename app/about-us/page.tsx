@@ -25,6 +25,25 @@ const reviewItems = [
   },
 ];
 
+// Flag to toggle between placeholder images and real images.
+// Set to false when user requests to unhide/import real images.
+export const USE_PLACEHOLDER_IMAGES = true;
+
+export const aboutImages = {
+  founder: USE_PLACEHOLDER_IMAGES
+    ? "/images/about us/placeholders/founder-placeholder.svg"
+    : "/images/about us/aboutImage.png",
+  panelist: USE_PLACEHOLDER_IMAGES
+    ? "/images/about us/placeholders/panelist-placeholder.svg"
+    : "/images/about us/panelListMember1.png",
+  nutritionist: USE_PLACEHOLDER_IMAGES
+    ? "/images/about us/placeholders/nutritionist-placeholder.svg"
+    : "/images/about us/annette-weseman.png",
+  mission: USE_PLACEHOLDER_IMAGES
+    ? "/images/about us/placeholders/mission-placeholder.svg"
+    : "/images/about us/our-mission.png",
+};
+
 export default function AboutUsPage() {
   const { t, language } = useLanguage();
 
@@ -34,44 +53,38 @@ export default function AboutUsPage() {
       
       <main className="flex-grow w-full">
         
-        {/* HERO SECTION */}
-        <section className="w-full px-4 sm:px-6 md:px-10">
-          <div className="relative w-full overflow-hidden rounded-2xl">
-            <img 
-              src="/images/aboutHeroFrame.png" 
-              alt={t("header.aboutUs")} 
-              className="w-full h-auto object-contain"
-            />
-            {language === "ES" && (
-              <div className="absolute inset-y-0 right-0 w-full md:w-[62%] lg:w-[58%] bg-white/95 backdrop-blur-[2px] flex flex-col justify-center items-center md:items-start px-6 md:px-10 lg:px-14 py-6 text-center md:text-left">
-                <span className="text-xs sm:text-sm font-bold tracking-widest text-[#2563EB] uppercase mb-2">
-                  {t("aboutUsPage.heroEyebrow")}
+        {/* HERO SECTION (Text Only - No Image) */}
+        <section className="w-full px-6 sm:px-12 md:px-[60px] lg:px-[120px] py-14 sm:py-18 lg:py-20 bg-gradient-to-b from-[#F0F7FF] via-[#F8FAFC] to-white border-b border-slate-100">
+          <div className="max-w-4xl">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold tracking-widest text-[#2563EB] bg-blue-50 border border-blue-100 uppercase mb-4 shadow-2xs">
+              {t("aboutUsPage.heroEyebrow")}
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15] mb-5">
+              {t("aboutUsPage.heroTitle")}
+            </h1>
+            <p className="text-base sm:text-lg lg:text-xl text-slate-600 font-medium leading-relaxed max-w-2xl mb-8">
+              {t("aboutUsPage.heroSubtitle")}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-blue-600" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  {language === "ES" ? "Membresía" : "Membership"}
                 </span>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 leading-tight mb-3 sm:mb-4 max-w-xl">
-                  {t("aboutUsPage.heroTitle")}
-                </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-slate-600 font-medium leading-relaxed max-w-lg mb-4 sm:mb-6">
-                  {t("aboutUsPage.heroSubtitle")}
-                </p>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-4">
-                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
-                    <span className="text-xs sm:text-sm font-bold text-slate-800">
-                      Membresía
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
-                    <span className="text-xs sm:text-sm font-bold text-slate-800">
-                      Diario
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 shadow-2xs">
-                    <span className="text-xs sm:text-sm font-bold text-slate-800">
-                      Clases en Vivo
-                    </span>
-                  </div>
-                </div>
               </div>
-            )}
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  {language === "ES" ? "Diario" : "Journal"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  {language === "ES" ? "Clases en Vivo" : "Live Classes"}
+                </span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -98,7 +111,7 @@ export default function AboutUsPage() {
             <div className="order-1 lg:order-2 flex justify-center">
               <div className="relative w-full aspect-square lg:aspect-[4/5]">
                 <Image
-                  src="/images/aboutImage.png"
+                  src={aboutImages.founder}
                   alt={t("aboutUsPage.founderImageAlt")}
                   fill
                   className="object-contain"
@@ -151,7 +164,7 @@ export default function AboutUsPage() {
             <div className="order-1 lg:order-1 flex justify-center">
               <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-slate-100 bg-slate-50 flex items-center justify-center p-2">
                 <img
-                  src="/images/panelListMember1.png"
+                  src={aboutImages.panelist}
                   alt={t("aboutUsPage.panelistName")}
                   className="w-full h-auto object-contain rounded-xl"
                 />
@@ -235,7 +248,7 @@ export default function AboutUsPage() {
               <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 shadow-lg">
                 <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-slate-100">
                   <Image
-                    src="/images/annette-weseman.png"
+                    src={aboutImages.nutritionist}
                     alt={t("aboutUsPage.nutritionistImageAlt")}
                     fill
                     className="object-cover object-center"
@@ -304,7 +317,7 @@ export default function AboutUsPage() {
           {/* Item 1: Mission */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/our-mission.png" alt="Our Mission" fill className="object-cover" />
+              <Image src={aboutImages.mission} alt="Our Mission" fill className="object-cover" />
             </div>
             <div>
               <h3 className="text-[28px] lg:text-3xl font-bold text-slate-900 mb-6">Our Mission</h3>
@@ -328,14 +341,14 @@ export default function AboutUsPage() {
               </p>
             </div>
             <div className="order-1 md:order-2 relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/our-mission.png" alt="Our Vision" fill className="object-cover" />
+              <Image src={aboutImages.mission} alt="Our Vision" fill className="object-cover" />
             </div>
           </div>
 
           {/* Item 3: Important Notice */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden shadow-xl border border-slate-100">
-              <Image src="/images/our-mission.png" alt="Important Notice" fill className="object-cover" />
+              <Image src={aboutImages.mission} alt="Important Notice" fill className="object-cover" />
             </div>
             <div>
               <h3 className="text-[28px] lg:text-3xl font-bold text-[#bd3d44] mb-6">Important Notice</h3>

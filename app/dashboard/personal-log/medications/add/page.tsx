@@ -128,8 +128,8 @@ export default function AddMedicationPage() {
                 </p>
                 <p className="text-xs text-slate-500">
                   {language === "ES"
-                    ? "Recibe alertas de notificación y avisos SMS para tus horarios de toma"
-                    : "Receive notifications and SMS alerts for each scheduled dose"}
+                    ? "Recibe alertas de notificación para tus horarios de toma"
+                    : "Receive notifications for each scheduled dose"}
                 </p>
               </div>
             </div>
@@ -177,10 +177,6 @@ export default function AddMedicationPage() {
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" defaultChecked className="rounded text-blue-600 h-4 w-4" />
                   <span>{language === "ES" ? "Alerta en la Aplicación" : "In-App Notification"}</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600 h-4 w-4" />
-                  <span>{language === "ES" ? "Mensaje de Texto SMS" : "SMS Text Alert"}</span>
                 </label>
               </div>
             </div>
