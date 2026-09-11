@@ -1838,6 +1838,15 @@ function RecentEntries({
   );
 }
 
+/** Current date and time, e.g. "Sep 11, 7:30 AM". */
+function formatNowStamp(language: string) {
+  const now = new Date();
+  const locale = language === "ES" ? "es-ES" : "en-US";
+  const date = now.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const time = now.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
 function EditEdwModal({
   isOpen,
   onClose,
@@ -1873,7 +1882,6 @@ function EditEdwModal({
     isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
   );
   const [formNote, setFormNote] = useState(edwNote);
-  const [formDate, setFormDate] = useState(todayDateStr);
 
   useEffect(() => {
     if (isOpen) {
@@ -1882,9 +1890,8 @@ function EditEdwModal({
         isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
       );
       setFormNote(edwNote);
-      setFormDate(todayDateStr);
     }
-  }, [isOpen, isKg, edwKg, todayWeightKg, edwNote, todayDateStr]);
+  }, [isOpen, isKg, edwKg, todayWeightKg, edwNote]);
 
   if (!isOpen) return null;
 
@@ -1904,9 +1911,8 @@ function EditEdwModal({
         (language === "ES"
           ? "Establecido por el equipo de atención."
           : "Set by care team."),
-      todayDateStr:
-        formDate.trim() ||
-        (language === "ES" ? "31 May, 7:30 AM" : "May 31, 7:30 AM"),
+      // Stamped with the moment the settings are saved
+      todayDateStr: formatNowStamp(language),
     });
     onClose();
   };

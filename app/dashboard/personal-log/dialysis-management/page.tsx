@@ -68,6 +68,9 @@ interface TreatmentCardItem {
   subtitle: string;
   startDate: string;
   endDate: string;
+  startKey: string; // yyyy-mm-dd
+  endKey: string;
+  status: TreatmentStatus;
   isExtra?: boolean;
   extraReason?: string;
   notes?: string;
@@ -158,6 +161,154 @@ const ALL_WEEKDAYS = [
   "Saturday",
 ];
 
+const WEEKDAY_ES: Record<string, string> = {
+  Sunday: "Domingo",
+  Monday: "Lunes",
+  Tuesday: "Martes",
+  Wednesday: "Miércoles",
+  Thursday: "Jueves",
+  Friday: "Viernes",
+  Saturday: "Sábado",
+};
+
+const MONTH_SHORT_EN = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const MONTH_SHORT_ES = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
+type TreatmentStatus = "past" | "current" | "upcoming";
+
+/** Unscheduled extra session. Its card is derived from the weekly schedule. */
+interface ExtraTreatment {
+  id: string;
+  dateKey: string; // yyyy-mm-dd
+  reason: string;
+  notes?: string;
+}
+
+function pad2(value: number) {
+  return `${value}`.padStart(2, "0");
+}
+
+function toDateKey(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function fromDateKey(key: string) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function addDays(d: Date, amount: number) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + amount);
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/** "Friday, Jun 19, 2026" — shape kept so parseDayAndDate keeps working. */
+function formatFullDate(d: Date, isEs: boolean) {
+  const weekday = ALL_WEEKDAYS[d.getDay()];
+  const dayLabel = isEs ? WEEKDAY_ES[weekday] : weekday;
+  const month = isEs ? MONTH_SHORT_ES[d.getMonth()] : MONTH_SHORT_EN[d.getMonth()];
+  return `${dayLabel}, ${month} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+type IsTreatmentDay = (date: Date) => boolean;
+
+/** How far back a saved week setting reaches. */
+type ApplyScope = "today" | "currentTreatment" | "month";
+
+const SCOPE_OPTIONS: {
+  id: ApplyScope;
+  labelEn: string;
+  labelEs: string;
+  descEn: string;
+  descEs: string;
+}[] = [
+  {
+    id: "currentTreatment",
+    labelEn: "From Current Treatment",
+    labelEs: "Desde el Tratamiento Actual",
+    descEn: "Changes the treatment you are in now and all the ones after it.",
+    descEs: "Cambia el tratamiento en curso y todos los siguientes.",
+  },
+  {
+    id: "today",
+    labelEn: "From Today",
+    labelEs: "Desde Hoy",
+    descEn: "Changes treatments from today onward. Today's treatment keeps its day.",
+    descEs: "Cambia los tratamientos desde hoy. El de hoy mantiene su día.",
+  },
+  {
+    id: "month",
+    labelEn: "Full Month",
+    labelEs: "Mes Completo",
+    descEn: "Changes every treatment in this month, starting from the 1st.",
+    descEs: "Cambia todos los tratamientos de este mes, desde el día 1.",
+  },
+];
+
+/**
+ * A weekly schedule and the date it takes effect from. Saving the Week Setting
+ * appends a new period instead of rewriting history, so treatments before the
+ * effective date keep the schedule they were actually run on.
+ */
+interface SchedulePeriod {
+  fromKey: string; // inclusive, yyyy-mm-dd
+  days: string[];
+}
+
+/** The prescribed days in force on a given date. */
+function daysForDate(periods: SchedulePeriod[], date: Date) {
+  const key = toDateKey(date);
+  let active = periods[0]?.days ?? [];
+  for (const period of periods) {
+    if (period.fromKey > key) break;
+    active = period.days;
+  }
+  return active;
+}
+
+function makeIsTreatmentDay(periods: SchedulePeriod[]): IsTreatmentDay {
+  return (date: Date) =>
+    daysForDate(periods, date).includes(ALL_WEEKDAYS[date.getDay()]);
+}
+
+/** First prescribed treatment day strictly after `from`. */
+function nextScheduledDate(from: Date, isTreatmentDay: IsTreatmentDay) {
+  for (let i = 1; i <= 62; i++) {
+    const candidate = addDays(from, i);
+    if (isTreatmentDay(candidate)) return candidate;
+  }
+  return addDays(from, 7);
+}
+
+/** Most recent prescribed treatment day on or before `from`. */
+function scheduledOnOrBefore(from: Date, isTreatmentDay: IsTreatmentDay) {
+  for (let i = 0; i <= 62; i++) {
+    const candidate = addDays(from, -i);
+    if (isTreatmentDay(candidate)) return candidate;
+  }
+  return from;
+}
+
+/** Position of a treatment date within its own month (1-based). */
+function treatmentNumberInMonth(d: Date, isTreatmentDay: IsTreatmentDay) {
+  let count = 0;
+  for (let day = 1; day <= d.getDate(); day++) {
+    const candidate = new Date(d.getFullYear(), d.getMonth(), day);
+    if (isTreatmentDay(candidate)) count++;
+  }
+  return count || 1;
+}
+
 function DialysisManagementDashboard() {
   const router = useRouter();
   const { language } = useLanguage();
@@ -166,7 +317,7 @@ function DialysisManagementDashboard() {
   // Section 1 State: Intervals
   const [intervals, setIntervals] = useState<TreatmentInterval[]>(DEFAULT_INTERVALS);
   // Last treatment is the current treatment (Treatment 4 / int-tx-4)
-  const [selectedIntervalId, setSelectedIntervalId] = useState("int-tx-4");
+  const [selectedIntervalId] = useState("int-tx-4");
   const selectedInterval =
     intervals.find((i) => i.id === selectedIntervalId) || intervals[intervals.length - 1];
 
@@ -174,29 +325,26 @@ function DialysisManagementDashboard() {
   const [records, setRecords] = useState<IntervalRecord[]>(INITIAL_RECORDS);
 
   // Section 2 State: Week Setting
-  const [treatmentFrequency, setTreatmentFrequency] = useState(3);
-  const [selectedDays, setSelectedDays] = useState<string[]>([
-    "Tuesday",
-    "Thursday",
-    "Saturday",
+  // Dated schedule history. The last period is the one currently in force.
+  const [schedulePeriods, setSchedulePeriods] = useState<SchedulePeriod[]>([
+    { fromKey: "0000-01-01", days: ["Tuesday", "Thursday", "Saturday"] },
   ]);
+  const selectedDays = schedulePeriods[schedulePeriods.length - 1].days;
+  const treatmentFrequency = selectedDays.length;
+  // How a saved week setting should be applied
+  const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string>("tx-4");
   const [activeTab, setActiveTab] = useState<"treatments" | "analytics" | "questions">("treatments");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // Extra Treatments Cards State (Includes default example Treatment 3.1)
-  const [extraTreatments, setExtraTreatments] = useState<TreatmentCardItem[]>([
+  // Extra Treatments (unscheduled sessions). Their cards are derived from the
+  // weekly schedule, so they stay correctly numbered if the week setting changes.
+  const [extraTreatments, setExtraTreatments] = useState<ExtraTreatment[]>([
     {
       id: "tx-extra-3-1",
-      intervalId: "int-tx-3",
-      orderKey: 3.1,
-      title: "Treatment 3.1",
-      subtitle: "Between treatment 3.1 to 4",
-      startDate: "Friday, Jun 26, 2026",
-      endDate: "Saturday, Jun 27, 2026",
-      isExtra: true,
-      extraReason: "Fluid Overload",
+      dateKey: "2026-06-26",
+      reason: "Fluid Overload",
       notes: "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg).",
     },
   ]);
@@ -255,84 +403,104 @@ function DialysisManagementDashboard() {
 
   // Take Extra Treatment Modal State
   const [isExtraTxModalOpen, setIsExtraTxModalOpen] = useState(false);
-  const [extraTxDate, setExtraTxDate] = useState("Tuesday, Jun 23, 2026");
+  const [extraTxDate, setExtraTxDate] = useState(() =>
+    formatFullDate(startOfToday(), language === "ES"),
+  );
   const [extraTxReason, setExtraTxReason] = useState("Fluid Overload");
   const [extraTxNotes, setExtraTxNotes] = useState("");
   // Details / History Modal State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Interactive Calendar State (Month & Year)
-  const [calYear, setCalYear] = useState(2026);
-  const [calMonth, setCalMonth] = useState(5); // June (0-indexed)
-  const [selectedDay, setSelectedDay] = useState(23);
+  // Interactive Calendar State (Month & Year) — opens on today
+  const [calYear, setCalYear] = useState(() => startOfToday().getFullYear());
+  const [calMonth, setCalMonth] = useState(() => startOfToday().getMonth());
+  const [selectedDay, setSelectedDay] = useState(() => startOfToday().getDate());
 
-  // Dynamic interval detection based on clicked calendar date:
-  // If date falls in Treatment 1 interval (June 19-21) -> Between Treatment 1 (base 1)
-  // If date falls in Treatment 2 interval (June 22-24) -> Between Treatment 2 (base 2)
-  // If date falls in Treatment 3 interval (June 25-27) -> Between Treatment 3 (base 3)
-  // If date falls in Treatment 4 interval (June 28+)   -> Between Treatment 4 (base 4)
+  // ---------------------------------------------------------------------------
+  // SCHEDULE ENGINE
+  // Treatments are not hardcoded: for any month they are generated from the
+  // prescribed weekday list in the Week Setting card. Treatment N of a month is
+  // the Nth prescribed weekday in it, and its interval runs until treatment N+1.
+  // ---------------------------------------------------------------------------
+
+  const today = React.useMemo(() => startOfToday(), []);
+  const todayTime = today.getTime();
+
+  // Month currently shown in the treatment cards list (defaults to this month)
+  const [viewMonthKey, setViewMonthKey] = useState(
+    () => `${today.getFullYear()}-${pad2(today.getMonth() + 1)}`,
+  );
+  const viewYear = Number(viewMonthKey.slice(0, 4));
+  const viewMonth = Number(viewMonthKey.slice(5, 7)) - 1;
+
+  // Resolves whether any given date is a treatment day, honouring the schedule
+  // that was in force on that date
+  const isTreatmentDay = React.useMemo(
+    () => makeIsTreatmentDay(schedulePeriods),
+    [schedulePeriods],
+  );
+
+  // Every scheduled treatment date inside the viewed month
+  const monthSchedule = React.useMemo(() => {
+    const daysInViewedMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const dates: Date[] = [];
+    for (let day = 1; day <= daysInViewedMonth; day++) {
+      const date = new Date(viewYear, viewMonth, day);
+      if (isTreatmentDay(date)) dates.push(date);
+    }
+    return dates;
+  }, [isTreatmentDay, viewYear, viewMonth]);
+
+  // Month picker range: one year back through three months ahead
+  const monthOptions = React.useMemo(() => {
+    const options: {
+      key: string;
+      year: number;
+      month: number;
+      isCurrent: boolean;
+    }[] = [
+      {
+        key: `${today.getFullYear()}-${pad2(today.getMonth() + 1)}`,
+        year: today.getFullYear(),
+        month: today.getMonth(),
+        isCurrent: true,
+      },
+    ];
+
+    for (let offset = 3; offset >= -12; offset--) {
+      if (offset === 0) continue; // already pinned at the top
+      const date = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+      options.push({
+        key: `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`,
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        isCurrent: false,
+      });
+    }
+    return options;
+  }, [today]);
+
+  // Interval that contains a date picked in the Take Extra Treatment calendar
   const detectIntervalForDate = (year: number, month: number, day: number) => {
-    if (year === 2026 && month === 5) {
-      if (day <= 21) {
-        return {
-          intervalId: "int-tx-1",
-          baseNumber: "1",
-          intervalName: "Between Treatment 1 to 2",
-          intervalLabel: "Treatment 1 ➔ Treatment 2",
-        };
-      } else if (day >= 22 && day <= 24) {
-        return {
-          intervalId: "int-tx-2",
-          baseNumber: "2",
-          intervalName: "Between Treatment 2 to 3",
-          intervalLabel: "Treatment 2 ➔ Treatment 3",
-        };
-      } else if (day >= 25 && day <= 27) {
-        return {
-          intervalId: "int-tx-3",
-          baseNumber: "3",
-          intervalName: "Between Treatment 3 to 4",
-          intervalLabel: "Treatment 3 ➔ Treatment 4",
-        };
-      } else {
-        return {
-          intervalId: "int-tx-4",
-          baseNumber: "4",
-          intervalName: "Between Treatment 4 to 5",
-          intervalLabel: "Treatment 4 ➔ Treatment 5",
-        };
-      }
-    }
+    const picked = new Date(year, month, day);
+    const start = scheduledOnOrBefore(picked, isTreatmentDay);
+    const end = nextScheduledDate(start, isTreatmentDay);
+    const baseNumber = treatmentNumberInMonth(start, isTreatmentDay);
+    const nextNumber = baseNumber + 1;
 
-    if (day <= 21) {
-      return {
-        intervalId: "int-tx-1",
-        baseNumber: "1",
-        intervalName: "Between Treatment 1 to 2",
-        intervalLabel: "Treatment 1 ➔ Treatment 2",
-      };
-    } else if (day <= 24) {
-      return {
-        intervalId: "int-tx-2",
-        baseNumber: "2",
-        intervalName: "Between Treatment 2 to 3",
-        intervalLabel: "Treatment 2 ➔ Treatment 3",
-      };
-    } else if (day <= 27) {
-      return {
-        intervalId: "int-tx-3",
-        baseNumber: "3",
-        intervalName: "Between Treatment 3 to 4",
-        intervalLabel: "Treatment 3 ➔ Treatment 4",
-      };
-    } else {
-      return {
-        intervalId: "int-tx-4",
-        baseNumber: "4",
-        intervalName: "Between Treatment 4 to 5",
-        intervalLabel: "Treatment 4 ➔ Treatment 5",
-      };
-    }
+    return {
+      startKey: toDateKey(start),
+      intervalId: `int-${toDateKey(start)}`,
+      baseNumber: `${baseNumber}`,
+      intervalName: isEs
+        ? `Entre Tratamiento ${baseNumber} y ${nextNumber}`
+        : `Between Treatment ${baseNumber} to ${nextNumber}`,
+      intervalLabel: isEs
+        ? `Tratamiento ${baseNumber} ➜ Tratamiento ${nextNumber}`
+        : `Treatment ${baseNumber} ➜ Treatment ${nextNumber}`,
+      startDate: formatFullDate(start, isEs),
+      endDate: formatFullDate(end, isEs),
+    };
   };
 
   // Detected interval for the currently clicked date:
@@ -340,11 +508,13 @@ function DialysisManagementDashboard() {
 
   // Count existing extra treatments in this detected interval
   const existingExtraCount = extraTreatments.filter(
-    (e) => e.intervalId === activeDetectedInterval.intervalId
+    (extra) =>
+      toDateKey(scheduledOnOrBefore(fromDateKey(extra.dateKey), isTreatmentDay)) ===
+      activeDetectedInterval.startKey,
   ).length;
 
   // Auto-calculated session number based on clicked date:
-  // e.g. clicking June 20 -> 1.1; clicking June 23 -> 2.1 (or 2.2 if 2.1 exists)
+  // e.g. first extra inside Treatment 2's interval -> 2.1, the next -> 2.2
   const autoSessionNumber = `${activeDetectedInterval.baseNumber}.${existingExtraCount + 1}`;
 
   // Month and Weekday labels for Calendar
@@ -382,19 +552,13 @@ function DialysisManagementDashboard() {
 
   const handleSelectDay = (day: number) => {
     setSelectedDay(day);
-    const d = new Date(calYear, calMonth, day);
-    const formatted = d.toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-    setExtraTxDate(formatted);
+    setExtraTxDate(formatFullDate(new Date(calYear, calMonth, day), isEs));
   };
 
   const handleOpenEditWeek = () => {
     setTempFrequency(treatmentFrequency);
     setTempDays([...selectedDays]);
+    setApplyScope("currentTreatment");
     setIsEditWeekModalOpen(true);
   };
 
@@ -408,19 +572,37 @@ function DialysisManagementDashboard() {
     }
   };
 
+  // Date the new schedule starts applying from, per the chosen scope
+  const scopeEffectiveDate = (scope: ApplyScope) => {
+    if (scope === "month") return new Date(viewYear, viewMonth, 1);
+    if (scope === "currentTreatment") return scheduledOnOrBefore(today, isTreatmentDay);
+    return today;
+  };
+
   const handleSaveWeekSetting = (e: React.FormEvent) => {
     e.preventDefault();
     const sorted = [...tempDays].sort(
       (a, b) => ALL_WEEKDAYS.indexOf(a) - ALL_WEEKDAYS.indexOf(b)
     );
-    setTreatmentFrequency(sorted.length);
-    setSelectedDays(sorted);
+    const fromKey = toDateKey(scopeEffectiveDate(applyScope));
+
+    setSchedulePeriods((prev) => {
+      // Drop any period starting on or after the new effective date, then append.
+      // Everything before it keeps the schedule it was actually run on.
+      const kept = prev.filter((period) => period.fromKey < fromKey);
+      const base = kept.length > 0 ? kept : [prev[0]];
+      return [...base, { fromKey, days: sorted }];
+    });
+
     setIsEditWeekModalOpen(false);
   };
 
   // Extra treatment submission
   const handleSaveExtraTreatment = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const pickedDate = new Date(calYear, calMonth, selectedDay);
+    const dateKey = toDateKey(pickedDate);
 
     const newRecord: IntervalRecord = {
       id: `extra-rec-${Date.now()}`,
@@ -437,29 +619,18 @@ function DialysisManagementDashboard() {
     };
 
     setRecords([newRecord, ...records]);
+    setExtraTreatments((prev) => [
+      ...prev,
+      {
+        id: `tx-extra-${dateKey}-${Date.now()}`,
+        dateKey,
+        reason: extraTxReason,
+        notes: extraTxNotes.trim(),
+      },
+    ]);
 
-    // Create and add the new Extra Treatment Card in purple
-    const targetInterval = intervals.find((i) => i.id === activeDetectedInterval.intervalId);
-    const parsedOrder = parseFloat(autoSessionNumber);
-    const nextNum = Math.floor(parsedOrder) + 1;
-
-    const newExtraCard: TreatmentCardItem = {
-      id: `tx-extra-${autoSessionNumber.replace(".", "-")}-${Date.now()}`,
-      intervalId: activeDetectedInterval.intervalId,
-      orderKey: parsedOrder,
-      title: isEs ? `Tratamiento ${autoSessionNumber}` : `Treatment ${autoSessionNumber}`,
-      subtitle: isEs
-        ? `Entre tratamiento ${autoSessionNumber} y ${nextNum}`
-        : `Between treatment ${autoSessionNumber} to ${nextNum}`,
-      startDate: extraTxDate,
-      endDate: targetInterval?.endDate || extraTxDate,
-      isExtra: true,
-      extraReason: extraTxReason,
-      notes: extraTxNotes.trim(),
-    };
-
-    setExtraTreatments((prev) => [...prev, newExtraCard]);
-    setSelectedIntervalId(activeDetectedInterval.intervalId);
+    // Jump the cards list to the month the extra session belongs to
+    setViewMonthKey(`${pickedDate.getFullYear()}-${pad2(pickedDate.getMonth() + 1)}`);
     setIsExtraTxModalOpen(false);
     setExtraTxNotes("");
   };
@@ -494,60 +665,124 @@ function DialysisManagementDashboard() {
     return { day: "", date: dateStr };
   };
 
-  // Base Treatment Cards: Treatment 1, 2, 3, 4
-  const baseTreatmentCards: TreatmentCardItem[] = [
-    {
-      id: "tx-1",
-      intervalId: "int-tx-1",
-      orderKey: 1,
-      title: isEs ? "Tratamiento 1" : "Treatment 1",
-      subtitle: isEs ? "Entre tratamiento 1 y 2" : "Between treatment 1 to 2",
-      startDate: intervals.find((i) => i.id === "int-tx-1")?.startDate || "Friday, Jun 19, 2026",
-      endDate: intervals.find((i) => i.id === "int-tx-1")?.endDate || "Monday, Jun 22, 2026",
+  // Base Treatment Cards: one per prescribed treatment day in the viewed month
+  const baseTreatmentCards: TreatmentCardItem[] = monthSchedule.map((start, index) => {
+    const end =
+      index < monthSchedule.length - 1
+        ? monthSchedule[index + 1]
+        : nextScheduledDate(start, isTreatmentDay);
+    const number = index + 1;
+    const startKey = toDateKey(start);
+
+    // Past: the interval is over. Current: today sits inside it. Upcoming: not started.
+    const status: TreatmentStatus =
+      todayTime >= end.getTime()
+        ? "past"
+        : todayTime >= start.getTime()
+          ? "current"
+          : "upcoming";
+
+    return {
+      id: `tx-${startKey}`,
+      intervalId: `int-${startKey}`,
+      orderKey: number,
+      title: isEs ? `Tratamiento ${number}` : `Treatment ${number}`,
+      subtitle: isEs
+        ? `Entre tratamiento ${number} y ${number + 1}`
+        : `Between treatment ${number} to ${number + 1}`,
+      startDate: formatFullDate(start, isEs),
+      endDate: formatFullDate(end, isEs),
+      startKey,
+      endKey: toDateKey(end),
+      status,
       isExtra: false,
-    },
-    {
-      id: "tx-2",
-      intervalId: "int-tx-2",
-      orderKey: 2,
-      title: isEs ? "Tratamiento 2" : "Treatment 2",
-      subtitle: isEs ? "Entre tratamiento 2 y 3" : "Between treatment 2 to 3",
-      startDate: intervals.find((i) => i.id === "int-tx-2")?.startDate || "Monday, Jun 22, 2026",
-      endDate: intervals.find((i) => i.id === "int-tx-2")?.endDate || "Wednesday, Jun 24, 2026",
-      isExtra: false,
-    },
-    {
-      id: "tx-3",
-      intervalId: "int-tx-3",
-      orderKey: 3,
-      title: isEs ? "Tratamiento 3" : "Treatment 3",
-      subtitle: isEs ? "Entre tratamiento 3 y 4" : "Between treatment 3 to 4",
-      startDate: intervals.find((i) => i.id === "int-tx-3")?.startDate || "Wednesday, Jun 24, 2026",
-      endDate: intervals.find((i) => i.id === "int-tx-3")?.endDate || "Saturday, Jun 27, 2026",
-      isExtra: false,
-    },
-    {
-      id: "tx-4",
-      intervalId: "int-tx-4",
-      orderKey: 4,
-      title: isEs ? "Tratamiento 4" : "Treatment 4",
-      subtitle: isEs ? "Entre tratamiento 4 y 5" : "Between treatment 4 to 5",
-      startDate: intervals.find((i) => i.id === "int-tx-4")?.startDate || "Saturday, Jun 27, 2026",
-      endDate: intervals.find((i) => i.id === "int-tx-4")?.endDate || "Tuesday, Jun 30, 2026",
-      isExtra: false,
-    },
-  ];
+    };
+  });
+
+  // Extra Treatment Cards: numbered against the base treatment they follow
+  // (e.g. an extra inside Treatment 2's interval becomes Treatment 2.1)
+  const extraTreatmentCards: TreatmentCardItem[] = (() => {
+    const grouped = new Map<string, ExtraTreatment[]>();
+
+    extraTreatments.forEach((extra) => {
+      const date = fromDateKey(extra.dateKey);
+      if (date.getFullYear() !== viewYear || date.getMonth() !== viewMonth) return;
+      const intervalStartKey = toDateKey(scheduledOnOrBefore(date, isTreatmentDay));
+      const bucket = grouped.get(intervalStartKey) || [];
+      bucket.push(extra);
+      grouped.set(intervalStartKey, bucket);
+    });
+
+    const cards: TreatmentCardItem[] = [];
+
+    grouped.forEach((bucket, intervalStartKey) => {
+      const base = baseTreatmentCards.find((card) => card.startKey === intervalStartKey);
+      const baseNumber = base
+        ? base.orderKey
+        : treatmentNumberInMonth(fromDateKey(intervalStartKey), isTreatmentDay);
+
+      [...bucket]
+        .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+        .forEach((extra, position) => {
+          const sessionNumber = `${baseNumber}.${position + 1}`;
+          const date = fromDateKey(extra.dateKey);
+
+          cards.push({
+            id: extra.id,
+            intervalId: `int-${intervalStartKey}`,
+            orderKey: baseNumber + (position + 1) / 10,
+            title: isEs ? `Tratamiento ${sessionNumber}` : `Treatment ${sessionNumber}`,
+            subtitle: isEs
+              ? `Entre tratamiento ${sessionNumber} y ${baseNumber + 1}`
+              : `Between treatment ${sessionNumber} to ${baseNumber + 1}`,
+            startDate: formatFullDate(date, isEs),
+            endDate: base?.endDate || formatFullDate(date, isEs),
+            startKey: extra.dateKey,
+            endKey: base?.endKey || extra.dateKey,
+            // Extra sessions stay fully editable whenever they were taken
+            status: todayTime >= date.getTime() ? "past" : "current",
+            isExtra: true,
+            extraReason: extra.reason,
+            notes: extra.notes,
+          });
+        });
+    });
+
+    return cards;
+  })();
 
   // Combined and sorted cards (Extra treatment is placed in its proper chronological place by orderKey)
-  const combinedTreatmentCards = [...baseTreatmentCards, ...extraTreatments].sort(
+  const combinedTreatmentCards = [...baseTreatmentCards, ...extraTreatmentCards].sort(
     (a, b) => a.orderKey - b.orderKey
   );
 
   const displayedTreatmentCards =
     sortOrder === "desc" ? [...combinedTreatmentCards].reverse() : combinedTreatmentCards;
 
-  const currentStartInfo = parseDayAndDate(selectedInterval.startDate);
-  const currentEndInfo = parseDayAndDate(selectedInterval.endDate);
+  // The live current treatment for the summary card — always relative to today,
+  // independent of whichever month the list below is showing.
+  const currentTreatment = (() => {
+    if (selectedDays.length === 0) return null;
+    const start = scheduledOnOrBefore(today, isTreatmentDay);
+    const end = nextScheduledDate(start, isTreatmentDay);
+    const number = treatmentNumberInMonth(start, isTreatmentDay);
+
+    return {
+      id: `tx-${toDateKey(start)}`,
+      name: isEs
+        ? `Entre Tratamiento ${number} y ${number + 1}`
+        : `Between Treatment ${number} to ${number + 1}`,
+      startDate: formatFullDate(start, isEs),
+      endDate: formatFullDate(end, isEs),
+    };
+  })();
+
+  const currentStartInfo = parseDayAndDate(
+    currentTreatment?.startDate || selectedInterval.startDate,
+  );
+  const currentEndInfo = parseDayAndDate(
+    currentTreatment?.endDate || selectedInterval.endDate,
+  );
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
@@ -576,12 +811,7 @@ function DialysisManagementDashboard() {
                 {isEs ? "Tratamiento actual" : "Current Treatment"}
               </span>
               <h2 className="text-[22px] sm:text-[26px] font-bold text-slate-800 tracking-tight">
-                {isEs
-                  ? selectedInterval.name
-                    .replace(/Between/g, "Entre")
-                    .replace(/Treatment/g, "Tratamiento")
-                    .replace(/\bto\b/g, "y")
-                  : selectedInterval.name}
+                {currentTreatment?.name || selectedInterval.name}
               </h2>
             </div>
 
@@ -621,7 +851,9 @@ function DialysisManagementDashboard() {
           <div className="flex flex-col gap-2.5 w-full">
             {/* Button 1: Add New Record (Opens View Details Page) */}
             <Link
-              href="/dashboard/personal-log/dialysis-management/view?treatment=tx-4"
+              href={`/dashboard/personal-log/dialysis-management/view?treatment=${
+                currentTreatment?.id || "tx-4"
+              }&title=${encodeURIComponent(currentTreatment?.name || "")}`}
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" />
@@ -809,9 +1041,32 @@ function DialysisManagementDashboard() {
           </button>
         </div>
 
-        {/* Right Side Sort Dropdown (No label, 2 short options: Ascending / Descending) */}
+        {/* Right Side: Month Picker + Sort Dropdown */}
         {activeTab === "treatments" && (
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            {/* Month Picker — treatments are regenerated for the chosen month */}
+            <div className="relative">
+              <select
+                value={viewMonthKey}
+                onChange={(e) => setViewMonthKey(e.target.value)}
+                aria-label={isEs ? "Seleccionar mes" : "Select month"}
+                className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition-all cursor-pointer"
+              >
+                {monthOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.isCurrent
+                      ? isEs
+                        ? "Este Mes"
+                        : "This Month"
+                      : `${(isEs ? monthNamesEs : monthNames)[option.month]} ${option.year}`}
+                  </option>
+                ))}
+              </select>
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            </div>
+
+            <div className="relative">
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
@@ -822,6 +1077,7 @@ function DialysisManagementDashboard() {
               <option value="desc">{isEs ? "Descendente" : "Descending"}</option>
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            </div>
           </div>
         )}
       </div>
@@ -831,8 +1087,10 @@ function DialysisManagementDashboard() {
         <section className="space-y-3 animate-in fade-in duration-200">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayedTreatmentCards.map((card) => {
-              // Only the regular Treatment 4 is marked as current
-              const isSelected = card.id === "tx-4";
+              // Lifecycle comes from the schedule: only the interval containing
+              // today is current, and anything after it cannot be logged yet.
+              const isSelected = card.status === "current";
+              const isUpcoming = card.status === "upcoming";
               const isExtra = !!card.isExtra;
               const startInfo = parseDayAndDate(card.startDate);
               const endInfo = parseDayAndDate(card.endDate);
@@ -915,9 +1173,19 @@ function DialysisManagementDashboard() {
               return (
                 <div
                   key={card.id}
-                  className={`min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md ${isSelected
-                      ? "border-[#2563EB] bg-blue-50/20 ring-2 ring-[#2563EB]/20"
-                      : "border-slate-200/90 bg-white hover:border-blue-300"
+                  aria-disabled={isUpcoming}
+                  title={
+                    isUpcoming
+                      ? isEs
+                        ? "Tratamiento próximo — aún no disponible"
+                        : "Upcoming treatment — not available yet"
+                      : undefined
+                  }
+                  className={`min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs ${isUpcoming
+                      ? "border-slate-200/90 bg-white opacity-20 pointer-events-none"
+                      : isSelected
+                        ? "border-[#2563EB] bg-blue-50/20 ring-2 ring-[#2563EB]/20 hover:shadow-md"
+                        : "border-slate-200/90 bg-white hover:border-blue-300 hover:shadow-md"
                     }`}
                 >
                   {/* Content: Text 1 & Text 2 (With Current badge for current treatment) */}
@@ -926,11 +1194,15 @@ function DialysisManagementDashboard() {
                       <h3 className="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-[#2563EB] transition-colors tracking-tight">
                         {card.title}
                       </h3>
-                      {isSelected && (
+                      {isSelected ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#2563EB] text-white shadow-2xs">
                           {isEs ? "Actual" : "Current"}
                         </span>
-                      )}
+                      ) : isUpcoming ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
+                          {isEs ? "Próximo" : "Upcoming"}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-sm sm:text-base font-semibold text-slate-500 leading-snug">
                       {card.subtitle}
@@ -971,18 +1243,46 @@ function DialysisManagementDashboard() {
 
                   {/* View Details Button Inside Treatment Card */}
                   <div className="w-full pt-1">
-                    <Link
-                      href={`/dashboard/personal-log/dialysis-management/view?treatment=${card.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full inline-flex items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
-                    >
-                      <span>{isEs ? "Ver Detalles" : "View Details"}</span>
-                    </Link>
+                    {isUpcoming ? (
+                      <button
+                        type="button"
+                        disabled
+                        tabIndex={-1}
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-slate-400 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-not-allowed text-center"
+                      >
+                        <span>{isEs ? "Próximo" : "Upcoming"}</span>
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/dashboard/personal-log/dialysis-management/view?treatment=${
+                          card.id
+                        }&title=${encodeURIComponent(card.title)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
+                      >
+                        <span>{isEs ? "Ver Detalles" : "View Details"}</span>
+                      </Link>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {displayedTreatmentCards.length === 0 && (
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center">
+              <p className="text-sm font-bold text-slate-700">
+                {isEs
+                  ? "No hay tratamientos programados para este mes."
+                  : "No treatments scheduled for this month."}
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                {isEs
+                  ? "Usa Editar Semana para elegir tus días de diálisis."
+                  : "Use Edit Week to choose your prescribed dialysis days."}
+              </p>
+            </div>
+          )}
         </section>
       )}
 
@@ -1149,13 +1449,13 @@ function DialysisManagementDashboard() {
       {/* ========================================================================= */}
       {isEditWeekModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-5">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xl space-y-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-900">
                   {isEs ? "Editar Horario Semanal" : "Edit Weekly Schedule"}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-sm text-slate-500">
                   {isEs
                     ? "Selecciona los días en que tienes diálisis"
                     : "Select which days of the week you receive dialysis"}
@@ -1170,12 +1470,12 @@ function DialysisManagementDashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveWeekSetting} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveWeekSetting} className="space-y-4 text-sm">
               <div>
                 <label className="block font-semibold text-slate-700 mb-2">
                   {isEs ? "Días de Diálisis" : "Prescribed Dialysis Days"}
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {ALL_WEEKDAYS.map((day) => {
                     const isSelected = tempDays.includes(day);
                     return (
@@ -1189,18 +1489,83 @@ function DialysisManagementDashboard() {
                           }`}
                       >
                         <span>{day}</span>
-                        {isSelected && <Check className="h-4 w-4 stroke-[3]" />}
+                        {isSelected && <Check className="h-[18px] w-[18px] stroke-[3]" />}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600 font-medium">
-                {isEs ? "Resultado:" : "Summary:"}{" "}
-                <strong className="text-slate-900">
-                  Weekly {tempDays.length} Treatments = {tempDays.join(", ")}
-                </strong>
+              {/* Apply scope: how far back this schedule reaches */}
+              <div className="space-y-2">
+                <label className="block font-semibold text-slate-700">
+                  {isEs ? "Aplicar Este Horario A" : "Apply This Schedule To"}
+                </label>
+
+                <div className="space-y-2">
+                  {SCOPE_OPTIONS.map((option) => {
+                    const isSelected = applyScope === option.id;
+                    const effective = scopeEffectiveDate(option.id);
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setApplyScope(option.id)}
+                        aria-pressed={isSelected}
+                        className={`w-full flex items-start gap-2.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${isSelected
+                            ? "bg-blue-50 border-[#2563EB]"
+                            : "bg-white border-slate-200 hover:bg-slate-50"
+                          }`}
+                      >
+                        <span
+                          className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${isSelected
+                              ? "border-[#2563EB]"
+                              : "border-slate-300"
+                            }`}
+                        >
+                          {isSelected && (
+                            <span className="h-2.5 w-2.5 rounded-full bg-[#2563EB]" />
+                          )}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          {/* Title on the left, effective date right-aligned beside it */}
+                          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                            <span
+                              className={`font-bold ${isSelected ? "text-[#2563EB]" : "text-slate-800"
+                                }`}
+                            >
+                              {isEs ? option.labelEs : option.labelEn}
+                            </span>
+                            <span className="ml-auto text-right text-xs font-bold text-slate-900">
+                              {isEs ? "Desde" : "Starts"}{" "}
+                              {formatFullDate(effective, isEs)}
+                            </span>
+                          </span>
+                          <span className="mt-1 block text-xs font-medium leading-relaxed text-slate-500">
+                            {isEs ? option.descEs : option.descEn}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Full month rebuilds treatments that already happened */}
+                {applyScope === "month" && (
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <AlertCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-600" />
+                    <p className="text-xs font-medium leading-relaxed text-amber-900">
+                      <strong className="font-bold">
+                        {isEs ? "Aviso:" : "Heads up:"}
+                      </strong>{" "}
+                      {isEs
+                        ? `Esto reconstruye todo ${monthNamesEs[viewMonth]} ${viewYear} desde el día 1, incluidos los tratamientos ya pasados. Puede generar una gran cantidad de tarjetas y los registros guardados con el horario anterior podrían dejar de coincidir.`
+                        : `This rebuilds all of ${monthNames[viewMonth]} ${viewYear} from the 1st, including treatments that already happened. It can create a large number of cards, and records logged against the old schedule may no longer line up.`}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">

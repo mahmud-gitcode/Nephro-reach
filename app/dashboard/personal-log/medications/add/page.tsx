@@ -50,7 +50,7 @@ const FIELD_CONFIGS: FieldConfig[] = [
 export default function AddMedicationPage() {
   const { language, t } = useLanguage();
   const [enableReminder, setEnableReminder] = useState(true);
-  const [reminderTime, setReminderTime] = useState("08:00 AM");
+  const [reminderTime, setReminderTime] = useState("08:00");
 
   return (
     <div className="mx-auto max-w-[672px]">
@@ -124,12 +124,7 @@ export default function AddMedicationPage() {
               </span>
               <div>
                 <p className="text-sm font-bold text-slate-950">
-                  {language === "ES" ? "Configurar Recordatorio de Medicamento" : "Set Medication Reminder"}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {language === "ES"
-                    ? "Recibe alertas de notificación para tus horarios de toma"
-                    : "Receive notifications for each scheduled dose"}
+                  {language === "ES" ? "Recordatorio de Medicamento" : "Medication Reminder"}
                 </p>
               </div>
             </div>
@@ -146,38 +141,14 @@ export default function AddMedicationPage() {
 
           {enableReminder && (
             <div className="space-y-3 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  {language === "ES" ? "Horario del Recordatorio" : "Select Reminder Time"}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { label: "8:00 AM", value: "08:00 AM" },
-                    { label: "12:30 PM", value: "12:30 PM" },
-                    { label: "6:30 PM", value: "06:30 PM" },
-                    { label: "10:00 PM", value: "10:00 PM" },
-                  ].map((slot) => (
-                    <button
-                      key={slot.value}
-                      type="button"
-                      onClick={() => setReminderTime(slot.value)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                        reminderTime === slot.value
-                          ? "bg-blue-50 border-blue-600 text-blue-700 shadow-2xs"
-                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {slot.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700 pt-1">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600 h-4 w-4" />
-                  <span>{language === "ES" ? "Alerta en la Aplicación" : "In-App Notification"}</span>
-                </label>
+              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  aria-label={language === "ES" ? "Seleccionar Hora" : "Select Reminder Time"}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-3xl font-extrabold tracking-wider text-slate-900 shadow-2xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                />
               </div>
             </div>
           )}

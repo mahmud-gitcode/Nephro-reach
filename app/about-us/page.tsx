@@ -209,7 +209,7 @@ export default function AboutUsPage() {
                     <h3 className="text-xl sm:text-[22px] font-bold text-slate-900 leading-tight">Joni Gathers</h3>
                     <p className="text-sm sm:text-base font-semibold text-slate-500 mt-0.5">MSN, APRN, FNP-C</p>
                     <p className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
-                      {isEs ? "Fundadora · FNP-C" : "Founder · Board-Certified Family Nurse Practitioner"}
+                      {isEs ? "Fundadora & FNP-C" : "Founder & Certified Family Nurse Practitioner"}
                     </p>
                   </div>
                 </div>
@@ -606,7 +606,7 @@ export default function AboutUsPage() {
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
               {isEs
                 ? "No tienes que recorrer este camino renal en soledad."
-                : "You don’t have to navigate kidney care alone."}
+                : "You don’t have to navigate kidney disease alone."}
             </h2>
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
