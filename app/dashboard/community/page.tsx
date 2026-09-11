@@ -221,8 +221,10 @@ function ComposeModal({
 
   const isFlagged = checkFlaggedMedicalContent(body);
 
+  const canPost = Boolean(body.trim()) && !isFlagged;
+
   const handleSubmit = () => {
-    if (!body.trim()) return;
+    if (!canPost) return;
     onPost(body.trim(), selectedCategory);
     setBody("");
     onClose();
@@ -318,11 +320,18 @@ function ComposeModal({
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E05252] text-white font-bold text-xs shadow-xs mt-0.5 select-none">
               !
             </div>
-            <p className="text-[#DC4C4C] text-sm font-medium leading-relaxed">
-              {isEs
-                ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
-                : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
-            </p>
+            <div className="text-left">
+              <p className="text-[#DC4C4C] text-sm font-medium leading-relaxed">
+                {isEs
+                  ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
+                  : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
+              </p>
+              <p className="mt-2 text-[#B91C1C] text-sm font-bold leading-relaxed">
+                {isEs
+                  ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
+                  : "This message cannot be posted. Please edit it to remove the urgent medical details."}
+              </p>
+            </div>
           </div>
         )}
 
@@ -330,7 +339,15 @@ function ComposeModal({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!body.trim()}
+          disabled={!canPost}
+          aria-disabled={!canPost}
+          title={
+            isFlagged
+              ? isEs
+                ? "No se puede publicar un mensaje marcado"
+                : "A flagged message cannot be posted"
+              : undefined
+          }
           className="mt-4 w-full rounded-2xl bg-[#F0F4F8] hover:bg-[#E2EAF2] text-slate-900 font-bold text-base py-3.5 px-6 flex items-center justify-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
         >
           <Send className="h-5 w-5 text-slate-800 -rotate-12" />

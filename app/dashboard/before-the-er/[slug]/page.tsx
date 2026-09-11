@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
+  ExternalLink,
+  ExternalLinkProvider,
+} from "@/components/dashboard/ExternalLinkDisclaimer";
+import {
   BEFORE_THE_ER_TOPICS,
   getBeforeTheErTopic,
   SLUG_LIST,
@@ -38,15 +42,13 @@ function renderFormattedText(text: string) {
     const linkText = match[1];
     const linkUrl = match[2];
     parts.push(
-      <a
+      <ExternalLink
         key={match.index}
         href={linkUrl}
-        target="_blank"
-        rel="noopener noreferrer"
         className="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors"
       >
         {linkText}
-      </a>
+      </ExternalLink>
     );
     lastIndex = regex.lastIndex;
   }
@@ -251,15 +253,13 @@ function SymptomDetailContent() {
                 <Phone className="h-4 w-4" />
                 <span>{t("beforeTheEr.detail.call911")}</span>
               </a>
-              <a
+              <ExternalLink
                 href="https://www.google.com/maps/search/nearest+emergency+room"
-                target="_blank"
-                rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition-colors"
               >
                 <MapPin className="h-4 w-4 text-slate-600" />
                 <span>{t("beforeTheEr.detail.findNearestEr")}</span>
-              </a>
+              </ExternalLink>
             </>
           )}
 
@@ -283,15 +283,13 @@ function SymptomDetailContent() {
 
           {nextStepLevel === "urgentMedical" && (
             <>
-              <a
+              <ExternalLink
                 href="https://www.google.com/maps/search/nearest+emergency+room"
-                target="_blank"
-                rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-700 transition-colors"
               >
                 <MapPin className="h-4 w-4" />
                 <span>{isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}</span>
-              </a>
+              </ExternalLink>
               <a
                 href="tel:911"
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors"
@@ -472,7 +470,9 @@ export default function SymptomDetailPage() {
         </div>
       }
     >
-      <SymptomDetailContent />
+      <ExternalLinkProvider>
+        <SymptomDetailContent />
+      </ExternalLinkProvider>
     </React.Suspense>
   );
 }
