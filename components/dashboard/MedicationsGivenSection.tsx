@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, Check, Pill, Trash2 } from "lucide-react";
+import { Plus, X, Check, ChevronDown, Pill, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
 export interface TreatmentMedication {
@@ -56,6 +56,52 @@ const INITIAL_MEDICATIONS: TreatmentMedication[] = [
   },
 ];
 
+const OTHER_MEDICATION = "__other__";
+
+/** In-clinic medications, matching the set used in the dialysis day log. */
+const MEDICATION_OPTIONS = [
+  "Epoetin Alfa (Epogen)",
+  "Methoxy PEG-Epoetin Beta (Mircera)",
+  "Iron Sucrose (Venofer)",
+  "Doxercalciferol (Hectorol)",
+  "Paricalcitol (Zemplar)",
+  "Calcitriol",
+  "Cinacalcet (Sensipar)",
+  "Etelcalcetide (Parsabiv)",
+  "Heparin",
+  "Clonidine",
+  "Midodrine",
+  "Difelikefalin (Korsuva)",
+  "Ondansetron (Zofran)",
+  "Acetaminophen (Tylenol)",
+  "Diphenhydramine (Benadryl)",
+  "Antibiotics",
+];
+
+const OTHER_DOSE_UNIT = "__other_unit__";
+
+/** Dose units. `value` is stored; the description is shown in the dropdown. */
+const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
+  { value: "mg", descEn: "milligrams", descEs: "miligramos" },
+  { value: "mcg", descEn: "micrograms", descEs: "microgramos" },
+  { value: "g", descEn: "grams", descEs: "gramos" },
+  { value: "Units", descEn: "medication units", descEs: "unidades de medicamento" },
+  { value: "mL", descEn: "milliliters", descEs: "mililitros" },
+  { value: "mg/mL", descEn: "milligrams per milliliter", descEs: "miligramos por mililitro" },
+  { value: "mcg/mL", descEn: "micrograms per milliliter", descEs: "microgramos por mililitro" },
+  { value: "Units/mL", descEn: "units per milliliter", descEs: "unidades por mililitro" },
+  { value: "mg/kg", descEn: "milligrams per kilogram", descEs: "miligramos por kilogramo" },
+  { value: "mcg/kg", descEn: "micrograms per kilogram", descEs: "microgramos por kilogramo" },
+  { value: "Units/kg", descEn: "units per kilogram", descEs: "unidades por kilogramo" },
+  { value: "mEq", descEn: "milliequivalents", descEs: "miliequivalentes" },
+  { value: "mEq/L", descEn: "milliequivalents per liter", descEs: "miliequivalentes por litro" },
+  { value: "mmol", descEn: "millimoles", descEs: "milimoles" },
+  { value: "tablet", descEn: "", descEs: "tableta" },
+  { value: "capsule", descEn: "", descEs: "cápsula" },
+  { value: "packet", descEn: "", descEs: "sobre" },
+  { value: "dose", descEn: "", descEs: "dosis" },
+];
+
 const LOCAL_STORAGE_KEY = "nephroreach_dialysis_treatment_medications_v2";
 
 export default function MedicationsGivenSection() {
@@ -66,7 +112,10 @@ export default function MedicationsGivenSection() {
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
   const [formMedication, setFormMedication] = useState("");
+  const [formMedicationOther, setFormMedicationOther] = useState("");
   const [formDose, setFormDose] = useState("");
+  const [formDoseUnit, setFormDoseUnit] = useState("mg");
+  const [formDoseUnitOther, setFormDoseUnitOther] = useState("");
   const [formReason, setFormReason] = useState("");
   const [formDate, setFormDate] = useState("May 31, 2024");
   const [formMedError, setFormMedError] = useState("");
@@ -97,7 +146,10 @@ export default function MedicationsGivenSection() {
 
   const handleOpenAddMedModal = () => {
     setFormMedication("");
+    setFormMedicationOther("");
     setFormDose("");
+    setFormDoseUnit("mg");
+    setFormDoseUnitOther("");
     setFormReason("");
     setFormDate("May 31, 2024");
     setFormMedError("");
@@ -113,9 +165,14 @@ export default function MedicationsGivenSection() {
 
   const handleAddMedicationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formMedication.trim()) {
+    const medicationName =
+      formMedication === OTHER_MEDICATION
+        ? formMedicationOther.trim()
+        : formMedication.trim();
+
+    if (!medicationName) {
       setFormMedError(
-        language === "ES" ? "Por favor ingrese el nombre del medicamento." : "Please enter a medication name."
+        language === "ES" ? "Por favor seleccione un medicamento." : "Please select a medication."
       );
       return;
     }
@@ -126,11 +183,23 @@ export default function MedicationsGivenSection() {
       return;
     }
 
+    const doseUnit =
+      formDoseUnit === OTHER_DOSE_UNIT ? formDoseUnitOther.trim() : formDoseUnit;
+
+    if (!doseUnit) {
+      setFormMedError(
+        language === "ES"
+          ? "Por favor seleccione la unidad de la dosis."
+          : "Please select a dose unit."
+      );
+      return;
+    }
+
     const newEntry: TreatmentMedication = {
       id: Date.now().toString(),
       date: formDate.trim() || "Today",
-      medication: formMedication.trim(),
-      dose: formDose.trim(),
+      medication: medicationName,
+      dose: `${formDose.trim()} ${doseUnit}`,
       reason: formReason.trim() || "Dialysis Support",
       given: true,
     };
@@ -289,14 +358,44 @@ export default function MedicationsGivenSection() {
                   {language === "ES" ? "Medicamento" : "Medication"}{" "}
                   <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={formMedication}
-                  onChange={(e) => setFormMedication(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Epoetin Alfa (Epogen)"
-                  autoFocus
-                />
+                <div className="relative">
+                  <select
+                    value={formMedication}
+                    onChange={(e) => setFormMedication(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    autoFocus
+                  >
+                    <option value="">
+                      {language === "ES"
+                        ? "Seleccione un medicamento"
+                        : "Select a medication"}
+                    </option>
+                    {MEDICATION_OPTIONS.map((med) => (
+                      <option key={med} value={med}>
+                        {med}
+                      </option>
+                    ))}
+                    <option value={OTHER_MEDICATION}>
+                      {language === "ES" ? "Otro (escribir)" : "Other (type it in)"}
+                    </option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                </div>
+
+                {formMedication === OTHER_MEDICATION && (
+                  <input
+                    type="text"
+                    value={formMedicationOther}
+                    onChange={(e) => setFormMedicationOther(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder={
+                      language === "ES"
+                        ? "Nombre del medicamento"
+                        : "e.g. Epoetin Alfa (Epogen)"
+                    }
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -306,11 +405,45 @@ export default function MedicationsGivenSection() {
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={formDose}
                   onChange={(e) => setFormDose(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. 8,000 units"
+                  placeholder={language === "ES" ? "ej. 8,000" : "e.g. 8,000"}
                 />
+
+                {/* Unit */}
+                <div className="relative">
+                  <select
+                    value={formDoseUnit}
+                    onChange={(e) => setFormDoseUnit(e.target.value)}
+                    aria-label={language === "ES" ? "Unidad de dosis" : "Dose unit"}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {DOSE_UNITS.map((unit) => {
+                      const desc = language === "ES" ? unit.descEs : unit.descEn;
+                      return (
+                        <option key={unit.value} value={unit.value}>
+                          {desc ? `${unit.value} — ${desc}` : unit.value}
+                        </option>
+                      );
+                    })}
+                    <option value={OTHER_DOSE_UNIT}>
+                      {language === "ES" ? "Otra (escribir)" : "Other (type it in)"}
+                    </option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                </div>
+
+                {formDoseUnit === OTHER_DOSE_UNIT && (
+                  <input
+                    type="text"
+                    value={formDoseUnitOther}
+                    onChange={(e) => setFormDoseUnitOther(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder={language === "ES" ? "Unidad" : "Unit"}
+                  />
+                )}
               </div>
 
               <div className="space-y-1.5">

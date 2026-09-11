@@ -1,10 +1,38 @@
 "use client";
 
 import React from "react";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Edit3, Plus, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
 type HealthTab = "allergies" | "history";
+
+type AllergyType = "Medication" | "Food" | "Environmental";
+type AllergySeverity = "Severe" | "Moderate" | "Mild";
+type ConditionStatus = "Current" | "Past";
+
+type AllergyRow = {
+  id: string;
+  /** Set on user-added rows; seeded rows fall back to the sample name. */
+  name?: string;
+  type: AllergyType;
+  /** Seeded rows translate through this key; user-added rows omit it. */
+  reactionKey?: string;
+  reactionDefault: string;
+  severity: AllergySeverity;
+  /** Set on user-added rows; seeded rows show "Week N". */
+  notes?: string;
+  week?: number;
+};
+
+type HistoryRow = {
+  id: string;
+  conditionKey?: string;
+  conditionDefault: string;
+  status: ConditionStatus;
+  diagnosed: string;
+  notes?: string;
+  week?: number;
+};
 
 const rawAllergyRows = [
   {
@@ -266,10 +294,12 @@ function SectionHeader({
   title,
   description,
   buttonLabel,
+  onAddClick,
 }: {
   title: string;
   description: string;
   buttonLabel: string;
+  onAddClick: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -283,6 +313,7 @@ function SectionHeader({
       </div>
       <button
         type="button"
+        onClick={onAddClick}
         className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
       >
         <Plus className="h-5 w-5" />
@@ -292,7 +323,7 @@ function SectionHeader({
   );
 }
 
-function AllergiesTable() {
+function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
@@ -352,17 +383,20 @@ function AllergiesTable() {
           </tr>
         </thead>
         <tbody>
-          {rawAllergyRows.map((row, index) => {
-            const reactionText = getReaction(row.reactionKey, row.reactionDefault);
-            const notesText = `${weekPrefix} ${row.week}`;
+          {rows.map((row) => {
+            const reactionText = row.reactionKey
+              ? getReaction(row.reactionKey, row.reactionDefault)
+              : row.reactionDefault;
+            const notesText = row.notes ?? `${weekPrefix} ${row.week}`;
+            const nameText = row.name || sampleName;
 
             return (
               <tr
-                key={`${row.reactionKey}-${index}`}
+                key={row.id}
                 className="border-b border-dashed border-[#C4CDD5] last:border-0"
               >
                 <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
-                  {sampleName}
+                  {nameText}
                 </td>
                 <td className="h-[54px] px-3 py-2">
                   <Badge
@@ -384,7 +418,7 @@ function AllergiesTable() {
                 </td>
                 <td className="h-[54px] px-3 py-2">
                   <RowActions
-                    label={sampleName}
+                    label={nameText}
                     editLabel={h?.actions?.edit}
                     deleteLabel={h?.actions?.delete}
                   />
@@ -398,7 +432,7 @@ function AllergiesTable() {
   );
 }
 
-function MedicalHistoryTable() {
+function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
@@ -446,16 +480,15 @@ function MedicalHistoryTable() {
           </tr>
         </thead>
         <tbody>
-          {rawHistoryRows.map((row, index) => {
-            const conditionText = getConditionName(
-              row.conditionKey,
-              row.conditionDefault
-            );
-            const notesText = `${weekPrefix} ${row.week}`;
+          {rows.map((row) => {
+            const conditionText = row.conditionKey
+              ? getConditionName(row.conditionKey, row.conditionDefault)
+              : row.conditionDefault;
+            const notesText = row.notes ?? `${weekPrefix} ${row.week}`;
 
             return (
               <tr
-                key={`${row.conditionKey}-${index}`}
+                key={row.id}
                 className="border-b border-dashed border-[#C4CDD5] last:border-0"
               >
                 <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
@@ -489,10 +522,340 @@ function MedicalHistoryTable() {
   );
 }
 
+const FIELD_CLASS =
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
+
+function ModalShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+      <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalFooter({
+  onClose,
+  submitLabel,
+  cancelLabel,
+}: {
+  onClose: () => void;
+  submitLabel: string;
+  cancelLabel: string;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+      >
+        {cancelLabel}
+      </button>
+      <button
+        type="submit"
+        className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700 cursor-pointer"
+      >
+        {submitLabel}
+      </button>
+    </div>
+  );
+}
+
+function AddAllergyModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: (row: Omit<AllergyRow, "id">) => void;
+}) {
+  const { language, dictionary } = useLanguage();
+  const h = dictionary?.myHealth;
+  const isEs = language === "ES";
+
+  const [name, setName] = React.useState("");
+  const [type, setType] = React.useState<AllergyType>("Medication");
+  const [reaction, setReaction] = React.useState("");
+  const [severity, setSeverity] = React.useState<AllergySeverity>("Moderate");
+  const [notes, setNotes] = React.useState("");
+  const [error, setError] = React.useState("");
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim()) {
+      setError(isEs ? "Ingrese el nombre de la alergia." : "Enter an allergy name.");
+      return;
+    }
+    if (!reaction.trim()) {
+      setError(isEs ? "Ingrese la reacción." : "Enter a reaction.");
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      type,
+      reactionDefault: reaction.trim(),
+      severity,
+      notes: notes.trim() || "—",
+    });
+  };
+
+  return (
+    <ModalShell title={h?.allergies?.addBtn || "Add Allergy"} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        {error ? (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <label htmlFor="allergy-name" className="block text-xs font-bold text-slate-800">
+            {h?.allergies?.headers?.name || "Name"} <span className="text-rose-500">*</span>
+          </label>
+          <input
+            id="allergy-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={isEs ? "ej. Penicilina" : "e.g. Penicillin"}
+            className={FIELD_CLASS}
+            autoFocus
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="allergy-type" className="block text-xs font-bold text-slate-800">
+              {h?.allergies?.headers?.type || "Type"}
+            </label>
+            <select
+              id="allergy-type"
+              value={type}
+              onChange={(event) => setType(event.target.value as AllergyType)}
+              className={`${FIELD_CLASS} cursor-pointer`}
+            >
+              <option value="Medication">{h?.allergies?.types?.medication || "Medication"}</option>
+              <option value="Food">{h?.allergies?.types?.food || "Food"}</option>
+              <option value="Environmental">
+                {h?.allergies?.types?.environmental || "Environmental"}
+              </option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="allergy-severity" className="block text-xs font-bold text-slate-800">
+              {h?.allergies?.headers?.severity || "Severity"}
+            </label>
+            <select
+              id="allergy-severity"
+              value={severity}
+              onChange={(event) => setSeverity(event.target.value as AllergySeverity)}
+              className={`${FIELD_CLASS} cursor-pointer`}
+            >
+              <option value="Severe">{h?.allergies?.severities?.severe || "Severe"}</option>
+              <option value="Moderate">{h?.allergies?.severities?.moderate || "Moderate"}</option>
+              <option value="Mild">{h?.allergies?.severities?.mild || "Mild"}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="allergy-reaction" className="block text-xs font-bold text-slate-800">
+            {h?.allergies?.headers?.reaction || "Reaction"} <span className="text-rose-500">*</span>
+          </label>
+          <input
+            id="allergy-reaction"
+            value={reaction}
+            onChange={(event) => setReaction(event.target.value)}
+            placeholder={isEs ? "ej. Sarpullido, urticaria" : "e.g. Rash, Hives"}
+            className={FIELD_CLASS}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="allergy-notes" className="block text-xs font-bold text-slate-800">
+            {h?.allergies?.headers?.notes || "Notes"}
+          </label>
+          <textarea
+            id="allergy-notes"
+            rows={2}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={isEs ? "Opcional" : "Optional"}
+            className={`${FIELD_CLASS} resize-none`}
+          />
+        </div>
+
+        <ModalFooter
+          onClose={onClose}
+          cancelLabel={isEs ? "Cancelar" : "Cancel"}
+          submitLabel={h?.allergies?.addBtn || "Add Allergy"}
+        />
+      </form>
+    </ModalShell>
+  );
+}
+
+function AddConditionModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: (row: Omit<HistoryRow, "id">) => void;
+}) {
+  const { language, dictionary } = useLanguage();
+  const h = dictionary?.myHealth;
+  const isEs = language === "ES";
+
+  const [condition, setCondition] = React.useState("");
+  const [status, setStatus] = React.useState<ConditionStatus>("Current");
+  const [diagnosed, setDiagnosed] = React.useState("");
+  const [notes, setNotes] = React.useState("");
+  const [error, setError] = React.useState("");
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!condition.trim()) {
+      setError(isEs ? "Ingrese la condición." : "Enter a condition.");
+      return;
+    }
+
+    // The table shows DD/MM/YYYY; the date input hands back YYYY-MM-DD
+    let diagnosedText = "—";
+    if (diagnosed) {
+      const [year, month, day] = diagnosed.split("-");
+      diagnosedText = `${day}/${month}/${year}`;
+    }
+
+    onSave({
+      conditionDefault: condition.trim(),
+      status,
+      diagnosed: diagnosedText,
+      notes: notes.trim() || "—",
+    });
+  };
+
+  return (
+    <ModalShell title={h?.history?.addBtn || "Add Condition"} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        {error ? (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <label htmlFor="condition-name" className="block text-xs font-bold text-slate-800">
+            {h?.history?.headers?.condition || "Condition / History"}{" "}
+            <span className="text-rose-500">*</span>
+          </label>
+          <input
+            id="condition-name"
+            value={condition}
+            onChange={(event) => setCondition(event.target.value)}
+            placeholder={isEs ? "ej. Hipertensión" : "e.g. Hypertension"}
+            className={FIELD_CLASS}
+            autoFocus
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="condition-status" className="block text-xs font-bold text-slate-800">
+              {h?.history?.headers?.status || "Status"}
+            </label>
+            <select
+              id="condition-status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as ConditionStatus)}
+              className={`${FIELD_CLASS} cursor-pointer`}
+            >
+              <option value="Current">{h?.history?.statuses?.current || "Current"}</option>
+              <option value="Past">{h?.history?.statuses?.past || "Past"}</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="condition-diagnosed" className="block text-xs font-bold text-slate-800">
+              {h?.history?.headers?.diagnosed || "Diagnosed"}
+            </label>
+            <input
+              id="condition-diagnosed"
+              type="date"
+              value={diagnosed}
+              onChange={(event) => setDiagnosed(event.target.value)}
+              className={`${FIELD_CLASS} cursor-pointer`}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="condition-notes" className="block text-xs font-bold text-slate-800">
+            {h?.history?.headers?.notes || "Notes"}
+          </label>
+          <textarea
+            id="condition-notes"
+            rows={2}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={isEs ? "Opcional" : "Optional"}
+            className={`${FIELD_CLASS} resize-none`}
+          />
+        </div>
+
+        <ModalFooter
+          onClose={onClose}
+          cancelLabel={isEs ? "Cancelar" : "Cancel"}
+          submitLabel={h?.history?.addBtn || "Add Condition"}
+        />
+      </form>
+    </ModalShell>
+  );
+}
+
 export default function MyHealthPage() {
   const [activeTab, setActiveTab] = React.useState<HealthTab>("allergies");
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
+
+  const [allergyRows, setAllergyRows] = React.useState<AllergyRow[]>(() =>
+    rawAllergyRows.map((row, index) => ({ ...row, id: `allergy-seed-${index}` })),
+  );
+  const [historyRows, setHistoryRows] = React.useState<HistoryRow[]>(() =>
+    rawHistoryRows.map((row, index) => ({ ...row, id: `history-seed-${index}` })),
+  );
+
+  const [isAllergyModalOpen, setIsAllergyModalOpen] = React.useState(false);
+  const [isConditionModalOpen, setIsConditionModalOpen] = React.useState(false);
+
+  const handleAddAllergy = (row: Omit<AllergyRow, "id">) => {
+    setAllergyRows((prev) => [{ ...row, id: `allergy-${Date.now()}` }, ...prev]);
+    setIsAllergyModalOpen(false);
+  };
+
+  const handleAddCondition = (row: Omit<HistoryRow, "id">) => {
+    setHistoryRows((prev) => [{ ...row, id: `history-${Date.now()}` }, ...prev]);
+    setIsConditionModalOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -518,8 +881,9 @@ export default function MyHealthPage() {
                 "List of substances, medications, foods or environmental factors you are allergic to."
               }
               buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
+              onAddClick={() => setIsAllergyModalOpen(true)}
             />
-            <AllergiesTable />
+            <AllergiesTable rows={allergyRows} />
           </div>
         ) : (
           <div className="space-y-3.5">
@@ -530,11 +894,26 @@ export default function MyHealthPage() {
                 "Your past and current medical conditions, surgeries and major health events."
               }
               buttonLabel={h?.history?.addBtn || "Add Condition"}
+              onAddClick={() => setIsConditionModalOpen(true)}
             />
-            <MedicalHistoryTable />
+            <MedicalHistoryTable rows={historyRows} />
           </div>
         )}
       </section>
+
+      {isAllergyModalOpen ? (
+        <AddAllergyModal
+          onClose={() => setIsAllergyModalOpen(false)}
+          onSave={handleAddAllergy}
+        />
+      ) : null}
+
+      {isConditionModalOpen ? (
+        <AddConditionModal
+          onClose={() => setIsConditionModalOpen(false)}
+          onSave={handleAddCondition}
+        />
+      ) : null}
     </div>
   );
 }

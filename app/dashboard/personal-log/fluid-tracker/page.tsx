@@ -9,6 +9,7 @@ import {
   Calendar,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Droplets,
   FileText,
   Info,
@@ -1853,7 +1854,6 @@ function EditEdwModal({
   edwKg,
   todayWeightKg,
   edwNote,
-  todayDateStr,
   unit,
   onSave,
 }: {
@@ -1862,7 +1862,6 @@ function EditEdwModal({
   edwKg: number;
   todayWeightKg: number;
   edwNote: string;
-  todayDateStr: string;
   unit: "kg" | "lbs";
   onSave: (data: {
     edwKg: number;
@@ -1995,13 +1994,16 @@ function EditEdwModal({
             <label className="text-xs font-bold text-slate-800 block mb-1">
               {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
             </label>
-            <input
-              type="text"
-              value={formDate}
-              onChange={(e) => setFormDate(e.target.value)}
-              placeholder="May 31, 7:30 AM"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
-            />
+            {/* Recorded automatically from the clock when the settings are saved */}
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+              <Clock className="h-4 w-4 shrink-0 text-blue-600" />
+              <span className="text-sm font-semibold text-slate-900">
+                {formatNowStamp(language)}
+              </span>
+              <span className="ml-auto text-[11px] font-semibold text-slate-500">
+                {language === "ES" ? "Automático" : "Automatic"}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-2">
@@ -2335,7 +2337,6 @@ export default function FluidTrackerPage() {
         edwKg={edwKg}
         todayWeightKg={todayWeightKg}
         edwNote={edwNote}
-        todayDateStr={todayDateStr}
         unit={unit}
         onSave={handleSaveEdwSettings}
       />

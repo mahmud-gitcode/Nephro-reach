@@ -15,7 +15,6 @@ import {
   Droplets,
   HeartPulse,
   Minus,
-  Pill,
   Plus,
   Printer,
   Scale,
@@ -365,12 +364,11 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
   });
 
   // Vitals & Meds
-  const [fluidRemoved, setFluidRemoved] = useState("2.3");
+  const [fluidRemoved, setFluidRemoved] = useState("");
   const [preWeight, setPreWeight] = useState("74.7");
-  const [postWeight, setPostWeight] = useState("72.4");
-  const [bpPost, setBpPost] = useState("118 / 72");
-  const [pulsePost, setPulsePost] = useState("78");
-  const [meds, setMeds] = useState<string[]>(["EPO / Mircera", "Heparin"]);
+  const [postWeight, setPostWeight] = useState("");
+  const [bpPost, setBpPost] = useState("");
+  const [pulsePost, setPulsePost] = useState("");
   const [medNotes, setMedNotes] = useState("Took all meds after session.");
   const [generalNotes, setGeneralNotes] = useState("Feeling better after treatment. Plan to rest and drink fluids.");
 
@@ -422,7 +420,8 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
       postWeight,
       bloodPressurePost: bpPost,
       heartRatePost: pulsePost,
-      medicationsGiven: meds,
+      // Recorded in the Medications Administered table on the treatment page
+      medicationsGiven: [],
       medicationsOther: medNotes,
       otherNotes: generalNotes,
     };
@@ -672,11 +671,6 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   value={arrivedLate}
                   onChange={setArrivedLate}
                 />
-                <BinaryToggle
-                  label="Ended early"
-                  value={endedEarly}
-                  onChange={setEndedEarly}
-                />
                 <CounterField
                   label="Missed treatments"
                   value={missedTreatments}
@@ -853,15 +847,91 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
         {/* TAB 3: POST & RECOVERY */}
         {(activeTab === 3 || activeTab === 4) && (
           <div className="space-y-6">
-            <h2 className="text-base font-bold tracking-tight text-slate-900">
-              Recovery & Clinical Vitals
-            </h2>
+            {/* Post-dialysis condition — mirrors the Pre-Treatment block on Tab 1 */}
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold tracking-tight text-slate-900">
+                Post-Treatment Condition
+              </h3>
+
+              {/* Mood */}
+              <div className="grid grid-cols-5 gap-2.5">
+                {MOODS.map((m) => {
+                  const active = postFeel === m.level;
+                  const Icon = m.icon;
+                  return (
+                    <button
+                      key={m.level}
+                      type="button"
+                      onClick={() => setPostFeel(m.level)}
+                      className={`group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 transition-all cursor-pointer ${
+                        active
+                          ? "border-[#2563EB] bg-blue-50/40 text-blue-900 ring-2 ring-blue-500/20 shadow-xs scale-[1.02]"
+                          : "border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      <div className="relative flex items-center justify-center">
+                        <span className="absolute inset-0.5 rounded-full bg-white shadow-2xs" />
+                        <Icon className={`relative size-7 sm:size-8 transition-transform group-hover:scale-110 drop-shadow-xs ${m.color}`} />
+                      </div>
+                      <span className="text-xs font-bold tracking-tight">{m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Post Symptoms Chips */}
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
+                <h3 className="text-base font-bold tracking-tight text-slate-900">Post-Dialysis Symptoms</h3>
+                <div className="flex flex-wrap gap-2">
+                  {postOptions.map((sym) => {
+                    const sel = postSymptoms.includes(sym);
+                    return (
+                      <button
+                        key={sym}
+                        type="button"
+                        onClick={() => toggleItem(postSymptoms, setPostSymptoms, sym)}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                          sel
+                            ? "bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
+                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span>{sym}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Post Severity Sliders */}
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-3">
+                <h3 className="text-base font-bold tracking-tight text-slate-900">Symptom Severity (0–10)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {Object.keys(postSeverity).map((key) => (
+                    <SeverityRow
+                      key={key}
+                      label={key}
+                      value={postSeverity[key]}
+                      onChange={(v) => setPostSeverity({ ...postSeverity, [key]: v })}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Recovery Time Severity Toggle */}
             <div className="space-y-3">
               <h3 className="text-base font-bold tracking-tight text-slate-900">
                 Post-Treatment Recovery
               </h3>
+
+              <div className="space-y-1.5">
+                <BinaryToggle
+                  label="Ended early"
+                  value={endedEarly}
+                  onChange={setEndedEarly}
+                />
+              </div>
 
               <SeverityFiveToggle
                 label="Recovery time"
@@ -901,12 +971,14 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     <span className="text-xs font-semibold">Fluid Removed</span>
                     <Droplets className="size-4 text-slate-400" />
                   </div>
-                  <div className="flex items-baseline gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 pt-1">
                     <input
                       type="text"
+                      inputMode="decimal"
                       value={fluidRemoved}
                       onChange={(e) => setFluidRemoved(e.target.value)}
-                      className="w-20 bg-transparent text-xl font-bold text-slate-900 outline-none"
+                      placeholder="2.3"
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <span className="text-xs font-medium text-slate-500">Liters</span>
                   </div>
@@ -917,14 +989,18 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     <span className="text-xs font-semibold">Post Weight</span>
                     <Scale className="size-4 text-slate-400" />
                   </div>
-                  <div className="flex items-baseline gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 pt-1">
                     <input
                       type="text"
+                      inputMode="decimal"
                       value={postWeight}
                       onChange={(e) => setPostWeight(e.target.value)}
-                      className="w-16 bg-transparent text-xl font-bold text-slate-900 outline-none"
+                      placeholder="72.4"
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
-                    <span className="text-xs font-medium text-slate-500">kg (pre: {preWeight})</span>
+                    <span className="shrink-0 text-xs font-medium text-slate-500">
+                      kg{preWeight ? ` (pre: ${preWeight})` : ""}
+                    </span>
                   </div>
                 </div>
 
@@ -933,12 +1009,14 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     <span className="text-xs font-semibold">Blood Pressure</span>
                     <HeartPulse className="size-4 text-slate-400" />
                   </div>
-                  <div className="flex items-baseline gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 pt-1">
                     <input
                       type="text"
+                      inputMode="text"
                       value={bpPost}
                       onChange={(e) => setBpPost(e.target.value)}
-                      className="w-24 bg-transparent text-xl font-bold text-slate-900 outline-none"
+                      placeholder="120/80"
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <span className="text-xs font-medium text-slate-500">mmHg</span>
                   </div>
@@ -949,61 +1027,18 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     <span className="text-xs font-semibold">Heart Rate</span>
                     <Activity className="size-4 text-slate-400" />
                   </div>
-                  <div className="flex items-baseline gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 pt-1">
                     <input
                       type="text"
+                      inputMode="numeric"
                       value={pulsePost}
                       onChange={(e) => setPulsePost(e.target.value)}
-                      className="w-16 bg-transparent text-xl font-bold text-slate-900 outline-none"
+                      placeholder="72"
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <span className="text-xs font-medium text-slate-500">bpm</span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* In-Clinic Medications Given */}
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-              <h3 className="flex items-center gap-1.5 text-base font-bold tracking-tight text-slate-900">
-                <Pill className="size-4 text-slate-500" />
-                <span>Medications Administered</span>
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "Heparin",
-                  "Venofer",
-                  "Epogen",
-                  "Mircera",
-                  "Calcitriol",
-                  "Hectorol",
-                  "Zemplar",
-                  "Sensipar",
-                  "Parsabiv",
-                  "Clonidine",
-                  "Midodrine",
-                  "Korsuva",
-                  "Zofran",
-                  "Tylenol",
-                  "Benadryl",
-                  "Antibiotics",
-                  "Other",
-                ].map((med) => {
-                  const sel = meds.includes(med);
-                  return (
-                    <button
-                      key={med}
-                      type="button"
-                      onClick={() => toggleItem(meds, setMeds, med)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                        sel
-                          ? "bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
-                          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>{med}</span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
 
