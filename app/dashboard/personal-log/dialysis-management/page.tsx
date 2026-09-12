@@ -32,6 +32,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/components/dashboard/DialysisClinicCard";
+import TravelCard from "@/components/dashboard/TravelCard";
 import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface TreatmentInterval {
@@ -873,6 +874,8 @@ function DialysisManagementDashboard() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       <DialysisClinicCard />
+
+      <TravelCard />
 
       {/* ========================================================================= */}
       {/* ========================================================================= */}

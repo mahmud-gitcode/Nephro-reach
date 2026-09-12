@@ -12,11 +12,13 @@ import {
   Eye,
   HeartPulse,
   Pencil,
+  Plane,
   Plus,
   Scale,
   Timer,
 } from "lucide-react";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
+import { useDialysisTrips } from "@/lib/useDialysisTrips";
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/components/dashboard/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
@@ -261,15 +263,6 @@ function toDateInputValue(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** `6/24/2026` — the full date shown next to the picker. */
-function formatPickedDate(value: string, isEs: boolean) {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return value;
-  return isEs
-    ? `${day}/${month}/${year}`
-    : `${month}/${day}/${year}`;
-}
-
 /** Newest logged treatment, so the page opens on a day that has data. */
 const LATEST_ENTRY_DATE =
   [...mockDialysisEntries]
@@ -296,27 +289,29 @@ export default function DialysisTreatmentPage() {
       {/* MONTH PICKER & ADD ENTRY BUTTON */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex items-center gap-2.5 shrink-0">
-          <label className="relative flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs transition-colors hover:bg-slate-50 cursor-pointer">
-            <Calendar className="h-4 w-4 shrink-0 text-slate-600" />
-            <span className="tabular-nums">
-              {selectedDate
-                ? formatPickedDate(selectedDate, isEs)
-                : isEs
-                  ? "Todas las fechas"
-                  : "All dates"}
-            </span>
-            <span className="sr-only">
-              {isEs ? "Elegir fecha" : "Pick a date"}
-            </span>
+          <div className="relative flex shrink-0 items-center">
+            <Calendar className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-600" />
             <input
               type="date"
               value={selectedDate ?? ""}
-              onChange={(event) =>
-                setSelectedDate(event.target.value || null)
-              }
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-label={isEs ? "Elegir fecha" : "Pick a date"}
+              onChange={(event) => setSelectedDate(event.target.value || null)}
+              onClick={(event) => {
+                // Tapping anywhere on the field opens the calendar, not just
+                // the browser's own small icon.
+                const input = event.currentTarget;
+                if (typeof input.showPicker === "function") {
+                  try {
+                    input.showPicker();
+                  } catch {
+                    // Some browsers refuse outside a user gesture; focusing
+                    // still lets the field be typed into.
+                  }
+                }
+              }}
+              className="h-[42px] cursor-pointer rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-3.5 text-sm font-bold tabular-nums text-slate-800 shadow-2xs outline-none transition-colors hover:bg-slate-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
             />
-          </label>
+          </div>
 
           <button
             type="button"
@@ -361,6 +356,20 @@ export default function DialysisTreatmentPage() {
   );
 }
 
+function AwayBadge({ center }: { center: string }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  return (
+    <span
+      title={center}
+      className="mt-1 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700"
+    >
+      <Plane className="h-3 w-3" />
+      {isEs ? "Fuera" : "Away"}
+    </span>
+  );
+}
+
 function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] }) {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
@@ -394,6 +403,7 @@ function TreatmentEntriesTable({
   entries: DialysisLogEntry[];
   onShowAll: () => void;
 }) {
+  const { tripForDate } = useDialysisTrips();
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
@@ -504,6 +514,16 @@ function TreatmentEntriesTable({
                     {/* Attendance Status */}
                     <td className="px-4 py-3.5">
                       <AttendanceBadge status={entry.attendance} />
+                      {(() => {
+                        const trip = tripForDate(entry.date);
+                        return trip ? (
+                          <span className="block">
+                            <AwayBadge
+                              center={trip.awayCenter || trip.destination}
+                            />
+                          </span>
+                        ) : null;
+                      })()}
                     </td>
 
                     {/* Actions: View (Full Page) & Edit */}
