@@ -161,17 +161,20 @@ export function JourneyPanelRail({
   activeTab,
   open,
   onSelect,
+  tabs = TAB_ORDER,
 }: {
   activeTab: JourneyPanelTab;
   open: boolean;
   onSelect: (tab: JourneyPanelTab) => void;
+  /** Reading classes have nothing to seek, so they leave Transcript out. */
+  tabs?: JourneyPanelTab[];
 }) {
   const { dictionary } = useLanguage();
   const j = dictionary?.educationJourney;
 
   return (
     <div className="flex shrink-0 flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
-      {TAB_ORDER.map((tab) => {
+      {tabs.map((tab) => {
         const Icon = TAB_ICON[tab];
         const label = tabLabel(tab, j);
         const isActive = open && tab === activeTab;

@@ -7,8 +7,10 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
+  Headphones,
   LayoutList,
   PlayCircle,
   RotateCcw,
@@ -51,7 +53,7 @@ function DayStage({
   isComplete,
   onToggleComplete,
   onOpenDayList,
-  videoRef,
+  mediaRef,
   videoUnavailable,
   onTimeUpdate,
   onVideoError,
@@ -61,7 +63,7 @@ function DayStage({
   onToggleComplete: () => void;
   onOpenDayList: () => void;
   /** Owned by the page so the transcript tab can seek this same element. */
-  videoRef: React.RefObject<HTMLVideoElement | null>;
+  mediaRef: React.MutableRefObject<HTMLMediaElement | null>;
   videoUnavailable: boolean;
   onTimeUpdate: () => void;
   onVideoError: () => void;
@@ -72,10 +74,29 @@ function DayStage({
 
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-900 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
-        <div className="relative aspect-video w-full">
+      {day.kind === "reading" ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_0_60px_rgba(0,0,0,0.06)] sm:p-7">
+          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-700">
+            <BookOpen className="h-4 w-4" />
+            {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
+            {j?.minutesShort || "min"}
+          </p>
+
+          <article className="mt-4 space-y-4">
+            {day.transcript.map((cue) => (
+              <p
+                key={cue.at}
+                className="text-base leading-relaxed text-slate-700"
+              >
+                {isEs ? cue.textEs : cue.textEn}
+              </p>
+            ))}
+          </article>
+        </section>
+      ) : (
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-900 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
           {videoUnavailable ? (
-            <>
+            <div className="relative aspect-video w-full">
               <Image
                 src={day.poster}
                 alt=""
@@ -85,7 +106,11 @@ function DayStage({
                 priority
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
-                <PlayCircle className="h-12 w-12 text-white/70" />
+                {day.kind === "audio" ? (
+                  <Headphones className="h-12 w-12 text-white/70" />
+                ) : (
+                  <PlayCircle className="h-12 w-12 text-white/70" />
+                )}
                 <p className="text-base font-semibold text-white">
                   {j?.videoUnavailableTitle || "Video coming soon"}
                 </p>
@@ -94,21 +119,56 @@ function DayStage({
                     "The full transcript for this lesson is available below."}
                 </p>
               </div>
+            </div>
+          ) : day.kind === "audio" ? (
+            <>
+              <div className="relative aspect-[21/9] w-full">
+                <Image
+                  src={day.poster}
+                  alt=""
+                  fill
+                  className="object-cover opacity-50"
+                  sizes="(min-width: 1280px) 560px, 100vw"
+                  priority
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <Headphones className="h-12 w-12 text-white/80" />
+                  <p className="text-sm font-semibold text-white/90">
+                    {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
+                    {j?.minutesShort || "min"}
+                  </p>
+                </div>
+              </div>
+              <div className="p-4">
+                <audio
+                  ref={(element) => {
+                    mediaRef.current = element;
+                  }}
+                  src={day.videoSrc}
+                  controls
+                  preload="metadata"
+                  onTimeUpdate={onTimeUpdate}
+                  onError={onVideoError}
+                  className="w-full"
+                />
+              </div>
             </>
           ) : (
             <video
-              ref={videoRef}
+              ref={(element) => {
+                mediaRef.current = element;
+              }}
               src={day.videoSrc}
               poster={day.poster}
               controls
               preload="metadata"
               onTimeUpdate={onTimeUpdate}
               onError={onVideoError}
-              className="h-full w-full bg-black"
+              className="aspect-video w-full bg-black"
             />
           )}
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_0_60px_rgba(0,0,0,0.06)] sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -196,7 +256,7 @@ export default function JourneyDayPage() {
 
   // Playback lives here so the transcript tab and the player share one source
   // of truth. Tagging it with the slug resets it on navigation without an effect.
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [playback, setPlayback] = useState({
     slug,
     seconds: 0,
@@ -206,7 +266,7 @@ export default function JourneyDayPage() {
     playback.slug === slug ? playback : { slug, seconds: 0, unavailable: false };
 
   const handleTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
+    const video = mediaRef.current;
     if (!video) return;
 
     const seconds = Math.floor(video.currentTime);
@@ -234,7 +294,7 @@ export default function JourneyDayPage() {
   }, [slug]);
 
   const seekTo = useCallback((seconds: number) => {
-    const video = videoRef.current;
+    const video = mediaRef.current;
     if (!video) return;
     video.currentTime = seconds;
     void video.play().catch(() => {
@@ -288,6 +348,12 @@ export default function JourneyDayPage() {
     );
   }
 
+  const isReading = day.kind === "reading";
+  const panelTabs: JourneyPanelTab[] = isReading
+    ? ["overview", "documents", "notes"]
+    : ["transcript", "overview", "documents", "notes"];
+  const activePanelTab = panelTabs.includes(panelTab) ? panelTab : "overview";
+
   const state = getProgress(day.slug);
   const isComplete = state.status === "completed";
   const note = getNote(day.slug);
@@ -336,7 +402,7 @@ export default function JourneyDayPage() {
                 isComplete ? markIncomplete(day.slug) : markComplete(day.slug)
               }
               onOpenDayList={() => setDayListOpen(true)}
-              videoRef={videoRef}
+              mediaRef={mediaRef}
               videoUnavailable={currentPlayback.unavailable}
               onTimeUpdate={handleTimeUpdate}
               onVideoError={handleVideoError}
@@ -386,7 +452,7 @@ export default function JourneyDayPage() {
               <div className="flex h-full max-h-[calc(100vh-2rem)] w-[340px] flex-col rounded-3xl border border-slate-200 bg-white shadow-[0_0_60px_rgba(0,0,0,0.06)]">
                 <JourneyPanelContent
                   day={day}
-                  activeTab={panelTab}
+                  activeTab={activePanelTab}
                   onClose={closePanel}
                   note={note}
                   onNoteChange={(value) => setNote(day.slug, value)}
@@ -403,9 +469,10 @@ export default function JourneyDayPage() {
             </div>
 
             <JourneyPanelRail
-              activeTab={panelTab}
+              activeTab={activePanelTab}
               open={panelOpen}
               onSelect={handleSelectTab}
+              tabs={panelTabs}
             />
           </div>
         </div>
@@ -463,7 +530,7 @@ export default function JourneyDayPage() {
       <JourneyResourceDrawer
         day={day}
         open={panelOpen}
-        activeTab={panelTab}
+        activeTab={activePanelTab}
         onClose={closePanel}
         note={note}
         onNoteChange={(value) => setNote(day.slug, value)}
