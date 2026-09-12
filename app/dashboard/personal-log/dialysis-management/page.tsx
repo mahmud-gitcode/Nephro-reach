@@ -4,7 +4,6 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Bell,
   Calendar,
   Clock,
@@ -32,6 +31,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
+import DialysisClinicCard from "@/components/dashboard/DialysisClinicCard";
 import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface TreatmentInterval {
@@ -324,6 +324,22 @@ function scheduledOnOrBefore(from: Date, isTreatmentDay: IsTreatmentDay) {
   return from;
 }
 
+/** Walks `offset` prescribed treatment days from `base`. */
+function shiftScheduledDate(
+  base: Date,
+  offset: number,
+  isTreatmentDay: IsTreatmentDay,
+) {
+  let cursor = base;
+  for (let step = 0; step < Math.abs(offset); step++) {
+    cursor =
+      offset > 0
+        ? nextScheduledDate(cursor, isTreatmentDay)
+        : scheduledOnOrBefore(addDays(cursor, -1), isTreatmentDay);
+  }
+  return cursor;
+}
+
 /** Position of a treatment date within its own month (1-based). */
 function treatmentNumberInMonth(d: Date, isTreatmentDay: IsTreatmentDay) {
   let count = 0;
@@ -372,6 +388,8 @@ function DialysisManagementDashboard() {
     : ALL_WEEKDAYS;
   // How a saved week setting should be applied
   const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
+  // 0 is the treatment period around today; the arrows step either way.
+  const [treatmentOffset, setTreatmentOffset] = useState(0);
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string>("tx-4");
   const [activeTab, setActiveTab] = useState<"treatments" | "analytics" | "questions">("treatments");
@@ -827,7 +845,11 @@ function DialysisManagementDashboard() {
   // independent of whichever month the list below is showing.
   const currentTreatment = (() => {
     if (selectedDays.length === 0) return null;
-    const start = scheduledOnOrBefore(today, isTreatmentDay);
+    const start = shiftScheduledDate(
+      scheduledOnOrBefore(today, isTreatmentDay),
+      treatmentOffset,
+      isTreatmentDay,
+    );
     const end = nextScheduledDate(start, isTreatmentDay);
     const number = treatmentNumberInMonth(start, isTreatmentDay);
 
@@ -850,16 +872,7 @@ function DialysisManagementDashboard() {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Top Breadcrumb Navigation */}
-      <div>
-        <Link
-          href="/dashboard/personal-log"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {isEs ? "Volver a Registro Personal" : "Back to Personal Log"}
-        </Link>
-      </div>
+      <DialysisClinicCard />
 
       {/* ========================================================================= */}
       {/* ========================================================================= */}
@@ -879,8 +892,41 @@ function DialysisManagementDashboard() {
               </h2>
             </div>
 
-            {/* Date Section: Start and End blocks inside an inner gray card (identical to treatment card) */}
+            {/* Date Section: arrows step through prescribed treatment periods */}
             <div className="my-4 rounded-2xl bg-slate-50 border border-slate-100/90 p-3.5 sm:p-4 space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTreatmentOffset((value) => value - 1)}
+                  aria-label={isEs ? "Tratamiento anterior" : "Previous treatment"}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {treatmentOffset === 0 ? (
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    {isEs ? "Actual" : "Current"}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setTreatmentOffset(0)}
+                    className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 transition-colors hover:bg-blue-100 cursor-pointer"
+                  >
+                    {isEs ? "Volver a hoy" : "Back to today"}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setTreatmentOffset((value) => value + 1)}
+                  aria-label={isEs ? "Tratamiento siguiente" : "Next treatment"}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
               {/* Start Block */}
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">

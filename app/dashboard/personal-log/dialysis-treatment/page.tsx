@@ -254,11 +254,40 @@ function SymptomsDonut() {
   );
 }
 
+/** `2026-06-24` for a date input. */
+function toDateInputValue(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** `6/24/2026` — the full date shown next to the picker. */
+function formatPickedDate(value: string, isEs: boolean) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return isEs
+    ? `${day}/${month}/${year}`
+    : `${month}/${day}/${year}`;
+}
+
+/** Newest logged treatment, so the page opens on a day that has data. */
+const LATEST_ENTRY_DATE =
+  [...mockDialysisEntries]
+    .map((entry) => entry.date)
+    .sort()
+    .pop() ?? toDateInputValue(new Date());
+
 export default function DialysisTreatmentPage() {
   const { language, dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
-  const [selectedMonth] = useState("Jun");
-  const displayMonth = language === "ES" ? "Jun" : selectedMonth;
+  const isEs = language === "ES";
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    LATEST_ENTRY_DATE,
+  );
+
+  const visibleEntries = selectedDate
+    ? mockDialysisEntries.filter((entry) => entry.date === selectedDate)
+    : mockDialysisEntries;
 
   return (
     <div className="w-full space-y-6">
@@ -267,12 +296,34 @@ export default function DialysisTreatmentPage() {
       {/* MONTH PICKER & ADD ENTRY BUTTON */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex items-center gap-2.5 shrink-0">
+          <label className="relative flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs transition-colors hover:bg-slate-50 cursor-pointer">
+            <Calendar className="h-4 w-4 shrink-0 text-slate-600" />
+            <span className="tabular-nums">
+              {selectedDate
+                ? formatPickedDate(selectedDate, isEs)
+                : isEs
+                  ? "Todas las fechas"
+                  : "All dates"}
+            </span>
+            <span className="sr-only">
+              {isEs ? "Elegir fecha" : "Pick a date"}
+            </span>
+            <input
+              type="date"
+              value={selectedDate ?? ""}
+              onChange={(event) =>
+                setSelectedDate(event.target.value || null)
+              }
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+
           <button
             type="button"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
+            onClick={() => setSelectedDate(toDateInputValue(new Date()))}
+            className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs transition-colors hover:bg-slate-50 cursor-pointer"
           >
-            <Calendar className="h-4 w-4 text-slate-600" />
-            <span>{displayMonth}</span>
+            {isEs ? "Hoy" : "Today"}
           </button>
 
           <Link
@@ -302,7 +353,10 @@ export default function DialysisTreatmentPage() {
       </section>
 
       {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
-      <TreatmentEntriesTable />
+      <TreatmentEntriesTable
+        entries={visibleEntries}
+        onShowAll={() => setSelectedDate(null)}
+      />
     </div>
   );
 }
@@ -333,9 +387,35 @@ function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] })
   );
 }
 
-function TreatmentEntriesTable() {
-  const { dictionary } = useLanguage();
+function TreatmentEntriesTable({
+  entries,
+  onShowAll,
+}: {
+  entries: DialysisLogEntry[];
+  onShowAll: () => void;
+}) {
+  const { language, dictionary } = useLanguage();
+  const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
+
+  if (entries.length === 0) {
+    return (
+      <section className="rounded-3xl border border-slate-200/80 bg-white p-10 text-center shadow-2xs">
+        <p className="text-sm font-semibold text-slate-600">
+          {isEs
+            ? "No hay tratamiento registrado en esta fecha."
+            : "No treatment logged on this date."}
+        </p>
+        <button
+          type="button"
+          onClick={onShowAll}
+          className="mt-4 inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-2xs transition-colors hover:bg-slate-50 cursor-pointer"
+        >
+          {isEs ? "Ver todas las fechas" : "Show all dates"}
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs">
@@ -356,7 +436,7 @@ function TreatmentEntriesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {mockDialysisEntries.map((entry) => {
+              {entries.map((entry) => {
                 const symptomsList = entry.preSymptoms
                   .concat(entry.intraSymptoms)
                   .filter((s) => s !== "None / Comfortable")
