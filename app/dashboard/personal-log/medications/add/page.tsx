@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface FieldConfig {
   labelKey: string;
@@ -54,6 +55,8 @@ export default function AddMedicationPage() {
 
   return (
     <div className="mx-auto max-w-[672px]">
+      <PersonalLogDisclaimer />
+
       <Link
         href="/dashboard/personal-log/medications"
         className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"

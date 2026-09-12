@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { getJourneyDayBySlug } from "@/lib/dialysisJourneyData";
 import { UserRole } from "@/lib/auth";
 import EmergencyModal from "@/components/dashboard/EmergencyModal";
 import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
@@ -161,6 +162,14 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Miembros" : "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Manage curriculum";
+  if (pathname.startsWith("/dashboard/education-center/")) {
+    const journeyDay = getJourneyDayBySlug(pathname.split("/").pop() || "");
+    if (journeyDay) {
+      return language === "ES"
+        ? `Día ${journeyDay.day} · ${journeyDay.titleEs}`
+        : `Day ${journeyDay.day} · ${journeyDay.titleEn}`;
+    }
+  }
   if (pathname.startsWith("/dashboard/education-center"))
     return language === "ES" ? "Centro Educativo" : "Education Center";
   if (pathname.startsWith("/dashboard/live-class"))

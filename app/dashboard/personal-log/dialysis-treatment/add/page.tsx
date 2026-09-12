@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DialysisDaySymptomLogForm from "@/components/dashboard/DialysisDaySymptomLogForm";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 export default function AddDialysisTreatmentPage() {
   const { dictionary } = useLanguage();
@@ -12,6 +13,8 @@ export default function AddDialysisTreatmentPage() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4 py-2">
+      <PersonalLogDisclaimer />
+
       <div className="flex items-center gap-2">
         <Link
           href="/dashboard/personal-log/dialysis-treatment"

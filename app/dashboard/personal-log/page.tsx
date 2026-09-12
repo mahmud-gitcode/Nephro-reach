@@ -14,6 +14,7 @@ import {
   Plus,
   User,
 } from "lucide-react";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -193,6 +194,8 @@ export default function PersonalLogPage() {
 
   return (
     <div className="w-full space-y-6">
+      <PersonalLogDisclaimer />
+
       <header>
         <h1 className="text-2xl sm:text-3xl font-semibold text-[#0F172A]">
           {greetingPrefix}, {firstName}

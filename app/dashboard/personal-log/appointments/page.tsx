@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import {
-  AlertCircle,
   ChevronRight,
   Clock3,
   LocateFixed,
@@ -13,6 +12,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface AppointmentItem {
   id: string;
@@ -292,26 +292,6 @@ function NextAppointment() {
   );
 }
 
-function Disclaimer() {
-  const { t } = useLanguage();
-
-  return (
-    <aside className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-orange-50 p-3.5">
-      <div className="flex gap-2">
-        <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
-        <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">
-            {t("appointments.disclaimerTitle")}
-          </h2>
-          <p className="mt-2 max-w-[760px] text-sm leading-5 text-slate-700">
-            {t("appointments.disclaimerText")}
-          </p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 export default function AppointmentsPage() {
   const { t } = useLanguage();
   const [appointments, setAppointments] = useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
@@ -371,6 +351,8 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-8">
+      <PersonalLogDisclaimer />
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[32px] font-medium leading-none text-slate-950">
@@ -394,8 +376,6 @@ export default function AppointmentsPage() {
         <UpcomingAppointments items={appointments} />
         <NextAppointment />
       </section>
-
-      <Disclaimer />
 
       {/* ADD APPOINTMENT MODAL */}
       {isModalOpen && (

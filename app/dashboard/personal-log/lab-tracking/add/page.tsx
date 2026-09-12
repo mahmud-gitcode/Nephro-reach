@@ -14,6 +14,7 @@ import {
   FaHeartPulse,
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface TestItem {
   id: string;
@@ -305,6 +306,8 @@ export default function AddLabTrackingPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      <PersonalLogDisclaimer />
+
       {savedSuccess && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 transition-all">
           <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />

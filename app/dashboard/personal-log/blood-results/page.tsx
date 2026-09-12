@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
 import {
-  AlertCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -10,6 +9,7 @@ import {
   ScanLine,
   Trash2,
 } from "lucide-react";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 const latestResults = [
   { label: "CREATININE", value: "0.9", unit: "umol/L", normal: "Normal: 60-110" },
@@ -184,27 +184,11 @@ function TestHistoryCard() {
   );
 }
 
-function Disclaimer() {
-  return (
-    <aside className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-orange-50 p-3.5">
-      <div className="flex gap-2">
-        <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
-        <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">Important Disclaimer</h2>
-          <p className="mt-2 max-w-[840px] text-sm leading-5 text-slate-700">
-            This is not medical advice. If this is a medical emergency, contact your care team or
-            emergency services. Always discuss lab results and treatment decisions with your
-            nephrology provider.
-          </p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 export default function BloodResultsPage() {
   return (
     <div className="space-y-6">
+      <PersonalLogDisclaimer />
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
@@ -262,8 +246,6 @@ export default function BloodResultsPage() {
       >
         View All Results
       </button>
-
-      <Disclaimer />
     </div>
   );
 }

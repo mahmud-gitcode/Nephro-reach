@@ -27,6 +27,7 @@ import {
   FaArrowTrendDown,
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -701,6 +702,8 @@ export default function MyLabsPage() {
 
   return (
     <div className="w-full space-y-6">
+      <PersonalLogDisclaimer />
+
       {/* 1. Top KPI Summary Cards */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Card 1: Latest Lab Date */}

@@ -11,7 +11,6 @@ import {
   Droplets,
   Eye,
   HeartPulse,
-  Info,
   Pencil,
   Plus,
   Scale,
@@ -20,6 +19,7 @@ import {
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/components/dashboard/MedicationsGivenSection";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 function SummaryCards() {
   const { dictionary } = useLanguage();
@@ -262,16 +262,10 @@ export default function DialysisTreatmentPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* TOP EDUCATIONAL BANNER, MONTH PICKER & ADD ENTRY BUTTON */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2.5 rounded-2xl border border-amber-200/80 bg-[#FFFBEB] px-4 py-3 text-xs sm:text-sm font-semibold text-[#92400E] shadow-2xs flex-1">
-          <Info className="h-5 w-5 shrink-0 text-[#B45309]" />
-          <span>
-            {dt?.topBanner ||
-              "Completing prescribed treatments is important for dialysis adequacy"}
-          </span>
-        </div>
+      <PersonalLogDisclaimer />
 
+      {/* MONTH PICKER & ADD ENTRY BUTTON */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"

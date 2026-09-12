@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  AlertCircle,
   Apple,
   CheckCircle2,
   ChevronRight,
@@ -15,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -648,28 +648,6 @@ function TipsCard() {
   );
 }
 
-function Disclaimer() {
-  const { dictionary } = useLanguage();
-  const n = dictionary?.nutrition;
-
-  return (
-    <aside className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-orange-50 p-3.5">
-      <div className="flex gap-2">
-        <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
-        <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">
-            {n?.disclaimer?.title || "Important Disclaimer"}
-          </h2>
-          <p className="mt-2 max-w-[760px] text-sm leading-5 text-slate-700">
-            {n?.disclaimer?.text ||
-              "This tool is for education and tracking only. Always discuss diet changes, lab results, and treatment decisions with your nephrology provider."}
-          </p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 const FIELD_CLASS =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
 
@@ -1234,6 +1212,8 @@ export default function NutritionPage() {
 
   return (
     <div className="space-y-6">
+      <PersonalLogDisclaimer />
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[32px] font-medium leading-none text-slate-950">
@@ -1279,8 +1259,6 @@ export default function NutritionPage() {
           <TipsCard />
         </div>
       </section>
-
-      <Disclaimer />
 
       {addFoodMeal ? (
         <AddFoodModal

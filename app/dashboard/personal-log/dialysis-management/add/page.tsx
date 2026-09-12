@@ -2,6 +2,7 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 function AddRedirectHandler() {
   const router = useRouter();
@@ -26,8 +27,12 @@ function AddRedirectHandler() {
 
 export default function AddDialysisRecordPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
-      <AddRedirectHandler />
-    </Suspense>
+    <>
+      <PersonalLogDisclaimer />
+
+      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+        <AddRedirectHandler />
+      </Suspense>
+    </>
   );
 }

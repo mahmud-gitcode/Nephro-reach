@@ -5,6 +5,7 @@ import Image from "next/image";
 import { BookOpen, ChevronDown, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 const defaultJournalEntries = [
   {
@@ -262,6 +263,8 @@ export default function DialysisJournalPage() {
 
   return (
     <div className="space-y-6">
+      <PersonalLogDisclaimer />
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[32px] font-medium leading-none text-slate-950">

@@ -12,6 +12,7 @@ import {
   ScanLine,
   Upload,
 } from "lucide-react";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 type Field = {
   label: string;
@@ -184,6 +185,8 @@ export default function AddBloodResultsPage() {
 
   return (
     <div className="space-y-6">
+      <PersonalLogDisclaimer />
+
       <header className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <Link

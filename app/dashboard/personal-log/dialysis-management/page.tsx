@@ -31,6 +31,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface TreatmentInterval {
   id: string;
@@ -1912,8 +1913,12 @@ function DialysisManagementDashboard() {
 
 export default function DialysisManagementPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
-      <DialysisManagementDashboard />
-    </Suspense>
+    <>
+      <PersonalLogDisclaimer />
+
+      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+        <DialysisManagementDashboard />
+      </Suspense>
+    </>
   );
 }

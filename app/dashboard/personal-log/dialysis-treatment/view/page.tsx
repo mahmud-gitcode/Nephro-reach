@@ -22,6 +22,7 @@ import {
 } from "react-icons/bs";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 const MOOD_CONFIG: Record<
   number,
@@ -482,8 +483,12 @@ function FallbackLoading() {
 
 export default function ViewDialysisTreatmentPage() {
   return (
-    <Suspense fallback={<FallbackLoading />}>
-      <TreatmentDetailContent />
-    </Suspense>
+    <>
+      <PersonalLogDisclaimer />
+
+      <Suspense fallback={<FallbackLoading />}>
+        <TreatmentDetailContent />
+      </Suspense>
+    </>
   );
 }

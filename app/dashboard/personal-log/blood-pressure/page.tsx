@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import {
-  AlertCircle,
   Download,
   Edit3,
   HeartPulse,
@@ -12,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 const readingGroupsData = [
   {
@@ -385,37 +385,17 @@ function ReadingGuide() {
   );
 }
 
-function Disclaimer() {
-  const { t } = useLanguage();
-
-  return (
-    <aside className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-orange-50 p-3.5">
-      <div className="flex gap-2">
-        <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
-        <div>
-          <h2 className="text-lg font-medium leading-7 text-slate-950">
-            {t("bloodPressure.disclaimerTitle")}
-          </h2>
-          <p className="mt-2 max-w-[840px] text-sm leading-5 text-slate-700">
-            {t("bloodPressure.disclaimerText")}
-          </p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 export default function BloodPressureLogPage() {
   return (
     <div className="space-y-4">
+      <PersonalLogDisclaimer />
+
       <DailyBloodPressureList />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_257px]">
         <TrendChart />
         <ReadingGuide />
       </section>
-
-      <Disclaimer />
     </div>
   );
 }

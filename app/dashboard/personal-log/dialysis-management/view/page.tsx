@@ -20,6 +20,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 interface ProviderOrder {
   id: string;
@@ -1220,8 +1221,12 @@ function ViewRecordContent() {
 
 export default function DialysisManagementViewPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
-      <ViewRecordContent />
-    </Suspense>
+    <>
+      <PersonalLogDisclaimer />
+
+      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+        <ViewRecordContent />
+      </Suspense>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Check, Clock3, HeartPulse, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
 
 export default function AddBloodPressurePage() {
   const { language, t } = useLanguage();
@@ -25,6 +26,8 @@ export default function AddBloodPressurePage() {
 
   return (
     <div className="mx-auto max-w-[429px]">
+      <PersonalLogDisclaimer />
+
       <section className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] p-3">
         <header className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red-100 text-red-500">
