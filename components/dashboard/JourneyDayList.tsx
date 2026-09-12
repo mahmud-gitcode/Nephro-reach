@@ -1,29 +1,139 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Check, Lock, PlayCircle } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Headphones,
+  Lock,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PlayCircle,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   JOURNEY_PHASES,
   JourneyDay,
+  JourneyMediaKind,
+  JourneyPhaseKey,
   PHASE_ORDER,
 } from "@/lib/dialysisJourneyData";
 import type { JourneyDayProgress } from "@/lib/useJourneyProgress";
 
+const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
+  video: PlayCircle,
+  audio: Headphones,
+  reading: BookOpen,
+};
+
+function kindLabel(
+  kind: JourneyMediaKind,
+  j: Record<string, string> | undefined,
+): string {
+  if (kind === "audio") return j?.typeAudio || "Audio";
+  if (kind === "reading") return j?.typeReading || "Reading";
+  return j?.typeVideo || "Video";
+}
+
+/** Narrow strip shown in place of the rail once it is minimised. */
+function CollapsedRail({
+  days,
+  activeSlug,
+  getProgress,
+  completedCount,
+  totalDays,
+  onExpand,
+}: {
+  days: JourneyDay[];
+  activeSlug: string;
+  getProgress: (slug: string) => JourneyDayProgress;
+  completedCount: number;
+  totalDays: number;
+  onExpand: () => void;
+}) {
+  const { language, dictionary } = useLanguage();
+  const isEs = language === "ES";
+  const j = dictionary?.educationJourney;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-slate-200 px-2 py-3">
+        <button
+          type="button"
+          onClick={onExpand}
+          title={j?.expandSidebar || "Expand day list"}
+          aria-label={j?.expandSidebar || "Expand day list"}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+        >
+          <PanelLeftOpen className="h-5 w-5" />
+        </button>
+        <span className="text-[11px] font-bold tabular-nums text-slate-600">
+          {completedCount}/{totalDays}
+        </span>
+      </div>
+
+      <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 py-3">
+        {days.map((day) => {
+          const state = getProgress(day.slug);
+          const isActive = day.slug === activeSlug;
+          const isDone = state.status === "completed";
+          const title = `${j?.dayLabel || "Day"} ${day.day} · ${
+            isEs ? day.titleEs : day.titleEn
+          }`;
+
+          return (
+            <li key={day.slug}>
+              <Link
+                href={`/dashboard/education-center/${day.slug}`}
+                title={title}
+                aria-label={title}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex h-9 w-full items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                  isDone
+                    ? "bg-emerald-500 text-white"
+                    : isActive
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {isDone ? <Check className="h-4 w-4" /> : day.day}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 /**
- * The "all days" rail shown beside the player. Days are grouped by week so the
- * list stays scannable at 21 entries.
+ * The "all days" rail shown beside the player.
+ *
+ * The progress summary and each week heading stay put while only the day rows
+ * scroll; weeks collapse individually, and the whole rail can be minimised to
+ * a strip of day numbers.
  */
 export default function JourneyDayList({
   days,
   activeSlug,
   getProgress,
+  completedCount,
+  totalDays,
+  collapsed = false,
+  onToggleCollapse,
   onNavigate,
 }: {
   days: JourneyDay[];
   activeSlug: string;
   getProgress: (slug: string) => JourneyDayProgress;
+  completedCount: number;
+  totalDays: number;
+  /** Renders the narrow strip instead of the full rail. */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   /** Lets the mobile drawer close itself once a day is picked. */
   onNavigate?: () => void;
 }) {
@@ -31,92 +141,186 @@ export default function JourneyDayList({
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
 
+  const [closedWeeks, setClosedWeeks] = useState<JourneyPhaseKey[]>([]);
+
+  const toggleWeek = (phaseKey: JourneyPhaseKey) => {
+    setClosedWeeks((current) =>
+      current.includes(phaseKey)
+        ? current.filter((key) => key !== phaseKey)
+        : [...current, phaseKey],
+    );
+  };
+
+  const overallPercent = Math.round((completedCount / totalDays) * 100);
+
+  if (collapsed && onToggleCollapse) {
+    return (
+      <CollapsedRail
+        days={days}
+        activeSlug={activeSlug}
+        getProgress={getProgress}
+        completedCount={completedCount}
+        totalDays={totalDays}
+        onExpand={onToggleCollapse}
+      />
+    );
+  }
+
   return (
-    <nav aria-label={j?.allDays || "All days"} className="flex flex-col gap-5">
-      {PHASE_ORDER.map((phaseKey) => {
-        const phase = JOURNEY_PHASES[phaseKey];
-        const phaseDays = days.filter((day) => day.phase === phaseKey);
-        if (phaseDays.length === 0) return null;
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="shrink-0 border-b border-slate-200 px-4 py-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="truncate text-xs font-bold uppercase tracking-wide text-slate-500">
+            {j?.yourProgress || "Your progress"}
+          </h2>
 
-        const phaseComplete = phaseDays.filter(
-          (day) => getProgress(day.slug).status === "completed",
-        ).length;
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              title={j?.collapseSidebar || "Minimise day list"}
+              aria-label={j?.collapseSidebar || "Minimise day list"}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+            >
+              <PanelLeftClose className="h-4.5 w-4.5" />
+            </button>
+          )}
+        </div>
 
-        return (
-          <section key={phaseKey}>
-            <div className="flex items-baseline justify-between gap-2 px-1">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                {isEs ? phase.labelEs : phase.labelEn}
+        <p className="mt-1 text-sm font-bold text-slate-900">
+          {completedCount}/{totalDays} {j?.daysLabel || "days"}
+        </p>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
+            style={{ width: `${overallPercent}%` }}
+          />
+        </div>
+      </header>
+
+      <nav
+        aria-label={j?.allDays || "All days"}
+        className="min-h-0 flex-1 overflow-y-auto pb-3"
+      >
+        {PHASE_ORDER.map((phaseKey) => {
+          const phase = JOURNEY_PHASES[phaseKey];
+          const phaseDays = days.filter((day) => day.phase === phaseKey);
+          if (phaseDays.length === 0) return null;
+
+          const phaseComplete = phaseDays.filter(
+            (day) => getProgress(day.slug).status === "completed",
+          ).length;
+          const isOpen = !closedWeeks.includes(phaseKey);
+          const panelId = `journey-week-${phaseKey}`;
+
+          return (
+            <section key={phaseKey}>
+              {/* Stays pinned to the top of the scroll area while days pass under it. */}
+              <h3 className="sticky top-0 z-10 bg-white">
+                <button
+                  type="button"
+                  onClick={() => toggleWeek(phaseKey)}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  className="flex w-full items-center gap-2 border-b border-slate-100 px-4 py-2.5 text-left transition-colors hover:bg-slate-50 cursor-pointer"
+                >
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                  )}
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                      {isEs ? phase.moduleEs : phase.moduleEn}
+                    </span>
+                    <span className="block truncate text-base font-semibold leading-6 text-slate-950">
+                      {isEs ? phase.titleEs : phase.titleEn}
+                    </span>
+                  </span>
+
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                    {phaseComplete}/{phaseDays.length}
+                  </span>
+                </button>
               </h3>
-              <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                {phaseComplete}/{phaseDays.length}
-              </span>
-            </div>
 
-            <ul className="mt-2 flex flex-col gap-1">
-              {phaseDays.map((day) => {
-                const state = getProgress(day.slug);
-                const isActive = day.slug === activeSlug;
-                const isDone = state.status === "completed";
+              {isOpen && (
+                <ul id={panelId} className="flex flex-col gap-1 px-3 py-2">
+                  {phaseDays.map((day) => {
+                    const state = getProgress(day.slug);
+                    const isActive = day.slug === activeSlug;
+                    const isDone = state.status === "completed";
+                    const KindIcon = KIND_ICON[day.kind];
 
-                return (
-                  <li key={day.slug}>
-                    <Link
-                      href={`/dashboard/education-center/${day.slug}`}
-                      onClick={onNavigate}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`group flex items-center gap-3 rounded-xl border px-2.5 py-2 transition-colors ${
-                        isActive
-                          ? "border-blue-200 bg-blue-50"
-                          : "border-transparent hover:border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
-                          isDone
-                            ? "bg-emerald-500 text-white"
-                            : isActive
-                              ? "bg-blue-600 text-white"
-                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
-                        }`}
-                      >
-                        {isDone ? <Check className="h-4 w-4" /> : day.day}
-                      </span>
-
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={`block truncate text-sm font-semibold ${
-                            isActive ? "text-blue-700" : "text-slate-800"
+                    return (
+                      <li key={day.slug}>
+                        <Link
+                          href={`/dashboard/education-center/${day.slug}`}
+                          onClick={onNavigate}
+                          aria-current={isActive ? "page" : undefined}
+                          className={`group flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                            isActive
+                              ? "border-blue-200 bg-blue-50"
+                              : "border-transparent hover:border-slate-200 hover:bg-slate-50"
                           }`}
                         >
-                          {isEs ? day.titleEs : day.titleEn}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-                          {day.durationMinutes} {j?.minutesShort || "min"}
-                          {state.status === "in-progress" && state.percent > 0
-                            ? ` · ${state.percent}%`
-                            : ""}
-                        </span>
-                      </span>
+                          <span
+                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                              isDone
+                                ? "bg-emerald-500 text-white"
+                                : isActive
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                            }`}
+                          >
+                            {isDone ? <Check className="h-4 w-4" /> : day.day}
+                          </span>
 
-                      {isActive && (
-                        <PlayCircle className="h-4 w-4 shrink-0 text-blue-600" />
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
+                          <span className="min-w-0 flex-1">
+                            <span
+                              className={`block text-sm font-semibold leading-5 ${
+                                isActive ? "text-blue-700" : "text-slate-800"
+                              }`}
+                            >
+                              {isEs ? day.titleEs : day.titleEn}
+                            </span>
 
-      {days.length === 0 && (
-        <p className="flex items-center gap-2 px-2 py-6 text-sm text-slate-500">
-          <Lock className="h-4 w-4" />
-          {j?.noResults || "No days match your search."}
-        </p>
-      )}
-    </nav>
+                            <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                              <KindIcon className="h-3.5 w-3.5 shrink-0" />
+                              <span>{kindLabel(day.kind, j)}</span>
+                              <span aria-hidden="true">·</span>
+                              <span>
+                                {day.durationMinutes} {j?.minutesShort || "min"}
+                              </span>
+                              {state.status === "in-progress" &&
+                                state.percent > 0 && (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span className="font-bold text-blue-600">
+                                      {state.percent}%
+                                    </span>
+                                  </>
+                                )}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+
+        {days.length === 0 && (
+          <p className="flex items-center gap-2 px-4 py-6 text-sm text-slate-500">
+            <Lock className="h-4 w-4" />
+            {j?.noResults || "No days match your search."}
+          </p>
+        )}
+      </nav>
+    </div>
   );
 }

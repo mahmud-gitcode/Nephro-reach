@@ -2,24 +2,31 @@
 
 import React, { useEffect, useRef } from "react";
 import {
+  Captions,
   CheckCircle2,
   ClipboardList,
   Download,
   FileText,
   Info,
+  Languages,
   NotebookPen,
   PencilRuler,
   X,
 } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
+import { LanguageCode, useLanguage } from "@/context/LanguageContext";
 import {
+  formatCueTime,
   JOURNEY_PHASES,
   JourneyDay,
   JourneyDocumentKind,
 } from "@/lib/dialysisJourneyData";
 import { downloadNoteAsText, NoteSaveState } from "@/lib/useJourneyNotes";
 
-export type JourneyPanelTab = "overview" | "documents" | "notes";
+export type JourneyPanelTab =
+  | "transcript"
+  | "overview"
+  | "documents"
+  | "notes";
 
 const KIND_ICON: Record<JourneyDocumentKind, React.ElementType> = {
   pdf: FileText,
@@ -34,20 +41,115 @@ const KIND_CLASS: Record<JourneyDocumentKind, string> = {
 };
 
 const TAB_ICON: Record<JourneyPanelTab, React.ElementType> = {
+  transcript: Captions,
   overview: Info,
   documents: FileText,
   notes: NotebookPen,
 };
 
-const TAB_ORDER: JourneyPanelTab[] = ["overview", "documents", "notes"];
+const TAB_ORDER: JourneyPanelTab[] = [
+  "transcript",
+  "overview",
+  "documents",
+  "notes",
+];
 
 function tabLabel(
   tab: JourneyPanelTab,
   j: Record<string, string> | undefined,
 ): string {
+  if (tab === "transcript") return j?.transcript || "Transcript";
   if (tab === "overview") return j?.overview || "Overview";
   if (tab === "documents") return j?.documents || "Documents";
   return j?.notes || "Notes";
+}
+
+/**
+ * The transcript reads in whichever language is picked here, independently of
+ * the language toggle in the header.
+ */
+function TranscriptTab({
+  day,
+  transcriptLanguage,
+  onTranscriptLanguageChange,
+  activeCueIndex,
+  onSeek,
+  seekDisabled,
+  interactive,
+}: {
+  day: JourneyDay;
+  transcriptLanguage: LanguageCode;
+  onTranscriptLanguageChange: (next: LanguageCode) => void;
+  activeCueIndex: number;
+  onSeek: (seconds: number) => void;
+  seekDisabled: boolean;
+  interactive: boolean;
+}) {
+  const { dictionary } = useLanguage();
+  const j = dictionary?.educationJourney;
+  const isEs = transcriptLanguage === "ES";
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-3 flex items-center gap-2">
+        <Languages className="h-4 w-4 shrink-0 text-slate-500" />
+        <label
+          htmlFor="journey-transcript-language"
+          className="text-xs font-semibold text-slate-600"
+        >
+          {j?.transcriptLanguage || "Language"}
+        </label>
+        <select
+          id="journey-transcript-language"
+          value={transcriptLanguage}
+          tabIndex={interactive ? 0 : -1}
+          onChange={(event) =>
+            onTranscriptLanguageChange(event.target.value as LanguageCode)
+          }
+          className="ml-auto rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-slate-800 outline-none transition-colors hover:bg-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+        >
+          <option value="EN">English</option>
+          <option value="ES">Español</option>
+        </select>
+      </div>
+
+      <ol className="-mx-1 min-h-0 flex-1 overflow-y-auto">
+        {day.transcript.map((cue, index) => {
+          const isActive = index === activeCueIndex;
+          return (
+            <li key={cue.at}>
+              <button
+                type="button"
+                tabIndex={interactive ? 0 : -1}
+                onClick={() => onSeek(cue.at)}
+                disabled={seekDisabled}
+                className={`flex w-full items-start gap-2.5 rounded-lg p-2 text-left transition-colors ${
+                  isActive ? "bg-blue-50" : "hover:bg-slate-50"
+                } ${seekDisabled ? "cursor-default" : "cursor-pointer"}`}
+              >
+                <span
+                  className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {formatCueTime(cue.at)}
+                </span>
+                <span
+                  className={`text-sm leading-relaxed ${
+                    isActive ? "font-medium text-slate-900" : "text-slate-700"
+                  }`}
+                >
+                  {isEs ? cue.textEs : cue.textEn}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 /**
@@ -131,12 +233,12 @@ function OverviewTab({ day }: { day: JourneyDay }) {
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            {j?.week || "Week"}
+            {j?.moduleLabel || "Module"}
           </dt>
           <dd className="mt-1 text-sm font-bold text-slate-900">
             {isEs
-              ? JOURNEY_PHASES[day.phase].rangeEs
-              : JOURNEY_PHASES[day.phase].rangeEn}
+              ? JOURNEY_PHASES[day.phase].moduleEs
+              : JOURNEY_PHASES[day.phase].moduleEn}
           </dd>
         </div>
       </dl>
@@ -261,6 +363,11 @@ export function JourneyPanelContent({
   onNoteChange,
   onNoteBlur,
   saveState,
+  transcriptLanguage,
+  onTranscriptLanguageChange,
+  activeCueIndex,
+  onSeek,
+  seekDisabled,
   interactive = true,
   closeRef,
 }: {
@@ -271,6 +378,11 @@ export function JourneyPanelContent({
   onNoteChange: (value: string) => void;
   onNoteBlur: () => void;
   saveState: NoteSaveState;
+  transcriptLanguage: LanguageCode;
+  onTranscriptLanguageChange: (next: LanguageCode) => void;
+  activeCueIndex: number;
+  onSeek: (seconds: number) => void;
+  seekDisabled: boolean;
   /** False while the drawer is closed, so nothing inside holds focus. */
   interactive?: boolean;
   closeRef?: React.Ref<HTMLButtonElement>;
@@ -297,6 +409,17 @@ export function JourneyPanelContent({
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
+        {activeTab === "transcript" && (
+          <TranscriptTab
+            day={day}
+            transcriptLanguage={transcriptLanguage}
+            onTranscriptLanguageChange={onTranscriptLanguageChange}
+            activeCueIndex={activeCueIndex}
+            onSeek={onSeek}
+            seekDisabled={seekDisabled}
+            interactive={interactive}
+          />
+        )}
         {activeTab === "overview" && <OverviewTab day={day} />}
         {activeTab === "documents" && (
           <DocumentsTab day={day} interactive={interactive} />
@@ -328,6 +451,11 @@ export default function JourneyResourceDrawer({
   onNoteChange,
   onNoteBlur,
   saveState,
+  transcriptLanguage,
+  onTranscriptLanguageChange,
+  activeCueIndex,
+  onSeek,
+  seekDisabled,
 }: {
   day: JourneyDay;
   open: boolean;
@@ -337,6 +465,11 @@ export default function JourneyResourceDrawer({
   onNoteChange: (value: string) => void;
   onNoteBlur: () => void;
   saveState: NoteSaveState;
+  transcriptLanguage: LanguageCode;
+  onTranscriptLanguageChange: (next: LanguageCode) => void;
+  activeCueIndex: number;
+  onSeek: (seconds: number) => void;
+  seekDisabled: boolean;
 }) {
   const { dictionary } = useLanguage();
   const j = dictionary?.educationJourney;
@@ -392,6 +525,11 @@ export default function JourneyResourceDrawer({
           onNoteChange={onNoteChange}
           onNoteBlur={onNoteBlur}
           saveState={saveState}
+          transcriptLanguage={transcriptLanguage}
+          onTranscriptLanguageChange={onTranscriptLanguageChange}
+          activeCueIndex={activeCueIndex}
+          onSeek={onSeek}
+          seekDisabled={seekDisabled}
           interactive={open}
           closeRef={closeRef}
         />

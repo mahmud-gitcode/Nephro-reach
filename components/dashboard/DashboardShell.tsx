@@ -11,6 +11,7 @@ import { UserRole } from "@/lib/auth";
 import EmergencyModal from "@/components/dashboard/EmergencyModal";
 import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
 import {
+  ArrowLeft,
   BookOpen,
   Car,
   CreditCard,
@@ -162,6 +163,8 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Miembros" : "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Manage curriculum";
+  if (pathname.startsWith("/dashboard/education-center/details"))
+    return language === "ES" ? "Detalles del Programa" : "Program Details";
   if (pathname.startsWith("/dashboard/education-center/")) {
     const journeyDay = getJourneyDayBySlug(pathname.split("/").pop() || "");
     if (journeyDay) {
@@ -222,6 +225,7 @@ function getBreadcrumbTrail(pathname: string, language?: string) {
   const dashboardLabel = language === "ES" ? "Panel" : "Dashboard";
   const beforeTheErLabel = language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
   const personalLogLabel = language === "ES" ? "Registro Personal" : "Personal Log";
+  const educationCenterLabel = language === "ES" ? "Centro Educativo" : "Education Center";
 
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
     return [dashboardLabel];
@@ -234,6 +238,9 @@ function getBreadcrumbTrail(pathname: string, language?: string) {
     !pathname.startsWith("/dashboard/personal-log/dialysis-journal")
   ) {
     return [dashboardLabel, personalLogLabel, current];
+  }
+  if (pathname.startsWith("/dashboard/education-center/details")) {
+    return [dashboardLabel, educationCenterLabel, current];
   }
   return [dashboardLabel, current];
 }
@@ -416,11 +423,102 @@ function HeaderIcon({ src, className = "size-6" }: { src: string; className?: st
   );
 }
 
+function LanguageSwitcher() {
+  const { language, setLanguage } = useLanguage();
+  const [langOpen, setLangOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setLangOpen((open) => !open)}
+        className="flex items-center gap-1 sm:gap-2.5 rounded-lg sm:rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer"
+        aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
+      >
+        <span className="relative h-4.5 w-6 sm:h-6 sm:w-[33px] overflow-clip rounded-[2px] shrink-0">
+          <img
+            src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
+            alt=""
+            className="size-full object-cover"
+          />
+        </span>
+        <HeaderIcon src="/images/dashboard-header/arrow-down.svg" className="size-3 sm:size-4" />
+      </button>
+      {langOpen ? (
+        <div className="absolute right-0 z-50 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-md">
+          {(["EN", "ES"] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              className={`block w-full px-3 py-1.5 text-left cursor-pointer ${
+                language === code ? "font-semibold text-blue-700" : "text-slate-700"
+              }`}
+              onClick={() => {
+                setLanguage(code);
+                setLangOpen(false);
+              }}
+            >
+              {code === "EN" ? (language === "ES" ? "Inglés" : "English") : (language === "ES" ? "Español" : "Spanish")}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Header for the distraction-free classroom view.
+ *
+ * The dashboard sidebar and breadcrumb bar are hidden while a lesson is open,
+ * so this keeps the two things a learner still needs: the way back out, and
+ * the language toggle the transcript follows.
+ */
+function ClassroomHeader() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+
+  return (
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-white px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 print:hidden">
+      <Link
+        href="/dashboard"
+        className="flex shrink-0 items-center"
+        aria-label="NephroReach"
+      >
+        <Image
+          src="/images/logo.svg"
+          alt="NephroReach"
+          width={160}
+          height={48}
+          priority
+          className="h-9 w-auto object-contain sm:h-11"
+        />
+      </Link>
+
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <LanguageSwitcher />
+
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700 sm:px-4 sm:py-2.5 sm:text-sm"
+        >
+          <ArrowLeft className="size-4 shrink-0" />
+          <span className="hidden min-[420px]:inline">
+            {isEs ? "Volver al Panel" : "Back to Dashboard"}
+          </span>
+          <span className="min-[420px]:hidden">
+            {isEs ? "Panel" : "Dashboard"}
+          </span>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
 function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { language, setLanguage } = useLanguage();
-  const [langOpen, setLangOpen] = useState(false);
+  const { language } = useLanguage();
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const isUser = user?.role === "user";
   const trail = getBreadcrumbTrail(pathname, language);
@@ -458,6 +556,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   if (item === "Dashboard" || item === "Panel") href = "/dashboard";
                   else if (item === "Before-the-ER" || item === "Antes de Urgencias") href = "/dashboard/before-the-er";
                   else if (item === "Personal Log" || item === "Registro Personal") href = "/dashboard/personal-log";
+                  else if (item === "Education Center" || item === "Centro Educativo") href = "/dashboard/education-center";
 
                   return (
                     <span key={`${item}-${index}`} className="flex items-center gap-3 md:gap-4">
@@ -493,44 +592,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-4">
         {/* Language Switcher - Compact on mobile, full on desktop */}
-        {isUser ? (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setLangOpen((open) => !open)}
-              className="flex items-center gap-1 sm:gap-2.5 rounded-lg sm:rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer"
-              aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
-            >
-              <span className="relative h-4.5 w-6 sm:h-6 sm:w-[33px] overflow-clip rounded-[2px] shrink-0">
-                <img
-                  src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              </span>
-              <HeaderIcon src="/images/dashboard-header/arrow-down.svg" className="size-3 sm:size-4" />
-            </button>
-            {langOpen ? (
-              <div className="absolute right-0 z-50 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-md">
-                {(["EN", "ES"] as const).map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    className={`block w-full px-3 py-1.5 text-left cursor-pointer ${
-                      language === code ? "font-semibold text-blue-700" : "text-slate-700"
-                    }`}
-                    onClick={() => {
-                      setLanguage(code);
-                      setLangOpen(false);
-                    }}
-                  >
-                    {code === "EN" ? (language === "ES" ? "Inglés" : "English") : (language === "ES" ? "Español" : "Spanish")}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        {isUser ? <LanguageSwitcher /> : null}
 
         {/* Notifications Button */}
         <button
@@ -587,13 +649,32 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   );
 }
 
+/** A single journey lesson, e.g. /dashboard/education-center/day-03. */
+function isClassroomRoute(pathname: string) {
+  const slug = pathname.split("/").pop() || "";
+  return (
+    /^\/dashboard\/education-center\/[^/]+$/.test(pathname) &&
+    Boolean(getJourneyDayBySlug(slug))
+  );
+}
+
 export default function DashboardShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rideModalOpen, setRideModalOpen] = useState(false);
+
+  if (isClassroomRoute(pathname)) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+        <ClassroomHeader />
+        <main className="px-4 py-5 md:px-6">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900">

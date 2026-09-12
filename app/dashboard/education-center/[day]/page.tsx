@@ -9,14 +9,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  CircleCheck,
-  Languages,
   LayoutList,
   PlayCircle,
   RotateCcw,
   X,
 } from "lucide-react";
-import { useLanguage } from "@/context/LanguageContext";
+import { LanguageCode, useLanguage } from "@/context/LanguageContext";
 import JourneyDayList from "@/components/dashboard/JourneyDayList";
 import JourneyResourceDrawer, {
   JourneyPanelContent,
@@ -24,15 +22,23 @@ import JourneyResourceDrawer, {
   JourneyPanelTab,
 } from "@/components/dashboard/JourneyResourcePanel";
 import {
-  formatCueTime,
   getJourneyDayBySlug,
   JOURNEY_DAYS,
-  JOURNEY_PHASES,
   JourneyDay,
+  JourneyMediaKind,
   TOTAL_JOURNEY_DAYS,
 } from "@/lib/dialysisJourneyData";
 import { useJourneyProgress } from "@/lib/useJourneyProgress";
 import { useJourneyNotes } from "@/lib/useJourneyNotes";
+
+function kindLabel(
+  kind: JourneyMediaKind,
+  j: Record<string, string> | undefined,
+): string {
+  if (kind === "audio") return j?.typeAudio || "Audio";
+  if (kind === "reading") return j?.typeReading || "Reading";
+  return j?.typeVideo || "Video";
+}
 
 /**
  * Player and transcript for one day.
@@ -43,48 +49,26 @@ import { useJourneyNotes } from "@/lib/useJourneyNotes";
 function DayStage({
   day,
   isComplete,
-  onWatched,
   onToggleComplete,
+  onOpenDayList,
+  videoRef,
+  videoUnavailable,
+  onTimeUpdate,
+  onVideoError,
 }: {
   day: JourneyDay;
   isComplete: boolean;
-  onWatched: (percent: number) => void;
   onToggleComplete: () => void;
+  onOpenDayList: () => void;
+  /** Owned by the page so the transcript tab can seek this same element. */
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  videoUnavailable: boolean;
+  onTimeUpdate: () => void;
+  onVideoError: () => void;
 }) {
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [videoUnavailable, setVideoUnavailable] = useState(false);
-
-  const handleTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const seconds = Math.floor(video.currentTime);
-    setCurrentTime((previous) => (previous === seconds ? previous : seconds));
-
-    if (video.duration > 0) {
-      onWatched((video.currentTime / video.duration) * 100);
-    }
-  }, [onWatched]);
-
-  const seekTo = useCallback((seconds: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = seconds;
-    void video.play().catch(() => {
-      // Autoplay can be blocked; the seek still lands where the user asked.
-    });
-  }, []);
-
-  // The last cue whose timestamp has passed is the one being spoken.
-  const activeCueIndex = day.transcript.reduce(
-    (active, cue, index) => (currentTime >= cue.at ? index : active),
-    -1,
-  );
 
   return (
     <div className="space-y-4">
@@ -97,7 +81,7 @@ function DayStage({
                 alt=""
                 fill
                 className="object-cover opacity-40"
-                sizes="(min-width: 1536px) 560px, (min-width: 1280px) 620px, 100vw"
+                sizes="(min-width: 1280px) 560px, 100vw"
                 priority
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
@@ -118,8 +102,8 @@ function DayStage({
               poster={day.poster}
               controls
               preload="metadata"
-              onTimeUpdate={handleTimeUpdate}
-              onError={() => setVideoUnavailable(true)}
+              onTimeUpdate={onTimeUpdate}
+              onError={onVideoError}
               className="h-full w-full bg-black"
             />
           )}
@@ -132,85 +116,52 @@ function DayStage({
             <h1 className="text-2xl font-semibold leading-8 text-slate-950 sm:text-[28px]">
               {isEs ? day.titleEs : day.titleEn}
             </h1>
-            <p className="mt-1.5 text-xs font-semibold text-slate-500">
-              {j?.dayLabel || "Day"} {day.day} · {day.durationMinutes}{" "}
-              {j?.minutesShort || "min"}
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
+              <span>
+                {j?.dayLabel || "Day"} {day.day}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>{kindLabel(day.kind, j)}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                {day.durationMinutes} {j?.minutesShort || "min"}
+              </span>
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onToggleComplete}
-            className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition-colors cursor-pointer ${
-              isComplete
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                : "bg-[#2563EB] text-white hover:bg-blue-700"
-            }`}
-          >
-            {isComplete ? (
-              <RotateCcw className="h-4 w-4" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            <span>
-              {isComplete
-                ? j?.markIncomplete || "Mark as not done"
-                : j?.markComplete || "Mark day complete"}
-            </span>
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            {/* Only route to the day list below the width where the rail docks. */}
+            <button
+              type="button"
+              onClick={onOpenDayList}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 cursor-pointer xl:hidden"
+            >
+              <LayoutList className="h-4 w-4 text-slate-600" />
+              {j?.allDays || "All days"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleComplete}
+              className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition-colors cursor-pointer ${
+                isComplete
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  : "bg-[#2563EB] text-white hover:bg-blue-700"
+              }`}
+            >
+              {isComplete ? (
+                <RotateCcw className="h-4 w-4" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              <span>
+                {isComplete
+                  ? j?.markIncomplete || "Mark as not done"
+                  : j?.markComplete || "Mark day complete"}
+              </span>
+            </button>
+          </div>
         </div>
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white shadow-[0_0_60px_rgba(0,0,0,0.06)]">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-4 sm:p-5">
-          <h2 className="text-lg font-semibold leading-7 text-slate-950">
-            {j?.transcript || "Transcript"}
-          </h2>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600">
-            <Languages className="h-3.5 w-3.5" />
-            {language === "ES" ? "Español" : "English"}
-          </span>
-        </header>
-
-        <ol className="divide-y divide-slate-100">
-          {day.transcript.map((cue, index) => {
-            const isActive = index === activeCueIndex;
-            return (
-              <li key={cue.at}>
-                <button
-                  type="button"
-                  onClick={() => seekTo(cue.at)}
-                  disabled={videoUnavailable}
-                  className={`flex w-full items-start gap-3 p-4 text-left transition-colors sm:p-5 ${
-                    isActive ? "bg-blue-50/70" : "hover:bg-slate-50"
-                  } ${videoUnavailable ? "cursor-default" : "cursor-pointer"}`}
-                >
-                  <span
-                    className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums ${
-                      isActive
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {formatCueTime(cue.at)}
-                  </span>
-                  <span
-                    className={`text-sm leading-relaxed ${
-                      isActive ? "font-medium text-slate-900" : "text-slate-700"
-                    }`}
-                  >
-                    {isEs ? cue.textEs : cue.textEn}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-
-        <p className="border-t border-slate-100 px-4 py-3 text-xs font-medium text-slate-500 sm:px-5">
-          {j?.transcriptNote ||
-            "The transcript follows the language selected in the header."}
-        </p>
       </section>
     </div>
   );
@@ -219,7 +170,6 @@ function DayStage({
 export default function JourneyDayPage() {
   const params = useParams();
   const { language, dictionary } = useLanguage();
-  const isEs = language === "ES";
   const j = dictionary?.educationJourney;
 
   const slug = (params?.day as string) || JOURNEY_DAYS[0].slug;
@@ -236,8 +186,61 @@ export default function JourneyDayPage() {
   const { getNote, setNote, flushNote, saveState } = useJourneyNotes();
 
   const [panelOpen, setPanelOpen] = useState(false);
-  const [panelTab, setPanelTab] = useState<JourneyPanelTab>("overview");
+  const [panelTab, setPanelTab] = useState<JourneyPanelTab>("transcript");
   const [dayListOpen, setDayListOpen] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(false);
+
+  // Seeded from the header language once, then driven only by its own dropdown.
+  const [transcriptLanguage, setTranscriptLanguage] =
+    useState<LanguageCode>(language);
+
+  // Playback lives here so the transcript tab and the player share one source
+  // of truth. Tagging it with the slug resets it on navigation without an effect.
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playback, setPlayback] = useState({
+    slug,
+    seconds: 0,
+    unavailable: false,
+  });
+  const currentPlayback =
+    playback.slug === slug ? playback : { slug, seconds: 0, unavailable: false };
+
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const seconds = Math.floor(video.currentTime);
+    setPlayback((current) =>
+      current.slug === slug && current.seconds === seconds
+        ? current
+        : {
+            slug,
+            seconds,
+            unavailable: current.slug === slug ? current.unavailable : false,
+          },
+    );
+
+    if (video.duration > 0) {
+      recordWatched(slug, (video.currentTime / video.duration) * 100);
+    }
+  }, [slug, recordWatched]);
+
+  const handleVideoError = useCallback(() => {
+    setPlayback((current) => ({
+      slug,
+      seconds: current.slug === slug ? current.seconds : 0,
+      unavailable: true,
+    }));
+  }, [slug]);
+
+  const seekTo = useCallback((seconds: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = seconds;
+    void video.play().catch(() => {
+      // Autoplay can be blocked; the seek still lands where the user asked.
+    });
+  }, []);
 
   // Clicking the active tab collapses the panel; any other tab switches to it.
   const handleSelectTab = useCallback(
@@ -287,8 +290,13 @@ export default function JourneyDayPage() {
 
   const state = getProgress(day.slug);
   const isComplete = state.status === "completed";
-  const phase = JOURNEY_PHASES[day.phase];
   const note = getNote(day.slug);
+
+  // The last cue whose timestamp has passed is the one being spoken.
+  const activeCueIndex = day.transcript.reduce(
+    (active, cue, index) => (currentPlayback.seconds >= cue.at ? index : active),
+    -1,
+  );
 
   const currentIndex = JOURNEY_DAYS.findIndex((entry) => entry.slug === day.slug);
   const previousDay = currentIndex > 0 ? JOURNEY_DAYS[currentIndex - 1] : null;
@@ -297,48 +305,23 @@ export default function JourneyDayPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/dashboard/education-center"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {j?.backToJourney || "Back to the journey"}
-          </Link>
-
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${phase.chipClass}`}
-          >
-            {isEs ? phase.labelEs : phase.labelEn}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-            <CircleCheck className="h-4 w-4 text-emerald-500" />
-            {completedCount}/{TOTAL_JOURNEY_DAYS}{" "}
-            {j?.completedShort || "complete"}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setDayListOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 cursor-pointer xl:hidden"
-          >
-            <LayoutList className="h-4 w-4 text-slate-600" />
-            {j?.allDays || "All days"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+      <div
+        className={`grid gap-4 ${
+          railCollapsed
+            ? "xl:grid-cols-[76px_minmax(0,1fr)]"
+            : "xl:grid-cols-[360px_minmax(0,1fr)]"
+        }`}
+      >
         <aside className="hidden xl:block">
-          <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+          <div className="sticky top-[72px] flex h-[calc(100vh-88px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_0_60px_rgba(0,0,0,0.06)]">
             <JourneyDayList
               days={JOURNEY_DAYS}
               activeSlug={day.slug}
               getProgress={getProgress}
+              completedCount={completedCount}
+              totalDays={TOTAL_JOURNEY_DAYS}
+              collapsed={railCollapsed}
+              onToggleCollapse={() => setRailCollapsed((value) => !value)}
             />
           </div>
         </aside>
@@ -349,10 +332,14 @@ export default function JourneyDayPage() {
               key={day.slug}
               day={day}
               isComplete={isComplete}
-              onWatched={(percent) => recordWatched(day.slug, percent)}
               onToggleComplete={() =>
                 isComplete ? markIncomplete(day.slug) : markComplete(day.slug)
               }
+              onOpenDayList={() => setDayListOpen(true)}
+              videoRef={videoRef}
+              videoUnavailable={currentPlayback.unavailable}
+              onTimeUpdate={handleTimeUpdate}
+              onVideoError={handleVideoError}
             />
 
             <nav className="mt-4 flex items-center justify-between gap-3">
@@ -402,6 +389,11 @@ export default function JourneyDayPage() {
                   onNoteChange={(value) => setNote(day.slug, value)}
                   onNoteBlur={flushNote}
                   saveState={saveState}
+                  transcriptLanguage={transcriptLanguage}
+                  onTranscriptLanguageChange={setTranscriptLanguage}
+                  activeCueIndex={activeCueIndex}
+                  onSeek={seekTo}
+                  seekDisabled={currentPlayback.unavailable}
                   interactive={panelOpen}
                 />
               </div>
@@ -434,7 +426,7 @@ export default function JourneyDayPage() {
           role="dialog"
           aria-modal={dayListOpen ? true : undefined}
           aria-label={j?.allDays || "All days"}
-          className={`absolute inset-y-0 left-0 flex w-full max-w-[340px] flex-col bg-white shadow-[0_0_60px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out ${
+          className={`absolute inset-y-0 left-0 flex w-full max-w-[360px] flex-col bg-white shadow-[0_0_60px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out ${
             dayListOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -452,11 +444,13 @@ export default function JourneyDayPage() {
               <X className="h-5 w-5" />
             </button>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <JourneyDayList
               days={JOURNEY_DAYS}
               activeSlug={day.slug}
               getProgress={getProgress}
+              completedCount={completedCount}
+              totalDays={TOTAL_JOURNEY_DAYS}
               onNavigate={() => setDayListOpen(false)}
             />
           </div>
@@ -472,6 +466,11 @@ export default function JourneyDayPage() {
         onNoteChange={(value) => setNote(day.slug, value)}
         onNoteBlur={flushNote}
         saveState={saveState}
+        transcriptLanguage={transcriptLanguage}
+        onTranscriptLanguageChange={setTranscriptLanguage}
+        activeCueIndex={activeCueIndex}
+        onSeek={seekTo}
+        seekDisabled={currentPlayback.unavailable}
       />
     </div>
   );

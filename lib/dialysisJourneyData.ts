@@ -6,12 +6,22 @@
  * toggle without refetching anything.
  */
 
-export type JourneyPhaseKey = "foundation" | "management" | "living";
+export type JourneyPhaseKey =
+  | "foundation"
+  | "routine"
+  | "nutrition"
+  | "living";
+
+/** How a day is delivered. Drives the badge under each title in the day list. */
+export type JourneyMediaKind = "video" | "audio" | "reading";
 
 export interface JourneyPhase {
   key: JourneyPhaseKey;
-  labelEn: string;
-  labelEs: string;
+  /** Short "Module 1" style subtitle shown above the module name. */
+  moduleEn: string;
+  moduleEs: string;
+  titleEn: string;
+  titleEs: string;
   rangeEn: string;
   rangeEs: string;
   /** Tailwind classes for the phase chip in the day list. */
@@ -41,6 +51,7 @@ export interface JourneyDay {
   day: number;
   slug: string;
   phase: JourneyPhaseKey;
+  kind: JourneyMediaKind;
   titleEn: string;
   titleEs: string;
   summaryEn: string;
@@ -58,28 +69,45 @@ export interface JourneyDay {
 export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
   foundation: {
     key: "foundation",
-    labelEn: "Week 1 · Getting Started",
-    labelEs: "Semana 1 · Primeros Pasos",
-    rangeEn: "Days 1-7",
-    rangeEs: "Días 1-7",
+    moduleEn: "Module 1",
+    moduleEs: "Módulo 1",
+    titleEn: "Understanding Dialysis",
+    titleEs: "Entendiendo la Diálisis",
+    rangeEn: "Days 1-5",
+    rangeEs: "Días 1-5",
     chipClass: "border-blue-200 bg-blue-50 text-blue-700",
     dotClass: "bg-blue-500",
   },
-  management: {
-    key: "management",
-    labelEn: "Week 2 · Daily Management",
-    labelEs: "Semana 2 · Manejo Diario",
-    rangeEn: "Days 8-14",
-    rangeEs: "Días 8-14",
+  routine: {
+    key: "routine",
+    moduleEn: "Module 2",
+    moduleEs: "Módulo 2",
+    titleEn: "Your Treatment Routine",
+    titleEs: "Su Rutina de Tratamiento",
+    rangeEn: "Days 6-10",
+    rangeEs: "Días 6-10",
     chipClass: "border-violet-200 bg-violet-50 text-violet-700",
     dotClass: "bg-violet-500",
   },
+  nutrition: {
+    key: "nutrition",
+    moduleEn: "Module 3",
+    moduleEs: "Módulo 3",
+    titleEn: "Diet, Labs & Medications",
+    titleEs: "Dieta, Laboratorios y Medicamentos",
+    rangeEn: "Days 11-16",
+    rangeEs: "Días 11-16",
+    chipClass: "border-amber-200 bg-amber-50 text-amber-700",
+    dotClass: "bg-amber-500",
+  },
   living: {
     key: "living",
-    labelEn: "Week 3 · Living Well",
-    labelEs: "Semana 3 · Vivir Bien",
-    rangeEn: "Days 15-21",
-    rangeEs: "Días 15-21",
+    moduleEn: "Module 4",
+    moduleEs: "Módulo 4",
+    titleEn: "Living Well & Staying Safe",
+    titleEs: "Vivir Bien y Mantenerse Seguro",
+    rangeEn: "Days 17-21",
+    rangeEs: "Días 17-21",
     chipClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
     dotClass: "bg-emerald-500",
   },
@@ -87,17 +115,19 @@ export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
 
 export const PHASE_ORDER: JourneyPhaseKey[] = [
   "foundation",
-  "management",
+  "routine",
+  "nutrition",
   "living",
 ];
 
-const POSTER = "/images/education-center-video.png";
+const POSTER = "/images/Class.jpg";
 
 export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 1,
     slug: "day-01",
     phase: "foundation",
+    kind: "video",
     titleEn: "Welcome to Your Dialysis Journey",
     titleEs: "Bienvenido a su Viaje de Diálisis",
     summaryEn:
@@ -177,6 +207,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 2,
     slug: "day-02",
     phase: "foundation",
+    kind: "video",
     titleEn: "How Your Kidneys Work",
     titleEs: "Cómo Funcionan sus Riñones",
     summaryEn:
@@ -248,6 +279,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 3,
     slug: "day-03",
     phase: "foundation",
+    kind: "reading",
     titleEn: "Understanding Your Treatment Schedule",
     titleEs: "Entendiendo su Horario de Tratamiento",
     summaryEn:
@@ -319,6 +351,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 4,
     slug: "day-04",
     phase: "foundation",
+    kind: "video",
     titleEn: "Your Dialysis Access",
     titleEs: "Su Acceso de Diálisis",
     summaryEn:
@@ -398,6 +431,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 5,
     slug: "day-05",
     phase: "foundation",
+    kind: "video",
     titleEn: "What Happens During Treatment",
     titleEs: "Qué Sucede Durante el Tratamiento",
     summaryEn:
@@ -468,7 +502,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 6,
     slug: "day-06",
-    phase: "foundation",
+    phase: "routine",
+    kind: "audio",
     titleEn: "Common Symptoms After Treatment",
     titleEs: "Síntomas Comunes Después del Tratamiento",
     summaryEn:
@@ -539,9 +574,10 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 7,
     slug: "day-07",
-    phase: "foundation",
-    titleEn: "Week 1 Review: Building Your Routine",
-    titleEs: "Repaso Semana 1: Construyendo su Rutina",
+    phase: "routine",
+    kind: "reading",
+    titleEn: "Checkpoint: Building Your Routine",
+    titleEs: "Punto de Control: Construyendo su Rutina",
     summaryEn:
       "A recap of week one and a simple routine you can keep: check your access, weigh yourself, log your fluid, and note how you felt.",
     summaryEs:
@@ -610,7 +646,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 8,
     slug: "day-08",
-    phase: "management",
+    phase: "routine",
+    kind: "video",
     titleEn: "Fluid Limits and Dry Weight",
     titleEs: "Límites de Líquido y Peso Seco",
     summaryEn:
@@ -689,7 +726,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 9,
     slug: "day-09",
-    phase: "management",
+    phase: "routine",
+    kind: "video",
     titleEn: "Reading Your Lab Results",
     titleEs: "Interpretando sus Resultados de Laboratorio",
     summaryEn:
@@ -760,7 +798,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 10,
     slug: "day-10",
-    phase: "management",
+    phase: "routine",
+    kind: "reading",
     titleEn: "Potassium: Foods to Watch",
     titleEs: "Potasio: Alimentos a Vigilar",
     summaryEn:
@@ -831,7 +870,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 11,
     slug: "day-11",
-    phase: "management",
+    phase: "nutrition",
+    kind: "video",
     titleEn: "Phosphorus and Bone Health",
     titleEs: "Fósforo y Salud Ósea",
     summaryEn:
@@ -910,7 +950,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 12,
     slug: "day-12",
-    phase: "management",
+    phase: "nutrition",
+    kind: "audio",
     titleEn: "Sodium, Blood Pressure and Thirst",
     titleEs: "Sodio, Presión Arterial y Sed",
     summaryEn:
@@ -981,7 +1022,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 13,
     slug: "day-13",
-    phase: "management",
+    phase: "nutrition",
+    kind: "video",
     titleEn: "Protein and Energy Needs",
     titleEs: "Necesidades de Proteína y Energía",
     summaryEn:
@@ -1052,9 +1094,10 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 14,
     slug: "day-14",
-    phase: "management",
-    titleEn: "Week 2 Review: Your Kidney-Friendly Plate",
-    titleEs: "Repaso Semana 2: Su Plato Amigable con el Riñón",
+    phase: "nutrition",
+    kind: "reading",
+    titleEn: "Checkpoint: Your Kidney-Friendly Plate",
+    titleEs: "Punto de Control: Su Plato Amigable con el Riñón",
     summaryEn:
       "Everything from week two on one plate: protein, potassium, phosphorus, sodium and fluid balanced together instead of managed one at a time.",
     summaryEs:
@@ -1131,7 +1174,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 15,
     slug: "day-15",
-    phase: "living",
+    phase: "nutrition",
+    kind: "video",
     titleEn: "Your Medications and Why Each One Matters",
     titleEs: "Sus Medicamentos y Por Qué Importa Cada Uno",
     summaryEn:
@@ -1210,7 +1254,8 @@ export const JOURNEY_DAYS: JourneyDay[] = [
   {
     day: 16,
     slug: "day-16",
-    phase: "living",
+    phase: "nutrition",
+    kind: "video",
     titleEn: "Preventing Infection",
     titleEs: "Prevención de Infecciones",
     summaryEn:
@@ -1282,6 +1327,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 17,
     slug: "day-17",
     phase: "living",
+    kind: "video",
     titleEn: "Recognizing Emergencies",
     titleEs: "Reconociendo Emergencias",
     summaryEn:
@@ -1361,6 +1407,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 18,
     slug: "day-18",
     phase: "living",
+    kind: "audio",
     titleEn: "Energy, Sleep and Staying Active",
     titleEs: "Energía, Sueño y Mantenerse Activo",
     summaryEn:
@@ -1432,6 +1479,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 19,
     slug: "day-19",
     phase: "living",
+    kind: "video",
     titleEn: "Mood, Stress and Asking for Support",
     titleEs: "Ánimo, Estrés y Pedir Apoyo",
     summaryEn:
@@ -1503,6 +1551,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 20,
     slug: "day-20",
     phase: "living",
+    kind: "reading",
     titleEn: "Travel, Work and Planning Ahead",
     titleEs: "Viajes, Trabajo y Planificar con Anticipación",
     summaryEn:
@@ -1582,6 +1631,7 @@ export const JOURNEY_DAYS: JourneyDay[] = [
     day: 21,
     slug: "day-21",
     phase: "living",
+    kind: "video",
     titleEn: "Your Long-Term Care Plan",
     titleEs: "Su Plan de Cuidado a Largo Plazo",
     summaryEn:
@@ -1660,6 +1710,23 @@ export const JOURNEY_DAYS: JourneyDay[] = [
 ];
 
 export const TOTAL_JOURNEY_DAYS = JOURNEY_DAYS.length;
+
+export const TOTAL_JOURNEY_MODULES = PHASE_ORDER.length;
+
+/** Summed from the lessons themselves so the stat cannot drift from content. */
+export const TOTAL_JOURNEY_MINUTES = JOURNEY_DAYS.reduce(
+  (total, day) => total + day.durationMinutes,
+  0,
+);
+
+/** Renders a minute total as "27h" or "2h 41m" for the summary row. */
+export function formatTotalDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}m`;
+  if (rest === 0) return `${hours}h`;
+  return `${hours}h ${rest}m`;
+}
 
 export function getJourneyDayBySlug(slug: string): JourneyDay | undefined {
   return JOURNEY_DAYS.find((entry) => entry.slug === slug);
