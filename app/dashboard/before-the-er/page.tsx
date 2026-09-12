@@ -21,7 +21,7 @@ const ACTION_CONFIGS: ActionConfig[] = [
     colorTheme: "blue",
     callActionHref: "tel:5550100",
     isCallLink: true,
-    secondaryActionHref: "/dashboard/personal-log/appointments",
+    secondaryActionHref: "/dashboard/personal-log/dialysis-management",
     secondaryActionKey: "findSchedule",
   },
   {
