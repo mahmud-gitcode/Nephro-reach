@@ -77,9 +77,57 @@ export function useJourneyProgress() {
     [progress],
   );
 
+  const unlockDay = useCallback(
+    (slug: string) => {
+      setProgress((current) => {
+        const existing = current[slug] ?? EMPTY_PROGRESS;
+        if (existing.status !== "not-started") return current;
+        const next: JourneyProgressMap = {
+          ...current,
+          [slug]: {
+            ...existing,
+            status: "in-progress",
+            updatedAt: new Date().toISOString(),
+          },
+        };
+        persistProgress(next);
+        return next;
+      });
+    },
+    [],
+  );
+
   const markComplete = useCallback(
-    (slug: string) => update(slug, { status: "completed", percent: 100 }),
-    [update],
+    (slug: string) => {
+      setProgress((current) => {
+        const existing = current[slug] ?? EMPTY_PROGRESS;
+        const next: JourneyProgressMap = {
+          ...current,
+          [slug]: {
+            ...existing,
+            status: "completed",
+            percent: 100,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+        // Automatically unlock the next day so the learner can proceed
+        const idx = JOURNEY_DAYS.findIndex((d) => d.slug === slug);
+        if (idx >= 0 && idx < JOURNEY_DAYS.length - 1) {
+          const nextSlug = JOURNEY_DAYS[idx + 1].slug;
+          const nextExisting = current[nextSlug] ?? EMPTY_PROGRESS;
+          if (nextExisting.status === "not-started") {
+            next[nextSlug] = {
+              ...nextExisting,
+              status: "in-progress",
+              updatedAt: new Date().toISOString(),
+            };
+          }
+        }
+        persistProgress(next);
+        return next;
+      });
+    },
+    [],
   );
 
   const markIncomplete = useCallback(
@@ -139,6 +187,7 @@ export function useJourneyProgress() {
   return {
     progress,
     getProgress,
+    unlockDay,
     markComplete,
     markIncomplete,
     recordWatched,

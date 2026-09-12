@@ -1,306 +1,278 @@
-import React from "react";
+"use client";
+
+import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
+  ChevronRight,
   Clock3,
-  Edit3,
-  Eye,
-  FileText,
   GraduationCap,
-  MoreHorizontal,
+  Layers,
+  Lock,
   Plus,
   Search,
-  Users,
-  Video,
+  Trash2,
 } from "lucide-react";
+import { formatTotalDuration } from "@/lib/dialysisJourneyData";
+import {
+  Course,
+  courseClassCount,
+  courseDocumentCount,
+  courseMinutes,
+  useCourseLibrary,
+} from "@/lib/courseLibrary";
+import { CourseModal } from "@/components/dashboard/CourseAdmin";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
-const summaryCards: Array<{
+function SummaryCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone,
+  iconTone,
+}: {
   label: string;
-  value: string;
+  value: string | number;
   detail: string;
   icon: IconType;
   tone: string;
   iconTone: string;
-}> = [
-  {
-    label: "Total Modules",
-    value: "24",
-    detail: "Across 4 learning paths",
-    icon: BookOpen,
-    tone: "bg-blue-100",
-    iconTone: "text-blue-600",
-  },
-  {
-    label: "Published",
-    value: "18",
-    detail: "Ready for members",
-    icon: CheckCircle2,
-    tone: "bg-emerald-100",
-    iconTone: "text-emerald-600",
-  },
-  {
-    label: "Drafts",
-    value: "04",
-    detail: "Needs review",
-    icon: FileText,
-    tone: "bg-amber-100",
-    iconTone: "text-amber-600",
-  },
-  {
-    label: "Live Classes",
-    value: "08",
-    detail: "Scheduled this month",
-    icon: Video,
-    tone: "bg-purple-100",
-    iconTone: "text-purple-600",
-  },
-];
-
-const curriculumItems = [
-  {
-    title: "Kidney Disease Basics",
-    path: "CKD Foundation",
-    type: "Video lesson",
-    lessons: "6 lessons",
-    audience: "All Members",
-    duration: "42 min",
-    updated: "12 April,2026",
-    status: "Published",
-  },
-  {
-    title: "Understanding Lab Values",
-    path: "Patient Education",
-    type: "Module",
-    lessons: "8 lessons",
-    audience: "Full Membership",
-    duration: "55 min",
-    updated: "5 May,2026",
-    status: "Published",
-  },
-  {
-    title: "Fluid Management at Home",
-    path: "Dialysis Prep",
-    type: "Handout",
-    lessons: "4 handouts",
-    audience: "Dialysis Class",
-    duration: "28 min",
-    updated: "20 March,2026",
-    status: "Draft",
-  },
-  {
-    title: "Medication Safety Checklist",
-    path: "Care Tools",
-    type: "Checklist",
-    lessons: "3 resources",
-    audience: "Caregivers",
-    duration: "18 min",
-    updated: "15 June,2026",
-    status: "Published",
-  },
-  {
-    title: "Nutrition for CKD",
-    path: "Renal Nutrition",
-    type: "Live class",
-    lessons: "1 event",
-    audience: "Full Membership",
-    duration: "60 min",
-    updated: "1 January,2026",
-    status: "Scheduled",
-  },
-  {
-    title: "When to Call Your Care Team",
-    path: "Symptom Guidance",
-    type: "Module",
-    lessons: "5 lessons",
-    audience: "All Members",
-    duration: "35 min",
-    updated: "10 November,2026",
-    status: "Review",
-  },
-];
-
-function SummaryCard({ card }: { card: (typeof summaryCards)[number] }) {
+}) {
   return (
     <article className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-500">{card.label}</p>
-          <p className="mt-3 text-3xl font-semibold leading-8 text-slate-900">{card.value}</p>
+          <p className="text-sm font-semibold text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-semibold leading-8 text-slate-900">
+            {value}
+          </p>
         </div>
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${card.tone}`}>
-          <card.icon className={`h-5 w-5 ${card.iconTone}`} />
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${tone}`}
+        >
+          <Icon className={`h-5 w-5 ${iconTone}`} />
         </span>
       </div>
-      <p className="text-sm font-medium text-slate-500">{card.detail}</p>
+      <p className="text-sm font-medium text-slate-500">{detail}</p>
     </article>
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    Published: "bg-emerald-50 text-emerald-600",
-    Draft: "bg-amber-50 text-amber-600",
-    Scheduled: "bg-blue-50 text-blue-600",
-    Review: "bg-purple-50 text-purple-600",
-  };
+function CourseCard({
+  course,
+  onDelete,
+}: {
+  course: Course;
+  onDelete: () => void;
+}) {
+  const classes = courseClassCount(course);
+  const minutes = courseMinutes(course);
 
   return (
-    <span className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
+    <article className="flex flex-col rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#00A76F] text-white">
+          <GraduationCap className="h-6 w-6" />
+        </span>
 
-function CurriculumTable() {
-  return (
-    <section className="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Curriculum Library</h2>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Manage videos, lessons, handouts, and live class resources.
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-lg font-semibold text-slate-900">
+              {course.titleEn}
+            </h3>
+            {course.seeded && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <Lock className="h-3 w-3" />
+                Built-in
+              </span>
+            )}
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-600">
+            {course.descriptionEn || "No description yet."}
           </p>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative block w-full sm:w-[277px]">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-600" />
-            <input
-              type="search"
-              placeholder="Search..."
-              className="h-10 w-full rounded-lg border border-[#CBD5ED] bg-white pl-10 pr-3 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-          <button
-            type="button"
-            className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800"
-          >
-            All Status
-            <ChevronDown className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Add Module
-          </button>
+      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center">
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Modules
+          </dt>
+          <dd className="mt-0.5 text-base font-bold text-slate-900">
+            {course.modules.length}
+          </dd>
         </div>
-      </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Classes
+          </dt>
+          <dd className="mt-0.5 text-base font-bold text-slate-900">
+            {classes}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Length
+          </dt>
+          <dd className="mt-0.5 text-base font-bold text-slate-900">
+            {formatTotalDuration(minutes)}
+          </dd>
+        </div>
+      </dl>
 
-      <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
-        <table className="w-full min-w-[1060px] border-collapse text-sm">
-          <thead>
-            <tr className="bg-[#F4F6F8] text-left">
-              {["Curriculum", "Type", "Audience", "Duration", "Updated", "Status", "Actions"].map((header) => (
-                <th
-                  key={header}
-                  className={`h-[55px] border-b border-[#C4CDD5] px-3 font-semibold tracking-[0.07px] text-slate-900 ${
-                    header === "Actions" ? "text-center" : ""
-                  }`}
-                >
-                  <span className="block border-l border-[#C4CDD5] pl-3 leading-5 first:border-l-0">
-                    {header}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {curriculumItems.map((item) => (
-              <tr key={item.title} className="border-b border-dashed border-[#C4CDD5] last:border-0">
-                <td className="h-[62px] px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00A76F] text-white">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold leading-5 text-slate-800">{item.title}</p>
-                      <p className="truncate text-xs leading-[18px] text-slate-600">{item.path}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="h-[62px] px-3 py-2">
-                  <p className="font-semibold leading-5 text-slate-800">{item.type}</p>
-                  <p className="text-xs leading-[18px] text-slate-600">{item.lessons}</p>
-                </td>
-                <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
-                  <span className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-slate-500" />
-                    {item.audience}
-                  </span>
-                </td>
-                <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
-                  <span className="flex items-center gap-2">
-                    <Clock3 className="h-4 w-4 text-slate-500" />
-                    {item.duration}
-                  </span>
-                </td>
-                <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
-                  <span className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-slate-500" />
-                    {item.updated}
-                  </span>
-                </td>
-                <td className="h-[62px] px-3 py-2">
-                  <StatusPill status={item.status} />
-                </td>
-                <td className="h-[62px] px-3 py-2">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-900 transition-colors hover:bg-slate-100"
-                      aria-label={`View ${item.title}`}
-                    >
-                      <Eye className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-900 transition-colors hover:bg-slate-100"
-                      aria-label={`Edit ${item.title}`}
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-900 transition-colors hover:bg-slate-100"
-                      aria-label={`More actions for ${item.title}`}
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-4 flex items-center gap-2">
+        <Link
+          href={`/dashboard/manage-curriculum/${course.id}`}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+        >
+          Manage
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+
+        {!course.seeded && (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label={`Delete ${course.titleEn}`}
+            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
-    </section>
+    </article>
   );
 }
 
 export default function ManageCurriculumPage() {
+  const { courses, totals, createCourse, deleteCourse } = useCourseLibrary();
+  const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const visibleCourses = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return courses;
+    return courses.filter((course) =>
+      `${course.titleEn} ${course.titleEs} ${course.descriptionEn}`
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [courses, query]);
+
+  const totalDocuments = courses.reduce(
+    (total, course) => total + courseDocumentCount(course),
+    0,
+  );
+
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-[42px] font-semibold leading-none tracking-[0.3px] text-slate-900 sm:text-[52px] xl:text-[60px]">
-          Manage curriculum
+      <div className="mb-6">
+        <h1 className="text-[32px] font-semibold leading-tight tracking-[0.3px] text-slate-900 sm:text-[40px]">
+          Class Management
         </h1>
+        <p className="mt-2 text-sm font-medium text-slate-500">
+          Every course holds modules, and every module holds classes.
+        </p>
       </div>
 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.label} card={card} />
-        ))}
+        <SummaryCard
+          label="Courses"
+          value={totals.courses}
+          detail="Published to the Education Center"
+          icon={GraduationCap}
+          tone="bg-blue-100"
+          iconTone="text-blue-600"
+        />
+        <SummaryCard
+          label="Modules"
+          value={totals.modules}
+          detail="Across every course"
+          icon={Layers}
+          tone="bg-emerald-100"
+          iconTone="text-emerald-600"
+        />
+        <SummaryCard
+          label="Classes"
+          value={totals.classes}
+          detail="Video, audio and reading"
+          icon={BookOpen}
+          tone="bg-amber-100"
+          iconTone="text-amber-600"
+        />
+        <SummaryCard
+          label="Total length"
+          value={formatTotalDuration(totals.minutes)}
+          detail={`${totalDocuments} handouts attached`}
+          icon={Clock3}
+          tone="bg-purple-100"
+          iconTone="text-purple-600"
+        />
       </section>
 
-      <div className="mt-6">
-        <CurriculumTable />
+      <section className="mt-6 rounded-[14px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Course Library
+            </h2>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Open a course to manage its modules and classes.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="relative block w-full sm:w-[277px]">
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-600" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search courses..."
+                className="h-10 w-full rounded-lg border border-[#CBD5ED] bg-white pl-10 pr-3 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              New Course
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        {visibleCourses.map((course) => (
+          <CourseCard
+            key={course.id}
+            course={course}
+            onDelete={() => deleteCourse(course.id)}
+          />
+        ))}
       </div>
+
+      {visibleCourses.length === 0 && (
+        <p className="mt-6 rounded-[14px] border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500">
+          No courses match that search.
+        </p>
+      )}
+
+      {creating && (
+        <CourseModal
+          open
+          onClose={() => setCreating(false)}
+          onSave={(values) => {
+            createCourse(values);
+            setCreating(false);
+          }}
+        />
+      )}
     </>
   );
 }

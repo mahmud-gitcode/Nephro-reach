@@ -162,7 +162,7 @@ function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/members"))
     return language === "ES" ? "Miembros" : "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
-    return language === "ES" ? "Gestión de Clases" : "Manage curriculum";
+    return language === "ES" ? "Gestión de Clases" : "Class Management";
   if (pathname.startsWith("/dashboard/education-center/details"))
     return language === "ES" ? "Detalles del Programa" : "Program Details";
   if (pathname.startsWith("/dashboard/education-center/")) {
@@ -498,16 +498,17 @@ function ClassroomHeader() {
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <LanguageSwitcher />
 
+        {/* Leaving a lesson drops back into the course, not the main dashboard. */}
         <Link
-          href="/dashboard"
+          href="/dashboard/education-center"
           className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700 sm:px-4 sm:py-2.5 sm:text-sm"
         >
           <ArrowLeft className="size-4 shrink-0" />
           <span className="hidden min-[420px]:inline">
-            {isEs ? "Volver al Panel" : "Back to Dashboard"}
+            {isEs ? "Volver al Centro Educativo" : "Back to Education Center"}
           </span>
           <span className="min-[420px]:hidden">
-            {isEs ? "Panel" : "Dashboard"}
+            {isEs ? "Centro" : "Education"}
           </span>
         </Link>
       </div>

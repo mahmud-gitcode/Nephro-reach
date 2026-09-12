@@ -346,9 +346,9 @@ export default function JourneyDayPage() {
               {previousDay ? (
                 <Link
                   href={`/dashboard/education-center/${previousDay.slug}`}
-                  className="inline-flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50"
+                  className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300"
                 >
-                  <ChevronLeft className="h-4 w-4 shrink-0 text-slate-600" />
+                  <ChevronLeft className="h-4 w-4 shrink-0 text-slate-500" />
                   <span className="truncate">
                     {j?.previousDay || "Previous"} · {j?.dayLabel || "Day"}{" "}
                     {previousDay.day}
@@ -361,12 +361,15 @@ export default function JourneyDayPage() {
               {nextDay && (
                 <Link
                   href={`/dashboard/education-center/${nextDay.slug}`}
-                  className="inline-flex min-w-0 items-center gap-2 rounded-2xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+                  onClick={() => {
+                    markComplete(day.slug);
+                  }}
+                  className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300"
                 >
                   <span className="truncate">
                     {j?.nextDay || "Next"} · {j?.dayLabel || "Day"} {nextDay.day}
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
                 </Link>
               )}
             </nav>

@@ -124,6 +124,8 @@ function JourneyHero({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <Link
           href={`/dashboard/education-center/${nextDay.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 sm:py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
         >
           <Play className="h-4 w-4 fill-current" />
@@ -168,6 +170,8 @@ export function DayCard({
   return (
     <Link
       href={`/dashboard/education-center/${day.slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
       className="group flex flex-col rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_0_60px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_0_60px_rgba(0,0,0,0.12)]"
     >
       <div className="relative aspect-[324/182] overflow-hidden rounded-2xl bg-slate-100">
