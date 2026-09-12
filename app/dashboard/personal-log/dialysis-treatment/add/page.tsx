@@ -12,18 +12,16 @@ export default function AddDialysisTreatmentPage() {
   const dt = dictionary.dialysisTreatment;
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4 py-2">
+    <div className="mx-auto w-full max-w-5xl space-y-4 py-2">
       <PersonalLogDisclaimer />
 
-      <div className="flex items-center gap-2">
-        <Link
-          href="/dashboard/personal-log/dialysis-treatment"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>{dt?.backToTreatment || "Back to Dialysis Treatment"}</span>
-        </Link>
-      </div>
+      <Link
+        href="/dashboard/personal-log/dialysis-treatment"
+        className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-xs font-bold text-slate-500 transition-colors hover:text-[#2563EB]"
+      >
+        <ArrowLeft className="size-4" />
+        <span>{dt?.backToTreatment || "Back to Dialysis Treatment"}</span>
+      </Link>
 
       <DialysisDaySymptomLogForm isModal={false} />
     </div>

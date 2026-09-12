@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Bell,
   Calendar,
   Clock,
   Plus,
@@ -257,13 +258,36 @@ const SCOPE_OPTIONS: {
 ];
 
 /**
- * A weekly schedule and the date it takes effect from. Saving the Week Setting
+ * A weekly schedule and the date it takes effect from. Saving the schedule
  * appends a new period instead of rewriting history, so treatments before the
  * effective date keep the schedule they were actually run on.
  */
 interface SchedulePeriod {
   fromKey: string; // inclusive, yyyy-mm-dd
   days: string[];
+  /** Reminder clock time per prescribed weekday, as "HH:MM" on a 24h clock. */
+  reminders: Record<string, string>;
+  /** Session length in minutes. One amount shared by every prescribed day. */
+  durationMinutes: number;
+}
+
+/** Reminder given to a day that was just added to the schedule. */
+const DEFAULT_REMINDER = "07:30";
+/** 4h, the usual in-centre hemodialysis run. */
+const DEFAULT_DURATION_MINUTES = 240;
+
+/** "07:30" -> "7:30 AM" in English; Spanish stays on the 24h clock. */
+function formatReminder(value: string, isEs: boolean) {
+  const [hour, minute] = value.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value;
+  if (isEs) return `${pad2(hour)}:${pad2(minute)}`;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${pad2(minute)} ${suffix}`;
+}
+
+/** 240 -> "4h 00m" */
+function formatDuration(minutes: number) {
+  return `${Math.floor(minutes / 60)}h ${pad2(minutes % 60)}m`;
 }
 
 /** The prescribed days in force on a given date. */
@@ -325,13 +349,27 @@ function DialysisManagementDashboard() {
   // Records logged
   const [records, setRecords] = useState<IntervalRecord[]>(INITIAL_RECORDS);
 
-  // Section 2 State: Week Setting
+  // Section 2 State: Dialysis Schedule
   // Dated schedule history. The last period is the one currently in force.
   const [schedulePeriods, setSchedulePeriods] = useState<SchedulePeriod[]>([
-    { fromKey: "0000-01-01", days: ["Tuesday", "Thursday", "Saturday"] },
+    {
+      fromKey: "0000-01-01",
+      days: ["Tuesday", "Thursday", "Saturday"],
+      reminders: {
+        Tuesday: DEFAULT_REMINDER,
+        Thursday: DEFAULT_REMINDER,
+        Saturday: DEFAULT_REMINDER,
+      },
+      durationMinutes: DEFAULT_DURATION_MINUTES,
+    },
   ]);
-  const selectedDays = schedulePeriods[schedulePeriods.length - 1].days;
-  const treatmentFrequency = selectedDays.length;
+  const currentSchedule = schedulePeriods[schedulePeriods.length - 1];
+  const selectedDays = currentSchedule.days;
+  // Display option: drop the empty placeholder tiles for non-treatment days.
+  const [hideBlankDays, setHideBlankDays] = useState(false);
+  const visibleWeekdays = hideBlankDays
+    ? ALL_WEEKDAYS.filter((day) => selectedDays.includes(day))
+    : ALL_WEEKDAYS;
   // How a saved week setting should be applied
   const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
@@ -351,12 +389,19 @@ function DialysisManagementDashboard() {
   ]);
 
   // Temp state for editing week
-  const [tempFrequency, setTempFrequency] = useState(3);
   const [tempDays, setTempDays] = useState<string[]>([
     "Tuesday",
     "Thursday",
     "Saturday",
   ]);
+  const [tempReminders, setTempReminders] = useState<Record<string, string>>({
+    Tuesday: DEFAULT_REMINDER,
+    Thursday: DEFAULT_REMINDER,
+    Saturday: DEFAULT_REMINDER,
+  });
+  const [tempDurationHours, setTempDurationHours] = useState("4");
+  const [tempDurationMins, setTempDurationMins] = useState("00");
+  const [tempHideBlankDays, setTempHideBlankDays] = useState(false);
 
   // Section 2: Quick Note State with Undo / Redo / Clean
   const [weeklyNote, setWeeklyNote] = useState<string>("");
@@ -420,7 +465,7 @@ function DialysisManagementDashboard() {
   // ---------------------------------------------------------------------------
   // SCHEDULE ENGINE
   // Treatments are not hardcoded: for any month they are generated from the
-  // prescribed weekday list in the Week Setting card. Treatment N of a month is
+  // prescribed weekday list in the Dialysis Schedule card. Treatment N of a month is
   // the Nth prescribed weekday in it, and its interval runs until treatment N+1.
   // ---------------------------------------------------------------------------
 
@@ -557,8 +602,11 @@ function DialysisManagementDashboard() {
   };
 
   const handleOpenEditWeek = () => {
-    setTempFrequency(treatmentFrequency);
     setTempDays([...selectedDays]);
+    setTempReminders({ ...currentSchedule.reminders });
+    setTempDurationHours(String(Math.floor(currentSchedule.durationMinutes / 60)));
+    setTempDurationMins(pad2(currentSchedule.durationMinutes % 60));
+    setTempHideBlankDays(hideBlankDays);
     setApplyScope("currentTreatment");
     setIsEditWeekModalOpen(true);
   };
@@ -570,6 +618,9 @@ function DialysisManagementDashboard() {
       }
     } else {
       setTempDays([...tempDays, day]);
+      setTempReminders((prev) =>
+        prev[day] ? prev : { ...prev, [day]: DEFAULT_REMINDER },
+      );
     }
   };
 
@@ -587,14 +638,26 @@ function DialysisManagementDashboard() {
     );
     const fromKey = toDateKey(scopeEffectiveDate(applyScope));
 
+    // A reminder for every prescribed day, and one session length for all of them.
+    const reminders: Record<string, string> = {};
+    sorted.forEach((day) => {
+      reminders[day] = tempReminders[day] || DEFAULT_REMINDER;
+    });
+    const hours = Math.min(12, Math.max(0, Number(tempDurationHours) || 0));
+    const durationMinutes = Math.max(
+      15,
+      hours * 60 + (Number(tempDurationMins) || 0),
+    );
+
     setSchedulePeriods((prev) => {
       // Drop any period starting on or after the new effective date, then append.
       // Everything before it keeps the schedule it was actually run on.
       const kept = prev.filter((period) => period.fromKey < fromKey);
       const base = kept.length > 0 ? kept : [prev[0]];
-      return [...base, { fromKey, days: sorted }];
+      return [...base, { fromKey, days: sorted, reminders, durationMinutes }];
     });
 
+    setHideBlankDays(tempHideBlankDays);
     setIsEditWeekModalOpen(false);
   };
 
@@ -873,134 +936,143 @@ function DialysisManagementDashboard() {
           </div>
         </section>
 
-        {/* CARD 2: WEEK SETTING (Widened to give ample space for 7 full day names without overlap) */}
+        {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
         <section className="xl:col-span-8 2xl:col-span-8 rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs flex flex-col">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2.5">
-                <CalendarDays className="h-[22px] w-[22px] sm:h-6 sm:w-6 text-slate-800 stroke-[2.2] shrink-0" />
-                <h2 className="text-[22px] sm:text-[26px] font-bold text-slate-800 tracking-tight">
-                  {isEs ? "Configuración Semanal" : "Week Setting"}
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleOpenEditWeek}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs hover:border-slate-300 transition-colors cursor-pointer"
-              >
-                <Settings className="h-4 w-4 text-slate-500" />
-                <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
-              </button>
+          {/* Card head: title on the left, Edit Week on the right */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <CalendarDays className="h-[22px] w-[22px] sm:h-6 sm:w-6 text-slate-800 stroke-[2.2] shrink-0" />
+              <h2 className="text-[22px] sm:text-[26px] font-bold text-slate-800 tracking-tight">
+                {isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
+              </h2>
             </div>
 
-            {/* Weekly X treatment on top, 7-day schedule underneath with full day names - exact 24px gap from title */}
-            <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3.5 sm:p-4 space-y-2.5">
-              <p className="text-sm sm:text-base font-bold text-slate-800">
-                {isEs ? "Semanal" : "Weekly"} {treatmentFrequency}{" "}
-                {isEs ? "tratamientos" : "treatment"}
-              </p>
-
-              {/* 7 Days Schedule with horizontal scroll protection on tiny mobile screens */}
-              <div className="overflow-x-auto pb-1 -mx-0.5 px-0.5">
-                <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 pt-1 min-w-[520px] sm:min-w-0">
-                  {ALL_WEEKDAYS.map((day) => {
-                    const isSelected = selectedDays.includes(day);
-                    const fullDayName = isEs
-                      ? day === "Saturday"
-                        ? "Sábado"
-                        : day === "Sunday"
-                          ? "Domingo"
-                          : day === "Monday"
-                            ? "Lunes"
-                            : day === "Tuesday"
-                              ? "Martes"
-                              : day === "Wednesday"
-                                ? "Miércoles"
-                                : day === "Thursday"
-                                  ? "Jueves"
-                                  : "Viernes"
-                      : day;
-
-                    return (
-                      <div
-                        key={day}
-                        className={`min-w-0 h-10 sm:h-12 rounded-xl flex items-center justify-center text-center transition-all px-0.5 sm:px-1 overflow-hidden ${isSelected
-                            ? "bg-blue-50 border border-blue-200/90 text-[#2563EB] font-bold shadow-2xs"
-                            : "bg-white/40 border border-dashed border-slate-200/70"
-                          }`}
-                      >
-                        {isSelected ? (
-                          <span className="text-[10px] min-[420px]:text-[11px] sm:text-xs md:text-sm lg:text-sm xl:text-xs 2xl:text-sm font-bold tracking-tight whitespace-nowrap select-none">
-                            {fullDayName}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-transparent select-none">&nbsp;</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={handleOpenEditWeek}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs hover:border-slate-300 transition-colors cursor-pointer"
+            >
+              <Settings className="h-4 w-4 text-slate-500" />
+              <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
+            </button>
           </div>
 
-          {/* Freeform Note Field: Exact 12px gap (mt-3) from Weekly 3 treatment schedule box */}
-          <div className="rounded-2xl bg-slate-50/80 border border-slate-200/80 p-3 sm:p-3.5 space-y-2 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100/60 transition-all mt-3 flex-1 flex flex-col justify-between">
-            {/* Note Head Bar: Only text label without side icon, with Undo, Redo, Clean on right */}
-            <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200/70">
-              <span className="text-xs font-bold text-slate-700">
-                {isEs ? "Notas" : "Notes"}
-              </span>
+          {/* Schedule down the left, notes down the right */}
+          <div className="mt-5 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(236px,0.72fr)]">
+            {/* Session duration on top, then one row per day */}
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 sm:p-4 space-y-3">
+              {/* One amount shared by every prescribed day */}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
+                <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700">
+                  <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-slate-500" />
+                  {isEs ? "Duración de la sesión" : "Session duration"}
+                </span>
+                <span className="text-sm sm:text-base font-bold text-[#2563EB]">
+                  {formatDuration(currentSchedule.durationMinutes)}
+                  <span className="ml-1.5 text-[11px] font-semibold text-slate-400">
+                    {isEs ? "(todos los días)" : "(all days)"}
+                  </span>
+                </span>
+              </div>
 
-              {/* Action Icons: Undo, Redo, Clean */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleUndoNote}
-                  disabled={historyIndex <= 0}
-                  title={isEs ? "Deshacer (Undo)" : "Undo"}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                </button>
+              {/* Two columns read top-to-bottom: Sunday..Wednesday down the
+                  first, the rest down the second. Blank days drop out entirely
+                  when "Remove blank days" is on. */}
+              <div className="-mb-1.5 columns-1 gap-x-1.5 sm:columns-2">
+                {visibleWeekdays.map((day) => {
+                  const isSelected = selectedDays.includes(day);
+                  const fullDayName = isEs ? WEEKDAY_ES[day] : day;
 
-                <button
-                  type="button"
-                  onClick={handleRedoNote}
-                  disabled={historyIndex >= noteHistory.length - 1}
-                  title={isEs ? "Rehacer (Redo)" : "Redo"}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  <Redo2 className="h-3.5 w-3.5" />
-                </button>
+                  return (
+                    <div
+                      key={day}
+                      className={`mb-1.5 flex min-w-0 break-inside-avoid items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-all ${isSelected
+                          ? "bg-gradient-to-r from-blue-50/80 via-white to-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-slate-300"
+                          : "bg-white/40 border border-dashed border-slate-200/70"
+                        }`}
+                    >
+                      <span
+                        className={`min-w-0 truncate text-xs sm:text-sm font-bold tracking-tight select-none ${isSelected ? "text-[#2563EB]" : "text-slate-400"
+                          }`}
+                      >
+                        {fullDayName}
+                      </span>
 
-                <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
-
-                <button
-                  type="button"
-                  onClick={handleCleanNote}
-                  disabled={!weeklyNote}
-                  title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                </button>
+                      {isSelected ? (
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-slate-900 whitespace-nowrap select-none">
+                          <Bell className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-slate-500" />
+                          {formatReminder(
+                            currentSchedule.reminders[day] ?? DEFAULT_REMINDER,
+                            isEs,
+                          )}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-xs font-bold text-slate-300 select-none">
+                          —
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Note Area */}
-            <textarea
-              value={weeklyNote}
-              onChange={handleNoteChange}
-              rows={2}
-              placeholder={
-                isEs
-                  ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
-                  : "Write any notes, symptoms, or reminders here..."
-              }
-              className="w-full flex-1 bg-transparent resize-none outline-none text-xs sm:text-sm font-medium text-slate-700 placeholder:text-slate-400 min-h-[48px] sm:min-h-[56px]"
-            />
+            {/* Freeform note, alongside the schedule */}
+            <div className="flex h-full flex-col justify-between gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 sm:p-3.5 transition-all focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100/60">
+              {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
+              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200/70">
+                <span className="text-xs font-bold text-slate-700">
+                  {isEs ? "Notas" : "Notes"}
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleUndoNote}
+                    disabled={historyIndex <= 0}
+                    title={isEs ? "Deshacer (Undo)" : "Undo"}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRedoNote}
+                    disabled={historyIndex >= noteHistory.length - 1}
+                    title={isEs ? "Rehacer (Redo)" : "Redo"}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    <Redo2 className="h-3.5 w-3.5" />
+                  </button>
+
+                  <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
+
+                  <button
+                    type="button"
+                    onClick={handleCleanNote}
+                    disabled={!weeklyNote}
+                    title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    <Eraser className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Note area */}
+              <textarea
+                value={weeklyNote}
+                onChange={handleNoteChange}
+                rows={2}
+                placeholder={
+                  isEs
+                    ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
+                    : "Write any notes, symptoms, or reminders here..."
+                }
+                className="w-full flex-1 bg-transparent resize-none outline-none text-xs sm:text-sm font-medium text-slate-700 placeholder:text-slate-400 min-h-[120px]"
+              />
+            </div>
           </div>
         </section>
       </div>
@@ -1489,11 +1561,110 @@ function DialysisManagementDashboard() {
                             : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                           }`}
                       >
-                        <span>{day}</span>
+                        <span>{isEs ? WEEKDAY_ES[day] : day}</span>
                         {isSelected && <Check className="h-[18px] w-[18px] stroke-[3]" />}
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Blank-day display option for the Dialysis Schedule card */}
+              <button
+                type="button"
+                onClick={() => setTempHideBlankDays((prev) => !prev)}
+                aria-pressed={tempHideBlankDays}
+                className="flex w-full items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:bg-slate-50 cursor-pointer"
+              >
+                <span
+                  className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-colors ${tempHideBlankDays
+                      ? "border-[#2563EB] bg-[#2563EB]"
+                      : "border-slate-300"
+                    }`}
+                >
+                  {tempHideBlankDays && (
+                    <Check className="h-3 w-3 stroke-[3.5] text-white" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-slate-800">
+                    {isEs ? "Ocultar días en blanco" : "Remove blank days"}
+                  </span>
+                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-slate-500">
+                    {isEs
+                      ? "La semana muestra solo tus días de tratamiento, sin los espacios vacíos."
+                      : "The week shows only your treatment days, with no empty placeholders."}
+                  </span>
+                </span>
+              </button>
+
+              {/* A reminder time per prescribed day */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-2">
+                  {isEs ? "Hora del Recordatorio" : "Reminder Time"}
+                </label>
+                <div className="space-y-2">
+                  {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => (
+                    <div
+                      key={day}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2"
+                    >
+                      <span className="inline-flex items-center gap-2 font-bold text-slate-700">
+                        <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-slate-400" />
+                        {isEs ? WEEKDAY_ES[day] : day}
+                      </span>
+                      <input
+                        type="time"
+                        value={tempReminders[day] ?? DEFAULT_REMINDER}
+                        onChange={(e) =>
+                          setTempReminders((prev) => ({
+                            ...prev,
+                            [day]: e.target.value,
+                          }))
+                        }
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Session length: one amount shared by every prescribed day */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-2">
+                  {isEs ? "Duración de la Sesión" : "Session Duration"}
+                </label>
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={12}
+                      value={tempDurationHours}
+                      onChange={(e) => setTempDurationHours(e.target.value)}
+                      className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-center font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    />
+                    <span className="font-bold text-slate-500">
+                      {isEs ? "h" : "hr"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={tempDurationMins}
+                      onChange={(e) => setTempDurationMins(e.target.value)}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                    >
+                      {["00", "15", "30", "45"].map((minute) => (
+                        <option key={minute} value={minute}>
+                          {minute}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="font-bold text-slate-500">min</span>
+                  </div>
+                  <span className="ml-auto text-xs font-semibold text-slate-400">
+                    {isEs ? "Se aplica a todos los días" : "Applies to every day"}
+                  </span>
                 </div>
               </div>
 
@@ -1581,7 +1752,7 @@ function DialysisManagementDashboard() {
                   type="submit"
                   className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 font-bold text-white transition-colors cursor-pointer shadow-2xs"
                 >
-                  {isEs ? "Guardar Semana" : "Save Week Setting"}
+                  {isEs ? "Guardar Horario" : "Save Schedule"}
                 </button>
               </div>
             </form>

@@ -22,7 +22,7 @@ export default function AddDialysisEntryModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-5xl max-h-[94vh] overflow-y-auto rounded-3xl shadow-2xl my-auto"
+        className="w-full max-w-5xl max-h-[94vh] overflow-y-auto rounded-2xl my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <DialysisDaySymptomLogForm
