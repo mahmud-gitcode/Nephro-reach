@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,17 +8,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Bell,
-  Calendar,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Droplets,
   HeartPulse,
   Minus,
   Plus,
   Printer,
   Scale,
-  Sparkles,
   X,
 } from "lucide-react";
 
@@ -114,6 +110,39 @@ const MOODS = [
   },
 ];
 
+/* ---- Shared style tokens: one radius scale, one type scale, one palette ---- */
+
+const SEGMENT_TRACK =
+  "flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-1";
+const SEGMENT_ITEM =
+  "flex h-7 items-center justify-center rounded-md px-3 text-xs font-bold transition-colors cursor-pointer";
+const SEGMENT_ACTIVE = "bg-[#2563EB] text-white shadow-xs";
+const SEGMENT_IDLE = "text-slate-500 hover:text-slate-800";
+
+const FIELD_ROW =
+  "flex flex-col gap-2.5 rounded-xl border border-slate-200 bg-white p-3.5 transition-colors hover:border-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
+const FIELD_LABEL = "text-sm font-semibold text-slate-800";
+
+const PANEL = "rounded-xl border border-slate-200 bg-[#F8FAFC] p-4";
+const CHIP_BASE =
+  "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer";
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-bold tracking-tight text-[#06265B]">
+      {children}
+    </h3>
+  );
+}
+
+function PanelTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+      {children}
+    </h3>
+  );
+}
+
 function BinaryToggle({
   label,
   value,
@@ -124,31 +153,21 @@ function BinaryToggle({
   onChange: (v: "Yes" | "No") => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:border-slate-300 transition-colors h-full">
-      <span className="text-base font-normal text-slate-800">{label}</span>
-      <div className="flex items-center rounded-xl bg-slate-100/80 p-1 border border-slate-200/70">
-        <button
-          type="button"
-          onClick={() => onChange("Yes")}
-          className={`rounded-lg px-4 py-1 text-xs font-bold transition-all cursor-pointer ${
-            value === "Yes"
-              ? "bg-[#2563EB] text-white shadow-xs"
-              : "text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          Yes
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange("No")}
-          className={`rounded-lg px-4 py-1 text-xs font-bold transition-all cursor-pointer ${
-            value === "No"
-              ? "bg-[#2563EB] text-white shadow-xs"
-              : "text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          No
-        </button>
+    <div className={`${FIELD_ROW} h-full`}>
+      <span className={FIELD_LABEL}>{label}</span>
+      <div className={`${SEGMENT_TRACK} shrink-0 self-start sm:self-auto`}>
+        {(["Yes", "No"] as const).map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={`${SEGMENT_ITEM} min-w-[52px] ${
+              value === opt ? SEGMENT_ACTIVE : SEGMENT_IDLE
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -165,26 +184,21 @@ function SeverityFiveToggle({
 }) {
   const options = ["Yes", "No", "Mild", "Moderate", "Severe"] as const;
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:border-slate-300 transition-colors">
-      <span className="text-base font-normal text-slate-800">{label}</span>
-      <div className="flex items-center rounded-xl bg-slate-100/80 p-1 border border-slate-200/70 self-end sm:self-auto">
-        {options.map((opt) => {
-          const active = value === opt;
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(opt)}
-              className={`rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
-                active
-                  ? "bg-[#2563EB] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {opt}
-            </button>
-          );
-        })}
+    <div className={FIELD_ROW}>
+      <span className={FIELD_LABEL}>{label}</span>
+      <div className={`${SEGMENT_TRACK} w-full sm:w-auto sm:shrink-0`}>
+        {options.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={`${SEGMENT_ITEM} flex-1 px-2 sm:flex-none sm:px-3 ${
+              value === opt ? SEGMENT_ACTIVE : SEGMENT_IDLE
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -200,21 +214,23 @@ function CounterField({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:border-slate-300 transition-colors h-full">
-      <span className="text-base font-normal text-slate-800">{label}</span>
-      <div className="flex items-center gap-2 rounded-xl bg-slate-100/80 p-1 border border-slate-200/70">
+    <div className={`${FIELD_ROW} h-full`}>
+      <span className={FIELD_LABEL}>{label}</span>
+      <div className="flex shrink-0 items-center gap-1 self-start rounded-lg border border-slate-200 bg-slate-100 p-1 sm:self-auto">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
-          className="flex size-7 items-center justify-center rounded-lg bg-white text-slate-700 hover:bg-slate-200/70 shadow-2xs transition-colors cursor-pointer"
+          className="flex size-7 items-center justify-center rounded-md bg-white text-slate-600 shadow-2xs transition-colors hover:text-[#2563EB] cursor-pointer"
         >
           <Minus className="size-3.5" />
         </button>
-        <span className="w-8 text-center text-xs font-extrabold text-slate-900">{value}</span>
+        <span className="w-9 text-center text-sm font-bold text-slate-900">
+          {value}
+        </span>
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="flex size-7 items-center justify-center rounded-lg bg-white text-slate-700 hover:bg-slate-200/70 shadow-2xs transition-colors cursor-pointer"
+          className="flex size-7 items-center justify-center rounded-md bg-white text-slate-600 shadow-2xs transition-colors hover:text-[#2563EB] cursor-pointer"
         >
           <Plus className="size-3.5" />
         </button>
@@ -235,24 +251,132 @@ function SeverityRow({
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3 hover:bg-slate-50 transition-colors">
-      <span className="text-base font-normal text-slate-800 w-44 truncate">{label}</span>
-      <div className="flex-1 flex items-center gap-3">
-        <input
-          type="range"
-          min="0"
-          max="10"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={{
-            background: `linear-gradient(to right, #2563EB ${pct}%, #e2e8f0 ${pct}%)`,
-          }}
-          className="h-2 w-full cursor-pointer appearance-none rounded-lg accent-[#2563EB] focus:outline-none"
-        />
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold bg-[#2563EB] text-white shadow-xs">
-          {value}
-        </span>
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-slate-300">
+      <span className="w-32 shrink-0 truncate text-sm font-semibold text-slate-800 sm:w-36">
+        {label}
+      </span>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{
+          background: `linear-gradient(to right, #2563EB ${pct}%, #E2E8F0 ${pct}%)`,
+        }}
+        className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full accent-[#2563EB] outline-none"
+      />
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[#2563EB] text-xs font-bold text-white">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function VitalCard({
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  placeholder,
+  unit,
+  inputMode,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  unit: string;
+  inputMode: "decimal" | "numeric" | "text";
+}) {
+  return (
+    <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-600">{label}</span>
+        <Icon className="size-4 shrink-0 text-[#2563EB]" />
       </div>
+      <input
+        type="text"
+        inputMode={inputMode}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-lg font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+      />
+      <p className="truncate text-xs font-medium text-slate-500">{unit}</p>
+    </div>
+  );
+}
+
+function SymptomChips({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: string[];
+  selected: string[];
+  onToggle: (item: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((sym) => {
+        const sel = selected.includes(sym);
+        return (
+          <button
+            key={sym}
+            type="button"
+            onClick={() => onToggle(sym)}
+            className={`${CHIP_BASE} ${
+              sel
+                ? "border-[#2563EB] bg-[#2563EB] text-white shadow-xs"
+                : "border-slate-200 bg-white text-slate-700 hover:border-[#2563EB] hover:text-[#2563EB]"
+            }`}
+          >
+            {sym}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MoodPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-5 gap-2 sm:gap-3">
+      {MOODS.map((m) => {
+        const active = value === m.level;
+        const Icon = m.icon;
+        return (
+          <button
+            key={m.level}
+            type="button"
+            onClick={() => onChange(m.level)}
+            className={`group flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-colors cursor-pointer ${
+              active
+                ? "border-[#2563EB] bg-blue-50 ring-1 ring-[#2563EB]"
+                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <Icon
+              className={`size-7 shrink-0 transition-transform group-hover:scale-110 sm:size-8 ${m.color}`}
+            />
+            <span
+              className={`text-xs font-bold ${
+                active ? "text-[#2563EB]" : "text-slate-600"
+              }`}
+            >
+              {m.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -469,21 +593,38 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
     "Better / No Symptoms",
   ];
 
+  const summaryItems = [
+    { label: "Treatment Type", value: treatmentType },
+    { label: "Start Time", value: startTime },
+    { label: "End Time", value: endTime },
+    { label: "Location", value: location },
+    { label: "Care Team", value: careTeam },
+    { label: "Post Weight", value: postWeightSummary },
+  ];
+
+  const steps = [
+    { id: 1, label: "Pre-Dialysis" },
+    { id: 2, label: "During Session" },
+    { id: 3, label: "Post & Vitals" },
+    { id: 4, label: "Full View" },
+  ];
+
   return (
     <div className="w-full space-y-4 font-sans text-slate-800">
       {/* 1. CLINICAL SESSION INFORMATION CARD */}
-      <div className="w-full bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              Dialysis Day Log
-            </h1>
-          </div>
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            Dialysis Day Log
+          </h1>
 
           <div className="flex flex-wrap items-end gap-3">
             {/* Date Field with Label */}
-            <div className="flex flex-col">
-              <label htmlFor="dialysis-log-date" className="text-base font-normal text-slate-800 mb-1">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="dialysis-log-date"
+                className="text-xs font-bold text-slate-500"
+              >
                 Date
               </label>
               <input
@@ -498,23 +639,21 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     (e.currentTarget as any).showPicker?.();
                   } catch {}
                 }}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 shadow-2xs hover:border-slate-400 focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none cursor-pointer h-[34px]"
+                className="h-9 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none transition-colors hover:border-slate-300 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
               />
             </div>
 
             {/* Dialysis Day Toggle with Label */}
-            <div className="flex flex-col">
-              <span className="text-base font-normal text-slate-800 mb-1">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-slate-500">
                 Dialysis Day
               </span>
-              <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100/80 p-0.5 h-[34px]">
+              <div className={`${SEGMENT_TRACK} h-9`}>
                 <button
                   type="button"
                   onClick={() => setIsDialysisDay(true)}
-                  className={`rounded-lg px-3.5 py-1 text-xs font-bold transition-all cursor-pointer h-full flex items-center ${
-                    isDialysisDay
-                      ? "bg-[#2563EB] text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800"
+                  className={`${SEGMENT_ITEM} min-w-[52px] ${
+                    isDialysisDay ? SEGMENT_ACTIVE : SEGMENT_IDLE
                   }`}
                 >
                   Yes
@@ -522,10 +661,8 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                 <button
                   type="button"
                   onClick={() => setIsDialysisDay(false)}
-                  className={`rounded-lg px-3.5 py-1 text-xs font-bold transition-all cursor-pointer h-full flex items-center ${
-                    !isDialysisDay
-                      ? "bg-[#2563EB] text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800"
+                  className={`${SEGMENT_ITEM} min-w-[52px] ${
+                    !isDialysisDay ? SEGMENT_ACTIVE : SEGMENT_IDLE
                   }`}
                 >
                   No
@@ -533,538 +670,378 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="flex size-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer mb-0.5"
-              title="Print"
-            >
-              <Printer className="size-4" />
-            </button>
-
-            {isModal && onClose && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="flex size-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer mb-0.5"
+                onClick={() => window.print()}
+                className="flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-[#2563EB] hover:text-[#2563EB] cursor-pointer"
+                title="Print"
               >
-                <X className="size-4" />
+                <Printer className="size-4" />
               </button>
-            )}
+
+              {isModal && onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Clinical Information Bar */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-slate-200/90 bg-[#F8FAFC] p-3 text-xs shadow-2xs divide-y sm:divide-y-0 divide-slate-100 sm:divide-x sm:divide-slate-200/80">
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">Treatment Type</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{treatmentType}</p>
-          </div>
-
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">Start Time</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{startTime}</p>
-          </div>
-
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">End Time</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{endTime}</p>
-          </div>
-
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">Location</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{location}</p>
-          </div>
-
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">Care Team</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{careTeam}</p>
-          </div>
-
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">Post Weight</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{postWeightSummary}</p>
-          </div>
+        <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-6">
+          {summaryItems.map((item) => (
+            <div key={item.label} className="min-w-0 bg-[#F8FAFC] px-3.5 py-3">
+              <p className="truncate text-[11px] font-medium text-slate-500">
+                {item.label}
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                {item.value}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* 2. STEP PROGRESS WIZARD CARD */}
-      <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-4 sm:px-6 shadow-sm">
-        <div className="flex items-center justify-between w-full">
-          {[
-            { id: 1, label: "Pre-Dialysis" },
-            { id: 2, label: "During Session" },
-            { id: 3, label: "Post & Vitals" },
-            { id: 4, label: "Full View" },
-          ].map((step, idx, arr) => {
-            const isCompleted = activeTab > step.id;
-            const isCurrent = activeTab === step.id;
+      {/* 2. FORM CARD — step wizard, content and actions on one surface */}
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* Step progress */}
+        <div className="border-b border-slate-200 bg-[#F8FAFC] px-4 py-4 sm:px-6">
+          <div className="flex w-full items-center justify-between">
+            {steps.map((step, idx, arr) => {
+              const isCompleted = activeTab > step.id;
+              const isCurrent = activeTab === step.id;
 
-            return (
-              <React.Fragment key={step.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(step.id)}
-                  className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
-                >
-                  <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                      isCurrent
-                        ? "bg-[#2563EB] text-white ring-4 ring-blue-100 shadow-sm"
-                        : isCompleted
-                        ? "bg-[#1E40AF] text-white shadow-2xs"
-                        : "border-2 border-slate-200 bg-white text-slate-400 group-hover:border-slate-300"
-                    }`}
+              return (
+                <React.Fragment key={step.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(step.id)}
+                    className="group flex shrink-0 flex-col items-center gap-2 cursor-pointer sm:flex-row"
                   >
-                    {isCompleted ? (
-                      <Check className="size-4 stroke-[3]" />
-                    ) : (
-                      step.id <= 3 ? step.id : <span className="text-[10px]">ALL</span>
-                    )}
-                  </span>
-                  <span
-                    className={`text-xs font-bold transition-colors text-center sm:text-left ${
-                      isCurrent
-                        ? "text-[#2563EB]"
-                        : isCompleted
-                        ? "text-slate-700"
-                        : "text-slate-400 group-hover:text-slate-600"
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                </button>
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                        isCurrent
+                          ? "bg-[#2563EB] text-white ring-4 ring-blue-100"
+                          : isCompleted
+                          ? "bg-[#06265B] text-white"
+                          : "border border-slate-300 bg-white text-slate-400 group-hover:border-slate-400"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <Check className="size-4 stroke-[3]" />
+                      ) : step.id <= 3 ? (
+                        step.id
+                      ) : (
+                        <span className="text-[10px]">ALL</span>
+                      )}
+                    </span>
+                    <span
+                      className={`text-center text-xs font-bold transition-colors sm:text-left ${
+                        isCurrent
+                          ? "text-[#2563EB]"
+                          : isCompleted
+                          ? "text-[#06265B]"
+                          : "text-slate-400 group-hover:text-slate-600"
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  </button>
 
-                {idx < arr.length - 1 && (
-                  <div
-                    className={`flex-1 mx-2 sm:mx-4 h-0.5 transition-colors ${
-                      activeTab > step.id ? "bg-[#2563EB]" : "bg-slate-200"
-                    }`}
+                  {idx < arr.length - 1 && (
+                    <div
+                      className={`mx-2 h-0.5 flex-1 rounded-full transition-colors sm:mx-4 ${
+                        activeTab > step.id ? "bg-[#2563EB]" : "bg-slate-200"
+                      }`}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step content */}
+        <div className="divide-y divide-slate-200">
+          {/* TAB 1: ATTENDANCE & PRE-DIALYSIS */}
+          {(activeTab === 1 || activeTab === 4) && (
+            <div className="space-y-6 p-5 sm:p-6">
+              {/* All options from reference image: Attendance Tracking */}
+              <section className="space-y-3">
+                <SectionTitle>Attendance &amp; Schedule</SectionTitle>
+
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <BinaryToggle
+                    label="Treatment attended"
+                    value={attended}
+                    onChange={setAttended}
                   />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. FORM CARD */}
-      <div className="w-full bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="p-6 space-y-6">
-        {/* TAB 1: ATTENDANCE & PRE-DIALYSIS */}
-        {(activeTab === 1 || activeTab === 4) && (
-          <div className="space-y-6">
-            {/* All options from reference image: Attendance Tracking */}
-            <div className="space-y-3">
-              <h2 className="text-base font-bold tracking-tight text-slate-900">
-                Attendance & Schedule
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <BinaryToggle
-                  label="Treatment attended"
-                  value={attended}
-                  onChange={setAttended}
-                />
-                <BinaryToggle
-                  label="Arrived late"
-                  value={arrivedLate}
-                  onChange={setArrivedLate}
-                />
-                <CounterField
-                  label="Missed treatments"
-                  value={missedTreatments}
-                  onChange={setMissedTreatments}
-                />
-                <div className="md:col-span-2">
+                  <BinaryToggle
+                    label="Arrived late"
+                    value={arrivedLate}
+                    onChange={setArrivedLate}
+                  />
+                  <CounterField
+                    label="Missed treatments"
+                    value={missedTreatments}
+                    onChange={setMissedTreatments}
+                  />
                   <BinaryToggle
                     label="Rescheduled missed treatment"
                     value={rescheduled}
                     onChange={setRescheduled}
                   />
                 </div>
-              </div>
-            </div>
+              </section>
 
-            {/* Pre-dialysis condition */}
-            <div className="pt-3 border-t border-slate-100 space-y-3.5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
-                Pre-Treatment Condition
-              </h3>
+              {/* Pre-dialysis condition */}
+              <section className="space-y-3">
+                <SectionTitle>Pre-Treatment Condition</SectionTitle>
 
-              {/* Mood */}
-              <div className="grid grid-cols-5 gap-2.5">
-                {MOODS.map((m) => {
-                  const active = preFeel === m.level;
-                  const Icon = m.icon;
-                  return (
-                    <button
-                      key={m.level}
-                      type="button"
-                      onClick={() => setPreFeel(m.level)}
-                      className={`group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 transition-all cursor-pointer ${
-                        active
-                          ? "border-[#2563EB] bg-blue-50/40 text-blue-900 ring-2 ring-blue-500/20 shadow-xs scale-[1.02]"
-                          : "border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/50"
-                      }`}
-                    >
-                      <div className="relative flex items-center justify-center">
-                        <span className="absolute inset-0.5 rounded-full bg-white shadow-2xs" />
-                        <Icon className={`relative size-7 sm:size-8 transition-transform group-hover:scale-110 drop-shadow-xs ${m.color}`} />
-                      </div>
-                      <span className="text-xs font-bold tracking-tight">{m.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                {/* Mood */}
+                <MoodPicker value={preFeel} onChange={setPreFeel} />
 
-              {/* Pre Symptoms Chips */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-                <h3 className="text-base font-bold tracking-tight text-slate-900">Pre-Dialysis Symptoms</h3>
-                <div className="flex flex-wrap gap-2">
-                  {preOptions.map((sym) => {
-                    const sel = preSymptoms.includes(sym);
-                    return (
-                      <button
-                        key={sym}
-                        type="button"
-                        onClick={() => toggleItem(preSymptoms, setPreSymptoms, sym)}
-                        className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                          sel
-                            ? "bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
-                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span>{sym}</span>
-                      </button>
-                    );
-                  })}
+                {/* Pre Symptoms Chips */}
+                <div className={`${PANEL} space-y-3`}>
+                  <PanelTitle>Pre-Dialysis Symptoms</PanelTitle>
+                  <SymptomChips
+                    options={preOptions}
+                    selected={preSymptoms}
+                    onToggle={(sym) => toggleItem(preSymptoms, setPreSymptoms, sym)}
+                  />
                 </div>
-              </div>
 
-              {/* Pre Severity Sliders */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-3">
-                <h3 className="text-base font-bold tracking-tight text-slate-900">Symptom Severity (0–10)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {Object.keys(preSeverity).map((key) => (
-                    <SeverityRow
-                      key={key}
-                      label={key}
-                      value={preSeverity[key]}
-                      onChange={(v) => setPreSeverity({ ...preSeverity, [key]: v })}
-                    />
-                  ))}
+                {/* Pre Severity Sliders */}
+                <div className={`${PANEL} space-y-3`}>
+                  <PanelTitle>Symptom Severity (0–10)</PanelTitle>
+                  <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+                    {Object.keys(preSeverity).map((key) => (
+                      <SeverityRow
+                        key={key}
+                        label={key}
+                        value={preSeverity[key]}
+                        onChange={(v) => setPreSeverity({ ...preSeverity, [key]: v })}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </section>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* TAB 2: DURING TREATMENT */}
-        {(activeTab === 2 || activeTab === 4) && (
-          <div className="space-y-6">
-            <h2 className="text-base font-bold tracking-tight text-slate-900">
-              During Treatment
-            </h2>
+          {/* TAB 2: DURING TREATMENT */}
+          {(activeTab === 2 || activeTab === 4) && (
+            <div className="space-y-6 p-5 sm:p-6">
+              <section className="space-y-3">
+                <SectionTitle>During Treatment</SectionTitle>
 
-            {/* Sequential for extra fluid removal (yes/no) */}
-            <div className="space-y-1.5">
-              <BinaryToggle
-                label="Sequential for extra fluid removal"
-                value={sequentialFluidRemoval}
-                onChange={setSequentialFluidRemoval}
-              />
-            </div>
-
-            {/* Core 5-state symptoms from user reference image */}
-            <div className="space-y-3">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
-                Intra-Session Symptoms
-              </h3>
-
-              <div className="space-y-2">
-                <SeverityFiveToggle
-                  label="Cramping"
-                  value={crampingSeverity}
-                  onChange={setCrampingSeverity}
-                />
-                <SeverityFiveToggle
-                  label="Low BP"
-                  value={lowBpSeverity}
-                  onChange={setLowBpSeverity}
-                />
-                <SeverityFiveToggle
-                  label="High BP"
-                  value={highBpSeverity}
-                  onChange={setHighBpSeverity}
-                />
-                <SeverityFiveToggle
-                  label="Fatigue"
-                  value={fatigueSeverity}
-                  onChange={setFatigueSeverity}
-                />
-              </div>
-            </div>
-
-            {/* Other intra symptoms */}
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">Additional Symptoms</h3>
-              <div className="flex flex-wrap gap-2">
-                {intraOptions.map((sym) => {
-                  const sel = intraSymptoms.includes(sym);
-                  return (
-                    <button
-                      key={sym}
-                      type="button"
-                      onClick={() => toggleItem(intraSymptoms, setIntraSymptoms, sym)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                        sel
-                          ? "bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
-                          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>{sym}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">Session Notes</h3>
-              <textarea
-                rows={2}
-                value={intraNotes}
-                onChange={(e) => setIntraNotes(e.target.value)}
-                placeholder="Session details, interventions, or notes..."
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-800 outline-none focus:border-slate-400 resize-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: POST & RECOVERY */}
-        {(activeTab === 3 || activeTab === 4) && (
-          <div className="space-y-6">
-            {/* Post-dialysis condition — mirrors the Pre-Treatment block on Tab 1 */}
-            <div className="space-y-3.5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
-                Post-Treatment Condition
-              </h3>
-
-              {/* Mood */}
-              <div className="grid grid-cols-5 gap-2.5">
-                {MOODS.map((m) => {
-                  const active = postFeel === m.level;
-                  const Icon = m.icon;
-                  return (
-                    <button
-                      key={m.level}
-                      type="button"
-                      onClick={() => setPostFeel(m.level)}
-                      className={`group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 transition-all cursor-pointer ${
-                        active
-                          ? "border-[#2563EB] bg-blue-50/40 text-blue-900 ring-2 ring-blue-500/20 shadow-xs scale-[1.02]"
-                          : "border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/50"
-                      }`}
-                    >
-                      <div className="relative flex items-center justify-center">
-                        <span className="absolute inset-0.5 rounded-full bg-white shadow-2xs" />
-                        <Icon className={`relative size-7 sm:size-8 transition-transform group-hover:scale-110 drop-shadow-xs ${m.color}`} />
-                      </div>
-                      <span className="text-xs font-bold tracking-tight">{m.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Post Symptoms Chips */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-                <h3 className="text-base font-bold tracking-tight text-slate-900">Post-Dialysis Symptoms</h3>
-                <div className="flex flex-wrap gap-2">
-                  {postOptions.map((sym) => {
-                    const sel = postSymptoms.includes(sym);
-                    return (
-                      <button
-                        key={sym}
-                        type="button"
-                        onClick={() => toggleItem(postSymptoms, setPostSymptoms, sym)}
-                        className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                          sel
-                            ? "bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
-                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span>{sym}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Post Severity Sliders */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-3">
-                <h3 className="text-base font-bold tracking-tight text-slate-900">Symptom Severity (0–10)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {Object.keys(postSeverity).map((key) => (
-                    <SeverityRow
-                      key={key}
-                      label={key}
-                      value={postSeverity[key]}
-                      onChange={(v) => setPostSeverity({ ...postSeverity, [key]: v })}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Recovery Time Severity Toggle */}
-            <div className="space-y-3">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
-                Post-Treatment Recovery
-              </h3>
-
-              <div className="space-y-1.5">
+                {/* Sequential for extra fluid removal (yes/no) */}
                 <BinaryToggle
-                  label="Ended early"
-                  value={endedEarly}
-                  onChange={setEndedEarly}
+                  label="Sequential for extra fluid removal"
+                  value={sequentialFluidRemoval}
+                  onChange={setSequentialFluidRemoval}
+                />
+              </section>
+
+              {/* Core 5-state symptoms from user reference image */}
+              <section className="space-y-3">
+                <SectionTitle>Intra-Session Symptoms</SectionTitle>
+
+                <div className="space-y-2.5">
+                  <SeverityFiveToggle
+                    label="Cramping"
+                    value={crampingSeverity}
+                    onChange={setCrampingSeverity}
+                  />
+                  <SeverityFiveToggle
+                    label="Low BP"
+                    value={lowBpSeverity}
+                    onChange={setLowBpSeverity}
+                  />
+                  <SeverityFiveToggle
+                    label="High BP"
+                    value={highBpSeverity}
+                    onChange={setHighBpSeverity}
+                  />
+                  <SeverityFiveToggle
+                    label="Fatigue"
+                    value={fatigueSeverity}
+                    onChange={setFatigueSeverity}
+                  />
+                </div>
+              </section>
+
+              {/* Other intra symptoms */}
+              <div className={`${PANEL} space-y-3`}>
+                <PanelTitle>Additional Symptoms</PanelTitle>
+                <SymptomChips
+                  options={intraOptions}
+                  selected={intraSymptoms}
+                  onToggle={(sym) => toggleItem(intraSymptoms, setIntraSymptoms, sym)}
                 />
               </div>
 
-              <SeverityFiveToggle
-                label="Recovery time"
-                value={recoverySeverity}
-                onChange={setRecoverySeverity}
-              />
-
-              {/* Medication Prescribed Compliance */}
-              <div className="space-y-1.5">
-                <BinaryToggle
-                  label="Prescribed medications taken"
-                  value={medsTakenPrescribed}
-                  onChange={setMedsTakenPrescribed}
+              {/* Notes */}
+              <div className={`${PANEL} space-y-3`}>
+                <PanelTitle>Session Notes</PanelTitle>
+                <textarea
+                  rows={3}
+                  value={intraNotes}
+                  onChange={(e) => setIntraNotes(e.target.value)}
+                  placeholder="Session details, interventions, or notes..."
+                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
                 />
-                <div className="flex items-center justify-between text-xs px-1 text-slate-500">
-                  <span>Need a prompt for your doses?</span>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: POST & RECOVERY */}
+          {(activeTab === 3 || activeTab === 4) && (
+            <div className="space-y-6 p-5 sm:p-6">
+              {/* Post-dialysis condition — mirrors the Pre-Treatment block on Tab 1 */}
+              <section className="space-y-3">
+                <SectionTitle>Post-Treatment Condition</SectionTitle>
+
+                {/* Mood */}
+                <MoodPicker value={postFeel} onChange={setPostFeel} />
+
+                {/* Post Symptoms Chips */}
+                <div className={`${PANEL} space-y-3`}>
+                  <PanelTitle>Post-Dialysis Symptoms</PanelTitle>
+                  <SymptomChips
+                    options={postOptions}
+                    selected={postSymptoms}
+                    onToggle={(sym) => toggleItem(postSymptoms, setPostSymptoms, sym)}
+                  />
+                </div>
+
+                {/* Post Severity Sliders */}
+                <div className={`${PANEL} space-y-3`}>
+                  <PanelTitle>Symptom Severity (0–10)</PanelTitle>
+                  <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+                    {Object.keys(postSeverity).map((key) => (
+                      <SeverityRow
+                        key={key}
+                        label={key}
+                        value={postSeverity[key]}
+                        onChange={(v) => setPostSeverity({ ...postSeverity, [key]: v })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Recovery Time Severity Toggle */}
+              <section className="space-y-3">
+                <SectionTitle>Post-Treatment Recovery</SectionTitle>
+
+                <div className="space-y-2.5">
+                  <BinaryToggle
+                    label="Ended early"
+                    value={endedEarly}
+                    onChange={setEndedEarly}
+                  />
+
+                  <SeverityFiveToggle
+                    label="Recovery time"
+                    value={recoverySeverity}
+                    onChange={setRecoverySeverity}
+                  />
+
+                  {/* Medication Prescribed Compliance */}
+                  <BinaryToggle
+                    label="Prescribed medications taken"
+                    value={medsTakenPrescribed}
+                    onChange={setMedsTakenPrescribed}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3">
+                  <span className="text-xs font-medium text-slate-600">
+                    Need a prompt for your doses?
+                  </span>
                   <Link
                     href="/dashboard/personal-log/medications"
-                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563EB] hover:text-blue-700 hover:underline"
                   >
-                    <Bell className="size-3.5 text-blue-600" />
+                    <Bell className="size-3.5" />
                     <span>Set Medication Reminders</span>
                   </Link>
                 </div>
+              </section>
+
+              {/* Clinical Vitals Cards */}
+              <section className="space-y-3">
+                <SectionTitle>Clinical Measurements</SectionTitle>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <VitalCard
+                    label="Fluid Removed"
+                    icon={Droplets}
+                    value={fluidRemoved}
+                    onChange={setFluidRemoved}
+                    placeholder="2.3"
+                    unit="Liters"
+                    inputMode="decimal"
+                  />
+                  <VitalCard
+                    label="Post Weight"
+                    icon={Scale}
+                    value={postWeight}
+                    onChange={setPostWeight}
+                    placeholder="72.4"
+                    unit={`kg${preWeight ? ` (pre: ${preWeight})` : ""}`}
+                    inputMode="decimal"
+                  />
+                  <VitalCard
+                    label="Blood Pressure"
+                    icon={HeartPulse}
+                    value={bpPost}
+                    onChange={setBpPost}
+                    placeholder="120/80"
+                    unit="mmHg"
+                    inputMode="text"
+                  />
+                  <VitalCard
+                    label="Heart Rate"
+                    icon={Activity}
+                    value={pulsePost}
+                    onChange={setPulsePost}
+                    placeholder="72"
+                    unit="bpm"
+                    inputMode="numeric"
+                  />
+                </div>
+              </section>
+
+              {/* Notes field */}
+              <div className={`${PANEL} space-y-3`}>
+                <PanelTitle>Recovery Notes</PanelTitle>
+                <textarea
+                  rows={3}
+                  value={generalNotes}
+                  onChange={(e) => setGeneralNotes(e.target.value)}
+                  placeholder="Post-dialysis notes or recovery observations..."
+                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                />
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Clinical Vitals Cards */}
-            <div className="pt-2 space-y-3">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
-                Clinical Measurements
-              </h3>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                  <div className="flex items-center justify-between text-slate-700">
-                    <span className="text-xs font-semibold">Fluid Removed</span>
-                    <Droplets className="size-4 text-slate-400" />
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={fluidRemoved}
-                      onChange={(e) => setFluidRemoved(e.target.value)}
-                      placeholder="2.3"
-                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="text-xs font-medium text-slate-500">Liters</span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                  <div className="flex items-center justify-between text-slate-700">
-                    <span className="text-xs font-semibold">Post Weight</span>
-                    <Scale className="size-4 text-slate-400" />
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={postWeight}
-                      onChange={(e) => setPostWeight(e.target.value)}
-                      placeholder="72.4"
-                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="shrink-0 text-xs font-medium text-slate-500">
-                      kg{preWeight ? ` (pre: ${preWeight})` : ""}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                  <div className="flex items-center justify-between text-slate-700">
-                    <span className="text-xs font-semibold">Blood Pressure</span>
-                    <HeartPulse className="size-4 text-slate-400" />
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      inputMode="text"
-                      value={bpPost}
-                      onChange={(e) => setBpPost(e.target.value)}
-                      placeholder="120/80"
-                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="text-xs font-medium text-slate-500">mmHg</span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                  <div className="flex items-center justify-between text-slate-700">
-                    <span className="text-xs font-semibold">Heart Rate</span>
-                    <Activity className="size-4 text-slate-400" />
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={pulsePost}
-                      onChange={(e) => setPulsePost(e.target.value)}
-                      placeholder="72"
-                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xl font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="text-xs font-medium text-slate-500">bpm</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes field */}
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">Recovery Notes</h3>
-              <textarea
-                rows={3}
-                value={generalNotes}
-                onChange={(e) => setGeneralNotes(e.target.value)}
-                placeholder="Post-dialysis notes or recovery observations..."
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-800 outline-none focus:border-slate-400 resize-none"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. FOOTER */}
-      <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 p-4 px-6">
-        <div className="flex items-center gap-2">
+        {/* 3. FOOTER */}
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-[#F8FAFC] px-5 py-4 sm:px-6">
           {activeTab > 1 ? (
             <button
               type="button"
               onClick={() => setActiveTab(activeTab - 1)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
             >
               <ArrowLeft className="size-3.5" />
               <span>Previous Page</span>
@@ -1073,26 +1050,24 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
             >
               Cancel
             </button>
           ) : (
             <Link
               href="/dashboard/personal-log/dialysis-treatment"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-2xs transition-colors inline-block"
+              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
             >
               Cancel
             </Link>
           )}
-        </div>
 
-        <div className="flex items-center gap-2.5">
           {activeTab < 4 ? (
             <button
               type="button"
               onClick={() => setActiveTab(activeTab + 1)}
-              className="flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#2563EB] px-5 text-xs font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
             >
               <span>Next Page</span>
               <ArrowRight className="size-3.5" />
@@ -1101,7 +1076,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={handleSave}
-              className="flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-6 py-2 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#2563EB] px-6 text-xs font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
             >
               <Check className="size-4" />
               <span>Save Log</span>
@@ -1109,7 +1084,6 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
           )}
         </div>
       </div>
-    </div>
     </div>
   );
 }
