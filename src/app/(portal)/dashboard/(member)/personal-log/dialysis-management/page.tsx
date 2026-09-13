@@ -33,6 +33,7 @@ import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSecti
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { Button, buttonStyles, Modal } from "@/components/ui";
 
 interface TreatmentInterval {
   id: string;
@@ -880,39 +881,39 @@ function DialysisManagementDashboard() {
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* CARD 1: CURRENT RUNNING TREATMENT, DATES & ACTION BUTTONS */}
-        <section className="xl:col-span-4 2xl:col-span-4 rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs flex flex-col justify-between space-y-5">
+        <section className="xl:col-span-4 2xl:col-span-4 rounded-card border border-line bg-surface p-6 sm:p-7 shadow-control flex flex-col justify-between space-y-5">
           <div className="space-y-4">
             {/* Currently Running Treatment Display */}
             <div>
-              <span className="block text-sm font-semibold text-slate-500 mb-1">
+              <span className="block text-sm font-semibold text-fg-muted mb-1">
                 {isEs ? "Tratamiento actual" : "Current Treatment"}
               </span>
-              <h2 className="text-[22px] sm:text-[26px] font-bold text-slate-800 tracking-tight">
+              <h2 className="text-[22px] sm:text-[26px] font-bold text-fg-secondary tracking-tight">
                 {currentTreatment?.name || selectedInterval.name}
               </h2>
             </div>
 
             {/* Date Section: arrows step through prescribed treatment periods */}
-            <div className="my-4 rounded-2xl bg-slate-50 border border-slate-100/90 p-3.5 sm:p-4 space-y-3.5">
+            <div className="my-4 rounded-card bg-surface-sunken border border-line-subtle/90 p-3.5 sm:p-4 space-y-3.5">
               <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setTreatmentOffset((value) => value - 1)}
                   aria-label={isEs ? "Tratamiento anterior" : "Previous treatment"}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg cursor-pointer"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
 
                 {treatmentOffset === 0 ? (
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-fg-subtle">
                     {isEs ? "Actual" : "Current"}
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setTreatmentOffset(0)}
-                    className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 transition-colors hover:bg-blue-100 cursor-pointer"
+                    className="rounded-lg bg-primary-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-fg-brand transition-colors hover:bg-brand-100 cursor-pointer"
                   >
                     {isEs ? "Volver a hoy" : "Back to today"}
                   </button>
@@ -922,7 +923,7 @@ function DialysisManagementDashboard() {
                   type="button"
                   onClick={() => setTreatmentOffset((value) => value + 1)}
                   aria-label={isEs ? "Tratamiento siguiente" : "Next treatment"}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg cursor-pointer"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -930,12 +931,12 @@ function DialysisManagementDashboard() {
               {/* Start Block */}
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-[13px] font-bold text-slate-700">
+                  <span className="text-label-md text-fg-secondary">
                     {isEs ? "Inicio" : "Start"}
                   </span>
-                  <div className="h-px bg-slate-200/90 flex-1" />
+                  <div className="h-px flex-1 bg-line" />
                 </div>
-                <div className="flex items-center justify-between text-sm sm:text-base font-bold text-slate-800 pt-0.5">
+                <div className="flex items-center justify-between pt-0.5 text-label-lg text-fg-secondary">
                   <span>{currentStartInfo.day}</span>
                   <span className="text-right">{currentStartInfo.date}</span>
                 </div>
@@ -944,12 +945,12 @@ function DialysisManagementDashboard() {
               {/* End Block */}
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-[13px] font-bold text-slate-700">
+                  <span className="text-label-md text-fg-secondary">
                     {isEs ? "Fin" : "End"}
                   </span>
-                  <div className="h-px bg-slate-200/90 flex-1" />
+                  <div className="h-px flex-1 bg-line" />
                 </div>
-                <div className="flex items-center justify-between text-sm sm:text-base font-bold text-slate-800 pt-0.5">
+                <div className="flex items-center justify-between pt-0.5 text-label-lg text-fg-secondary">
                   <span>{currentEndInfo.day}</span>
                   <span className="text-right">{currentEndInfo.date}</span>
                 </div>
@@ -964,7 +965,7 @@ function DialysisManagementDashboard() {
               href={`/dashboard/personal-log/dialysis-management/view?treatment=${
                 currentTreatment?.id || "tx-4"
               }&title=${encodeURIComponent(currentTreatment?.name || "")}`}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action hover:bg-action-hover py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-control hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" />
               <span>{isEs ? "Agregar Nuevo Registro" : "Add New Record"}</span>
@@ -974,21 +975,21 @@ function DialysisManagementDashboard() {
             <button
               type="button"
               onClick={() => setIsExtraTxModalOpen(true)}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100/80 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-purple-800 shadow-2xs transition-all active:scale-[0.98] cursor-pointer text-center"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-accent-300 bg-accent-soft hover:bg-accent-100/80 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-accent-800 shadow-control transition-all active:scale-[0.98] cursor-pointer text-center"
             >
-              <Clock className="h-4 w-4 text-purple-700 stroke-[2.5]" />
+              <Clock className="h-4 w-4 text-accent-fg stroke-[2.5]" />
               <span>{isEs ? "Tomar Tratamiento Extra" : "Take Extra Treatment"}</span>
             </button>
           </div>
         </section>
 
         {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
-        <section className="xl:col-span-8 2xl:col-span-8 rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs flex flex-col">
+        <section className="xl:col-span-8 2xl:col-span-8 rounded-card border border-line bg-surface p-5 sm:p-6 shadow-control flex flex-col">
           {/* Card head: title on the left, Edit Week on the right */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <CalendarDays className="h-[22px] w-[22px] sm:h-6 sm:w-6 text-slate-800 stroke-[2.2] shrink-0" />
-              <h2 className="text-[22px] sm:text-[26px] font-bold text-slate-800 tracking-tight">
+              <CalendarDays className="h-[22px] w-[22px] sm:h-6 sm:w-6 text-fg-secondary stroke-[2.2] shrink-0" />
+              <h2 className="text-[22px] sm:text-[26px] font-bold text-fg-secondary tracking-tight">
                 {isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
               </h2>
             </div>
@@ -996,9 +997,9 @@ function DialysisManagementDashboard() {
             <button
               type="button"
               onClick={handleOpenEditWeek}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs hover:border-slate-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface hover:bg-surface-sunken px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold text-fg-secondary shadow-control hover:border-line-strong transition-colors cursor-pointer"
             >
-              <Settings className="h-4 w-4 text-slate-500" />
+              <Settings className="h-4 w-4 text-fg-muted" />
               <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
             </button>
           </div>
@@ -1006,16 +1007,16 @@ function DialysisManagementDashboard() {
           {/* Schedule down the left, notes down the right */}
           <div className="mt-5 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(236px,0.72fr)]">
             {/* Session duration on top, then one row per day */}
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 sm:p-4 space-y-3">
+            <div className="rounded-xl border border-line-subtle bg-surface-sunken p-3.5 sm:p-4 space-y-3">
               {/* One amount shared by every prescribed day */}
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
-                <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700">
-                  <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-slate-500" />
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+                <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-fg-secondary">
+                  <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-muted" />
                   {isEs ? "Duración de la sesión" : "Session duration"}
                 </span>
-                <span className="text-sm sm:text-base font-bold text-[#2563EB]">
+                <span className="text-sm sm:text-base font-bold text-fg-brand">
                   {formatDuration(currentSchedule.durationMinutes)}
-                  <span className="ml-1.5 text-[11px] font-semibold text-slate-400">
+                  <span className="ml-1.5 text-[11px] font-semibold text-fg-subtle">
                     {isEs ? "(todos los días)" : "(all days)"}
                   </span>
                 </span>
@@ -1033,27 +1034,27 @@ function DialysisManagementDashboard() {
                     <div
                       key={day}
                       className={`mb-1.5 flex min-w-0 break-inside-avoid items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-all ${isSelected
-                          ? "bg-gradient-to-r from-blue-50/80 via-white to-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-slate-300"
-                          : "bg-white/40 border border-dashed border-slate-200/70"
+                          ? "bg-gradient-to-r from-blue-50/80 via-white to-white border border-line shadow-card hover:shadow-md hover:border-line-strong"
+                          : "bg-surface/40 border border-dashed border-line/70"
                         }`}
                     >
                       <span
-                        className={`min-w-0 truncate text-xs sm:text-sm font-bold tracking-tight select-none ${isSelected ? "text-[#2563EB]" : "text-slate-400"
+                        className={`min-w-0 truncate text-xs sm:text-sm font-bold tracking-tight select-none ${isSelected ? "text-fg-brand" : "text-fg-subtle"
                           }`}
                       >
                         {fullDayName}
                       </span>
 
                       {isSelected ? (
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-slate-900 whitespace-nowrap select-none">
-                          <Bell className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-slate-500" />
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] sm:text-xs font-bold text-fg whitespace-nowrap select-none">
+                          <Bell className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
                           {formatReminder(
                             currentSchedule.reminders[day] ?? DEFAULT_REMINDER,
                             isEs,
                           )}
                         </span>
                       ) : (
-                        <span className="shrink-0 text-xs font-bold text-slate-300 select-none">
+                        <span className="shrink-0 text-xs font-bold text-fg-subtle select-none">
                           —
                         </span>
                       )}
@@ -1064,10 +1065,10 @@ function DialysisManagementDashboard() {
             </div>
 
             {/* Freeform note, alongside the schedule */}
-            <div className="flex h-full flex-col justify-between gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 sm:p-3.5 transition-all focus-within:border-blue-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100/60">
+            <div className="flex h-full flex-col justify-between gap-2 rounded-card border border-line/80 bg-surface-sunken p-3 sm:p-3.5 transition-all focus-within:border-primary-soft-line focus-within:bg-surface focus-within:ring-2 focus-within:ring-ring/60">
               {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
-              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200/70">
-                <span className="text-xs font-bold text-slate-700">
+              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-line/70">
+                <span className="text-xs font-bold text-fg-secondary">
                   {isEs ? "Notas" : "Notes"}
                 </span>
 
@@ -1077,7 +1078,7 @@ function DialysisManagementDashboard() {
                     onClick={handleUndoNote}
                     disabled={historyIndex <= 0}
                     title={isEs ? "Deshacer (Undo)" : "Undo"}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg text-fg-muted hover:text-fg-secondary hover:bg-line/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <Undo2 className="h-3.5 w-3.5" />
                   </button>
@@ -1087,19 +1088,19 @@ function DialysisManagementDashboard() {
                     onClick={handleRedoNote}
                     disabled={historyIndex >= noteHistory.length - 1}
                     title={isEs ? "Rehacer (Redo)" : "Redo"}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg text-fg-muted hover:text-fg-secondary hover:bg-line/80 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <Redo2 className="h-3.5 w-3.5" />
                   </button>
 
-                  <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
+                  <div className="h-3.5 w-px bg-line mx-0.5" />
 
                   <button
                     type="button"
                     onClick={handleCleanNote}
                     disabled={!weeklyNote}
                     title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg text-fg-muted hover:text-danger hover:bg-danger-surface disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <Eraser className="h-3.5 w-3.5" />
                   </button>
@@ -1116,7 +1117,7 @@ function DialysisManagementDashboard() {
                     ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
                     : "Write any notes, symptoms, or reminders here..."
                 }
-                className="w-full flex-1 bg-transparent resize-none outline-none text-xs sm:text-sm font-medium text-slate-700 placeholder:text-slate-400 min-h-[120px]"
+                className="w-full flex-1 bg-transparent resize-none outline-none text-xs sm:text-sm font-medium text-fg-secondary placeholder:text-fg-subtle min-h-[120px]"
               />
             </div>
           </div>
@@ -1127,13 +1128,13 @@ function DialysisManagementDashboard() {
       {/* TABS: Treatments, Analytics, Care Team Questions & Sort Dropdown          */}
       {/* ========================================================================= */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-1 sm:gap-2 p-1 bg-slate-100/90 rounded-2xl w-full sm:w-fit border border-slate-200/80">
+        <div className="flex items-center gap-1 sm:gap-2 p-1 bg-surface-sunken/90 rounded-card w-full sm:w-fit border border-line/80">
           <button
             type="button"
             onClick={() => setActiveTab("treatments")}
             className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none text-center ${activeTab === "treatments"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-surface text-fg shadow-control border border-line/60"
+                : "text-fg-muted hover:text-fg hover:bg-surface/50"
               }`}
           >
             {isEs ? "Tratamientos" : "Treatments"}
@@ -1142,8 +1143,8 @@ function DialysisManagementDashboard() {
             type="button"
             onClick={() => setActiveTab("analytics")}
             className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none text-center ${activeTab === "analytics"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-surface text-fg shadow-control border border-line/60"
+                : "text-fg-muted hover:text-fg hover:bg-surface/50"
               }`}
           >
             {isEs ? "Analíticas" : "Analytics"}
@@ -1152,8 +1153,8 @@ function DialysisManagementDashboard() {
             type="button"
             onClick={() => setActiveTab("questions")}
             className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none text-center ${activeTab === "questions"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-surface text-fg shadow-control border border-line/60"
+                : "text-fg-muted hover:text-fg hover:bg-surface/50"
               }`}
           >
             {isEs ? "Preguntas del Equipo" : "Care Team Questions"}
@@ -1169,7 +1170,7 @@ function DialysisManagementDashboard() {
                 value={viewMonthKey}
                 onChange={(e) => setViewMonthKey(e.target.value)}
                 aria-label={isEs ? "Seleccionar mes" : "Select month"}
-                className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition-all cursor-pointer"
+                className="appearance-none bg-surface border border-line hover:border-line-strong rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-bold text-fg-secondary shadow-control focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)]/20 transition-all cursor-pointer"
               >
                 {monthOptions.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -1181,8 +1182,8 @@ function DialysisManagementDashboard() {
                   </option>
                 ))}
               </select>
-              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
             </div>
 
             <div className="relative">
@@ -1190,12 +1191,12 @@ function DialysisManagementDashboard() {
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
               aria-label="Sort order"
-              className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-2.5 pr-8 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition-all cursor-pointer"
+              className="appearance-none bg-surface border border-line hover:border-line-strong rounded-xl px-4 py-2.5 pr-8 text-xs sm:text-sm font-bold text-fg-secondary shadow-control focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)]/20 transition-all cursor-pointer"
             >
               <option value="asc">{isEs ? "Ascendente" : "Ascending"}</option>
               <option value="desc">{isEs ? "Descendente" : "Descending"}</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
             </div>
           </div>
         )}
@@ -1218,14 +1219,14 @@ function DialysisManagementDashboard() {
                 return (
                   <div
                     key={card.id}
-                    className="min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border border-purple-200 bg-purple-50/20 p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs hover:shadow-md hover:border-purple-400"
+                    className="min-h-[320px] sm:min-h-[340px] w-full rounded-panel border border-accent-soft-line bg-accent-soft/20 p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-control hover:shadow-md hover:border-accent-400"
                   >
                     {/* Content: Text 1 & Text 2 (Normal layout, no tag, pure purple color) */}
                     <div className="space-y-1.5">
-                      <h3 className="text-xl sm:text-2xl font-bold text-purple-900 group-hover:text-purple-700 transition-colors tracking-tight">
+                      <h3 className="text-xl sm:text-2xl font-bold text-accent-900 group-hover:text-accent-fg transition-colors tracking-tight">
                         {isEs ? card.title.replace("Treatment", "Tratamiento") : card.title}
                       </h3>
-                      <p className="text-sm sm:text-base font-semibold text-purple-700 leading-snug">
+                      <p className="text-sm sm:text-base font-semibold text-accent-fg leading-snug">
                         {isEs
                           ? card.subtitle
                             .replace("Between", "Entre")
@@ -1236,16 +1237,16 @@ function DialysisManagementDashboard() {
                     </div>
 
                     {/* Date & Reason Section: Single Date when extra treatment was taken + Reason underneath */}
-                    <div className="my-5 rounded-2xl bg-purple-50/60 border border-purple-100 p-3.5 sm:p-4 space-y-3.5">
+                    <div className="my-5 rounded-card bg-accent-soft/60 border border-accent-soft-line p-3.5 sm:p-4 space-y-3.5">
                       {/* Treatment Date Block */}
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-[13px] font-bold text-purple-800">
+                          <span className="text-xs sm:text-[13px] font-bold text-accent-800">
                             {isEs ? "Fecha" : "Date"}
                           </span>
-                          <div className="h-px bg-purple-200 flex-1" />
+                          <div className="h-px bg-accent-200 flex-1" />
                         </div>
-                        <div className="flex items-center justify-between text-sm sm:text-base font-bold text-purple-950 pt-0.5">
+                        <div className="flex items-center justify-between text-sm sm:text-base font-bold text-accent-950 pt-0.5">
                           <span>{startInfo.day}</span>
                           <span className="text-right">{startInfo.date}</span>
                         </div>
@@ -1254,13 +1255,13 @@ function DialysisManagementDashboard() {
                       {/* Reason Block */}
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-[13px] font-bold text-purple-800">
+                          <span className="text-xs sm:text-[13px] font-bold text-accent-800">
                             {isEs ? "Motivo" : "Reason"}
                           </span>
-                          <div className="h-px bg-purple-200 flex-1" />
+                          <div className="h-px bg-accent-200 flex-1" />
                         </div>
                         <div className="pt-0.5">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs sm:text-[13px] font-bold bg-white text-purple-900 border border-purple-200/80 shadow-2xs leading-snug">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs sm:text-[13px] font-bold bg-surface text-accent-900 border border-accent-soft-line/80 shadow-control leading-snug">
                             {card.extraReason || (isEs ? "Sobrecarga de Líquidos" : "Fluid Overload")}
                           </span>
                         </div>
@@ -1280,7 +1281,7 @@ function DialysisManagementDashboard() {
                             : `/dashboard/personal-log/dialysis-management/view?treatment=${card.id}`
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-accent-solid hover:bg-accent-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-control hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
                       >
                         <span>{isEs ? "Ver Detalles" : "View Details"}</span>
                       </Link>
@@ -1300,46 +1301,46 @@ function DialysisManagementDashboard() {
                         : "Upcoming treatment — not available yet"
                       : undefined
                   }
-                  className={`min-h-[320px] sm:min-h-[340px] w-full rounded-3xl border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-xs ${isUpcoming
-                      ? "border-slate-200/90 bg-white opacity-20 pointer-events-none"
+                  className={`min-h-[320px] sm:min-h-[340px] w-full rounded-panel border p-6 sm:p-7 flex flex-col justify-between transition-all duration-200 select-none group shadow-control ${isUpcoming
+                      ? "border-line bg-surface opacity-20 pointer-events-none"
                       : isSelected
-                        ? "border-[#2563EB] bg-blue-50/20 ring-2 ring-[#2563EB]/20 hover:shadow-md"
-                        : "border-slate-200/90 bg-white hover:border-blue-300 hover:shadow-md"
+                        ? "border-[var(--color-brand-600)] bg-primary-soft/20 ring-2 ring-[var(--color-brand-600)]/20 hover:shadow-md"
+                        : "border-line bg-surface hover:border-primary-soft-line hover:shadow-md"
                     }`}
                 >
                   {/* Content: Text 1 & Text 2 (With Current badge for current treatment) */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-[#2563EB] transition-colors tracking-tight">
+                      <h3 className="text-xl sm:text-2xl font-bold text-fg group-hover:text-fg-brand transition-colors tracking-tight">
                         {card.title}
                       </h3>
                       {isSelected ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#2563EB] text-white shadow-2xs">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-action text-white shadow-control">
                           {isEs ? "Actual" : "Current"}
                         </span>
                       ) : isUpcoming ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-line text-fg-secondary">
                           {isEs ? "Próximo" : "Upcoming"}
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-sm sm:text-base font-semibold text-slate-500 leading-snug">
+                    <p className="text-sm sm:text-base font-semibold text-fg-muted leading-snug">
                       {card.subtitle}
                     </p>
                   </div>
 
                   {/* Date Section: Start and End blocks inside an inner gray card */}
                   {/* 20px gap from top title & subtitle and 20px gap before buttons */}
-                  <div className="my-5 rounded-2xl bg-slate-50 border border-slate-100/90 p-3.5 sm:p-4 space-y-3.5">
+                  <div className="my-5 rounded-card bg-surface-sunken border border-line-subtle/90 p-3.5 sm:p-4 space-y-3.5">
                     {/* Start Block */}
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-[13px] font-bold text-slate-700">
+                        <span className="text-label-md text-fg-secondary">
                           {isEs ? "Inicio" : "Start"}
                         </span>
-                        <div className="h-px bg-slate-200/90 flex-1" />
+                        <div className="h-px flex-1 bg-line" />
                       </div>
-                      <div className="flex items-center justify-between text-sm sm:text-base font-bold text-slate-800 pt-0.5">
+                      <div className="flex items-center justify-between pt-0.5 text-label-lg text-fg-secondary">
                         <span>{startInfo.day}</span>
                         <span className="text-right">{startInfo.date}</span>
                       </div>
@@ -1348,12 +1349,12 @@ function DialysisManagementDashboard() {
                     {/* End Block */}
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-[13px] font-bold text-slate-700">
+                        <span className="text-label-md text-fg-secondary">
                           {isEs ? "Fin" : "End"}
                         </span>
-                        <div className="h-px bg-slate-200/90 flex-1" />
+                        <div className="h-px flex-1 bg-line" />
                       </div>
-                      <div className="flex items-center justify-between text-sm sm:text-base font-bold text-slate-800 pt-0.5">
+                      <div className="flex items-center justify-between pt-0.5 text-label-lg text-fg-secondary">
                         <span>{endInfo.day}</span>
                         <span className="text-right">{endInfo.date}</span>
                       </div>
@@ -1367,7 +1368,7 @@ function DialysisManagementDashboard() {
                         type="button"
                         disabled
                         tabIndex={-1}
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-slate-400 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-not-allowed text-center"
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-gray-400 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-not-allowed text-center"
                       >
                         <span>{isEs ? "Próximo" : "Upcoming"}</span>
                       </button>
@@ -1377,7 +1378,7 @@ function DialysisManagementDashboard() {
                           card.id
                         }&title=${encodeURIComponent(card.title)}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-action hover:bg-action-hover py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-control hover:shadow transition-all active:scale-[0.98] cursor-pointer text-center"
                       >
                         <span>{isEs ? "Ver Detalles" : "View Details"}</span>
                       </Link>
@@ -1389,13 +1390,13 @@ function DialysisManagementDashboard() {
           </div>
 
           {displayedTreatmentCards.length === 0 && (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center">
-              <p className="text-sm font-bold text-slate-700">
+            <div className="rounded-panel border border-dashed border-line bg-surface p-10 text-center">
+              <p className="text-sm font-bold text-fg-secondary">
                 {isEs
                   ? "No hay tratamientos programados para este mes."
                   : "No treatments scheduled for this month."}
               </p>
-              <p className="mt-1 text-xs font-medium text-slate-500">
+              <p className="mt-1 text-xs font-medium text-fg-muted">
                 {isEs
                   ? "Usa Editar Semana para elegir tus días de diálisis."
                   : "Use Edit Week to choose your prescribed dialysis days."}
@@ -1411,13 +1412,13 @@ function DialysisManagementDashboard() {
           <RecoveryPatternSection mode="weekly" />
 
           {/* Weekly Performance Breakdown */}
-          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-4">
+          <div className="rounded-panel border border-line bg-surface p-6 sm:p-7 shadow-control space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-base font-bold text-fg">
                   {isEs ? "Desglose de Desempeño Semanal" : "Weekly Performance Breakdown"}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <p className="text-xs text-fg-muted font-medium mt-0.5">
                   {isEs
                     ? "Historial de tratamientos y recuperación organizado por semanas"
                     : "Treatment completion and recovery outcomes aggregated week-by-week"}
@@ -1425,10 +1426,10 @@ function DialysisManagementDashboard() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+            <div className="overflow-x-auto rounded-card border border-line/80">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                  <tr className="bg-surface-sunken/90 text-xs font-bold uppercase tracking-wider text-fg-muted border-b border-line">
                     <th className="py-3 px-4 w-32">{isEs ? "Semana" : "Week"}</th>
                     <th className="py-3 px-4 w-44">{isEs ? "Período" : "Period"}</th>
                     <th className="py-3 px-4">{isEs ? "Tratamientos" : "Treatments Completed"}</th>
@@ -1437,114 +1438,114 @@ function DialysisManagementDashboard() {
                     <th className="py-3 px-4 text-center">{isEs ? "Estado" : "Status"}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
+                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
+                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
                       {isEs ? "Semana 4 (Actual)" : "Week 4 (Current)"}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
                       Jun 22, 2026 - Jun 28, 2026
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       2.4 hrs
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "85%" }} />
+                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
+                          <div className="h-2 rounded-pill bg-action" style={{ width: "85%" }} />
                         </div>
-                        <span className="text-xs font-bold text-slate-800">85%</span>
+                        <span className="text-label-md text-fg">85%</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-success-surface text-success border border-success-line">
                         {isEs ? "En Objetivo" : "On Target"}
                       </span>
                     </td>
                   </tr>
 
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
+                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
                       {isEs ? "Semana 3" : "Week 3"}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
                       Jun 15, 2026 - Jun 21, 2026
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       2.9 hrs
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "74%" }} />
+                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
+                          <div className="h-2 rounded-pill bg-action" style={{ width: "74%" }} />
                         </div>
-                        <span className="text-xs font-bold text-slate-800">74%</span>
+                        <span className="text-label-md text-fg">74%</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-soft text-fg-brand border border-primary-soft-line">
                         {isEs ? "Estable" : "Stable"}
                       </span>
                     </td>
                   </tr>
 
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
+                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
                       {isEs ? "Semana 2" : "Week 2"}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
                       Jun 08, 2026 - Jun 14, 2026
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3.2 hrs
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "64%" }} />
+                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
+                          <div className="h-2 rounded-pill bg-action" style={{ width: "64%" }} />
                         </div>
-                        <span className="text-xs font-bold text-slate-800">64%</span>
+                        <span className="text-label-md text-fg">64%</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
+                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft text-accent-fg border border-accent-soft-line">
                         {isEs ? "Mejorando" : "Improving"}
                       </span>
                     </td>
                   </tr>
 
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
+                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
                       {isEs ? "Semana 1" : "Week 1"}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
+                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
                       Jun 01, 2026 - Jun 07, 2026
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800 text-xs sm:text-sm">
+                    <td className="text-overline px-inset-md py-inset-sm text-fg-muted">
                       3.8 hrs
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-[#2563EB] h-2 rounded-full" style={{ width: "52%" }} />
+                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
+                          <div className="h-2 rounded-pill bg-action" style={{ width: "52%" }} />
                         </div>
-                        <span className="text-xs font-bold text-slate-800">52%</span>
+                        <span className="text-label-md text-fg">52%</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-warning-surface text-warning border border-warning-line">
                         {isEs ? "Monitoreado" : "Monitored"}
                       </span>
                     </td>
@@ -1566,32 +1567,38 @@ function DialysisManagementDashboard() {
       {/* ========================================================================= */}
       {/* MODAL 1: EDIT WEEK SETTING                                                */}
       {/* ========================================================================= */}
-      {isEditWeekModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xl space-y-5 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <Modal
+        open={isEditWeekModalOpen}
+        onClose={() => setIsEditWeekModalOpen(false)}
+        size="wide"
+        title={isEs ? "Editar Horario Semanal" : "Edit Weekly Schedule"}
+        description={
+          isEs
+            ? "Selecciona los días en que tienes diálisis"
+            : "Select which days of the week you receive dialysis"
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsEditWeekModalOpen(false)}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="week-schedule-form">
+              {isEs ? "Guardar Horario" : "Save Schedule"}
+            </Button>
+          </>
+        }
+      >
+            <form
+              id="week-schedule-form"
+              onSubmit={handleSaveWeekSetting}
+              className="space-y-stack-lg"
+            >
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {isEs ? "Editar Horario Semanal" : "Edit Weekly Schedule"}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {isEs
-                    ? "Selecciona los días en que tienes diálisis"
-                    : "Select which days of the week you receive dialysis"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsEditWeekModalOpen(false)}
-                className="rounded-xl p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveWeekSetting} className="space-y-4 text-sm">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-2">
+                <label className="block font-semibold text-fg-secondary mb-2">
                   {isEs ? "Días de Diálisis" : "Prescribed Dialysis Days"}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1603,8 +1610,8 @@ function DialysisManagementDashboard() {
                         type="button"
                         onClick={() => toggleDaySelection(day)}
                         className={`flex items-center justify-between p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${isSelected
-                            ? "bg-blue-50 border-[#2563EB] text-[#2563EB]"
-                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                            ? "bg-primary-soft border-[var(--color-brand-600)] text-fg-brand"
+                            : "bg-surface border-line text-fg-secondary hover:bg-surface-sunken"
                           }`}
                       >
                         <span>{isEs ? WEEKDAY_ES[day] : day}</span>
@@ -1620,12 +1627,12 @@ function DialysisManagementDashboard() {
                 type="button"
                 onClick={() => setTempHideBlankDays((prev) => !prev)}
                 aria-pressed={tempHideBlankDays}
-                className="flex w-full items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:bg-slate-50 cursor-pointer"
+                className="flex w-full items-start gap-2.5 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:bg-surface-sunken cursor-pointer"
               >
                 <span
                   className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-colors ${tempHideBlankDays
-                      ? "border-[#2563EB] bg-[#2563EB]"
-                      : "border-slate-300"
+                      ? "border-[var(--color-brand-600)] bg-action"
+                      : "border-line-strong"
                     }`}
                 >
                   {tempHideBlankDays && (
@@ -1633,10 +1640,10 @@ function DialysisManagementDashboard() {
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-bold text-slate-800">
+                  <span className="block font-bold text-fg-secondary">
                     {isEs ? "Ocultar días en blanco" : "Remove blank days"}
                   </span>
-                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-slate-500">
+                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-fg-muted">
                     {isEs
                       ? "La semana muestra solo tus días de tratamiento, sin los espacios vacíos."
                       : "The week shows only your treatment days, with no empty placeholders."}
@@ -1646,17 +1653,17 @@ function DialysisManagementDashboard() {
 
               {/* A reminder time per prescribed day */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-2">
+                <label className="block font-semibold text-fg-secondary mb-2">
                   {isEs ? "Hora del Recordatorio" : "Reminder Time"}
                 </label>
                 <div className="space-y-2">
                   {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => (
                     <div
                       key={day}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2"
                     >
-                      <span className="inline-flex items-center gap-2 font-bold text-slate-700">
-                        <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-slate-400" />
+                      <span className="inline-flex items-center gap-2 font-bold text-fg-secondary">
+                        <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-subtle" />
                         {isEs ? WEEKDAY_ES[day] : day}
                       </span>
                       <input
@@ -1668,7 +1675,7 @@ function DialysisManagementDashboard() {
                             [day]: e.target.value,
                           }))
                         }
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                        className="rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary outline-none transition-colors focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring cursor-pointer"
                       />
                     </div>
                   ))}
@@ -1677,10 +1684,10 @@ function DialysisManagementDashboard() {
 
               {/* Session length: one amount shared by every prescribed day */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-2">
+                <label className="block font-semibold text-fg-secondary mb-2">
                   {isEs ? "Duración de la Sesión" : "Session Duration"}
                 </label>
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
                   <div className="flex items-center gap-1.5">
                     <input
                       type="number"
@@ -1688,9 +1695,9 @@ function DialysisManagementDashboard() {
                       max={12}
                       value={tempDurationHours}
                       onChange={(e) => setTempDurationHours(e.target.value)}
-                      className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-center font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      className="w-16 rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 text-center font-bold text-fg-secondary outline-none transition-colors focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
                     />
-                    <span className="font-bold text-slate-500">
+                    <span className="font-bold text-fg-muted">
                       {isEs ? "h" : "hr"}
                     </span>
                   </div>
@@ -1698,7 +1705,7 @@ function DialysisManagementDashboard() {
                     <select
                       value={tempDurationMins}
                       onChange={(e) => setTempDurationMins(e.target.value)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-bold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                      className="rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary outline-none transition-colors focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring cursor-pointer"
                     >
                       {["00", "15", "30", "45"].map((minute) => (
                         <option key={minute} value={minute}>
@@ -1706,9 +1713,9 @@ function DialysisManagementDashboard() {
                         </option>
                       ))}
                     </select>
-                    <span className="font-bold text-slate-500">min</span>
+                    <span className="font-bold text-fg-muted">min</span>
                   </div>
-                  <span className="ml-auto text-xs font-semibold text-slate-400">
+                  <span className="ml-auto text-xs font-semibold text-fg-subtle">
                     {isEs ? "Se aplica a todos los días" : "Applies to every day"}
                   </span>
                 </div>
@@ -1716,7 +1723,7 @@ function DialysisManagementDashboard() {
 
               {/* Apply scope: how far back this schedule reaches */}
               <div className="space-y-2">
-                <label className="block font-semibold text-slate-700">
+                <label className="block font-semibold text-fg-secondary">
                   {isEs ? "Aplicar Este Horario A" : "Apply This Schedule To"}
                 </label>
 
@@ -1732,18 +1739,18 @@ function DialysisManagementDashboard() {
                         onClick={() => setApplyScope(option.id)}
                         aria-pressed={isSelected}
                         className={`w-full flex items-start gap-2.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${isSelected
-                            ? "bg-blue-50 border-[#2563EB]"
-                            : "bg-white border-slate-200 hover:bg-slate-50"
+                            ? "bg-primary-soft border-[var(--color-brand-600)]"
+                            : "bg-surface border-line hover:bg-surface-sunken"
                           }`}
                       >
                         <span
                           className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${isSelected
-                              ? "border-[#2563EB]"
-                              : "border-slate-300"
+                              ? "border-[var(--color-brand-600)]"
+                              : "border-line-strong"
                             }`}
                         >
                           {isSelected && (
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#2563EB]" />
+                            <span className="h-2.5 w-2.5 rounded-full bg-action" />
                           )}
                         </span>
 
@@ -1751,17 +1758,17 @@ function DialysisManagementDashboard() {
                           {/* Title on the left, effective date right-aligned beside it */}
                           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                             <span
-                              className={`font-bold ${isSelected ? "text-[#2563EB]" : "text-slate-800"
+                              className={`font-bold ${isSelected ? "text-fg-brand" : "text-fg-secondary"
                                 }`}
                             >
                               {isEs ? option.labelEs : option.labelEn}
                             </span>
-                            <span className="ml-auto text-right text-xs font-bold text-slate-900">
+                            <span className="ml-auto text-right text-xs font-bold text-fg">
                               {isEs ? "Desde" : "Starts"}{" "}
                               {formatFullDate(effective, isEs)}
                             </span>
                           </span>
-                          <span className="mt-1 block text-xs font-medium leading-relaxed text-slate-500">
+                          <span className="mt-1 block text-xs font-medium leading-relaxed text-fg-muted">
                             {isEs ? option.descEs : option.descEn}
                           </span>
                         </span>
@@ -1772,9 +1779,9 @@ function DialysisManagementDashboard() {
 
                 {/* Full month rebuilds treatments that already happened */}
                 {applyScope === "month" && (
-                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <AlertCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-600" />
-                    <p className="text-xs font-medium leading-relaxed text-amber-900">
+                  <div className="flex items-start gap-2 rounded-xl border border-warning-line bg-warning-surface p-3">
+                    <AlertCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-warning" />
+                    <p className="text-xs font-medium leading-relaxed text-warning-900">
                       <strong className="font-bold">
                         {isEs ? "Aviso:" : "Heads up:"}
                       </strong>{" "}
@@ -1786,80 +1793,68 @@ function DialysisManagementDashboard() {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsEditWeekModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {isEs ? "Cancelar" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 font-bold text-white transition-colors cursor-pointer shadow-2xs"
-                >
-                  {isEs ? "Guardar Horario" : "Save Schedule"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* ========================================================================= */}
       {/* MODAL 2: TAKE EXTRA TREATMENT (WITH INTERACTIVE CALENDAR & AUTO SESSION) */}
       {/* ========================================================================= */}
-      {isExtraTxModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
-            {/* Modal Header without Unscheduled Extra Treatment badge */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  {isEs ? "Tomar Tratamiento Extra" : "Take Extra Treatment"}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                  {isEs
-                    ? "Selecciona la fecha en el calendario para agendar la sesión extra"
-                    : "Select a date on the calendar to schedule an extra treatment session"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsExtraTxModalOpen(false)}
-                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveExtraTreatment} className="space-y-6">
+      <Modal
+        open={isExtraTxModalOpen}
+        onClose={() => setIsExtraTxModalOpen(false)}
+        size="wide"
+        title={isEs ? "Tomar Tratamiento Extra" : "Take Extra Treatment"}
+        description={
+          isEs
+            ? "Selecciona la fecha en el calendario para agendar la sesión extra"
+            : "Select a date on the calendar to schedule an extra treatment session"
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsExtraTxModalOpen(false)}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="extra-tx-form">
+              {isEs ? "Crear Sesión Extra" : "Create Extra Treatment"}
+            </Button>
+          </>
+        }
+      >
+            <form
+              id="extra-tx-form"
+              onSubmit={handleSaveExtraTreatment}
+              className="space-y-stack-xl"
+            >
               {/* 1. Interactive Calendar Date Selection */}
               <div className="space-y-2">
-                <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
+                <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-fg-secondary">
                   {isEs ? "Seleccionar Fecha en el Calendario" : "Select Date on Calendar"}
                 </label>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-4">
+                <div className="rounded-card border border-line bg-surface-sunken p-4 sm:p-5 space-y-4">
                   {/* Month & Year Navigation */}
                   <div className="flex items-center justify-between px-2">
                     <button
                       type="button"
                       onClick={handlePrevMonth}
-                      className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                      className="p-2 rounded-xl border border-line bg-surface hover:bg-surface-sunken text-fg-secondary transition-colors cursor-pointer shadow-control"
                       aria-label="Previous Month"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
 
-                    <p className="text-base sm:text-lg font-bold text-slate-900">
+                    <h3 className="text-heading-5 text-fg">
                       {isEs ? monthNamesEs[calMonth] : monthNames[calMonth]} {calYear}
-                    </p>
+                    </h3>
 
                     <button
                       type="button"
                       onClick={handleNextMonth}
-                      className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                      className="p-2 rounded-xl border border-line bg-surface hover:bg-surface-sunken text-fg-secondary transition-colors cursor-pointer shadow-control"
                       aria-label="Next Month"
                     >
                       <ChevronRight className="h-5 w-5" />
@@ -1867,7 +1862,7 @@ function DialysisManagementDashboard() {
                   </div>
 
                   {/* Day-of-Week Headers */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-fg-subtle uppercase tracking-wider">
                     {(isEs ? daysOfWeekEs : daysOfWeek).map((d) => (
                       <div key={d} className="py-1">
                         {d}
@@ -1893,8 +1888,8 @@ function DialysisManagementDashboard() {
                           type="button"
                           onClick={() => handleSelectDay(dayNum)}
                           className={`h-9 sm:h-11 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer flex items-center justify-center select-none ${isSelected
-                              ? "bg-[#2563EB] text-white shadow-sm scale-105"
-                              : "bg-white hover:bg-blue-50 text-slate-800 border border-slate-200/70 hover:border-blue-300"
+                              ? "bg-action text-white shadow-card scale-105"
+                              : "bg-surface hover:bg-primary-soft text-fg-secondary border border-line/70 hover:border-primary-soft-line"
                             }`}
                         >
                           {dayNum}
@@ -1904,44 +1899,44 @@ function DialysisManagementDashboard() {
                   </div>
 
                   {/* Selected Date Confirmation */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80 text-xs sm:text-sm font-semibold text-slate-700">
-                    <Calendar className="h-4 w-4 text-[#2563EB]" />
+                  <div className="flex items-center gap-2 pt-2 border-t border-line/80 text-xs sm:text-sm font-semibold text-fg-secondary">
+                    <Calendar className="h-4 w-4 text-fg-brand" />
                     <span>{isEs ? "Fecha Seleccionada:" : "Selected Date:"}</span>
-                    <strong className="text-slate-900 font-bold">{extraTxDate}</strong>
+                    <strong className="text-fg font-bold">{extraTxDate}</strong>
                   </div>
                 </div>
               </div>
 
               {/* 2. Auto-Calculated Session Number */}
-              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="rounded-card border border-accent-soft-line bg-accent-soft/50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-accent-fg">
                     {isEs ? "Número de Sesión (Automático)" : "Session Number (Auto-Assigned)"}
                   </label>
-                  <p className="text-xl sm:text-2xl font-extrabold text-purple-900 tracking-tight">
+                  <p className="text-xl sm:text-2xl font-extrabold text-accent-900 tracking-tight">
                     Treatment {autoSessionNumber}
                   </p>
-                  <p className="text-xs font-medium text-purple-700">
+                  <p className="text-xs font-medium text-accent-fg">
                     {isEs
                       ? `Calculado automáticamente para ${activeDetectedInterval.intervalName} (${activeDetectedInterval.intervalLabel})`
                       : `Auto-calculated for ${activeDetectedInterval.intervalName} (${activeDetectedInterval.intervalLabel})`}
                   </p>
                 </div>
 
-                <span className="rounded-xl bg-purple-200/80 border border-purple-300 px-3 py-1.5 text-xs font-bold text-purple-900 self-start sm:self-center">
+                <span className="rounded-xl bg-accent-200/80 border border-accent-300 px-3 py-1.5 text-xs font-bold text-accent-900 self-start sm:self-center">
                   Extra #{existingExtraCount + 1}
                 </span>
               </div>
 
               {/* 3. Clinical Reason */}
               <div className="space-y-1.5">
-                <label className="block text-xs sm:text-sm font-bold text-slate-800">
+                <label className="block text-xs sm:text-sm font-bold text-fg-secondary">
                   {isEs ? "Motivo Clínico" : "Clinical Reason"}
                 </label>
                 <select
                   value={extraTxReason}
                   onChange={(e) => setExtraTxReason(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-base font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                  className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm sm:text-base font-medium text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
                 >
                   <option value="Fluid Overload">Fluid Overload (Extra Ultrafiltration needed)</option>
                   <option value="High Potassium">High Potassium Alert / Lab Result</option>
@@ -1952,7 +1947,7 @@ function DialysisManagementDashboard() {
 
               {/* 4. Additional Notes */}
               <div className="space-y-1.5">
-                <label className="block text-xs sm:text-sm font-bold text-slate-800">
+                <label className="block text-xs sm:text-sm font-bold text-fg-secondary">
                   {isEs ? "Notas Adicionales" : "Additional Notes / Symptoms"}
                 </label>
                 <textarea
@@ -1964,90 +1959,72 @@ function DialysisManagementDashboard() {
                       ? "Describe los síntomas o indicaciones médicas para esta sesión..."
                       : "Symptoms, fluid overload indicators, or instructions for this extra session..."
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm sm:text-base font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
+                  className="w-full rounded-xl border border-line bg-surface p-3.5 text-sm sm:text-base font-medium text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring resize-none shadow-control"
                 />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsExtraTxModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm sm:text-base font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {isEs ? "Cancelar" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-6 py-3 text-sm sm:text-base font-bold text-white transition-colors cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
-                >
-                  {isEs ? "Crear Sesión Extra" : "Create Extra Treatment"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* ========================================================================= */}
       {/* MODAL 3: VIEW DETAILS / HISTORY                                           */}
       {/* ========================================================================= */}
-      {isDetailsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xl space-y-6 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div>
-                <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  {isEs ? "Detalles del Tratamiento" : "Treatment Details & History"}
-                </span>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  {selectedInterval.name}
-                </h3>
-                <p className="text-xs sm:text-sm font-medium text-slate-500">
-                  {selectedInterval.startDate} – {selectedInterval.endDate}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsDetailsModalOpen(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Modal
+        open={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        size="wide"
+        title={selectedInterval.name}
+        description={`${selectedInterval.startDate} – ${selectedInterval.endDate}`}
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsDetailsModalOpen(false)}
+            >
+              {isEs ? "Cerrar" : "Close"}
+            </Button>
+            <Link
+              href={`/dashboard/personal-log/dialysis-management/view?treatment=${selectedCard}`}
+              className={buttonStyles()}
+            >
+              {isEs ? "Ver Detalles Completos" : "View Full Details"}
+            </Link>
+          </>
+        }
+      >
 
             {/* Baseline Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-line-subtle bg-surface-sunken p-3.5 space-y-1">
+                <span className="block text-[11px] font-semibold text-fg-subtle uppercase tracking-wider">
                   {isEs ? "Peso Post-Tx Previo" : "Previous Post-Weight"}
                 </span>
-                <p className="text-base sm:text-lg font-bold text-slate-900">
+                <h3 className="text-heading-5 text-fg">
                   {selectedInterval.previousTxPostWeight} kg
-                </p>
+                </h3>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-line-subtle bg-surface-sunken p-3.5 space-y-1">
+                <span className="block text-[11px] font-semibold text-fg-subtle uppercase tracking-wider">
                   {isEs ? "PA Post-Tx Previa" : "Previous Post-BP"}
                 </span>
-                <p className="text-base sm:text-lg font-bold text-slate-900">
+                <h3 className="text-heading-5 text-fg">
                   {selectedInterval.previousTxPostBp}
-                </p>
+                </h3>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-line-subtle bg-surface-sunken p-3.5 space-y-1">
+                <span className="block text-[11px] font-semibold text-fg-subtle uppercase tracking-wider">
                   {isEs ? "Peso Seco Objetivo" : "Target Dry Weight"}
                 </span>
-                <p className="text-base sm:text-lg font-bold text-[#2563EB]">
+                <h3 className="text-heading-5 text-fg-brand">
                   {selectedInterval.targetDryWeight.toFixed(1)} kg
-                </p>
+                </h3>
               </div>
             </div>
 
             {/* Logged Interdialytic Records for this interval */}
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-slate-900">
+              <h4 className="text-sm font-bold text-fg">
                 {isEs ? "Registros Registrados en este Intervalo" : "Logged Records in this Interval"}
               </h4>
 
@@ -2058,38 +2035,38 @@ function DialysisManagementDashboard() {
                     .map((rec) => (
                       <div
                         key={rec.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-2"
+                        className="rounded-xl border border-line bg-surface-sunken/40 p-4 space-y-2"
                       >
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-sm font-bold text-fg">
                             {rec.date}
                           </span>
                           {rec.isExtraTreatment && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-accent-100 text-accent-800">
                               Extra Tx {rec.extraTreatmentNumber}
                             </span>
                           )}
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                           <div>
-                            <span className="text-slate-400 block">Morning Weight</span>
-                            <span className="font-bold text-slate-800">{rec.morningWeight || "--"} kg</span>
+                            <span className="text-fg-subtle block">Morning Weight</span>
+                            <span className="font-bold text-fg-secondary">{rec.morningWeight || "--"} kg</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block">Fluid Gain</span>
-                            <span className="font-bold text-slate-800">+{rec.fluidGainedKg || "--"} kg</span>
+                            <span className="text-fg-subtle block">Fluid Gain</span>
+                            <span className="font-bold text-fg-secondary">+{rec.fluidGainedKg || "--"} kg</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block">Home BP</span>
-                            <span className="font-bold text-slate-800">{rec.homeBp || "--"}</span>
+                            <span className="text-fg-subtle block">Home BP</span>
+                            <span className="font-bold text-fg-secondary">{rec.homeBp || "--"}</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block">Fluid Intake</span>
-                            <span className="font-bold text-slate-800">{rec.fluidOz || "--"} oz</span>
+                            <span className="text-fg-subtle block">Fluid Intake</span>
+                            <span className="font-bold text-fg-secondary">{rec.fluidOz || "--"} oz</span>
                           </div>
                         </div>
                         {rec.notes && (
-                          <p className="text-xs text-slate-600 bg-white p-2 rounded-lg border border-slate-100">
+                          <p className="text-xs text-fg-muted bg-surface p-2 rounded-lg border border-line-subtle">
                             {rec.notes}
                           </p>
                         )}
@@ -2097,7 +2074,7 @@ function DialysisManagementDashboard() {
                     ))}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs sm:text-sm text-slate-400">
+                <div className="rounded-xl border border-dashed border-line p-6 text-center text-xs sm:text-sm text-fg-subtle">
                   {isEs
                     ? "Aún no hay registros para este intervalo de tratamiento."
                     : "No records logged for this treatment interval yet."}
@@ -2105,25 +2082,7 @@ function DialysisManagementDashboard() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsDetailsModalOpen(false)}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                {isEs ? "Cerrar" : "Close"}
-              </button>
-              <Link
-                href={`/dashboard/personal-log/dialysis-management/view?treatment=${selectedCard}`}
-                className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-2.5 text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer"
-              >
-                {isEs ? "Ver Detalles Completos" : "View Full Details"}
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -2133,7 +2092,7 @@ export default function DialysisManagementPage() {
     <>
       <PersonalLogDisclaimer />
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-fg-muted">Loading...</div>}>
         <DialysisManagementDashboard />
       </Suspense>
     </>

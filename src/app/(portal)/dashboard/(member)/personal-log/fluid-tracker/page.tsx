@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { Button, Input, Modal, Textarea } from "@/components/ui";
 
 function GoalBadge({
   status,
@@ -30,8 +31,8 @@ function GoalBadge({
   isGoalMet: boolean;
 }) {
   const className = isGoalMet
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-amber-50 text-amber-700";
+    ? "bg-success-surface text-success"
+    : "bg-warning-surface text-warning";
 
   return (
     <span
@@ -45,20 +46,20 @@ function GoalBadge({
 function TrendIcon({ type }: { type: "up" | "down" | "level" }) {
   if (type === "up") {
     return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success-600 text-white">
         <ArrowUp className="h-3.5 w-3.5" />
       </span>
     );
   }
   if (type === "down") {
     return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger-solid text-white">
         <ArrowDown className="h-3.5 w-3.5" />
       </span>
     );
   }
   return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white">
+    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-white">
       <Minus className="h-3.5 w-3.5" />
     </span>
   );
@@ -79,8 +80,8 @@ function BathroomScaleIcon({ className = "h-9 w-9" }: { className?: string }) {
         width="36"
         height="36"
         rx="9"
-        fill="#0D47A1"
-        stroke="#1E40AF"
+        fill="var(--color-brand-900)"
+        stroke="var(--color-brand-800)"
         strokeWidth="1.5"
       />
       {/* Subtle Inner Frame */}
@@ -90,24 +91,24 @@ function BathroomScaleIcon({ className = "h-9 w-9" }: { className?: string }) {
         width="31"
         height="31"
         rx="7"
-        stroke="#60A5FA"
+        stroke="var(--color-brand-400)"
         strokeWidth="1"
         strokeOpacity="0.4"
       />
       {/* Top Dial / Display Window */}
-      <circle cx="22" cy="14" r="5.5" fill="#FFFFFF" />
-      <circle cx="22" cy="14" r="5.5" stroke="#93C5FD" strokeWidth="1" />
+      <circle cx="22" cy="14" r="5.5" fill="var(--color-surface)" />
+      <circle cx="22" cy="14" r="5.5" stroke="var(--color-brand-300)" strokeWidth="1" />
       {/* Dial Needle */}
       <line
         x1="22"
         y1="14"
         x2="22"
         y2="10"
-        stroke="#0D47A1"
+        stroke="var(--color-brand-900)"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
-      <circle cx="22" cy="14" r="1.2" fill="#0D47A1" />
+      <circle cx="22" cy="14" r="1.2" fill="var(--color-brand-900)" />
       {/* Platform footpad indicator groove */}
       <rect
         x="13"
@@ -115,7 +116,7 @@ function BathroomScaleIcon({ className = "h-9 w-9" }: { className?: string }) {
         width="18"
         height="2"
         rx="1"
-        fill="#FFFFFF"
+        fill="var(--color-surface)"
         fillOpacity="0.45"
       />
     </svg>
@@ -160,29 +161,29 @@ function MetricCards({
   let statusTitle = w?.edwMetrics?.aboveEdw || "Above EDW";
   let statusSubtitle = `${diffPct}% ${w?.edwMetrics?.aboveEdwSuffix || "above EDW"}`;
   let diffSign = "+";
-  let statusTextColor = "text-red-600";
-  let statusIconBg = "bg-[#FEF2F2] border border-red-100";
+  let statusTextColor = "text-danger";
+  let statusIconBg = "bg-danger-surface border border-danger-line";
   let StatusIcon = () => (
-    <ArrowUp className="h-6 w-6 sm:h-7 sm:w-7 text-red-600 stroke-[2.5]" />
+    <ArrowUp className="h-6 w-6 sm:h-7 sm:w-7 text-danger stroke-[2.5]" />
   );
 
   if (isBelow) {
     statusTitle = w?.edwMetrics?.belowEdw || "Below EDW";
     statusSubtitle = `${diffPct}% ${w?.edwMetrics?.belowEdwSuffix || "below EDW"}`;
     diffSign = "-";
-    statusTextColor = "text-amber-600";
-    statusIconBg = "bg-amber-50 border border-amber-100";
+    statusTextColor = "text-warning";
+    statusIconBg = "bg-warning-surface border border-warning-line";
     StatusIcon = () => (
-      <ArrowDown className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 stroke-[2.5]" />
+      <ArrowDown className="h-6 w-6 sm:h-7 sm:w-7 text-warning stroke-[2.5]" />
     );
   } else if (isTarget) {
     statusTitle = w?.edwMetrics?.atEdw || "At Target EDW";
     statusSubtitle = w?.edwMetrics?.atEdwSuffix || "On target with EDW";
     diffSign = "";
-    statusTextColor = "text-emerald-600";
-    statusIconBg = "bg-emerald-50 border border-emerald-100";
+    statusTextColor = "text-success";
+    statusIconBg = "bg-success-surface border border-success-line";
     StatusIcon = () => (
-      <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600" />
+      <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-success" />
     );
   }
 
@@ -194,40 +195,40 @@ function MetricCards({
       value: "18",
       unit: w?.metrics?.avgFluidIntake?.unit || "OZ",
       subtitle: w?.metrics?.avgFluidIntake?.note || "↓ 1.2 lbs vs yesterday",
-      subtitleClass: "text-emerald-600 font-bold",
+      subtitleClass: "text-success font-bold",
       icon: Droplets,
-      iconBg: "bg-sky-50 border border-sky-100",
-      iconClass: "text-sky-600",
+      iconBg: "bg-brand-50 border border-primary-soft-line",
+      iconClass: "text-brand-600",
     },
     {
       label: w?.metrics?.daysGoalMet?.label || "Days Goal Met",
       value: "21 / 30",
       unit: "60%",
       subtitle: w?.metrics?.daysGoalMet?.note || "This Month",
-      subtitleClass: "text-slate-500 font-medium",
+      subtitleClass: "text-fg-muted font-medium",
       icon: CheckCircle2,
-      iconBg: "bg-emerald-50 border border-emerald-100",
-      iconClass: "text-emerald-600",
+      iconBg: "bg-success-surface border border-success-line",
+      iconClass: "text-success",
     },
     {
       label: w?.metrics?.swellingReports?.label || "Swelling Reports",
       value: "5",
       unit: "",
       subtitle: w?.metrics?.swellingReports?.note || "↓ 2 vs last month",
-      subtitleClass: "text-emerald-600 font-bold",
+      subtitleClass: "text-success font-bold",
       icon: FileText,
-      iconBg: "bg-amber-50 border border-amber-100",
-      iconClass: "text-amber-600",
+      iconBg: "bg-warning-surface border border-warning-line",
+      iconClass: "text-warning",
     },
     {
       label: w?.metrics?.sobReports?.label || "SOB Reports",
       value: "3",
       unit: "",
       subtitle: w?.metrics?.sobReports?.note || "↓ 1 vs last month",
-      subtitleClass: "text-emerald-600 font-bold",
+      subtitleClass: "text-success font-bold",
       icon: Wind,
-      iconBg: "bg-rose-50 border border-rose-100",
-      iconClass: "text-rose-500",
+      iconBg: "bg-danger-surface border border-danger-line",
+      iconClass: "text-danger",
     },
   ];
 
@@ -238,23 +239,23 @@ function MetricCards({
         {/* Card 1: Estimated Dry Weight */}
         <div
           onClick={onOpenEdwModal}
-          className="group relative flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md cursor-pointer"
+          className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md cursor-pointer"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] border border-blue-100 shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card bg-[var(--color-brand-50)] border border-primary-soft-line shadow-control group-hover:scale-105 transition-transform">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+              <p className="truncate text-label-md text-fg">
                 {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"}
               </p>
-              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+              <p className="mt-stack-xs text-metric-md text-fg">
                 {displayEdw}
-                <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                <span className="ml-1 text-body-sm text-fg-secondary">
                   {unit}
                 </span>
               </p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">
+              <p className="mt-stack-xs text-caption text-fg-muted">
                 {edwNote || (w?.edwMetrics?.edwSetBy || "Set by care team.")}
               </p>
             </div>
@@ -265,7 +266,7 @@ function MetricCards({
               e.stopPropagation();
               onOpenEdwModal();
             }}
-            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 cursor-pointer shadow-2xs active:scale-95 shrink-0"
+            className="flex items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all hover:bg-primary-soft hover:text-fg-brand hover:border-primary-soft-line cursor-pointer shadow-control active:scale-95 shrink-0"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -275,23 +276,23 @@ function MetricCards({
         {/* Card 2: Today's Weight */}
         <div
           onClick={onOpenEdwModal}
-          className="group relative flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md cursor-pointer"
+          className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md cursor-pointer"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] border border-blue-100 shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card bg-[var(--color-brand-50)] border border-primary-soft-line shadow-control group-hover:scale-105 transition-transform">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+              <p className="truncate text-label-md text-fg">
                 {w?.edwMetrics?.todaysWeight || "Today's Weight"}
               </p>
-              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+              <p className="mt-stack-xs text-metric-md text-fg">
                 {displayToday}
-                <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                <span className="ml-1 text-body-sm text-fg-secondary">
                   {unit}
                 </span>
               </p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">
+              <p className="mt-stack-xs text-caption text-fg-muted">
                 {todayDateStr}
               </p>
             </div>
@@ -302,7 +303,7 @@ function MetricCards({
               e.stopPropagation();
               onOpenEdwModal();
             }}
-            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 cursor-pointer shadow-2xs active:scale-95 shrink-0"
+            className="flex items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all hover:bg-primary-soft hover:text-fg-brand hover:border-primary-soft-line cursor-pointer shadow-control active:scale-95 shrink-0"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -310,20 +311,20 @@ function MetricCards({
         </div>
 
         {/* Card 3: Difference Above / Below EDW */}
-        <div className="flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:shadow-md">
+        <div className="flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:shadow-md">
           <div
-            className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${statusIconBg} shadow-2xs`}
+            className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${statusIconBg} shadow-control`}
           >
             <StatusIcon />
           </div>
           <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+            <p className="truncate text-label-md text-fg">
               {statusTitle}
             </p>
-            <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+            <p className="mt-stack-xs text-metric-md text-fg">
               {diffSign}
               {Math.abs(diffVal).toFixed(1)}
-              <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+              <span className="ml-1 text-body-sm text-fg-secondary">
                 {unit}
               </span>
             </p>
@@ -339,21 +340,21 @@ function MetricCards({
         {secondaryCards.map((card) => (
           <article
             key={card.label}
-            className="group relative flex items-center gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-blue-300 hover:shadow-md"
+            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md"
           >
             <div
-              className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ${card.iconBg} shadow-2xs group-hover:scale-105 transition-transform`}
+              className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card ${card.iconBg} shadow-control group-hover:scale-105 transition-transform`}
             >
               <card.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconClass}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+              <p className="truncate text-label-md text-fg">
                 {card.label}
               </p>
-              <p className="mt-0.5 text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-950">
+              <p className="mt-stack-xs text-metric-md text-fg">
                 {card.value}
                 {card.unit && (
-                  <span className="ml-1 text-sm sm:text-base font-bold text-slate-800">
+                  <span className="ml-1 text-body-sm text-fg-secondary">
                     {card.unit}
                   </span>
                 )}
@@ -431,13 +432,13 @@ function WeightTrendChart() {
   return (
     <section
       ref={containerRef}
-      className="h-full rounded-2xl border border-[#DFE3E8] bg-[#FCFDFD] p-3.5"
+      className="h-full rounded-card border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-3.5"
     >
-      <div className="flex items-center gap-1.5">
-        <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+      <div className="flex items-center gap-inline-sm">
+        <h2 className="text-body-md text-fg">
           {w?.weightTrend?.title || "Weight Trend"}
         </h2>
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-fg-muted">
           {w?.weightTrend?.subtitle || "(30 Day)"}
         </span>
       </div>
@@ -462,7 +463,7 @@ function WeightTrendChart() {
                 x2={width - right}
                 y1={y}
                 y2={y}
-                stroke="#E2E8F0"
+                stroke="var(--color-gray-200)"
                 strokeDasharray="4 4"
               />
             </g>
@@ -470,7 +471,7 @@ function WeightTrendChart() {
         })}
         <polyline
           fill="none"
-          stroke="#8979FF"
+          stroke="var(--color-accent-500)"
           strokeWidth="2.5"
           points={points}
         />
@@ -481,7 +482,7 @@ function WeightTrendChart() {
             cy={yFor(point.value)}
             r="4"
             fill="white"
-            stroke="#8979FF"
+            stroke="var(--color-accent-500)"
             strokeWidth="2"
           />
         ))}
@@ -510,19 +511,19 @@ function GoalProgress() {
       label: w?.goalProgress?.goalMet || "Goal Met",
       count: 29,
       percent: 50,
-      color: "#3B82F6",
+      color: "var(--color-brand-500)",
     },
     {
       label: w?.goalProgress?.aboveGoal || "Above Goal",
       count: 16,
       percent: 28,
-      color: "#F59E0B",
+      color: "var(--color-warning-500)",
     },
     {
       label: w?.goalProgress?.belowGoal || "Below Goal",
       count: 13,
       percent: 22,
-      color: "#FF5630",
+      color: "var(--color-danger-500)",
     },
   ];
 
@@ -531,8 +532,8 @@ function GoalProgress() {
   let offset = 0;
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-[#E3E6F0] bg-white p-4">
-      <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+    <section className="flex h-full flex-col rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
+      <h2 className="text-body-md text-fg">
         {w?.goalProgress?.title || "Goal & Progress"}
       </h2>
       <div className="mt-4 flex flex-1 flex-col items-center gap-4 sm:flex-row">
@@ -543,7 +544,7 @@ function GoalProgress() {
               cy="113"
               r={radius}
               fill="none"
-              stroke="#E2E8F0"
+              stroke="var(--color-gray-200)"
               strokeWidth="28"
             />
             {goalSlices.map((slice) => {
@@ -566,8 +567,8 @@ function GoalProgress() {
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-[22px] font-medium text-slate-950">86%</p>
-            <p className="text-sm text-[#454F5B]">
+            <p className="text-[22px] font-medium text-fg">86%</p>
+            <p className="text-sm text-[var(--color-gray-800)]">
               {w?.goalProgress?.overall || "Overall"}
             </p>
           </div>
@@ -578,14 +579,14 @@ function GoalProgress() {
               key={slice.label}
               className="flex items-center justify-between gap-2"
             >
-              <span className="flex items-center gap-2 text-lg font-medium text-[#454F5B]">
+              <span className="flex items-center gap-2 text-lg font-medium text-[var(--color-gray-800)]">
                 <span
                   className="h-4 w-4 rounded-full"
                   style={{ backgroundColor: slice.color }}
                 />
                 {slice.label}
               </span>
-              <span className="text-lg font-medium text-[#454F5B]">
+              <span className="text-lg font-medium text-[var(--color-gray-800)]">
                 {slice.count} ({slice.percent}%)
               </span>
             </div>
@@ -610,12 +611,12 @@ function FluidIntakeTrend() {
       : ["May 1", "May 2", "May 3", "May 4", "May 5", "May 6"];
 
   return (
-    <section className="h-full rounded-xl border border-[#DFE3E8] bg-[#FCFDFD] p-3.5">
-      <div className="flex items-center gap-1.5">
-        <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+    <section className="h-full rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-3.5">
+      <div className="flex items-center gap-inline-sm">
+        <h2 className="text-body-md text-fg">
           {w?.fluidIntakeTrend?.title || "Fluid Intake Trend"}
         </h2>
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-fg-muted">
           {w?.fluidIntakeTrend?.subtitle || "(30 Day)"}
         </span>
       </div>
@@ -630,7 +631,7 @@ function FluidIntakeTrend() {
             {Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
-                className="border-t border-dashed border-slate-200"
+                className="border-t border-dashed border-line"
               />
             ))}
           </div>
@@ -642,7 +643,7 @@ function FluidIntakeTrend() {
               >
                 <div className="absolute inset-y-0 w-[18px] bg-[rgba(214,219,237,0.4)]" />
                 <div
-                  className="relative w-[18px] bg-[#8979FF]/80"
+                  className="relative w-[18px] bg-[var(--color-accent-500)]/80"
                   style={{ height: `${value}%` }}
                 />
               </div>
@@ -701,21 +702,21 @@ function UrinaryOutput() {
   };
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-[#E3E6F0] bg-white p-[17px]">
-      <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+    <section className="flex h-full flex-col rounded-xl border border-[var(--color-gray-200)] bg-surface p-[17px]">
+      <h2 className="text-body-md text-fg">
         {w?.urinaryOutput?.title || "Urinary Output"}{" "}
-        <span className="text-sm font-medium text-slate-600">
+        <span className="text-sm font-medium text-fg-muted">
           {w?.urinaryOutput?.subtitle || "(24 Hours)"}
         </span>
       </h2>
-      <div className="mt-3.5 overflow-hidden rounded-lg border border-[#C4CDD5]">
+      <div className="mt-3.5 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[#F4F6F8]">
+          <thead className="bg-[var(--color-gray-50)]">
             <tr>
-              <th className="border-b border-[#C4CDD5] px-3 py-3 font-medium text-slate-950">
+              <th className="border-b border-[var(--color-gray-300)] px-3 py-3 font-medium text-fg">
                 {w?.urinaryOutput?.date || "Date"}
               </th>
-              <th className="border-b border-[#C4CDD5] px-3 py-3 font-medium text-slate-950">
+              <th className="border-b border-[var(--color-gray-300)] px-3 py-3 font-medium text-fg">
                 {w?.urinaryOutput?.trend || "Trend"}
               </th>
             </tr>
@@ -724,13 +725,13 @@ function UrinaryOutput() {
             {urineTrends.map((row) => (
               <tr
                 key={row.date}
-                className="border-b border-dashed border-[#C4CDD5] last:border-b-0"
+                className="border-b border-dashed border-[var(--color-gray-300)] last:border-b-0"
               >
-                <td className="px-3 py-3 text-[#1C252E]">{row.date}</td>
+                <td className="px-3 py-3 text-[var(--color-gray-950)]">{row.date}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-3">
                     <TrendIcon type={row.icon} />
-                    <span className="font-medium text-[#1C252E]">
+                    <span className="font-medium text-[var(--color-gray-950)]">
                       {getTrendText(row.trendKey, row.defaultTrend)}
                     </span>
                   </div>
@@ -749,10 +750,10 @@ function AlertsInsights() {
   const w = dictionary?.weightFluidTracker;
 
   const toneClass = {
-    warning: "border-amber-200 bg-amber-50",
-    error: "border-red-200 bg-red-50",
-    success: "border-emerald-200 bg-emerald-50",
-    info: "border-blue-200 bg-blue-50",
+    warning: "border-warning-line bg-warning-surface",
+    error: "border-danger-line bg-danger-surface",
+    success: "border-success-line bg-success-surface",
+    info: "border-primary-soft-line bg-primary-soft",
   };
 
   const alerts = [
@@ -788,8 +789,8 @@ function AlertsInsights() {
   ];
 
   return (
-    <section className="h-full rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-medium text-slate-950">
+    <section className="h-full rounded-xl border border-line bg-surface p-4">
+      <h2 className="text-sm font-medium text-fg">
         {w?.alerts?.title || "Alerts & Insights"}
       </h2>
       <div className="mt-3 space-y-2">
@@ -802,15 +803,15 @@ function AlertsInsights() {
           >
             <div className="flex gap-2">
               {alert.tone === "info" ? (
-                <BookOpen className="mt-0.5 h-3 w-3 shrink-0 text-blue-600" />
+                <BookOpen className="mt-0.5 h-3 w-3 shrink-0 text-fg-brand" />
               ) : (
-                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600" />
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
               )}
               <div>
-                <p className="text-xs font-medium text-slate-950">
+                <p className="text-xs font-medium text-fg">
                   {alert.title}
                 </p>
-                <p className="mt-0.5 text-[11px] leading-[13px] text-slate-600">
+                <p className="mt-0.5 text-[11px] leading-[13px] text-fg-muted">
                   {alert.body}
                 </p>
               </div>
@@ -1103,8 +1104,6 @@ function AddWeightLogModal({
     }
   }
 
-  if (!isOpen) return null;
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1146,30 +1145,33 @@ function AddWeightLogModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-150 no-scrollbar">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <Scale className="h-6 w-6 text-blue-600" />
-            <h3 className="text-xl font-bold text-slate-900">
-              {language === "ES" ? "Registrar Nuevo Control de Peso" : "Entry New Weight Log"}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-3.5">
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="wide"
+      title={
+        <span className="flex items-center gap-inline-md">
+          <Scale aria-hidden="true" className="h-icon-big w-icon-big text-fg-brand" />
+          {language === "ES"
+            ? "Registrar Nuevo Control de Peso"
+            : "Entry New Weight Log"}
+        </span>
+      }
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {language === "ES" ? "Cancelar" : "Cancel"}
+          </Button>
+          <Button type="submit" form="weight-log-form">
+            {language === "ES" ? "Guardar Registro" : "Save Entry"}
+          </Button>
+        </>
+      }
+    >
+      <form id="weight-log-form" onSubmit={handleSave} className="space-y-stack-lg">
           {/* Row 1: Date Input Box */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-800 block">
+            <label className="block text-label-md text-fg">
               {language === "ES" ? "Fecha" : "Date"}
             </label>
             <input
@@ -1181,19 +1183,19 @@ function AddWeightLogModal({
                   (e.target as HTMLInputElement).showPicker?.();
                 } catch {}
               }}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
+              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control cursor-pointer"
             />
           </div>
 
           {/* Row 2: Morning Weight & Evening Weight Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-800 block">
+              <label className="block text-label-md text-fg">
                 {language === "ES"
                   ? `Peso Mañana (${unit.toUpperCase()})`
                   : `Morning Weight (${unit.toUpperCase()})`}
               </label>
-              <input
+              <Input
                 type="text"
                 inputMode="decimal"
                 value={formMorning}
@@ -1207,17 +1209,17 @@ function AddWeightLogModal({
                     ? (language === "ES" ? "ej. 72.9" : "e.g. 72.9")
                     : (language === "ES" ? "ej. 125" : "e.g. 125")
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-800 block">
+              <label className="block text-label-md text-fg">
                 {language === "ES"
                   ? `Peso Tarde (${unit.toUpperCase()})`
                   : `Evening Weight (${unit.toUpperCase()})`}
               </label>
-              <input
+              <Input
                 type="text"
                 inputMode="decimal"
                 value={formEvening}
@@ -1231,7 +1233,7 @@ function AddWeightLogModal({
                     ? (language === "ES" ? "ej. 73.2" : "e.g. 73.2")
                     : (language === "ES" ? "ej. 122" : "e.g. 122")
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
               />
             </div>
           </div>
@@ -1239,7 +1241,7 @@ function AddWeightLogModal({
           {/* Row 3: Fluid Intake & Fluid Goal Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-800 block">
+              <label className="block text-label-md text-fg">
                 {language === "ES" ? "Ingesta de Líquidos" : "Fluid Intake"}
               </label>
               <input
@@ -1247,12 +1249,12 @@ function AddWeightLogModal({
                 value={formIntake}
                 onChange={(e) => setFormIntake(e.target.value)}
                 placeholder={language === "ES" ? "ej. 48 OZ" : "e.g. 48 OZ"}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-800 block">
+              <label className="block text-label-md text-fg">
                 {language === "ES" ? "Meta de Líquidos" : "Fluid Goal"}
               </label>
               <input
@@ -1260,24 +1262,24 @@ function AddWeightLogModal({
                 value={formGoal}
                 onChange={(e) => setFormGoal(e.target.value)}
                 placeholder="48 OZ"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
               />
             </div>
           </div>
 
           {/* Goal Met Row */}
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5">
-            <span className="text-xs sm:text-sm font-bold text-slate-800">
+          <div className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-2.5">
+            <span className="text-xs sm:text-sm font-bold text-fg-secondary">
               {language === "ES" ? "Meta Cumplida" : "Goal Met"}
             </span>
-            <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+            <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
               <button
                 type="button"
                 onClick={() => setFormGoalMet(true)}
                 className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   formGoalMet
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-700 hover:text-slate-900"
+                    ? "bg-surface text-fg shadow-control"
+                    : "text-fg-secondary hover:text-fg"
                 }`}
               >
                 {language === "ES" ? "Sí" : "Yes"}
@@ -1287,8 +1289,8 @@ function AddWeightLogModal({
                 onClick={() => setFormGoalMet(false)}
                 className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   !formGoalMet
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-700 hover:text-slate-900"
+                    ? "bg-surface text-fg shadow-control"
+                    : "text-fg-secondary hover:text-fg"
                 }`}
               >
                 {language === "ES" ? "No" : "No"}
@@ -1297,18 +1299,18 @@ function AddWeightLogModal({
           </div>
 
           {/* Fluid Status Check Section */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-3 shadow-2xs">
+          <div className="rounded-card border border-line bg-surface p-3.5 space-y-3 shadow-control">
             {/* Section Header */}
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-fg-brand">
                   <Droplets className="h-3.5 w-3.5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-fg">
                   {language === "ES" ? "Control del Estado Hídrico" : "Fluid Status Check"}
                 </h3>
               </div>
-              <p className="mt-1 text-xs font-medium text-slate-500">
+              <p className="mt-1 text-xs font-medium text-fg-muted">
                 {language === "ES"
                   ? "Ayúdenos a comprender cómo se siente después de la diálisis."
                   : "Help us understand how you’re feeling after dialysis."}
@@ -1318,28 +1320,28 @@ function AddWeightLogModal({
 
 
             {/* Subsection 1: Possible Fluid Overload */}
-            <div className="space-y-2 pt-1 border-t border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-blue-600" />
-                <h4 className="text-xs font-bold text-slate-800">
+            <div className="space-y-2 pt-1 border-t border-line-subtle">
+              <div className="flex items-center gap-inline-sm">
+                <span className="h-2 w-2 rounded-full bg-primary-solid" />
+                <h4 className="text-label-md text-fg">
                   {language === "ES" ? "Posible Sobrecarga de Líquidos" : "Possible Fluid Overload"}
                 </h4>
               </div>
 
               <div className="space-y-1.5">
                 {/* Swelling */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Hinchazón" : "Swelling"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormSwelling(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formSwelling
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1349,8 +1351,8 @@ function AddWeightLogModal({
                       onClick={() => setFormSwelling(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formSwelling
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1359,18 +1361,18 @@ function AddWeightLogModal({
                 </div>
 
                 {/* Shortness of Breath */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Falta de Aire" : "Shortness of Breath"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormSob(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formSob
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1380,8 +1382,8 @@ function AddWeightLogModal({
                       onClick={() => setFormSob(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formSob
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1390,18 +1392,18 @@ function AddWeightLogModal({
                 </div>
 
                 {/* Sudden / Rapid Weight Gain */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Aumento de Peso Repentino / Rápido" : "Sudden / Rapid Weight Gain"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormRapidGain(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formRapidGain
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1411,8 +1413,8 @@ function AddWeightLogModal({
                       onClick={() => setFormRapidGain(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formRapidGain
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1423,28 +1425,28 @@ function AddWeightLogModal({
             </div>
 
             {/* Subsection 2: Possible Too Much Fluid Removed */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-sky-500" />
-                <h4 className="text-xs font-bold text-slate-800">
+            <div className="space-y-2 pt-2 border-t border-line-subtle">
+              <div className="flex items-center gap-inline-sm">
+                <span className="h-2 w-2 rounded-full bg-brand-500" />
+                <h4 className="text-label-md text-fg">
                   {language === "ES" ? "Posible Exceso de Líquido Eliminado" : "Possible Too Much Fluid Removed"}
                 </h4>
               </div>
 
               <div className="space-y-1.5">
                 {/* Dizziness */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Mareos" : "Dizziness"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormDizziness(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formDizziness
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1454,8 +1456,8 @@ function AddWeightLogModal({
                       onClick={() => setFormDizziness(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formDizziness
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1464,18 +1466,18 @@ function AddWeightLogModal({
                 </div>
 
                 {/* Cramping */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Calambres" : "Cramping"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormCramping(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formCramping
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1485,8 +1487,8 @@ function AddWeightLogModal({
                       onClick={() => setFormCramping(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formCramping
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1495,18 +1497,18 @@ function AddWeightLogModal({
                 </div>
 
                 {/* Weakness (Reused existing field) */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Debilidad" : "Weakness"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormWeakness(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formWeakness
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1516,8 +1518,8 @@ function AddWeightLogModal({
                       onClick={() => setFormWeakness(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formWeakness
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1526,18 +1528,18 @@ function AddWeightLogModal({
                 </div>
 
                 {/* Nausea */}
-                <div className="flex items-center justify-between rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-100 px-3.5 py-2 transition-colors">
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                  <span className="text-body-sm text-fg-secondary">
                     {language === "ES" ? "Náuseas" : "Nausea"}
                   </span>
-                  <div className="flex items-center gap-1 rounded-xl bg-[#DBEAFE]/80 p-1">
+                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
                     <button
                       type="button"
                       onClick={() => setFormNausea(true)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         formNausea
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "Sí" : "Yes"}
@@ -1547,8 +1549,8 @@ function AddWeightLogModal({
                       onClick={() => setFormNausea(false)}
                       className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !formNausea
-                          ? "bg-white text-slate-900 shadow-xs"
-                          : "text-slate-700 hover:text-slate-900"
+                          ? "bg-surface text-fg shadow-control"
+                          : "text-fg-secondary hover:text-fg"
                       }`}
                     >
                       {language === "ES" ? "No" : "No"}
@@ -1560,38 +1562,38 @@ function AddWeightLogModal({
           </div>
 
           {/* Urinary Output (24 Hours) Card */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-2.5">
+          <div className="rounded-card border border-line bg-surface p-3.5 space-y-2.5">
             <div className="flex items-baseline gap-1.5">
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+              <h3 className="text-xs sm:text-sm font-bold text-fg">
                 {language === "ES" ? "Gasto Urinario" : "Urinary Output"}
               </h3>
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className="text-[11px] font-semibold text-fg-muted">
                 {language === "ES" ? "(24 Horas)" : "(24 Hours)"}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-2.5">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-500 block">
+                <label className="block text-caption text-fg-muted">
                   {language === "ES" ? "Cantidad" : "Amount"}
                 </label>
                 <div className="relative">
                   <select
                     value={formUoAmount}
                     onChange={(e) => setFormUoAmount(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 cursor-pointer pr-7 shadow-2xs"
+                    className="w-full appearance-none rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-fg-secondary outline-none focus:border-primary-edge cursor-pointer pr-7 shadow-control"
                   >
                     <option value="Moderate">{language === "ES" ? "Moderada" : "Moderate"}</option>
                     <option value="Low">{language === "ES" ? "Baja" : "Low"}</option>
                     <option value="Normal">{language === "ES" ? "Normal" : "Normal"}</option>
                     <option value="High">{language === "ES" ? "Alta" : "High"}</option>
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-500 block">
+                <label className="block text-caption text-fg-muted">
                   {language === "ES" ? "Tendencia" : "Trend"}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -1600,14 +1602,14 @@ function AddWeightLogModal({
                     onClick={() => setFormUoTrend("decreasing")}
                     className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       formUoTrend === "decreasing"
-                        ? "bg-red-50 border-2 border-red-500 text-red-700 shadow-2xs"
-                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        ? "bg-danger-surface border-2 border-danger-edge text-danger shadow-control"
+                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
                     }`}
                   >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-white">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-danger-solid text-white">
                       <ArrowDown className="h-2.5 w-2.5 stroke-[3]" />
                     </span>
-                    <span className="truncate text-[11px] sm:text-xs">
+                    <span className="truncate text-caption">
                       {language === "ES" ? "Disminuyendo" : "Decreasing"}
                     </span>
                   </button>
@@ -1617,14 +1619,14 @@ function AddWeightLogModal({
                     onClick={() => setFormUoTrend("noChange")}
                     className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       formUoTrend === "noChange"
-                        ? "bg-blue-50 border-2 border-blue-500 text-blue-700 shadow-2xs"
-                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        ? "bg-primary-soft border-2 border-primary-edge text-fg-brand shadow-control"
+                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
                     }`}
                   >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-solid text-white">
                       <Minus className="h-2.5 w-2.5 stroke-[3]" />
                     </span>
-                    <span className="truncate text-[11px] sm:text-xs">
+                    <span className="truncate text-caption">
                       {language === "ES" ? "Sin Cambios" : "No Change"}
                     </span>
                   </button>
@@ -1634,14 +1636,14 @@ function AddWeightLogModal({
                     onClick={() => setFormUoTrend("increasing")}
                     className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       formUoTrend === "increasing"
-                        ? "bg-emerald-50 border-2 border-emerald-500 text-emerald-700 shadow-2xs"
-                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        ? "bg-success-surface border-2 border-success-600 text-success shadow-control"
+                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
                     }`}
                   >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success-600 text-white">
                       <ArrowUp className="h-2.5 w-2.5 stroke-[3]" />
                     </span>
-                    <span className="truncate text-[11px] sm:text-xs">
+                    <span className="truncate text-caption">
                       {language === "ES" ? "Aumentando" : "Increasing"}
                     </span>
                   </button>
@@ -1651,11 +1653,11 @@ function AddWeightLogModal({
           </div>
 
           {/* Notes (Optional) Card */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-1.5">
-            <label className="text-xs font-bold text-slate-800 block">
+          <div className="rounded-card border border-line bg-surface p-3.5 space-y-1.5">
+            <label className="block text-label-md text-fg">
               {language === "ES" ? "Notas (Opcional)" : "Notes (Optional)"}
             </label>
-            <textarea
+            <Textarea
               rows={2}
               value={formNotes}
               onChange={(e) => setFormNotes(e.target.value)}
@@ -1664,29 +1666,11 @@ function AddWeightLogModal({
                   ? "ej. Tomé todos los medicamentos después de la sesión."
                   : "e.g. Took all meds after session."
               }
-              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
             />
           </div>
 
-          {/* Footer Actions */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-11 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer"
-            >
-              {language === "ES" ? "Cancelar" : "Cancel"}
-            </button>
-            <button
-              type="submit"
-              className="flex h-11 items-center justify-center rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-xs hover:shadow cursor-pointer active:scale-[0.98]"
-            >
-              {language === "ES" ? "Guardar Registro" : "Save Entry"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -1744,29 +1728,29 @@ function RecentEntries({
   ];
 
   return (
-    <section className="rounded-[14px] border border-slate-200 bg-white p-3">
+    <section className="rounded-[14px] border border-line bg-surface p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-fg">
           {w?.recentEntries?.title || "Recent Entries"}
         </h2>
         <button
           type="button"
           onClick={onOpenAddModal}
-          className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98]"
+          className="flex h-12 items-center justify-center gap-2 rounded bg-primary-solid px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-primary-solid-hover cursor-pointer active:scale-[0.98]"
         >
           <Plus className="h-5 w-5" />
           {w?.recentEntries?.addNewEntry || "New Entry"}
         </button>
       </div>
-      <div className="mt-4 overflow-hidden rounded-lg border border-[#C4CDD5]">
+      <div className="mt-4 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
         <div className="max-h-[430px] overflow-auto">
           <table className="min-w-[1080px] w-full text-left text-sm">
-            <thead className="sticky top-0 bg-[#F4F6F8]">
+            <thead className="sticky top-0 bg-[var(--color-gray-50)]">
               <tr>
                 {headers.map((header) => (
                   <th
                     key={header}
-                    className="border-b border-[#C4CDD5] px-3 py-4 font-medium text-slate-950"
+                    className="border-b border-[var(--color-gray-300)] px-3 py-4 font-medium text-fg"
                   >
                     {header}
                   </th>
@@ -1787,18 +1771,18 @@ function RecentEntries({
                 return (
                   <tr
                     key={entry.id || `${entry.dateEn}-${index}`}
-                    className="border-b border-dashed border-[#C4CDD5] last:border-b-0 hover:bg-slate-50/60 transition-colors"
+                    className="border-b border-dashed border-[var(--color-gray-300)] last:border-b-0 hover:bg-surface-sunken/60 transition-colors"
                   >
-                    <td className="px-3 py-3 text-[#1C252E] font-semibold">{dateLabel}</td>
-                    <td className="px-3 py-3 text-[#1C252E]">{entry.morning}</td>
-                    <td className="px-3 py-3 text-[#1C252E]">{entry.evening}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)] font-semibold">{dateLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.morning}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.evening}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <TrendIcon type="up" />
                         <span>{uoLabel}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-[#1C252E]">{entry.intake}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.intake}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-1">
                         <GoalBadge status={goalLabel} isGoalMet={isGoalMet} />
@@ -1806,10 +1790,10 @@ function RecentEntries({
                           <span
                             className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold w-fit ${
                               entry.fluidStatus === "Above EDW"
-                                ? "bg-amber-50 text-amber-700"
+                                ? "bg-warning-surface text-warning"
                                 : entry.fluidStatus === "Below EDW"
-                                ? "bg-sky-50 text-sky-700"
-                                : "bg-emerald-50 text-emerald-700"
+                                ? "bg-brand-50 text-brand-700"
+                                : "bg-success-surface text-success"
                             }`}
                           >
                             <span className="h-1 w-1 rounded-full bg-current" />
@@ -1824,10 +1808,10 @@ function RecentEntries({
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-[#1C252E]">{swellingLabel}</td>
-                    <td className="px-3 py-3 text-[#1C252E]">{sobLabel}</td>
-                    <td className="px-3 py-3 text-[#1C252E]">{weaknessLabel}</td>
-                    <td className="px-3 py-3 text-[#1C252E]">{notesLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{swellingLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{sobLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{weaknessLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{notesLabel}</td>
                   </tr>
                 );
               })}
@@ -1892,8 +1876,6 @@ function EditEdwModal({
     }
   }, [isOpen, isKg, edwKg, todayWeightKg, edwNote]);
 
-  if (!isOpen) return null;
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const parsedEdw = parseFloat(formEdw) || edwKg;
@@ -1917,46 +1899,46 @@ function EditEdwModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-100">
-              <BathroomScaleIcon className="h-5 w-5" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">
-              {w?.edwMetrics?.editSettings ||
-                (language === "ES"
-                  ? "Configuración de Peso y EDW"
-                  : "Weight & EDW Settings")}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-3.5">
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={
+        <span className="flex items-center gap-inline-md">
+          <BathroomScaleIcon className="h-icon-small w-icon-small" />
+          {w?.edwMetrics?.editSettings ||
+            (language === "ES"
+              ? "Configuración de Peso y EDW"
+              : "Weight & EDW Settings")}
+        </span>
+      }
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {language === "ES" ? "Cancelar" : "Cancel"}
+          </Button>
+          <Button type="submit" form="edw-form">
+            {w?.edwMetrics?.saveSettings ||
+              (language === "ES" ? "Guardar" : "Save Settings")}
+          </Button>
+        </>
+      }
+    >
+      <form id="edw-form" onSubmit={handleSave} className="space-y-stack-lg">
           <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1">
+            <label className="mb-stack-xs block text-label-md text-fg">
               {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"} ({unit})
             </label>
-            <input
+            <Input
               type="text"
               inputMode="decimal"
               value={formEdw}
               onChange={(e) => setFormEdw(e.target.value.replace(/[^0-9.]/g, ""))}
               placeholder={isKg ? "72.5" : "159.8"}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1">
+            <label className="mb-stack-xs block text-label-md text-fg">
               {language === "ES"
                 ? "Nota de EDW / Proveedor"
                 : "EDW Care Team Note"}
@@ -1970,15 +1952,14 @@ function EditEdwModal({
                   ? "ej. Establecido por el equipo de atención."
                   : "e.g. Set by care team."
               }
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1">
+            <label className="mb-stack-xs block text-label-md text-fg">
               {w?.edwMetrics?.todaysWeight || "Today's Weight"} ({unit})
             </label>
-            <input
+            <Input
               type="text"
               inputMode="decimal"
               value={formToday}
@@ -1986,45 +1967,27 @@ function EditEdwModal({
                 setFormToday(e.target.value.replace(/[^0-9.]/g, ""))
               }
               placeholder={isKg ? "72.9" : "160.7"}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-800 block mb-1">
+            <label className="mb-stack-xs block text-label-md text-fg">
               {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
             </label>
             {/* Recorded automatically from the clock when the settings are saved */}
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
-              <Clock className="h-4 w-4 shrink-0 text-blue-600" />
-              <span className="text-sm font-semibold text-slate-900">
+            <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-sunken px-3.5 py-2.5">
+              <Clock className="h-4 w-4 shrink-0 text-fg-brand" />
+              <span className="text-sm font-semibold text-fg">
                 {formatNowStamp(language)}
               </span>
-              <span className="ml-auto text-[11px] font-semibold text-slate-500">
+              <span className="ml-auto text-[11px] font-semibold text-fg-muted">
                 {language === "ES" ? "Automático" : "Automatic"}
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-11 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer"
-            >
-              {language === "ES" ? "Cancelar" : "Cancel"}
-            </button>
-            <button
-              type="submit"
-              className="flex h-11 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-xs hover:shadow cursor-pointer active:scale-[0.98]"
-            >
-              {w?.edwMetrics?.saveSettings ||
-                (language === "ES" ? "Guardar" : "Save Settings")}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -2129,20 +2092,20 @@ export default function FluidTrackerPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
+          <h1 className="text-[28px] font-medium leading-none text-fg sm:text-[32px]">
             {w?.title || "Weight & Fluid Management Center"}
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
           {/* Unit Switcher: kg / lbs */}
-          <div className="flex h-10 sm:h-12 items-center rounded-xl border border-slate-200 bg-[#F1F5F9] p-1 shadow-2xs">
+          <div className="flex h-10 sm:h-12 items-center rounded-xl border border-line bg-[var(--color-gray-100)] p-1 shadow-control">
             <button
               type="button"
               onClick={() => setUnit("kg")}
               className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 unit === "kg"
-                  ? "bg-white text-blue-600 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-surface text-fg-brand shadow-control"
+                  : "text-fg-muted hover:text-fg"
               }`}
             >
               kg
@@ -2152,8 +2115,8 @@ export default function FluidTrackerPage() {
               onClick={() => setUnit("lbs")}
               className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 unit === "lbs"
-                  ? "bg-white text-blue-600 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-surface text-fg-brand shadow-control"
+                  : "text-fg-muted hover:text-fg"
               }`}
             >
               lbs
@@ -2163,7 +2126,7 @@ export default function FluidTrackerPage() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-blue-600 px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-white shadow-xs transition-colors hover:bg-blue-700 cursor-pointer active:scale-[0.98] whitespace-nowrap"
+            className="flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-primary-solid px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-white shadow-control transition-colors hover:bg-primary-solid-hover cursor-pointer active:scale-[0.98] whitespace-nowrap"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
             <span>{w?.recentEntries?.addNewEntry || "New Entry"}</span>
@@ -2176,31 +2139,31 @@ export default function FluidTrackerPage() {
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
               className={`flex h-10 sm:h-12 shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] transition-all cursor-pointer whitespace-nowrap ${
                 isDatePickerOpen
-                  ? "border-blue-500 bg-blue-50/50 text-blue-700 shadow-xs"
-                  : "border-slate-200 bg-[#F9F9F9] text-slate-950 hover:bg-white"
+                  ? "border-primary-edge bg-primary-soft/50 text-fg-brand shadow-control"
+                  : "border-line bg-[var(--color-gray-50)] text-fg hover:bg-surface"
               }`}
             >
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-slate-700" />
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-fg-secondary" />
               <span>{displayDateText}</span>
               <ChevronDown
-                className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-500 transition-transform duration-200 ${
-                  isDatePickerOpen ? "rotate-180 text-blue-600" : ""
+                className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-fg-muted transition-transform duration-200 ${
+                  isDatePickerOpen ? "rotate-180 text-fg-brand" : ""
                 }`}
               />
             </button>
 
             {/* Floating Date Picker Dropdown Popover */}
             {isDatePickerOpen && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-72 sm:w-80 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full mt-2 z-50 w-72 sm:w-80 rounded-card border border-line bg-surface p-3.5 sm:p-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
                 {/* Header with Title and Close */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2.5">
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+                <div className="flex items-center justify-between pb-2.5 border-b border-line-subtle mb-2.5">
+                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-fg-muted">
                     {language === "ES" ? "Seleccionar Fecha" : "Select Date"}
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsDatePickerOpen(false)}
-                    className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                    className="flex h-6 w-6 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-sunken hover:text-fg-muted transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -2216,16 +2179,16 @@ export default function FluidTrackerPage() {
                     }}
                     className={`flex w-full items-center justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all cursor-pointer ${
                       selectedDateFilter === "today"
-                        ? "bg-blue-50 border border-blue-200 text-blue-800"
-                        : "hover:bg-slate-50 border border-transparent text-slate-700"
+                        ? "bg-primary-soft border border-primary-soft-line text-primary-fg"
+                        : "hover:bg-surface-sunken border border-transparent text-fg-secondary"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-inline-md">
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
                           selectedDateFilter === "today"
-                            ? "bg-blue-600 text-white shadow-xs"
-                            : "bg-slate-100 text-slate-600"
+                            ? "bg-primary-solid text-white shadow-control"
+                            : "bg-surface-sunken text-fg-muted"
                         }`}
                       >
                         <Calendar className="h-4 w-4" />
@@ -2234,7 +2197,7 @@ export default function FluidTrackerPage() {
                         <div className="text-xs sm:text-sm font-bold leading-tight">
                           {language === "ES" ? "Hoy (Fecha actual)" : "Today (Current Date)"}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-medium">
+                        <div className="text-[11px] text-fg-muted font-medium">
                           {new Date().toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
                             weekday: "short",
                             month: "short",
@@ -2244,14 +2207,14 @@ export default function FluidTrackerPage() {
                       </div>
                     </div>
                     {selectedDateFilter === "today" && (
-                      <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-fg-brand shrink-0" />
                     )}
                   </button>
                 </div>
 
                 {/* Divider: Custom Date Picker */}
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <div className="mt-3 pt-3 border-t border-line-subtle">
+                  <label className="text-xs font-bold text-fg-secondary block mb-1.5">
                     {language === "ES" ? "Elegir Fecha (Date Picker):" : "Pick Date (Date Picker):"}
                   </label>
                   <div className="relative">
@@ -2269,7 +2232,7 @@ export default function FluidTrackerPage() {
                           (e.target as HTMLInputElement).showPicker?.();
                         } catch {}
                       }}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
+                      className="w-full rounded-xl border border-line bg-surface-sunken hover:bg-surface focus:bg-surface px-3 py-2 text-xs sm:text-sm font-semibold text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring transition-colors cursor-pointer"
                     />
                   </div>
                   <button
@@ -2278,7 +2241,7 @@ export default function FluidTrackerPage() {
                       setSelectedDateFilter("custom");
                       setIsDatePickerOpen(false);
                     }}
-                    className="mt-2.5 w-full flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
+                    className="mt-2.5 w-full flex items-center justify-center rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-white font-bold text-xs py-2 shadow-control transition-colors cursor-pointer active:scale-[0.98]"
                   >
                     {language === "ES" ? "Aplicar Fecha" : "Apply Date"}
                   </button>
