@@ -1,0 +1,312 @@
+/* ==========================================================================
+   NephroReach — Colour tokens
+   --------------------------------------------------------------------------
+   Two layers:
+     1. PRIMITIVES  name the hue and step. Never used in a component.
+     2. SEMANTICS   name the job. This is all a component may reference.
+
+   Why we generate our own ramps instead of using Tailwind's:
+     #2563EB (our brand, 255 uses) is NOT Tailwind v4's blue-600 (#155DFC).
+     Same lightness, same hue, different chroma — an OKLab delta of 0.030,
+     which is above the visible threshold. Leaning on framework defaults
+     means the brand shifts when Tailwind bumps a version.
+
+   Ramps are generated in OKLCH on one shared lightness curve with a
+   proportional chroma curve, hue being the only variable. That produces one
+   rule that holds in EVERY ramp:
+
+       step 500 = minimum for UI boundaries  (>= 3:1 on white)
+       step 600 = minimum for text           (>= 4.5:1 on white)
+
+   Names chosen to avoid collision: `gray` has 0 uses in this codebase, so
+   it is free. `slate` (2626 uses) and `blue` (784) are deliberately left
+   untouched so existing markup keeps working during migration.
+   ========================================================================== */
+
+@theme {
+  /* ======================================================================
+     PRIMITIVE — Brand · blue · hue 262.9°
+     600 is anchored exactly on the existing brand colour.
+     ====================================================================== */
+  --color-brand-50: #f1f5fe;
+  --color-brand-100: #dfe9fc;
+  --color-brand-200: #c6d9fb;
+  --color-brand-300: #a1c1fd;
+  --color-brand-400: #709efa; /* dark-mode text — 7.10:1 on dark */
+  --color-brand-500: #4780f6; /* focus ring only — 3.69:1, never text */
+  --color-brand-600: #2563eb; /* PRIMARY — 5.17:1, safe as text AND fill */
+  --color-brand-700: #1450d6; /* hover · logo */
+  --color-brand-800: #1443ab; /* active · logo deep */
+  --color-brand-900: #1b3d85;
+  --color-brand-950: #132750;
+
+  /* ======================================================================
+     PRIMITIVE — Secondary · violet · hue 300°
+     37° from the brand. The old #7C6CFF sat at 283° — only 20° away, which
+     is why it read as "another blue" rather than a secondary.
+     Never appears in the same component as a primary action.
+     ====================================================================== */
+  --color-accent-50: #f6f3fc;
+  --color-accent-100: #ebe5f9;
+  --color-accent-200: #ddd1f6;
+  --color-accent-300: #c9b3f4;
+  --color-accent-400: #af8aed;
+  --color-accent-500: #9a65e5;
+  --color-accent-600: #8743d8; /* 5.49:1 */
+  --color-accent-700: #762fc3;
+  --color-accent-800: #5f2a9d;
+  --color-accent-900: #4e2c7b;
+  --color-accent-950: #301e4a;
+
+  /* ======================================================================
+     PRIMITIVE — Gray · hue 262.9° (same as brand, chroma 0.042)
+     A neutral that shares the brand's hue reads as chosen, not inherited.
+     gray-500 hits 3.62:1 — which is why input borders can finally clear
+     the 3:1 WCAG 1.4.11 requirement without going near-black.
+     ====================================================================== */
+  --color-gray-50: #f4f5f7;
+  --color-gray-100: #e6e8ec;
+  --color-gray-200: #d5d8df;
+  --color-gray-300: #bac1cd;
+  --color-gray-400: #97a1b3; /* 2.60:1 — disabled only (WCAG-exempt) */
+  --color-gray-500: #7b879e; /* 3.62:1 — UI boundaries, input borders */
+  --color-gray-600: #64718a; /* 4.92:1 — muted text floor */
+  --color-gray-700: #536078;
+  --color-gray-800: #444e61;
+  --color-gray-900: #3b4250;
+  --color-gray-950: #252931;
+
+  /* ======================================================================
+     PRIMITIVE — Status
+     Each ramp has a TEXT value (600+, AA-safe) and FILL values (300-500).
+     The bright steps may never carry a word: #00A24A is 3.35:1 and fails.
+     ====================================================================== */
+
+  /* Success · hue 150° */
+  --color-success-50: #f0f7f1;
+  --color-success-100: #ddeee0;
+  --color-success-200: #c3e2c8;
+  --color-success-300: #99d1a4;
+  --color-success-400: #5bb872;
+  --color-success-500: #00a24a; /* fill only — 3.35:1 */
+  --color-success-600: #00873d; /* 4.63:1 */
+  --color-success-700: #007433; /* 5.92:1 — badge text */
+  --color-success-800: #005f28;
+  --color-success-900: #005121;
+  --color-success-950: #033314;
+
+  /* Warning · hue 70°
+     warning-500 is a dark gold, not a bright yellow. Yellow cannot carry
+     text at any lightness where it still looks yellow — bright amber lives
+     at 300/400 for fills, 600/700 for words. */
+  --color-warning-50: #faf4ed;
+  --color-warning-100: #f4e6d7;
+  --color-warning-200: #ecd4b8;
+  --color-warning-300: #e3b887;
+  --color-warning-400: #d3913b;
+  --color-warning-500: #ba7600; /* fill only — 3.70:1 */
+  --color-warning-600: #9b6200; /* 5.07:1 */
+  --color-warning-700: #855300; /* 6.49:1 — badge text */
+  --color-warning-800: #6e4400;
+  --color-warning-900: #5d3900;
+  --color-warning-950: #3c2300;
+
+  /* Danger · hue 27° */
+  --color-danger-50: #fff2f0;
+  --color-danger-100: #fde1dd;
+  --color-danger-200: #fdcac3;
+  --color-danger-300: #fda69c;
+  --color-danger-400: #f67266;
+  --color-danger-500: #ec3b37; /* fill only — 4.00:1 */
+  --color-danger-600: #d30016; /* 5.55:1 */
+  --color-danger-700: #b60011; /* 7.01:1 — badge text */
+  --color-danger-800: #96000c;
+  --color-danger-900: #7e0b0f;
+  --color-danger-950: #4d100e;
+
+  /* Info reuses the brand ramp. A seventh hue would add nothing. */
+}
+
+/* ==========================================================================
+   SEMANTIC LAYER
+   --------------------------------------------------------------------------
+   Declared as plain custom properties so they can be swapped at runtime,
+   then exposed to Tailwind through `@theme inline` below. A component
+   references ONLY these — never a primitive. That indirection is what makes
+   dark mode a token swap, and per-clinic branding possible later.
+   ========================================================================== */
+
+:root {
+  /* ---- surfaces ---- */
+  --canvas: var(--color-gray-50); /* page background */
+  --surface: #ffffff; /* cards, inputs, modals */
+  --surface-sunken: var(--color-gray-100); /* table stripes, wells */
+  --surface-raised: #ffffff; /* dropdowns, popovers (+ shadow) */
+  --surface-inverse: var(--color-gray-900);
+  --surface-brand: var(--color-brand-600);
+  --surface-brand-subtle: var(--color-brand-50);
+  --surface-accent-subtle: var(--color-accent-50);
+
+  /* ---- foreground ---- */
+  --fg: var(--color-gray-950); /* headings, values, body */
+  --fg-secondary: var(--color-gray-700); /* supporting copy */
+  --fg-muted: var(--color-gray-600); /* labels, captions, placeholders */
+  --fg-subtle: var(--color-gray-400); /* DISABLED ONLY — fails contrast */
+  --fg-brand: var(--color-brand-600);
+  --fg-on-brand: #ffffff;
+  --fg-inverse: #ffffff;
+
+  /* ---- lines ---- */
+  --line-subtle: var(--color-gray-100); /* internal dividers */
+  --line: var(--color-gray-200); /* card and panel edges */
+  --line-strong: var(--color-gray-300); /* emphasis, selected */
+  --field: var(--color-gray-500); /* input borders — needs 3:1 */
+  --ring: var(--color-brand-500); /* focus ring */
+
+  /* ---- actions ---- */
+  --action: var(--color-brand-600);
+  --action-hover: var(--color-brand-700);
+  --action-active: var(--color-brand-800);
+  --action-subtle-hover: var(--color-brand-50); /* ghost hover */
+  --action-danger: var(--color-danger-600);
+  --action-danger-hover: var(--color-danger-700);
+  --action-accent: var(--color-accent-600);
+  --action-accent-hover: var(--color-accent-700);
+
+  /* ---- status: text / surface / line ---- */
+  --success: var(--color-success-700);
+  --success-surface: var(--color-success-50);
+  --success-line: var(--color-success-200);
+
+  --warning: var(--color-warning-700);
+  --warning-surface: var(--color-warning-50);
+  --warning-line: var(--color-warning-200);
+
+  --danger: var(--color-danger-700);
+  --danger-surface: var(--color-danger-50);
+  --danger-line: var(--color-danger-200);
+
+  --info: var(--color-brand-700);
+  --info-surface: var(--color-brand-50);
+  --info-line: var(--color-brand-200);
+}
+
+/* ==========================================================================
+   DARK THEME — deliberately OPT-IN, not `prefers-color-scheme`.
+
+   The app still carries ~864 hardcoded light colours. Switching on dark
+   automatically would render some of the UI dark and most of it light,
+   which is worse than no dark mode at all. This block lets dark mode be
+   built and tested behind <html data-theme="dark"> and flipped on to
+   `prefers-color-scheme` once the palette migration is finished.
+
+   Two shifts: surfaces walk UP the gray ramp, and every hue drops two steps
+   for text. brand-600 on a dark ground is 3.62:1 and FAILS; brand-400 is
+   7.10:1. Fills stay at 600.
+   ========================================================================== */
+
+[data-theme="dark"] {
+  --canvas: var(--color-gray-950);
+  --surface: var(--color-gray-900);
+  --surface-sunken: var(--color-gray-950);
+  --surface-raised: var(--color-gray-800);
+  --surface-inverse: var(--color-gray-50);
+  --surface-brand: var(--color-brand-600);
+  --surface-brand-subtle: var(--color-brand-950);
+  --surface-accent-subtle: var(--color-accent-950);
+
+  --fg: var(--color-gray-50);
+  --fg-secondary: var(--color-gray-300);
+  --fg-muted: var(--color-gray-400);
+  --fg-subtle: var(--color-gray-600);
+  --fg-brand: var(--color-brand-400);
+  --fg-on-brand: #ffffff;
+  --fg-inverse: var(--color-gray-950);
+
+  --line-subtle: var(--color-gray-800);
+  --line: var(--color-gray-700);
+  --line-strong: var(--color-gray-600);
+  --field: var(--color-gray-500);
+  --ring: var(--color-brand-400);
+
+  --action: var(--color-brand-600);
+  --action-hover: var(--color-brand-500);
+  --action-active: var(--color-brand-400);
+  --action-subtle-hover: var(--color-brand-950);
+  --action-danger: var(--color-danger-600);
+  --action-danger-hover: var(--color-danger-500);
+  --action-accent: var(--color-accent-600);
+  --action-accent-hover: var(--color-accent-500);
+
+  --success: var(--color-success-300);
+  --success-surface: var(--color-success-950);
+  --success-line: var(--color-success-800);
+
+  --warning: var(--color-warning-300);
+  --warning-surface: var(--color-warning-950);
+  --warning-line: var(--color-warning-800);
+
+  --danger: var(--color-danger-300);
+  --danger-surface: var(--color-danger-950);
+  --danger-line: var(--color-danger-800);
+
+  --info: var(--color-brand-300);
+  --info-surface: var(--color-brand-950);
+  --info-line: var(--color-brand-800);
+}
+
+/* ==========================================================================
+   Expose semantics to Tailwind.
+   `inline` makes the utility emit `var(--fg)` rather than copying the value,
+   which is what lets [data-theme] swap it at runtime.
+   ========================================================================== */
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-subtle: var(--surface-brand-subtle);
+  --color-surface-accent-subtle: var(--surface-accent-subtle);
+
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-brand: var(--fg-brand);
+  --color-fg-on-brand: var(--fg-on-brand);
+  --color-fg-inverse: var(--fg-inverse);
+
+  --color-line-subtle: var(--line-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-field: var(--field);
+  --color-ring: var(--ring);
+
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-active: var(--action-active);
+  --color-action-subtle-hover: var(--action-subtle-hover);
+  --color-action-danger: var(--action-danger);
+  --color-action-danger-hover: var(--action-danger-hover);
+  --color-action-accent: var(--action-accent);
+  --color-action-accent-hover: var(--action-accent-hover);
+
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-success-line: var(--success-line);
+
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-line: var(--warning-line);
+
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-line: var(--danger-line);
+
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --color-info-line: var(--info-line);
+}

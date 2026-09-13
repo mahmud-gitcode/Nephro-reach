@@ -131,7 +131,44 @@ function TypeSpec({
   );
 }
 
+function Ramp({ name, steps }: { name: string; steps: string[] }) {
+  return (
+    <div>
+      <p className="text-overline mb-1.5 text-fg-muted">{name}</p>
+      <div className="flex overflow-hidden rounded-card border border-line">
+        {steps.map((s) => (
+          <div key={s} className={`h-12 flex-1 ${s}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Token({
+  name,
+  swatch,
+  note,
+}: {
+  name: string;
+  swatch: string;
+  note: string;
+}) {
+  return (
+    <div className="flex items-center gap-inline-lg">
+      <span
+        className={`h-8 w-8 shrink-0 rounded-chip border border-line ${swatch}`}
+      />
+      <div className="min-w-0">
+        <code className="text-label-sm text-fg">{name}</code>
+        <p className="text-caption text-fg-muted">{note}</p>
+      </div>
+    </div>
+  );
+}
+
 const sections = [
+  { id: "color", label: "Color" },
+  { id: "spacing", label: "Spacing" },
   { id: "typography", label: "Typography" },
   { id: "buttons", label: "Buttons" },
   { id: "forms", label: "Form controls" },
@@ -200,6 +237,233 @@ export default function DesignSystemPage() {
           </a>
         ))}
       </nav>
+
+      {/* ---------------- Color ---------------- */}
+      <Section
+        id="color"
+        title="Color"
+        description="Six ramps on one shared lightness curve. Step 500 is the minimum for UI boundaries (3:1); step 600 is the minimum for text (4.5:1) — in every ramp."
+      >
+        <div className="space-y-stack-lg rounded-card border border-line bg-surface p-inset-md shadow-card">
+          <Ramp
+            name="Brand · hue 262.9° · 600 anchored on #2563EB"
+            steps={[
+              "bg-brand-50", "bg-brand-100", "bg-brand-200", "bg-brand-300",
+              "bg-brand-400", "bg-brand-500", "bg-brand-600", "bg-brand-700",
+              "bg-brand-800", "bg-brand-900", "bg-brand-950",
+            ]}
+          />
+          <Ramp
+            name="Secondary · violet · hue 300°"
+            steps={[
+              "bg-accent-50", "bg-accent-100", "bg-accent-200", "bg-accent-300",
+              "bg-accent-400", "bg-accent-500", "bg-accent-600", "bg-accent-700",
+              "bg-accent-800", "bg-accent-900", "bg-accent-950",
+            ]}
+          />
+          <Ramp
+            name="Gray · blue-biased, hue 262.9°"
+            steps={[
+              "bg-gray-50", "bg-gray-100", "bg-gray-200", "bg-gray-300",
+              "bg-gray-400", "bg-gray-500", "bg-gray-600", "bg-gray-700",
+              "bg-gray-800", "bg-gray-900", "bg-gray-950",
+            ]}
+          />
+          <Ramp
+            name="Success · hue 150°"
+            steps={[
+              "bg-success-50", "bg-success-100", "bg-success-200", "bg-success-300",
+              "bg-success-400", "bg-success-500", "bg-success-600", "bg-success-700",
+              "bg-success-800", "bg-success-900", "bg-success-950",
+            ]}
+          />
+          <Ramp
+            name="Warning · hue 70°"
+            steps={[
+              "bg-warning-50", "bg-warning-100", "bg-warning-200", "bg-warning-300",
+              "bg-warning-400", "bg-warning-500", "bg-warning-600", "bg-warning-700",
+              "bg-warning-800", "bg-warning-900", "bg-warning-950",
+            ]}
+          />
+          <Ramp
+            name="Danger · hue 27°"
+            steps={[
+              "bg-danger-50", "bg-danger-100", "bg-danger-200", "bg-danger-300",
+              "bg-danger-400", "bg-danger-500", "bg-danger-600", "bg-danger-700",
+              "bg-danger-800", "bg-danger-900", "bg-danger-950",
+            ]}
+          />
+        </div>
+
+        <div className="rounded-card border border-line bg-surface p-inset-md shadow-card">
+          <p className="text-overline mb-inset-sm text-fg-muted">
+            Semantic tokens — the only names a component may use
+          </p>
+          <div className="grid gap-stack-md sm:grid-cols-2 lg:grid-cols-3">
+            <Token name="bg-canvas" swatch="bg-canvas" note="Page background" />
+            <Token name="bg-surface" swatch="bg-surface" note="Cards, inputs, modals" />
+            <Token name="bg-surface-sunken" swatch="bg-surface-sunken" note="Table stripes, wells" />
+            <Token name="text-fg" swatch="bg-fg" note="Headings, values, body" />
+            <Token name="text-fg-secondary" swatch="bg-fg-secondary" note="Supporting copy" />
+            <Token name="text-fg-muted" swatch="bg-fg-muted" note="Labels, captions, placeholders" />
+            <Token name="border-line" swatch="bg-line" note="Card and panel edges" />
+            <Token name="border-field" swatch="bg-field" note="Input borders — clears 3:1" />
+            <Token name="ring-ring" swatch="bg-ring" note="Focus ring" />
+            <Token name="bg-action" swatch="bg-action" note="Primary action" />
+            <Token name="bg-action-danger" swatch="bg-action-danger" note="Destructive action" />
+            <Token name="bg-action-accent" swatch="bg-action-accent" note="Secondary action" />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-inline-md">
+          <span className="inline-flex items-center gap-inline-xs rounded-pill border border-success-line bg-success-surface px-inset-sm py-1 text-label-sm text-success">
+            <Check className="h-3 w-3" />
+            At Target EDW
+          </span>
+          <span className="inline-flex items-center gap-inline-xs rounded-pill border border-warning-line bg-warning-surface px-inset-sm py-1 text-label-sm text-warning">
+            <TriangleAlert className="h-3 w-3" />
+            Above Goal
+          </span>
+          <span className="inline-flex items-center gap-inline-xs rounded-pill border border-danger-line bg-danger-surface px-inset-sm py-1 text-label-sm text-danger">
+            <AlertTriangle className="h-3 w-3" />
+            Below EDW
+          </span>
+          <span className="inline-flex items-center gap-inline-xs rounded-pill border border-info-line bg-info-surface px-inset-sm py-1 text-label-sm text-info">
+            <Info className="h-3 w-3" />
+            Automatic
+          </span>
+        </div>
+
+        <div className="rounded-card border border-info-line bg-info-surface p-inset-md">
+          <p className="text-body-sm text-fg-secondary">
+            <strong className="font-semibold text-fg">Dark mode is opt-in, not automatic.</strong>{" "}
+            The tokens above all have dark values behind{" "}
+            <code className="rounded bg-surface px-1 text-caption">
+              [data-theme=&quot;dark&quot;]
+            </code>
+            . It is deliberately not wired to{" "}
+            <code className="rounded bg-surface px-1 text-caption">prefers-color-scheme</code>{" "}
+            yet — roughly 864 hardcoded light colors remain in the app, so
+            switching it on now would render part of the UI dark and most of it
+            light. The old broken auto-dark block has been removed.
+          </p>
+        </div>
+      </Section>
+
+      {/* ---------------- Spacing ---------------- */}
+      <Section
+        id="spacing"
+        title="Spacing &amp; Scale"
+        description="Chosen by role, never by number. Controls are sized by height so vertical padding is not a decision — and 44px touch targets are guaranteed."
+      >
+        <div className="grid gap-stack-lg rounded-card border border-line bg-surface p-inset-md shadow-card lg:grid-cols-2">
+          <div>
+            <p className="text-overline mb-inset-sm text-fg-muted">
+              Inline — gap on one line
+            </p>
+            <div className="space-y-stack-sm">
+              {[
+                ["inline-xs", "4px", "w-1"],
+                ["inline-sm", "6px", "w-1.5"],
+                ["inline-md", "8px", "w-2"],
+                ["inline-lg", "12px", "w-3"],
+              ].map(([n, px, w]) => (
+                <div key={n} className="flex items-center gap-inline-lg">
+                  <code className="w-24 shrink-0 text-label-sm text-fg-brand">{n}</code>
+                  <span className="w-10 shrink-0 text-caption text-fg-muted">{px}</span>
+                  <span className={`h-3 rounded-chip bg-action ${w}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-overline mb-inset-sm text-fg-muted">
+              Stack — vertical rhythm
+            </p>
+            <div className="space-y-stack-sm">
+              {[
+                ["stack-xs", "4px", "w-1"],
+                ["stack-sm", "8px", "w-2"],
+                ["stack-md", "12px", "w-3"],
+                ["stack-lg", "16px", "w-4"],
+                ["stack-xl", "24px", "w-6"],
+                ["stack-2xl", "32px", "w-8"],
+              ].map(([n, px, w]) => (
+                <div key={n} className="flex items-center gap-inline-lg">
+                  <code className="w-24 shrink-0 text-label-sm text-fg-brand">{n}</code>
+                  <span className="w-10 shrink-0 text-caption text-fg-muted">{px}</span>
+                  <span className={`h-3 rounded-chip bg-action ${w}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-card border border-line bg-surface p-inset-md shadow-card">
+          <p className="text-overline mb-inset-sm text-fg-muted">
+            Control heights — the 44px default is the accessible minimum
+          </p>
+          <div className="flex flex-wrap items-end gap-inline-lg">
+            <div className="flex flex-col items-center gap-stack-xs">
+              <span className="flex h-control-sm items-center rounded-control bg-surface-sunken px-control-x-sm text-button-md text-fg-secondary">
+                sm · 36
+              </span>
+              <code className="text-caption text-fg-muted">control-sm</code>
+            </div>
+            <div className="flex flex-col items-center gap-stack-xs">
+              <span className="flex h-control-md items-center rounded-control bg-action px-control-x-md text-button-md text-fg-on-brand">
+                md · 44
+              </span>
+              <code className="text-caption text-fg-muted">control-md</code>
+            </div>
+            <div className="flex flex-col items-center gap-stack-xs">
+              <span className="flex h-control-lg items-center rounded-control bg-surface-sunken px-control-x-lg text-button-lg text-fg-secondary">
+                lg · 52
+              </span>
+              <code className="text-caption text-fg-muted">control-lg</code>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-inline-lg sm:grid-cols-2">
+          <div className="rounded-card border border-line bg-surface p-inset-md shadow-card">
+            <p className="text-overline mb-inset-sm text-fg-muted">Radius</p>
+            <div className="flex flex-wrap gap-inline-lg">
+              {[
+                ["chip", "6px", "rounded-chip"],
+                ["control", "12px", "rounded-control"],
+                ["card", "12px", "rounded-card"],
+                ["panel", "16px", "rounded-panel"],
+                ["pill", "full", "rounded-pill"],
+              ].map(([n, px, cls]) => (
+                <div key={n} className="flex flex-col items-center gap-stack-xs">
+                  <span className={`h-12 w-12 border border-line bg-surface-sunken ${cls}`} />
+                  <code className="text-caption text-fg-muted">{n}</code>
+                  <span className="text-caption text-fg-subtle">{px}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-card border border-line bg-surface p-inset-md shadow-card">
+            <p className="text-overline mb-inset-sm text-fg-muted">Elevation</p>
+            <div className="flex flex-wrap gap-inline-lg">
+              {[
+                ["control", "shadow-control"],
+                ["card", "shadow-card"],
+                ["raised", "shadow-raised"],
+                ["overlay", "shadow-overlay"],
+              ].map(([n, cls]) => (
+                <div key={n} className="flex flex-col items-center gap-stack-xs">
+                  <span className={`h-12 w-12 rounded-card bg-surface ${cls}`} />
+                  <code className="text-caption text-fg-muted">{n}</code>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Section>
 
       {/* ---------------- Typography ---------------- */}
       <Section

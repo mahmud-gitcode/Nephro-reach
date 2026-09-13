@@ -1,5 +1,7 @@
 @import "tailwindcss";
+@import "./tokens/color.css";
 @import "./tokens/typography.css";
+@import "./tokens/spacing.css";
 
 :root {
   --background: #ffffff;
@@ -12,12 +14,16 @@
   --font-sans: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* The `prefers-color-scheme: dark` block that used to sit here has been
+   removed. It flipped the page ground to #0a0a0a and the inherited text
+   colour to #ededed while ~864 hardcoded light colours stayed light, so any
+   text that did not set its own colour became near-invisible on a white
+   card. Dark mode now lives in tokens/color.css behind [data-theme="dark"]
+   — opt-in, so it can be built and tested before it reaches anyone.
+
+   --background / --foreground below are superseded by --canvas / --fg and
+   will be removed once the palette migration lands. They are left in place
+   for now because `body` is the only thing using them. */
 
 body {
   background: var(--background);

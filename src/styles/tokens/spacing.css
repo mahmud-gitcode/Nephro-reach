@@ -1,0 +1,135 @@
+/* ==========================================================================
+   NephroReach — Spacing, radius, elevation and motion tokens
+   --------------------------------------------------------------------------
+   Spacing is chosen by ROLE, not by number. A developer should never have to
+   decide between py-2, py-2.5 and py-3 — those three appear 455 times doing
+   the same job, 2px apart, and no rule says which to use.
+
+   The four roles:
+     inline   horizontal gap between things on one line (icon -> label)
+     stack    vertical rhythm between stacked blocks
+     inset    padding INSIDE a container (card, badge, panel)
+     section  gap between major page regions
+
+   Controls are sized by HEIGHT, not padding. That deletes the vertical
+   padding decision entirely and guarantees the 44px touch target, which is
+   a functional requirement here: many members have diabetic neuropathy and
+   reduced fine motor control, and use this app during or just after a
+   four-hour treatment session.
+
+   NOTE: these are NAMED tokens added alongside Tailwind's numeric scale, not
+   replacements for it. Tailwind's own --radius-xl is 12px and `rounded-xl`
+   has 371 uses in this codebase; overriding it would silently change every
+   corner in the app. Semantic names avoid that entirely.
+   ========================================================================== */
+
+@theme {
+  /* ======================================================================
+     INLINE — horizontal, within a line
+     ====================================================================== */
+  --spacing-inline-xs: 0.25rem; /*  4px · icon -> label inside a badge     */
+  --spacing-inline-sm: 0.375rem; /*  6px · icon -> label inside a button    */
+  --spacing-inline-md: 0.5rem; /*  8px · DEFAULT (gap-2, 304 uses today) */
+  --spacing-inline-lg: 0.75rem; /* 12px · between separate inline items    */
+
+  /* ======================================================================
+     STACK — vertical rhythm
+     ====================================================================== */
+  --spacing-stack-xs: 0.25rem; /*  4px · label -> helper text            */
+  --spacing-stack-sm: 0.5rem; /*  8px · tight list items                */
+  --spacing-stack-md: 0.75rem; /* 12px · related blocks                  */
+  --spacing-stack-lg: 1rem; /* 16px · between form fields (default)   */
+  --spacing-stack-xl: 1.5rem; /* 24px · between card groups             */
+  --spacing-stack-2xl: 2rem; /* 32px · between sub-sections            */
+
+  /* ======================================================================
+     INSET — padding inside a container
+     ====================================================================== */
+  --spacing-inset-xs: 0.5rem; /*  8px · badge, pill                     */
+  --spacing-inset-sm: 0.75rem; /* 12px · compact card, table cell        */
+  --spacing-inset-md: 1rem; /* 16px · DEFAULT card (p-4, 143 uses)    */
+  --spacing-inset-lg: 1.5rem; /* 24px · modal, large card               */
+  --spacing-inset-xl: 2rem; /* 32px · page panel                      */
+
+  /* ======================================================================
+     SECTION — between major page regions
+     ====================================================================== */
+  --spacing-section-sm: 2rem; /* 32px */
+  --spacing-section-md: 3rem; /* 48px */
+  --spacing-section-lg: 4rem; /* 64px */
+
+  /* ======================================================================
+     CONTROL — buttons, inputs, selects.
+     Use the HEIGHT token; do not set vertical padding on a control.
+     44px is the accessible minimum and is the default (md).
+     ====================================================================== */
+  --spacing-control-sm: 2.25rem; /* 36px */
+  --spacing-control-md: 2.75rem; /* 44px · DEFAULT — minimum touch target */
+  --spacing-control-lg: 3.25rem; /* 52px */
+
+  /* Horizontal inset for controls, paired with the heights above. */
+  --spacing-control-x-sm: 0.75rem; /* 12px */
+  --spacing-control-x-md: 1.25rem; /* 20px */
+  --spacing-control-x-lg: 1.625rem; /* 26px */
+
+  /* ======================================================================
+     GUTTER — page side padding. Responsive, applied once on a wrapper.
+     Replaces the fixed px-[120px] / px-[105px] / px-[60px] in the landing
+     pages, which squeeze content on a 1366px laptop.
+     ====================================================================== */
+  --spacing-gutter-sm: 1rem; /* 16px · mobile  */
+  --spacing-gutter-md: 1.5rem; /* 24px · tablet  */
+  --spacing-gutter-lg: 2rem; /* 32px · desktop */
+
+  /* ======================================================================
+     RADIUS — semantic names, mapped to the values the app already draws.
+     The dominant shape today is 12px (rounded-xl in Tailwind v4, 371 uses),
+     so control and card both sit at 12px and nothing visibly changes.
+     ====================================================================== */
+  --radius-chip: 0.375rem; /*  6px · badges, small tags        */
+  --radius-control: 0.75rem; /* 12px · buttons, inputs, selects  */
+  --radius-card: 0.75rem; /* 12px · cards, inner panels       */
+  --radius-panel: 1rem; /* 16px · modals, drawers, sheets   */
+  --radius-pill: 9999px; /*        avatars, pills, progress  */
+
+  /* ======================================================================
+     ELEVATION — four steps by role.
+     Replaces eight Tailwind shadow steps plus eight hand-written arbitrary
+     shadows. Note that shadow-[inset_0_-1px_0_#DBE9FE] (20 uses) is not
+     elevation at all — it is a bottom rule and becomes a border-bottom.
+     ====================================================================== */
+  --shadow-control: 0 1px 2px 0 rgb(37 41 49 / 0.05);
+  --shadow-card: 0 1px 3px 0 rgb(37 41 49 / 0.08);
+  --shadow-raised: 0 4px 12px -2px rgb(37 41 49 / 0.08);
+  --shadow-overlay: 0 12px 32px -8px rgb(37 41 49 / 0.12);
+
+  /* ======================================================================
+     MOTION — one easing curve, three durations.
+     Every animation must sit behind prefers-reduced-motion: this is a
+     patient population that includes people with vestibular conditions.
+     ====================================================================== */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Durations are not a Tailwind theme namespace, so they live as plain
+   custom properties and are referenced directly in component CSS. */
+:root {
+  --duration-fast: 150ms; /* colour, opacity            */
+  --duration-base: 200ms; /* transform, shadow          */
+  --duration-slow: 300ms; /* modals, drawers            */
+}
+
+/* ==========================================================================
+   Reading measure and motion safety
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
