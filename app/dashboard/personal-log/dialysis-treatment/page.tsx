@@ -12,13 +12,11 @@ import {
   Eye,
   HeartPulse,
   Pencil,
-  Plane,
   Plus,
   Scale,
   Timer,
 } from "lucide-react";
 import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
-import { useDialysisTrips } from "@/lib/useDialysisTrips";
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/components/dashboard/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
@@ -356,20 +354,6 @@ export default function DialysisTreatmentPage() {
   );
 }
 
-function AwayBadge({ center }: { center: string }) {
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-  return (
-    <span
-      title={center}
-      className="mt-1 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700"
-    >
-      <Plane className="h-3 w-3" />
-      {isEs ? "Fuera" : "Away"}
-    </span>
-  );
-}
-
 function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] }) {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
@@ -403,7 +387,6 @@ function TreatmentEntriesTable({
   entries: DialysisLogEntry[];
   onShowAll: () => void;
 }) {
-  const { tripForDate } = useDialysisTrips();
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
@@ -514,16 +497,6 @@ function TreatmentEntriesTable({
                     {/* Attendance Status */}
                     <td className="px-4 py-3.5">
                       <AttendanceBadge status={entry.attendance} />
-                      {(() => {
-                        const trip = tripForDate(entry.date);
-                        return trip ? (
-                          <span className="block">
-                            <AwayBadge
-                              center={trip.awayCenter || trip.destination}
-                            />
-                          </span>
-                        ) : null;
-                      })()}
                     </td>
 
                     {/* Actions: View (Full Page) & Edit */}
