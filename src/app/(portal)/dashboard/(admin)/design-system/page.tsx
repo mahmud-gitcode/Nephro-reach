@@ -17,6 +17,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
+import { Button } from "@/components/ui";
 
 /* ------------------------------------------------------------------ */
 /*  Local presentation helpers — only used by this page               */
@@ -597,73 +598,140 @@ export default function DesignSystemPage() {
       <Section
         id="buttons"
         title="Buttons"
-        description="The most-used element in the app, and the most inconsistent."
+        description="Three independent axes: variant (which colour), appearance (how much emphasis), size. 4 x 3 x 2 = 24 combinations, all built from tone tokens."
       >
+        <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
+          <table className="w-full min-w-[620px] border-collapse">
+            <thead>
+              <tr>
+                <th className="text-overline px-inset-md py-inset-sm text-left text-fg-muted">
+                  variant
+                </th>
+                {(["fill", "fill-stroke", "stroke"] as const).map((a) => (
+                  <th
+                    key={a}
+                    className="text-overline px-inset-md py-inset-sm text-left text-fg-muted"
+                  >
+                    {a}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(["primary", "neutral", "danger", "accent"] as const).map((v) => (
+                <tr key={v} className="border-t border-line-subtle">
+                  <td className="px-inset-md py-inset-sm">
+                    <code className="text-label-sm text-fg">{v}</code>
+                  </td>
+                  {(["fill", "fill-stroke", "stroke"] as const).map((a) => (
+                    <td key={a} className="px-inset-md py-inset-sm">
+                      <Button variant={v} appearance={a}>
+                        Log Treatment
+                      </Button>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         <Spec
-          name="Primary button"
-          uses="368 button elements total"
-          variants="12 divergent class strings"
-          status="diverged"
-          note="The same primary button is written 12 different ways — padding varies (py-2 / py-2.5 / py-3), text size varies (text-xs / text-sm / text-base), and most mix two color systems in one string: bg-[#2563EB] paired with hover:bg-blue-700."
+          name="Sizes — big 48 / small 36"
+          status="consistent"
+          uses="height tokens, never padding"
+          note="Icons are sized by the component: 24px in a big button, 16px in a small one. A caller passes <Plus /> and never sets h-4 w-4."
         >
-          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700">
-            <Plus className="h-4 w-4" />
-            Log Treatment
-          </button>
-          <button className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2563EB] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all hover:bg-blue-700 active:scale-[0.98]">
-            Variant found in code
-          </button>
-          <button className="rounded-xl bg-[#2563EB] px-4 py-3 text-center text-base font-bold text-white shadow-md">
-            Another found in code
-          </button>
+          <Button size="big" leadingIcon={<Plus />}>
+            Big
+          </Button>
+          <Button size="small" leadingIcon={<Plus />}>
+            Small
+          </Button>
+          <Button size="big" variant="neutral" appearance="fill-stroke" leadingIcon={<Pencil />}>
+            Big
+          </Button>
+          <Button size="small" variant="neutral" appearance="fill-stroke" leadingIcon={<Pencil />}>
+            Small
+          </Button>
         </Spec>
 
         <Spec
-          name="Secondary / ghost / danger"
-          uses="Used across forms and modals"
-          status="diverged"
-          note="Secondary buttons appear with border-slate-200 and border-slate-300 interchangeably."
+          name="States"
+          status="consistent"
+          uses="default · hover · active · focus · disabled · loading"
+          note="Tab to a button to see the focus ring — 2px at 2px offset, on every combination. Loading keeps the button width so the layout does not jump, and sets aria-busy."
         >
-          <button className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-            Cancel
-          </button>
-          <button className="inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-[#2563EB] transition-colors hover:bg-blue-50">
-            View history
-          </button>
-          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-bold text-white transition-colors hover:bg-rose-700">
-            <Trash2 className="h-4 w-4" />
-            Delete entry
-          </button>
-          <button
-            disabled
-            className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-5 text-sm font-semibold text-slate-400"
-          >
+          <Button>Default</Button>
+          <Button loading>Saving…</Button>
+          <Button disabled>Disabled</Button>
+          <Button variant="neutral" appearance="fill-stroke" loading>
             Saving…
-          </button>
+          </Button>
+          <Button variant="neutral" appearance="fill-stroke" disabled>
+            Disabled
+          </Button>
+          <Button variant="danger" appearance="stroke" disabled>
+            Disabled
+          </Button>
         </Spec>
 
-        <Spec name="Icon button" uses="Common in tables and cards" status="diverged">
-          <button
-            aria-label="Edit"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            aria-label="Copy"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-          <button
-            aria-label="Delete"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition-colors hover:bg-rose-50"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+        <Spec
+          name="Icon only"
+          status="consistent"
+          uses="width locked to height"
+          note="iconOnly makes width equal height, so an icon button can never fall below its touch target — the thing most often got wrong when these were hand-written (the old ones were 28px)."
+        >
+          <Button iconOnly variant="neutral" appearance="fill-stroke" aria-label="Edit">
+            <Pencil />
+          </Button>
+          <Button iconOnly variant="danger" aria-label="Delete">
+            <Trash2 />
+          </Button>
+          <Button iconOnly variant="primary" appearance="stroke" aria-label="Copy">
+            <Copy />
+          </Button>
+          <Button iconOnly size="small" variant="neutral" appearance="stroke" aria-label="Close">
+            <X />
+          </Button>
         </Spec>
+
+        <Spec name="Full width" status="consistent" uses="fullWidth prop">
+          <div className="w-full max-w-sm space-y-stack-md">
+            <Button fullWidth leadingIcon={<Plus />}>
+              Add appointment
+            </Button>
+            <Button fullWidth variant="neutral" appearance="fill-stroke">
+              Cancel
+            </Button>
+          </div>
+        </Spec>
+
+        <div className="rounded-card border border-info-line bg-info-surface p-inset-md">
+          <p className="text-body-sm text-fg-secondary">
+            <strong className="font-semibold text-fg">
+              Why the prop is called appearance, not type.
+            </strong>{" "}
+            <code className="rounded bg-surface px-1 text-caption">type</code> is a
+            native button attribute — submit, reset, button. Shadowing it would
+            silently stop forms from submitting, so the emphasis axis is called{" "}
+            <code className="rounded bg-surface px-1 text-caption">appearance</code>{" "}
+            instead. The values are unchanged.
+          </p>
+          <p className="mt-inset-sm text-body-sm text-fg-secondary">
+            <strong className="font-semibold text-fg">
+              And why neutral, not black.
+            </strong>{" "}
+            A button named for a colour breaks the moment the ground changes —
+            a black button on a dark background is invisible. The neutral tone
+            inverts to a light solid under{" "}
+            <code className="rounded bg-surface px-1 text-caption">
+              [data-theme=&quot;dark&quot;]
+            </code>
+            , so it stays the highest-contrast option in either theme.
+          </p>
+        </div>
       </Section>
-
       {/* ---------------- Forms ---------------- */}
       <Section
         id="forms"

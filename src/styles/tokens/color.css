@@ -189,6 +189,64 @@
   --info: var(--color-brand-700);
   --info-surface: var(--color-brand-50);
   --info-line: var(--color-brand-200);
+
+  /* ---- tones ----------------------------------------------------------
+     One tone = the full expression of a colour role across the three
+     button appearances. Nine slots per tone:
+
+       solid / solid-hover / on-solid     fill
+       soft / soft-hover / soft-line      fill-stroke  (tinted)
+       edge / edge-hover / fg             stroke       (outlined)
+
+     `neutral` is deliberately not called "black": in dark mode it inverts
+     to a light solid, so a literal name would become wrong.
+     -------------------------------------------------------------------- */
+
+  /* primary */
+  --tone-primary-solid: var(--color-brand-600);
+  --tone-primary-solid-hover: var(--color-brand-700);
+  --tone-primary-on-solid: #ffffff;
+  --tone-primary-soft: var(--color-brand-50);
+  --tone-primary-soft-hover: var(--color-brand-100);
+  --tone-primary-soft-line: var(--color-brand-200);
+  --tone-primary-edge: var(--color-brand-600);
+  --tone-primary-edge-hover: var(--color-brand-50);
+  --tone-primary-fg: var(--color-brand-700);
+
+  /* neutral — the classic white-on-grey secondary button.
+     `soft` is the page surface rather than a grey tint, because white +
+     grey border is the pattern this app already uses most. */
+  --tone-neutral-solid: var(--color-gray-950);
+  --tone-neutral-solid-hover: var(--color-gray-800);
+  --tone-neutral-on-solid: #ffffff;
+  --tone-neutral-soft: #ffffff;
+  --tone-neutral-soft-hover: var(--color-gray-50);
+  --tone-neutral-soft-line: var(--color-gray-300);
+  --tone-neutral-edge: var(--color-gray-950);
+  --tone-neutral-edge-hover: var(--color-gray-100);
+  --tone-neutral-fg: var(--color-gray-800);
+
+  /* danger */
+  --tone-danger-solid: var(--color-danger-600);
+  --tone-danger-solid-hover: var(--color-danger-700);
+  --tone-danger-on-solid: #ffffff;
+  --tone-danger-soft: var(--color-danger-50);
+  --tone-danger-soft-hover: var(--color-danger-100);
+  --tone-danger-soft-line: var(--color-danger-200);
+  --tone-danger-edge: var(--color-danger-600);
+  --tone-danger-edge-hover: var(--color-danger-50);
+  --tone-danger-fg: var(--color-danger-700);
+
+  /* accent */
+  --tone-accent-solid: var(--color-accent-600);
+  --tone-accent-solid-hover: var(--color-accent-700);
+  --tone-accent-on-solid: #ffffff;
+  --tone-accent-soft: var(--color-accent-50);
+  --tone-accent-soft-hover: var(--color-accent-100);
+  --tone-accent-soft-line: var(--color-accent-200);
+  --tone-accent-edge: var(--color-accent-600);
+  --tone-accent-edge-hover: var(--color-accent-50);
+  --tone-accent-fg: var(--color-accent-700);
 }
 
 /* ==========================================================================
@@ -253,6 +311,48 @@
   --info: var(--color-brand-300);
   --info-surface: var(--color-brand-950);
   --info-line: var(--color-brand-800);
+
+  /* ---- tones, dark ---- */
+  --tone-primary-solid: var(--color-brand-600);
+  --tone-primary-solid-hover: var(--color-brand-500);
+  --tone-primary-on-solid: #ffffff;
+  --tone-primary-soft: var(--color-brand-950);
+  --tone-primary-soft-hover: var(--color-brand-900);
+  --tone-primary-soft-line: var(--color-brand-800);
+  --tone-primary-edge: var(--color-brand-400);
+  --tone-primary-edge-hover: var(--color-brand-950);
+  --tone-primary-fg: var(--color-brand-300);
+
+  /* neutral inverts — a "black" button would vanish on a dark ground */
+  --tone-neutral-solid: var(--color-gray-50);
+  --tone-neutral-solid-hover: var(--color-gray-200);
+  --tone-neutral-on-solid: var(--color-gray-950);
+  --tone-neutral-soft: var(--color-gray-900);
+  --tone-neutral-soft-hover: var(--color-gray-800);
+  --tone-neutral-soft-line: var(--color-gray-700);
+  --tone-neutral-edge: var(--color-gray-300);
+  --tone-neutral-edge-hover: var(--color-gray-800);
+  --tone-neutral-fg: var(--color-gray-200);
+
+  --tone-danger-solid: var(--color-danger-600);
+  --tone-danger-solid-hover: var(--color-danger-500);
+  --tone-danger-on-solid: #ffffff;
+  --tone-danger-soft: var(--color-danger-950);
+  --tone-danger-soft-hover: var(--color-danger-900);
+  --tone-danger-soft-line: var(--color-danger-800);
+  --tone-danger-edge: var(--color-danger-400);
+  --tone-danger-edge-hover: var(--color-danger-950);
+  --tone-danger-fg: var(--color-danger-300);
+
+  --tone-accent-solid: var(--color-accent-600);
+  --tone-accent-solid-hover: var(--color-accent-500);
+  --tone-accent-on-solid: #ffffff;
+  --tone-accent-soft: var(--color-accent-950);
+  --tone-accent-soft-hover: var(--color-accent-900);
+  --tone-accent-soft-line: var(--color-accent-800);
+  --tone-accent-edge: var(--color-accent-400);
+  --tone-accent-edge-hover: var(--color-accent-950);
+  --tone-accent-fg: var(--color-accent-300);
 }
 
 /* ==========================================================================
@@ -309,4 +409,45 @@
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
   --color-info-line: var(--info-line);
+
+  /* tones */
+  --color-primary-solid: var(--tone-primary-solid);
+  --color-primary-solid-hover: var(--tone-primary-solid-hover);
+  --color-primary-on-solid: var(--tone-primary-on-solid);
+  --color-primary-soft: var(--tone-primary-soft);
+  --color-primary-soft-hover: var(--tone-primary-soft-hover);
+  --color-primary-soft-line: var(--tone-primary-soft-line);
+  --color-primary-edge: var(--tone-primary-edge);
+  --color-primary-edge-hover: var(--tone-primary-edge-hover);
+  --color-primary-fg: var(--tone-primary-fg);
+
+  --color-neutral-solid: var(--tone-neutral-solid);
+  --color-neutral-solid-hover: var(--tone-neutral-solid-hover);
+  --color-neutral-on-solid: var(--tone-neutral-on-solid);
+  --color-neutral-soft: var(--tone-neutral-soft);
+  --color-neutral-soft-hover: var(--tone-neutral-soft-hover);
+  --color-neutral-soft-line: var(--tone-neutral-soft-line);
+  --color-neutral-edge: var(--tone-neutral-edge);
+  --color-neutral-edge-hover: var(--tone-neutral-edge-hover);
+  --color-neutral-fg: var(--tone-neutral-fg);
+
+  --color-danger-solid: var(--tone-danger-solid);
+  --color-danger-solid-hover: var(--tone-danger-solid-hover);
+  --color-danger-on-solid: var(--tone-danger-on-solid);
+  --color-danger-soft: var(--tone-danger-soft);
+  --color-danger-soft-hover: var(--tone-danger-soft-hover);
+  --color-danger-soft-line: var(--tone-danger-soft-line);
+  --color-danger-edge: var(--tone-danger-edge);
+  --color-danger-edge-hover: var(--tone-danger-edge-hover);
+  --color-danger-fg: var(--tone-danger-fg);
+
+  --color-accent-solid: var(--tone-accent-solid);
+  --color-accent-solid-hover: var(--tone-accent-solid-hover);
+  --color-accent-on-solid: var(--tone-accent-on-solid);
+  --color-accent-soft: var(--tone-accent-soft);
+  --color-accent-soft-hover: var(--tone-accent-soft-hover);
+  --color-accent-soft-line: var(--tone-accent-soft-line);
+  --color-accent-edge: var(--tone-accent-edge);
+  --color-accent-edge-hover: var(--tone-accent-edge-hover);
+  --color-accent-fg: var(--tone-accent-fg);
 }

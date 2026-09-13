@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Phone, Pencil, Plus, Trash2, X, Car, Star, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
 
 export interface RideContact {
@@ -168,14 +169,12 @@ export default function MyRidesPage() {
           </div>
         </div>
 
-        <button
-          type="button"
+        <Button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer shrink-0"
+          leadingIcon={<Plus className="h-4 w-4 stroke-[2.5]" />}
         >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>{t("myRides.addRide")}</span>
-        </button>
+          {t("myRides.addRide")}
+        </Button>
       </div>
 
       {/* Main 2-Column Responsive Layout */}
@@ -194,14 +193,12 @@ export default function MyRidesPage() {
                   Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling.
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={handleOpenAdd}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-5 py-2.5 text-sm font-bold text-white transition-colors shadow-xs cursor-pointer"
+                leadingIcon={<Plus className="h-4 w-4" />}
               >
-                <Plus className="h-4 w-4" />
-                <span>{t("myRides.addFirstRide")}</span>
-              </button>
+                {t("myRides.addFirstRide")}
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -249,25 +246,28 @@ export default function MyRidesPage() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
+                        <Button
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          size="small"
+                          iconOnly
                           onClick={() => handleOpenEdit(ride)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
                           title={t("myRides.editDetails")}
                           aria-label={`Edit ${ride.name}`}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         {rides.length > 1 && (
-                          <button
-                            type="button"
+                          <Button
+                            variant="danger"
+                            size="small"
+                            iconOnly
                             onClick={() => handleDeleteRide(ride.id, ride.name)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
                             title={t("myRides.removeRide")}
                             aria-label={`Remove ${ride.name}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -360,14 +360,17 @@ export default function MyRidesPage() {
               <h3 className="text-lg font-bold text-slate-900">
                 {modalMode === "add" ? t("myRides.addNewRideModal") : t("myRides.editRideModal")}
               </h3>
-              <button
-                type="button"
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                iconOnly
                 onClick={handleCloseModal}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
                 title={t("myRides.close")}
+                aria-label={t("myRides.close")}
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
             {formError && (
@@ -432,19 +435,12 @@ export default function MyRidesPage() {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 text-sm transition-colors shadow-sm cursor-pointer"
-                >
+                <Button type="submit" className="flex-1">
                   {modalMode === "add" ? t("myRides.saveRide") : t("myRides.updateInfo")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-3 text-sm transition-colors cursor-pointer"
-                >
+                </Button>
+                <Button variant="neutral" appearance="fill-stroke" onClick={handleCloseModal}>
                   {t("myRides.cancel")}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

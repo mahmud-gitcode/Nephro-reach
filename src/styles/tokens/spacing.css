@@ -63,14 +63,18 @@
      Use the HEIGHT token; do not set vertical padding on a control.
      44px is the accessible minimum and is the default (md).
      ====================================================================== */
-  --spacing-control-sm: 2.25rem; /* 36px */
-  --spacing-control-md: 2.75rem; /* 44px · DEFAULT — minimum touch target */
-  --spacing-control-lg: 3.25rem; /* 52px */
+  --spacing-control-big: 3rem; /* 48px · DEFAULT — clears WCAG 2.5.5 (44px) */
+  --spacing-control-small: 2.25rem; /* 36px · dense rows; clears WCAG 2.5.8 (24px) */
 
-  /* Horizontal inset for controls, paired with the heights above. */
-  --spacing-control-x-sm: 0.75rem; /* 12px */
-  --spacing-control-x-md: 1.25rem; /* 20px */
-  --spacing-control-x-lg: 1.625rem; /* 26px */
+  /* Horizontal inset, paired with the heights above. */
+  --spacing-control-x-big: 1.5rem; /* 24px */
+  --spacing-control-x-small: 0.75rem; /* 12px */
+
+  /* Icon size inside a control. 24px needs a 48px box or it looks cramped;
+     16px suits the 36px box. The Button sizes any <svg> child with these
+     so a caller never has to remember. */
+  --spacing-icon-big: 1.5rem; /* 24px */
+  --spacing-icon-small: 1rem; /* 16px */
 
   /* ======================================================================
      GUTTER — page side padding. Responsive, applied once on a wrapper.
@@ -86,11 +90,12 @@
      The dominant shape today is 12px (rounded-xl in Tailwind v4, 371 uses),
      so control and card both sit at 12px and nothing visibly changes.
      ====================================================================== */
-  --radius-chip: 0.375rem; /*  6px · badges, small tags        */
-  --radius-control: 0.75rem; /* 12px · buttons, inputs, selects  */
-  --radius-card: 0.75rem; /* 12px · cards, inner panels       */
-  --radius-panel: 1rem; /* 16px · modals, drawers, sheets   */
-  --radius-pill: 9999px; /*        avatars, pills, progress  */
+  --radius-control: 0.5rem; /*  8px · big controls   */
+  --radius-control-small: 0.25rem; /*  4px · small controls */
+  --radius-chip: 0.25rem; /*  4px · badges, tags   */
+  --radius-card: 0.75rem; /* 12px · cards          */
+  --radius-panel: 1rem; /* 16px · modals, sheets */
+  --radius-pill: 9999px; /*        avatars, pills */
 
   /* ======================================================================
      ELEVATION — four steps by role.
