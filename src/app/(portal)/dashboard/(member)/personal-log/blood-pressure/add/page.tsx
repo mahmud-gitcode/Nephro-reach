@@ -5,6 +5,55 @@ import Link from "next/link";
 import { CalendarDays, Check, Clock3, HeartPulse, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  FormField,
+  Input,
+  Textarea,
+} from "@/components/ui";
+
+/** The tick that shows which option in a radio group is chosen. */
+function RadioMark({ selected }: { selected: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-chip border ${
+        selected
+          ? "border-primary-edge bg-primary-solid text-primary-on-solid"
+          : "border-field bg-surface"
+      }`}
+    >
+      {selected ? <Check className="h-3.5 w-3.5" /> : null}
+    </span>
+  );
+}
+
+function MetaTile({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <Card tone="flat" padding="small" className="flex items-center gap-inline-md">
+      <span
+        aria-hidden="true"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand [&_svg]:h-icon-small [&_svg]:w-icon-small"
+      >
+        {icon}
+      </span>
+      <div>
+        <p className="text-caption text-fg-muted">{label}</p>
+        <p className="mt-stack-xs text-label-md text-fg">{value}</p>
+      </div>
+    </Card>
+  );
+}
 
 export default function AddBloodPressurePage() {
   const { language, t } = useLanguage();
@@ -24,213 +73,195 @@ export default function AddBloodPressurePage() {
     { label: t("bloodPressure.add.moods.stressed"), mark: t("bloodPressure.add.moods.stressedMark"), emoji: ":/" },
   ];
 
+  const vitals = [
+    { label: t("bloodPressure.add.systolic"), value: systolic, set: setSystolic },
+    { label: t("bloodPressure.add.diastolic"), value: diastolic, set: setDiastolic },
+    { label: t("bloodPressure.add.pulse"), value: pulse, set: setPulse },
+  ];
+
   return (
-    <div className="mx-auto max-w-[429px]">
+    <div className="mx-auto max-w-[429px] space-y-stack-lg">
       <PersonalLogDisclaimer />
 
-      <section className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] p-3">
-        <header className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red-100 text-red-500">
-            <HeartPulse className="h-6 w-6" />
+      <Card as="section" tone="sunken" padding="small">
+        <header className="flex items-center gap-inline-md px-inset-xs pt-inset-xs">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-panel bg-danger-soft text-danger"
+          >
+            <HeartPulse className="h-icon-big w-icon-big" />
           </span>
-          <h1 className="min-w-0 flex-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+          <h1 className="min-w-0 flex-1 text-heading-4 text-fg">
             {t("bloodPressure.add.title")}
           </h1>
           <Link
             href="/dashboard/personal-log/blood-pressure"
-            className="rounded-full p-1 text-slate-950 transition-colors hover:bg-white"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "stroke",
+              size: "small",
+              iconOnly: true,
+            })}
             aria-label={t("bloodPressure.add.closeAria")}
           >
-            <X className="h-6 w-6" />
+            <X />
           </Link>
         </header>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="flex min-h-[74px] items-center gap-3 rounded-lg border border-[#E3E6F0] bg-white p-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <CalendarDays className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-medium leading-4 text-slate-500">{t("bloodPressure.add.date")}</p>
-              <p className="mt-1 text-sm font-semibold leading-5 text-slate-950">
-                {language === "ES" ? "5 de mayo de 2026" : "May 5, 2026"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex min-h-[74px] items-center gap-3 rounded-lg border border-[#E3E6F0] bg-white p-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <Clock3 className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-medium leading-4 text-slate-500">{t("bloodPressure.add.time")}</p>
-              <p className="mt-1 text-sm font-semibold leading-5 text-slate-950">12:00 AM</p>
-            </div>
-          </div>
+        <div className="mt-stack-lg grid grid-cols-2 gap-inline-md">
+          <MetaTile
+            icon={<CalendarDays />}
+            label={t("bloodPressure.add.date")}
+            value={language === "ES" ? "5 de mayo de 2026" : "May 5, 2026"}
+          />
+          <MetaTile
+            icon={<Clock3 />}
+            label={t("bloodPressure.add.time")}
+            value="12:00 AM"
+          />
         </div>
 
-        <div className="mt-4 rounded-lg bg-white p-3">
-          <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+        <Card padding="small" className="mt-stack-lg">
+          <h2 className="text-heading-5 text-fg">
             {t("bloodPressure.add.howIFelt")}
           </h2>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label className="block">
-              <span className="text-sm font-medium leading-5 text-slate-950">
-                {t("bloodPressure.add.systolic")}
-              </span>
-              <input
-                type="number"
-                value={systolic}
-                onChange={(e) => setSystolic(e.target.value)}
-                className="mt-2 flex h-12 w-full items-center rounded border border-[#CBD5ED] bg-white px-3 text-base font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-medium leading-5 text-slate-950">
-                {t("bloodPressure.add.diastolic")}
-              </span>
-              <input
-                type="number"
-                value={diastolic}
-                onChange={(e) => setDiastolic(e.target.value)}
-                className="mt-2 flex h-12 w-full items-center rounded border border-[#CBD5ED] bg-white px-3 text-base font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-medium leading-5 text-slate-950">
-                {t("bloodPressure.add.pulse")}
-              </span>
-              <input
-                type="number"
-                value={pulse}
-                onChange={(e) => setPulse(e.target.value)}
-                className="mt-2 flex h-12 w-full items-center rounded border border-[#CBD5ED] bg-white px-3 text-base font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
+          <div className="mt-stack-md grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
+            {vitals.map((v) => (
+              <FormField key={v.label} label={v.label}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="number"
+                    inputMode="numeric"
+                    value={v.value}
+                    onChange={(e) => v.set(e.target.value)}
+                  />
+                )}
+              </FormField>
+            ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="mt-4 rounded-lg bg-white p-3">
-          <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+        {/* Was a list of plain buttons: a screen reader could not tell these
+            were one choice, nor which one was picked. It is a radio group. */}
+        <Card padding="small" className="mt-stack-lg">
+          <h2 id="mood-label" className="text-heading-5 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
-          <p className="mt-1 text-sm font-medium leading-5 text-slate-500">
+          <p className="mt-stack-xs text-body-sm text-fg-muted">
             {t("bloodPressure.add.selectCurrentState")}
           </p>
 
-          <div className="mt-3 space-y-2">
-            {moods.map((mood, index) => (
-              <button
-                key={mood.label}
-                type="button"
-                onClick={() => setSelectedMood(index)}
-                className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors cursor-pointer ${
-                  selectedMood === index
-                    ? "border-blue-300 bg-blue-50"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
-                }`}
-              >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1F5FA] text-sm font-bold text-slate-700">
-                  {mood.emoji}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold leading-5 text-slate-950">
-                    {mood.label}
-                  </span>
-                  <span className="block text-xs font-medium leading-4 text-slate-500">
-                    {mood.mark}
-                  </span>
-                </span>
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                    selectedMood === index ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
+          <div
+            role="radiogroup"
+            aria-labelledby="mood-label"
+            className="mt-stack-md space-y-stack-sm"
+          >
+            {moods.map((mood, index) => {
+              const selected = selectedMood === index;
+              return (
+                <button
+                  key={mood.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setSelectedMood(index)}
+                  className={`flex w-full cursor-pointer items-center gap-inline-md rounded-card border p-inset-sm text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                    selected
+                      ? "border-primary-soft-line bg-primary-soft"
+                      : "border-line bg-surface hover:bg-surface-sunken"
                   }`}
                 >
-                  {selectedMood === index && <Check className="h-3.5 w-3.5" />}
-                </span>
-              </button>
-            ))}
+                  <span
+                    aria-hidden="true"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-surface-sunken text-label-md text-fg-secondary"
+                  >
+                    {mood.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-label-md text-fg">
+                      {mood.label}
+                    </span>
+                    <span className="block text-caption text-fg-muted">
+                      {mood.mark}
+                    </span>
+                  </span>
+                  <RadioMark selected={selected} />
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </Card>
 
-        <div className="mt-4 rounded-lg bg-white p-3">
-          <h2 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+        <Card padding="small" className="mt-stack-lg">
+          <h2 className="text-heading-5 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
-          <p className="mt-3 text-sm font-medium leading-5 text-slate-950">
+          <p id="med-label" className="mt-stack-md text-label-md text-fg">
             {t("bloodPressure.add.medicationQuestion")}
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setMedTaken(true)}
-              className={`flex h-12 items-center justify-between rounded-lg border px-3 text-sm font-semibold cursor-pointer ${
-                medTaken
-                  ? "border-blue-300 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-700"
-              }`}
-            >
-              {t("bloodPressure.add.yes")}
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  medTaken ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
-                }`}
-              >
-                {medTaken && <Check className="h-3.5 w-3.5" />}
-              </span>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setMedTaken(false)}
-              className={`flex h-12 items-center justify-between rounded-lg border px-3 text-sm font-semibold cursor-pointer ${
-                !medTaken
-                  ? "border-blue-300 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-700"
-              }`}
-            >
-              {t("bloodPressure.add.no")}
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  !medTaken ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
-                }`}
-              >
-                {!medTaken && <Check className="h-3.5 w-3.5" />}
-              </span>
-            </button>
+          <div
+            role="radiogroup"
+            aria-labelledby="med-label"
+            className="mt-stack-md grid grid-cols-2 gap-inline-md"
+          >
+            {[
+              { label: t("bloodPressure.add.yes"), value: true },
+              { label: t("bloodPressure.add.no"), value: false },
+            ].map((opt) => {
+              const selected = medTaken === opt.value;
+              return (
+                <button
+                  key={opt.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setMedTaken(opt.value)}
+                  className={`flex h-control-big cursor-pointer items-center justify-between rounded-card border px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                    selected
+                      ? "border-primary-soft-line bg-primary-soft text-primary-fg"
+                      : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
+                  }`}
+                >
+                  {opt.label}
+                  <RadioMark selected={selected} />
+                </button>
+              );
+            })}
           </div>
 
-          <label className="mt-4 block">
-            <span className="text-sm font-medium leading-5 text-slate-950">
-              {t("bloodPressure.add.notes")}
-            </span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("bloodPressure.add.notesPlaceholder")}
-              className="mt-2 block min-h-[92px] w-full resize-none rounded border border-[#CBD5ED] bg-white p-3 text-sm font-medium leading-5 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-        </div>
+          <div className="mt-stack-lg">
+            <FormField label={t("bloodPressure.add.notes")}>
+              {(props) => (
+                <Textarea
+                  {...props}
+                  rows={4}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={t("bloodPressure.add.notesPlaceholder")}
+                />
+              )}
+            </FormField>
+          </div>
+        </Card>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-stack-xl grid grid-cols-2 gap-inline-md">
           <Link
             href="/dashboard/personal-log/blood-pressure"
-            className="flex h-12 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold text-slate-950 transition-colors hover:bg-white cursor-pointer"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              fullWidth: true,
+            })}
           >
             {t("bloodPressure.add.cancel")}
           </Link>
-          <button
-            type="button"
-            className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
-            <Plus className="h-5 w-5" />
+          <Button fullWidth leadingIcon={<Plus />}>
             {t("bloodPressure.add.saveEntry")}
-          </button>
+          </Button>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }

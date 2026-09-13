@@ -16,10 +16,13 @@ import {
   X,
 } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
   CardBody,
+  Chip,
+  ChipGroup,
   CardFooter,
   CardHeader,
   EmptyState,
@@ -27,6 +30,9 @@ import {
   Input,
   Modal,
   Select,
+  Switch,
+  SwitchRow,
+  TabPanel,
   Table,
   TableBody,
   TableCell,
@@ -36,6 +42,7 @@ import {
   TablePagination,
   TableRow,
   TableSkeleton,
+  Tabs,
   Textarea,
   type SortDirection,
 } from "@/components/ui";
@@ -143,6 +150,10 @@ const COMPONENTS = [
   { id: "formfield", label: "FormField" },
   { id: "table", label: "Table" },
   { id: "emptystate", label: "EmptyState" },
+  { id: "alert", label: "Alert" },
+  { id: "tabs", label: "Tabs" },
+  { id: "chip", label: "Chip" },
+  { id: "switch", label: "Switch" },
 ] as const;
 
 type ComponentId = (typeof COMPONENTS)[number]["id"];
@@ -166,6 +177,10 @@ export default function DesignSystemPage() {
   const [tableState, setTableState] = useState<"data" | "loading" | "empty">(
     "data",
   );
+  const [demoTab, setDemoTab] = useState("overview");
+  const [chips, setChips] = useState<string[]>(["counts"]);
+  const [switchOn, setSwitchOn] = useState(true);
+  const [notify, setNotify] = useState(true);
 
   const show = (id: ComponentId) => component === "all" || component === id;
 
@@ -739,6 +754,229 @@ export default function DesignSystemPage() {
                   onPageChange={setPage}
                   summary="16 results"
                 />
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Alert -------- */}
+          {show("alert") ? (
+            <Block title="Alert">
+              <div className="space-y-stack-md">
+                <Alert tone="info">
+                  Your nephrologist reviews these entries before each monthly
+                  visit.
+                </Alert>
+                <Alert tone="success">Profile saved successfully.</Alert>
+                <Alert tone="warning" title="Above your fluid goal">
+                  You are 0.6 L over today&apos;s target. Check with your care
+                  team before your next session.
+                </Alert>
+                <Alert
+                  tone="danger"
+                  title="Weight gain above target"
+                  action={
+                    <Button size="small" variant="danger" appearance="fill-stroke">
+                      Contact care team
+                    </Button>
+                  }
+                  onDismiss={() => {}}
+                >
+                  Interdialytic weight gain is 5.2% of dry weight. Target is
+                  under 4%.
+                </Alert>
+              </div>
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    Role follows tone.
+                  </strong>{" "}
+                  Warning and danger use role=&quot;alert&quot; and interrupt a
+                  screen reader; info and success use role=&quot;status&quot; and
+                  wait. A notice that is simply part of the page passes live=
+                  {"{false}"} so it is not announced at all.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Tabs -------- */}
+          {show("tabs") ? (
+            <Block title="Tabs">
+              <Row label="underline">
+                <div className="w-full">
+                  <Tabs
+                    label="Demo sections"
+                    value={demoTab}
+                    onChange={setDemoTab}
+                    items={[
+                      { id: "overview", label: "Overview" },
+                      { id: "history", label: "History" },
+                      { id: "trends", label: "Trends" },
+                      { id: "archive", label: "Archive", disabled: true },
+                    ]}
+                  />
+                  <TabPanel id="overview" value={demoTab} className="pt-inset-md">
+                    <p className="text-body-md text-fg-secondary">
+                      Overview panel.
+                    </p>
+                  </TabPanel>
+                  <TabPanel id="history" value={demoTab} className="pt-inset-md">
+                    <p className="text-body-md text-fg-secondary">
+                      History panel.
+                    </p>
+                  </TabPanel>
+                  <TabPanel id="trends" value={demoTab} className="pt-inset-md">
+                    <p className="text-body-md text-fg-secondary">
+                      Trends panel.
+                    </p>
+                  </TabPanel>
+                </div>
+              </Row>
+
+              <Row label="pill">
+                <Tabs
+                  variant="pill"
+                  label="Demo sections, pill"
+                  value={demoTab}
+                  onChange={setDemoTab}
+                  items={[
+                    { id: "overview", label: "Overview" },
+                    { id: "history", label: "History" },
+                    { id: "trends", label: "Trends" },
+                  ]}
+                />
+              </Row>
+
+              <Row label="vertical">
+                <div className="w-full max-w-xs">
+                  <Tabs
+                    variant="vertical"
+                    label="Demo sections, vertical"
+                    value={demoTab}
+                    onChange={setDemoTab}
+                    items={[
+                      { id: "overview", label: "Overview", icon: <Info /> },
+                      { id: "history", label: "History", icon: <Calendar /> },
+                      { id: "trends", label: "Trends", icon: <Droplet /> },
+                    ]}
+                  />
+                </div>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    Try the arrow keys.
+                  </strong>{" "}
+                  A tab strip is one stop in the tab order, not one per tab: Tab
+                  into it, then arrow keys to move, Home / End to jump. The nine
+                  hand-written tab strips in this app made every tab its own tab
+                  stop.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Chip -------- */}
+          {show("chip") ? (
+            <Block title="Chip">
+              <Row label="Multiple selection">
+                <ChipGroup label="Lab categories" selection="multiple">
+                  {[
+                    { id: "counts", label: "Blood Counts" },
+                    { id: "chem", label: "Chemistry" },
+                    { id: "fluid", label: "Fluid" },
+                    { id: "bone", label: "Bone" },
+                  ].map((c) => (
+                    <Chip
+                      key={c.id}
+                      selected={chips.includes(c.id)}
+                      onClick={() =>
+                        setChips((prev) =>
+                          prev.includes(c.id)
+                            ? prev.filter((x) => x !== c.id)
+                            : [...prev, c.id],
+                        )
+                      }
+                    >
+                      {c.label}
+                    </Chip>
+                  ))}
+                </ChipGroup>
+              </Row>
+
+              <Row label="Removable · with icon · disabled">
+                <Chip selected icon={<Droplet />} onRemove={() => {}}>
+                  Fluid tracker
+                </Chip>
+                <Chip onRemove={() => {}}>May 2026</Chip>
+                <Chip disabled>Unavailable</Chip>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    A Chip is not a Badge.
+                  </strong>{" "}
+                  Badge reports state and is a span; Chip is a control the member
+                  operates and is a real button with aria-pressed. They look
+                  alike, which is exactly why they drift together.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Switch -------- */}
+          {show("switch") ? (
+            <Block title="Switch">
+              <Row label="Standalone">
+                <Switch
+                  checked={switchOn}
+                  onChange={setSwitchOn}
+                  label="Demo switch"
+                />
+                <Switch
+                  size="small"
+                  checked={switchOn}
+                  onChange={setSwitchOn}
+                  label="Demo switch, small"
+                />
+                <Switch
+                  checked={false}
+                  onChange={() => {}}
+                  label="Disabled"
+                  disabled
+                />
+              </Row>
+
+              <Row label="SwitchRow — the whole row is the control">
+                <div className="w-full space-y-stack-md">
+                  <SwitchRow
+                    checked={notify}
+                    onChange={setNotify}
+                    title="Medication Reminders"
+                    description="Daily notifications and alerts for scheduled medication times"
+                  />
+                  <SwitchRow
+                    checked={!notify}
+                    onChange={() => setNotify((v) => !v)}
+                    title="Weekly Check-In Reminders"
+                    description="Get reminded to complete your weekly check-in"
+                  />
+                </div>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    This one exists because of a bug.
+                  </strong>{" "}
+                  The notification preferences in settings were a div with an
+                  onClick and an aria-hidden indicator, so all six were
+                  unreachable by keyboard and invisible to a screen reader. The
+                  row target is full width rather than a 44px switch, which
+                  matters for members with reduced fine motor control.
+                </p>
               </Card>
             </Block>
           ) : null}

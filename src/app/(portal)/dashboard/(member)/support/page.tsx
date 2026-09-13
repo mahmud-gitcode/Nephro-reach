@@ -10,10 +10,20 @@ import {
   Mail,
   Send,
   Tag,
-  X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+} from "@/components/ui";
 
 type CommentItem = {
   author: string;
@@ -89,36 +99,23 @@ const defaultTickets: TicketItem[] = [
   },
 ];
 
-function StatusChip({
-  status,
-  label,
-}: {
-  status: "new" | "inProgress" | "resolved";
-  label: string;
-}) {
-  const styles = {
-    new: "bg-sky-200 text-sky-700",
-    inProgress: "bg-amber-100 text-amber-500",
-    resolved: "bg-emerald-100 text-emerald-600",
-  }[status];
-
-  return (
-    <span
-      className={`inline-flex h-8 items-center rounded-lg px-2 text-sm font-bold ${styles}`}
-    >
-      {label}
-    </span>
-  );
-}
+const statusTone = {
+  new: "info",
+  inProgress: "warning",
+  resolved: "success",
+} as const;
 
 function TicketMeta({ category, date }: { category: string; date: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-500">
-      <span className="flex items-center gap-2 text-base text-slate-700">
-        <Tag className="h-5 w-5 text-indigo-700" />
+    <div className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-muted">
+      <span className="flex items-center gap-inline-md text-fg-secondary">
+        <Tag className="h-icon-small w-icon-small text-fg-brand" />
         {category}
       </span>
-      <CircleDot className="h-2.5 w-2.5 fill-slate-200 text-slate-200" />
+      <CircleDot
+        aria-hidden="true"
+        className="h-2.5 w-2.5 fill-line text-line"
+      />
       <span>{date}</span>
     </div>
   );
@@ -127,8 +124,11 @@ function TicketMeta({ category, date }: { category: string; date: string }) {
 function Avatar({ initial, isSupport }: { initial: string; isSupport?: boolean }) {
   return (
     <span
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm text-white ${
-        isSupport ? "bg-indigo-600" : "bg-blue-700"
+      aria-hidden="true"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-label-sm ${
+        isSupport
+          ? "bg-accent-solid text-accent-on-solid"
+          : "bg-primary-solid text-primary-on-solid"
       }`}
     >
       {initial}
@@ -140,23 +140,19 @@ function CommentCard({ comment }: { comment: CommentItem }) {
   const isSupport = comment.tone === "support";
 
   return (
-    <article
-      className={`rounded-lg border border-[#D6E6F2] px-4 py-4 ${
-        isSupport ? "bg-blue-100" : "bg-[#F8FAFC]"
-      }`}
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-3">
+    <Card as="article" tone={isSupport ? "sunken" : "flat"} padding="big">
+      <div className="mb-stack-md flex flex-wrap items-center gap-inline-lg">
+        <div className="flex items-center gap-inline-md">
           <Avatar
             initial={comment.author ? comment.author.charAt(0) : "U"}
             isSupport={isSupport}
           />
-          <span className="text-sm font-medium text-slate-900">{comment.author}</span>
+          <span className="text-label-md text-fg">{comment.author}</span>
         </div>
-        <span className="text-sm font-medium text-slate-500">{comment.date}</span>
+        <span className="text-caption text-fg-muted">{comment.date}</span>
       </div>
-      <p className="text-sm leading-5 text-slate-700">{comment.message}</p>
-    </article>
+      <p className="text-body-sm text-fg-secondary">{comment.message}</p>
+    </Card>
   );
 }
 
@@ -178,24 +174,26 @@ function ReplyBox({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#E9EEF4]">
-      <textarea
-        value={replyText}
-        onChange={(e) => setReplyText(e.target.value)}
-        rows={3}
-        placeholder={placeholder}
-        className="w-full resize-none bg-[#F1F5FA] px-4 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-500 focus:bg-white focus:ring-1 focus:ring-blue-300"
-      />
-      <div className="flex justify-end bg-white px-2 py-2.5">
-        <button
-          type="button"
+    <div className="space-y-stack-md">
+      <FormField label={placeholder}>
+        {(props) => (
+          <Textarea
+            {...props}
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={3}
+            placeholder={placeholder}
+          />
+        )}
+      </FormField>
+      <div className="flex justify-end">
+        <Button
           onClick={handleSend}
           disabled={!replyText.trim()}
-          className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+          leadingIcon={<Send />}
         >
-          <Send className="h-5 w-5" />
           {buttonLabel}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -223,14 +221,6 @@ function NewTicketModal({
     submitButton: string;
   };
 }) {
-  const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState(
-    modalData?.categories?.[0] || "General Inquiry"
-  );
-  const [message, setMessage] = useState("");
-
-  if (!open) return null;
-
   const categories = modalData?.categories || [
     "General Inquiry",
     "Technical Issue",
@@ -238,110 +228,89 @@ function NewTicketModal({
     "Treatment Records",
   ];
 
+  const [subject, setSubject] = useState("");
+  const [category, setCategory] = useState(categories[0]);
+  const [message, setMessage] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) return;
-    onSubmit({
-      title: subject.trim(),
-      category,
-      message: message.trim(),
-    });
+    onSubmit({ title: subject.trim(), category, message: message.trim() });
     setSubject("");
     setMessage("");
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="new-ticket-title"
-        className="w-full max-w-[560px] rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 id="new-ticket-title" className="text-lg font-bold text-slate-900">
-            {modalData?.title || "Create New Ticket"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 cursor-pointer"
-            aria-label={modalData?.closeAria || "Close dialog"}
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="wide"
+      title={modalData?.title || "Create New Ticket"}
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {modalData?.cancelButton || "Cancel"}
+          </Button>
+          <Button
+            type="submit"
+            form="new-ticket-form"
+            disabled={!subject.trim() || !message.trim()}
           >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700">
-              {modalData?.subjectLabel || "Subject"}
-            </label>
-            <input
-              type="text"
+            {modalData?.submitButton || "Submit Ticket"}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="new-ticket-form"
+        onSubmit={handleSubmit}
+        className="space-y-stack-lg"
+      >
+        <FormField label={modalData?.subjectLabel || "Subject"} required>
+          {(props) => (
+            <Input
+              {...props}
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder={
                 modalData?.subjectPlaceholder || "What do you need help with?"
               }
-              required
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
-          </div>
+          )}
+        </FormField>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700">
-              {modalData?.categoryLabel || "Category"}
-            </label>
-            <select
+        <FormField label={modalData?.categoryLabel || "Category"}>
+          {(props) => (
+            <Select
+              {...props}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          )}
+        </FormField>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700">
-              {modalData?.messageLabel || "Message"}
-            </label>
-            <textarea
+        <FormField label={modalData?.messageLabel || "Message"} required>
+          {(props) => (
+            <Textarea
+              {...props}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder={
                 modalData?.messagePlaceholder || "Describe your issue in detail..."
               }
-              required
-              className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
-            >
-              {modalData?.cancelButton || "Cancel"}
-            </button>
-            <button
-              type="submit"
-              disabled={!subject.trim() || !message.trim()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
-            >
-              {modalData?.submitButton || "Submit Ticket"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          )}
+        </FormField>
+      </form>
+    </Modal>
   );
 }
 
@@ -364,71 +333,70 @@ function TicketCard({
   sendReplyButton: string;
   onAddComment: (message: string) => void;
 }) {
-  return (
-    <article className="rounded-xl border border-slate-200 bg-[#F8F8FF] px-3 py-4 transition-colors">
-      <div
-        className="flex flex-col gap-3 cursor-pointer select-none"
-        onClick={onToggleExpand}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex flex-1 flex-wrap items-center gap-3">
-            <span className="text-sm text-[#4A4A68] font-mono font-medium">
-              {ticket.id}
-            </span>
-            <StatusChip status={ticket.status} label={statusLabel} />
-          </div>
-          {ticket.replies && (
-            <span className="rounded-[10px] border border-[#D6E6F2] bg-[#EAF4FB] px-3 py-1 text-sm font-medium text-indigo-900">
-              {ticket.replies}
-            </span>
-          )}
-          <button
-            type="button"
-            className="p-1 text-indigo-700 hover:bg-indigo-50 rounded cursor-pointer"
-            aria-label={expanded ? "Collapse ticket" : "Expand ticket"}
-          >
-            {expanded ? (
-              <ChevronUp className="h-5 w-5" />
-            ) : (
-              <ChevronDown className="h-5 w-5" />
-            )}
-          </button>
-        </div>
+  const panelId = `${ticket.id}-panel`;
 
-        <h2 className="text-lg font-medium leading-7 text-slate-900">
-          {ticket.title}
-        </h2>
+  return (
+    <Card as="article" tone="flat">
+      {/* The whole header is the control. It used to be a <div onClick> with
+          a chevron <button> that had no handler at all — so expanding a
+          ticket was impossible with a keyboard. */}
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        className="flex w-full cursor-pointer flex-col gap-inline-md text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <span className="flex w-full items-center gap-inline-md">
+          <span className="flex flex-1 flex-wrap items-center gap-inline-md">
+            <span className="text-label-md text-fg-muted">{ticket.id}</span>
+            <Badge tone={statusTone[ticket.status]}>{statusLabel}</Badge>
+          </span>
+
+          {ticket.replies ? (
+            <Badge tone="neutral" variant="outline">
+              {ticket.replies}
+            </Badge>
+          ) : null}
+
+          <span aria-hidden="true" className="text-fg-brand">
+            {expanded ? (
+              <ChevronUp className="h-icon-small w-icon-small" />
+            ) : (
+              <ChevronDown className="h-icon-small w-icon-small" />
+            )}
+          </span>
+        </span>
+
+        <span className="block text-heading-5 text-fg">{ticket.title}</span>
+      </button>
+
+      <div className="mt-stack-md">
         <TicketMeta category={ticket.category} date={ticket.date} />
       </div>
 
-      {expanded && (
-        <>
-          <div className="my-5 border-t border-slate-200" />
-          <div className="space-y-4">
-            {ticket.comments && ticket.comments.length > 0 ? (
-              ticket.comments.map((comment, index) => (
+      {expanded ? (
+        <div id={panelId} className="mt-stack-xl space-y-stack-lg border-t border-line-subtle pt-inset-md">
+          {ticket.comments && ticket.comments.length > 0
+            ? ticket.comments.map((comment, index) => (
                 <CommentCard key={`${ticket.id}-cmt-${index}`} comment={comment} />
               ))
-            ) : null}
+            : null}
 
-            {ticket.status !== "resolved" && (
-              <ReplyBox
-                placeholder={replyPlaceholder}
-                buttonLabel={sendReplyButton}
-                onSend={onAddComment}
-              />
-            )}
-
-            {ticket.status === "resolved" && (
-              <div className="flex h-[50px] items-center gap-4 rounded-lg bg-emerald-100 px-4 text-sm font-medium text-emerald-600 shadow-sm">
-                <Info className="h-5 w-5 shrink-0" />
-                <span>{resolvedText}</span>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </article>
+          {ticket.status !== "resolved" ? (
+            <ReplyBox
+              placeholder={replyPlaceholder}
+              buttonLabel={sendReplyButton}
+              onSend={onAddComment}
+            />
+          ) : (
+            <Alert tone="success" live={false} icon={<Info />}>
+              {resolvedText}
+            </Alert>
+          )}
+        </div>
+      ) : null}
+    </Card>
   );
 }
 
@@ -455,10 +423,7 @@ export default function SupportPage() {
   const allTickets = [...customTickets, ...dictTickets];
 
   const handleToggleExpand = (id: string) => {
-    setExpandedIds((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleAddComment = (ticketId: string, message: string) => {
@@ -474,10 +439,7 @@ export default function SupportPage() {
         prev[ticketId] ||
         allTickets.find((t) => t.id === ticketId)?.comments ||
         [];
-      return {
-        ...prev,
-        [ticketId]: [...existing, newComment],
-      };
+      return { ...prev, [ticketId]: [...existing, newComment] };
     });
   };
 
@@ -508,25 +470,20 @@ export default function SupportPage() {
   };
 
   return (
-    <section className="rounded-xl border border-[#D6E6F2] bg-[#F1F5FA] p-3.5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Mail className="h-5 w-5 text-slate-900" />
-          <h1 className="text-lg font-medium leading-7 text-slate-900">
+    <Card as="section" tone="sunken" padding="small">
+      <div className="mb-stack-md flex flex-wrap items-center justify-between gap-inline-lg px-inset-xs pt-inset-xs">
+        <div className="flex items-center gap-inline-md">
+          <Mail className="h-icon-small w-icon-small text-fg" />
+          <h1 className="text-heading-4 text-fg">
             {sup?.pageTitle || "My Tickets"}
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-        >
-          <HelpCircle className="h-5 w-5" />
+        <Button onClick={() => setModalOpen(true)} leadingIcon={<HelpCircle />}>
           {sup?.newTicketButton || "New Ticket"}
-        </button>
+        </Button>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-[#E9EEF4] bg-[#F8F8FF] p-3.5">
+      <Card padding="small" className="space-y-stack-sm">
         {allTickets.map((ticket) => {
           const isExpanded = Boolean(expandedIds[ticket.id]);
           const statusLabel =
@@ -534,8 +491,8 @@ export default function SupportPage() {
             (ticket.status === "new"
               ? "New"
               : ticket.status === "inProgress"
-              ? "In Progress"
-              : "Resolved");
+                ? "In Progress"
+                : "Resolved");
 
           const effectiveTicket = {
             ...ticket,
@@ -549,20 +506,14 @@ export default function SupportPage() {
               expanded={isExpanded}
               onToggleExpand={() => handleToggleExpand(ticket.id)}
               statusLabel={statusLabel}
-              resolvedText={
-                sup?.ticketResolved || "This ticket has been resolved"
-              }
-              replyPlaceholder={
-                sup?.replyPlaceholder || "Type your reply..."
-              }
-              sendReplyButton={
-                sup?.sendReplyButton || "Send Reply"
-              }
+              resolvedText={sup?.ticketResolved || "This ticket has been resolved"}
+              replyPlaceholder={sup?.replyPlaceholder || "Type your reply..."}
+              sendReplyButton={sup?.sendReplyButton || "Send Reply"}
               onAddComment={(msg) => handleAddComment(ticket.id, msg)}
             />
           );
         })}
-      </div>
+      </Card>
 
       <NewTicketModal
         open={modalOpen}
@@ -570,6 +521,6 @@ export default function SupportPage() {
         onSubmit={handleCreateTicket}
         modalData={sup?.modal}
       />
-    </section>
+    </Card>
   );
 }

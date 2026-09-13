@@ -5,14 +5,15 @@
  * the internal file layout free to change.
  */
 
-export { Button, buttonStyles } from "./Button";
+export { Button } from "./Button";
+export { buttonStyles } from "./buttonStyles";
+export type { ButtonProps } from "./Button";
 export type {
-  ButtonProps,
   ButtonSize,
   ButtonVariant,
   ButtonAppearance,
   ButtonStyleOptions,
-} from "./Button";
+} from "./buttonStyles";
 
 export { Modal } from "./Modal";
 export type { ModalProps, ModalSize } from "./Modal";
@@ -54,3 +55,15 @@ export type {
   PaginationProps,
   SortDirection,
 } from "./Table";
+
+export { Alert } from "./Alert";
+export type { AlertProps, AlertTone } from "./Alert";
+
+export { Tabs, TabPanel } from "./Tabs";
+export type { TabsProps, TabsVariant, TabItem, TabPanelProps } from "./Tabs";
+
+export { Chip, ChipGroup } from "./Chip";
+export type { ChipProps, ChipGroupProps } from "./Chip";
+
+export { Switch, SwitchRow } from "./Switch";
+export type { SwitchProps, SwitchRowProps, SwitchSize } from "./Switch";

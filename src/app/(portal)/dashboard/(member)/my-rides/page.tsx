@@ -2,7 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { Phone, Pencil, Plus, Trash2, X, Car, Star, ShieldAlert } from "lucide-react";
-import { Button } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  buttonStyles,
+  Card,
+  EmptyState,
+  FormField,
+  Input,
+  Modal,
+} from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
 
 export interface RideContact {
@@ -157,22 +166,20 @@ export default function MyRidesPage() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 pb-10">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-500/20">
-            <Car className="h-7 w-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              {t("myRides.sectionTitle") || "Where's My Ride"}
-            </h1>
-          </div>
+      <div className="flex flex-col gap-inline-lg border-b border-line pb-inset-lg sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-inline-lg">
+          <span
+            aria-hidden="true"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-panel bg-primary-solid text-primary-on-solid shadow-card"
+          >
+            <Car className="h-icon-big w-icon-big" />
+          </span>
+          <h1 className="text-heading-1 text-fg">
+            {t("myRides.sectionTitle") || "Where's My Ride"}
+          </h1>
         </div>
 
-        <Button
-          onClick={handleOpenAdd}
-          leadingIcon={<Plus className="h-4 w-4 stroke-[2.5]" />}
-        >
+        <Button onClick={handleOpenAdd} leadingIcon={<Plus />}>
           {t("myRides.addRide")}
         </Button>
       </div>
@@ -183,62 +190,52 @@ export default function MyRidesPage() {
         <section className="lg:col-span-7 xl:col-span-7 space-y-4">
 
           {rides.length === 0 ? (
-            <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center space-y-4 shadow-sm">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <Car className="h-7 w-7" />
-              </div>
-              <div className="space-y-1 max-w-sm mx-auto">
-                <p className="text-base font-bold text-slate-800">{t("myRides.noRides")}</p>
-                <p className="text-xs text-slate-500">
-                  Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling.
-                </p>
-              </div>
-              <Button
-                onClick={handleOpenAdd}
-                leadingIcon={<Plus className="h-4 w-4" />}
-              >
-                {t("myRides.addFirstRide")}
-              </Button>
-            </div>
+            <EmptyState
+              icon={<Car />}
+              title={t("myRides.noRides")}
+              description="Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling."
+              action={
+                <Button onClick={handleOpenAdd} leadingIcon={<Plus />}>
+                  {t("myRides.addFirstRide")}
+                </Button>
+              }
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {rides.map((ride) => (
-                <div
+                <Card
                   key={ride.id}
-                  className={`rounded-2xl border p-5 flex flex-col justify-between gap-4 transition-all ${
-                    ride.isPrimary
-                      ? "border-blue-300 bg-gradient-to-b from-blue-50/60 to-white shadow-sm ring-1 ring-blue-500/20"
-                      : "border-slate-200 bg-white shadow-xs hover:border-slate-300 hover:shadow-sm"
+                  as="article"
+                  className={`flex flex-col justify-between gap-inline-lg ${
+                    ride.isPrimary ? "border-primary-soft-line bg-primary-soft" : ""
                   }`}
                 >
                   {/* Card Top: Driver Info & Action buttons */}
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-bold text-base ${
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-heading-5 ${
                             ride.isPrimary
-                              ? "bg-blue-600 text-white shadow-xs"
-                              : "bg-slate-100 text-slate-700"
+                              ? "bg-primary-solid text-primary-on-solid"
+                              : "bg-surface-sunken text-fg-secondary"
                           }`}
                         >
                           {ride.name.charAt(0).toUpperCase()}
-                        </div>
+                        </span>
                         <div className="min-w-0">
-                          <h3 className="text-base font-bold text-slate-900 truncate">
+                          <h3 className="truncate text-heading-5 text-fg">
                             {ride.name}
                           </h3>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <div className="mt-stack-xs flex flex-wrap items-center gap-inline-xs">
                             {ride.isPrimary && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                                <Star className="h-2.5 w-2.5 fill-blue-700 text-blue-700" />
+                              <Badge tone="info" icon={<Star />}>
                                 {t("myRides.primaryBadge")}
-                              </span>
+                              </Badge>
                             )}
                             {ride.note && (!ride.isPrimary || !/primary/i.test(ride.note)) && (
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                                {ride.note}
-                              </span>
+                              <Badge tone="neutral">{ride.note}</Badge>
                             )}
                           </div>
                         </div>
@@ -272,11 +269,11 @@ export default function MyRidesPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <div className="mt-stack-lg border-t border-line-subtle pt-inset-sm">
+                      <p className="text-overline text-fg-muted">
                         {t("myRides.phoneLabel") || "Phone Number"}
                       </p>
-                      <p className="text-sm font-bold text-slate-800 mt-0.5">
+                      <p className="mt-stack-xs text-metric-sm text-fg">
                         {ride.phone}
                       </p>
                     </div>
@@ -285,12 +282,14 @@ export default function MyRidesPage() {
                   {/* Call CTA button */}
                   <a
                     href={`tel:${ride.phone.replace(/[^0-9+]/g, "")}`}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 py-2.5 px-3 text-xs sm:text-sm font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+                    className={buttonStyles({ fullWidth: true })}
                   >
-                    <Phone className="h-4 w-4" />
-                    <span>{t("myRides.call")} {ride.name}</span>
+                    <Phone />
+                    <span>
+                      {t("myRides.call")} {ride.name}
+                    </span>
                   </a>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -299,153 +298,134 @@ export default function MyRidesPage() {
 
         {/* SECTION 2: SEPARATE RIDESHARE APPS SECTION */}
         <section className="lg:col-span-5 xl:col-span-5 space-y-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-            {/* Section Header */}
-            <div className="pb-3 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">
+          <Card className="space-y-stack-xl">
+            <div className="border-b border-line-subtle pb-inset-sm">
+              <h2 className="text-heading-4 text-fg">
                 {t("myRides.rideshareTitle")}
               </h2>
             </div>
 
-            {/* Rideshare Cards */}
-            <div className="space-y-3.5">
-              {/* Uber Card */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 hover:border-slate-300 transition-all">
-                <a
-                  href="https://m.uber.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] hover:bg-black py-3 px-4 text-sm font-bold text-white transition-all shadow-xs hover:shadow-sm"
-                >
-                  <Car className="h-4 w-4 shrink-0" />
-                  <span>{t("myRides.openUber")}</span>
-                </a>
-              </div>
+            <div className="space-y-stack-md">
+              <a
+                href="https://m.uber.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonStyles({ variant: "neutral", fullWidth: true })}
+              >
+                <Car />
+                <span>{t("myRides.openUber")}</span>
+              </a>
 
-              {/* Lyft Card */}
-              <div className="rounded-2xl border border-pink-100 bg-pink-50/30 p-4 hover:border-pink-200 transition-all">
-                <a
-                  href="https://www.lyft.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF00BF] hover:bg-[#E000A8] py-3 px-4 text-sm font-bold text-white transition-all shadow-xs hover:shadow-sm"
-                >
-                  <Car className="h-4 w-4 shrink-0" />
-                  <span>{t("myRides.openLyft")}</span>
-                </a>
-              </div>
+              {/* Lyft's brand magenta is a third-party brand colour, not ours —
+                  it stays a literal on purpose and must not be tokenised. */}
+              <a
+                href="https://www.lyft.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${buttonStyles({ fullWidth: true })} border-transparent bg-[#FF00BF] text-white shadow-control hover:bg-[#E000A8]`}
+              >
+                <Car />
+                <span>{t("myRides.openLyft")}</span>
+              </a>
             </div>
 
-            {/* Third-Party Transportation Disclaimer */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-left space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <ShieldAlert className="h-4 w-4 text-slate-600 shrink-0" />
-                <span>{t("myRides.disclaimerTitle") || "Third-Party Transportation Disclaimer:"}</span>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-600">
+            <Card tone="sunken" className="space-y-stack-sm text-left">
+              <p className="flex items-center gap-inline-xs text-label-md text-fg">
+                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0 text-fg-muted" />
+                <span>
+                  {t("myRides.disclaimerTitle") ||
+                    "Third-Party Transportation Disclaimer:"}
+                </span>
+              </p>
+              <p className="text-body-sm text-fg-muted">
                 {t("myRides.disclaimerText") ||
                   "NephroReach does not provide, arrange, operate, endorse, or guarantee transportation services offered by third-party providers. Transportation availability, eligibility, pricing, scheduling, safety, and services are determined solely by the transportation provider. By selecting a transportation link, you will leave NephroReach and be subject to the third party's terms and privacy practices."}
               </p>
-            </div>
-          </div>
+            </Card>
+          </Card>
         </section>
       </div>
 
-      {/* ADD / EDIT RIDE MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {modalMode === "add" ? t("myRides.addNewRideModal") : t("myRides.editRideModal")}
-              </h3>
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                size="small"
-                iconOnly
-                onClick={handleCloseModal}
-                title={t("myRides.close")}
-                aria-label={t("myRides.close")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {formError && (
-              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
-                {formError}
-              </div>
+      <Modal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        title={
+          modalMode === "add"
+            ? t("myRides.addNewRideModal")
+            : t("myRides.editRideModal")
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={handleCloseModal}
+            >
+              {t("myRides.cancel")}
+            </Button>
+            <Button type="submit" form="ride-form">
+              {modalMode === "add"
+                ? t("myRides.saveRide")
+                : t("myRides.updateInfo")}
+            </Button>
+          </>
+        }
+      >
+        <form id="ride-form" onSubmit={handleSubmit} className="space-y-stack-lg">
+          <FormField
+            label={t("myRides.driverNameLabel")}
+            required
+            error={formError || undefined}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="text"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder={t("myRides.driverNamePlaceholder")}
+                autoFocus
+              />
             )}
+          </FormField>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-bold text-slate-900">
-                  {t("myRides.driverNameLabel")} <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder={t("myRides.driverNamePlaceholder")}
-                  autoFocus
-                />
-              </div>
+          <FormField label={t("myRides.phoneLabel")} required>
+            {(props) => (
+              <Input
+                {...props}
+                type="tel"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+                placeholder={t("myRides.phonePlaceholder")}
+              />
+            )}
+          </FormField>
 
-              <div className="space-y-1.5">
-                <label className="block text-sm font-bold text-slate-900">
-                  {t("myRides.phoneLabel")} <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder={t("myRides.phonePlaceholder")}
-                />
-              </div>
+          <FormField label={t("myRides.relationshipLabel")} optionalLabel="optional">
+            {(props) => (
+              <Input
+                {...props}
+                type="text"
+                value={formNote}
+                onChange={(e) => setFormNote(e.target.value)}
+                placeholder={t("myRides.relationshipPlaceholder")}
+              />
+            )}
+          </FormField>
 
-              <div className="space-y-1.5">
-                <label className="block text-sm font-bold text-slate-900">
-                  {t("myRides.relationshipLabel")}
-                </label>
-                <input
-                  type="text"
-                  value={formNote}
-                  onChange={(e) => setFormNote(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder={t("myRides.relationshipPlaceholder")}
-                />
-              </div>
-
-              <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={formIsPrimary}
-                  onChange={(e) => setFormIsPrimary(e.target.checked)}
-                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                />
-                <span className="text-sm font-semibold text-slate-700">
-                  {t("myRides.setPrimary")}
-                </span>
-              </label>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <Button type="submit" className="flex-1">
-                  {modalMode === "add" ? t("myRides.saveRide") : t("myRides.updateInfo")}
-                </Button>
-                <Button variant="neutral" appearance="fill-stroke" onClick={handleCloseModal}>
-                  {t("myRides.cancel")}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <label className="flex cursor-pointer items-center gap-inline-md select-none">
+            <input
+              type="checkbox"
+              checked={formIsPrimary}
+              onChange={(e) => setFormIsPrimary(e.target.checked)}
+              className="h-4 w-4 rounded-chip border-field text-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+            <span className="text-label-lg text-fg-secondary">
+              {t("myRides.setPrimary")}
+            </span>
+          </label>
+        </form>
+      </Modal>
     </div>
   );
 }

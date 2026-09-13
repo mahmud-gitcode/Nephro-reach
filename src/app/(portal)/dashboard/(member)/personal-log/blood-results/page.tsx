@@ -1,15 +1,21 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Edit3,
-  Plus,
-  ScanLine,
-  Trash2,
-} from "lucide-react";
+import { Download, Edit3, Eye, Plus, ScanLine, Trash2 } from "lucide-react";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TablePagination,
+  TableRow,
+} from "@/components/ui";
 
 const latestResults = [
   { label: "CREATININE", value: "0.9", unit: "umol/L", normal: "Normal: 60-110" },
@@ -37,215 +43,193 @@ const history = [
 
 function ResultCard({ result }: { result: (typeof latestResults)[number] }) {
   return (
-    <article className="rounded-xl border border-[#E3E6F0] bg-white p-4">
-      <p className="text-xs font-semibold uppercase leading-4 tracking-[0.06px] text-slate-500">
-        {result.label}
-      </p>
-      <div className="mt-1 flex items-baseline gap-1">
-        <p className="text-xl font-semibold leading-7 tracking-[0.1px] text-slate-950">
-          {result.value}
-        </p>
-        <p className="text-sm font-medium leading-5 text-slate-500">{result.unit}</p>
+    <Card as="article" tone="flat">
+      <p className="text-overline text-fg-muted">{result.label}</p>
+      <div className="mt-stack-xs flex items-baseline gap-inline-xs">
+        <p className="text-metric-md text-fg">{result.value}</p>
+        <p className="text-body-sm text-fg-muted">{result.unit}</p>
       </div>
-      <p className="mt-1 text-xs font-medium leading-4 text-slate-500">{result.normal}</p>
-    </article>
-  );
-}
-
-function DataTable({
-  headers,
-  children,
-}: {
-  headers: string[];
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-[480px] w-full text-left text-sm">
-          <thead className="bg-[#F1F5FA] text-sm font-medium leading-5 text-slate-950">
-            <tr>
-              {headers.map((header) => (
-                <th key={header} className="border-b border-slate-200 px-3 py-4">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dashed divide-slate-200">{children}</tbody>
-        </table>
-      </div>
-    </div>
+      <p className="mt-stack-xs text-caption text-fg-muted">{result.normal}</p>
+    </Card>
   );
 }
 
 function LabGoalsCard() {
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <Card as="section">
+      <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-              My Lab Goal
-            </h2>
-            <p className="text-xs font-medium leading-4 text-slate-500">June 1, 2026</p>
+          <div className="flex flex-wrap items-center gap-inline-md">
+            <h2 className="text-heading-4 text-fg">My Lab Goal</h2>
+            <p className="text-caption text-fg-muted">June 1, 2026</p>
           </div>
-          <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-950">
+          <p className="mt-stack-sm text-body-sm text-fg-secondary">
             Allow members to enter provider recommended goals:
           </p>
         </div>
-        <button
-          type="button"
-          className="flex h-11 shrink-0 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-sm font-bold text-slate-950 transition-colors hover:bg-white"
+        <Button
+          variant="neutral"
+          appearance="fill-stroke"
+          size="small"
+          leadingIcon={<Edit3 />}
         >
-          <Edit3 className="h-4 w-4" />
           Edit
-        </button>
+        </Button>
       </div>
 
-      <div className="mt-3">
-        <DataTable headers={["Lab", "My Goal", "Current"]}>
-          {labGoals.map((goal) => (
-            <tr key={goal.lab}>
-              <td className="px-3 py-2.5 font-medium text-slate-800">{goal.lab}</td>
-              <td className="px-3 py-2.5 font-medium text-slate-800">{goal.goal}</td>
-              <td
-                className={`px-3 py-2.5 font-medium ${
-                  goal.status === "danger"
-                    ? "text-red-500"
-                    : goal.status === "warning"
-                      ? "text-amber-600"
-                      : "text-green-600"
-                }`}
-              >
-                {goal.current}
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </div>
-    </section>
+      <Card padding="none" className="mt-stack-md overflow-hidden">
+        <Table minWidth={420}>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>Lab</TableHeaderCell>
+              <TableHeaderCell numeric>My Goal</TableHeaderCell>
+              <TableHeaderCell numeric>Current</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {labGoals.map((goal) => (
+              <TableRow key={goal.lab}>
+                <TableCell emphasis>{goal.lab}</TableCell>
+                <TableCell numeric>{goal.goal}</TableCell>
+                <TableCell
+                  numeric
+                  className={
+                    goal.status === "danger"
+                      ? "text-danger"
+                      : goal.status === "warning"
+                        ? "text-warning"
+                        : "text-success"
+                  }
+                >
+                  {goal.current}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    </Card>
   );
 }
 
 function TestHistoryCard() {
+  // The chevrons here used to be bare icons with no handler — pagination
+  // that looked real and did nothing.
+  const [page, setPage] = useState(1);
+
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-          Test History
-        </h2>
-      </div>
+    <Card as="section">
+      <h2 className="text-heading-4 text-fg">Test History</h2>
 
-      <div className="mt-3">
-        <DataTable headers={["Date", "Label", "Action"]}>
-          {history.map((item) => (
-            <tr key={item.date}>
-              <td className="px-3 py-2.5 font-medium text-slate-800">{item.date}</td>
-              <td className="px-3 py-2.5 font-medium text-slate-800">{item.label}</td>
-              <td className="px-3 py-2.5">
-                <div className="flex justify-center gap-3">
-                  <button
-                    type="button"
-                    className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100"
-                    aria-label={`Edit result from ${item.date}`}
-                  >
-                    <Edit3 className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full p-1 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-600"
-                    aria-label={`Delete result from ${item.date}`}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </div>
+      <Card padding="none" className="mt-stack-md overflow-hidden">
+        <Table minWidth={420}>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell numeric>Date</TableHeaderCell>
+              <TableHeaderCell>Label</TableHeaderCell>
+              <TableHeaderCell>Action</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {history.map((item) => (
+              <TableRow key={item.date}>
+                <TableCell numeric>{item.date}</TableCell>
+                <TableCell emphasis>{item.label}</TableCell>
+                <TableCell>
+                  <span className="flex gap-inline-md">
+                    <Button
+                      iconOnly
+                      size="small"
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      aria-label={`Edit result from ${item.date}`}
+                    >
+                      <Edit3 />
+                    </Button>
+                    <Button
+                      iconOnly
+                      size="small"
+                      variant="danger"
+                      appearance="fill-stroke"
+                      aria-label={`Delete result from ${item.date}`}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-4 bg-white px-3 py-2 text-sm text-slate-800">
-        <div className="flex items-center gap-2">
-          <span>Rows per page:</span>
-          <span className="inline-flex items-center gap-1">
-            10
-            <ChevronDown className="h-4 w-4" />
-          </span>
-        </div>
-        <span>1-10 of 20</span>
-        <div className="flex items-center gap-1">
-          <ChevronLeft className="h-5 w-5 text-slate-400" />
-          <ChevronRight className="h-5 w-5" />
-        </div>
-      </div>
-    </section>
+        <TablePagination
+          page={page}
+          pageCount={2}
+          onPageChange={setPage}
+          summary="1-10 of 20"
+        />
+      </Card>
+    </Card>
   );
 }
 
 export default function BloodResultsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-stack-xl">
       <PersonalLogDisclaimer />
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          className="flex h-12 w-fit items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
-        >
-          <ScanLine className="h-5 w-5" />
+      <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="neutral" appearance="fill-stroke" leadingIcon={<ScanLine />}>
           Scan Results
-        </button>
+        </Button>
         <Link
           href="/dashboard/personal-log/blood-results/add"
-          className="flex h-12 w-fit items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white"
+          className={buttonStyles()}
         >
-          <Plus className="h-5 w-5" />
+          <Plus />
           Add Results
         </Link>
       </header>
 
-      <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-            Latest Results
-          </h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-xs font-medium leading-4 text-slate-500">June 1, 2026</p>
-            <button
-              type="button"
-              className="h-11 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-sm font-bold text-slate-950"
+      <Card as="section" tone="sunken" padding="big">
+        <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-heading-4 text-fg">Latest Results</h1>
+          <div className="flex flex-wrap items-center gap-inline-md">
+            <p className="text-caption text-fg-muted">June 1, 2026</p>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              size="small"
+              leadingIcon={<Eye />}
             >
               View
-            </button>
-            <button
-              type="button"
-              className="h-11 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-sm font-bold text-slate-950"
+            </Button>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              size="small"
+              leadingIcon={<Download />}
             >
               Download PDF
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-stack-md grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
           {latestResults.map((result) => (
             <ResultCard key={result.label} result={result} />
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2">
         <LabGoalsCard />
         <TestHistoryCard />
       </section>
 
-      <button
-        type="button"
-        className="flex h-12 w-full items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white"
-      >
+      <Button variant="primary" appearance="stroke" fullWidth>
         View All Results
-      </button>
+      </Button>
     </div>
   );
 }

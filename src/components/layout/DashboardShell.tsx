@@ -30,7 +30,6 @@ import {
   Search,
   Settings,
   Star,
-  Trash2,
   Users,
   Video,
   X,
@@ -97,14 +96,11 @@ const sidebarItems: NavItem[] = [
 const supportItems: NavItem[] = [
   { label: "Support", href: "/dashboard/support", icon: HelpCircle, roles: ["user"] },
   { label: "Setting", href: "/dashboard/settings", icon: Settings, roles: ["user"] },
-  { label: "Trash", href: "/dashboard/trash", icon: Trash2, roles: ["user"] },
 ];
 
 function getBreadcrumb(pathname: string, language?: string) {
   if (pathname === "/dashboard" || pathname === "/dashboard/")
     return language === "ES" ? "Panel" : "Dashboard";
-  if (pathname.startsWith("/dashboard/trash"))
-    return language === "ES" ? "Papelera" : "Trash";
   if (pathname.startsWith("/dashboard/design-system"))
     return language === "ES" ? "Sistema de Diseño" : "Design System";
   if (pathname.startsWith("/dashboard/before-the-er/")) {
@@ -225,7 +221,6 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
     "/dashboard/design-system": "Sistema de Diseño",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",
-    "/dashboard/trash": "Papelera",
   };
   return spanishLabels[href] || defaultLabel;
 }

@@ -23,6 +23,11 @@ import { cn } from "@/lib/utils/cn";
 
    Error replaces hint rather than stacking, so the member is never asked to
    read two competing instructions.
+
+   NOTE: the render-prop means FormField can only be used from a client
+   component - React cannot pass a function from a server component to a
+   client one. Form pages are interactive anyway, so this costs nothing in
+   practice, but it is why a page using FormField needs "use client".
    ========================================================================== */
 
 export type FieldControlProps = {

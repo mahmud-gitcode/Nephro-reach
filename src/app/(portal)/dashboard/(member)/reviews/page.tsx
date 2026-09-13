@@ -15,9 +15,19 @@ import {
   Clock,
   XCircle,
   MessageSquare,
-  Sparkles,
   AlertCircle,
 } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  ChipGroup,
+  EmptyState,
+  FormField,
+  Textarea,
+} from "@/components/ui";
 
 export default function UserReviewsPage() {
   const { user } = useAuth();
@@ -76,7 +86,7 @@ export default function UserReviewsPage() {
     setSubmittedMessage(
       isEs
         ? "¡Gracias! Su reseña ha sido enviada para moderación."
-        : "Thank you! Your review has been submitted for moderation."
+        : "Thank you! Your review has been submitted for moderation.",
     );
 
     setTimeout(() => {
@@ -85,40 +95,35 @@ export default function UserReviewsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 sm:space-y-8">
-      {/* Header - Simple & Clean */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+    <div className="mx-auto max-w-4xl space-y-stack-xl">
+      <header>
+        <h1 className="text-heading-1 text-fg">
           {isEs ? "Dejar una Reseña" : "Leave a Review"}
         </h1>
-        <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+        <p className="mt-stack-xs text-body-md text-fg-muted">
           {isEs
             ? "Comparta su experiencia con NephroReach."
             : "Share your experience with NephroReach."}
         </p>
-      </div>
+      </header>
 
-      {/* Success Banner */}
-      {submittedMessage && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-xs animate-in fade-in duration-200">
-          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-          <p className="text-sm font-semibold">{submittedMessage}</p>
-        </div>
-      )}
+      {submittedMessage ? (
+        <Alert tone="success">{submittedMessage}</Alert>
+      ) : null}
 
-      {/* Review Submission Card */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs">
-        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+      <Card as="section" padding="big" className="space-y-stack-lg">
+        <h2 className="text-heading-4 text-fg">
           {isEs ? "Escribir Reseña" : "Write a Review"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
-          {/* Star Rating */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+        <form onSubmit={handleSubmit} className="space-y-stack-xl">
+          {/* Star rating. A dedicated <Rating> component is still owed —
+              these are toggles in a group, not actions. */}
+          <fieldset>
+            <legend className="text-overline text-fg-muted">
               {isEs ? "Calificación" : "Rating"}
-            </label>
-            <div className="mt-2 flex items-center gap-1.5">
+            </legend>
+            <div className="mt-stack-sm flex items-center gap-inline-xs">
               {[1, 2, 3, 4, 5].map((star) => {
                 const isFilled = (hoverRating || rating) >= star;
                 return (
@@ -129,181 +134,148 @@ export default function UserReviewsPage() {
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
                     aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-                    className="p-1 transition-transform hover:scale-110 cursor-pointer focus:outline-hidden"
+                    aria-pressed={rating >= star}
+                    className="cursor-pointer rounded-control-small p-1 transition-transform duration-150 ease-standard hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     <Star
-                      className={`h-8 w-8 sm:h-9 sm:w-9 ${
+                      className={`h-8 w-8 transition-colors duration-150 ease-standard ${
                         isFilled
-                          ? "fill-amber-400 text-amber-400 drop-shadow-xs"
-                          : "fill-slate-100 text-slate-300"
-                      } transition-colors`}
+                          ? "fill-warning-400 text-warning-400"
+                          : "fill-surface-sunken text-line-strong"
+                      }`}
                     />
                   </button>
                 );
               })}
-              <span className="ml-2 text-sm font-bold text-slate-700">
+              <span className="ml-stack-sm text-metric-sm text-fg-secondary">
                 {rating} / 5
               </span>
             </div>
-          </div>
+          </fieldset>
 
-          {/* Role selector */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+          <fieldset>
+            <legend className="text-overline mb-stack-sm text-fg-muted">
               {isEs ? "Su Rol" : "Your Role"}
-            </label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {roleOptions.map((opt) => {
-                const active = role === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setRole(opt.key)}
-                    className={`rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                      active
-                        ? "border-blue-600 bg-blue-50 text-blue-700 shadow-xs"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            </legend>
+            <ChipGroup label={isEs ? "Su Rol" : "Your Role"}>
+              {roleOptions.map((opt) => (
+                <Chip
+                  key={opt.key}
+                  selected={role === opt.key}
+                  onClick={() => setRole(opt.key)}
+                >
+                  {opt.label}
+                </Chip>
+              ))}
+            </ChipGroup>
+          </fieldset>
 
-          {/* Review text */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-              {isEs ? "Su Mensaje" : "Your Review"}
-            </label>
-            <textarea
-              required
-              rows={4}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder={
-                isEs
-                  ? "Escriba su experiencia aquí..."
-                  : "Write your honest feedback or experience here..."
-              }
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+          <FormField
+            label={isEs ? "Su Mensaje" : "Your Review"}
+            required
+          >
+            {(props) => (
+              <Textarea
+                {...props}
+                rows={4}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder={
+                  isEs
+                    ? "Escriba su experiencia aquí..."
+                    : "Write your honest feedback or experience here..."
+                }
+              />
+            )}
+          </FormField>
 
-          {/* Submit */}
-          <div className="flex justify-end pt-1">
-            <button
-              type="submit"
-              disabled={!comment.trim()}
-              className="flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white shadow-xs transition-all hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
-            >
+          <div className="flex justify-end">
+            <Button type="submit" disabled={!comment.trim()}>
               {isEs ? "Enviar Reseña" : "Submit Review"}
-            </button>
+            </Button>
           </div>
         </form>
-      </section>
+      </Card>
 
-      {/* My Submitted Reviews */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+      <section className="space-y-stack-lg">
+        <h2 className="text-heading-4 text-fg">
           {isEs ? "Mis Reseñas" : "My Reviews"}
         </h2>
 
         {myReviews.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-xs">
-            <MessageSquare className="mx-auto h-8 w-8 text-slate-400" />
-            <p className="mt-2 text-sm font-medium">
-              {isEs
+          <EmptyState
+            icon={<MessageSquare />}
+            title={
+              isEs
                 ? "Aún no ha enviado ninguna reseña."
-                : "You have not submitted any reviews yet."}
-            </p>
-          </div>
+                : "You have not submitted any reviews yet."
+            }
+            description={
+              isEs
+                ? "Sus reseñas aparecerán aquí después de enviarlas."
+                : "Reviews you submit will appear here."
+            }
+          />
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-stack-md">
             {myReviews.map((rev) => (
-              <div
-                key={rev.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:border-slate-300"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  {/* Stars + Role */}
-                  <div className="flex items-center gap-3">
+              <Card key={rev.id} as="article">
+                <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-inline-lg">
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star
                           key={s}
+                          aria-hidden="true"
                           className={`h-4 w-4 ${
                             rev.rating >= s
-                              ? "fill-amber-400 text-amber-400"
-                              : "fill-slate-100 text-slate-200"
+                              ? "fill-warning-400 text-warning-400"
+                              : "fill-surface-sunken text-line"
                           }`}
                         />
                       ))}
                     </div>
-                    <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">
-                      {rev.role}
-                    </span>
+                    <Badge tone="neutral">{rev.role}</Badge>
                   </div>
 
-                  {/* Status Badge */}
-                  <div>
-                    {rev.status === "approved" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {isEs ? "Aprobada y Publicada" : "Approved & Live"}
-                      </span>
-                    )}
-                    {rev.status === "pending" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
-                        <Clock className="h-3.5 w-3.5" />
-                        {isEs ? "En Revisión" : "Pending Review"}
-                      </span>
-                    )}
-                    {rev.status === "declined" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-200">
-                        <XCircle className="h-3.5 w-3.5" />
-                        {isEs ? "Rechazada" : "Declined"}
-                      </span>
-                    )}
-                  </div>
+                  {rev.status === "approved" ? (
+                    <Badge tone="success" icon={<CheckCircle2 />}>
+                      {isEs ? "Aprobada y Publicada" : "Approved & Live"}
+                    </Badge>
+                  ) : rev.status === "pending" ? (
+                    <Badge tone="warning" icon={<Clock />}>
+                      {isEs ? "En Revisión" : "Pending Review"}
+                    </Badge>
+                  ) : (
+                    <Badge tone="danger" icon={<XCircle />}>
+                      {isEs ? "Rechazada" : "Declined"}
+                    </Badge>
+                  )}
                 </div>
 
-                {/* Comment */}
-                <p className="mt-3 text-sm leading-relaxed text-slate-800 font-medium">
+                <p className="mt-stack-md text-body-md text-fg-secondary">
                   {rev.comment}
                 </p>
 
-                {/* Date */}
-                <p className="mt-3 text-xs font-medium text-slate-400">
+                <p className="mt-stack-md text-caption text-fg-muted">
                   {new Date(rev.createdAt).toLocaleDateString(
                     isEs ? "es-ES" : "en-US",
-                    {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    }
+                    { month: "short", day: "numeric", year: "numeric" },
                   )}
                 </p>
 
-                {/* Admin Feedback Callout (if declined) */}
-                {rev.status === "declined" && rev.adminFeedback && (
-                  <div className="mt-3.5 rounded-xl border border-rose-200 bg-rose-50/60 p-3.5">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-                      <div>
-                        <p className="text-xs font-bold text-rose-900">
-                          {isEs ? "Comentario del Administrador:" : "Admin Feedback:"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-rose-700 leading-relaxed font-medium">
-                          {rev.adminFeedback}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+                {rev.status === "declined" && rev.adminFeedback ? (
+                  <Alert
+                    tone="danger"
+                    live={false}
+                    icon={<AlertCircle />}
+                    title={isEs ? "Comentario del Administrador:" : "Admin Feedback:"}
+                    className="mt-stack-md"
+                  >
+                    {rev.adminFeedback}
+                  </Alert>
+                ) : null}
+              </Card>
             ))}
           </div>
         )}

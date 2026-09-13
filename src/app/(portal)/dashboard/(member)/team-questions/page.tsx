@@ -11,8 +11,10 @@ export default function TeamQuestionsRedirectPage() {
   }, [router]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-16 text-center text-slate-500">
-      <p className="text-sm font-medium">Redirecting to Dialysis Management...</p>
+    <div className="mx-auto w-full max-w-5xl py-section-md text-center">
+      <p className="text-body-md text-fg-muted">
+        Redirecting to Dialysis Management…
+      </p>
     </div>
   );
 }

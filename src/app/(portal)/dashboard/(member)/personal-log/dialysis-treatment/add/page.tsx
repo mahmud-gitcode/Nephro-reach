@@ -6,20 +6,25 @@ import { ArrowLeft } from "lucide-react";
 import DialysisDaySymptomLogForm from "@/features/personal-log/DialysisDaySymptomLogForm";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { buttonStyles } from "@/components/ui";
 
 export default function AddDialysisTreatmentPage() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 py-2">
+    <div className="mx-auto w-full max-w-5xl space-y-stack-lg">
       <PersonalLogDisclaimer />
 
       <Link
         href="/dashboard/personal-log/dialysis-treatment"
-        className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-xs font-bold text-slate-500 transition-colors hover:text-[#2563EB]"
+        className={buttonStyles({
+          variant: "neutral",
+          appearance: "stroke",
+          size: "small",
+        })}
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft />
         <span>{dt?.backToTreatment || "Back to Dialysis Treatment"}</span>
       </Link>
 

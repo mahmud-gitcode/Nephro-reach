@@ -4,6 +4,17 @@ import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
+function LoadingNotice({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      className="flex min-h-[50vh] items-center justify-center text-body-md text-fg-muted"
+    >
+      {label}
+    </div>
+  );
+}
+
 function AddRedirectHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,11 +29,7 @@ function AddRedirectHandler() {
     router.replace(target);
   }, [router, searchParams]);
 
-  return (
-    <div className="flex min-h-[50vh] items-center justify-center text-sm font-medium text-slate-500">
-      Loading view details...
-    </div>
-  );
+  return <LoadingNotice label="Loading view details…" />;
 }
 
 export default function AddDialysisRecordPage() {
@@ -30,7 +37,7 @@ export default function AddDialysisRecordPage() {
     <>
       <PersonalLogDisclaimer />
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+      <Suspense fallback={<LoadingNotice label="Loading…" />}>
         <AddRedirectHandler />
       </Suspense>
     </>

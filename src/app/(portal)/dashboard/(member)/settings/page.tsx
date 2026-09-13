@@ -1,9 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bell, CheckCircle2, KeyRound, UserCircle } from "lucide-react";
+import { Bell, KeyRound, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  Alert,
+  Button,
+  Card,
+  FormField,
+  Input,
+  SwitchRow,
+  TabPanel,
+  Tabs,
+} from "@/components/ui";
 
 type SettingsTab = "profile" | "notification" | "password";
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -47,6 +57,29 @@ function getHashTab(hash: string): SettingsTab {
   return "profile";
 }
 
+/** The panel shell each settings section shares. */
+function SettingsSection({
+  id,
+  icon: Icon,
+  title,
+  children,
+}: {
+  id: string;
+  icon: IconType;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card as="section" id={id} tone="sunken" padding="small">
+      <div className="mb-stack-lg flex items-center gap-inline-md px-inset-xs pt-inset-xs">
+        <Icon className="h-icon-big w-icon-big text-fg-brand" />
+        <h2 className="text-heading-4 text-fg">{title}</h2>
+      </div>
+      <Card padding="big">{children}</Card>
+    </Card>
+  );
+}
+
 function SettingsMenu({
   activeTab,
   onTabChange,
@@ -56,77 +89,30 @@ function SettingsMenu({
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
   generalHeader: string;
-  tabsLabels: {
-    profile: string;
-    notification: string;
-    password: string;
-  };
+  tabsLabels: { profile: string; notification: string; password: string };
 }) {
-  const menuItems: Array<{
-    id: SettingsTab;
-    label: string;
-    href: string;
-    icon: IconType;
-  }> = [
-    { id: "profile", label: tabsLabels.profile, href: "#profile", icon: UserCircle },
-    { id: "notification", label: tabsLabels.notification, href: "#notification", icon: Bell },
-    { id: "password", label: tabsLabels.password, href: "#password", icon: KeyRound },
+  const items = [
+    { id: "profile" as const, label: tabsLabels.profile, icon: <UserCircle /> },
+    { id: "notification" as const, label: tabsLabels.notification, icon: <Bell /> },
+    { id: "password" as const, label: tabsLabels.password, icon: <KeyRound /> },
   ];
 
   return (
-    <aside className="w-full rounded-[14px] border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-24 lg:w-[289px]">
-      <p className="mb-2 px-4 text-xs font-medium text-slate-500">{generalHeader}</p>
-      <div className="space-y-2" role="tablist" aria-label="Settings sections">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`${item.id}-tab`}
-            aria-selected={activeTab === item.id}
-            aria-controls={`${item.id}-panel`}
-            onClick={() => {
-              onTabChange(item.id);
-              window.history.replaceState(null, "", item.href);
-            }}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors cursor-pointer ${
-              activeTab === item.id
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <item.icon className="h-5 w-5 shrink-0" />
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
-    </aside>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  onChange?: (val: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-base font-medium leading-6 text-slate-900">{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        disabled={disabled}
-        className={`h-12 w-full rounded border border-[#CBD5ED] px-4 text-base text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-          disabled ? "bg-[#F1F5FA] cursor-not-allowed" : "bg-white"
-        }`}
+    <Card as="section" className="w-full lg:sticky lg:top-24 lg:w-[289px]">
+      <p className="text-overline mb-stack-sm px-inset-sm text-fg-muted">
+        {generalHeader}
+      </p>
+      <Tabs
+        variant="vertical"
+        label="Settings sections"
+        items={items}
+        value={activeTab}
+        onChange={(id) => {
+          onTabChange(id);
+          window.history.replaceState(null, "", `#${id}`);
+        }}
       />
-    </label>
+    </Card>
   );
 }
 
@@ -155,73 +141,63 @@ function ProfileInformation({
   };
 
   return (
-    <section
+    <SettingsSection
       id="profile"
-      className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] px-3 py-4 shadow-sm"
+      icon={UserCircle}
+      title={profileData?.title || "Profile Information"}
     >
-      <div className="mb-[18px] flex items-center gap-2.5">
-        <UserCircle className="h-6 w-6 text-blue-600" />
-        <h1 className="text-xl font-medium leading-[30px] text-black">
-          {profileData?.title || "Profile Information"}
-        </h1>
-      </div>
+      <form onSubmit={handleSubmit}>
+        {saved ? (
+          <Alert tone="success" className="mb-stack-lg">
+            {profileData?.savedMessage || "Profile saved successfully!"}
+          </Alert>
+        ) : null}
 
-      <form onSubmit={handleSubmit} className="rounded-lg bg-white p-4">
-        {saved && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            <span>{profileData?.savedMessage || "Profile saved successfully!"}</span>
-          </div>
-        )}
+        <div className="space-y-stack-lg">
+          <FormField label={profileData?.fullName || "Full Name"}>
+            {(props) => (
+              <Input
+                {...props}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </FormField>
 
-        <div className="space-y-3.5">
-          <Field
-            label={profileData?.fullName || "Full Name"}
-            value={name}
-            onChange={setName}
-          />
-          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-            <Field
-              label={profileData?.emailAddress || "Email Address"}
-              value={user?.email || "sarah.jenkins@example.com"}
-              disabled
-            />
-            <Field
-              label={profileData?.phoneNumber || "Phone Number"}
-              value={phone}
-              onChange={setPhone}
-            />
+          <div className="grid grid-cols-1 gap-stack-lg md:grid-cols-2">
+            <FormField label={profileData?.emailAddress || "Email Address"}>
+              {(props) => (
+                <Input
+                  {...props}
+                  value={user?.email || "sarah.jenkins@example.com"}
+                  disabled
+                  readOnly
+                />
+              )}
+            </FormField>
+            <FormField label={profileData?.phoneNumber || "Phone Number"}>
+              {(props) => (
+                <Input
+                  {...props}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              )}
+            </FormField>
           </div>
-          <Field
-            label={profileData?.memberId || "Member ID"}
-            value="MM-XK877"
-            disabled
-          />
+
+          <FormField label={profileData?.memberId || "Member ID"}>
+            {(props) => <Input {...props} value="MM-XK877" disabled readOnly />}
+          </FormField>
         </div>
 
-        <div className="mt-5 flex justify-end">
-          <button
-            type="submit"
-            className="flex h-12 items-center justify-center rounded bg-blue-600 px-5 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
+        <div className="mt-stack-xl flex justify-end">
+          <Button type="submit">
             {profileData?.saveButton || "Save Profile Changes"}
-          </button>
+          </Button>
         </div>
       </form>
-    </section>
-  );
-}
-
-function Toggle({ checked }: { checked: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex h-5 w-8 shrink-0 items-center rounded-full p-0.5 transition-colors ${
-        checked ? "justify-end bg-blue-600" : "justify-start bg-slate-300"
-      }`}
-    >
-      <span className="h-4 w-4 rounded-full bg-white shadow-sm" />
-    </span>
+    </SettingsSection>
   );
 }
 
@@ -259,57 +235,35 @@ function NotificationPreferences({
   };
 
   return (
-    <section
+    <SettingsSection
       id="notification"
-      className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] px-3 py-4 shadow-sm"
+      icon={Bell}
+      title={notificationData?.title || "Notification Settings"}
     >
-      <div className="mb-[18px] flex items-center gap-2.5">
-        <Bell className="h-6 w-6 text-blue-600" />
-        <h2 className="text-xl font-medium leading-[30px] text-black">
-          {notificationData?.title || "Notification Settings"}
-        </h2>
+      {saved ? (
+        <Alert tone="success" className="mb-stack-lg">
+          {notificationData?.savedMessage || "Preferences saved successfully!"}
+        </Alert>
+      ) : null}
+
+      <div className="space-y-stack-md">
+        {items.map((item) => (
+          <SwitchRow
+            key={item.id}
+            title={item.title}
+            description={item.description}
+            checked={toggles[item.id] ?? true}
+            onChange={() => toggleItem(item.id)}
+          />
+        ))}
       </div>
 
-      <div className="rounded-lg bg-white p-4">
-        {saved && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            <span>{notificationData?.savedMessage || "Preferences saved successfully!"}</span>
-          </div>
-        )}
-
-        <div className="space-y-3.5">
-          {items.map((item) => {
-            const isChecked = toggles[item.id] ?? true;
-            return (
-              <div
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                className="flex items-center justify-between gap-3 rounded-xl border-b border-dashed border-[#E9EEF4] bg-[#F1F5FA] p-3 cursor-pointer select-none transition-colors hover:bg-slate-100"
-              >
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-medium leading-7 text-slate-950">{item.title}</h3>
-                  <p className="mt-1 text-sm font-medium leading-5 text-slate-500">
-                    {item.description}
-                  </p>
-                </div>
-                <Toggle checked={isChecked} />
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-5 flex justify-end">
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex h-12 items-center justify-center rounded bg-blue-600 px-5 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
-            {notificationData?.saveButton || "Save Notification Settings"}
-          </button>
-        </div>
+      <div className="mt-stack-xl flex justify-end">
+        <Button onClick={handleSave}>
+          {notificationData?.saveButton || "Save Notification Settings"}
+        </Button>
       </div>
-    </section>
+    </SettingsSection>
   );
 }
 
@@ -349,85 +303,81 @@ function ChangePassword({
   };
 
   return (
-    <section
+    <SettingsSection
       id="password"
-      className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] px-3 py-4 shadow-sm"
+      icon={KeyRound}
+      title={passwordData?.title || "Change Your Password"}
     >
-      <div className="mb-[18px] flex items-center gap-2.5">
-        <KeyRound className="h-6 w-6 text-blue-600" />
-        <h2 className="text-xl font-medium leading-[30px] text-black">
-          {passwordData?.title || "Change Your Password"}
-        </h2>
-      </div>
+      <form onSubmit={handleSubmit}>
+        {saved ? (
+          <Alert tone="success" className="mb-stack-lg">
+            {passwordData?.updatedMessage || "Password updated successfully!"}
+          </Alert>
+        ) : null}
 
-      <form onSubmit={handleSubmit} className="rounded-lg bg-white p-4">
-        {saved && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            <span>{passwordData?.updatedMessage || "Password updated successfully!"}</span>
-          </div>
-        )}
+        <div className="space-y-stack-lg">
+          <FormField
+            label={passwordData?.currentPassword || "Current Password"}
+            required
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="password"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                placeholder={
+                  passwordData?.currentPlaceholder || "Enter current password"
+                }
+              />
+            )}
+          </FormField>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-rose-50 p-3 text-sm font-medium text-rose-700 border border-rose-200">
-            {error}
-          </div>
-        )}
+          <FormField
+            label={passwordData?.newPassword || "New Password"}
+            required
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="password"
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+                placeholder={
+                  passwordData?.newPlaceholder || "Create a new secure password"
+                }
+              />
+            )}
+          </FormField>
 
-        <div className="space-y-3.5">
-          <label className="block">
-            <span className="mb-2 block text-base font-medium leading-6 text-slate-900">
-              {passwordData?.currentPassword || "Current Password"}
-            </span>
-            <input
-              type="password"
-              value={current}
-              onChange={(e) => setCurrent(e.target.value)}
-              placeholder={passwordData?.currentPlaceholder || "Enter current password"}
-              required
-              className="h-12 w-full rounded border border-[#CBD5ED] bg-white px-4 text-base text-slate-600 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-base font-medium leading-6 text-slate-900">
-              {passwordData?.newPassword || "New Password"}
-            </span>
-            <input
-              type="password"
-              value={newPass}
-              onChange={(e) => setNewPass(e.target.value)}
-              placeholder={passwordData?.newPlaceholder || "Create a new secure password"}
-              required
-              className="h-12 w-full rounded border border-[#CBD5ED] bg-white px-4 text-base text-slate-600 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-base font-medium leading-6 text-slate-900">
-              {passwordData?.confirmPassword || "Confirm Password"}
-            </span>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder={passwordData?.confirmPlaceholder || "Re-enter new password to confirm"}
-              required
-              className="h-12 w-full rounded border border-[#CBD5ED] bg-white px-4 text-base text-slate-600 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
+          {/* The mismatch error belongs to the field that has to change. */}
+          <FormField
+            label={passwordData?.confirmPassword || "Confirm Password"}
+            error={error || undefined}
+            required
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder={
+                  passwordData?.confirmPlaceholder ||
+                  "Re-enter new password to confirm"
+                }
+              />
+            )}
+          </FormField>
         </div>
 
-        <div className="mt-5 flex justify-end">
-          <button
-            type="submit"
-            className="flex h-12 items-center justify-center rounded bg-blue-600 px-5 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
+        <div className="mt-stack-xl flex justify-end">
+          <Button type="submit">
             {passwordData?.updateButton || "Update Password"}
-          </button>
+          </Button>
         </div>
       </form>
-    </section>
+    </SettingsSection>
   );
 }
 
@@ -457,29 +407,23 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+    <div className="flex flex-col gap-inline-lg lg:flex-row lg:items-start">
       <SettingsMenu
         activeTab={activeTab}
         onTabChange={setActiveTab}
         generalHeader={st?.generalHeader || "General"}
         tabsLabels={tabsLabels}
       />
-      <div className="flex-1 space-y-4">
-        {activeTab === "profile" && (
-          <div id="profile-panel" role="tabpanel" aria-labelledby="profile-tab">
-            <ProfileInformation profileData={st?.profile} />
-          </div>
-        )}
-        {activeTab === "notification" && (
-          <div id="notification-panel" role="tabpanel" aria-labelledby="notification-tab">
-            <NotificationPreferences notificationData={st?.notifications} />
-          </div>
-        )}
-        {activeTab === "password" && (
-          <div id="password-panel" role="tabpanel" aria-labelledby="password-tab">
-            <ChangePassword passwordData={st?.password} />
-          </div>
-        )}
+      <div className="flex-1 space-y-stack-lg">
+        <TabPanel id="profile" value={activeTab}>
+          <ProfileInformation profileData={st?.profile} />
+        </TabPanel>
+        <TabPanel id="notification" value={activeTab}>
+          <NotificationPreferences notificationData={st?.notifications} />
+        </TabPanel>
+        <TabPanel id="password" value={activeTab}>
+          <ChangePassword passwordData={st?.password} />
+        </TabPanel>
       </div>
     </div>
   );

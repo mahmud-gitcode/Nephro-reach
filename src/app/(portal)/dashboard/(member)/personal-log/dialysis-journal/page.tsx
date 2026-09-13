@@ -2,10 +2,19 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { BookOpen, ChevronDown, Plus, X } from "lucide-react";
+import { BookOpen, ChevronDown, Plus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Button,
+  Card,
+  Chip,
+  ChipGroup,
+  FormField,
+  Modal,
+  Textarea,
+} from "@/components/ui";
 
 const defaultJournalEntries = [
   {
@@ -57,8 +66,6 @@ function NewEntryModal({
     { key: "Anxious", label: dj?.modal?.moods?.anxious || "Anxious" },
   ];
 
-  if (!open) return null;
-
   const handleSave = () => {
     if (notes.trim()) {
       const selectedMoodLabel =
@@ -77,88 +84,53 @@ function NewEntryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="new-entry-title"
-        className="w-full max-w-[520px] rounded-[20px] border border-slate-200 bg-white p-[17px] pt-[19px] shadow-[0_4px_8px_rgba(15,23,42,0.03),0_8px_16px_rgba(15,23,42,0.05)]"
-      >
-        <div className="flex items-start gap-2.5">
-          <div className="min-w-0 flex-1">
-            <h2
-              id="new-entry-title"
-              className="text-base font-medium leading-4 text-[#0A0A0A]"
-            >
-              {dj?.modal?.title || "New Entry"}
-            </h2>
-            <p className="mt-1.5 text-base leading-6 text-[#717182]">
-              {dj?.modal?.question || "How are you feeling today?"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-1 text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
-            aria-label={dj?.modal?.cancel || "Close"}
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="mt-4">
-          <p className="text-sm font-medium leading-5 text-[#0A0A0A]">
-            {dj?.modal?.moodLabel || "Mood (optional)"}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {moodOptions.map((option) => {
-              const selected = option.key === mood;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setMood(option.key)}
-                  className={`rounded-lg border px-[13px] py-[9px] text-sm font-medium tracking-[0.07px] transition-colors cursor-pointer ${
-                    selected
-                      ? "border-blue-600 bg-blue-50 text-blue-700 font-bold"
-                      : "border-black/10 bg-white text-[#0A0A0A] hover:bg-slate-50"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <textarea
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          placeholder={
-            dj?.modal?.placeholder || "Write your thoughts here..."
-          }
-          className="mt-4 min-h-16 w-full resize-y rounded-lg border-0 bg-[#F3F3F5] px-[13px] py-[9px] text-sm leading-5 text-slate-950 outline-none placeholder:text-[#717182] focus:ring-2 focus:ring-blue-100"
-          rows={3}
-        />
-
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-12 flex-1 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-3.5 text-base font-bold tracking-[0.08px] text-slate-950 transition-colors hover:bg-white cursor-pointer"
-          >
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={dj?.modal?.title || "New Entry"}
+      description={dj?.modal?.question || "How are you feeling today?"}
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             {dj?.modal?.cancel || "Cancel"}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex h-12 flex-1 items-center justify-center rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
+          </Button>
+          <Button onClick={handleSave}>
             {dj?.modal?.saveEntry || "Save Entry"}
-          </button>
-        </div>
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-stack-lg">
+        <fieldset>
+          <legend className="text-label-lg mb-stack-sm text-fg">
+            {dj?.modal?.moodLabel || "Mood (optional)"}
+          </legend>
+          <ChipGroup label={dj?.modal?.moodLabel || "Mood"}>
+            {moodOptions.map((option) => (
+              <Chip
+                key={option.key}
+                selected={option.key === mood}
+                onClick={() => setMood(option.key)}
+              >
+                {option.label}
+              </Chip>
+            ))}
+          </ChipGroup>
+        </fieldset>
+
+        <FormField label={dj?.modal?.title || "New Entry"}>
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={4}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder={dj?.modal?.placeholder || "Write your thoughts here..."}
+            />
+          )}
+        </FormField>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -177,46 +149,51 @@ function JournalCard({
   const [open, setOpen] = useState(false);
 
   return (
-    <article className="rounded-[20px] border border-slate-200 bg-white px-4 py-[18px] shadow-[0_4px_8px_rgba(15,23,42,0.03)]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+    <Card as="article">
+      <div className="flex items-start justify-between gap-inline-md">
+        <div className="flex min-w-0 items-center gap-inline-md">
           <Image
             src="/images/journal-avatar.png"
             alt=""
             width={40}
             height={40}
-            className="h-10 w-10 rounded-full object-cover"
+            className="h-10 w-10 rounded-pill object-cover"
           />
           <div>
-            <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#18181B]">
+            <p className="text-label-lg text-fg">
               {dj?.pageTitle || "Dialysis Journal"}
             </p>
-            <p className="text-sm font-medium leading-5 tracking-[0.07px] text-[#52525B]">
-              {entry.date}
-            </p>
+            <p className="text-body-sm text-fg-muted">{entry.date}</p>
           </div>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          appearance="stroke"
+          size="small"
           onClick={() => setOpen((value) => !value)}
-          className="flex h-[46px] shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-[13px] py-[9px] text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white cursor-pointer"
+          aria-expanded={open}
+          aria-controls={`entry-${entry.id}-details`}
+          trailingIcon={
+            <ChevronDown className={open ? "rotate-180" : undefined} />
+          }
         >
           {open
             ? dj?.hideDetails || "Hide details"
             : dj?.viewDetails || "View details"}
-          <ChevronDown
-            className={`h-6 w-6 transition-transform ${
-              open ? "rotate-180" : ""
-            }`}
-          />
-        </button>
+        </Button>
       </div>
-      <div className="mt-3 h-px bg-slate-200" />
-      <p className="mt-3 text-base leading-6 text-[#0A0A0A]">{entry.preview}</p>
+
+      <div className="mt-stack-md h-px bg-line" />
+      <p className="mt-stack-md text-body-md text-fg-secondary">{entry.preview}</p>
       {open && (
-        <p className="mt-2 text-base leading-6 text-[#0A0A0A]">{entry.details}</p>
+        <p
+          id={`entry-${entry.id}-details`}
+          className="mt-stack-sm text-body-md text-fg-secondary"
+        >
+          {entry.details}
+        </p>
       )}
-    </article>
+    </Card>
   );
 }
 
@@ -262,63 +239,61 @@ export default function DialysisJournalPage() {
   const userName = user?.name ? `, ${user.name}` : ", Sarah";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-stack-xl">
       <PersonalLogDisclaimer />
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-medium leading-none text-slate-950">
+          <h1 className="text-heading-1 text-fg">
             {greeting}
             {userName}
           </h1>
-          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-600">
+          <p className="mt-stack-xs text-body-lg text-fg-secondary">
             {dj?.subtitle || "Your personal journal for each dialysis day"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-3.5 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-        >
-          <Plus className="h-6 w-6" />
+        <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
           {dj?.newEntryBtn || "New Entry"}
-        </button>
+        </Button>
       </header>
 
       {/* Journal Purpose & Logging Guidance Card */}
-      <section className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-5 sm:p-6 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-        <div className="flex items-start gap-3.5 sm:gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
-            <BookOpen className="h-5 w-5" />
-          </div>
+      <Card as="section" className="border-primary-soft-line bg-primary-soft">
+        <div className="flex items-start gap-inline-lg">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-solid text-primary-on-solid"
+          >
+            <BookOpen className="h-icon-small w-icon-small" />
+          </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            <h2 className="text-heading-3 text-fg">
               {dj?.introCard?.title || "My Dialysis Journal"}
             </h2>
-            <p className="mt-1 text-sm font-semibold text-blue-600 sm:text-base">
+            <p className="mt-stack-xs text-label-lg text-fg-brand">
               {dj?.introCard?.subtitle ||
                 "A private space to reflect on your dialysis journey."}
             </p>
-            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
+            <p className="mt-stack-md measure text-body-md text-fg-secondary">
               {dj?.introCard?.body ||
                 "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
             </p>
-            <div className="mt-4 rounded-xl border border-blue-100 bg-white/90 p-3.5 sm:p-4">
-              <p className="text-xs font-semibold leading-relaxed text-slate-700 sm:text-sm">
-                <span className="font-bold text-slate-900">
+            <Card padding="small" className="mt-stack-lg">
+              <p className="text-body-sm text-fg-secondary">
+                <span className="font-semibold text-fg">
                   {dj?.introCard?.promptsPrefix || "You can write about:"}
                 </span>{" "}
-                <span className="text-slate-600 font-medium">
+                <span>
                   {dj?.introCard?.prompts ||
                     "how you felt today • your energy level • your dialysis experience • changes in your routine • good or difficult days • personal goals • milestones and progress"}
                 </span>
               </p>
-            </div>
+            </Card>
           </div>
         </div>
-      </section>
+      </Card>
 
-      <section className="space-y-4">
+      <section className="space-y-stack-lg">
         {entries.map((entry) => (
           <JournalCard key={entry.id} entry={entry} />
         ))}

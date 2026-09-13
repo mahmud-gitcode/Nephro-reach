@@ -9,18 +9,33 @@ import {
   Apple,
   FileText,
   HeartPulse,
+  Mail,
   Notebook,
   Pill,
   Plus,
   User,
 } from "lucide-react";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Badge,
+  Button,
+  buttonStyles,
+  Card,
+  EmptyState,
+  FormField,
+  Input,
+} from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 type LogTileConfig = {
   key: string;
   icon: IconType;
+  /* Category colours come from the primitive ramps rather than the semantic
+     status tokens: "Blood Pressure" is a category, not an error, and reusing
+     --danger for it would break the rule that semantic colours are reserved.
+     A proper categorical palette is still owed — these four ramps are simply
+     the distinct hues currently available. */
   iconClass: string;
   iconBg: string;
   href: string;
@@ -30,57 +45,57 @@ const tileConfigs: LogTileConfig[] = [
   {
     key: "appointments",
     icon: User,
-    iconClass: "text-[#16A34A]",
-    iconBg: "bg-[#DCFCE7]",
+    iconClass: "text-success-700",
+    iconBg: "bg-success-100",
     href: "/dashboard/personal-log/appointments",
   },
   {
     key: "medications",
     icon: Pill,
-    iconClass: "text-[#2563EB]",
-    iconBg: "bg-[#DBEAFE]",
+    iconClass: "text-brand-700",
+    iconBg: "bg-brand-100",
     href: "/dashboard/personal-log/medications",
   },
   {
     key: "bloodPressure",
     icon: HeartPulse,
-    iconClass: "text-[#EF4444]",
-    iconBg: "bg-[#FEE2E2]",
+    iconClass: "text-danger-700",
+    iconBg: "bg-danger-100",
     href: "/dashboard/personal-log/blood-pressure",
   },
   {
     key: "myLabs",
     icon: FileText,
-    iconClass: "text-[#9333EA]",
-    iconBg: "bg-[#F3E8FF]",
+    iconClass: "text-accent-700",
+    iconBg: "bg-accent-100",
     href: "/dashboard/personal-log/lab-tracking",
   },
   {
     key: "nutrition",
     icon: Apple,
-    iconClass: "text-[#16A34A]",
-    iconBg: "bg-[#DCFCE7]",
+    iconClass: "text-success-700",
+    iconBg: "bg-success-100",
     href: "/dashboard/personal-log/nutrition",
   },
   {
     key: "fluidTracker",
     icon: Activity,
-    iconClass: "text-[#2563EB]",
-    iconBg: "bg-[#DBEAFE]",
+    iconClass: "text-brand-700",
+    iconBg: "bg-brand-100",
     href: "/dashboard/personal-log/fluid-tracker",
   },
   {
     key: "dialysisTreatment",
     icon: Activity,
-    iconClass: "text-[#2563EB]",
-    iconBg: "bg-[#DBEAFE]",
+    iconClass: "text-brand-700",
+    iconBg: "bg-brand-100",
     href: "/dashboard/personal-log/dialysis-treatment",
   },
   {
     key: "dialysisJournal",
     icon: Notebook,
-    iconClass: "text-[#2563EB]",
-    iconBg: "bg-[#DBEAFE]",
+    iconClass: "text-brand-700",
+    iconBg: "bg-brand-100",
     href: "/dashboard/personal-log/dialysis-management",
   },
 ];
@@ -89,24 +104,27 @@ function UpcomingAppointments() {
   const { t } = useLanguage();
 
   return (
-    <section className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[#0F172A]">
+    <Card tone="sunken" as="section" className="space-y-stack-md">
+      <div className="flex items-center justify-between gap-inline-lg">
+        <h2 className="text-heading-5 text-fg">
           {t("personalLogHub.upcoming.title")}
         </h2>
         <Link
           href="/dashboard/personal-log/appointments"
-          className="rounded-md border border-[#CBD5E1] bg-white px-3 py-1 text-xs font-medium text-[#0F172A] shadow-sm hover:bg-slate-50 transition-colors"
+          className={buttonStyles({
+            variant: "neutral",
+            appearance: "fill-stroke",
+            size: "small",
+          })}
         >
           {t("personalLogHub.upcoming.viewAll")}
         </Link>
       </div>
-      <div className="flex min-h-[140px] items-center justify-center rounded-xl border border-[#E2E8F0] bg-white p-6">
-        <p className="text-base sm:text-lg font-normal text-[#64748B]">
-          {t("personalLogHub.upcoming.empty")}
-        </p>
-      </div>
-    </section>
+
+      <Card padding="none">
+        <EmptyState variant="bare" title={t("personalLogHub.upcoming.empty")} />
+      </Card>
+    </Card>
   );
 }
 
@@ -124,59 +142,56 @@ function HealthcareTeam() {
   };
 
   return (
-    <section className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 space-y-3">
+    <Card tone="sunken" as="section" className="space-y-stack-md">
       <div>
-        <h2 className="text-base font-semibold text-[#0F172A]">
+        <h2 className="text-heading-5 text-fg">
           {t("personalLogHub.team.title")}
         </h2>
-        <p className="text-xs text-[#64748B] mt-0.5">
+        <p className="mt-stack-xs text-body-sm text-fg-muted">
           {t("personalLogHub.team.subtitle")}
         </p>
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("personalLogHub.team.placeholder")}
-          className="h-11 flex-1 rounded-lg border border-[#CBD5E1] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-        <button
-          type="submit"
-          className="h-11 shrink-0 rounded-lg bg-[#2563EB] px-5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+      <form onSubmit={handleAdd} className="flex items-end gap-inline-lg">
+        <FormField
+          label={t("personalLogHub.team.title")}
+          hint={t("personalLogHub.team.note")}
+          className="flex-1"
         >
-          <Plus className="h-4 w-4" />
+          {(props) => (
+            <Input
+              {...props}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t("personalLogHub.team.placeholder")}
+              leadingIcon={<Mail />}
+            />
+          )}
+        </FormField>
+        <Button type="submit" leadingIcon={<Plus />}>
           {t("personalLogHub.team.add")}
-        </button>
+        </Button>
       </form>
 
-      <p className="text-xs text-[#64748B]">
-        {t("personalLogHub.team.note")}
-      </p>
-
-      <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-[#E2E8F0] bg-white p-6">
+      <Card padding="none">
         {clinicians.length === 0 ? (
-          <p className="text-sm font-normal text-[#64748B]">
-            {t("personalLogHub.team.empty")}
-          </p>
+          <EmptyState variant="bare" title={t("personalLogHub.team.empty")} />
         ) : (
-          <ul className="w-full space-y-2">
+          <ul className="divide-y divide-line-subtle">
             {clinicians.map((c, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between text-sm text-[#0F172A] bg-slate-50 p-2.5 rounded-lg border border-slate-200"
+                className="flex items-center justify-between gap-inline-lg px-inset-md py-inset-sm"
               >
-                <span>{c}</span>
-                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                  {t("personalLogHub.team.invited")}
-                </span>
+                <span className="text-body-sm text-fg">{c}</span>
+                <Badge tone="info">{t("personalLogHub.team.invited")}</Badge>
               </li>
             ))}
           </ul>
         )}
-      </div>
-    </section>
+      </Card>
+    </Card>
   );
 }
 
@@ -193,40 +208,38 @@ export default function PersonalLogPage() {
   }, [t]);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-stack-xl">
       <PersonalLogDisclaimer />
 
       <header>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-[#0F172A]">
+        <h1 className="text-heading-1 text-fg">
           {greetingPrefix}, {firstName}
         </h1>
-        <p className="mt-1 text-sm sm:text-base font-normal text-[#64748B]">
+        <p className="mt-stack-xs text-body-md text-fg-muted">
           {t("personalLogHub.title")}
         </p>
       </header>
 
-      {/* 8 Grid Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 lg:grid-cols-4">
         {tileConfigs.map((tile) => (
           <Link
             key={tile.key}
             href={tile.href}
-            className="flex flex-col items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white py-6 px-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all hover:shadow-md hover:-translate-y-0.5"
+            className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg shadow-card transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${tile.iconBg} mb-3.5`}
+            <span
+              className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}
             >
-              <tile.icon className={`h-6 w-6 ${tile.iconClass}`} />
-            </div>
-            <span className="text-center text-sm sm:text-base font-semibold text-[#0F172A]">
+              <tile.icon className={`h-icon-big w-icon-big ${tile.iconClass}`} />
+            </span>
+            <span className="text-center text-heading-5 text-fg">
               {t(`personalLogHub.tiles.${tile.key}`)}
             </span>
           </Link>
         ))}
       </section>
 
-      {/* Lower Sections */}
-      <div className="space-y-6">
+      <div className="space-y-stack-xl">
         <UpcomingAppointments />
         <HealthcareTeam />
       </div>

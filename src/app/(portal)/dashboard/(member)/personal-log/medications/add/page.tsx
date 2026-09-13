@@ -2,17 +2,19 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Bell,
-  BriefcaseMedical,
-  ChevronDown,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Bell, BriefcaseMedical, Plus, Search, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  FormField,
+  Input,
+  Select,
+  Switch,
+  Textarea,
+} from "@/components/ui";
 
 interface FieldConfig {
   labelKey: string;
@@ -22,6 +24,7 @@ interface FieldConfig {
   search?: boolean;
   select?: boolean;
   textarea?: boolean;
+  type?: string;
 }
 
 const FIELD_CONFIGS: FieldConfig[] = [
@@ -36,8 +39,8 @@ const FIELD_CONFIGS: FieldConfig[] = [
   { labelKey: "routeLabel", placeholderKey: "routePlaceholder", select: true },
   { labelKey: "frequencyLabel", placeholderKey: "frequencyPlaceholder", select: true },
   { labelKey: "purposeLabel", placeholderKey: "purposePlaceholder" },
-  { labelKey: "startDateLabel", placeholderKey: "startDatePlaceholder" },
-  { labelKey: "endDateLabel", placeholderKey: "endDatePlaceholder" },
+  { labelKey: "startDateLabel", placeholderKey: "startDatePlaceholder", type: "date" },
+  { labelKey: "endDateLabel", placeholderKey: "endDatePlaceholder", type: "date" },
   { labelKey: "providerLabel", placeholderKey: "providerPlaceholder" },
   { labelKey: "pharmacyLabel", placeholderKey: "pharmacyPlaceholder" },
   {
@@ -54,125 +57,155 @@ export default function AddMedicationPage() {
   const [reminderTime, setReminderTime] = useState("08:00");
 
   return (
-    <div className="mx-auto max-w-[672px]">
+    <div className="mx-auto max-w-[672px] space-y-stack-lg">
       <PersonalLogDisclaimer />
 
       <Link
         href="/dashboard/personal-log/medications"
-        className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+        className={buttonStyles({
+          variant: "neutral",
+          appearance: "stroke",
+          size: "small",
+        })}
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft />
         {t("medicationsLog.backToLog")}
       </Link>
 
-      <section className="rounded-[14px] border border-[#E3E6F0] bg-[#F1F5FA] p-3">
-        <header className="flex items-start gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-blue-100 text-blue-600">
-            <BriefcaseMedical className="h-6 w-6" />
+      <Card as="section" tone="sunken" padding="small">
+        <header className="flex items-start gap-inline-lg px-inset-xs pt-inset-xs">
+          <span
+            aria-hidden="true"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel bg-primary-soft text-fg-brand"
+          >
+            <BriefcaseMedical className="h-icon-big w-icon-big" />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+            <h1 className="text-heading-4 text-fg">
               {t("medicationsLog.addNewMedication")}
             </h1>
-            <p className="mt-0.5 text-base font-medium leading-6 tracking-[0.08px] text-slate-700">
+            <p className="mt-stack-xs text-body-md text-fg-secondary">
               {t("medicationsLog.addNewSubtitle")}
             </p>
           </div>
           <Link
             href="/dashboard/personal-log/medications"
-            className="rounded-full p-1 text-slate-950 transition-colors hover:bg-white"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "stroke",
+              size: "small",
+              iconOnly: true,
+            })}
             aria-label="Close add medication"
           >
-            <X className="h-6 w-6" />
+            <X />
           </Link>
         </header>
 
-        <div className="mt-5 rounded-lg bg-white p-3">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {FIELD_CONFIGS.map((field) => (
-              <label
-                key={field.labelKey}
-                className={`block ${field.full ? "md:col-span-2" : ""}`}
-              >
-                <span className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
-                  {t(`medicationsLog.addForm.${field.labelKey}`)}
-                </span>
-                <span
-                  className={`mt-2 flex rounded border border-[#CBD5ED] bg-white px-4 text-base font-normal leading-6 tracking-[0.08px] text-slate-500 ${
-                    field.textarea ? "h-[102px] items-start py-3" : "h-12 items-center"
-                  }`}
+        {/* These were <span> elements dressed up to look like inputs — no real
+            form controls existed on this page at all. They are proper fields
+            now, so the labels are actually associated with something. */}
+        <Card padding="small" className="mt-stack-lg">
+          <div className="grid grid-cols-1 gap-stack-xl md:grid-cols-2">
+            {FIELD_CONFIGS.map((field) => {
+              const label = t(`medicationsLog.addForm.${field.labelKey}`);
+              const placeholder = t(
+                `medicationsLog.addForm.${field.placeholderKey}`,
+              );
+              const hint = field.helperKey
+                ? t(`medicationsLog.addForm.${field.helperKey}`)
+                : undefined;
+
+              return (
+                <FormField
+                  key={field.labelKey}
+                  label={label}
+                  hint={hint}
+                  className={field.full ? "md:col-span-2" : undefined}
                 >
-                  <span className="min-w-0 flex-1 truncate">
-                    {t(`medicationsLog.addForm.${field.placeholderKey}`)}
-                  </span>
-                  {field.search && <Search className="h-5 w-5 shrink-0 text-slate-500" />}
-                  {field.select && <ChevronDown className="h-5 w-5 shrink-0 text-slate-500" />}
-                </span>
-                {field.helperKey && (
-                  <span className="mt-2 block text-sm font-medium leading-5 tracking-[0.07px] text-slate-700">
-                    {t(`medicationsLog.addForm.${field.helperKey}`)}
-                  </span>
-                )}
-              </label>
-            ))}
+                  {(props) =>
+                    field.textarea ? (
+                      <Textarea {...props} rows={4} placeholder={placeholder} />
+                    ) : field.select ? (
+                      <Select {...props} defaultValue="">
+                        <option value="" disabled>
+                          {placeholder}
+                        </option>
+                      </Select>
+                    ) : (
+                      <Input
+                        {...props}
+                        type={field.type}
+                        placeholder={placeholder}
+                        leadingIcon={field.search ? <Search /> : undefined}
+                      />
+                    )
+                  }
+                </FormField>
+              );
+            })}
           </div>
-        </div>
+        </Card>
 
-        {/* Medication Reminder & Notification Schedule */}
-        <div className="mt-5 rounded-lg bg-white p-4 border border-blue-100/90 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100/70 text-blue-600">
-                <Bell className="h-5 w-5" />
+        <Card className="mt-stack-lg space-y-stack-md">
+          <div className="flex items-center justify-between gap-inline-lg">
+            <div className="flex items-center gap-inline-md">
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-control bg-primary-soft text-fg-brand"
+              >
+                <Bell className="h-icon-small w-icon-small" />
               </span>
-              <div>
-                <p className="text-sm font-bold text-slate-950">
-                  {language === "ES" ? "Recordatorio de Medicamento" : "Medication Reminder"}
-                </p>
-              </div>
+              <p id="reminder-label" className="text-label-lg text-fg">
+                {language === "ES"
+                  ? "Recordatorio de Medicamento"
+                  : "Medication Reminder"}
+              </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enableReminder}
-                onChange={(e) => setEnableReminder(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
+            <Switch
+              checked={enableReminder}
+              onChange={setEnableReminder}
+              aria-labelledby="reminder-label"
+            />
           </div>
 
-          {enableReminder && (
-            <div className="space-y-3 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
-              <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                <input
-                  type="time"
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  aria-label={language === "ES" ? "Seleccionar Hora" : "Select Reminder Time"}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-3xl font-extrabold tracking-wider text-slate-900 shadow-2xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 cursor-pointer"
-                />
-              </div>
+          {enableReminder ? (
+            <div className="border-t border-line-subtle pt-inset-sm">
+              <FormField
+                label={
+                  language === "ES" ? "Seleccionar Hora" : "Select Reminder Time"
+                }
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="time"
+                    value={reminderTime}
+                    onChange={(e) => setReminderTime(e.target.value)}
+                    className="text-center text-metric-md"
+                  />
+                )}
+              </FormField>
             </div>
-          )}
-        </div>
+          ) : null}
+        </Card>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="mt-stack-lg grid grid-cols-1 gap-inline-md md:grid-cols-2">
           <Link
             href="/dashboard/personal-log/medications"
-            className="flex h-12 items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold text-slate-950 transition-colors hover:bg-white cursor-pointer"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              fullWidth: true,
+            })}
           >
             {t("medicationsLog.cancel")}
           </Link>
-          <button
-            type="button"
-            className="flex h-12 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-          >
-            <Plus className="h-5 w-5" />
+          <Button fullWidth leadingIcon={<Plus />}>
             {t("medicationsLog.addMedication")}
-          </button>
+          </Button>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
