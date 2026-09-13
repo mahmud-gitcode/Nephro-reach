@@ -67,3 +67,14 @@ export type { ChipProps, ChipGroupProps } from "./Chip";
 
 export { Switch, SwitchRow } from "./Switch";
 export type { SwitchProps, SwitchRowProps, SwitchSize } from "./Switch";
+
+export { RadioGroup, RadioCard } from "./RadioGroup";
+export type { RadioGroupProps, RadioCardProps } from "./RadioGroup";
+
+export { LineChart, Sparkline } from "./Chart";
+export type {
+  LineChartProps,
+  SparklineProps,
+  ChartSeries,
+  SeriesTone,
+} from "./Chart";

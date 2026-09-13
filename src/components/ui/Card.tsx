@@ -42,8 +42,9 @@ export type CardProps = React.HTMLAttributes<HTMLElement> & {
   padding?: CardPadding;
   /** Adds hover feedback. Only for a card that is actually clickable. */
   interactive?: boolean;
-  /** `li` for a card inside a list, `article` for standalone content. */
-  as?: "div" | "article" | "section" | "li";
+  /** `li` for a card inside a list, `article` for standalone content,
+      `form` for a form that is itself the card. */
+  as?: "div" | "article" | "section" | "li" | "form";
 };
 
 export function Card({

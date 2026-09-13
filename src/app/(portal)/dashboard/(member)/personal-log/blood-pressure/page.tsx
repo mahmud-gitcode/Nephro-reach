@@ -17,6 +17,7 @@ import {
   Button,
   buttonStyles,
   Card,
+  LineChart,
   Table,
   TableBody,
   TableCell,
@@ -281,88 +282,37 @@ function DailyBloodPressureList() {
 function TrendChart() {
   const { language, t } = useLanguage();
 
-  const chartWidth = 640;
-  const chartHeight = 184;
-  const xFor = (index: number) => 26 + index * 96;
-  const yFor = (value: number) => 12 + ((160 - value) / 80) * 156;
-  const systolicLine = trendPointsBase.map((point, index) => `${xFor(index)},${yFor(point.systolic)}`).join(" ");
-  const diastolicLine = trendPointsBase.map((point, index) => `${xFor(index)},${yFor(point.diastolic)}`).join(" ");
-
   return (
     <Card as="section">
-      <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-heading-4 text-fg">
-          {t("bloodPressure.trendsTitle")}
-        </h2>
-        <div className="flex flex-wrap items-center gap-inline-lg text-caption text-fg-secondary">
-          <span className="inline-flex items-center gap-inline-xs">
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-pill bg-accent-solid" />
-            {t("bloodPressure.systolicLegend")}
-          </span>
-          <span className="inline-flex items-center gap-inline-xs">
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-pill bg-danger-solid" />
-            {t("bloodPressure.diastolicLegend")}
-          </span>
-        </div>
-      </div>
+      <h2 className="text-heading-4 text-fg">
+        {t("bloodPressure.trendsTitle")}
+      </h2>
 
-      <div className="mt-5">
-        <div className="grid h-[206px] grid-cols-[38px_minmax(0,1fr)] gap-3">
-          <div className="flex flex-col justify-between text-right text-caption text-fg-muted">
-            {[160, 140, 120, 100, 80].map((label) => (
-              <span key={label}>{label}</span>
-            ))}
-          </div>
-          <div className="relative overflow-hidden rounded-card">
-            <div className="absolute inset-0 flex flex-col justify-between py-inset-sm">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <span key={index} className="border-t border-dashed border-line" />
-              ))}
-            </div>
-            <div className="absolute inset-x-5 inset-y-0 flex justify-between">
-              {Array.from({ length: 7 }).map((_, index) => (
-                <span key={index} className="border-l border-dashed border-line" />
-              ))}
-            </div>
-            <svg
-              className="absolute inset-0 h-full w-full"
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <polyline
-                points={systolicLine}
-                fill="none"
-                stroke="var(--color-accent-600)"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
-              <polyline
-                points={diastolicLine}
-                fill="none"
-                stroke="var(--color-danger-600)"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
-              {trendPointsBase.map((point, index) => (
-                <React.Fragment key={index}>
-                  <circle cx={xFor(index)} cy={yFor(point.systolic)} r="4" fill="var(--color-surface)" stroke="var(--color-accent-600)" strokeWidth="2" />
-                  <circle cx={xFor(index)} cy={yFor(point.diastolic)} r="4" fill="var(--color-surface)" stroke="var(--color-danger-600)" strokeWidth="2" />
-                </React.Fragment>
-              ))}
-            </svg>
-          </div>
-        </div>
-        <div className="mt-stack-sm grid grid-cols-[38px_minmax(0,1fr)] gap-inline-md">
-          <span />
-          <div className="flex justify-between px-inset-sm text-caption text-fg-secondary">
-            {trendPointsBase.map((point, idx) => (
-              <span key={idx} className="w-9 text-center">
-                {language === "ES" ? point.dayEs : point.dayEn}
-              </span>
-            ))}
-          </div>
-        </div>
+      <div className="mt-stack-xl">
+        <LineChart
+          label={t("bloodPressure.trendsTitle")}
+          unit="mmHg"
+          yMin={80}
+          yMax={160}
+          height={206}
+          xLabels={trendPointsBase.map((point) =>
+            language === "ES" ? point.dayEs : point.dayEn,
+          )}
+          series={[
+            {
+              id: "systolic",
+              label: t("bloodPressure.systolicLegend"),
+              tone: "accent",
+              points: trendPointsBase.map((p) => p.systolic),
+            },
+            {
+              id: "diastolic",
+              label: t("bloodPressure.diastolicLegend"),
+              tone: "danger",
+              points: trendPointsBase.map((p) => p.diastolic),
+            },
+          ]}
+        />
       </div>
     </Card>
   );

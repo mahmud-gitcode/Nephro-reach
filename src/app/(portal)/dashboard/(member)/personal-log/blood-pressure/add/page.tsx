@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Check, Clock3, HeartPulse, Plus, X } from "lucide-react";
+import { CalendarDays, Clock3, HeartPulse, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -11,24 +11,10 @@ import {
   Card,
   FormField,
   Input,
+  RadioCard,
+  RadioGroup,
   Textarea,
 } from "@/components/ui";
-
-/** The tick that shows which option in a radio group is chosen. */
-function RadioMark({ selected }: { selected: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-chip border ${
-        selected
-          ? "border-primary-edge bg-primary-solid text-primary-on-solid"
-          : "border-field bg-surface"
-      }`}
-    >
-      {selected ? <Check className="h-3.5 w-3.5" /> : null}
-    </span>
-  );
-}
 
 function MetaTile({
   icon,
@@ -61,16 +47,16 @@ export default function AddBloodPressurePage() {
   const [systolic, setSystolic] = useState("123");
   const [diastolic, setDiastolic] = useState("78");
   const [pulse, setPulse] = useState("72");
-  const [selectedMood, setSelectedMood] = useState(1);
-  const [medTaken, setMedTaken] = useState(true);
+  const [selectedMood, setSelectedMood] = useState("good");
+  const [medTaken, setMedTaken] = useState("yes");
   const [notes, setNotes] = useState("");
 
   const moods = [
-    { label: t("bloodPressure.add.moods.great"), mark: t("bloodPressure.add.moods.greatMark"), emoji: ":)" },
-    { label: t("bloodPressure.add.moods.good"), mark: t("bloodPressure.add.moods.goodMark"), emoji: ":)" },
-    { label: t("bloodPressure.add.moods.okay"), mark: t("bloodPressure.add.moods.okayMark"), emoji: ":|" },
-    { label: t("bloodPressure.add.moods.tired"), mark: t("bloodPressure.add.moods.tiredMark"), emoji: "-_-" },
-    { label: t("bloodPressure.add.moods.stressed"), mark: t("bloodPressure.add.moods.stressedMark"), emoji: ":/" },
+    { id: "great", label: t("bloodPressure.add.moods.great"), mark: t("bloodPressure.add.moods.greatMark"), emoji: ":)" },
+    { id: "good", label: t("bloodPressure.add.moods.good"), mark: t("bloodPressure.add.moods.goodMark"), emoji: ":)" },
+    { id: "okay", label: t("bloodPressure.add.moods.okay"), mark: t("bloodPressure.add.moods.okayMark"), emoji: ":|" },
+    { id: "tired", label: t("bloodPressure.add.moods.tired"), mark: t("bloodPressure.add.moods.tiredMark"), emoji: "-_-" },
+    { id: "stressed", label: t("bloodPressure.add.moods.stressed"), mark: t("bloodPressure.add.moods.stressedMark"), emoji: ":/" },
   ];
 
   const vitals = [
@@ -142,94 +128,50 @@ export default function AddBloodPressurePage() {
           </div>
         </Card>
 
-        {/* Was a list of plain buttons: a screen reader could not tell these
-            were one choice, nor which one was picked. It is a radio group. */}
         <Card padding="small" className="mt-stack-lg">
-          <h2 id="mood-label" className="text-heading-5 text-fg">
+          <h2 className="text-heading-5 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
             {t("bloodPressure.add.selectCurrentState")}
           </p>
 
-          <div
-            role="radiogroup"
-            aria-labelledby="mood-label"
-            className="mt-stack-md space-y-stack-sm"
+          <RadioGroup
+            label={t("bloodPressure.add.howIFeel")}
+            value={selectedMood}
+            onChange={setSelectedMood}
+            className="mt-stack-md"
           >
-            {moods.map((mood, index) => {
-              const selected = selectedMood === index;
-              return (
-                <button
-                  key={mood.label}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setSelectedMood(index)}
-                  className={`flex w-full cursor-pointer items-center gap-inline-md rounded-card border p-inset-sm text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                    selected
-                      ? "border-primary-soft-line bg-primary-soft"
-                      : "border-line bg-surface hover:bg-surface-sunken"
-                  }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-surface-sunken text-label-md text-fg-secondary"
-                  >
-                    {mood.emoji}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-label-md text-fg">
-                      {mood.label}
-                    </span>
-                    <span className="block text-caption text-fg-muted">
-                      {mood.mark}
-                    </span>
-                  </span>
-                  <RadioMark selected={selected} />
-                </button>
-              );
-            })}
-          </div>
+            {moods.map((mood) => (
+              <RadioCard
+                key={mood.id}
+                value={mood.id}
+                title={mood.label}
+                description={mood.mark}
+                icon={mood.emoji}
+              />
+            ))}
+          </RadioGroup>
         </Card>
 
         <Card padding="small" className="mt-stack-lg">
           <h2 className="text-heading-5 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
-          <p id="med-label" className="mt-stack-md text-label-md text-fg">
+          <p className="mt-stack-md text-label-md text-fg">
             {t("bloodPressure.add.medicationQuestion")}
           </p>
 
-          <div
-            role="radiogroup"
-            aria-labelledby="med-label"
-            className="mt-stack-md grid grid-cols-2 gap-inline-md"
+          <RadioGroup
+            label={t("bloodPressure.add.medicationQuestion")}
+            orientation="horizontal"
+            value={medTaken}
+            onChange={setMedTaken}
+            className="mt-stack-md"
           >
-            {[
-              { label: t("bloodPressure.add.yes"), value: true },
-              { label: t("bloodPressure.add.no"), value: false },
-            ].map((opt) => {
-              const selected = medTaken === opt.value;
-              return (
-                <button
-                  key={opt.label}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setMedTaken(opt.value)}
-                  className={`flex h-control-big cursor-pointer items-center justify-between rounded-card border px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                    selected
-                      ? "border-primary-soft-line bg-primary-soft text-primary-fg"
-                      : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
-                  }`}
-                >
-                  {opt.label}
-                  <RadioMark selected={selected} />
-                </button>
-              );
-            })}
-          </div>
+            <RadioCard value="yes" title={t("bloodPressure.add.yes")} />
+            <RadioCard value="no" title={t("bloodPressure.add.no")} />
+          </RadioGroup>
 
           <div className="mt-stack-lg">
             <FormField label={t("bloodPressure.add.notes")}>

@@ -8,11 +8,17 @@ import {
   LocateFixed,
   MapPin,
   Plus,
-  X,
   Calendar,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+} from "@/components/ui";
 
 interface AppointmentItem {
   id: string;
@@ -86,14 +92,10 @@ function DateBadge({
   weekday: string;
 }) {
   return (
-    <div className="flex w-[78px] shrink-0 flex-col items-center gap-2 rounded-xl border border-slate-200 bg-[#F1F5FA] px-4 py-[18px] text-center text-slate-500">
-      <p className="text-2xl font-semibold leading-8 tracking-[0.12px]">
-        {month}
-      </p>
-      <p className="text-[28px] font-extrabold leading-none">{day}</p>
-      <p className="text-2xl font-normal leading-8 tracking-[0.12px]">
-        {weekday}
-      </p>
+    <div className="flex w-[78px] shrink-0 flex-col items-center gap-stack-sm rounded-card border border-line bg-surface-sunken px-inset-md py-inset-md text-center text-fg-secondary">
+      <p className="text-overline">{month}</p>
+      <p className="text-metric-md text-fg">{day}</p>
+      <p className="text-label-md">{weekday}</p>
     </div>
   );
 }
@@ -108,11 +110,11 @@ function IconText({
   primary?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 text-base font-medium leading-6 tracking-[0.08px] sm:text-lg sm:leading-7">
-      <span className="text-slate-500">{icon}</span>
-      <span className={primary ? "text-blue-600" : "text-slate-950"}>
-        {children}
+    <div className="flex items-center gap-inline-md text-body-md">
+      <span aria-hidden="true" className="text-fg-muted [&_svg]:h-icon-small [&_svg]:w-icon-small">
+        {icon}
       </span>
+      <span className={primary ? "text-fg-brand" : "text-fg"}>{children}</span>
     </div>
   );
 }
@@ -134,18 +136,16 @@ function AppointmentRow({
     : appointment.customLocation || "Zik Center";
 
   return (
-    <article className="flex flex-col gap-5 border-b border-slate-200 bg-white p-3.5 last:border-b-0 sm:flex-row sm:items-center">
+    <article className="flex flex-col gap-inline-lg border-b border-line-subtle bg-surface p-inset-sm last:border-b-0 sm:flex-row sm:items-center">
       <DateBadge month={month} day={appointment.day} weekday={weekday} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h3 className="text-[28px] font-medium leading-none text-slate-950 sm:text-[32px]">
-            {title}
-          </h3>
-          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-700">
+          <h3 className="text-heading-3 text-fg">{title}</h3>
+          <p className="mt-stack-xs text-body-md text-fg-secondary">
             {appointment.doctor}
           </p>
-          <div className="mt-1 space-y-1">
+          <div className="mt-stack-sm space-y-stack-xs">
             <IconText icon={<Clock3 className="h-5 w-5" />}>
               {appointment.time}
             </IconText>
@@ -156,10 +156,10 @@ function AppointmentRow({
         </div>
 
         <div className="shrink-0">
-          <p className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+          <p className="text-heading-5 text-fg">
             {t("appointments.reminder")}
           </p>
-          <div className="mt-1 space-y-1 text-slate-700">
+          <div className="mt-stack-sm space-y-stack-xs">
             <IconText icon={<Clock3 className="h-5 w-5" />}>
               {appointment.reminderTime}
             </IconText>
@@ -170,13 +170,15 @@ function AppointmentRow({
         </div>
       </div>
 
-      <button
-        type="button"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-950 transition-colors hover:bg-slate-100 cursor-pointer"
+      <Button
+        iconOnly
+        size="small"
+        variant="neutral"
+        appearance="stroke"
         aria-label={t("appointments.openDetails").replace("{title}", title)}
       >
-        <ChevronRight className="h-6 w-6" />
-      </button>
+        <ChevronRight />
+      </Button>
     </article>
   );
 }
@@ -189,22 +191,21 @@ function UpcomingAppointments({
   const { t } = useLanguage();
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
-      <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+    <Card as="section" tone="sunken" padding="small">
+      <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.upcomingTitle")}
       </h2>
-      <div className="mt-3 overflow-hidden rounded-xl border border-[#E9EEF4] bg-white">
+      <Card padding="none" className="mt-stack-md overflow-hidden">
         {items.map((appointment) => (
           <AppointmentRow key={appointment.id} appointment={appointment} />
         ))}
+      </Card>
+      <div className="mt-stack-md">
+        <Button variant="primary" appearance="stroke" fullWidth>
+          {t("appointments.viewAll")}
+        </Button>
       </div>
-      <button
-        type="button"
-        className="mt-3 flex h-12 w-full items-center justify-center rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white cursor-pointer"
-      >
-        {t("appointments.viewAll")}
-      </button>
-    </section>
+    </Card>
   );
 }
 
@@ -212,28 +213,26 @@ function NextAppointment() {
   const { language, t } = useLanguage();
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
-      <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+    <Card as="section" tone="sunken" padding="small">
+      <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.nextTitle")}
       </h2>
 
-      <div className="mt-3 rounded-xl border border-[#E9EEF4] bg-white p-3.5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-[18px] text-slate-500">
-            <p className="text-[60px] font-semibold leading-none tracking-[0.3px]">
-              12
-            </p>
-            <div className="text-2xl font-medium leading-8 tracking-[0.12px]">
+      <Card padding="small" className="mt-stack-md">
+        <div className="flex flex-col gap-inline-lg sm:flex-row sm:items-start">
+          <div className="flex shrink-0 items-center gap-inline-md px-inset-md py-inset-md text-fg-secondary">
+            <p className="text-metric-xl text-fg">12</p>
+            <div className="text-label-lg">
               <p>{language === "ES" ? "MAY" : "MAY"}</p>
               <p>{language === "ES" ? "Vie" : "Fri"}</p>
             </div>
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-[32px] font-medium leading-none text-slate-950">
+            <h3 className="text-heading-3 text-fg">
               {t("appointments.sampleSpecialty")}
             </h3>
-            <p className="mt-1 text-xl font-medium leading-7 tracking-[0.1px] text-slate-700">
+            <p className="mt-stack-xs text-body-md text-fg-secondary">
               Dr. Niro mia
             </p>
             <IconText icon={<Clock3 className="h-5 w-5" />}>
@@ -245,17 +244,18 @@ function NextAppointment() {
           </div>
         </div>
 
-        <div className="mt-3 space-y-3">
-          <IconText icon={<Clock3 className="h-5 w-5" />}>
-            10:30 AM - 11:15 AM
-          </IconText>
-          <div className="flex items-start gap-2 text-xl font-medium leading-7 tracking-[0.1px]">
-            <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-blue-600" />
+        <div className="mt-stack-md space-y-stack-md">
+          <IconText icon={<Clock3 />}>10:30 AM - 11:15 AM</IconText>
+          <div className="flex items-start gap-inline-md">
+            <MapPin
+              aria-hidden="true"
+              className="mt-0.5 h-icon-big w-icon-big shrink-0 text-fg-brand"
+            />
             <div>
-              <p className="text-blue-600 font-bold">
+              <p className="text-label-lg text-fg-brand">
                 {t("appointments.kidneyCareCenter")}
               </p>
-              <p className="mt-2 font-semibold text-slate-700">
+              <p className="mt-stack-sm text-body-md text-fg-secondary">
                 {t("appointments.addressLine1")}
                 <br />
                 {t("appointments.addressLine2")}
@@ -264,20 +264,21 @@ function NextAppointment() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            window.open(
-              "https://www.google.com/maps/search/?api=1&query=123+Health+way+suite+400+Atlanta+GA",
-              "_blank",
-            );
-          }}
-          className="mt-4 flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-        >
-          {t("appointments.getDirections")}
-        </button>
+        <div className="mt-stack-lg">
+          <Button
+            fullWidth
+            onClick={() => {
+              window.open(
+                "https://www.google.com/maps/search/?api=1&query=123+Health+way+suite+400+Atlanta+GA",
+                "_blank",
+              );
+            }}
+          >
+            {t("appointments.getDirections")}
+          </Button>
+        </div>
 
-        <div className="relative mt-4 h-[247px] overflow-hidden rounded-[14px] border border-slate-300 bg-slate-100">
+        <div className="relative mt-stack-lg h-[247px] overflow-hidden rounded-panel border border-line-strong bg-surface-sunken">
           <Image
             src="/images/appointment-map.png"
             alt={t("appointments.mapAlt")}
@@ -285,10 +286,13 @@ function NextAppointment() {
             className="object-cover opacity-75"
             sizes="(min-width: 1280px) 395px, 100vw"
           />
-          <LocateFixed className="absolute left-[22%] top-[43%] h-8 w-8 text-rose-500" />
+          <LocateFixed
+            aria-hidden="true"
+            className="absolute top-[43%] left-[22%] h-8 w-8 text-danger"
+          />
         </div>
-      </div>
-    </section>
+      </Card>
+    </Card>
   );
 }
 
@@ -350,147 +354,113 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-stack-2xl">
       <PersonalLogDisclaimer />
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-medium leading-none text-slate-950">
-            {t("appointments.title")}
-          </h1>
-          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-700">
+          <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
+          <p className="mt-stack-xs text-body-lg text-fg-secondary">
             {t("appointments.subtitle")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-        >
-          <Plus className="h-5 w-5" />
+        <Button onClick={() => setIsModalOpen(true)} leadingIcon={<Plus />}>
           {t("appointments.addAppointment")}
-        </button>
+        </Button>
       </header>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,447px)]">
+      <section className="grid grid-cols-1 gap-inline-lg lg:grid-cols-[minmax(0,1fr)_minmax(360px,447px)]">
         <UpcomingAppointments items={appointments} />
         <NextAppointment />
       </section>
 
-      {/* ADD APPOINTMENT MODAL */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
-          onClick={() => setIsModalOpen(false)}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          <span className="flex items-center gap-inline-md">
+            <Calendar aria-hidden="true" className="h-icon-big w-icon-big text-fg-brand" />
+            {t("appointments.modalTitle")}
+          </span>
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsModalOpen(false)}
+            >
+              {t("appointments.cancel")}
+            </Button>
+            <Button type="submit" form="appointment-form">
+              {t("appointments.save")}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="appointment-form"
+          onSubmit={handleSaveAppointment}
+          className="space-y-stack-lg"
         >
-          <div
-            className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-slate-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-6 w-6 text-blue-600" />
-                <h3 className="text-xl font-bold text-slate-900">
-                  {t("appointments.modalTitle")}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+          <FormField label={t("appointments.specialtyLabel")} required>
+            {(props) => (
+              <Input
+                {...props}
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                placeholder={t("appointments.specialtyPlaceholder")}
+              />
+            )}
+          </FormField>
 
-            <form onSubmit={handleSaveAppointment} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  {t("appointments.specialtyLabel")} *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={specialty}
-                  onChange={(e) => setSpecialty(e.target.value)}
-                  placeholder={t("appointments.specialtyPlaceholder")}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          <FormField label={t("appointments.doctorLabel")} required>
+            {(props) => (
+              <Input
+                {...props}
+                value={doctor}
+                onChange={(e) => setDoctor(e.target.value)}
+                placeholder={t("appointments.doctorPlaceholder")}
+              />
+            )}
+          </FormField>
+
+          <div className="grid grid-cols-1 gap-stack-lg sm:grid-cols-2">
+            <FormField label={t("appointments.dateLabel")}>
+              {(props) => (
+                <Input
+                  {...props}
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                 />
-              </div>
+              )}
+            </FormField>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  {t("appointments.doctorLabel")} *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={doctor}
-                  onChange={(e) => setDoctor(e.target.value)}
-                  placeholder={t("appointments.doctorPlaceholder")}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            <FormField label={t("appointments.timeLabel")}>
+              {(props) => (
+                <Input
+                  {...props}
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  placeholder={t("appointments.timePlaceholder")}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    {t("appointments.dateLabel")}
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    {t("appointments.timeLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    placeholder={t("appointments.timePlaceholder")}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  {t("appointments.locationLabel")}
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder={t("appointments.locationPlaceholder")}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  {t("appointments.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-colors cursor-pointer"
-                >
-                  {t("appointments.save")}
-                </button>
-              </div>
-            </form>
+              )}
+            </FormField>
           </div>
-        </div>
-      )}
+
+          <FormField label={t("appointments.locationLabel")}>
+            {(props) => (
+              <Input
+                {...props}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t("appointments.locationPlaceholder")}
+              />
+            )}
+          </FormField>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -23,16 +23,17 @@ import {
 import { mockDialysisEntries, DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { Badge, buttonStyles, Card } from "@/components/ui";
 
 const MOOD_CONFIG: Record<
   number,
   { key: "great" | "good" | "okay" | "low" | "poor"; defaultLabel: string; icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
-  5: { key: "great", defaultLabel: "Great", icon: BsEmojiLaughingFill, color: "text-emerald-500" },
-  4: { key: "good", defaultLabel: "Good", icon: BsEmojiSmileFill, color: "text-lime-500" },
-  3: { key: "okay", defaultLabel: "Okay", icon: BsEmojiNeutralFill, color: "text-amber-500" },
-  2: { key: "low", defaultLabel: "Low", icon: BsEmojiFrownFill, color: "text-orange-500" },
-  1: { key: "poor", defaultLabel: "Poor", icon: BsEmojiAngryFill, color: "text-red-500" },
+  5: { key: "great", defaultLabel: "Great", icon: BsEmojiLaughingFill, color: "text-success-600" },
+  4: { key: "good", defaultLabel: "Good", icon: BsEmojiSmileFill, color: "text-success-500" },
+  3: { key: "okay", defaultLabel: "Okay", icon: BsEmojiNeutralFill, color: "text-warning-600" },
+  2: { key: "low", defaultLabel: "Low", icon: BsEmojiFrownFill, color: "text-warning-700" },
+  1: { key: "poor", defaultLabel: "Poor", icon: BsEmojiAngryFill, color: "text-danger-600" },
 };
 
 function DetailRow({
@@ -46,18 +47,12 @@ function DetailRow({
 }) {
   const isAffirmative = value === "Yes" || value === "Sí";
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs h-full">
-      <span className="text-base font-normal text-slate-800">{label}</span>
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold ${
-          isHighlight || isAffirmative
-            ? "bg-blue-50 text-[#2563EB] border border-blue-200"
-            : "bg-slate-100 text-slate-800 border border-slate-200"
-        }`}
-      >
+    <Card padding="small" className="flex h-full items-center justify-between gap-inline-lg">
+      <span className="text-body-md text-fg-secondary">{label}</span>
+      <Badge tone={isHighlight || isAffirmative ? "info" : "neutral"}>
         {value}
-      </span>
-    </div>
+      </Badge>
+    </Card>
   );
 }
 
@@ -82,102 +77,105 @@ function TreatmentDetailContent() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5 py-2 font-sans text-slate-800">
+    <div className="mx-auto w-full max-w-5xl space-y-stack-xl text-fg-secondary">
       {/* HEADER BAR: BACK LINK & EDIT ACTION */}
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/dashboard/personal-log/dialysis-treatment"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
+          className={buttonStyles({
+            variant: "neutral",
+            appearance: "stroke",
+            size: "small",
+          })}
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft />
           <span>{dt?.backToTreatment || "Back to Dialysis Treatment"}</span>
         </Link>
 
         <Link
           href={`/dashboard/personal-log/dialysis-treatment/add?edit=${entry.id}`}
-          className="flex items-center gap-2 rounded-2xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+          className={buttonStyles({ size: "small" })}
         >
-          <Pencil className="size-3.5" />
+          <Pencil />
           <span>{dt?.editEntry || "Edit Entry"}</span>
         </Link>
       </div>
 
       {/* CARD 1: SESSION INFORMATION (MATCHING FORM CARD 1) */}
-      <div className="w-full bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+      <div className="w-full space-y-stack-lg rounded-card border border-line bg-surface p-inset-lg shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-heading-3 text-fg">
               {dt?.detail?.title || "Dialysis Day Log"}
             </h1>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">
+            <p className="mt-stack-xs text-caption text-fg-muted">
               {entry.displayDate}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-800 border border-slate-200">
-              <Calendar className="size-3.5 text-slate-500" />
+            <Badge tone="neutral" icon={<Calendar />}>
               <span>
                 {dt?.detail?.dialysisDay || "Dialysis Day"}:{" "}
                 {entry.isDialysisDay
                   ? dt?.detail?.yes || "Yes"
                   : dt?.detail?.no || "No"}
               </span>
-            </span>
+            </Badge>
           </div>
         </div>
 
         {/* 6-Column Summary Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-slate-200/90 bg-[#F8FAFC] p-3 text-xs shadow-2xs divide-y sm:divide-y-0 divide-slate-100 sm:divide-x sm:divide-slate-200/80">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-card border border-line bg-surface-sunken p-inset-sm text-caption shadow-control divide-y divide-line-subtle sm:divide-x sm:divide-y-0">
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.treatmentType || "Treatment Type"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.treatmentType}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.treatmentType}</p>
           </div>
 
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.startTime || "Start Time"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.startTime}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.startTime}</p>
           </div>
 
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.endTime || "End Time"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.endTime}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.endTime}</p>
           </div>
 
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.location || "Location"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.location}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.location}</p>
           </div>
 
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.careTeam || "Care Team"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.careTeam}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.careTeam}</p>
           </div>
 
           <div className="px-3 py-1.5 sm:py-0 min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 leading-tight">
+            <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.postWeight || "Post Weight"}
             </p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">{entry.postWeightSummary}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.postWeightSummary}</p>
           </div>
         </div>
       </div>
 
       {/* CARD 2: LOGGED CLINICAL DATA (MATCHING FORM CARD 2 / STEPS) */}
-      <div className="w-full bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-8">
+      <div className="w-full bg-surface rounded-panel border border-line p-6 sm:p-8 shadow-card space-y-8">
         {/* 1. ATTENDANCE & SCHEDULE */}
         <section className="space-y-3">
-          <h2 className="text-base font-bold tracking-tight text-slate-900">
+          <h2 className="text-heading-5 text-fg">
             {dt?.detail?.attendanceSchedule?.title || "Attendance & Schedule"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -210,42 +208,42 @@ function TreatmentDetailContent() {
         </section>
 
         {/* 2. PRE-TREATMENT CONDITION */}
-        <section className="pt-6 border-t border-slate-100 space-y-4">
-          <h2 className="text-base font-bold tracking-tight text-slate-900">
+        <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
+          <h2 className="text-heading-5 text-fg">
             {dt?.detail?.preTreatment?.title || "Pre-Treatment Condition"}
           </h2>
 
           {/* Selected Mood Display */}
-          <div className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
-            <span className="text-base font-normal text-slate-800">
+          <div className="flex items-center justify-between gap-3 p-4 rounded-card border border-line bg-surface-sunken">
+            <span className="text-body-md text-fg-secondary">
               {dt?.detail?.preTreatment?.overallFeel || "Overall Feel"}
             </span>
-            <div className="flex items-center gap-2.5 bg-white border border-[#2563EB] px-4 py-2 rounded-2xl shadow-2xs">
+            <div className="flex items-center gap-2.5 rounded-card border border-primary-edge bg-surface px-inset-md py-inset-xs shadow-control">
               <div className="relative flex items-center justify-center">
-                <span className="absolute inset-0.5 rounded-full bg-white shadow-2xs" />
+                <span className="absolute inset-0.5 rounded-full bg-surface shadow-control" />
                 <PreMoodIcon className={`relative size-7 ${preMoodConfig.color}`} />
               </div>
-              <span className="text-sm font-bold text-slate-900">{preMoodLabel}</span>
+              <span className="text-sm font-bold text-fg">{preMoodLabel}</span>
             </div>
           </div>
 
           {/* Selected Pre-Dialysis Symptoms */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-            <h3 className="text-base font-bold tracking-tight text-slate-900">
+          <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
+            <h3 className="text-heading-5 text-fg">
               {dt?.detail?.preTreatment?.preSymptoms || "Pre-Dialysis Symptoms"}
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-inline-md">
               {entry.preSymptoms.length > 0 ? (
                 entry.preSymptoms.map((sym) => (
                   <span
                     key={sym}
-                    className="rounded-xl border px-3 py-1.5 text-xs font-semibold bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
+                    className="rounded-control border border-transparent bg-primary-solid px-inset-sm py-1 text-label-sm text-primary-on-solid shadow-control"
                   >
                     {sym}
                   </span>
                 ))
               ) : (
-                <span className="text-xs text-slate-400">
+                <span className="text-caption text-fg-subtle">
                   {dt?.detail?.preTreatment?.noneReported || "None reported"}
                 </span>
               )}
@@ -255,17 +253,17 @@ function TreatmentDetailContent() {
           {/* Symptom Severity if reported */}
           {Object.keys(entry.preSeverity).length > 0 && (
             <div className="space-y-2.5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
+              <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.preTreatment?.severity || "Symptom Severity (0–10)"}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {Object.entries(entry.preSeverity).map(([symptom, score]) => (
                   <div
                     key={symptom}
-                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3"
+                    className="flex items-center justify-between gap-4 rounded-xl border border-line-subtle bg-surface-sunken/50 p-3"
                   >
-                    <span className="text-base font-normal text-slate-800">{symptom}</span>
-                    <span className="flex size-7 items-center justify-center rounded-lg text-xs font-bold bg-[#2563EB] text-white shadow-xs">
+                    <span className="text-body-md text-fg-secondary">{symptom}</span>
+                    <span className="flex size-7 items-center justify-center rounded-control-small bg-primary-solid text-label-sm text-primary-on-solid shadow-control">
                       {score}
                     </span>
                   </div>
@@ -276,8 +274,8 @@ function TreatmentDetailContent() {
         </section>
 
         {/* 3. DURING TREATMENT */}
-        <section className="pt-6 border-t border-slate-100 space-y-4">
-          <h2 className="text-base font-bold tracking-tight text-slate-900">
+        <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
+          <h2 className="text-heading-5 text-fg">
             {dt?.detail?.duringTreatment?.title || "During Treatment"}
           </h2>
 
@@ -309,15 +307,15 @@ function TreatmentDetailContent() {
 
           {/* Additional Symptoms */}
           {entry.intraSymptoms.length > 0 && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
+            <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
+              <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.duringTreatment?.additionalSymptoms || "Additional Symptoms"}
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-inline-md">
                 {entry.intraSymptoms.map((sym) => (
                   <span
                     key={sym}
-                    className="rounded-xl border px-3 py-1.5 text-xs font-semibold bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
+                    className="rounded-control border border-transparent bg-primary-solid px-inset-sm py-1 text-label-sm text-primary-on-solid shadow-control"
                   >
                     {sym}
                   </span>
@@ -328,11 +326,11 @@ function TreatmentDetailContent() {
 
           {/* Session Notes */}
           {entry.intraNotes && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
+            <div className="rounded-card border border-line-subtle bg-surface-sunken p-4 space-y-2">
+              <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.duringTreatment?.sessionNotes || "Session Notes"}
               </h3>
-              <p className="text-sm font-normal text-slate-700 leading-relaxed bg-white border border-slate-200 rounded-xl p-3.5">
+              <p className="rounded-card border border-line bg-surface p-inset-sm text-body-sm text-fg-secondary">
                 {entry.intraNotes}
               </p>
             </div>
@@ -340,8 +338,8 @@ function TreatmentDetailContent() {
         </section>
 
         {/* 4. RECOVERY & CLINICAL VITALS */}
-        <section className="pt-6 border-t border-slate-100 space-y-4">
-          <h2 className="text-base font-bold tracking-tight text-slate-900">
+        <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
+          <h2 className="text-heading-5 text-fg">
             {dt?.detail?.recoveryVitals?.title || "Recovery & Clinical Vitals"}
           </h2>
 
@@ -362,64 +360,64 @@ function TreatmentDetailContent() {
 
           {/* Clinical Measurements (4 Vitals Cards from Form) */}
           <div className="pt-2 space-y-3">
-            <h3 className="text-base font-bold tracking-tight text-slate-900">
+            <h3 className="text-heading-5 text-fg">
               {dt?.detail?.recoveryVitals?.measurements || "Clinical Measurements"}
             </h3>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                <div className="flex items-center justify-between text-slate-700">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+                <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed"}
                   </span>
-                  <Droplets className="size-4 text-slate-400" />
+                  <Droplets className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-xl font-bold text-slate-900">{entry.fluidRemoved}</span>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-metric-sm text-fg">{entry.fluidRemoved}</span>
+                  <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.liters || "Liters"}
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                <div className="flex items-center justify-between text-slate-700">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+                <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.postWeight || "Post Weight"}
                   </span>
-                  <Scale className="size-4 text-slate-400" />
+                  <Scale className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-xl font-bold text-slate-900">{entry.postWeight}</span>
-                  <span className="text-xs font-medium text-slate-500">kg (pre: {entry.preWeight})</span>
+                  <span className="text-metric-sm text-fg">{entry.postWeight}</span>
+                  <span className="text-caption text-fg-muted">kg (pre: {entry.preWeight})</span>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                <div className="flex items-center justify-between text-slate-700">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+                <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure"}
                   </span>
-                  <HeartPulse className="size-4 text-slate-400" />
+                  <HeartPulse className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-xl font-bold text-slate-900">{entry.bloodPressurePost}</span>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-metric-sm text-fg">{entry.bloodPressurePost}</span>
+                  <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.mmHg || "mmHg"}
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-1 shadow-2xs">
-                <div className="flex items-center justify-between text-slate-700">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+                <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.heartRate || "Heart Rate"}
                   </span>
-                  <Activity className="size-4 text-slate-400" />
+                  <Activity className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-xl font-bold text-slate-900">{entry.heartRatePost}</span>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-metric-sm text-fg">{entry.heartRatePost}</span>
+                  <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.bpm || "bpm"}
                   </span>
                 </div>
@@ -428,26 +426,26 @@ function TreatmentDetailContent() {
           </div>
 
           {/* Administered Medications */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2.5">
-            <h3 className="flex items-center gap-1.5 text-base font-bold tracking-tight text-slate-900">
-              <Pill className="size-4 text-slate-500" />
+          <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
+            <h3 className="flex items-center gap-1.5 text-base font-bold tracking-tight text-fg">
+              <Pill className="size-4 text-fg-muted" />
               <span>
                 {dt?.detail?.recoveryVitals?.medsAdministered ||
                   "Medications Administered"}
               </span>
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-inline-md">
               {entry.medicationsGiven && entry.medicationsGiven.length > 0 ? (
                 entry.medicationsGiven.map((med) => (
                   <span
                     key={med}
-                    className="rounded-xl border px-3 py-1.5 text-xs font-semibold bg-[#2563EB] border-[#2563EB] text-white shadow-xs"
+                    className="rounded-control border border-transparent bg-primary-solid px-inset-sm py-1 text-label-sm text-primary-on-solid shadow-control"
                   >
                     {med}
                   </span>
                 ))
               ) : (
-                <span className="text-xs text-slate-400">
+                <span className="text-caption text-fg-subtle">
                   {dt?.detail?.recoveryVitals?.noneRecorded || "None recorded"}
                 </span>
               )}
@@ -456,11 +454,11 @@ function TreatmentDetailContent() {
 
           {/* Recovery Notes */}
           {entry.otherNotes && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 space-y-2">
-              <h3 className="text-base font-bold tracking-tight text-slate-900">
+            <div className="rounded-card border border-line-subtle bg-surface-sunken p-4 space-y-2">
+              <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.recoveryVitals?.recoveryNotes || "Recovery Notes"}
               </h3>
-              <p className="text-sm font-normal text-slate-700 leading-relaxed bg-white border border-slate-200 rounded-xl p-3.5">
+              <p className="rounded-card border border-line bg-surface p-inset-sm text-body-sm text-fg-secondary">
                 {entry.otherNotes}
               </p>
             </div>
@@ -475,7 +473,7 @@ function FallbackLoading() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   return (
-    <div className="w-full max-w-5xl mx-auto py-12 text-center text-slate-500 font-medium">
+    <div className="w-full max-w-5xl mx-auto py-12 text-center text-fg-muted font-medium">
       {dt?.detail?.loading || "Loading treatment details..."}
     </div>
   );

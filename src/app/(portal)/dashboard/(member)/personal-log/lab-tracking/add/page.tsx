@@ -15,6 +15,23 @@ import {
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Alert,
+  Button,
+  buttonStyles,
+  Card,
+  Chip,
+  ChipGroup,
+  FormField,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Textarea,
+} from "@/components/ui";
 
 interface TestItem {
   id: string;
@@ -305,198 +322,188 @@ export default function AddLabTrackingPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-stack-xl">
       <PersonalLogDisclaimer />
 
       {savedSuccess && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 transition-all">
-          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
-          <div>
-            <p className="font-bold text-sm">
-              {l?.addModal?.successTitle || "Lab Results Saved Successfully!"}
-            </p>
-            <p className="text-xs text-emerald-700">
-              {l?.addModal?.successDesc ||
-                "Updating table info and redirecting to My Labs..."}
-            </p>
-          </div>
-        </div>
+        <Alert
+          tone="success"
+          icon={<CheckCircle2 />}
+          title={l?.addModal?.successTitle || "Lab Results Saved Successfully!"}
+        >
+          {l?.addModal?.successDesc ||
+            "Updating table info and redirecting to My Labs..."}
+        </Alert>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6"
-      >
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">
-              {l?.addModal?.title || "Add Lab Result"}
-            </h1>
-          </div>
+      <Card as="form" onSubmit={handleSubmit} className="space-y-stack-xl">
+        <header className="flex flex-wrap items-center justify-between gap-inline-lg border-b border-line-subtle pb-inset-md">
+          <h1 className="text-heading-3 text-fg">
+            {l?.addModal?.title || "Add Lab Result"}
+          </h1>
           <Link
             href="/dashboard/personal-log/lab-tracking"
             aria-label="Close form"
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "stroke",
+              size: "small",
+              iconOnly: true,
+            })}
           >
-            <X className="h-5 w-5" />
+            <X />
           </Link>
         </header>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-2">
-          <label
-            htmlFor="lab-date"
-            className="block text-xs font-bold text-slate-900"
-          >
-            {l?.addModal?.drawDateLabel || "Lab Draw Date"}
-          </label>
+        <Card tone="sunken" padding="big">
           <div className="max-w-xs">
-            <input
-              id="lab-date"
-              type="date"
-              value={labDate}
-              onChange={(e) => setLabDate(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-500"
+            <FormField
+              label={l?.addModal?.drawDateLabel || "Lab Draw Date"}
               required
-            />
+            >
+              {(props) => (
+                <Input
+                  {...props}
+                  type="date"
+                  value={labDate}
+                  onChange={(e) => setLabDate(e.target.value)}
+                />
+              )}
+            </FormField>
           </div>
-        </div>
+        </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-stack-lg">
           {activeCategoryIds.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-stack-xl">
               {designCategories
                 .filter((cat) => activeCategoryIds.includes(cat.id))
                 .map((category) => (
-                  <div
-                    key={category.id}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white space-y-0"
-                  >
-                    <div className="flex items-center justify-between bg-[#F1F5FA] px-4 py-2.5 border-b border-slate-200">
-                      <div className="flex items-center gap-2 font-bold text-xs text-[#06265B] tracking-wider uppercase">
-                        <category.icon className="h-4.5 w-4.5 fill-current text-blue-600 shrink-0" />
+                  <Card key={category.id} padding="none" className="overflow-hidden">
+                    <div className="flex items-center justify-between gap-inline-md border-b border-line bg-surface-sunken px-inset-md py-inset-xs">
+                      <h2 className="text-overline flex items-center gap-inline-md text-fg-brand">
+                        <category.icon
+                          aria-hidden="true"
+                          className="h-4 w-4 shrink-0 fill-current"
+                        />
                         {getCategoryName(category.id, category.name)}
-                      </div>
-                      <button
-                        type="button"
+                      </h2>
+                      <Button
+                        size="small"
+                        variant="danger"
+                        appearance="stroke"
                         onClick={() => handleRemoveCategorySection(category.id)}
-                        className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors cursor-pointer"
                       >
                         {l?.addModal?.remove || "Remove"}
-                      </button>
+                      </Button>
                     </div>
 
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-2.5">
+                    <Table minWidth={520}>
+                      <TableHead>
+                        <TableRow>
+                          <TableHeaderCell>
                             {l?.addModal?.headers?.test || "Test"}
-                          </th>
-                          <th className="px-4 py-2.5">
+                          </TableHeaderCell>
+                          <TableHeaderCell>
                             {l?.addModal?.headers?.resultValue || "Result Value"}
-                          </th>
-                          <th className="px-4 py-2.5">
+                          </TableHeaderCell>
+                          <TableHeaderCell>
                             {l?.addModal?.headers?.unit || "Unit"}
-                          </th>
-                          <th className="px-4 py-2.5">
-                            {l?.addModal?.headers?.refRange ||
-                              "Reference Range"}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
+                          </TableHeaderCell>
+                          <TableHeaderCell numeric>
+                            {l?.addModal?.headers?.refRange || "Reference Range"}
+                          </TableHeaderCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
                         {category.tests.map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-2.5 font-bold text-slate-900">
+                          <TableRow key={t.id}>
+                            <TableCell emphasis>
                               {getTestDisplayName(t.id, t.name)}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <input
-                                type="text"
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                inputSize="small"
+                                className="w-32"
                                 value={testValues[t.name] || ""}
                                 onChange={(e) =>
                                   handleValueChange(t.name, e.target.value)
                                 }
+                                aria-label={`${getTestDisplayName(t.id, t.name)} result`}
                                 placeholder={
                                   l?.addModal?.enterValuePlaceholder ||
                                   "Enter value"
                                 }
-                                className="w-32 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                               />
-                            </td>
-                            <td className="px-4 py-2.5 font-medium text-slate-500">
-                              {t.unit}
-                            </td>
-                            <td className="px-4 py-2.5 font-medium text-slate-500">
-                              {t.refRange}
-                            </td>
-                          </tr>
+                            </TableCell>
+                            <TableCell>{t.unit}</TableCell>
+                            <TableCell numeric>{t.refRange}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </Table>
+                  </Card>
                 ))}
             </div>
           )}
 
           {availableCategoriesToAdd.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-[#F1F5FA] p-4 space-y-3">
-              <label className="block text-xs font-bold text-[#06265B] tracking-wider uppercase">
+            <Card tone="sunken" padding="big" className="space-y-stack-md">
+              <p className="text-overline text-fg-brand">
                 {l?.addModal?.addCategoryLabel || "+ Add Category:"}
-              </label>
+              </p>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <ChipGroup
+                label={l?.addModal?.addCategoryLabel || "Add category"}
+                selection="multiple"
+              >
                 {availableCategoriesToAdd.map((cat) => (
-                  <button
+                  <Chip
                     key={cat.id}
-                    type="button"
+                    icon={<Plus />}
                     onClick={() => handleAddCategorySection(cat.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 hover:border-slate-300 hover:bg-slate-50 transition-all cursor-pointer"
                   >
-                    <Plus className="h-3.5 w-3.5 text-blue-600" />
                     {getCategoryName(cat.id, cat.name)}
-                  </button>
+                  </Chip>
                 ))}
-              </div>
-            </div>
+              </ChipGroup>
+            </Card>
           )}
         </div>
 
-        <section className="space-y-2">
-          <label
-            htmlFor="notes-input"
-            className="block text-xs font-bold text-slate-700"
-          >
-            {l?.addModal?.notesLabel || "Notes & Observations (Optional)"}
-          </label>
-          <textarea
-            id="notes-input"
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={
-              l?.addModal?.notesPlaceholder ||
-              "Add any notes or questions about your phosphorus, potassium, or fluid levels..."
-            }
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors"
-          />
-        </section>
+        <FormField
+          label={l?.addModal?.notesLabel || "Notes & Observations"}
+          optionalLabel="optional"
+        >
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={
+                l?.addModal?.notesPlaceholder ||
+                "Add any notes or questions about your phosphorus, potassium, or fluid levels..."
+              }
+            />
+          )}
+        </FormField>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-end gap-inline-md border-t border-line-subtle pt-inset-md">
           <Link
             href="/dashboard/personal-log/lab-tracking"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+            })}
           >
             {l?.addModal?.cancel || "Cancel"}
           </Link>
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-6 text-xs font-bold text-white hover:bg-blue-700 transition-colors cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
+          <Button type="submit" leadingIcon={<Plus />}>
             {l?.addModal?.saveEntry || "Save Entry"}
-          </button>
+          </Button>
         </div>
-      </form>
+      </Card>
     </div>
   );
 }

@@ -29,6 +29,8 @@ import {
   FormField,
   Input,
   Modal,
+  RadioCard,
+  RadioGroup,
   Select,
   Switch,
   SwitchRow,
@@ -154,6 +156,7 @@ const COMPONENTS = [
   { id: "tabs", label: "Tabs" },
   { id: "chip", label: "Chip" },
   { id: "switch", label: "Switch" },
+  { id: "radiogroup", label: "RadioGroup" },
 ] as const;
 
 type ComponentId = (typeof COMPONENTS)[number]["id"];
@@ -181,6 +184,8 @@ export default function DesignSystemPage() {
   const [chips, setChips] = useState<string[]>(["counts"]);
   const [switchOn, setSwitchOn] = useState(true);
   const [notify, setNotify] = useState(true);
+  const [mood, setMood] = useState("good");
+  const [answer, setAnswer] = useState("yes");
 
   const show = (id: ComponentId) => component === "all" || component === id;
 
@@ -976,6 +981,47 @@ export default function DesignSystemPage() {
                   unreachable by keyboard and invisible to a screen reader. The
                   row target is full width rather than a 44px switch, which
                   matters for members with reduced fine motor control.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- RadioGroup -------- */}
+          {show("radiogroup") ? (
+            <Block title="RadioGroup">
+              <Row label="Rich options — icon and description">
+                <div className="w-full max-w-md">
+                  <RadioGroup label="How I feel" value={mood} onChange={setMood}>
+                    <RadioCard value="great" title="Great" description="No symptoms today" icon=":)" />
+                    <RadioCard value="good" title="Good" description="Mild tiredness" icon=":)" />
+                    <RadioCard value="okay" title="Okay" description="Some cramping" icon=":|" />
+                    <RadioCard value="tired" title="Tired" description="Needed a long rest" icon="-_-" />
+                  </RadioGroup>
+                </div>
+              </Row>
+
+              <Row label="Compact — title only, horizontal">
+                <div className="w-full max-w-sm">
+                  <RadioGroup
+                    label="Medication taken"
+                    orientation="horizontal"
+                    value={answer}
+                    onChange={setAnswer}
+                  >
+                    <RadioCard value="yes" title="Yes" />
+                    <RadioCard value="no" title="No" />
+                  </RadioGroup>
+                </div>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">Arrow keys, one tab stop.</strong>{" "}
+                  Selection follows focus, which is correct for radios. The
+                  option order comes from the DOM at key-press time rather than
+                  a ref written during render, so it stays right when options
+                  are filtered. These lists were plain buttons before: a screen
+                  reader heard unrelated controls, not one choice.
                 </p>
               </Card>
             </Block>
