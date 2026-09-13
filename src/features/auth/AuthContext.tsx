@@ -15,7 +15,7 @@ import {
   readSessionFromDocument,
   registerUser,
   writeSessionCookie,
-} from "@/lib/auth";
+} from "@/features/auth/auth";
 
 type AuthContextValue = {
   user: AuthUser | null;

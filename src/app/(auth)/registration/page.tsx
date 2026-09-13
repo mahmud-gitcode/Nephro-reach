@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { DEMO_ACCOUNTS, USER_HOME } from "@/lib/auth";
+import { DEMO_ACCOUNTS, USER_HOME } from "@/features/auth/auth";
 
 const inputClassName =
   "h-12 w-full rounded border border-[#CBD5ED] bg-white py-3 pl-4 pr-3 text-base leading-6 tracking-[0.08px] text-[#0F172A] outline-none placeholder:text-[#64748B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#DBE9FE]";

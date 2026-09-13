@@ -2,8 +2,8 @@
 
 import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { canAccessPath, homeForRole } from "@/lib/auth";
+import { useAuth } from "@/features/auth/AuthContext";
+import { canAccessPath, homeForRole } from "@/features/auth/auth";
 
 export default function DashboardGuard({
   children,

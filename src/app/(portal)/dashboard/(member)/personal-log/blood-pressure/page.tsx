@@ -11,7 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 const readingGroupsData = [
   {

@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 function AddRedirectHandler() {
   const router = useRouter();

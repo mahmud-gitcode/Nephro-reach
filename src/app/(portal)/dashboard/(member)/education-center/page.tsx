@@ -21,11 +21,11 @@ import {
   TOTAL_JOURNEY_DAYS,
   TOTAL_JOURNEY_MINUTES,
   TOTAL_JOURNEY_MODULES,
-} from "@/lib/dialysisJourneyData";
+} from "@/features/education/dialysisJourneyData";
 import {
   JourneyDayProgress,
   useJourneyProgress,
-} from "@/lib/useJourneyProgress";
+} from "@/features/education/useJourneyProgress";
 
 export const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,

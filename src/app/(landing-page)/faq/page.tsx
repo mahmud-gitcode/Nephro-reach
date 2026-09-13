@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import ContactUs from "@/components/homePage/ContactUs";
+import ContactUs from "@/features/landing-page/ContactUs";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";

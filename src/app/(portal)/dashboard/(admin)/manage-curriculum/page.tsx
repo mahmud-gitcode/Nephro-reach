@@ -13,15 +13,15 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { formatTotalDuration } from "@/lib/dialysisJourneyData";
+import { formatTotalDuration } from "@/features/education/dialysisJourneyData";
 import {
   Course,
   courseClassCount,
   courseDocumentCount,
   courseMinutes,
   useCourseLibrary,
-} from "@/lib/courseLibrary";
-import { CourseModal } from "@/components/dashboard/CourseAdmin";
+} from "@/features/education/courseLibrary";
+import { CourseModal } from "@/features/education/admin/CourseAdmin";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 

@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { BookOpen, ChevronDown, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/context/AuthContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import { useAuth } from "@/features/auth/AuthContext";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 const defaultJournalEntries = [
   {

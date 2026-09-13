@@ -14,7 +14,7 @@ import {
   FaHeartPulse,
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 interface TestItem {
   id: string;

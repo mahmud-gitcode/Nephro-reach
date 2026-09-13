@@ -19,8 +19,8 @@ import {
   JOURNEY_PHASES,
   JourneyDay,
   JourneyDocumentKind,
-} from "@/lib/dialysisJourneyData";
-import { downloadNoteAsText, NoteSaveState } from "@/lib/useJourneyNotes";
+} from "@/features/education/dialysisJourneyData";
+import { downloadNoteAsText, NoteSaveState } from "@/features/education/useJourneyNotes";
 
 export type JourneyPanelTab =
   | "transcript"

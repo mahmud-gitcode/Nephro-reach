@@ -7,7 +7,7 @@ import {
   DEFAULT_SUBSCRIPTION_PLANS,
   getStoredSubscriptionPlans,
   saveStoredSubscriptionPlans,
-} from "@/lib/subscriptions";
+} from "@/features/billing/subscriptions";
 
 function FeatureIcon({ included }: { included: boolean }) {
   return (

@@ -1,6 +1,6 @@
 import React from "react";
-import DashboardGuard from "@/components/dashboard/DashboardGuard";
-import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardGuard from "@/features/auth/DashboardGuard";
+import DashboardShell from "@/components/layout/DashboardShell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

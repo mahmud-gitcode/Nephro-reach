@@ -6,8 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useLanguage, LanguageCode } from "@/context/LanguageContext";
-import { useAuth } from "@/context/AuthContext";
-import { homeForRole } from "@/lib/auth";
+import { useAuth } from "@/features/auth/AuthContext";
+import { homeForRole } from "@/features/auth/auth";
 
 const USFlag = () => (
   <svg className="w-4 h-3 rounded-[2px] object-cover shrink-0 border border-slate-200/50" viewBox="0 0 640 480">

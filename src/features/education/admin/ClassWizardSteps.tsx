@@ -7,8 +7,8 @@ import {
   PlayCircle,
   Upload,
 } from "lucide-react";
-import { CourseClass, CourseClassKind } from "@/lib/courseLibrary";
-import { formatClock } from "@/lib/vtt";
+import { CourseClass, CourseClassKind } from "@/features/education/courseLibrary";
+import { formatClock } from "@/features/education/vtt";
 
 export const FIELD_CLASS =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";

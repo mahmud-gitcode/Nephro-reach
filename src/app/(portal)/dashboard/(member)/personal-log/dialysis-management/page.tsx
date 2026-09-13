@@ -29,10 +29,10 @@ import {
   Eraser,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
-import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
-import DialysisClinicCard from "@/components/dashboard/DialysisClinicCard";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSection";
+import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
+import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 interface TreatmentInterval {
   id: string;

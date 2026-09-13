@@ -4,12 +4,12 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { getJourneyDayBySlug } from "@/lib/dialysisJourneyData";
-import { UserRole } from "@/lib/auth";
-import EmergencyModal from "@/components/dashboard/EmergencyModal";
-import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
+import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
+import { UserRole } from "@/features/auth/auth";
+import EmergencyModal from "@/features/emergency/EmergencyModal";
+import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import {
   ArrowLeft,
   BookOpen,

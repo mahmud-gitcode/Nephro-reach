@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { JOURNEY_DAYS, TOTAL_JOURNEY_DAYS } from "@/lib/dialysisJourneyData";
+import { JOURNEY_DAYS, TOTAL_JOURNEY_DAYS } from "@/features/education/dialysisJourneyData";
 
 export type JourneyDayStatus = "not-started" | "in-progress" | "completed";
 

@@ -9,7 +9,7 @@ import {
   ScanLine,
   Trash2,
 } from "lucide-react";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 const latestResults = [
   { label: "CREATININE", value: "0.9", unit: "umol/L", normal: "Normal: 60-110" },

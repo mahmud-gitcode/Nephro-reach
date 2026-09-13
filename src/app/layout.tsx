@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/features/auth/AuthContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "Understand your kidneys. Take control of your journey with NephroReach.",
 };
 
-import LandingAnimationObserver from "@/components/homePage/LandingAnimationObserver";
+import LandingAnimationObserver from "@/features/landing-page/LandingAnimationObserver";
 
 export default function RootLayout({
   children,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Review,
@@ -9,7 +9,7 @@ import {
   updateReviewStatus,
   deleteReview,
   REVIEWS_EVENT,
-} from "@/lib/reviews";
+} from "@/features/reviews/reviews";
 import {
   Star,
   CheckCircle2,

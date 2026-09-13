@@ -8,8 +8,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import {
   JOURNEY_DAYS,
   JourneyPhaseKey,
-} from "@/lib/dialysisJourneyData";
-import { useJourneyProgress } from "@/lib/useJourneyProgress";
+} from "@/features/education/dialysisJourneyData";
+import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { DayCard } from "../page";
 
 type StatusFilter = "all" | "in-progress" | "completed" | "not-started";

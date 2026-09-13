@@ -3,9 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import DialysisDaySymptomLogForm from "@/components/dashboard/DialysisDaySymptomLogForm";
+import DialysisDaySymptomLogForm from "@/features/personal-log/DialysisDaySymptomLogForm";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 export default function AddDialysisTreatmentPage() {
   const { dictionary } = useLanguage();

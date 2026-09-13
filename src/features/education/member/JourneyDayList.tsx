@@ -20,8 +20,8 @@ import {
   JourneyMediaKind,
   JourneyPhaseKey,
   PHASE_ORDER,
-} from "@/lib/dialysisJourneyData";
-import type { JourneyDayProgress } from "@/lib/useJourneyProgress";
+} from "@/features/education/dialysisJourneyData";
+import type { JourneyDayProgress } from "@/features/education/useJourneyProgress";
 
 const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,

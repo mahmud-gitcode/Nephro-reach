@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Bell, CheckCircle2, KeyRound, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 
 type SettingsTab = "profile" | "notification" | "password";
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;

@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 
 type CommentItem = {
   author: string;

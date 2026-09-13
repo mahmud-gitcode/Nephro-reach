@@ -6,7 +6,7 @@ import {
   SubscriptionPlan,
   DEFAULT_SUBSCRIPTION_PLANS,
   getStoredSubscriptionPlans,
-} from "@/lib/subscriptions";
+} from "@/features/billing/subscriptions";
 import { useLanguage } from "@/context/LanguageContext";
 
 function FeatureIcon({ included }: { included: boolean }) {

@@ -12,7 +12,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 interface AppointmentItem {
   id: string;

@@ -4,9 +4,9 @@ import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Phone, Pencil, Star, X } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import WheresMyRideModal from "@/components/dashboard/WheresMyRideModal";
+import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Review, getApprovedReviews, REVIEWS_EVENT } from "@/lib/reviews";
+import { Review, getApprovedReviews, REVIEWS_EVENT } from "@/features/reviews/reviews";
 
 export default function Testimonials() {
   const { t } = useLanguage();

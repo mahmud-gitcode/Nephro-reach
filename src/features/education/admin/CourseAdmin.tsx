@@ -14,7 +14,7 @@ import {
   CourseClass,
   CourseDocument,
   createId,
-} from "@/lib/courseLibrary";
+} from "@/features/education/courseLibrary";
 import {
   Field,
   FIELD_CLASS,
@@ -22,8 +22,8 @@ import {
   OverviewStep,
   ReadingBody,
   TypeStep,
-} from "@/components/dashboard/ClassWizardSteps";
-import ClassTranscriptUpload from "@/components/dashboard/ClassTranscriptUpload";
+} from "@/features/education/admin/ClassWizardSteps";
+import ClassTranscriptUpload from "@/features/education/admin/ClassTranscriptUpload";
 
 /** Centred dialog used by the course and module forms. */
 export function AdminModal({

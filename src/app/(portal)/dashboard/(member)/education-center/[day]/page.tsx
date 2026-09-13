@@ -17,21 +17,21 @@ import {
   X,
 } from "lucide-react";
 import { LanguageCode, useLanguage } from "@/context/LanguageContext";
-import JourneyDayList from "@/components/dashboard/JourneyDayList";
+import JourneyDayList from "@/features/education/member/JourneyDayList";
 import JourneyResourceDrawer, {
   JourneyPanelContent,
   JourneyPanelRail,
   JourneyPanelTab,
-} from "@/components/dashboard/JourneyResourcePanel";
+} from "@/features/education/member/JourneyResourcePanel";
 import {
   getJourneyDayBySlug,
   JOURNEY_DAYS,
   JourneyDay,
   JourneyMediaKind,
   TOTAL_JOURNEY_DAYS,
-} from "@/lib/dialysisJourneyData";
-import { useJourneyProgress } from "@/lib/useJourneyProgress";
-import { useJourneyNotes } from "@/lib/useJourneyNotes";
+} from "@/features/education/dialysisJourneyData";
+import { useJourneyProgress } from "@/features/education/useJourneyProgress";
+import { useJourneyNotes } from "@/features/education/useJourneyNotes";
 
 function kindLabel(
   kind: JourneyMediaKind,

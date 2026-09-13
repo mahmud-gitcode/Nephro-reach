@@ -17,7 +17,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { formatTotalDuration } from "@/lib/dialysisJourneyData";
+import { formatTotalDuration } from "@/features/education/dialysisJourneyData";
 import {
   CourseClass,
   CourseClassKind,
@@ -27,12 +27,12 @@ import {
   emptyClass,
   moduleMinutes,
   useCourseLibrary,
-} from "@/lib/courseLibrary";
+} from "@/features/education/courseLibrary";
 import {
   ClassEditorPanel,
   CourseModal,
   ModuleModal,
-} from "@/components/dashboard/CourseAdmin";
+} from "@/features/education/admin/CourseAdmin";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 

@@ -12,7 +12,7 @@ import {
   ScanLine,
   Upload,
 } from "lucide-react";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 type Field = {
   label: string;

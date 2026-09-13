@@ -18,9 +18,9 @@ import {
   Pencil,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import RecoveryPatternSection from "@/components/dashboard/RecoveryPatternSection";
-import CareTeamQuestionsSection from "@/components/dashboard/CareTeamQuestionsSection";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSection";
+import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 interface ProviderOrder {
   id: string;

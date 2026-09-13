@@ -8,7 +8,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { CourseClass, createId } from "@/lib/courseLibrary";
+import { CourseClass, createId } from "@/features/education/courseLibrary";
 import {
   downloadTextFile,
   formatClock,
@@ -16,7 +16,7 @@ import {
   toFileSlug,
   toVtt,
   withResolvedEnds,
-} from "@/lib/vtt";
+} from "@/features/education/vtt";
 
 type CaptionLanguage = "EN" | "ES";
 

@@ -16,10 +16,10 @@ import {
   Scale,
   Timer,
 } from "lucide-react";
-import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
+import { mockDialysisEntries, DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
-import MedicationsGivenSection from "@/components/dashboard/MedicationsGivenSection";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 function SummaryCards() {
   const { dictionary } = useLanguage();

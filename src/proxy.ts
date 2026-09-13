@@ -5,7 +5,7 @@ import {
   canAccessPath,
   homeForRole,
   parseSession,
-} from "@/lib/auth";
+} from "@/features/auth/auth";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

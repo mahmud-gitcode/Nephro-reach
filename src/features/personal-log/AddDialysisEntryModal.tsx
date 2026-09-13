@@ -3,7 +3,7 @@
 import React from "react";
 import DialysisDaySymptomLogForm, {
   DialysisDayLogData,
-} from "@/components/dashboard/DialysisDaySymptomLogForm";
+} from "@/features/personal-log/DialysisDaySymptomLogForm";
 
 export default function AddDialysisEntryModal({
   isOpen,

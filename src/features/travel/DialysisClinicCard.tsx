@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Building2, Pencil, Phone, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { toTelHref, useDialysisClinic } from "@/lib/useDialysisClinic";
+import { toTelHref, useDialysisClinic } from "@/features/travel/useDialysisClinic";
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";

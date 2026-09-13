@@ -20,9 +20,9 @@ import {
   BsEmojiFrownFill,
   BsEmojiAngryFill,
 } from "react-icons/bs";
-import { mockDialysisEntries, DialysisLogEntry } from "@/lib/dialysisTreatmentData";
+import { mockDialysisEntries, DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 const MOOD_CONFIG: Record<
   number,

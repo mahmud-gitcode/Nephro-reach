@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 function GoalBadge({
   status,

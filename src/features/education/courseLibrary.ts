@@ -7,7 +7,7 @@ import {
   JourneyDocumentKind,
   JourneyMediaKind,
   PHASE_ORDER,
-} from "@/lib/dialysisJourneyData";
+} from "@/features/education/dialysisJourneyData";
 
 /**
  * Admin-side model of the course catalogue: course -> modules -> classes.

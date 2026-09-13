@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Check, Clock3, HeartPulse, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 export default function AddBloodPressurePage() {
   const { language, t } = useLanguage();

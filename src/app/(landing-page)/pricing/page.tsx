@@ -3,8 +3,8 @@
 import React from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import Pricing from "@/components/homePage/Pricing";
-import "@/components/homePage/landing-animations.css";
+import Pricing from "@/features/landing-page/Pricing";
+import "@/features/landing-page/landing-animations.css";
 
 export default function PricingPage() {
   return (

@@ -27,7 +27,7 @@ import {
   FaArrowTrendDown,
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
-import PersonalLogDisclaimer from "@/components/dashboard/PersonalLogDisclaimer";
+import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 

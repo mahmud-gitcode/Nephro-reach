@@ -19,14 +19,14 @@ import { useLanguage } from "@/context/LanguageContext";
 import {
   ExternalLink,
   ExternalLinkProvider,
-} from "@/components/dashboard/ExternalLinkDisclaimer";
+} from "@/components/common/ExternalLinkDisclaimer";
 import {
   BEFORE_THE_ER_TOPICS,
   getBeforeTheErTopic,
   SLUG_LIST,
   NEXT_STEP_CONFIGS,
   NextStepLevel,
-} from "@/lib/beforeTheErData";
+} from "@/features/emergency/beforeTheErData";
 
 function renderFormattedText(text: string) {
   if (!text) return null;
