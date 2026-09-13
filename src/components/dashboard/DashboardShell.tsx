@@ -26,6 +26,7 @@ import {
   Notebook,
   MessageCircle,
   MessagesSquare,
+  Palette,
   Search,
   Settings,
   Star,
@@ -85,6 +86,12 @@ const sidebarItems: NavItem[] = [
     icon: Star,
     roles: ["admin"],
   },
+  {
+    label: "Design System",
+    href: "/dashboard/design-system",
+    icon: Palette,
+    roles: ["admin"],
+  },
 ];
 
 const supportItems: NavItem[] = [
@@ -98,6 +105,8 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/trash"))
     return language === "ES" ? "Papelera" : "Trash";
+  if (pathname.startsWith("/dashboard/design-system"))
+    return language === "ES" ? "Sistema de Diseño" : "Design System";
   if (pathname.startsWith("/dashboard/before-the-er/")) {
     const slug = pathname.split("/").pop() || "";
     if (language === "ES") {
@@ -213,6 +222,7 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
     "/dashboard/subscriptions": "Suscripciones",
     "/dashboard/reviews": "Reseñas",
     "/dashboard/admin-reviews": "Moderación de Reseñas",
+    "/dashboard/design-system": "Sistema de Diseño",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",
     "/dashboard/trash": "Papelera",

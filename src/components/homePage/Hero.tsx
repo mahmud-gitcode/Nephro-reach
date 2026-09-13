@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
-import nephroReachImg from "@/public/images/home/NephroReach-clean.jpg";
+import nephroReachImg from "@public/images/home/NephroReach-clean.jpg";
 
 export default function Hero() {
   const { t } = useLanguage();
