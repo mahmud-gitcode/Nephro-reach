@@ -111,7 +111,28 @@ function Spec({
 
 /* ------------------------------------------------------------------ */
 
+function TypeSpec({
+  token,
+  meta,
+  children,
+}: {
+  token: string;
+  meta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 items-baseline gap-x-6 gap-y-1 border-t border-slate-100 py-3 sm:grid-cols-[168px_1fr]">
+      <div>
+        <code className="text-xs font-semibold text-[#2563EB]">{token}</code>
+        <p className="mt-0.5 text-xs text-slate-500">{meta}</p>
+      </div>
+      <div className="min-w-0 text-slate-900">{children}</div>
+    </div>
+  );
+}
+
 const sections = [
+  { id: "typography", label: "Typography" },
   { id: "buttons", label: "Buttons" },
   { id: "forms", label: "Form controls" },
   { id: "display", label: "Display" },
@@ -179,6 +200,134 @@ export default function DesignSystemPage() {
           </a>
         ))}
       </nav>
+
+      {/* ---------------- Typography ---------------- */}
+      <Section
+        id="typography"
+        title="Typography"
+        description="22 named styles. One class sets size, line-height, weight and tracking together. Font sizes are always even; 12px is the floor."
+      >
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-2xs">
+          <h3 className="pt-3 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Display — landing page only
+          </h3>
+          <TypeSpec token="text-display-lg" meta="48 / 1.05 · 700 · −0.025em">
+            <p className="text-display-lg">Understand your kidneys</p>
+          </TypeSpec>
+          <TypeSpec token="text-display-md" meta="40 / 1.10 · 700 · −0.02em">
+            <p className="text-display-md">Membership that fits</p>
+          </TypeSpec>
+
+          <h3 className="pt-6 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Heading — 32 · 28 · 24 · 20 · 16
+          </h3>
+          <TypeSpec token="text-heading-1" meta="32 / 1.20 · 700 · <h1>">
+            <p className="text-heading-1">My Health Overview</p>
+          </TypeSpec>
+          <TypeSpec token="text-heading-2" meta="28 / 1.25 · 700 · <h2>">
+            <p className="text-heading-2">Alerts &amp; Insights</p>
+          </TypeSpec>
+          <TypeSpec token="text-heading-3" meta="24 / 1.30 · 600 · <h3>">
+            <p className="text-heading-3">Avg. Fluid Intake</p>
+          </TypeSpec>
+          <TypeSpec token="text-heading-4" meta="20 / 1.35 · 600 · <h4>">
+            <p className="text-heading-4">Interdialytic Weight Gain</p>
+          </TypeSpec>
+          <TypeSpec token="text-heading-5" meta="16 / 1.40 · 600 · <h5>">
+            <p className="text-heading-5">Condition / History</p>
+          </TypeSpec>
+
+          <h3 className="pt-6 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Body — reading text
+          </h3>
+          <TypeSpec token="text-body-lg" meta="18 / 1.60 · 400 · long-form">
+            <p className="text-body-lg measure">
+              Record your pre- and post-treatment weight after each session so
+              your care team can see the trend rather than a single reading.
+            </p>
+          </TypeSpec>
+          <TypeSpec token="text-body-md" meta="16 / 1.55 · 400 · THE DEFAULT">
+            <p className="text-body-md measure">
+              Your nephrologist reviews these entries before each monthly
+              visit. Target interdialytic weight gain is under 4% of dry
+              weight.
+            </p>
+          </TypeSpec>
+          <TypeSpec token="text-body-sm" meta="14 / 1.50 · 400 · dense UI">
+            <p className="text-body-sm measure">
+              Used in table cells and compact rows — not for passages a member
+              has to read.
+            </p>
+          </TypeSpec>
+
+          <h3 className="pt-6 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Label &amp; caption — fixed line-height
+          </h3>
+          <TypeSpec token="text-label-lg" meta="16 / 24px · 500 · form labels">
+            <p className="text-label-lg">Pre-treatment weight</p>
+          </TypeSpec>
+          <TypeSpec token="text-label-md" meta="14 / 20px · 500 · nav, tabs, th">
+            <p className="text-label-md">All Categories</p>
+          </TypeSpec>
+          <TypeSpec token="text-label-sm" meta="12 / 16px · 500 · badges">
+            <p className="text-label-sm">At Target EDW</p>
+          </TypeSpec>
+          <TypeSpec token="text-overline" meta="12 / 16px · 600 · +0.08em">
+            <p className="text-overline text-slate-500">Blood Counts</p>
+          </TypeSpec>
+          <TypeSpec token="text-caption" meta="12 / 18px · 400 · the floor">
+            <p className="text-caption text-slate-500">
+              Last synced 14 minutes ago · Session 3 of 3 this week
+            </p>
+          </TypeSpec>
+
+          <h3 className="pt-6 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Metric — tabular-nums built in
+          </h3>
+          <TypeSpec token="text-metric-xl" meta="40 / 44px · 700 · hero number">
+            <p className="text-metric-xl">72.4</p>
+          </TypeSpec>
+          <TypeSpec token="text-metric-lg" meta="32 / 36px · 700 · stat card">
+            <p className="text-metric-lg">1,240</p>
+          </TypeSpec>
+          <TypeSpec token="text-metric-md" meta="24 / 28px · 600 · secondary">
+            <p className="text-metric-md">138 / 86</p>
+          </TypeSpec>
+          <TypeSpec token="text-metric-sm" meta="16 / 20px · 600 · in tables">
+            <p className="text-metric-sm">8.2 mg/dL</p>
+          </TypeSpec>
+
+          <h3 className="pt-6 pb-1 text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Interactive
+          </h3>
+          <TypeSpec token="text-button-lg" meta="16 / 24px · 600">
+            <p className="text-button-lg">Log Treatment</p>
+          </TypeSpec>
+          <TypeSpec token="text-button-md" meta="14 / 20px · 600">
+            <p className="text-button-md">Add appointment</p>
+          </TypeSpec>
+          <TypeSpec token="text-link" meta="inherits size · 500 · underlined">
+            <p className="text-body-md">
+              Read the{" "}
+              <a href="#typography" className="text-link text-[#2563EB]">
+                fluid intake guide
+              </a>{" "}
+              before your next session.
+            </p>
+          </TypeSpec>
+        </div>
+
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-body-sm text-blue-900">
+            <strong className="font-semibold">Why numbers get their own styles.</strong>{" "}
+            The four <code className="rounded bg-white/70 px-1 text-xs">metric-*</code>{" "}
+            styles carry <code className="rounded bg-white/70 px-1 text-xs">font-variant-numeric: tabular-nums</code>{" "}
+            so digits keep equal width — a weight reading does not jump sideways
+            going from 9.8 to 10.2, and a lab column stays aligned. Only 3 uses
+            of tabular-nums existed in the entire codebase before these tokens.
+          </p>
+        </div>
+      </Section>
 
       {/* ---------------- Buttons ---------------- */}
       <Section

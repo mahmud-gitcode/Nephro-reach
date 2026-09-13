@@ -1,0 +1,232 @@
+/* ==========================================================================
+   NephroReach — Typography tokens
+   --------------------------------------------------------------------------
+   22 named styles. One class sets size, line-height, weight and tracking
+   together — never `text-2xl font-bold tracking-tight` at a call site.
+
+   Rules this file encodes:
+     · Font sizes are ALWAYS even. 48 40 32 28 24 20 18 16 14 12.
+     · 10px does not exist. 12px is the floor — this app is used by people
+       with diabetic retinopathy and age-related vision loss.
+     · Multi-line text uses a unitless line-height RATIO (scales, never
+       compounds). Single-line UI text uses a FIXED px line-height, because
+       those styles sit in fixed-height controls where 14 x 1.25 = 17.5px
+       would make a 44px button impossible to hit exactly.
+     · Ratio falls as size rises; tracking goes negative as size rises.
+       12px text gets slightly POSITIVE tracking — small type needs air.
+     · Four weights only: 400 / 500 / 600 / 700.
+
+   Default colour per style is defined in tokens/colour.css, not here.
+   ========================================================================== */
+
+@theme {
+  /* ---- weights ------------------------------------------------------- */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ======================================================================
+     DISPLAY — landing page only. Never inside the app.
+     ====================================================================== */
+
+  /* 48/1.05 · landing hero headline. One per page, maximum. */
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 1.05;
+  --text-display-lg--font-weight: 700;
+  --text-display-lg--letter-spacing: -0.025em;
+
+  /* 40/1.10 · pricing headline, About Us hero, campaign section openers. */
+  --text-display-md: 2.5rem;
+  --text-display-md--line-height: 1.1;
+  --text-display-md--font-weight: 700;
+  --text-display-md--letter-spacing: -0.02em;
+
+  /* ======================================================================
+     HEADING — structure inside the app. Binds to <h1>..<h5>.
+     Ramp is 32 · 28 · 24 · 20 · 16 — even steps of 4.
+     Adjacent levels differ by only 1.14x at the tight end, so never place
+     two adjacent levels as siblings. Skip a step.
+     ====================================================================== */
+
+  /* 32/1.20 · the page title. Exactly one per route. */
+  --text-heading-1: 2rem;
+  --text-heading-1--line-height: 1.2;
+  --text-heading-1--font-weight: 700;
+  --text-heading-1--letter-spacing: -0.02em;
+
+  /* 28/1.25 · major section breaks. "Alerts & Insights", "Blood Counts". */
+  --text-heading-2: 1.75rem;
+  --text-heading-2--line-height: 1.25;
+  --text-heading-2--font-weight: 700;
+  --text-heading-2--letter-spacing: -0.015em;
+
+  /* 24/1.30 · card titles, panel headers, modal titles. */
+  --text-heading-3: 1.5rem;
+  --text-heading-3--line-height: 1.3;
+  --text-heading-3--font-weight: 600;
+  --text-heading-3--letter-spacing: -0.01em;
+
+  /* 20/1.35 · sub-sections in a card, accordion headers, FAQ questions. */
+  --text-heading-4: 1.25rem;
+  --text-heading-4--line-height: 1.35;
+  --text-heading-4--font-weight: 600;
+  --text-heading-4--letter-spacing: -0.005em;
+
+  /* 16/1.40 · smallest heading. Compact card headers, sidebar groups. */
+  --text-heading-5: 1rem;
+  --text-heading-5--line-height: 1.4;
+  --text-heading-5--font-weight: 600;
+  --text-heading-5--letter-spacing: 0em;
+
+  /* ======================================================================
+     BODY — reading text. Gets max-width 65ch in reading contexts.
+     body-lg (18) is larger than heading-5 (16) on purpose: an intro
+     paragraph may outsize the smallest heading. Weight and colour keep
+     them apart.
+     ====================================================================== */
+
+  /* 18/1.60 · long-form reading. Education Center, Before-the-ER articles. */
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 400;
+  --text-body-lg--letter-spacing: 0em;
+
+  /* 16/1.55 · THE DEFAULT for patient-facing content. */
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.55;
+  --text-body-md--font-weight: 400;
+  --text-body-md--letter-spacing: 0em;
+
+  /* 14/1.50 · dense UI only. Table cells, compact rows, secondary detail. */
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.5;
+  --text-body-sm--font-weight: 400;
+  --text-body-sm--letter-spacing: 0em;
+
+  /* ======================================================================
+     LABEL — names things. Not read as prose, so line-height is fixed.
+     ====================================================================== */
+
+  /* 16/24 · form field labels. Always a real <label>, never a placeholder. */
+  --text-label-lg: 1rem;
+  --text-label-lg--line-height: 1.5rem;
+  --text-label-lg--font-weight: 500;
+  --text-label-lg--letter-spacing: 0em;
+
+  /* 14/20 · table column headers, tab labels, sidebar nav, filter chips. */
+  --text-label-md: 0.875rem;
+  --text-label-md--line-height: 1.25rem;
+  --text-label-md--font-weight: 500;
+  --text-label-md--letter-spacing: 0em;
+
+  /* 12/16 · badges and status pills. "At Target EDW", "Above Goal". */
+  --text-label-sm: 0.75rem;
+  --text-label-sm--line-height: 1rem;
+  --text-label-sm--font-weight: 500;
+  --text-label-sm--letter-spacing: 0.01em;
+
+  /* Overline lives below as a utility, not here — uppercase has to travel
+     with the style, and @theme cannot set text-transform. */
+
+  /* ======================================================================
+     CAPTION — supporting detail. 12px is the floor; nothing goes below.
+     ====================================================================== */
+
+  /* 12/18 · timestamps, units, helper text, chart axis labels. */
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.125rem;
+  --text-caption--font-weight: 400;
+  --text-caption--letter-spacing: 0.01em;
+
+  /* ======================================================================
+     BUTTON — applied inside the Button component, never at a call site.
+     size="sm" reuses button-md type and only tightens its box.
+     ====================================================================== */
+
+  --text-button-lg: 1rem;
+  --text-button-lg--line-height: 1.5rem;
+  --text-button-lg--font-weight: 600;
+  --text-button-lg--letter-spacing: 0em;
+
+  --text-button-md: 0.875rem;
+  --text-button-md--line-height: 1.25rem;
+  --text-button-md--font-weight: 600;
+  --text-button-md--letter-spacing: 0em;
+}
+
+/* ==========================================================================
+   METRIC — numbers that change: weight, blood pressure, lab values.
+
+   These are written as full utilities rather than @theme entries so that
+   `font-variant-numeric: tabular-nums` travels WITH the style and cannot be
+   forgotten. Without it a value jitters as it goes from 9.8 to 10.2, and a
+   lab column stops lining up. Only 3 uses of tabular-nums existed in the
+   whole codebase before this file.
+   ========================================================================== */
+
+@utility text-metric-xl {
+  /* 40/44 · the single hero number on a dashboard. Today's weight. */
+  font-size: 2.5rem;
+  line-height: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-metric-lg {
+  /* 32/36 · primary stat-card values. */
+  font-size: 2rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-metric-md {
+  /* 24/28 · secondary stats, comparison values, sparkline endpoints. */
+  font-size: 1.5rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-metric-sm {
+  /* 16/20 · inline values in tables. Creatinine, Albumin, BP readings. */
+  font-size: 1rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Composite utilities
+   ========================================================================== */
+
+/* 12/16 · category eyebrows above a heading. "BLOOD COUNTS".
+   Uppercase is part of the style — never add `uppercase` at a call site. */
+@utility text-overline {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Inline text links. The underline is NOT optional — colour alone fails
+   WCAG 1.4.1 and fails entirely for colour-blind readers. Size is
+   inherited from the surrounding text style. */
+@utility text-link {
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Reading measure. 45-75 characters per line; beyond that the eye loses
+   its place on the return sweep. Apply to body-lg / body-md in article
+   and long-form contexts. */
+@utility measure {
+  max-width: 65ch;
+}

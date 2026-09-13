@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./tokens/typography.css";
 
 :root {
   --background: #ffffff;
