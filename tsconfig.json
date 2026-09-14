@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -26,8 +27,11 @@
   "include": [
     "next-env.d.ts",
     "src/**/*.ts",
+    "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.mts",
+    "vitest.config.mts",
+    "vitest.setup.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

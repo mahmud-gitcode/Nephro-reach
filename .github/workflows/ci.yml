@@ -42,6 +42,10 @@ jobs:
         if: always()
         run: npm run format:check
 
+      - name: Tests
+        if: always()
+        run: npm run test
+
       - name: Build
         if: always()
         run: npm run build
