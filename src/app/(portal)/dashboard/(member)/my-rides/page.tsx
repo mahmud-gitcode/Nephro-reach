@@ -265,6 +265,7 @@ export default function MyRidesPage() {
                         {rides.length > 1 && (
                           <Button
                             variant="danger"
+                            appearance="fill-stroke"
                             size="small"
                             iconOnly
                             onClick={() => handleDeleteRide(ride.id, ride.name)}

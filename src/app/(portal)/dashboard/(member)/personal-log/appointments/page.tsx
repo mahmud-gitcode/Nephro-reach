@@ -181,7 +181,12 @@ function UpcomingAppointments({ items }: { items: AppointmentItem[] }) {
   const { t } = useLanguage();
 
   return (
-    <Card as="section" tone="sunken" padding="small">
+    <Card
+      as="section"
+      tone="default"
+      padding="small"
+      className="border border-line bg-white shadow-card"
+    >
       <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.upcomingTitle")}
       </h2>
@@ -208,7 +213,12 @@ function NextAppointment() {
   const { language, t } = useLanguage();
 
   return (
-    <Card as="section" tone="sunken" padding="small">
+    <Card
+      as="section"
+      tone="default"
+      padding="small"
+      className="border border-line bg-white shadow-card"
+    >
       <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.nextTitle")}
       </h2>

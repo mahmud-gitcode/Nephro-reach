@@ -103,7 +103,11 @@ function UpcomingAppointments() {
   const { t } = useLanguage();
 
   return (
-    <Card tone="sunken" as="section" className="space-y-stack-md">
+    <Card
+      tone="default"
+      as="section"
+      className="space-y-stack-md border border-line bg-white shadow-card"
+    >
       <div className="flex items-center justify-between gap-inline-lg">
         <h2 className="text-heading-5 text-fg">
           {t("personalLogHub.upcoming.title")}
@@ -120,7 +124,7 @@ function UpcomingAppointments() {
         </Link>
       </div>
 
-      <Card padding="none">
+      <Card tone="sunken" padding="none">
         <EmptyState variant="bare" title={t("personalLogHub.upcoming.empty")} />
       </Card>
     </Card>
@@ -141,7 +145,11 @@ function HealthcareTeam() {
   };
 
   return (
-    <Card tone="sunken" as="section" className="space-y-stack-md">
+    <Card
+      tone="default"
+      as="section"
+      className="space-y-stack-md border border-line bg-white shadow-card"
+    >
       <div>
         <h2 className="text-heading-5 text-fg">
           {t("personalLogHub.team.title")}
@@ -167,7 +175,7 @@ function HealthcareTeam() {
         {t("personalLogHub.team.note")}
       </p>
 
-      <Card padding="none">
+      <Card padding="none" className="border border-line-subtle bg-white">
         {clinicians.length === 0 ? (
           <EmptyState variant="bare" title={t("personalLogHub.team.empty")} />
         ) : (

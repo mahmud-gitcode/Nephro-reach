@@ -133,6 +133,12 @@ const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
+    label: "Testimonials Moderation",
+    href: "/dashboard/admin-testimonials",
+    icon: Video,
+    roles: ["admin"],
+  },
+  {
     label: "Design System",
     href: "/dashboard/design-system",
     icon: Palette,
@@ -264,6 +270,10 @@ function getBreadcrumb(pathname: string, language?: string) {
       : "Notification Analytics";
   if (pathname.startsWith("/dashboard/subscriptions"))
     return language === "ES" ? "Suscripciones" : "Subscriptions";
+  if (pathname.startsWith("/dashboard/admin-testimonials"))
+    return language === "ES"
+      ? "Moderación de Testimonios"
+      : "Testimonials Moderation";
   if (pathname.startsWith("/dashboard/admin-reviews"))
     return language === "ES" ? "Moderación de Reseñas" : "Reviews Moderation";
   if (pathname.startsWith("/dashboard/reviews"))
@@ -298,6 +308,7 @@ function getNavLabel(
     "/dashboard/subscriptions": "Suscripciones",
     "/dashboard/reviews": "Reseñas",
     "/dashboard/admin-reviews": "Moderación de Reseñas",
+    "/dashboard/admin-testimonials": "Moderación de Testimonios",
     "/dashboard/design-system": "Sistema de Diseño",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",

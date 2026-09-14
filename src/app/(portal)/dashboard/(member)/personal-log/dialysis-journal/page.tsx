@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { BookOpen, ChevronDown, Plus } from "lucide-react";
+import { AlertTriangle, BookOpen, ChevronDown, Lock, Plus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { checkFlaggedMedicalContent } from "@/app/(portal)/dashboard/(member)/community/page";
 import {
+  Badge,
   Button,
   Card,
   Chip,
@@ -57,6 +59,7 @@ function NewEntryModal({
 
   const [mood, setMood] = useState("Calm");
   const [notes, setNotes] = useState("");
+  const isFlaggedMedical = checkFlaggedMedicalContent(notes);
 
   const moodOptions = [
     { key: "Positive", label: dj?.modal?.moods?.positive || "Positive" },
@@ -134,6 +137,33 @@ function NewEntryModal({
             />
           )}
         </FormField>
+
+        {isFlaggedMedical && (
+          <div className="bg-warning-soft text-warning-fg space-y-1 rounded-control border border-warning-line p-3 text-xs">
+            <div className="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle className="size-4 shrink-0 text-warning" />
+              <span>
+                {language === "ES"
+                  ? "Aviso de Seguridad y Privacidad"
+                  : "Private Journal Safety Reminder"}
+              </span>
+            </div>
+            <p>
+              {language === "ES"
+                ? "Su diario es 100% privado y puede guardar cualquier palabra libremente. Recuerde que su diario no se monitorea para emergencias médicas. Si necesita ayuda urgente o experimenta síntomas graves, no use su diario para contactar a su equipo; llame al 911 o a su centro de diálisis."
+                : "Your journal is private and you may save any entries freely. Please note that private journals are not monitored for medical emergencies. If you need immediate help, do not use your journal to contact your care team—call 911 or your doctor directly."}
+            </p>
+          </div>
+        )}
+
+        <p className="flex items-center gap-1.5 text-caption text-fg-muted">
+          <Lock className="size-3.5 shrink-0 text-fg-muted" />
+          <span>
+            {language === "ES"
+              ? "Las entradas del diario son completamente privadas y solo usted puede verlas."
+              : "Journal entries are strictly private to your account and never shared."}
+          </span>
+        </p>
       </div>
     </Modal>
   );
@@ -250,6 +280,60 @@ export default function DialysisJournalPage() {
   return (
     <div className="space-y-stack-xl">
       <PersonalLogDisclaimer />
+
+      {/* Standing Private Journal Notice per Jonlg09 Medical Safety Policy */}
+      <aside
+        role="note"
+        aria-label="Journal Privacy Notice"
+        className="rounded-card border border-primary-soft-line bg-surface p-inset-md shadow-xs"
+      >
+        <div className="flex items-start gap-inline-md">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary-fg">
+            <Lock className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="text-label-md font-semibold text-fg">
+                {language === "ES"
+                  ? "Su diario es privado"
+                  : "Your Journal is Private"}
+              </p>
+              <Badge tone="neutral" variant="soft">
+                {language === "ES" ? "No monitoreado" : "Unmonitored"}
+              </Badge>
+            </div>
+            <p className="text-body-sm text-fg-secondary">
+              {language === "ES" ? (
+                <>
+                  <strong className="font-semibold text-fg">
+                    Su diario es privado y no se monitorea para emergencias
+                    médicas.
+                  </strong>{" "}
+                  Si necesita ayuda inmediata,{" "}
+                  <strong className="font-semibold text-danger-fg">
+                    no use su diario para comunicarse con su equipo de atención
+                    médica
+                  </strong>
+                  ; llame al 911 o acuda a urgencias.
+                </>
+              ) : (
+                <>
+                  <strong className="font-semibold text-fg">
+                    Your journal is private and is not monitored for medical
+                    emergencies.
+                  </strong>{" "}
+                  If you need immediate help,{" "}
+                  <strong className="font-semibold text-danger-fg">
+                    do not use your journal to contact your care team
+                  </strong>
+                  . Please call 911 or contact your clinic or emergency care
+                  provider directly.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      </aside>
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <div>

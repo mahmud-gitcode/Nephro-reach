@@ -1,14 +1,23 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Users, Video } from "lucide-react";
+import { Calendar, Users, Video, Play, Clock } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import { Badge, Button, Card, Progress } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import {
+  Testimonial,
+  getApprovedTestimonials,
+  getUserTestimonials,
+  TESTIMONIALS_EVENT,
+} from "@/features/testimonials/testimonials";
+import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
+import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
+import { useClientValue } from "@/lib/storage/useClientValue";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 
@@ -90,6 +99,8 @@ function getGreeting(dh?: GreetingStrings) {
   return dh?.greetingEvening || "Good evening";
 }
 
+const NO_TESTIMONIALS: Testimonial[] = [];
+
 export default function UserDashboard() {
   const { user } = useAuth();
   const { language, dictionary } = useLanguage();
@@ -97,6 +108,30 @@ export default function UserDashboard() {
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => getGreeting(dh), [dh]);
   const [isRideModalOpen, setIsRideModalOpen] = useState(false);
+
+  const [selectedVideo, setSelectedVideo] = useState<Testimonial | null>(null);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [approvedTestimonials, , refreshTestimonials] = useClientValue(
+    getApprovedTestimonials,
+    NO_TESTIMONIALS,
+  );
+
+  useEffect(() => {
+    window.addEventListener(TESTIMONIALS_EVENT, refreshTestimonials);
+    window.addEventListener("storage", refreshTestimonials);
+    return () => {
+      window.removeEventListener(TESTIMONIALS_EVENT, refreshTestimonials);
+      window.removeEventListener("storage", refreshTestimonials);
+    };
+  }, [refreshTestimonials]);
+
+  const userSubmissions = useMemo(
+    () => getUserTestimonials(user?.email || ""),
+    [user?.email],
+  );
+  const pendingCount = userSubmissions.filter(
+    (t) => t.status === "pending",
+  ).length;
 
   const getQuickActionLabel = (action: (typeof quickActions)[0]) => {
     switch (action.href) {
@@ -300,6 +335,119 @@ export default function UserDashboard() {
           </div>
         </div>
       </Card>
+
+      {/* From Fear to Hope Testimonials Section */}
+      <section className="space-y-stack-lg">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-heading-4 text-fg">
+                {language === "ES"
+                  ? "Testimonios: Del Miedo a la Esperanza"
+                  : "From Fear to Hope Testimonials"}
+              </h2>
+              <Badge tone="accent" variant="soft">
+                {language === "ES" ? "Historias en Video" : "Video Stories"}
+              </Badge>
+            </div>
+            <p className="mt-1 text-body-sm text-fg-muted">
+              {language === "ES"
+                ? "No estás solo — Testimonios reales en video de miembros que navegan su viaje de diálisis."
+                : "You're Not Alone — Real video journeys and personal stories from fellow kidney warriors."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {pendingCount > 0 && (
+              <span className="bg-warning-soft text-warning-fg hidden items-center gap-1 rounded-control border border-warning-line px-2.5 py-1 text-xs font-medium sm:inline-flex">
+                <Clock className="size-3" />
+                {pendingCount}{" "}
+                {language === "ES" ? "en revisión" : "under admin review"}
+              </span>
+            )}
+            <Button
+              variant="primary"
+              appearance="fill-stroke"
+              leadingIcon={<Video className="size-4" />}
+              onClick={() => setIsSubmitModalOpen(true)}
+            >
+              {language === "ES"
+                ? "Compartir Mi Historia"
+                : "Share Your Video Story"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Video Cards Grid */}
+        <div className="grid grid-cols-1 gap-inset-lg md:grid-cols-3">
+          {approvedTestimonials.map((item) => (
+            <Card
+              as="article"
+              key={item.id}
+              padding="small"
+              className="group cursor-pointer overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-raised"
+              onClick={() => setSelectedVideo(item)}
+            >
+              {/* Thumbnail Container */}
+              <div className="relative aspect-video w-full overflow-hidden rounded-card bg-slate-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={
+                    item.thumbnailUrl ||
+                    "/images/user-dashboard/testimonial.jpg"
+                  }
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/20">
+                  <span className="flex size-12 items-center justify-center rounded-pill bg-white/95 text-brand-700 shadow-md transition-transform duration-200 group-hover:scale-110">
+                    <Play className="ml-0.5 size-5 fill-current" />
+                  </span>
+                </div>
+                {/* Duration Badge */}
+                {item.duration && (
+                  <span className="absolute right-2 bottom-2 rounded bg-black/80 px-2 py-0.5 text-caption font-medium text-white backdrop-blur-xs">
+                    {item.duration}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1 p-inset-sm">
+                <div className="flex items-center justify-between pt-1 text-caption text-fg-muted">
+                  <span className="font-semibold text-fg">
+                    {item.memberName}
+                  </span>
+                  <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] text-fg-secondary">
+                    {item.role}
+                  </span>
+                </div>
+                <p className="line-clamp-1 text-label-md font-bold text-fg transition-colors group-hover:text-brand-600">
+                  {item.title}
+                </p>
+                <p className="line-clamp-2 text-caption text-fg-muted italic">
+                  &ldquo;{item.summary}&rdquo;
+                </p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Video Player Modal */}
+      <VideoPlayerModal
+        testimonial={selectedVideo}
+        open={Boolean(selectedVideo)}
+        onClose={() => setSelectedVideo(null)}
+      />
+
+      {/* Submit Testimonial Modal */}
+      <SubmitTestimonialModal
+        open={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+        user={user}
+        onSubmitted={refreshTestimonials}
+      />
 
       {/* Where's My Ride Modal.
           NOTE: nothing on this page sets isRideModalOpen — the Quick Action
