@@ -32,6 +32,7 @@ import {
 } from "@/features/education/dialysisJourneyData";
 import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useJourneyNotes } from "@/features/education/useJourneyNotes";
+import { Button, buttonStyles, Card, EmptyState } from "@/components/ui";
 
 function kindLabel(
   kind: JourneyMediaKind,
@@ -73,28 +74,25 @@ function DayStage({
   const j = dictionary?.educationJourney;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-stack-lg">
       {day.kind === "reading" ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_0_60px_rgba(0,0,0,0.06)] sm:p-7">
-          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-700">
-            <BookOpen className="h-4 w-4" />
+        <Card as="section" padding="none" className="p-inset-lg">
+          <p className="text-overline flex items-center gap-inline-md text-warning">
+            <BookOpen aria-hidden="true" className="h-4 w-4" />
             {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
             {j?.minutesShort || "min"}
           </p>
 
-          <article className="mt-4 space-y-4">
+          <article className="mt-stack-lg space-y-stack-lg">
             {day.transcript.map((cue) => (
-              <p
-                key={cue.at}
-                className="text-base leading-relaxed text-slate-700"
-              >
+              <p key={cue.at} className="measure text-body-md text-fg-secondary">
                 {isEs ? cue.textEs : cue.textEn}
               </p>
             ))}
           </article>
-        </section>
+        </Card>
       ) : (
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-900 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+        <section className="overflow-hidden rounded-card border border-line bg-surface-inverse shadow-card">
           {videoUnavailable ? (
             <div className="relative aspect-video w-full">
               <Image
@@ -107,14 +105,14 @@ function DayStage({
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
                 {day.kind === "audio" ? (
-                  <Headphones className="h-12 w-12 text-white/70" />
+                  <Headphones aria-hidden="true" className="h-12 w-12 text-fg-inverse/70" />
                 ) : (
-                  <PlayCircle className="h-12 w-12 text-white/70" />
+                  <PlayCircle aria-hidden="true" className="h-12 w-12 text-fg-inverse/70" />
                 )}
-                <p className="text-base font-semibold text-white">
+                <p className="text-label-lg text-fg-inverse">
                   {j?.videoUnavailableTitle || "Video coming soon"}
                 </p>
-                <p className="max-w-sm text-sm leading-relaxed text-white/70">
+                <p className="max-w-sm text-body-sm text-fg-inverse/70">
                   {j?.videoUnavailableBody ||
                     "The full transcript for this lesson is available below."}
                 </p>
@@ -132,8 +130,8 @@ function DayStage({
                   priority
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Headphones className="h-12 w-12 text-white/80" />
-                  <p className="text-sm font-semibold text-white/90">
+                  <Headphones aria-hidden="true" className="h-12 w-12 text-fg-inverse/80" />
+                  <p className="text-label-md text-fg-inverse/90">
                     {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
                     {j?.minutesShort || "min"}
                   </p>
@@ -164,19 +162,19 @@ function DayStage({
               preload="metadata"
               onTimeUpdate={onTimeUpdate}
               onError={onVideoError}
-              className="aspect-video w-full bg-black"
+              className="aspect-video w-full bg-surface-inverse"
             />
           )}
         </section>
       )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_0_60px_rgba(0,0,0,0.06)] sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <Card as="section" padding="small">
+        <div className="flex flex-col gap-inset-md lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold leading-8 text-slate-950 sm:text-[28px]">
+            <h1 className="text-heading-2 text-fg">
               {isEs ? day.titleEs : day.titleEn}
             </h1>
-            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
+            <p className="mt-stack-xs flex flex-wrap items-center gap-inline-sm text-label-sm text-fg-muted">
               <span>
                 {j?.dayLabel || "Day"} {day.day}
               </span>
@@ -189,40 +187,43 @@ function DayStage({
             </p>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-inline-md">
             {/* Only route to the day list below the width where the rail docks. */}
-            <button
-              type="button"
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
               onClick={onOpenDayList}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 cursor-pointer xl:hidden"
+              className="xl:hidden"
             >
-              <LayoutList className="h-4 w-4 text-slate-600" />
+              <LayoutList aria-hidden="true" />
               {j?.allDays || "All days"}
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            {/* aria-pressed: the label alone changed, so a screen reader had
+                no way to hear that this is a toggle. */}
+            <Button
+              variant={isComplete ? "neutral" : "primary"}
+              appearance={isComplete ? "fill-stroke" : "fill"}
               onClick={onToggleComplete}
-              className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition-colors cursor-pointer ${
+              aria-pressed={isComplete}
+              className={
                 isComplete
-                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "bg-[#2563EB] text-white hover:bg-blue-700"
-              }`}
+                  ? "border-success-line bg-success-surface text-success"
+                  : undefined
+              }
             >
               {isComplete ? (
-                <RotateCcw className="h-4 w-4" />
+                <RotateCcw aria-hidden="true" />
               ) : (
-                <Check className="h-4 w-4" />
+                <Check aria-hidden="true" />
               )}
-              <span>
-                {isComplete
-                  ? j?.markIncomplete || "Mark as not done"
-                  : j?.markComplete || "Mark day complete"}
-              </span>
-            </button>
+              {isComplete
+                ? j?.markIncomplete || "Mark as not done"
+                : j?.markComplete || "Mark day complete"}
+            </Button>
           </div>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
@@ -329,22 +330,19 @@ export default function JourneyDayPage() {
 
   if (!day) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-[0_0_60px_rgba(0,0,0,0.06)]">
-        <h1 className="text-xl font-semibold text-slate-950">
-          {j?.dayNotFoundTitle || "That day is not part of the journey"}
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          {j?.dayNotFoundBody ||
-            "Pick a day from the 21-Day Dialysis Journey to get started."}
-        </p>
-        <Link
-          href="/dashboard/education-center"
-          className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {j?.backToJourney || "Back to the journey"}
-        </Link>
-      </div>
+      <EmptyState
+        title={j?.dayNotFoundTitle || "That day is not part of the journey"}
+        description={
+          j?.dayNotFoundBody ||
+          "Pick a day from the 21-Day Dialysis Journey to get started."
+        }
+        action={
+          <Link href="/dashboard/education-center" className={buttonStyles()}>
+            <ArrowLeft aria-hidden="true" />
+            {j?.backToJourney || "Back to the journey"}
+          </Link>
+        }
+      />
     );
   }
 
@@ -370,16 +368,16 @@ export default function JourneyDayPage() {
     currentIndex < JOURNEY_DAYS.length - 1 ? JOURNEY_DAYS[currentIndex + 1] : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-stack-lg">
       <div
-        className={`grid gap-4 ${
+        className={`grid gap-inset-md ${
           railCollapsed
             ? "xl:grid-cols-[76px_minmax(0,1fr)]"
             : "xl:grid-cols-[360px_minmax(0,1fr)]"
         }`}
       >
         <aside className="hidden xl:block">
-          <div className="sticky top-[72px] flex h-[calc(100vh-88px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+          <div className="sticky top-[72px] flex h-[calc(100vh-88px)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-card">
             <JourneyDayList
               days={JOURNEY_DAYS}
               activeSlug={day.slug}
@@ -392,7 +390,7 @@ export default function JourneyDayPage() {
           </div>
         </aside>
 
-        <div className="flex min-w-0 gap-3 sm:gap-4">
+        <div className="flex min-w-0 gap-3 sm:gap-inset-md">
           <div className="min-w-0 flex-1">
             <DayStage
               key={day.slug}
@@ -412,9 +410,12 @@ export default function JourneyDayPage() {
               {previousDay ? (
                 <Link
                   href={`/dashboard/education-center/${previousDay.slug}`}
-                  className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300"
+                  className={buttonStyles({
+                    variant: "neutral",
+                    appearance: "fill-stroke",
+                  })}
                 >
-                  <ChevronLeft className="h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronLeft aria-hidden="true" className="shrink-0" />
                   <span className="truncate">
                     {j?.previousDay || "Previous"} · {j?.dayLabel || "Day"}{" "}
                     {previousDay.day}
@@ -430,12 +431,15 @@ export default function JourneyDayPage() {
                   onClick={() => {
                     markComplete(day.slug);
                   }}
-                  className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300"
+                  className={buttonStyles({
+                    variant: "neutral",
+                    appearance: "fill-stroke",
+                  })}
                 >
                   <span className="truncate">
                     {j?.nextDay || "Next"} · {j?.dayLabel || "Day"} {nextDay.day}
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronRight aria-hidden="true" className="shrink-0" />
                 </Link>
               )}
             </nav>
@@ -449,7 +453,7 @@ export default function JourneyDayPage() {
                 panelOpen ? "w-[340px] opacity-100" : "w-0 opacity-0"
               }`}
             >
-              <div className="flex h-full max-h-[calc(100vh-2rem)] w-[340px] flex-col rounded-3xl border border-slate-200 bg-white shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+              <div className="flex h-full max-h-[calc(100vh-2rem)] w-[340px] flex-col rounded-card border border-line bg-surface shadow-card">
                 <JourneyPanelContent
                   day={day}
                   activeTab={activePanelTab}
@@ -488,7 +492,7 @@ export default function JourneyDayPage() {
           tabIndex={dayListOpen ? 0 : -1}
           onClick={() => setDayListOpen(false)}
           aria-label={j?.closePanel || "Close panel"}
-          className={`absolute inset-0 h-full w-full cursor-default bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+          className={`absolute inset-0 h-full w-full cursor-default bg-fg/40 backdrop-blur-[2px] transition-opacity duration-300 ${
             dayListOpen ? "opacity-100" : "opacity-0"
           }`}
         />
@@ -496,22 +500,20 @@ export default function JourneyDayPage() {
           role="dialog"
           aria-modal={dayListOpen ? true : undefined}
           aria-label={j?.allDays || "All days"}
-          className={`absolute inset-y-0 left-0 flex w-full max-w-[360px] flex-col bg-white shadow-[0_0_60px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out ${
+          className={`absolute inset-y-0 left-0 flex w-full max-w-[360px] flex-col bg-surface shadow-overlay transition-transform duration-300 ease-out ${
             dayListOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
-            <h2 className="text-base font-semibold text-slate-950">
-              {j?.allDays || "All days"}
-            </h2>
+          <header className="flex items-center justify-between gap-inline-lg border-b border-line p-inset-md">
+            <h2 className="text-heading-5 text-fg">{j?.allDays || "All days"}</h2>
             <button
               type="button"
               tabIndex={dayListOpen ? 0 : -1}
               onClick={() => setDayListOpen(false)}
               aria-label={j?.closePanel || "Close panel"}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-colors duration-150 ease-standard hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              <X className="h-5 w-5" />
+              <X aria-hidden="true" className="h-5 w-5" />
             </button>
           </header>
           <div className="min-h-0 flex-1 overflow-hidden">

@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Bell, Check, Eye, X, Phone } from "lucide-react";
+import { AlertCircle, Bell, Check, Eye, Phone } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Alert, Button, buttonStyles, Card, Modal } from "@/components/ui";
 
 interface ActionConfig {
   key: "callClinic" | "seekMedical" | "monitorSymptoms" | "call911";
@@ -81,9 +82,28 @@ const SYMPTOMS: SymptomConfig[] = [
   { id: "confusion-or-mental-status-changes", key: "confusionMentalStatus", urgent: false },
 ];
 
+/* The four themes the content author can pick collapse onto the palette's
+   own meanings: "orange" and "yellow" are both a warning. */
+const ACTION_TONE: Record<string, "primary" | "danger" | "accent"> = {
+  red: "danger",
+  orange: "primary",
+  yellow: "primary",
+  blue: "primary",
+};
+
+const ACTION_ALERT_TONE: Record<
+  string,
+  "info" | "danger" | "warning" | "success"
+> = {
+  red: "danger",
+  orange: "warning",
+  yellow: "warning",
+  blue: "info",
+};
+
 export default function BeforeTheErPage() {
   const router = useRouter();
-  const { t, dictionary, language } = useLanguage();
+  const { t, dictionary } = useLanguage();
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [activeModalKey, setActiveModalKey] = useState<ActionConfig["key"] | null>(null);
@@ -126,14 +146,20 @@ export default function BeforeTheErPage() {
   return (
     <div className="space-y-4">
       {/* Disclaimer Box */}
-      <section className="rounded-2xl border border-[#FFC9C9] bg-gradient-to-r from-red-50 to-orange-50 px-6 py-6">
-        <div className="flex gap-3">
-          <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
+      {/* Kept as a section with a real <h1> rather than an <Alert>: this is
+          the page heading, not a notice that appeared in response to
+          something. It borrows the danger surface only for weight. */}
+      <section className="rounded-card border border-danger-line bg-danger-surface p-inset-lg">
+        <div className="flex gap-inline-lg">
+          <AlertCircle
+            aria-hidden="true"
+            className="mt-0.5 h-icon-big w-icon-big shrink-0 text-danger"
+          />
           <div>
-            <h1 className="text-lg font-medium leading-7 text-[#0A0A0A]">
+            <h1 className="text-heading-5 text-fg">
               {t("beforeTheEr.disclaimerTitle")}
             </h1>
-            <p className="mt-2 text-sm sm:text-base font-normal leading-relaxed text-slate-700">
+            <p className="mt-stack-sm measure text-body-md text-fg-secondary">
               {t("beforeTheEr.disclaimerText")}
             </p>
           </div>
@@ -141,218 +167,193 @@ export default function BeforeTheErPage() {
       </section>
 
       {/* Action Items Grid with Eye Icon Trigger */}
-      <section className="rounded-[14px] border border-[#E3E6F0] bg-white px-3 py-4 shadow-xs">
-        <h2 className="mb-[14px] text-2xl font-medium leading-8 text-slate-900">
+      <Card as="section" padding="small">
+        <h2 className="mb-stack-md text-heading-3 text-fg">
           {t("beforeTheEr.sectionTitle")}
         </h2>
 
-        <div className="rounded-lg border border-[#C4CDD5]">
-          <div className="rounded-[14px] border border-slate-200 bg-[#F8FAFC] p-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {ACTION_CONFIGS.map((item) => {
-                const itemTitle = t(`beforeTheEr.${item.key}.title`);
-                return (
-                  <div
-                    key={item.key}
-                    className="flex min-h-[60px] items-center justify-between gap-3 rounded-[10px] border border-slate-200 bg-white p-4 text-left text-lg font-medium leading-7 text-slate-900 transition-colors hover:border-blue-300 hover:bg-blue-50/50"
+        <Card tone="sunken" padding="small">
+          <ul className="grid grid-cols-1 gap-inline-md md:grid-cols-2">
+            {ACTION_CONFIGS.map((item) => {
+              const itemTitle = t(`beforeTheEr.${item.key}.title`);
+              return (
+                <Card
+                  key={item.key}
+                  as="li"
+                  tone="flat"
+                  padding="small"
+                  className="flex min-h-[60px] items-center justify-between gap-inline-md"
+                >
+                  <span className="truncate text-body-md text-fg">{itemTitle}</span>
+                  {/* title= is a tooltip, not a name. aria-label is. */}
+                  <Button
+                    variant="neutral"
+                    appearance="fill-stroke"
+                    className="shrink-0 px-inset-xs"
+                    onClick={() => setActiveModalKey(item.key)}
+                    aria-label={t("beforeTheEr.viewDetailsFor").replace(
+                      "{item}",
+                      itemTitle,
+                    )}
                   >
-                    <span className="truncate">{itemTitle}</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveModalKey(item.key)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors cursor-pointer"
-                      title={t("beforeTheEr.viewDetailsFor").replace("{item}", itemTitle)}
-                    >
-                      <Eye className="h-5 w-5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+                    <Eye aria-hidden="true" />
+                  </Button>
+                </Card>
+              );
+            })}
+          </ul>
+        </Card>
+      </Card>
 
       {/* Symptoms Checkbox List */}
-      <section className="rounded-[14px] border border-[#E3E6F0] bg-white px-3 py-4 shadow-xs">
-        <div className="mb-[14px] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card as="section" padding="small">
+        <div className="mb-stack-md flex flex-col gap-inset-md md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-medium leading-8 text-slate-900">
+            <h2 className="text-heading-3 text-fg">
               {t("beforeTheEr.notFeelingBestTitle")}
             </h2>
-            <p className="mt-2 text-base font-medium leading-6 text-slate-700">
+            <p className="mt-stack-sm measure text-body-md text-fg-secondary">
               {t("beforeTheEr.notFeelingBestSubtitle")}
             </p>
           </div>
-          <button
-            type="button"
+          <Button
             disabled={selectedCount === 0}
             onClick={handleGetGuidance}
-            className={`flex h-12 items-center justify-center rounded border px-4 text-base font-bold transition-colors ${
-              selectedCount === 0
-                ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
-                : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-            }`}
+            className="shrink-0"
           >
             {t("beforeTheEr.getGuidance")}
-          </button>
+          </Button>
         </div>
 
-        <div className="rounded-lg border border-[#C4CDD5]">
-          <div className="rounded-[14px] border border-slate-200 bg-[#F8FAFC] p-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {SYMPTOMS.map((symptom) => {
-                const checked = selectedSymptoms.includes(symptom.id);
-                const label = t(`beforeTheEr.symptomsList.${symptom.key}`);
+        <Card tone="sunken" padding="small">
+          {/* These were plain buttons drawing a checkbox. A screen reader
+              heard "button" and never whether the symptom was ticked. */}
+          <div
+            role="group"
+            aria-label={t("beforeTheEr.notFeelingBestTitle")}
+            className="grid grid-cols-1 gap-inline-md md:grid-cols-2"
+          >
+            {SYMPTOMS.map((symptom) => {
+              const checked = selectedSymptoms.includes(symptom.id);
+              const label = t(`beforeTheEr.symptomsList.${symptom.key}`);
 
-                return (
-                  <button
-                    key={symptom.id}
-                    type="button"
-                    onClick={() => toggleSymptom(symptom.id)}
-                    className={`flex min-h-16 items-center gap-3 rounded-[10px] bg-white p-[18px] text-left transition-colors cursor-pointer ${
-                      symptom.urgent
-                        ? "border-2 border-red-300 hover:bg-red-50"
-                        : "border border-slate-200 hover:bg-blue-50"
-                    } ${checked ? "ring-2 ring-blue-200" : ""}`}
+              return (
+                <button
+                  key={symptom.id}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked}
+                  onClick={() => toggleSymptom(symptom.id)}
+                  className={`flex min-h-16 cursor-pointer items-center gap-inline-lg rounded-card bg-surface p-inset-md text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                    symptom.urgent
+                      ? "border-2 border-danger-line hover:bg-danger-surface"
+                      : "border border-line hover:bg-primary-soft"
+                  } ${checked ? "ring-2 ring-ring" : ""}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control-small border-2 ${
+                      checked
+                        ? "border-primary-solid bg-primary-solid text-primary-on-solid"
+                        : "border-line bg-surface"
+                    }`}
                   >
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${
-                        checked
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    >
-                      {checked && <Check className="h-3.5 w-3.5" />}
-                    </span>
-                    <span className="text-lg font-medium leading-7 text-slate-900">
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                    {checked && <Check className="h-3.5 w-3.5" />}
+                  </span>
+                  <span className="text-body-md text-fg">{label}</span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-      </section>
+        </Card>
+      </Card>
 
       {/* EYE BUTTON DETAILS POPUP MODAL */}
       {activeConfig && modalData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs transition-opacity"
-          onClick={() => setActiveModalKey(null)}
-        >
-          <div
-            className="flex flex-col w-full max-w-2xl max-h-[90vh] rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6 pb-4 bg-white shrink-0">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 leading-tight">
-                  {modalData.title}
-                </h3>
-                <p className="text-sm font-medium text-slate-600 mt-1 leading-relaxed">
-                  {modalData.purpose}
-                </p>
-              </div>
-              <button
-                type="button"
+        <Modal
+          open
+          onClose={() => setActiveModalKey(null)}
+          size="wide"
+          title={modalData.title}
+          description={modalData.purpose}
+          footer={
+            <>
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
                 onClick={() => setActiveModalKey(null)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer shrink-0"
               >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+                {t("beforeTheEr.close")}
+              </Button>
 
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Reminder Banner */}
-              <div
-                className={`flex items-start gap-3 rounded-2xl p-4 text-sm font-bold leading-relaxed ${
-                  activeConfig.colorTheme === "red"
-                    ? "bg-red-50 text-red-900 border border-red-200"
-                    : activeConfig.colorTheme === "orange"
-                    ? "bg-amber-50 text-amber-900 border border-amber-200"
-                    : activeConfig.colorTheme === "yellow"
-                    ? "bg-yellow-50 text-yellow-900 border border-yellow-200"
-                    : "bg-blue-50 text-blue-900 border border-blue-200"
-                }`}
-              >
-                <Bell className="h-5 w-5 shrink-0 mt-0.5" />
-                <span className="break-words">{modalData.reminder}</span>
-              </div>
+              {activeConfig.secondaryActionHref &&
+                activeConfig.secondaryActionKey && (
+                  <Link
+                    href={activeConfig.secondaryActionHref}
+                    className={buttonStyles({
+                      variant: "neutral",
+                      appearance: "fill-stroke",
+                    })}
+                  >
+                    {t(`beforeTheEr.${activeConfig.secondaryActionKey}`)}
+                  </Link>
+                )}
 
-              {/* Symptoms Bullet List */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  {t("beforeTheEr.suggestedTopics")}
-                </h4>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-medium text-slate-700">
-                  {Array.isArray(modalData.symptoms) &&
-                    modalData.symptoms.map((symptomName, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-200/80 break-words whitespace-normal"
-                      >
-                        <span className="text-blue-600 font-bold text-base leading-none">•</span>
-                        <span className="leading-snug">{symptomName}</span>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 p-6 pt-4 bg-slate-50/50 shrink-0">
               {activeConfig.isCallLink ? (
                 <a
                   href={activeConfig.callActionHref}
-                  className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-colors shadow-sm ${
-                    activeConfig.colorTheme === "red"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : activeConfig.colorTheme === "orange"
-                      ? "bg-amber-600 hover:bg-amber-700"
-                      : activeConfig.colorTheme === "yellow"
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-slate-950"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  className={buttonStyles({
+                    variant: ACTION_TONE[activeConfig.colorTheme],
+                  })}
                 >
-                  <Phone className="h-4 w-4" />
+                  <Phone aria-hidden="true" />
                   {modalData.callAction}
                 </a>
               ) : (
                 <Link
                   href={activeConfig.callActionHref}
-                  className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-colors shadow-sm ${
-                    activeConfig.colorTheme === "yellow"
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-slate-950"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  className={buttonStyles({
+                    variant: ACTION_TONE[activeConfig.colorTheme],
+                  })}
                 >
                   {modalData.callAction}
                 </Link>
               )}
+            </>
+          }
+        >
+          <div className="space-y-stack-xl">
+            {/* Reminder Banner */}
+            <Alert
+              tone={ACTION_ALERT_TONE[activeConfig.colorTheme]}
+              live={false}
+              icon={<Bell />}
+            >
+              {modalData.reminder}
+            </Alert>
 
-              {activeConfig.secondaryActionHref && activeConfig.secondaryActionKey && (
-                <Link
-                  href={activeConfig.secondaryActionHref}
-                  className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-colors shadow-xs"
-                >
-                  {t(`beforeTheEr.${activeConfig.secondaryActionKey}`)}
-                </Link>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setActiveModalKey(null)}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shadow-xs"
-              >
-                {t("beforeTheEr.close")}
-              </button>
+            {/* Symptoms Bullet List */}
+            <div className="space-y-stack-md">
+              <h4 className="text-overline text-fg-muted">
+                {t("beforeTheEr.suggestedTopics")}
+              </h4>
+              <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
+                {Array.isArray(modalData.symptoms) &&
+                  modalData.symptoms.map((symptomName, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-inline-md rounded-control border border-line bg-surface-sunken p-inset-sm text-body-sm break-words text-fg-secondary"
+                    >
+                      <span aria-hidden="true" className="text-fg-brand">
+                        •
+                      </span>
+                      <span>{symptomName}</span>
+                    </li>
+                  ))}
+              </ul>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

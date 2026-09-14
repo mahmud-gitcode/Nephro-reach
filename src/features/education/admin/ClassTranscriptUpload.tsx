@@ -144,7 +144,7 @@ export default function ClassTranscriptUpload({
           onChange={(event) =>
             setLanguage(event.target.value as CaptionLanguage)
           }
-          className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 outline-none hover:bg-slate-50 focus:border-blue-500 cursor-pointer"
+          className="rounded-control border border-line bg-surface px-2.5 py-2 text-xs font-bold text-fg-secondary outline-none hover:bg-surface-sunken focus:border-primary-edge cursor-pointer"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -153,7 +153,7 @@ export default function ClassTranscriptUpload({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
         >
           <Upload className="h-3.5 w-3.5" />
           Upload transcript
@@ -161,14 +161,14 @@ export default function ClassTranscriptUpload({
       </div>
 
       {error && (
-        <p className="flex gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-900">
+        <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-[11px] font-medium leading-relaxed text-warning">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {error}
         </p>
       )}
 
       {durationMismatch && (
-        <p className="flex gap-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-red-800">
+        <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-[11px] font-medium leading-relaxed text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           This transcript ends at {formatClock(lastCueAt)} but the media is only{" "}
           {formatClock(mediaSeconds ?? 0)} long. The two may not belong
@@ -177,7 +177,7 @@ export default function ClassTranscriptUpload({
       )}
 
       {loaded.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
           No transcript uploaded yet.
         </p>
       ) : (
@@ -185,16 +185,16 @@ export default function ClassTranscriptUpload({
           {loaded.map((entry) => (
             <li
               key={entry.code}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+              className="flex items-center gap-3 rounded-control border border-line bg-surface p-3"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand">
                 <Captions className="h-4.5 w-4.5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-slate-900">
+                <span className="block text-sm font-semibold text-fg">
                   {LANGUAGE_NAME[entry.code]}
                 </span>
-                <span className="block text-xs font-medium text-slate-500">
+                <span className="block text-xs font-medium text-fg-muted">
                   {entry.lines} lines
                 </span>
               </span>
@@ -203,7 +203,7 @@ export default function ClassTranscriptUpload({
                 type="button"
                 onClick={() => exportLanguage(entry.code)}
                 aria-label={`Download ${LANGUAGE_NAME[entry.code]} transcript`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
               >
                 <Download className="h-4 w-4" />
               </button>
@@ -211,7 +211,7 @@ export default function ClassTranscriptUpload({
                 type="button"
                 onClick={() => removeLanguage(entry.code)}
                 aria-label={`Remove ${LANGUAGE_NAME[entry.code]} transcript`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

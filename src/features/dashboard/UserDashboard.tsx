@@ -3,45 +3,53 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Phone, Pencil, Star, X } from "lucide-react";
+import { Star } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
+import { Button, Card } from "@/components/ui";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 
 function Icon({ src, className }: { src: string; className?: string }) {
   return (
     <span className={`relative block size-6 overflow-clip ${className ?? ""}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element --
+          a small local decorative SVG; next/image cannot optimise SVG and
+          would only add a wrapper and a layout pass. */}
       <img src={src} alt="" className="size-full" />
     </span>
   );
 }
 
+/* NOTE: these eight tints are categories, not states, and the palette has
+   no categorical ramp yet — so they borrow the status surfaces. It reads
+   fine (Before-the-ER on danger, Classes on success) but it is the third
+   place this gap has come up. A proper categorical ramp would replace them. */
 const quickActions = [
   {
     label: "Where's My Ride",
     href: "/dashboard/my-rides",
     icon: "quick-car.svg",
-    tone: "bg-[#DBEAFE]",
+    tone: "bg-primary-soft",
   },
   {
     label: "Education Center",
     href: "/dashboard/education-center",
     icon: "quick-book.svg",
-    tone: "bg-[#F3E8FF]",
+    tone: "bg-accent-soft",
   },
   {
     label: "Community",
     href: "/dashboard/community",
     icon: "quick-messages.svg",
-    tone: "bg-[#DCFCE7]",
+    tone: "bg-success-surface",
   },
   {
     label: "Before the ER™",
     href: "/dashboard/before-the-er",
     icon: "quick-info.svg",
-    tone: "bg-[#FFE2E2]",
+    tone: "bg-danger-surface",
   },
 ];
 
@@ -50,25 +58,25 @@ const stats = [
     label: "Journal Entries",
     value: "1,247",
     icon: "stat-users.svg",
-    tone: "bg-[#DBEAFE]",
+    tone: "bg-primary-soft",
   },
   {
     label: "Notification Check-ins",
     value: "78%",
     icon: "stat-clipboard.svg",
-    tone: "bg-[#EDFF9F]",
+    tone: "bg-warning-surface",
   },
   {
     label: "Curriculum Progress",
     value: "892",
     icon: "stat-book.svg",
-    tone: "bg-[#F3E8FF]",
+    tone: "bg-accent-soft",
   },
   {
     label: "Classes Attended",
     value: "2",
     icon: "stat-video.svg",
-    tone: "bg-[#D0FAE5]",
+    tone: "bg-success-surface",
   },
 ];
 
@@ -87,7 +95,13 @@ const testimonials = [
   },
 ];
 
-function getGreeting(dh?: any) {
+type GreetingStrings = {
+  greetingMorning?: string;
+  greetingAfternoon?: string;
+  greetingEvening?: string;
+};
+
+function getGreeting(dh?: GreetingStrings) {
   const hour = new Date().getHours();
   if (hour < 12) return dh?.greetingMorning || "Good morning";
   if (hour < 17) return dh?.greetingAfternoon || "Good afternoon";
@@ -134,16 +148,16 @@ export default function UserDashboard() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-[32px] font-medium leading-none text-[#0F172A]">
+    <div className="space-y-stack-lg">
+      <h1 className="text-heading-1 text-fg">
         {greeting}, {firstName}
       </h1>
 
       <section>
-        <h2 className="mb-3 text-lg font-medium tracking-[0.09px] text-[#344056]">
+        <h2 className="mb-stack-md text-heading-5 text-fg-secondary">
           {dh?.quickActionTitle || (language === "ES" ? "Acción Rápida" : "Quick Action")}
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
           {quickActions.map((action) => {
             const label = getQuickActionLabel(action);
 
@@ -151,127 +165,134 @@ export default function UserDashboard() {
               <Link
                 key={action.label}
                 href={action.href}
-                className="flex min-h-[134px] flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-[25px] hover:border-blue-300 hover:shadow-sm transition-all"
+                className="flex min-h-[134px] flex-col gap-inline-lg rounded-card border border-line bg-surface p-inset-lg transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
-                  className={`flex size-12 items-center justify-center rounded-[14px] ${action.tone}`}
+                  aria-hidden="true"
+                  className={`flex size-12 items-center justify-center rounded-card ${action.tone}`}
                 >
                   <Icon src={asset(action.icon)} />
                 </span>
-                <p className="text-base font-medium tracking-[0.08px] text-[#0F172A]">
-                  {label}
-                </p>
+                <p className="text-body-md text-fg">{label}</p>
               </Link>
             );
           })}
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <article className="rounded-xl border border-[#D6E6F2] bg-white p-3.5">
-          <div className="flex items-center gap-2 py-2">
-            <p className="flex-1 text-base font-medium tracking-[0.08px] text-[#0F172A]">
+      <section className="grid grid-cols-1 gap-inset-lg xl:grid-cols-2">
+        <Card as="article" padding="small">
+          <div className="flex items-center gap-inline-md py-inset-xs">
+            <p className="flex-1 text-body-md text-fg">
               {dh?.curriculum?.title || "Curriculum Progress"}
             </p>
             <Link
               href="/dashboard/education-center"
-              className="flex items-center gap-2 text-sm font-medium tracking-[0.07px] text-[#2563EB]"
+              className="flex items-center gap-inline-md rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {dh?.curriculum?.weekBadge || "Day 1 of 21"}
               <Icon src={asset("arrow-right.svg")} />
             </Link>
           </div>
-          <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5">
-            <p className="text-base font-medium tracking-[0.08px] text-[#2563EB]">
+          <Card tone="sunken" padding="small">
+            <p className="text-body-md text-fg-brand">
               {dh?.curriculum?.weekLabel || "Day 1"}
             </p>
-            <div className="mt-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-lg font-medium tracking-[0.09px] text-[#344056]">
+            <div className="mt-stack-lg">
+              <div className="flex items-center justify-between gap-inline-lg">
+                <p className="text-heading-5 text-fg-secondary">
                   {dh?.curriculum?.moduleTitle || "Foundations of Awareness"}
                 </p>
-                <p className="shrink-0 text-sm font-medium tracking-[0.07px] text-[#4A4A68]">
+                <p className="shrink-0 text-label-md text-fg-muted">
                   {dh?.curriculum?.completed || "25% complete"}
                 </p>
               </div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#D7EDFF]">
-                <div className="h-full w-1/4 rounded-full bg-[#2563EB]" />
+              <div
+                role="progressbar"
+                aria-valuenow={25}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={dh?.curriculum?.title || "Curriculum Progress"}
+                className="mt-stack-sm h-2.5 overflow-hidden rounded-pill bg-primary-soft"
+              >
+                <div className="h-full w-1/4 rounded-pill bg-primary-solid" />
               </div>
-              <p className="mt-4 text-sm font-medium leading-5 tracking-[0.07px] text-[#344056]">
+              <p className="mt-stack-lg measure text-body-sm text-fg-secondary">
                 {dh?.curriculum?.description ||
                   "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}
               </p>
             </div>
-          </div>
-        </article>
+          </Card>
+        </Card>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-inset-lg sm:grid-cols-2">
           {stats.map((stat) => (
-            <article
-              key={stat.label}
-              className="rounded-[14px] border border-[#E2E8F0] bg-white p-px"
-            >
-              <div className="flex items-center justify-between px-6 pt-3">
-                <p className="text-base font-medium tracking-[0.08px] text-[#344056]">
+            <Card as="article" key={stat.label} padding="none" className="p-inset-md">
+              <div className="flex items-center justify-between gap-inline-md">
+                <p className="text-body-md text-fg-secondary">
                   {getStatLabel(stat.label, stat.label)}
                 </p>
                 <span
-                  className={`flex size-10 items-center justify-center rounded-[10px] ${stat.tone}`}
+                  aria-hidden="true"
+                  className={`flex size-10 items-center justify-center rounded-control ${stat.tone}`}
                 >
                   <Icon src={asset(stat.icon)} />
                 </span>
               </div>
-              <p className="px-6 pb-3 pt-4 text-2xl font-medium leading-8 tracking-[0.12px] text-[#0F172A]">
-                {stat.value}
-              </p>
-            </article>
+              <p className="mt-stack-lg text-metric-sm text-fg">{stat.value}</p>
+            </Card>
           ))}
         </div>
       </section>
 
-      <section className="flex flex-col items-start gap-4 rounded-2xl border border-[#BEDBFF] bg-[#F8FAFC] px-[25px] py-[25px] sm:flex-row sm:items-center">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-[#2563EB]">
+      <Card
+        as="section"
+        tone="flat"
+        padding="none"
+        className="flex flex-col items-start gap-inset-md border-primary-soft-line bg-surface-sunken p-inset-lg sm:flex-row sm:items-center"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-card bg-primary-solid"
+        >
           <Icon src={asset("class-video.svg")} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-5 text-[#4A5565]">
+          <p className="text-body-sm text-fg-muted">
             {dh?.upcomingClass?.badge || "Upcoming Live Class"}
           </p>
-          <p className="text-lg font-medium tracking-[0.09px] text-[#0A0A0A]">
+          <p className="text-heading-5 text-fg">
             {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
           </p>
-          <p className="text-sm leading-5 text-[#4A5565]">
+          <p className="text-body-sm text-fg-muted">
             {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
           </p>
         </div>
-        <button
-          type="button"
-          className="rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold tracking-[0.08px] text-white hover:bg-blue-700 transition-colors"
-        >
-          {dh?.upcomingClass?.joinButton || "Join Class"}
-        </button>
-      </section>
+        <Button>{dh?.upcomingClass?.joinButton || "Join Class"}</Button>
+      </Card>
 
       <section>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-medium leading-7 text-[#0A0A0A]">
+        <div className="mb-stack-lg flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-heading-4 text-fg">
             {dh?.testimonials?.title || "Testimonials - You're Not Alone"}
           </h2>
           <Link
             href="/dashboard/reviews"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+            className="inline-flex items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand transition-colors duration-150 ease-standard hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            <Star aria-hidden="true" className="h-4 w-4 fill-warning-500 text-warning-500" />
             {language === "ES" ? "Dejar una Reseña" : "Leave a Review"}
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-inset-lg md:grid-cols-3">
           {testimonials.map((item, index) => (
-            <article
+            <Card
+              as="article"
               key={`${item.name}-${index}`}
-              className="overflow-hidden rounded-3xl border border-[#E2E8F0] bg-white p-4 shadow-[0_0_60px_rgba(0,0,0,0.06)]"
+              padding="small"
+              className="overflow-hidden"
             >
-              <div className="relative h-[182px] overflow-hidden rounded-2xl">
+              <div className="relative h-[182px] max-w-full overflow-hidden rounded-card">
                 <Image
                   src={asset("testimonial.jpg")}
                   alt=""
@@ -279,20 +300,26 @@ export default function UserDashboard() {
                   sizes="(min-width: 768px) 33vw, 100vw"
                   className="object-cover"
                 />
-                <span className="absolute left-1/2 top-1/2 flex size-[50px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90">
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1/2 left-1/2 flex size-[50px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill bg-surface/90"
+                >
                   <Icon src={asset("play.svg")} />
                 </span>
               </div>
-              <p className="mt-4 text-sm leading-5 text-[#0A0A0A]">{item.name}</p>
-              <p className="mt-1 text-xs leading-4 text-[#4A5565]">
+              <p className="mt-stack-lg text-label-md text-fg">{item.name}</p>
+              <p className="mt-stack-xs text-caption text-fg-muted">
                 {dh?.testimonials?.storyTitle || item.title}
               </p>
-            </article>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* Where's My Ride Modal */}
+      {/* Where's My Ride Modal.
+          NOTE: nothing on this page sets isRideModalOpen — the Quick Action
+          tile is a <Link> to /dashboard/my-rides instead. Left wired so the
+          modal can be opened from here once that is decided. */}
       <WheresMyRideModal
         isOpen={isRideModalOpen}
         onClose={() => setIsRideModalOpen(false)}

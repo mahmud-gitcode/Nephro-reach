@@ -24,6 +24,7 @@ import {
   TypeStep,
 } from "@/features/education/admin/ClassWizardSteps";
 import ClassTranscriptUpload from "@/features/education/admin/ClassTranscriptUpload";
+import { Button, Modal } from "@/components/ui";
 
 /** Centred dialog used by the course and module forms. */
 export function AdminModal({
@@ -43,76 +44,27 @@ export function AdminModal({
   submitDisabled?: boolean;
   children: React.ReactNode;
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close dialog"
-        className="absolute inset-0 h-full w-full cursor-default bg-slate-900/50 backdrop-blur-[2px]"
-      />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="relative flex max-h-[90vh] w-full max-w-[560px] flex-col rounded-2xl bg-white shadow-[0_0_60px_rgba(15,23,42,0.25)]"
-      >
-        <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-          {children}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2.5 border-t border-slate-200 p-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
-          >
+    // Escape, the scroll lock and the initial focus move were already here.
+    // What was missing was the trap that keeps Tab inside the dialog.
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="wide"
+      title={title}
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitDisabled}
-            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-          >
+          </Button>
+          <Button onClick={onSubmit} disabled={submitDisabled}>
             {submitLabel}
-          </button>
-        </footer>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-stack-lg">{children}</div>
+    </Modal>
   );
 }
 
@@ -289,14 +241,14 @@ function DocumentsStep({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 px-4 py-7 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer"
+        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft cursor-pointer"
       >
-        <Upload className="h-6 w-6 text-slate-400" />
-        <span className="text-sm font-bold text-slate-700">Upload handouts</span>
+        <Upload className="h-6 w-6 text-fg-subtle" />
+        <span className="text-sm font-bold text-fg-secondary">Upload handouts</span>
       </button>
 
       {documents.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+        <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
           No handouts attached yet.
         </p>
       ) : (
@@ -304,15 +256,15 @@ function DocumentsStep({
           {documents.map((doc) => (
             <li
               key={doc.id}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+              className="flex items-center gap-3 rounded-control border border-line bg-surface p-3"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-danger-surface text-danger">
                 <FileText className="h-4.5 w-4.5" />
               </span>
 
               <span className="min-w-0 flex-1">
                 <input
-                  className="w-full rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-slate-900 outline-none transition-colors hover:border-slate-200 focus:border-blue-500"
+                  className="w-full rounded-control border border-transparent px-2 py-1 text-sm font-semibold text-fg outline-none transition-colors hover:border-line focus:border-primary-edge"
                   value={doc.titleEn}
                   onChange={(event) =>
                     onChange(
@@ -328,7 +280,7 @@ function DocumentsStep({
                     )
                   }
                 />
-                <span className="block px-2 text-xs font-medium text-slate-500">
+                <span className="block px-2 text-xs font-medium text-fg-muted">
                   {doc.metaEn}
                 </span>
               </span>
@@ -339,7 +291,7 @@ function DocumentsStep({
                   onChange(documents.filter((entry) => entry.id !== doc.id))
                 }
                 aria-label={`Remove ${doc.titleEn}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -445,41 +397,49 @@ export function ClassEditorPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close class editor"
-        className="absolute inset-0 h-full w-full cursor-default bg-slate-900/50 backdrop-blur-[2px]"
-      />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Class editor"
-        className="relative flex max-h-[92vh] w-full max-w-[720px] flex-col rounded-2xl bg-white shadow-[0_0_60px_rgba(15,23,42,0.25)]"
-      >
-        <header className="flex items-start gap-3 border-b border-slate-200 p-4 sm:p-5">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
-              {moduleName}
-            </p>
-            <h2 className="mt-0.5 truncate text-lg font-semibold text-slate-950">
-              {draft.titleEn || "New class"}
-            </h2>
-          </div>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close class editor"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+    <Modal
+      open
+      onClose={onClose}
+      size="wide"
+      title={draft.titleEn || "New class"}
+      description={moduleName}
+      footer={
+        <>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
+            disabled={stepIndex === 0}
+            className="mr-auto"
           >
-            <X className="h-5 w-5" />
-          </button>
-        </header>
+            <ChevronLeft aria-hidden="true" />
+            Back
+          </Button>
 
-        <ol className="flex items-center gap-1.5 overflow-x-auto border-b border-slate-200 px-4 py-3">
+          <Button variant="neutral" appearance="stroke" onClick={onClose}>
+            Cancel
+          </Button>
+
+          {isLastStep ? (
+            <Button onClick={() => onSave(draft)} disabled={!canContinue}>
+              Save class
+            </Button>
+          ) : (
+            <Button
+              onClick={() =>
+                setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))
+              }
+              disabled={!canContinue}
+            >
+              Next
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="flex min-h-0 flex-col">
+        <ol className="-mx-inset-lg mb-stack-lg flex items-center gap-inline-sm overflow-x-auto border-b border-line px-inset-lg pb-inset-sm">
           {STEPS.map((entry, index) => {
             const done = index < stepIndex;
             const active = index === stepIndex;
@@ -488,21 +448,23 @@ export function ClassEditorPanel({
                 <button
                   type="button"
                   onClick={() => setStepIndex(index)}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                  aria-current={active ? "step" : undefined}
+                  className={`flex cursor-pointer items-center gap-inline-sm rounded-control px-inset-xs py-1.5 text-label-sm transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                     active
-                      ? "bg-blue-600 text-white"
+                      ? "bg-primary-solid text-primary-on-solid"
                       : done
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-slate-500 hover:bg-slate-50"
+                        ? "bg-primary-soft text-primary-fg"
+                        : "text-fg-muted hover:bg-surface-sunken"
                   }`}
                 >
                   <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 items-center justify-center rounded-pill text-[10px] ${
                       active
-                        ? "bg-white/25"
+                        ? "bg-surface/25"
                         : done
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-200 text-slate-600"
+                          ? "bg-primary-solid text-primary-on-solid"
+                          : "bg-line text-fg-muted"
                     }`}
                   >
                     {done ? <Check className="h-3 w-3" /> : index + 1}
@@ -510,14 +472,17 @@ export function ClassEditorPanel({
                   {entry.label}
                 </button>
                 {index < STEPS.length - 1 && (
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 text-fg-subtle"
+                  />
                 )}
               </li>
             );
           })}
         </ol>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+        <div className="min-h-0 flex-1 space-y-stack-lg">
           {step === "overview" && (
             <OverviewStep draft={draft} onChange={set} />
           )}
@@ -538,8 +503,8 @@ export function ClassEditorPanel({
                 onPickFile={handlePickFile}
               />
 
-              <div className="space-y-4 border-t border-slate-200 pt-4">
-                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              <div className="space-y-4 border-t border-line pt-4">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-fg-muted">
                   Transcript
                 </h3>
                 <ClassTranscriptUpload
@@ -559,53 +524,7 @@ export function ClassEditorPanel({
           )}
         </div>
 
-        <footer className="flex items-center justify-between gap-2.5 border-t border-slate-200 p-4">
-          <button
-            type="button"
-            onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
-            disabled={stepIndex === 0}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer"
-            >
-              Cancel
-            </button>
-
-            {isLastStep ? (
-              <button
-                type="button"
-                onClick={() => onSave(draft)}
-                disabled={!canContinue}
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-              >
-                Save class
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  setStepIndex((index) =>
-                    Math.min(STEPS.length - 1, index + 1),
-                  )
-                }
-                disabled={!canContinue}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </footer>
       </div>
-    </div>
+    </Modal>
   );
 }

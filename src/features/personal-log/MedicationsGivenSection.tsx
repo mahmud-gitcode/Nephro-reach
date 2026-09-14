@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, X, Check, ChevronDown, Pill, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Alert, Button, Input, Modal, Select } from "@/components/ui";
 
 export interface TreatmentMedication {
   id: string;
@@ -214,14 +215,14 @@ export default function MedicationsGivenSection() {
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4 flex flex-col justify-between h-full">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+    <section className="rounded-panel border border-line bg-surface p-6 shadow-control space-y-4 flex flex-col justify-between h-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line-subtle">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 border border-blue-100">
-            <Pill className="h-4 w-4 text-[#2563EB]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
+            <Pill className="h-4 w-4 text-fg-brand" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">
+            <h2 className="text-base font-bold text-fg tracking-tight">
               {language === "ES"
                 ? "Medicamentos Administrados Durante la Diálisis"
                 : "Medications Given During Dialysis"}
@@ -232,7 +233,7 @@ export default function MedicationsGivenSection() {
         <button
           type="button"
           onClick={handleOpenAddMedModal}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center gap-1.5 rounded-control bg-primary-solid hover:bg-primary-solid-hover px-3.5 py-1.5 text-xs font-bold text-primary-on-solid shadow-control transition-all active:scale-95 cursor-pointer shrink-0"
         >
           <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
           <span>{language === "ES" ? "Agregar Medicamento" : "Add Medication"}</span>
@@ -240,10 +241,10 @@ export default function MedicationsGivenSection() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 flex-1">
+      <div className="overflow-x-auto rounded-card border border-line flex-1">
         <table className="w-full text-left border-collapse text-xs sm:text-sm">
           <thead>
-            <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+            <tr className="bg-surface-sunken text-xs font-bold uppercase tracking-wider text-fg-muted border-b border-line">
               <th className="py-2.5 px-3.5">{language === "ES" ? "Fecha" : "Date"}</th>
               <th className="py-2.5 px-3.5">{language === "ES" ? "Medicamento" : "Medication"}</th>
               <th className="py-2.5 px-3.5">{language === "ES" ? "Dosis" : "Dose"}</th>
@@ -252,10 +253,10 @@ export default function MedicationsGivenSection() {
               <th className="py-2.5 px-2 text-center w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+          <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
             {medications.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-slate-400">
+                <td colSpan={6} className="py-8 text-center text-xs text-fg-subtle">
                   {language === "ES"
                     ? "No hay medicamentos registrados para este tratamiento."
                     : "No medications recorded for this treatment."}
@@ -263,17 +264,17 @@ export default function MedicationsGivenSection() {
               </tr>
             ) : (
               medications.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-2.5 px-3.5 text-slate-900 whitespace-nowrap font-semibold text-xs">
+                <tr key={item.id} className="hover:bg-surface-sunken transition-colors">
+                  <td className="py-2.5 px-3.5 text-fg whitespace-nowrap font-semibold text-xs">
                     {item.date}
                   </td>
-                  <td className="py-2.5 px-3.5 text-slate-900 font-bold whitespace-nowrap text-xs">
+                  <td className="py-2.5 px-3.5 text-fg font-bold whitespace-nowrap text-xs">
                     {item.medication}
                   </td>
-                  <td className="py-2.5 px-3.5 text-slate-700 whitespace-nowrap font-semibold text-xs">
+                  <td className="py-2.5 px-3.5 text-fg-secondary whitespace-nowrap font-semibold text-xs">
                     {item.dose}
                   </td>
-                  <td className="py-2.5 px-3.5 text-slate-600 whitespace-nowrap text-xs">
+                  <td className="py-2.5 px-3.5 text-fg-muted whitespace-nowrap text-xs">
                     {item.reason}
                   </td>
                   <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
@@ -282,8 +283,8 @@ export default function MedicationsGivenSection() {
                       onClick={() => handleToggleGiven(item.id)}
                       className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
                         item.given
-                          ? "bg-[#2563EB] border-[#2563EB] text-white shadow-2xs"
-                          : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
+                          ? "bg-primary-solid border-primary-edge text-primary-on-solid shadow-control"
+                          : "bg-surface border-line-strong hover:border-line-strong text-transparent"
                       }`}
                       title={
                         item.given
@@ -302,7 +303,7 @@ export default function MedicationsGivenSection() {
                     <button
                       type="button"
                       onClick={() => handleDeleteMedication(item.id)}
-                      className="p-1 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      className="p-1 rounded-control-small text-fg-subtle hover:text-danger hover:bg-danger-surface transition-colors cursor-pointer"
                       title={language === "ES" ? "Eliminar" : "Delete"}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -316,53 +317,60 @@ export default function MedicationsGivenSection() {
       </div>
 
       {/* ADD MEDICATION MODAL */}
-      {isMedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {language === "ES" ? "Agregar Registro de Medicamento" : "Add Medication Record"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsMedModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
+      <Modal
+        open={isMedModalOpen}
+        onClose={() => setIsMedModalOpen(false)}
+        title={
+          language === "ES"
+            ? "Agregar Registro de Medicamento"
+            : "Add Medication Record"
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsMedModalOpen(false)}
+            >
+              {language === "ES" ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="add-medication-form">
+              {language === "ES" ? "Guardar Medicamento" : "Save Medication"}
+            </Button>
+          </>
+        }
+      >
             {formMedError && (
-              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
+              <Alert tone="danger" className="mb-stack-lg">
                 {formMedError}
-              </div>
+              </Alert>
             )}
 
-            <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
+            <form
+              id="add-medication-form"
+              onSubmit={handleAddMedicationSubmit}
+              className="space-y-stack-lg"
+            >
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Fecha" : "Date"}
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="May 31, 2024"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Medicamento" : "Medication"}{" "}
-                  <span className="text-rose-500">*</span>
+                  <span className="text-danger">*</span>
                 </label>
-                <div className="relative">
-                  <select
+                <Select
                     value={formMedication}
                     onChange={(e) => setFormMedication(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
                     autoFocus
                   >
                     <option value="">
@@ -378,16 +386,14 @@ export default function MedicationsGivenSection() {
                     <option value={OTHER_MEDICATION}>
                       {language === "ES" ? "Otro (escribir)" : "Other (type it in)"}
                     </option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                </div>
+                </Select>
 
                 {formMedication === OTHER_MEDICATION && (
-                  <input
+                  <Input
                     type="text"
                     value={formMedicationOther}
                     onChange={(e) => setFormMedicationOther(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="mt-stack-sm"
                     placeholder={
                       language === "ES"
                         ? "Nombre del medicamento"
@@ -399,26 +405,23 @@ export default function MedicationsGivenSection() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Dosis" : "Dose"}{" "}
-                  <span className="text-rose-500">*</span>
+                  <span className="text-danger">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   inputMode="decimal"
                   value={formDose}
                   onChange={(e) => setFormDose(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder={language === "ES" ? "ej. 8,000" : "e.g. 8,000"}
                 />
 
                 {/* Unit */}
-                <div className="relative">
-                  <select
+                <Select
                     value={formDoseUnit}
                     onChange={(e) => setFormDoseUnit(e.target.value)}
                     aria-label={language === "ES" ? "Unidad de dosis" : "Dose unit"}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
                   >
                     {DOSE_UNITS.map((unit) => {
                       const desc = language === "ES" ? unit.descEs : unit.descEn;
@@ -431,53 +434,32 @@ export default function MedicationsGivenSection() {
                     <option value={OTHER_DOSE_UNIT}>
                       {language === "ES" ? "Otra (escribir)" : "Other (type it in)"}
                     </option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                </div>
+                </Select>
 
                 {formDoseUnit === OTHER_DOSE_UNIT && (
-                  <input
+                  <Input
                     type="text"
                     value={formDoseUnitOther}
                     onChange={(e) => setFormDoseUnitOther(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     placeholder={language === "ES" ? "Unidad" : "Unit"}
                   />
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Razón / Indicación" : "Reason / Indication"}
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formReason}
                   onChange={(e) => setFormReason(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="e.g. Anemia"
                 />
               </div>
 
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 text-sm transition-colors shadow-sm cursor-pointer"
-                >
-                  {language === "ES" ? "Guardar Medicamento" : "Save Medication"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMedModalOpen(false)}
-                  className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer"
-                >
-                  {language === "ES" ? "Cancelar" : "Cancel"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </section>
   );
 }

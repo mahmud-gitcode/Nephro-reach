@@ -60,17 +60,17 @@ function CollapsedRail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-slate-200 px-2 py-3">
+      <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-line px-2 py-3">
         <button
           type="button"
           onClick={onExpand}
           title={j?.expandSidebar || "Expand day list"}
           aria-label={j?.expandSidebar || "Expand day list"}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+          className="flex h-9 w-9 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
         >
           <PanelLeftOpen className="h-5 w-5" />
         </button>
-        <span className="text-[11px] font-bold tabular-nums text-slate-600">
+        <span className="text-[11px] font-bold tabular-nums text-fg-muted">
           {completedCount}/{totalDays}
         </span>
       </div>
@@ -91,12 +91,12 @@ function CollapsedRail({
                 title={title}
                 aria-label={title}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex h-9 w-full items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                className={`flex h-9 w-full items-center justify-center rounded-control text-xs font-bold transition-colors ${
                   isDone
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-success-600 text-white"
                     : isActive
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-primary-solid text-primary-on-solid"
+                      : "bg-surface-sunken text-fg-muted hover:bg-line"
                 }`}
               >
                 {isDone ? <Check className="h-4 w-4" /> : day.day}
@@ -168,9 +168,9 @@ export default function JourneyDayList({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="shrink-0 border-b border-slate-200 px-4 py-3.5">
+      <header className="shrink-0 border-b border-line px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-xs font-bold uppercase tracking-wide text-slate-500">
+          <h2 className="truncate text-xs font-bold uppercase tracking-wide text-fg-muted">
             {j?.yourProgress || "Your progress"}
           </h2>
 
@@ -180,19 +180,19 @@ export default function JourneyDayList({
               onClick={onToggleCollapse}
               title={j?.collapseSidebar || "Minimise day list"}
               aria-label={j?.collapseSidebar || "Minimise day list"}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
             >
               <PanelLeftClose className="h-4.5 w-4.5" />
             </button>
           )}
         </div>
 
-        <p className="mt-1 text-sm font-bold text-slate-900">
+        <p className="mt-1 text-sm font-bold text-fg">
           {completedCount}/{totalDays} {j?.daysLabel || "days"}
         </p>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-pill bg-surface-sunken">
           <div
-            className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
+            className="h-full rounded-pill bg-success-600 transition-[width] duration-500"
             style={{ width: `${overallPercent}%` }}
           />
         </div>
@@ -216,30 +216,30 @@ export default function JourneyDayList({
           return (
             <section key={phaseKey}>
               {/* Stays pinned to the top of the scroll area while days pass under it. */}
-              <h3 className="sticky top-0 z-10 bg-white">
+              <h3 className="sticky top-0 z-10 bg-surface">
                 <button
                   type="button"
                   onClick={() => toggleWeek(phaseKey)}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
-                  className="flex w-full items-center gap-2 border-b border-slate-100 px-4 py-2.5 text-left transition-colors hover:bg-slate-50 cursor-pointer"
+                  className="flex w-full items-center gap-2 border-b border-line-subtle px-4 py-2.5 text-left transition-colors hover:bg-surface-sunken cursor-pointer"
                 >
                   {isOpen ? (
-                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                    <ChevronDown className="h-4 w-4 shrink-0 text-fg-subtle" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" />
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-fg-brand">
                       {isEs ? phase.moduleEs : phase.moduleEn}
                     </span>
-                    <span className="block truncate text-base font-semibold leading-6 text-slate-950">
+                    <span className="block truncate text-base font-semibold leading-6 text-fg">
                       {isEs ? phase.titleEs : phase.titleEn}
                     </span>
                   </span>
 
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                  <span className="shrink-0 rounded-pill bg-surface-sunken px-2 py-0.5 text-[11px] font-bold text-fg-muted">
                     {phaseComplete}/{phaseDays.length}
                   </span>
                 </button>
@@ -259,19 +259,19 @@ export default function JourneyDayList({
                           href={`/dashboard/education-center/${day.slug}`}
                           onClick={onNavigate}
                           aria-current={isActive ? "page" : undefined}
-                          className={`group flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                          className={`group flex items-start gap-3 rounded-control border px-3 py-2.5 transition-colors ${
                             isActive
-                              ? "border-blue-200 bg-blue-50"
-                              : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                              ? "border-primary-soft-line bg-primary-soft"
+                              : "border-transparent hover:border-line hover:bg-surface-sunken"
                           }`}
                         >
                           <span
-                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-xs font-bold transition-colors ${
                               isDone
-                                ? "bg-emerald-500 text-white"
+                                ? "bg-success-600 text-white"
                                 : isActive
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                  ? "bg-primary-solid text-primary-on-solid"
+                                  : "bg-surface-sunken text-fg-muted group-hover:bg-line"
                             }`}
                           >
                             {isDone ? <Check className="h-4 w-4" /> : day.day}
@@ -280,13 +280,13 @@ export default function JourneyDayList({
                           <span className="min-w-0 flex-1">
                             <span
                               className={`block text-sm font-semibold leading-5 ${
-                                isActive ? "text-blue-700" : "text-slate-800"
+                                isActive ? "text-fg-brand" : "text-fg-secondary"
                               }`}
                             >
                               {isEs ? day.titleEs : day.titleEn}
                             </span>
 
-                            <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                            <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-fg-muted">
                               <KindIcon className="h-3.5 w-3.5 shrink-0" />
                               <span>{kindLabel(day.kind, j)}</span>
                               <span aria-hidden="true">·</span>
@@ -297,7 +297,7 @@ export default function JourneyDayList({
                                 state.percent > 0 && (
                                   <>
                                     <span aria-hidden="true">·</span>
-                                    <span className="font-bold text-blue-600">
+                                    <span className="font-bold text-fg-brand">
                                       {state.percent}%
                                     </span>
                                   </>
@@ -315,7 +315,7 @@ export default function JourneyDayList({
         })}
 
         {days.length === 0 && (
-          <p className="flex items-center gap-2 px-4 py-6 text-sm text-slate-500">
+          <p className="flex items-center gap-2 px-4 py-6 text-sm text-fg-muted">
             <Lock className="h-4 w-4" />
             {j?.noResults || "No days match your search."}
           </p>

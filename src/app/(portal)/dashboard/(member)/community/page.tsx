@@ -2,9 +2,28 @@
 
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
-import { X, FileText, Send, MessageCircle } from "lucide-react";
+import {
+  FileText,
+  Heart,
+  MessageCircle,
+  MoreVertical,
+  Plus,
+  Send,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  ChipGroup,
+  Modal,
+  Tabs,
+  TabPanel,
+} from "@/components/ui";
+import type { TabItem } from "@/components/ui";
 
 type CommunityTab = {
   id: string;
@@ -217,8 +236,6 @@ function ComposeModal({
     }
   }, [open, initialCategory]);
 
-  if (!open) return null;
-
   const isFlagged = checkFlaggedMedicalContent(body);
 
   const canPost = Boolean(body.trim()) && !isFlagged;
@@ -231,130 +248,100 @@ function ComposeModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-xs animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="community-guidelines-heading"
-        className="relative w-full max-w-[560px] rounded-[24px] bg-white p-6 sm:p-7 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto select-text"
-      >
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-5 right-5 rounded-full p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          aria-label={isEs ? "Cerrar ventana" : "Close modal"}
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="wide"
+      title={isEs ? "Compartir con la Comunidad" : "Share with the Community"}
+      footer={
+        <Button
+          onClick={handleSubmit}
+          disabled={!canPost}
+          variant="neutral"
+          appearance="fill"
+          className="w-full"
         >
-          <X className="h-5 w-5" />
-        </button>
+          <Send aria-hidden="true" className="-rotate-12" />
+          {isEs ? "Publicar en la Comunidad" : "Post to Community"}
+        </Button>
+      }
+    >
+      <div className="space-y-stack-lg">
+        {/* 1. Community Guidelines — part of the page, not a response to
+            anything the member did, so it is not announced. */}
+        <Alert
+          tone="info"
+          live={false}
+          title={isEs ? "Pautas de la Comunidad" : "Community Guidelines"}
+        >
+          {isEs
+            ? "Esta comunidad es solo para educación y apoyo. Por favor, no publique consejos médicos, cambios en medicamentos, síntomas de emergencia o instrucciones de tratamiento."
+            : "This community is for education and support only. Please do not post medical advice, medication changes, emergency symptoms, or treatment instructions."}
+        </Alert>
 
-        {/* 1. Community Guidelines Banner */}
-        <div className="rounded-2xl bg-[#EAF5FE] border border-[#D2E7FC]/60 p-4 sm:p-5 text-left mb-4">
-          <h3
-            id="community-guidelines-heading"
-            className="text-base sm:text-[17px] font-bold text-slate-900 leading-tight mb-2"
-          >
-            {isEs ? "Pautas de la Comunidad" : "Community Guidelines"}
-          </h3>
-          <p className="text-sm text-slate-700 font-normal leading-relaxed">
-            {isEs
-              ? "Esta comunidad es solo para educación y apoyo. Por favor, no publique consejos médicos, cambios en medicamentos, síntomas de emergencia o instrucciones de tratamiento."
-              : "This community is for education and support only. Please do not post medical advice, medication changes, emergency symptoms, or treatment instructions."}
-          </p>
-        </div>
+        {/* 2. Category — one of six, so the group is marked single-select. */}
+        <ChipGroup
+          selection="single"
+          label={isEs ? "Categoría" : "Category"}
+          className="gap-inline-md"
+        >
+          {COMPOSE_CATEGORIES.map((cat) => (
+            <Chip
+              key={cat.id}
+              selected={selectedCategory === cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+            >
+              {isEs ? cat.labelEs : cat.labelEn}
+            </Chip>
+          ))}
+        </ChipGroup>
 
-        {/* 2. Category Selector Pills (One after another with tight consistent gap) */}
-        <div className="rounded-2xl bg-[#F0F4F8] p-1.5 flex flex-wrap items-center gap-1.5 text-left mb-6">
-          {COMPOSE_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium transition-all cursor-pointer select-none whitespace-nowrap ${
-                  isSelected
-                    ? "bg-white text-slate-900 font-semibold shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-                }`}
-              >
-                {isEs ? cat.labelEs : cat.labelEn}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 3. Section Title */}
-        <h3 className="text-lg sm:text-xl font-bold text-slate-900 text-left mb-3">
-          {isEs ? "Compartir con la Comunidad" : "Share with the Community"}
-        </h3>
-
-        {/* 4. Textarea Box with Character Counter */}
-        <div className="rounded-2xl border border-[#DFE7F0] p-4 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all text-left flex flex-col justify-between min-h-[160px]">
+        {/* 3. Body, with the counter inside the same focus ring as the field */}
+        <div className="flex min-h-[160px] flex-col justify-between rounded-card border border-line bg-surface p-inset-md transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
+          <label htmlFor="compose-body" className="sr-only">
+            {isEs ? "Su mensaje" : "Your message"}
+          </label>
           <textarea
+            id="compose-body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={200}
             rows={4}
+            aria-describedby="compose-count"
             placeholder={
               isEs
                 ? "Este es un espacio de apoyo, no para instrucciones médicas."
                 : "This is a support space, not for medical instructions."
             }
-            className="w-full flex-grow resize-none border-0 p-0 text-sm sm:text-base text-slate-800 placeholder:text-slate-400 focus:ring-0 outline-none leading-relaxed"
+            className="w-full flex-grow resize-none border-0 p-0 text-body-md text-fg-secondary outline-none placeholder:text-fg-muted"
           />
-          <div className="flex items-center justify-end gap-1.5 text-slate-400 text-xs sm:text-sm font-medium mt-2 select-none">
-            <FileText className="h-4 w-4 stroke-[1.8]" />
+          <p
+            id="compose-count"
+            className="mt-stack-sm flex items-center justify-end gap-inline-sm text-caption text-fg-muted select-none"
+          >
+            <FileText aria-hidden="true" className="h-4 w-4" />
             <span>{body.length}/200</span>
-          </div>
+          </p>
         </div>
 
-        {/* 5. Dynamic Auto-Flagged Disclaimer Alert Box */}
+        {/* 4. Auto-flag notice. This one IS a response to what was typed, so
+            it keeps the live region <Alert> gives it by default. */}
         {isFlagged && (
-          <div className="mt-4 rounded-2xl bg-[#FEEBEB] border border-[#FCD4D4] p-4 sm:p-4.5 flex items-start gap-3.5 text-left animate-in fade-in duration-200">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E05252] text-white font-bold text-xs shadow-xs mt-0.5 select-none">
-              !
-            </div>
-            <div className="text-left">
-              <p className="text-[#DC4C4C] text-sm font-medium leading-relaxed">
-                {isEs
-                  ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
-                  : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
-              </p>
-              <p className="mt-2 text-[#B91C1C] text-sm font-bold leading-relaxed">
-                {isEs
-                  ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
-                  : "This message cannot be posted. Please edit it to remove the urgent medical details."}
-              </p>
-            </div>
-          </div>
+          <Alert tone="danger">
+            <p>
+              {isEs
+                ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
+                : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
+            </p>
+            <p className="mt-stack-sm font-semibold">
+              {isEs
+                ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
+                : "This message cannot be posted. Please edit it to remove the urgent medical details."}
+            </p>
+          </Alert>
         )}
-
-        {/* 6. Post to Community Button */}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canPost}
-          aria-disabled={!canPost}
-          title={
-            isFlagged
-              ? isEs
-                ? "No se puede publicar un mensaje marcado"
-                : "A flagged message cannot be posted"
-              : undefined
-          }
-          className="mt-4 w-full rounded-2xl bg-[#F0F4F8] hover:bg-[#E2EAF2] text-slate-900 font-bold text-base py-3.5 px-6 flex items-center justify-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
-        >
-          <Send className="h-5 w-5 text-slate-800 -rotate-12" />
-          <span>{isEs ? "Publicar en la Comunidad" : "Post to Community"}</span>
-        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -404,6 +391,11 @@ export default function CommunityPage() {
     comm?.tabs && Array.isArray(comm.tabs) && comm.tabs.length > 0
       ? comm.tabs
       : defaultTabs;
+
+  const tabItems: ReadonlyArray<TabItem> = tabs.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+  }));
 
   const [activeTabId, setActiveTabId] = useState<string>("all");
   const [liked, setLiked] = useState<Record<string, boolean>>({});
@@ -498,31 +490,20 @@ export default function CommunityPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-7rem)]">
-      {/* Category Tabs */}
-      <div className="mb-4 overflow-x-auto rounded-[14px] border border-[#E2E8F0] bg-[#F1F5FA] p-1.5">
-        <div className="flex min-w-[720px] gap-1.5 md:min-w-0">
-          {tabs.map((tab) => {
-            const active = tab.id === activeTabId;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTabId(tab.id)}
-                className={`h-12 flex-1 whitespace-nowrap rounded-xl px-4 text-base font-medium tracking-[0.08px] transition-colors cursor-pointer ${
-                  active
-                    ? "bg-white text-black shadow-[0_1px_0.5px_rgba(0,0,0,0.05)]"
-                    : "text-black/80 hover:text-black hover:bg-white/50"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+      {/* Category Tabs — six separate tab stops became one, with arrow
+          keys moving between categories. */}
+      <div className="mb-stack-lg overflow-x-auto">
+        <Tabs
+          items={tabItems}
+          value={activeTabId}
+          onChange={setActiveTabId}
+          variant="pill"
+          label={isEs ? "Categorías de la comunidad" : "Community categories"}
+        />
       </div>
 
       {/* Feed Posts */}
-      <div className="flex flex-col gap-3">
+      <TabPanel id={activeTabId} value={activeTabId} className="flex flex-col gap-inline-md">
         {posts.map((post) => {
           const isLiked = Boolean(liked[post.id]);
           const postReplies = replies[post.id] || [];
@@ -531,13 +512,10 @@ export default function CommunityPage() {
           const isReplyFlagged = checkFlaggedMedicalContent(draft);
 
           return (
-            <article
-              key={post.id}
-              className="rounded-[20px] border border-[#E2E8F0] bg-white p-4 sm:p-5 shadow-[0_4px_8px_rgba(15,23,42,0.03),0_8px_16px_rgba(15,23,42,0.02)]"
-            >
-              <div className="flex items-start gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
+            <Card key={post.id} as="article">
+              <div className="flex items-start gap-inline-md">
+                <div className="flex min-w-0 flex-1 items-center gap-inline-md">
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill">
                     <Image
                       src="/images/community/avatar.png"
                       alt=""
@@ -546,53 +524,56 @@ export default function CommunityPage() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-base font-medium leading-6 tracking-[0.08px] text-[#18181B]">
-                        {post.author}
-                      </p>
-                      <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-xs leading-4 text-[#0A0A0A]">
-                        {post.badge}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-inline-lg">
+                      <p className="text-label-lg text-fg">{post.author}</p>
+                      <Badge tone="neutral">{post.badge}</Badge>
                     </div>
-                    <p className="mt-0.5 text-sm leading-5 text-[#52525B]">{post.time}</p>
+                    <p className="mt-stack-xs text-body-sm text-fg-muted">
+                      {post.time}
+                    </p>
                   </div>
                 </div>
                 <div className="relative">
-                  <button
-                    type="button"
-                    className="relative size-6 overflow-clip cursor-pointer"
+                  {/* Was a bare <img> inside a button with no visible focus
+                      state; now a real icon button with aria-expanded. */}
+                  <Button
+                    variant="neutral"
+                    appearance="stroke"
+                    size="small"
+                    className="px-inset-xs"
                     aria-label={comm?.postOptionsAria || "Post options"}
+                    aria-expanded={menuOpen === post.id}
                     onClick={() =>
                       setMenuOpen((current) => (current === post.id ? null : post.id))
                     }
                   >
-                    <img
-                      src="/images/community/more-vertical.svg"
-                      alt=""
-                      className="size-full"
-                    />
-                  </button>
+                    <MoreVertical aria-hidden="true" />
+                  </Button>
                   {menuOpen === post.id && (
-                    <div className="absolute right-0 z-10 mt-1 w-36 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-md">
+                    <Card
+                      tone="raised"
+                      padding="none"
+                      className="absolute right-0 z-10 mt-stack-xs w-36 py-inset-xs"
+                    >
                       <button
                         type="button"
-                        className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        className="block w-full cursor-pointer px-inset-sm py-inset-xs text-left text-body-sm text-fg-secondary transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                         onClick={() => handleHidePost(post.id)}
                       >
                         {comm?.hidePost || "Hide post"}
                       </button>
-                    </div>
+                    </Card>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 text-sm leading-[22px] text-[#0F172A]">
+              <div className="mt-stack-md measure text-body-sm text-fg">
                 {post.paragraphs && post.paragraphs.length > 0 ? (
                   post.paragraphs.map((p: string, pIdx: number) => (
-                    <p key={pIdx} className={pIdx > 0 ? "mt-[22px]" : ""}>
+                    <p key={pIdx} className={pIdx > 0 ? "mt-stack-lg" : ""}>
                       {p}
                       {pIdx === post.paragraphs.length - 1 && post.hashtags && (
-                        <span className="ml-1 text-[#2563EB]">{post.hashtags}</span>
+                        <span className="ml-1 text-fg-brand">{post.hashtags}</span>
                       )}
                     </p>
                   ))
@@ -602,14 +583,14 @@ export default function CommunityPage() {
               </div>
 
               {/* Actions Divider */}
-              <div className="mt-3.5 h-px w-full bg-slate-100" />
+              <div className="mt-stack-md h-px w-full bg-line-subtle" />
 
               {/* Action Buttons: Like & Reply */}
-              <div className="mt-3 flex items-center gap-6">
+              <div className="mt-stack-md flex items-center gap-inset-lg">
                 {/* Like Button */}
                 <button
                   type="button"
-                  className="flex items-center gap-2 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer group"
+                  className="group flex cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   onClick={() =>
                     setLiked((current) => ({
                       ...current,
@@ -619,16 +600,15 @@ export default function CommunityPage() {
                   aria-pressed={isLiked}
                   aria-label={comm?.likePostAria || "Like post"}
                 >
-                  <span className="relative size-5 overflow-clip">
-                    <img
-                      src="/images/community/heart.svg"
-                      alt=""
-                      className={`size-full transition-opacity ${
-                        isLiked ? "opacity-100" : "opacity-70 group-hover:opacity-100"
-                      }`}
-                    />
-                  </span>
-                  <span className="text-sm font-medium tracking-[0.08px]">
+                  {/* Filled when liked — shape, not only colour, carries
+                      the state, which an opacity change alone did not. */}
+                  <Heart
+                    aria-hidden="true"
+                    className={`size-5 transition-colors duration-150 ease-standard ${
+                      isLiked ? "fill-current text-danger" : ""
+                    }`}
+                  />
+                  <span className="text-label-md">
                     {post.likes + (isLiked ? 1 : 0)}
                   </span>
                 </button>
@@ -636,13 +616,16 @@ export default function CommunityPage() {
                 {/* Reply Button */}
                 <button
                   type="button"
-                  className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer group"
+                  className="group flex cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   onClick={() => toggleReplies(post.id)}
                   aria-expanded={isExpanded}
                   aria-label={isEs ? "Responder a la publicación" : "Reply to post"}
                 >
-                  <MessageCircle className="size-5 stroke-[1.8] text-slate-400 group-hover:text-blue-600 transition-colors" />
-                  <span className="text-sm font-medium tracking-[0.08px]">
+                  <MessageCircle
+                    aria-hidden="true"
+                    className="size-5 text-fg-subtle transition-colors duration-150 ease-standard group-hover:text-fg-brand"
+                  />
+                  <span className="text-label-md">
                     {postReplies.length > 0
                       ? `${postReplies.length} ${
                           postReplies.length === 1
@@ -662,69 +645,83 @@ export default function CommunityPage() {
 
               {/* Replies Section (Collapsible Thread) */}
               {isExpanded && (
-                <div className="mt-4 pt-4 border-t border-slate-100 space-y-3.5 animate-in fade-in duration-200">
+                <div className="mt-stack-lg space-y-stack-md border-t border-line-subtle pt-inset-md">
                   {/* List of existing replies */}
                   {postReplies.length > 0 && (
-                    <div className="space-y-2.5">
+                    <div className="space-y-stack-sm">
                       {postReplies.map((reply) => {
                         const isReplyLiked = Boolean(replyLikes[reply.id]);
                         return (
-                          <div
+                          <Card
                             key={reply.id}
-                            className="flex items-start gap-2.5 rounded-2xl bg-slate-50/80 p-3.5 border border-slate-100 text-left"
+                            tone="sunken"
+                            padding="small"
+                            className="flex items-start gap-inline-md text-left"
                           >
-                            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                            <span
+                              aria-hidden="true"
+                              className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-primary-soft text-label-sm text-primary-fg"
+                            >
                               {reply.author.slice(0, 2).toUpperCase()}
-                            </div>
+                            </span>
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-bold text-slate-900 leading-none">
+                              <div className="flex flex-wrap items-center gap-inline-md">
+                                <span className="text-label-md text-fg">
                                   {reply.author}
                                 </span>
                                 {reply.badge && (
-                                  <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                                  <Badge tone="neutral" variant="outline">
                                     {reply.badge}
-                                  </span>
+                                  </Badge>
                                 )}
-                                <span className="text-xs text-slate-400 font-medium">
+                                <span className="text-caption text-fg-subtle">
                                   {reply.time}
                                 </span>
                               </div>
-                              <p className="mt-1.5 text-sm text-slate-700 leading-relaxed font-normal">
+                              <p className="mt-stack-xs text-body-sm text-fg-secondary">
                                 {reply.content}
                               </p>
                             </div>
+                            {/* The count and the heart were the only cue that
+                                this toggles; aria-pressed now says so too. */}
                             <button
                               type="button"
                               onClick={() => handleToggleReplyLike(reply.id)}
-                              className="flex items-center gap-1 text-slate-400 hover:text-rose-500 transition-colors p-1 cursor-pointer"
-                              title={isEs ? "Me gusta" : "Like"}
+                              aria-pressed={isReplyLiked}
+                              aria-label={isEs ? "Me gusta" : "Like"}
+                              className="flex cursor-pointer items-center gap-inline-xs rounded-control-small p-1 text-fg-subtle transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
-                              <span className="text-xs font-semibold">
+                              <span className="text-label-sm">
                                 {(reply.likes || 0) + (isReplyLiked ? 1 : 0)}
                               </span>
-                              <img
-                                src="/images/community/heart.svg"
-                                alt=""
-                                className={`size-3.5 transition-opacity ${
-                                  isReplyLiked ? "opacity-100" : "opacity-40 hover:opacity-80"
+                              <Heart
+                                aria-hidden="true"
+                                className={`size-3.5 transition-colors duration-150 ease-standard ${
+                                  isReplyLiked ? "fill-current text-danger" : ""
                                 }`}
                               />
                             </button>
-                          </div>
+                          </Card>
                         );
                       })}
                     </div>
                   )}
 
                   {/* Inline Compose Reply Input */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3.5 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                    <div className="flex items-start gap-3">
-                      <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs mt-0.5">
+                  <div className="rounded-card border border-line bg-surface p-inset-sm transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
+                    <div className="flex items-start gap-inline-lg">
+                      <span
+                        aria-hidden="true"
+                        className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-primary-solid text-label-sm text-primary-on-solid"
+                      >
                         {(user?.name || "U").slice(0, 2).toUpperCase()}
-                      </div>
+                      </span>
                       <div className="flex-1">
+                        <label htmlFor={`reply-${post.id}`} className="sr-only">
+                          {isEs ? "Su respuesta" : "Your reply"}
+                        </label>
                         <textarea
+                          id={`reply-${post.id}`}
                           value={draft}
                           onChange={(e) =>
                             setReplyDrafts((prev) => ({
@@ -739,44 +736,39 @@ export default function CommunityPage() {
                               ? "Escriba una respuesta de apoyo..."
                               : "Write a supportive reply..."
                           }
-                          className="w-full resize-none border-0 p-0 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-0 outline-none leading-relaxed"
+                          className="w-full resize-none border-0 p-0 text-body-sm text-fg-secondary outline-none placeholder:text-fg-muted"
                         />
 
                         {/* Reply Auto-Flag Moderation Disclaimer */}
                         {isReplyFlagged && (
-                          <div className="mt-2 mb-1 rounded-xl bg-[#FEEBEB] border border-[#FCD4D4] p-3 flex items-start gap-2.5 text-left animate-in fade-in duration-200">
-                            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E05252] text-white font-bold text-[10px] shadow-xs mt-0.5 select-none">
-                              !
-                            </div>
-                            <p className="text-[#DC4C4C] text-xs font-medium leading-relaxed">
-                              {isEs
-                                ? "Su respuesta contiene síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no reemplaza a su equipo de diálisis."
-                                : "Your reply includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not replace your medical team."}
-                            </p>
-                          </div>
+                          <Alert tone="danger" className="mt-stack-sm">
+                            {isEs
+                              ? "Su respuesta contiene síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no reemplaza a su equipo de diálisis."
+                              : "Your reply includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not replace your medical team."}
+                          </Alert>
                         )}
 
-                        <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 mt-2">
-                          <span className="text-xs text-slate-400 font-medium">
+                        <div className="mt-stack-sm flex items-center justify-between border-t border-line-subtle pt-inset-xs">
+                          <span className="text-caption text-fg-muted">
                             {draft.length}/200
                           </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
+                          <div className="flex items-center gap-inline-md">
+                            <Button
+                              variant="neutral"
+                              appearance="stroke"
+                              size="small"
                               onClick={() => toggleReplies(post.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                             >
                               {isEs ? "Cerrar" : "Close"}
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              size="small"
                               onClick={() => handleAddReply(post.id)}
                               disabled={!draft.trim()}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
                             >
-                              <Send className="h-3.5 w-3.5 -rotate-12" />
-                              <span>{isEs ? "Responder" : "Reply"}</span>
-                            </button>
+                              <Send aria-hidden="true" className="-rotate-12" />
+                              {isEs ? "Responder" : "Reply"}
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -784,22 +776,19 @@ export default function CommunityPage() {
                   </div>
                 </div>
               )}
-            </article>
+            </Card>
           );
         })}
-      </div>
+      </TabPanel>
 
       {/* Floating Create Post Button */}
-      <button
-        type="button"
+      <Button
         onClick={() => setComposeOpen(true)}
-        className="fixed bottom-8 right-6 z-20 flex h-12 w-[52px] items-center justify-center rounded bg-[#2563EB] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] transition-transform hover:scale-105 cursor-pointer lg:right-10"
+        className="fixed right-6 bottom-8 z-20 px-inset-md shadow-raised lg:right-10"
         aria-label={comm?.createPostAria || "Create a new post"}
       >
-        <span className="relative size-6 overflow-clip">
-          <img src="/images/community/add.svg" alt="" className="size-full" />
-        </span>
-      </button>
+        <Plus aria-hidden="true" />
+      </Button>
 
       {/* Compose Modal */}
       <ComposeModal

@@ -35,9 +35,9 @@ const KIND_ICON: Record<JourneyDocumentKind, React.ElementType> = {
 };
 
 const KIND_CLASS: Record<JourneyDocumentKind, string> = {
-  pdf: "bg-red-50 text-red-600",
-  checklist: "bg-emerald-50 text-emerald-600",
-  worksheet: "bg-violet-50 text-violet-600",
+  pdf: "bg-danger-surface text-danger",
+  checklist: "bg-success-surface text-success",
+  worksheet: "bg-accent-soft text-accent-fg",
 };
 
 const TAB_ICON: Record<JourneyPanelTab, React.ElementType> = {
@@ -92,10 +92,10 @@ function TranscriptTab({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex items-center gap-2">
-        <Languages className="h-4 w-4 shrink-0 text-slate-500" />
+        <Languages className="h-4 w-4 shrink-0 text-fg-muted" />
         <label
           htmlFor="journey-transcript-language"
-          className="text-xs font-semibold text-slate-600"
+          className="text-xs font-semibold text-fg-muted"
         >
           {j?.transcriptLanguage || "Language"}
         </label>
@@ -106,7 +106,7 @@ function TranscriptTab({
           onChange={(event) =>
             onTranscriptLanguageChange(event.target.value as LanguageCode)
           }
-          className="ml-auto rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-slate-800 outline-none transition-colors hover:bg-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+          className="ml-auto rounded-control border border-line bg-surface px-2 py-1.5 text-xs font-bold text-fg-secondary outline-none transition-colors hover:bg-surface-sunken focus:border-primary-edge focus:ring-1 focus:ring-ring cursor-pointer"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -123,22 +123,22 @@ function TranscriptTab({
                 tabIndex={interactive ? 0 : -1}
                 onClick={() => onSeek(cue.at)}
                 disabled={seekDisabled}
-                className={`flex w-full items-start gap-2.5 rounded-lg p-2 text-left transition-colors ${
-                  isActive ? "bg-blue-50" : "hover:bg-slate-50"
+                className={`flex w-full items-start gap-2.5 rounded-control p-2 text-left transition-colors ${
+                  isActive ? "bg-primary-soft" : "hover:bg-surface-sunken"
                 } ${seekDisabled ? "cursor-default" : "cursor-pointer"}`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${
+                  className={`mt-0.5 shrink-0 rounded-control-small px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${
                     isActive
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-primary-solid text-primary-on-solid"
+                      : "bg-surface-sunken text-fg-muted"
                   }`}
                 >
                   {formatCueTime(cue.at)}
                 </span>
                 <span
                   className={`text-sm leading-relaxed ${
-                    isActive ? "font-medium text-slate-900" : "text-slate-700"
+                    isActive ? "font-medium text-fg" : "text-fg-secondary"
                   }`}
                 >
                   {isEs ? cue.textEs : cue.textEn}
@@ -173,7 +173,7 @@ export function JourneyPanelRail({
   const j = dictionary?.educationJourney;
 
   return (
-    <div className="flex shrink-0 flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+    <div className="flex shrink-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-1.5 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
       {tabs.map((tab) => {
         const Icon = TAB_ICON[tab];
         const label = tabLabel(tab, j);
@@ -186,10 +186,10 @@ export function JourneyPanelRail({
             onClick={() => onSelect(tab)}
             aria-pressed={isActive}
             title={label}
-            className={`flex w-[58px] flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-[10px] font-semibold leading-tight transition-colors cursor-pointer ${
+            className={`flex w-[58px] flex-col items-center gap-1 rounded-control px-1 py-2.5 text-[10px] font-semibold leading-tight transition-colors cursor-pointer ${
               isActive
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                ? "bg-primary-soft text-fg-brand"
+                : "text-fg-muted hover:bg-surface-sunken hover:text-fg-secondary"
             }`}
           >
             <Icon className="h-5 w-5" />
@@ -209,36 +209,36 @@ function OverviewTab({ day }: { day: JourneyDay }) {
 
   return (
     <div>
-      <p className="text-sm leading-relaxed text-slate-700">
+      <p className="text-sm leading-relaxed text-fg-secondary">
         {isEs ? day.summaryEs : day.summaryEn}
       </p>
 
-      <h4 className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">
+      <h4 className="mt-5 text-xs font-bold uppercase tracking-wide text-fg-muted">
         {j?.keyPoints || "What you will learn"}
       </h4>
       <ul className="mt-2 space-y-2">
         {keyPoints.map((point) => (
-          <li key={point} className="flex gap-2 text-sm text-slate-700">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+          <li key={point} className="flex gap-2 text-sm text-fg-secondary">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <span className="leading-relaxed">{point}</span>
           </li>
         ))}
       </ul>
 
       <dl className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-control border border-line bg-surface-sunken p-3">
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
             {j?.duration || "Length"}
           </dt>
-          <dd className="mt-1 text-sm font-bold text-slate-900">
+          <dd className="mt-1 text-sm font-bold text-fg">
             {day.durationMinutes} {j?.minutesShort || "min"}
           </dd>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-control border border-line bg-surface-sunken p-3">
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
             {j?.moduleLabel || "Module"}
           </dt>
-          <dd className="mt-1 text-sm font-bold text-slate-900">
+          <dd className="mt-1 text-sm font-bold text-fg">
             {isEs
               ? JOURNEY_PHASES[day.phase].moduleEs
               : JOURNEY_PHASES[day.phase].moduleEn}
@@ -268,22 +268,22 @@ function DocumentsTab({
             <button
               type="button"
               tabIndex={interactive ? 0 : -1}
-              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
+              className="flex w-full items-center gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-line-strong hover:bg-surface-sunken cursor-pointer"
             >
               <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${KIND_CLASS[doc.kind]}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${KIND_CLASS[doc.kind]}`}
               >
                 <Icon className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-slate-900">
+                <span className="block truncate text-sm font-semibold text-fg">
                   {isEs ? doc.titleEs : doc.titleEn}
                 </span>
-                <span className="block text-xs font-medium text-slate-500">
+                <span className="block text-xs font-medium text-fg-muted">
                   {isEs ? doc.metaEs : doc.metaEn}
                 </span>
               </span>
-              <Download className="h-4 w-4 shrink-0 text-slate-400" />
+              <Download className="h-4 w-4 shrink-0 text-fg-subtle" />
             </button>
           </li>
         );
@@ -329,11 +329,11 @@ function NotesTab({
           j?.notesPlaceholder ||
           "Write anything you want to remember from this lesson, or a question for your care team."
         }
-        className="min-h-[260px] w-full flex-1 resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm leading-relaxed text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="min-h-[260px] w-full flex-1 resize-none rounded-control border border-line bg-surface p-3 text-sm leading-relaxed text-fg-secondary outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-slate-500">{saveLabel}</span>
+        <span className="text-xs font-medium text-fg-muted">{saveLabel}</span>
         <button
           type="button"
           tabIndex={interactive ? 0 : -1}
@@ -344,7 +344,7 @@ function NotesTab({
               `${isEs ? day.titleEs : day.titleEn}\n\n${note}`,
             )
           }
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           <Download className="h-3.5 w-3.5" />
           {j?.downloadNotes || "Download .txt"}
@@ -395,8 +395,8 @@ export function JourneyPanelContent({
 
   return (
     <>
-      <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3.5">
-        <h2 className="truncate text-base font-semibold text-slate-950">
+      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+        <h2 className="truncate text-base font-semibold text-fg">
           {tabLabel(activeTab, j)}
         </h2>
         <button
@@ -405,7 +405,7 @@ export function JourneyPanelContent({
           tabIndex={interactive ? 0 : -1}
           onClick={onClose}
           aria-label={j?.closePanel || "Close panel"}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
         >
           <X className="h-4.5 w-4.5" />
         </button>
@@ -507,7 +507,7 @@ export default function JourneyResourceDrawer({
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         aria-label={j?.closePanel || "Close panel"}
-        className={`absolute inset-0 h-full w-full cursor-default bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+        className={`absolute inset-0 h-full w-full cursor-default bg-fg/50 backdrop-blur-[2px] transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
       />
@@ -516,7 +516,7 @@ export default function JourneyResourceDrawer({
         role="dialog"
         aria-modal={open ? true : undefined}
         aria-label={tabLabel(activeTab, j)}
-        className={`absolute inset-y-0 right-0 flex w-full max-w-[400px] flex-col bg-white shadow-[0_0_60px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-[400px] flex-col bg-surface shadow-[0_0_60px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

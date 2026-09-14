@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, X, PenLine, Search, Trash2, HelpCircle, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Alert, Button, Input, Modal, Select, Textarea } from "@/components/ui";
 
 export type CareTeamRole = "Provider" | "Dietitian" | "Social Worker" | "Nurse";
 export type QuestionStatus = "Answered" | "Discussed" | "Submitted";
@@ -304,13 +305,13 @@ export default function CareTeamQuestionsSection({
   const getStatusBadgeStyle = (status: QuestionStatus) => {
     switch (status) {
       case "Answered":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+        return "bg-success-surface text-success border-success-line hover:bg-success-100";
       case "Discussed":
-        return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+        return "bg-primary-soft text-fg-brand border-primary-soft-line hover:bg-brand-100";
       case "Submitted":
-        return "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100";
+        return "bg-danger-surface text-danger border-danger-line hover:bg-danger-100";
       default:
-        return "bg-slate-50 text-slate-700 border-slate-200";
+        return "bg-surface-sunken text-fg-secondary border-line";
     }
   };
 
@@ -319,7 +320,7 @@ export default function CareTeamQuestionsSection({
       {/* Optional Section Title (if !hideTitle) */}
       {!hideTitle && (
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#1e3a8a] tracking-tight uppercase">
+          <h2 className="text-lg font-bold text-primary-fg tracking-tight uppercase">
             {language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"}
           </h2>
         </div>
@@ -331,9 +332,13 @@ export default function CareTeamQuestionsSection({
         <div className="flex items-center gap-3 flex-wrap flex-1">
           {/* 1. Search Bar (Small, placed before dropdowns) */}
           <div className="relative w-48 sm:w-56">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-subtle" />
+            <label htmlFor="care-team-search" className="sr-only">
+              {language === "ES" ? "Buscar preguntas" : "Search questions"}
+            </label>
+            <Input
+              id="care-team-search"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
@@ -341,72 +346,72 @@ export default function CareTeamQuestionsSection({
                   ? "Buscar preguntas..."
                   : "Search questions..."
               }
-              className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              className="pl-8"
             />
           </div>
 
           {/* 2. Role Filter Dropdown */}
-          <div className="relative min-w-[140px] sm:min-w-[160px]">
-            <select
+          <div className="min-w-[140px] sm:min-w-[160px]">
+            <label htmlFor="care-team-role" className="sr-only">
+              {language === "ES" ? "Filtrar por rol" : "Filter by role"}
+            </label>
+            <Select
+              id="care-team-role"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value as CareTeamRole | "All")}
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 pr-8 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
             >
               {roleTabs.map((tab) => (
-                <option key={tab.id} value={tab.id} className="font-semibold text-slate-800">
+                <option key={tab.id} value={tab.id}>
                   {tab.label}
                 </option>
               ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[2.5]" />
+            </Select>
           </div>
 
           {/* 3. Status Filter Dropdown (All, Answered, Discussed, Submitted) */}
-          <div className="relative min-w-[130px] sm:min-w-[150px]">
-            <select
+          <div className="min-w-[130px] sm:min-w-[150px]">
+            <label htmlFor="care-team-status" className="sr-only">
+              {language === "ES" ? "Filtrar por estado" : "Filter by status"}
+            </label>
+            <Select
+              id="care-team-status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as "All" | QuestionStatus)}
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 pr-8 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
             >
-              <option value="All" className="font-semibold text-slate-800">
+              <option value="All">
                 {language === "ES" ? "Todos los Estados" : "All Status"}
               </option>
-              <option value="Answered" className="font-semibold text-slate-800">
+              <option value="Answered">
                 {language === "ES" ? "Respondidas" : "Answered"}
               </option>
-              <option value="Discussed" className="font-semibold text-slate-800">
+              <option value="Discussed">
                 {language === "ES" ? "Discutidas" : "Discussed"}
               </option>
-              <option value="Submitted" className="font-semibold text-slate-800">
+              <option value="Submitted">
                 {language === "ES" ? "Pendientes" : "Submitted"}
               </option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[2.5]" />
+            </Select>
           </div>
         </div>
 
         {/* 4. Add Question Button (Right aligned) */}
-        <button
-          type="button"
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow transition-all active:scale-[0.98] cursor-pointer shrink-0 ml-auto"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
+        <Button onClick={handleOpenAddModal} className="ml-auto shrink-0">
+          <Plus aria-hidden="true" />
           <span>{language === "ES" ? "Hacer Pregunta" : "Add Question"}</span>
-        </button>
+        </Button>
       </div>
 
       {/* Clean Q & Ans Card List */}
       <div className="space-y-3.5">
         {filteredQuestions.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-400 space-y-2">
-            <HelpCircle className="h-8 w-8 mx-auto text-slate-300" />
-            <p className="text-sm font-semibold text-slate-600">
+          <div className="rounded-card border border-line bg-surface p-12 text-center text-fg-subtle space-y-2">
+            <HelpCircle className="h-8 w-8 mx-auto text-fg-subtle" />
+            <p className="text-sm font-semibold text-fg-muted">
               {language === "ES"
                 ? "No se encontraron preguntas para este miembro o filtro."
                 : "No questions found for this care team member or filter."}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-fg-subtle">
               {language === "ES"
                 ? "Haz clic en 'Hacer Pregunta' para agregar una nueva duda o consulta."
                 : "Click 'Ask a Question' to add a question for your care team."}
@@ -416,12 +421,12 @@ export default function CareTeamQuestionsSection({
           filteredQuestions.map((q) => (
             <div
               key={q.id}
-              className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-shadow space-y-3"
+              className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-control hover:shadow-control transition-shadow space-y-3"
             >
               {/* Question Row with Status Tag, Edit Button, and Delete */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex-1">
-                  <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                  <h3 className="text-base font-semibold text-fg leading-snug">
                     {q.question}
                   </h3>
                 </div>
@@ -437,7 +442,7 @@ export default function CareTeamQuestionsSection({
                         ? "Clic para cambiar estado (Pendiente → Discutida → Respondida)"
                         : "Click to cycle status (Submitted → Discussed → Answered)"
                     }
-                    className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${getStatusBadgeStyle(
+                    className={`px-3 py-1 rounded-pill text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 shadow-control ${getStatusBadgeStyle(
                       q.status
                     )}`}
                   >
@@ -458,14 +463,14 @@ export default function CareTeamQuestionsSection({
                   <button
                     type="button"
                     onClick={() => handleOpenEditModal(q)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill border border-line bg-surface hover:bg-primary-soft hover:border-primary-soft-line text-fg-secondary hover:text-fg-brand text-xs font-semibold shadow-control transition-all cursor-pointer active:scale-95"
                     title={
                       language === "ES"
                         ? "Editar pregunta y respuesta"
                         : "Edit question and answer"
                     }
                   >
-                    <PenLine className="h-3.5 w-3.5 text-slate-500" />
+                    <PenLine className="h-3.5 w-3.5 text-fg-muted" />
                     <span>{language === "ES" ? "Editar" : "Edit"}</span>
                   </button>
 
@@ -473,7 +478,7 @@ export default function CareTeamQuestionsSection({
                   <button
                     type="button"
                     onClick={() => handleDeleteQuestion(q.id)}
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-control text-fg-subtle hover:text-danger hover:bg-danger-surface transition-colors cursor-pointer"
                     title={language === "ES" ? "Eliminar" : "Delete"}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -482,16 +487,16 @@ export default function CareTeamQuestionsSection({
               </div>
 
               {/* Answer Row */}
-              <div className="pt-3 border-t border-slate-100 flex items-start gap-2.5">
-                <span className="text-sm font-bold text-slate-700 shrink-0 select-none">
+              <div className="pt-3 border-t border-line-subtle flex items-start gap-2.5">
+                <span className="text-sm font-bold text-fg-secondary shrink-0 select-none">
                   Ans:
                 </span>
                 {q.answer && q.answer.trim().length > 0 ? (
-                  <p className="text-sm text-slate-600 leading-relaxed font-normal flex-1">
+                  <p className="text-sm text-fg-muted leading-relaxed font-normal flex-1">
                     {q.answer}
                   </p>
                 ) : (
-                  <div className="flex items-center gap-2 text-xs text-slate-400 italic">
+                  <div className="flex items-center gap-2 text-xs text-fg-subtle italic">
                     <span>
                       {language === "ES"
                         ? "Aún no se ha documentado una respuesta."
@@ -500,7 +505,7 @@ export default function CareTeamQuestionsSection({
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal(q)}
-                      className="text-blue-600 font-semibold not-italic hover:underline cursor-pointer"
+                      className="text-fg-brand font-semibold not-italic hover:underline cursor-pointer"
                     >
                       {language === "ES" ? "+ Agregar Respuesta" : "+ Add Answer"}
                     </button>
@@ -513,45 +518,59 @@ export default function CareTeamQuestionsSection({
       </div>
 
       {/* ADD / EDIT MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-7 text-left shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingId
-                  ? language === "ES"
-                    ? "Editar Pregunta y Respuesta"
-                    : "Edit Question & Answer"
-                  : language === "ES"
-                  ? "Hacer Pregunta al Equipo"
-                  : "Ask Care Team a Question"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        size="wide"
+        title={
+          editingId
+            ? language === "ES"
+              ? "Editar Pregunta y Respuesta"
+              : "Edit Question & Answer"
+            : language === "ES"
+              ? "Hacer Pregunta al Equipo"
+              : "Ask Care Team a Question"
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsModalOpen(false)}
+            >
+              {language === "ES" ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="care-team-question-form">
+              {editingId
+                ? language === "ES"
+                  ? "Guardar Cambios"
+                  : "Save Changes"
+                : language === "ES"
+                  ? "Guardar Pregunta"
+                  : "Save Question"}
+            </Button>
+          </>
+        }
+      >
             {formError && (
-              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
+              <Alert tone="danger" className="mb-stack-lg">
                 {formError}
-              </div>
+              </Alert>
             )}
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            <form
+              id="care-team-question-form"
+              onSubmit={handleFormSubmit}
+              className="space-y-stack-lg"
+            >
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Destinatario / Especialidad" : "Care Team Member"}{" "}
-                  <span className="text-rose-500">*</span>
+                  <span className="text-danger">*</span>
                 </label>
-                <select
+                <Select
                   value={formRole}
                   onChange={(e) => setFormRole(e.target.value as CareTeamRole)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="Provider">
                     {language === "ES" ? "Proveedor (Provider)" : "Provider"}
@@ -565,18 +584,17 @@ export default function CareTeamQuestionsSection({
                   <option value="Nurse">
                     {language === "ES" ? "Enfermero/a (Nurse)" : "Nurse"}
                   </option>
-                </select>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  {language === "ES" ? "Pregunta" : "Question"} <span className="text-rose-500">*</span>
+                <label className="text-overline mb-stack-xs block text-fg-muted">
+                  {language === "ES" ? "Pregunta" : "Question"} <span className="text-danger">*</span>
                 </label>
-                <textarea
+                <Textarea
                   rows={3}
                   value={formQuestion}
                   onChange={(e) => setFormQuestion(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder={
                     language === "ES"
                       ? "p.ej. ¿Por qué cambiaron mi peso seco?"
@@ -587,14 +605,13 @@ export default function CareTeamQuestionsSection({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Respuesta (Ans)" : "Answer (Ans)"}
                 </label>
-                <textarea
+                <Textarea
                   rows={4}
                   value={formAnswer}
                   onChange={(e) => setFormAnswer(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder={
                     language === "ES"
                       ? "Documenta la respuesta o indicaciones que te dio el equipo médico..."
@@ -604,13 +621,13 @@ export default function CareTeamQuestionsSection({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-overline mb-stack-xs block text-fg-muted">
                   {language === "ES" ? "Estado" : "Status"}
                 </label>
-                <select
+                <Select
                   value={formStatus}
                   onChange={(e) => setFormStatus(e.target.value as QuestionStatus)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 >
                   <option value="Answered">
                     {language === "ES" ? "Respondida (Answered)" : "Answered"}
@@ -621,34 +638,11 @@ export default function CareTeamQuestionsSection({
                   <option value="Submitted">
                     {language === "ES" ? "Pendiente (Submitted)" : "Submitted"}
                   </option>
-                </select>
+                </Select>
               </div>
 
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 text-sm transition-colors shadow-sm cursor-pointer"
-                >
-                  {editingId
-                    ? language === "ES"
-                      ? "Guardar Cambios"
-                      : "Save Changes"
-                    : language === "ES"
-                    ? "Guardar Pregunta"
-                    : "Save Question"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer"
-                >
-                  {language === "ES" ? "Cancelar" : "Cancel"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

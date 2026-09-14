@@ -11,7 +11,7 @@ import { CourseClass, CourseClassKind } from "@/features/education/courseLibrary
 import { formatClock } from "@/features/education/vtt";
 
 export const FIELD_CLASS =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
+  "w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
 
 export function Field({
   label,
@@ -24,11 +24,11 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+      <span className="block text-xs font-bold uppercase tracking-wide text-fg-muted">
         {label}
       </span>
       {hint && (
-        <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
+        <span className="mt-0.5 block text-[11px] font-medium text-fg-subtle">
           {hint}
         </span>
       )}
@@ -134,21 +134,21 @@ export function TypeStep({
                 })
               }
               aria-pressed={selected}
-              className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-5 text-center transition-colors cursor-pointer ${
+              className={`flex flex-col items-center gap-2 rounded-card border-2 p-5 text-center transition-colors cursor-pointer ${
                 selected
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  ? "border-primary-edge bg-primary-soft"
+                  : "border-line bg-surface hover:border-line-strong hover:bg-surface-sunken"
               }`}
             >
               <option.icon
-                className={`h-7 w-7 ${selected ? "text-blue-600" : "text-slate-400"}`}
+                className={`h-7 w-7 ${selected ? "text-fg-brand" : "text-fg-subtle"}`}
               />
               <span
-                className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}
+                className={`text-sm font-bold ${selected ? "text-fg-brand" : "text-fg-secondary"}`}
               >
                 {option.label}
               </span>
-              <span className="text-[11px] font-medium leading-snug text-slate-500">
+              <span className="text-[11px] font-medium leading-snug text-fg-muted">
                 {option.detail}
               </span>
             </button>
@@ -228,19 +228,19 @@ export function MediaUpload({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 px-4 py-7 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer"
+        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft cursor-pointer"
       >
-        <Upload className="h-6 w-6 text-slate-400" />
-        <span className="text-sm font-bold text-slate-700">
+        <Upload className="h-6 w-6 text-fg-subtle" />
+        <span className="text-sm font-bold text-fg-secondary">
           Upload {label} file
         </span>
-        <span className="text-xs font-medium text-slate-500">
+        <span className="text-xs font-medium text-fg-muted">
           Reads the length and previews it here
         </span>
       </button>
 
       {mediaFileName && (
-        <p className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+        <p className="mt-2 flex items-center gap-2 rounded-control bg-success-surface px-3 py-2 text-xs font-semibold text-success">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{mediaFileName}</span>
           {mediaSeconds !== null && (
@@ -254,7 +254,7 @@ export function MediaUpload({
           src={mediaUrl}
           controls
           preload="metadata"
-          className="mt-3 aspect-video w-full rounded-xl bg-slate-900"
+          className="mt-3 aspect-video w-full rounded-control bg-surface-inverse"
         />
       )}
 

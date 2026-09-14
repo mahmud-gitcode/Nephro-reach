@@ -82,54 +82,54 @@ const MOODS = [
     level: 5,
     label: "Great",
     icon: BsEmojiLaughingFill,
-    color: "text-emerald-500",
+    color: "text-success-700",
   },
   {
     level: 4,
     label: "Good",
     icon: BsEmojiSmileFill,
-    color: "text-lime-500",
+    color: "text-success-500",
   },
   {
     level: 3,
     label: "Okay",
     icon: BsEmojiNeutralFill,
-    color: "text-amber-500",
+    color: "text-warning",
   },
   {
     level: 2,
     label: "Low",
     icon: BsEmojiFrownFill,
-    color: "text-orange-500",
+    color: "text-danger-500",
   },
   {
     level: 1,
     label: "Poor",
     icon: BsEmojiAngryFill,
-    color: "text-red-500",
+    color: "text-danger-700",
   },
 ];
 
 /* ---- Shared style tokens: one radius scale, one type scale, one palette ---- */
 
 const SEGMENT_TRACK =
-  "flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-1";
+  "flex items-center gap-0.5 rounded-control border border-line bg-surface-sunken p-1";
 const SEGMENT_ITEM =
-  "flex h-7 items-center justify-center rounded-md px-3 text-xs font-bold transition-colors cursor-pointer";
-const SEGMENT_ACTIVE = "bg-[#2563EB] text-white shadow-xs";
-const SEGMENT_IDLE = "text-slate-500 hover:text-slate-800";
+  "flex h-7 items-center justify-center rounded-control-small px-3 text-xs font-bold transition-colors cursor-pointer";
+const SEGMENT_ACTIVE = "bg-primary-solid text-primary-on-solid shadow-control";
+const SEGMENT_IDLE = "text-fg-muted hover:text-fg-secondary";
 
 const FIELD_ROW =
-  "flex flex-col gap-2.5 rounded-xl border border-slate-200 bg-white p-3.5 transition-colors hover:border-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
-const FIELD_LABEL = "text-sm font-semibold text-slate-800";
+  "flex flex-col gap-2.5 rounded-control border border-line bg-surface p-3.5 transition-colors hover:border-line-strong sm:flex-row sm:items-center sm:justify-between sm:gap-4";
+const FIELD_LABEL = "text-sm font-semibold text-fg-secondary";
 
-const PANEL = "rounded-xl border border-slate-200 bg-[#F8FAFC] p-4";
+const PANEL = "rounded-control border border-line bg-surface-sunken p-4";
 const CHIP_BASE =
-  "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer";
+  "rounded-control border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-bold tracking-tight text-[#06265B]">
+    <h3 className="text-sm font-bold tracking-tight text-fg">
       {children}
     </h3>
   );
@@ -137,7 +137,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function PanelTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+    <h3 className="text-xs font-bold uppercase tracking-wider text-fg-muted">
       {children}
     </h3>
   );
@@ -216,21 +216,21 @@ function CounterField({
   return (
     <div className={`${FIELD_ROW} h-full`}>
       <span className={FIELD_LABEL}>{label}</span>
-      <div className="flex shrink-0 items-center gap-1 self-start rounded-lg border border-slate-200 bg-slate-100 p-1 sm:self-auto">
+      <div className="flex shrink-0 items-center gap-1 self-start rounded-control border border-line bg-surface-sunken p-1 sm:self-auto">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
-          className="flex size-7 items-center justify-center rounded-md bg-white text-slate-600 shadow-2xs transition-colors hover:text-[#2563EB] cursor-pointer"
+          className="flex size-7 items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand cursor-pointer"
         >
           <Minus className="size-3.5" />
         </button>
-        <span className="w-9 text-center text-sm font-bold text-slate-900">
+        <span className="w-9 text-center text-sm font-bold text-fg">
           {value}
         </span>
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="flex size-7 items-center justify-center rounded-md bg-white text-slate-600 shadow-2xs transition-colors hover:text-[#2563EB] cursor-pointer"
+          className="flex size-7 items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand cursor-pointer"
         >
           <Plus className="size-3.5" />
         </button>
@@ -251,8 +251,8 @@ function SeverityRow({
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-slate-300">
-      <span className="w-32 shrink-0 truncate text-sm font-semibold text-slate-800 sm:w-36">
+    <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3.5 py-3 transition-colors hover:border-line-strong">
+      <span className="w-32 shrink-0 truncate text-sm font-semibold text-fg-secondary sm:w-36">
         {label}
       </span>
       <input
@@ -262,11 +262,11 @@ function SeverityRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{
-          background: `linear-gradient(to right, #2563EB ${pct}%, #E2E8F0 ${pct}%)`,
+          background: `linear-gradient(to right, var(--color-primary-solid) ${pct}%, var(--color-line) ${pct}%)`,
         }}
-        className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full accent-[#2563EB] outline-none"
+        className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-pill accent-[var(--color-primary-solid)] outline-none"
       />
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[#2563EB] text-xs font-bold text-white">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-xs font-bold text-primary-on-solid">
         {value}
       </span>
     </div>
@@ -291,10 +291,10 @@ function VitalCard({
   inputMode: "decimal" | "numeric" | "text";
 }) {
   return (
-    <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-4">
+    <div className="space-y-2.5 rounded-control border border-line bg-surface p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-600">{label}</span>
-        <Icon className="size-4 shrink-0 text-[#2563EB]" />
+        <span className="text-xs font-bold text-fg-muted">{label}</span>
+        <Icon className="size-4 shrink-0 text-fg-brand" />
       </div>
       <input
         type="text"
@@ -302,9 +302,9 @@ function VitalCard({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-lg font-bold text-slate-900 outline-none transition-colors placeholder:font-semibold placeholder:text-slate-300 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-lg font-bold text-fg outline-none transition-colors placeholder:font-semibold placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
-      <p className="truncate text-xs font-medium text-slate-500">{unit}</p>
+      <p className="truncate text-xs font-medium text-fg-muted">{unit}</p>
     </div>
   );
 }
@@ -329,8 +329,8 @@ function SymptomChips({
             onClick={() => onToggle(sym)}
             className={`${CHIP_BASE} ${
               sel
-                ? "border-[#2563EB] bg-[#2563EB] text-white shadow-xs"
-                : "border-slate-200 bg-white text-slate-700 hover:border-[#2563EB] hover:text-[#2563EB]"
+                ? "border-primary-edge bg-primary-solid text-primary-on-solid shadow-control"
+                : "border-line bg-surface text-fg-secondary hover:border-primary-edge hover:text-fg-brand"
             }`}
           >
             {sym}
@@ -358,10 +358,10 @@ function MoodPicker({
             key={m.level}
             type="button"
             onClick={() => onChange(m.level)}
-            className={`group flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-colors cursor-pointer ${
+            className={`group flex flex-col items-center justify-center gap-2 rounded-control border p-3 transition-colors cursor-pointer ${
               active
-                ? "border-[#2563EB] bg-blue-50 ring-1 ring-[#2563EB]"
-                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                ? "border-primary-edge bg-primary-soft ring-1 ring-ring"
+                : "border-line bg-surface hover:border-line-strong hover:bg-surface-sunken"
             }`}
           >
             <Icon
@@ -369,7 +369,7 @@ function MoodPicker({
             />
             <span
               className={`text-xs font-bold ${
-                active ? "text-[#2563EB]" : "text-slate-600"
+                active ? "text-fg-brand" : "text-fg-muted"
               }`}
             >
               {m.label}
@@ -610,11 +610,11 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
   ];
 
   return (
-    <div className="w-full space-y-4 font-sans text-slate-800">
+    <div className="w-full space-y-4 font-sans text-fg-secondary">
       {/* 1. CLINICAL SESSION INFORMATION CARD */}
-      <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="w-full rounded-card border border-line bg-surface p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl font-bold tracking-tight text-fg">
             Dialysis Day Log
           </h1>
 
@@ -623,7 +623,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="dialysis-log-date"
-                className="text-xs font-bold text-slate-500"
+                className="text-xs font-bold text-fg-muted"
               >
                 Date
               </label>
@@ -639,13 +639,13 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     (e.currentTarget as any).showPicker?.();
                   } catch {}
                 }}
-                className="h-9 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none transition-colors hover:border-slate-300 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-xs font-bold text-fg-secondary outline-none transition-colors hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"
               />
             </div>
 
             {/* Dialysis Day Toggle with Label */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-slate-500">
+              <span className="text-xs font-bold text-fg-muted">
                 Dialysis Day
               </span>
               <div className={`${SEGMENT_TRACK} h-9`}>
@@ -674,7 +674,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-[#2563EB] hover:text-[#2563EB] cursor-pointer"
+                className="flex size-9 items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand cursor-pointer"
                 title="Print"
               >
                 <Printer className="size-4" />
@@ -684,7 +684,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer"
+                  className="flex size-9 items-center justify-center rounded-control border border-line bg-surface text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-secondary cursor-pointer"
                 >
                   <X className="size-4" />
                 </button>
@@ -694,13 +694,13 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
         </div>
 
         {/* Clinical Information Bar */}
-        <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-control border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
           {summaryItems.map((item) => (
-            <div key={item.label} className="min-w-0 bg-[#F8FAFC] px-3.5 py-3">
-              <p className="truncate text-[11px] font-medium text-slate-500">
+            <div key={item.label} className="min-w-0 bg-surface-sunken px-3.5 py-3">
+              <p className="truncate text-[11px] font-medium text-fg-muted">
                 {item.label}
               </p>
-              <p className="mt-1 truncate text-sm font-bold text-slate-900">
+              <p className="mt-1 truncate text-sm font-bold text-fg">
                 {item.value}
               </p>
             </div>
@@ -709,9 +709,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
       </div>
 
       {/* 2. FORM CARD — step wizard, content and actions on one surface */}
-      <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="w-full overflow-hidden rounded-card border border-line bg-surface shadow-card">
         {/* Step progress */}
-        <div className="border-b border-slate-200 bg-[#F8FAFC] px-4 py-4 sm:px-6">
+        <div className="border-b border-line bg-surface-sunken px-4 py-4 sm:px-6">
           <div className="flex w-full items-center justify-between">
             {steps.map((step, idx, arr) => {
               const isCompleted = activeTab > step.id;
@@ -725,12 +725,12 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     className="group flex shrink-0 flex-col items-center gap-2 cursor-pointer sm:flex-row"
                   >
                     <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-bold transition-colors ${
                         isCurrent
-                          ? "bg-[#2563EB] text-white ring-4 ring-blue-100"
+                          ? "bg-primary-solid text-primary-on-solid ring-4 ring-ring"
                           : isCompleted
-                          ? "bg-[#06265B] text-white"
-                          : "border border-slate-300 bg-white text-slate-400 group-hover:border-slate-400"
+                          ? "bg-surface-inverse text-fg-inverse"
+                          : "border border-line-strong bg-surface text-fg-subtle group-hover:border-line-strong"
                       }`}
                     >
                       {isCompleted ? (
@@ -744,10 +744,10 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     <span
                       className={`text-center text-xs font-bold transition-colors sm:text-left ${
                         isCurrent
-                          ? "text-[#2563EB]"
+                          ? "text-fg-brand"
                           : isCompleted
-                          ? "text-[#06265B]"
-                          : "text-slate-400 group-hover:text-slate-600"
+                          ? "text-fg"
+                          : "text-fg-subtle group-hover:text-fg-muted"
                       }`}
                     >
                       {step.label}
@@ -756,8 +756,8 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
 
                   {idx < arr.length - 1 && (
                     <div
-                      className={`mx-2 h-0.5 flex-1 rounded-full transition-colors sm:mx-4 ${
-                        activeTab > step.id ? "bg-[#2563EB]" : "bg-slate-200"
+                      className={`mx-2 h-0.5 flex-1 rounded-pill transition-colors sm:mx-4 ${
+                        activeTab > step.id ? "bg-primary-solid" : "bg-line"
                       }`}
                     />
                   )}
@@ -768,7 +768,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
         </div>
 
         {/* Step content */}
-        <div className="divide-y divide-slate-200">
+        <div className="divide-y divide-line">
           {/* TAB 1: ATTENDANCE & PRE-DIALYSIS */}
           {(activeTab === 1 || activeTab === 4) && (
             <div className="space-y-6 p-5 sm:p-6">
@@ -895,7 +895,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   value={intraNotes}
                   onChange={(e) => setIntraNotes(e.target.value)}
                   placeholder="Session details, interventions, or notes..."
-                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary outline-none transition-colors focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -962,13 +962,13 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3">
-                  <span className="text-xs font-medium text-slate-600">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-primary-soft-line bg-primary-soft px-3.5 py-3">
+                  <span className="text-xs font-medium text-fg-muted">
                     Need a prompt for your doses?
                   </span>
                   <Link
                     href="/dashboard/personal-log/medications"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563EB] hover:text-blue-700 hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-fg-brand hover:text-fg-brand hover:underline"
                   >
                     <Bell className="size-3.5" />
                     <span>Set Medication Reminders</span>
@@ -1028,7 +1028,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   value={generalNotes}
                   onChange={(e) => setGeneralNotes(e.target.value)}
                   placeholder="Post-dialysis notes or recovery observations..."
-                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary outline-none transition-colors focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -1036,12 +1036,12 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
         </div>
 
         {/* 3. FOOTER */}
-        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-[#F8FAFC] px-5 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-sunken px-5 py-4 sm:px-6">
           {activeTab > 1 ? (
             <button
               type="button"
               onClick={() => setActiveTab(activeTab - 1)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken cursor-pointer"
             >
               <ArrowLeft className="size-3.5" />
               <span>Previous Page</span>
@@ -1050,14 +1050,14 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+              className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg cursor-pointer"
             >
               Cancel
             </button>
           ) : (
             <Link
               href="/dashboard/personal-log/dialysis-treatment"
-              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+              className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
               Cancel
             </Link>
@@ -1067,7 +1067,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={() => setActiveTab(activeTab + 1)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#2563EB] px-5 text-xs font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-control bg-primary-solid px-5 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
             >
               <span>Next Page</span>
               <ArrowRight className="size-3.5" />
@@ -1076,7 +1076,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={handleSave}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#2563EB] px-6 text-xs font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-control bg-primary-solid px-6 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
             >
               <Check className="size-4" />
               <span>Save Log</span>

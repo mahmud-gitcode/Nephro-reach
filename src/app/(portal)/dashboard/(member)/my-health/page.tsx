@@ -1,8 +1,28 @@
 "use client";
 
 import React from "react";
-import { Edit3, Plus, Trash2, X } from "lucide-react";
+import { Edit3, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Tabs,
+  TabPanel,
+  Textarea,
+} from "@/components/ui";
+import type { BadgeProps, TabItem } from "@/components/ui";
 
 type HealthTab = "allergies" | "history";
 
@@ -180,42 +200,29 @@ const rawHistoryRows = [
   },
 ];
 
-function Badge({
-  typeKey,
-  label,
-}: {
-  typeKey:
-    | "Medication"
-    | "Food"
-    | "Environmental"
-    | "Severe"
-    | "Moderate"
-    | "Mild"
-    | "Current"
-    | "Past";
-  label: string;
-}) {
-  const styles: Record<string, string> = {
-    Medication: "bg-[#F9CFFF] text-[#AF14C7]",
-    Food: "bg-emerald-100 text-emerald-600",
-    Environmental: "bg-blue-100 text-blue-600",
-    Severe: "bg-red-100 text-red-500",
-    Moderate: "bg-[#FFE98F] text-[#9C6200]",
-    Mild: "bg-amber-100 text-amber-500",
-    Current: "bg-emerald-50 text-emerald-600",
-    Past: "bg-slate-200 text-slate-600",
-  };
+/* Colour is spent on what needs attention, not on everything.
 
-  return (
-    <span
-      className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${
-        styles[typeKey] || "bg-slate-100 text-slate-700"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
+   Severity and status say something a member may have to act on, so they
+   carry tone. Allergy TYPE is a category — the word "Food" already says
+   food — so it stays neutral and outlined. Previously all three types were
+   coloured, which put five competing hues in one table row and left
+   "Severe" with no more visual weight than "Environmental". */
+const severityBadge: Record<
+  AllergySeverity,
+  Pick<BadgeProps, "tone" | "variant">
+> = {
+  Severe: { tone: "danger", variant: "solid" },
+  Moderate: { tone: "warning", variant: "soft" },
+  Mild: { tone: "neutral", variant: "soft" },
+};
+
+const statusBadge: Record<
+  ConditionStatus,
+  Pick<BadgeProps, "tone" | "variant">
+> = {
+  Current: { tone: "success", variant: "soft" },
+  Past: { tone: "neutral", variant: "soft" },
+};
 
 function RowActions({
   label,
@@ -227,65 +234,25 @@ function RowActions({
   deleteLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-center gap-4">
-      <button
-        type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 cursor-pointer"
+    <div className="flex items-center justify-center gap-inline-md">
+      <Button
+        variant="neutral"
+        appearance="stroke"
+        size="small"
+        className="px-inset-xs"
         aria-label={`${editLabel || "Edit"} ${label}`}
       >
-        <Edit3 className="h-5 w-5" />
-      </button>
-      <button
-        type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+        <Edit3 aria-hidden="true" />
+      </Button>
+      <Button
+        variant="danger"
+        appearance="stroke"
+        size="small"
+        className="px-inset-xs"
         aria-label={`${deleteLabel || "Delete"} ${label}`}
       >
-        <Trash2 className="h-5 w-5" />
-      </button>
-    </div>
-  );
-}
-
-function Tabs({
-  activeTab,
-  onTabChange,
-  allergiesLabel,
-  historyLabel,
-}: {
-  activeTab: HealthTab;
-  onTabChange: (tab: HealthTab) => void;
-  allergiesLabel?: string;
-  historyLabel?: string;
-}) {
-  const tabs: Array<{ id: HealthTab; label: string }> = [
-    { id: "allergies", label: allergiesLabel || "Allergies" },
-    { id: "history", label: historyLabel || "Medical History" },
-  ];
-
-  return (
-    <div
-      className="grid h-12 w-full max-w-[540px] grid-cols-2 gap-1 border-b border-slate-200"
-      role="tablist"
-      aria-label="My Health sections"
-    >
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === tab.id}
-          aria-controls={`${tab.id}-panel`}
-          id={`${tab.id}-tab`}
-          onClick={() => onTabChange(tab.id)}
-          className={`h-12 border-b-[3px] px-6 text-center text-sm font-medium tracking-[0.07px] transition-colors cursor-pointer ${
-            activeTab === tab.id
-              ? "border-blue-600 text-slate-950 shadow-[0_1px_1px_rgba(0,0,0,0.05)] font-bold"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          {tab.label}
-        </button>
-      ))}
+        <Trash2 aria-hidden="true" />
+      </Button>
     </div>
   );
 }
@@ -302,23 +269,17 @@ function SectionHeader({
   onAddClick: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-inset-md sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
-          {title}
-        </h1>
-        <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-900 sm:text-base sm:leading-6">
+        <h2 className="text-heading-4 text-fg">{title}</h2>
+        <p className="mt-stack-sm measure text-body-sm text-fg-secondary">
           {description}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onAddClick}
-        className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
-      >
-        <Plus className="h-5 w-5" />
+      <Button onClick={onAddClick} className="shrink-0">
+        <Plus aria-hidden="true" />
         {buttonLabel}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -364,25 +325,23 @@ function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
   const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
-      <table className="w-full min-w-[1080px] border-collapse text-sm">
-        <thead className="bg-[#F4F6F8]">
-          <tr>
-            {headers.map((header) => (
-              <th
+    <Card padding="none" className="overflow-hidden">
+      <Table minWidth={1080}>
+        <TableHead className="bg-surface-sunken">
+          <TableRow>
+            {headers.map((header, index) => (
+              <TableHeaderCell
                 key={header}
-                className={`h-[55px] border-b border-[#C4CDD5] px-3 text-left font-medium tracking-[0.07px] text-slate-950 ${
-                  header === headers[0] ? "w-[358px]" : ""
-                } ${header === headers[5] ? "text-center" : ""}`}
+                className={`${index === 0 ? "w-[358px]" : ""} ${
+                  index === 5 ? "text-center" : ""
+                }`}
               >
-                <span className="block border-l border-[#C4CDD5] pl-3 first:border-l-0">
-                  {header}
-                </span>
-              </th>
+                {header}
+              </TableHeaderCell>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {rows.map((row) => {
             const reactionText = row.reactionKey
               ? getReaction(row.reactionKey, row.reactionDefault)
@@ -391,44 +350,37 @@ function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
             const nameText = row.name || sampleName;
 
             return (
-              <tr
-                key={row.id}
-                className="border-b border-dashed border-[#C4CDD5] last:border-0"
-              >
-                <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
+              <TableRow key={row.id}>
+                <TableCell emphasis className="max-w-[358px] truncate">
                   {nameText}
-                </td>
-                <td className="h-[54px] px-3 py-2">
-                  <Badge
-                    typeKey={row.type}
-                    label={getTypeName(row.type)}
-                  />
-                </td>
-                <td className="h-[54px] max-w-[160px] truncate px-3 py-2 text-slate-800">
+                </TableCell>
+                <TableCell>
+                  <Badge tone="neutral" variant="outline">
+                    {getTypeName(row.type)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="max-w-[160px] truncate">
                   {reactionText}
-                </td>
-                <td className="h-[54px] px-3 py-2">
-                  <Badge
-                    typeKey={row.severity}
-                    label={getSeverityName(row.severity)}
-                  />
-                </td>
-                <td className="h-[54px] px-3 py-2 text-slate-800">
-                  {notesText}
-                </td>
-                <td className="h-[54px] px-3 py-2">
+                </TableCell>
+                <TableCell>
+                  <Badge {...severityBadge[row.severity]}>
+                    {getSeverityName(row.severity)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{notesText}</TableCell>
+                <TableCell>
                   <RowActions
                     label={nameText}
                     editLabel={h?.actions?.edit}
                     deleteLabel={h?.actions?.delete}
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 
@@ -461,25 +413,23 @@ function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
   const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
-      <table className="w-full min-w-[1080px] border-collapse text-sm">
-        <thead className="bg-[#F8FAFC]">
-          <tr>
-            {headers.map((header) => (
-              <th
+    <Card padding="none" className="overflow-hidden">
+      <Table minWidth={1080}>
+        <TableHead className="bg-surface-sunken">
+          <TableRow>
+            {headers.map((header, index) => (
+              <TableHeaderCell
                 key={header}
-                className={`h-[55px] border-b border-[#C4CDD5] px-3 text-left font-medium tracking-[0.07px] text-slate-950 ${
-                  header === headers[0] ? "w-[358px]" : ""
-                } ${header === headers[4] ? "text-center" : ""}`}
+                className={`${index === 0 ? "w-[358px]" : ""} ${
+                  index === 4 ? "text-center" : ""
+                }`}
               >
-                <span className="block border-l border-[#C4CDD5] pl-3 first:border-l-0">
-                  {header}
-                </span>
-              </th>
+                {header}
+              </TableHeaderCell>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {rows.map((row) => {
             const conditionText = row.conditionKey
               ? getConditionName(row.conditionKey, row.conditionDefault)
@@ -487,98 +437,69 @@ function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
             const notesText = row.notes ?? `${weekPrefix} ${row.week}`;
 
             return (
-              <tr
-                key={row.id}
-                className="border-b border-dashed border-[#C4CDD5] last:border-0"
-              >
-                <td className="h-[54px] max-w-[358px] truncate px-3 py-2 text-slate-800">
+              <TableRow key={row.id}>
+                <TableCell emphasis className="max-w-[358px] truncate">
                   {conditionText}
-                </td>
-                <td className="h-[54px] px-3 py-2">
-                  <Badge
-                    typeKey={row.status}
-                    label={getStatusName(row.status)}
-                  />
-                </td>
-                <td className="h-[54px] px-3 py-2 text-slate-800">
-                  {row.diagnosed}
-                </td>
-                <td className="h-[54px] px-3 py-2 text-slate-800">
-                  {notesText}
-                </td>
-                <td className="h-[54px] px-3 py-2">
+                </TableCell>
+                <TableCell>
+                  <Badge {...statusBadge[row.status]}>
+                    {getStatusName(row.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{row.diagnosed}</TableCell>
+                <TableCell>{notesText}</TableCell>
+                <TableCell>
                   <RowActions
                     label={conditionText}
                     editLabel={h?.actions?.edit}
                     deleteLabel={h?.actions?.delete}
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 
-const FIELD_CLASS =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
-
+/* Both modals go through here, so the focus trap, Escape and scroll lock
+   arrive in both at once. The submit button lives in the footer and reaches
+   the form through form="…", which is what lets <Modal> own the shell. */
 function ModalShell({
   title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-      <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({
+  formId,
   onClose,
   submitLabel,
   cancelLabel,
+  children,
 }: {
+  title: string;
+  formId: string;
   onClose: () => void;
   submitLabel: string;
   cancelLabel: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
-      <button
-        type="button"
-        onClick={onClose}
-        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
-      >
-        {cancelLabel}
-      </button>
-      <button
-        type="submit"
-        className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700 cursor-pointer"
-      >
-        {submitLabel}
-      </button>
-    </div>
+    <Modal
+      open
+      onClose={onClose}
+      title={title}
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button type="submit" form={formId}>
+            {submitLabel}
+          </Button>
+        </>
+      }
+    >
+      {children}
+    </Modal>
   );
 }
 
@@ -620,96 +541,99 @@ function AddAllergyModal({
   };
 
   return (
-    <ModalShell title={h?.allergies?.addBtn || "Add Allergy"} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-        {error ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
-            {error}
-          </p>
-        ) : null}
+    <ModalShell
+      title={h?.allergies?.addBtn || "Add Allergy"}
+      formId="add-allergy-form"
+      onClose={onClose}
+      cancelLabel={isEs ? "Cancelar" : "Cancel"}
+      submitLabel={h?.allergies?.addBtn || "Add Allergy"}
+    >
+      <form
+        id="add-allergy-form"
+        onSubmit={handleSubmit}
+        className="space-y-stack-lg"
+      >
+        {error ? <Alert tone="danger">{error}</Alert> : null}
 
-        <div className="space-y-1.5">
-          <label htmlFor="allergy-name" className="block text-xs font-bold text-slate-800">
-            {h?.allergies?.headers?.name || "Name"} <span className="text-rose-500">*</span>
-          </label>
-          <input
-            id="allergy-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={isEs ? "ej. Penicilina" : "e.g. Penicillin"}
-            className={FIELD_CLASS}
-            autoFocus
-          />
+        <FormField label={h?.allergies?.headers?.name || "Name"} required>
+          {(props) => (
+            <Input
+              {...props}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={isEs ? "ej. Penicilina" : "e.g. Penicillin"}
+              autoFocus
+            />
+          )}
+        </FormField>
+
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
+          <FormField label={h?.allergies?.headers?.type || "Type"}>
+            {(props) => (
+              <Select
+                {...props}
+                value={type}
+                onChange={(event) => setType(event.target.value as AllergyType)}
+              >
+                <option value="Medication">
+                  {h?.allergies?.types?.medication || "Medication"}
+                </option>
+                <option value="Food">{h?.allergies?.types?.food || "Food"}</option>
+                <option value="Environmental">
+                  {h?.allergies?.types?.environmental || "Environmental"}
+                </option>
+              </Select>
+            )}
+          </FormField>
+
+          <FormField label={h?.allergies?.headers?.severity || "Severity"}>
+            {(props) => (
+              <Select
+                {...props}
+                value={severity}
+                onChange={(event) =>
+                  setSeverity(event.target.value as AllergySeverity)
+                }
+              >
+                <option value="Severe">
+                  {h?.allergies?.severities?.severe || "Severe"}
+                </option>
+                <option value="Moderate">
+                  {h?.allergies?.severities?.moderate || "Moderate"}
+                </option>
+                <option value="Mild">
+                  {h?.allergies?.severities?.mild || "Mild"}
+                </option>
+              </Select>
+            )}
+          </FormField>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="allergy-type" className="block text-xs font-bold text-slate-800">
-              {h?.allergies?.headers?.type || "Type"}
-            </label>
-            <select
-              id="allergy-type"
-              value={type}
-              onChange={(event) => setType(event.target.value as AllergyType)}
-              className={`${FIELD_CLASS} cursor-pointer`}
-            >
-              <option value="Medication">{h?.allergies?.types?.medication || "Medication"}</option>
-              <option value="Food">{h?.allergies?.types?.food || "Food"}</option>
-              <option value="Environmental">
-                {h?.allergies?.types?.environmental || "Environmental"}
-              </option>
-            </select>
-          </div>
+        <FormField label={h?.allergies?.headers?.reaction || "Reaction"} required>
+          {(props) => (
+            <Input
+              {...props}
+              value={reaction}
+              onChange={(event) => setReaction(event.target.value)}
+              placeholder={isEs ? "ej. Sarpullido, urticaria" : "e.g. Rash, Hives"}
+            />
+          )}
+        </FormField>
 
-          <div className="space-y-1.5">
-            <label htmlFor="allergy-severity" className="block text-xs font-bold text-slate-800">
-              {h?.allergies?.headers?.severity || "Severity"}
-            </label>
-            <select
-              id="allergy-severity"
-              value={severity}
-              onChange={(event) => setSeverity(event.target.value as AllergySeverity)}
-              className={`${FIELD_CLASS} cursor-pointer`}
-            >
-              <option value="Severe">{h?.allergies?.severities?.severe || "Severe"}</option>
-              <option value="Moderate">{h?.allergies?.severities?.moderate || "Moderate"}</option>
-              <option value="Mild">{h?.allergies?.severities?.mild || "Mild"}</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="allergy-reaction" className="block text-xs font-bold text-slate-800">
-            {h?.allergies?.headers?.reaction || "Reaction"} <span className="text-rose-500">*</span>
-          </label>
-          <input
-            id="allergy-reaction"
-            value={reaction}
-            onChange={(event) => setReaction(event.target.value)}
-            placeholder={isEs ? "ej. Sarpullido, urticaria" : "e.g. Rash, Hives"}
-            className={FIELD_CLASS}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="allergy-notes" className="block text-xs font-bold text-slate-800">
-            {h?.allergies?.headers?.notes || "Notes"}
-          </label>
-          <textarea
-            id="allergy-notes"
-            rows={2}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder={isEs ? "Opcional" : "Optional"}
-            className={`${FIELD_CLASS} resize-none`}
-          />
-        </div>
-
-        <ModalFooter
-          onClose={onClose}
-          cancelLabel={isEs ? "Cancelar" : "Cancel"}
-          submitLabel={h?.allergies?.addBtn || "Add Allergy"}
-        />
+        <FormField
+          label={h?.allergies?.headers?.notes || "Notes"}
+          optionalLabel={isEs ? "Opcional" : "Optional"}
+        >
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={2}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              className="resize-none"
+            />
+          )}
+        </FormField>
       </form>
     </ModalShell>
   );
@@ -755,78 +679,81 @@ function AddConditionModal({
   };
 
   return (
-    <ModalShell title={h?.history?.addBtn || "Add Condition"} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-        {error ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
-            {error}
-          </p>
-        ) : null}
+    <ModalShell
+      title={h?.history?.addBtn || "Add Condition"}
+      formId="add-condition-form"
+      onClose={onClose}
+      cancelLabel={isEs ? "Cancelar" : "Cancel"}
+      submitLabel={h?.history?.addBtn || "Add Condition"}
+    >
+      <form
+        id="add-condition-form"
+        onSubmit={handleSubmit}
+        className="space-y-stack-lg"
+      >
+        {error ? <Alert tone="danger">{error}</Alert> : null}
 
-        <div className="space-y-1.5">
-          <label htmlFor="condition-name" className="block text-xs font-bold text-slate-800">
-            {h?.history?.headers?.condition || "Condition / History"}{" "}
-            <span className="text-rose-500">*</span>
-          </label>
-          <input
-            id="condition-name"
-            value={condition}
-            onChange={(event) => setCondition(event.target.value)}
-            placeholder={isEs ? "ej. Hipertensión" : "e.g. Hypertension"}
-            className={FIELD_CLASS}
-            autoFocus
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="condition-status" className="block text-xs font-bold text-slate-800">
-              {h?.history?.headers?.status || "Status"}
-            </label>
-            <select
-              id="condition-status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as ConditionStatus)}
-              className={`${FIELD_CLASS} cursor-pointer`}
-            >
-              <option value="Current">{h?.history?.statuses?.current || "Current"}</option>
-              <option value="Past">{h?.history?.statuses?.past || "Past"}</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="condition-diagnosed" className="block text-xs font-bold text-slate-800">
-              {h?.history?.headers?.diagnosed || "Diagnosed"}
-            </label>
-            <input
-              id="condition-diagnosed"
-              type="date"
-              value={diagnosed}
-              onChange={(event) => setDiagnosed(event.target.value)}
-              className={`${FIELD_CLASS} cursor-pointer`}
+        <FormField
+          label={h?.history?.headers?.condition || "Condition / History"}
+          required
+        >
+          {(props) => (
+            <Input
+              {...props}
+              value={condition}
+              onChange={(event) => setCondition(event.target.value)}
+              placeholder={isEs ? "ej. Hipertensión" : "e.g. Hypertension"}
+              autoFocus
             />
-          </div>
+          )}
+        </FormField>
+
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
+          <FormField label={h?.history?.headers?.status || "Status"}>
+            {(props) => (
+              <Select
+                {...props}
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as ConditionStatus)
+                }
+              >
+                <option value="Current">
+                  {h?.history?.statuses?.current || "Current"}
+                </option>
+                <option value="Past">
+                  {h?.history?.statuses?.past || "Past"}
+                </option>
+              </Select>
+            )}
+          </FormField>
+
+          <FormField label={h?.history?.headers?.diagnosed || "Diagnosed"}>
+            {(props) => (
+              <Input
+                {...props}
+                type="date"
+                value={diagnosed}
+                onChange={(event) => setDiagnosed(event.target.value)}
+              />
+            )}
+          </FormField>
         </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="condition-notes" className="block text-xs font-bold text-slate-800">
-            {h?.history?.headers?.notes || "Notes"}
-          </label>
-          <textarea
-            id="condition-notes"
-            rows={2}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder={isEs ? "Opcional" : "Optional"}
-            className={`${FIELD_CLASS} resize-none`}
-          />
-        </div>
-
-        <ModalFooter
-          onClose={onClose}
-          cancelLabel={isEs ? "Cancelar" : "Cancel"}
-          submitLabel={h?.history?.addBtn || "Add Condition"}
-        />
+        <FormField
+          label={h?.history?.headers?.notes || "Notes"}
+          optionalLabel={isEs ? "Opcional" : "Optional"}
+        >
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={2}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              className="resize-none"
+            />
+          )}
+        </FormField>
       </form>
     </ModalShell>
   );
@@ -857,49 +784,49 @@ export default function MyHealthPage() {
     setIsConditionModalOpen(false);
   };
 
+  const tabItems: ReadonlyArray<TabItem<HealthTab>> = [
+    { id: "allergies", label: h?.tabs?.allergies || "Allergies" },
+    { id: "history", label: h?.tabs?.history || "Medical History" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-stack-xl">
       <Tabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        allergiesLabel={h?.tabs?.allergies}
-        historyLabel={h?.tabs?.history}
+        items={tabItems}
+        value={activeTab}
+        onChange={setActiveTab}
+        label="My Health sections"
       />
 
-      <section
-        id={`${activeTab}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${activeTab}-tab`}
-        className="rounded-[14px] border border-[#E3E6F0] bg-white px-3 py-4 shadow-sm"
-      >
-        {activeTab === "allergies" ? (
-          <div className="space-y-3.5">
-            <SectionHeader
-              title={h?.allergies?.title || "Allergy"}
-              description={
-                h?.allergies?.description ||
-                "List of substances, medications, foods or environmental factors you are allergic to."
-              }
-              buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
-              onAddClick={() => setIsAllergyModalOpen(true)}
-            />
-            <AllergiesTable rows={allergyRows} />
-          </div>
-        ) : (
-          <div className="space-y-3.5">
-            <SectionHeader
-              title={h?.history?.title || "Medical History"}
-              description={
-                h?.history?.description ||
-                "Your past and current medical conditions, surgeries and major health events."
-              }
-              buttonLabel={h?.history?.addBtn || "Add Condition"}
-              onAddClick={() => setIsConditionModalOpen(true)}
-            />
-            <MedicalHistoryTable rows={historyRows} />
-          </div>
-        )}
-      </section>
+      <TabPanel id="allergies" value={activeTab}>
+        <Card padding="small" className="space-y-stack-md">
+          <SectionHeader
+            title={h?.allergies?.title || "Allergy"}
+            description={
+              h?.allergies?.description ||
+              "List of substances, medications, foods or environmental factors you are allergic to."
+            }
+            buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
+            onAddClick={() => setIsAllergyModalOpen(true)}
+          />
+          <AllergiesTable rows={allergyRows} />
+        </Card>
+      </TabPanel>
+
+      <TabPanel id="history" value={activeTab}>
+        <Card padding="small" className="space-y-stack-md">
+          <SectionHeader
+            title={h?.history?.title || "Medical History"}
+            description={
+              h?.history?.description ||
+              "Your past and current medical conditions, surgeries and major health events."
+            }
+            buttonLabel={h?.history?.addBtn || "Add Condition"}
+            onAddClick={() => setIsConditionModalOpen(true)}
+          />
+          <MedicalHistoryTable rows={historyRows} />
+        </Card>
+      </TabPanel>
 
       {isAllergyModalOpen ? (
         <AddAllergyModal

@@ -17,15 +17,18 @@ export default function PersonalLogDisclaimer() {
   return (
     <aside
       role="note"
-      className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:p-4"
+      className="mb-stack-xl rounded-card border border-warning-line bg-warning-surface p-inset-md"
     >
-      <div className="flex gap-2.5">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-        <p className="text-xs sm:text-sm font-medium leading-relaxed text-amber-900">
+      <div className="flex gap-inline-md">
+        <AlertTriangle
+          aria-hidden="true"
+          className="mt-0.5 h-5 w-5 shrink-0 text-warning"
+        />
+        <p className="measure text-body-sm text-fg-secondary">
           {isEs ? (
             <>
               NephroReach es una herramienta educativa de registro y comunicación.{" "}
-              <strong className="font-bold">
+              <strong className="font-semibold text-fg">
                 No es un dispositivo de diagnóstico autorizado por la FDA y no
                 transmite datos automáticamente a los servicios de emergencia.
               </strong>{" "}
@@ -36,7 +39,7 @@ export default function PersonalLogDisclaimer() {
           ) : (
             <>
               NephroReach is an educational tracking log and communication tool.{" "}
-              <strong className="font-bold">
+              <strong className="font-semibold text-fg">
                 It is not an FDA-cleared diagnostic device and does not
                 automatically transmit data to emergency services.
               </strong>{" "}

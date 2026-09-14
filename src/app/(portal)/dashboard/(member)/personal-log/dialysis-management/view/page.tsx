@@ -866,7 +866,7 @@ function ViewRecordContent() {
                         onClick={() => toggleOrderCompleted(item.id)}
                         className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-control-small border transition-colors duration-150 ease-standard select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                           item.completed
-                            ? "border-primary-solid bg-primary-solid text-on-primary"
+                            ? "border-primary-solid bg-primary-solid text-primary-on-solid"
                             : "border-line-strong bg-surface hover:border-fg-subtle"
                         }`}
                       >
@@ -1166,7 +1166,7 @@ function ViewRecordContent() {
                   </ChipGroup>
                 </div>
                 {symptomFormError && (
-                  <p role="alert" className="text-caption text-fg-danger">
+                  <p role="alert" className="text-caption text-danger">
                     {symptomFormError}
                   </p>
                 )}

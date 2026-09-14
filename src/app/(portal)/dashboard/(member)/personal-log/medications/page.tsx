@@ -272,7 +272,7 @@ function SectionTitle({ number, title }: { number: string; title: string }) {
     <div className="flex items-center gap-inline-md">
       <span
         aria-hidden="true"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-label-lg text-on-primary"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-label-lg text-primary-on-solid"
       >
         {number}
       </span>

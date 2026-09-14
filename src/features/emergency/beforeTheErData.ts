@@ -12,6 +12,9 @@ export interface NextStepConfig {
   cardBg: string;
 }
 
+/* Four rungs of urgency, three owned hues. The palette has one warning, so
+   rungs 2 and 3 share it and separate by weight instead: urgentMedical is a
+   solid warning badge, callDialysis a soft one. */
 export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
   call911: {
     level: "call911",
@@ -21,10 +24,10 @@ export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
       "Your answers may indicate a medical emergency. Do not wait for your next dialysis treatment.",
     descriptionEs:
       "Sus respuestas pueden indicar una emergencia médica. No espere a su próximo tratamiento de diálisis.",
-    dotColor: "bg-red-500",
-    badgeClass: "bg-red-100 text-red-800 border-red-200",
-    cardBorder: "border-red-200",
-    cardBg: "bg-red-50/50",
+    dotColor: "bg-danger-solid",
+    badgeClass: "bg-danger-600 text-white border-danger-600",
+    cardBorder: "border-danger-line",
+    cardBg: "bg-danger-surface",
   },
   urgentMedical: {
     level: "urgentMedical",
@@ -32,10 +35,10 @@ export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
     badgeEs: "Evaluación Médica Urgente",
     descriptionEn: "Your symptoms need prompt medical evaluation.",
     descriptionEs: "Sus síntomas necesitan una pronta evaluación médica.",
-    dotColor: "bg-orange-500",
-    badgeClass: "bg-orange-100 text-orange-800 border-orange-200",
-    cardBorder: "border-orange-200",
-    cardBg: "bg-orange-50/40",
+    dotColor: "bg-warning-600",
+    badgeClass: "bg-warning-600 text-white border-warning-600",
+    cardBorder: "border-warning-line",
+    cardBg: "bg-warning-surface",
   },
   callDialysis: {
     level: "callDialysis",
@@ -45,10 +48,10 @@ export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
       "This may be something your dialysis team needs to assess before you go to the ER.",
     descriptionEs:
       "Esto puede ser algo que su equipo de diálisis deba evaluar antes de ir a urgencias.",
-    dotColor: "bg-amber-500",
-    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
-    cardBorder: "border-amber-200",
-    cardBg: "bg-amber-50/40",
+    dotColor: "bg-warning-600",
+    badgeClass: "bg-warning-100 text-warning border-warning-line",
+    cardBorder: "border-warning-line",
+    cardBg: "bg-warning-surface",
   },
   monitor: {
     level: "monitor",
@@ -58,10 +61,10 @@ export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
       "Symptoms are mild and there are no emergency warning signs.",
     descriptionEs:
       "Los síntomas son leves y no hay señales de advertencia de emergencia.",
-    dotColor: "bg-emerald-500",
-    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    cardBorder: "border-emerald-200",
-    cardBg: "bg-emerald-50/40",
+    dotColor: "bg-success-600",
+    badgeClass: "bg-success-100 text-success border-success-line",
+    cardBorder: "border-success-line",
+    cardBg: "bg-success-surface",
   },
 };
 

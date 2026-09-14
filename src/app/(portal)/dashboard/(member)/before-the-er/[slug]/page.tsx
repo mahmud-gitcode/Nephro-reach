@@ -10,12 +10,12 @@ import {
   MapPin,
   PlayCircle,
   FileText,
-  ShieldAlert,
   ChevronRight,
   ChevronDown,
   Activity,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { buttonStyles, Card } from "@/components/ui";
 import {
   ExternalLink,
   ExternalLinkProvider,
@@ -45,7 +45,7 @@ function renderFormattedText(text: string) {
       <ExternalLink
         key={match.index}
         href={linkUrl}
-        className="text-blue-600 hover:text-blue-800 underline font-semibold transition-colors"
+        className="text-fg-brand hover:text-primary-fg underline font-semibold transition-colors"
       >
         {linkText}
       </ExternalLink>
@@ -167,17 +167,17 @@ function SymptomDetailContent() {
     <div className="w-full space-y-6">
       {/* MULTIPLE SELECTED SYMPTOMS SWITCHER BAR (if patient selected > 1) */}
       {selectedSlugList.length > 1 && (
-        <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 space-y-2.5">
+        <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
-              <Activity className="h-4 w-4 text-blue-600" />
+            <p className="text-xs font-bold uppercase tracking-wider text-primary-fg flex items-center gap-1.5">
+              <Activity className="h-4 w-4 text-fg-brand" />
               <span>
                 {isEs
                   ? `Síntomas Seleccionados para Orientación (${selectedSlugList.length})`
                   : `Selected Symptoms for Guidance (${selectedSlugList.length})`}
               </span>
             </p>
-            <span className="text-[11px] font-medium text-blue-700">
+            <span className="text-[11px] font-medium text-fg-brand">
               {isEs ? "Toca para ver cada guía" : "Tap any to view guide"}
             </span>
           </div>
@@ -191,13 +191,13 @@ function SymptomDetailContent() {
                   key={slug}
                   type="button"
                   onClick={() => handleSelectTopic(slug)}
-                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 rounded-control px-3.5 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "bg-white text-slate-700 border border-blue-200/80 hover:bg-blue-100/60"
+                      ? "bg-primary-solid text-primary-on-solid shadow-control"
+                      : "bg-surface text-fg-secondary border border-primary-soft-line hover:bg-primary-soft-hover"
                   }`}
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="h-2 w-2 rounded-full bg-success-600" />
                   <span>{itemTitle}</span>
                 </button>
               );
@@ -207,15 +207,15 @@ function SymptomDetailContent() {
       )}
 
       {/* 1. EMERGENCY NOTICE CARD (Normal neutral bg & border) */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 space-y-2 shadow-xs">
+      <Card as="section" padding="none" className="space-y-stack-sm p-inset-lg">
         <div>
-          <span className="text-xs font-black uppercase tracking-wider text-red-600">
+          <span className="text-xs font-black uppercase tracking-wider text-danger">
             {isEs ? "AVISO DE EMERGENCIA" : "EMERGENCY NOTICE"}
           </span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm sm:text-base font-medium text-slate-700 leading-relaxed">
+          <p className="text-sm sm:text-base font-medium text-fg-secondary leading-relaxed">
             {isEs
               ? "Before-the-ER™ no diagnostica afecciones médicas. Si cree que está experimentando una emergencia potencialmente mortal, llame al 911 de inmediato."
               : "Before-the-ER™ does not diagnose medical conditions. If you believe you are experiencing a life-threatening emergency, call 911 immediately."}
@@ -223,22 +223,22 @@ function SymptomDetailContent() {
 
           <a
             href="tel:911"
-            className="text-sm sm:text-base font-bold text-red-600 underline underline-offset-4 hover:text-red-700 transition-colors shrink-0 whitespace-nowrap"
+            className="text-sm sm:text-base font-bold text-danger underline underline-offset-4 hover:text-danger transition-colors shrink-0 whitespace-nowrap"
           >
             {isEs ? "Llamar al 911" : "Call 911"}
           </a>
         </div>
-      </section>
+      </Card>
 
       {/* 2. YOUR NEXT STEP ESCALATION CARD */}
       <section
-        className={`rounded-3xl border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} p-5 sm:p-6 space-y-3.5 shadow-xs`}
+        className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} p-5 sm:p-6 space-y-3.5 shadow-control`}
       >
         <div className="space-y-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+          <span className="text-xs font-black uppercase tracking-wider text-fg-muted">
             {isEs ? "SU SIGUIENTE PASO" : "YOUR NEXT STEP"}
           </span>
-          <p className="text-sm sm:text-base font-semibold text-slate-900 leading-relaxed">
+          <p className="text-sm sm:text-base font-semibold text-fg leading-relaxed">
             {isEs ? nextStepConfig.descriptionEs : nextStepConfig.descriptionEn}
           </p>
         </div>
@@ -248,16 +248,19 @@ function SymptomDetailContent() {
             <>
               <a
                 href="tel:911"
-                className="flex items-center gap-2 rounded-xl bg-[#EF4444] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-600 transition-colors"
+                className={buttonStyles({ variant: "danger" })}
               >
-                <Phone className="h-4 w-4" />
+                <Phone aria-hidden="true" />
                 <span>{t("beforeTheEr.detail.call911")}</span>
               </a>
               <ExternalLink
                 href="https://www.google.com/maps/search/nearest+emergency+room"
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition-colors"
+                className={buttonStyles({
+                  variant: "neutral",
+                  appearance: "fill-stroke",
+                })}
               >
-                <MapPin className="h-4 w-4 text-slate-600" />
+                <MapPin aria-hidden="true" />
                 <span>{t("beforeTheEr.detail.findNearestEr")}</span>
               </ExternalLink>
             </>
@@ -267,14 +270,17 @@ function SymptomDetailContent() {
             <>
               <a
                 href="tel:5550100"
-                className="flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-amber-700 transition-colors"
+                className={CTA_WARNING}
               >
-                <Phone className="h-4 w-4" />
+                <Phone aria-hidden="true" />
                 <span>{isEs ? "Llamar a la Clínica de Diálisis" : "Call Dialysis Clinic"}</span>
               </a>
               <a
                 href="tel:911"
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors"
+                className={buttonStyles({
+                  variant: "danger",
+                  appearance: "fill-stroke",
+                })}
               >
                 <span>{isEs ? "Si empeora: 911" : "If Severe: Call 911"}</span>
               </a>
@@ -285,16 +291,19 @@ function SymptomDetailContent() {
             <>
               <ExternalLink
                 href="https://www.google.com/maps/search/nearest+emergency+room"
-                className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-700 transition-colors"
+                className={CTA_WARNING}
               >
-                <MapPin className="h-4 w-4" />
+                <MapPin aria-hidden="true" />
                 <span>{isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}</span>
               </ExternalLink>
               <a
                 href="tel:911"
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors"
+                className={buttonStyles({
+                  variant: "danger",
+                  appearance: "fill-stroke",
+                })}
               >
-                <Phone className="h-4 w-4" />
+                <Phone aria-hidden="true" />
                 <span>{isEs ? "Emergencia: 911" : "Emergency: 911"}</span>
               </a>
             </>
@@ -303,7 +312,7 @@ function SymptomDetailContent() {
           {nextStepLevel === "monitor" && (
             <Link
               href="/dashboard/personal-log/dialysis-journal"
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+              className={CTA_SUCCESS}
             >
               <span>{isEs ? "Registrar en Diario" : "Log in Health Journal"}</span>
             </Link>
@@ -312,12 +321,12 @@ function SymptomDetailContent() {
       </section>
 
       {/* MAIN SYMPTOM DETAILS CARD */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 space-y-6 shadow-xs">
-        <div className="border-b border-slate-100 pb-4">
+      <section className="rounded-panel border border-line bg-surface p-6 space-y-6 shadow-control">
+        <div className="border-b border-line-subtle pb-4">
           <div className="relative inline-flex items-center gap-2 group">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-fg flex items-center gap-2">
               <span>{title}</span>
-              <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6 text-slate-400 group-hover:text-slate-700 transition-colors pointer-events-none" />
+              <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6 text-fg-subtle group-hover:text-fg-secondary transition-colors pointer-events-none" />
             </h1>
             <select
               id="topic-selector"
@@ -330,7 +339,7 @@ function SymptomDetailContent() {
                 const item = BEFORE_THE_ER_TOPICS[slug];
                 const itemTitle = isEs ? item.titleEs : item.titleEn;
                 return (
-                  <option key={slug} value={slug} className="text-slate-900 font-semibold text-base py-1">
+                  <option key={slug} value={slug} className="text-fg font-semibold text-base py-1">
                     {itemTitle}
                   </option>
                 );
@@ -341,7 +350,7 @@ function SymptomDetailContent() {
 
         {/* What to Watch For Section */}
         <div className="space-y-3">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+          <h2 className="text-base sm:text-lg font-bold text-fg">
             {isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}
           </h2>
 
@@ -349,9 +358,9 @@ function SymptomDetailContent() {
             {parsedWatchFor.bullets.map((bullet, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-slate-800 leading-relaxed"
+                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-fg-secondary leading-relaxed"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0 mt-2" />
+                <span className="h-1.5 w-1.5 rounded-full bg-fg-muted shrink-0 mt-2" />
                 <span>{renderFormattedText(formatBulletText(bullet))}</span>
               </li>
             ))}
@@ -359,8 +368,8 @@ function SymptomDetailContent() {
 
           {/* Emergency Directive & Source Citation Callout */}
           {parsedWatchFor.directive && (
-            <div className="inline-flex w-fit max-w-full items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/70 p-3.5 text-xs sm:text-sm font-medium text-red-950 leading-relaxed mt-2">
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs sm:text-sm font-medium text-danger leading-relaxed mt-2">
+              <AlertTriangle className="h-4 w-4 text-danger shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 {renderFormattedText(parsedWatchFor.directive)}
               </div>
@@ -369,8 +378,8 @@ function SymptomDetailContent() {
         </div>
 
         {/* Subsection 2: Especially Important In */}
-        <div className="space-y-3 pt-2 border-t border-slate-100">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+        <div className="space-y-3 pt-2 border-t border-line-subtle">
+          <h2 className="text-base sm:text-lg font-bold text-fg">
             {t("beforeTheEr.detail.importantIn")}
           </h2>
 
@@ -378,9 +387,9 @@ function SymptomDetailContent() {
             {importantInList.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-slate-800 leading-relaxed"
+                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-fg-secondary leading-relaxed"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0 mt-2" />
+                <span className="h-1.5 w-1.5 rounded-full bg-fg-muted shrink-0 mt-2" />
                 <span>{item}</span>
               </li>
             ))}
@@ -389,14 +398,14 @@ function SymptomDetailContent() {
       </section>
 
       {/* RELATED EDUCATION CARD */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
+      <section className="rounded-panel border border-line bg-surface p-6 space-y-4 shadow-control">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-lg font-bold text-fg">
             {t("beforeTheEr.detail.relatedEducation")}
           </h2>
           <Link
             href="/dashboard/education-center"
-            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-fg-brand hover:underline flex items-center gap-1"
           >
             <span>{isEs ? "Ver Todos los Videos" : "View All Videos"}</span>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -407,9 +416,9 @@ function SymptomDetailContent() {
           {/* Video Item */}
           <Link
             href="/dashboard/education-center"
-            className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-[#F8FAFC] p-4 hover:bg-blue-50/50 hover:border-blue-200 transition-colors"
+            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 hover:bg-primary-soft hover:border-primary-soft-line transition-colors"
           >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-900/10 border border-blue-200">
+            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
               <Image
                 src="/images/logo.svg"
                 alt="NephroReach"
@@ -420,11 +429,11 @@ function SymptomDetailContent() {
               />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-fg">
                 {t("beforeTheEr.detail.videoTitle")}
               </h3>
-              <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
-                <PlayCircle className="h-3.5 w-3.5 text-blue-600" />
+              <p className="text-xs font-medium text-fg-muted flex items-center gap-1 mt-0.5">
+                <PlayCircle className="h-3.5 w-3.5 text-fg-brand" />
                 {t("beforeTheEr.detail.video")} • 8:30
               </p>
             </div>
@@ -433,9 +442,9 @@ function SymptomDetailContent() {
           {/* Article Item */}
           <Link
             href="/dashboard/education-center"
-            className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-[#F8FAFC] p-4 hover:bg-blue-50/50 hover:border-blue-200 transition-colors"
+            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 hover:bg-primary-soft hover:border-primary-soft-line transition-colors"
           >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-900/10 border border-blue-200">
+            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
               <Image
                 src="/images/logo.svg"
                 alt="NephroReach"
@@ -446,11 +455,11 @@ function SymptomDetailContent() {
               />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-fg">
                 {t("beforeTheEr.detail.articleTitle")}
               </h3>
-              <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
-                <FileText className="h-3.5 w-3.5 text-blue-600" />
+              <p className="text-xs font-medium text-fg-muted flex items-center gap-1 mt-0.5">
+                <FileText className="h-3.5 w-3.5 text-fg-brand" />
                 {t("beforeTheEr.detail.article")} • {t("beforeTheEr.detail.readTime")}
               </p>
             </div>
@@ -461,11 +470,29 @@ function SymptomDetailContent() {
   );
 }
 
+/* The four next-step levels are an urgency ladder — 911, urgent care,
+   clinic, self-monitor — and the colour carries that meaning, so it is not
+   decoration to drop. buttonStyles() has no success or warning variant
+   (actions are deliberately primary / neutral / danger / accent), so these
+   two rungs are composed from the same geometry plus their own tone tokens,
+   rather than by overriding buttonStyles, where the classes would collide. */
+const CTA_SHAPE =
+  "inline-flex shrink-0 items-center justify-center gap-inline-md border " +
+  "h-control-big px-control-x-big rounded-control text-button-lg " +
+  "whitespace-nowrap cursor-pointer select-none shadow-control " +
+  "transition-colors duration-150 ease-standard " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
+  "[&_svg]:h-icon-big [&_svg]:w-icon-big";
+
+/* White clears AA on both: warning-600 is 5.07:1, success-600 is 4.63:1. */
+const CTA_WARNING = `${CTA_SHAPE} border-transparent bg-warning-600 text-white hover:bg-warning-700`;
+const CTA_SUCCESS = `${CTA_SHAPE} border-transparent bg-success-600 text-white hover:bg-success-700`;
+
 export default function SymptomDetailPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex h-64 w-full items-center justify-center text-slate-500 font-medium">
+        <div className="flex h-64 w-full items-center justify-center text-fg-muted font-medium">
           Loading Before-the-ER guidance...
         </div>
       }
