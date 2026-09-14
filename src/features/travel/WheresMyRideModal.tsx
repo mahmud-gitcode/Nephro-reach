@@ -139,20 +139,25 @@ export default function WheresMyRideModal({
             href="https://m.uber.com"
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonStyles({ variant: "neutral", fullWidth: true })}
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              fullWidth: true,
+            })}
           >
             <Car aria-hidden="true" className="shrink-0" />
             <span>{t("myRides.openUber")}</span>
           </a>
 
-          {/* #FF00BF is Lyft's own brand colour, not a palette colour — a
-              third party's mark is the one thing tokens must not restyle.
-              Same literal as /dashboard/my-rides; keep the two in step. */}
           <a
             href="https://www.lyft.com"
             target="_blank"
             rel="noopener noreferrer"
-            className={`${buttonStyles({ fullWidth: true })} border-transparent bg-[#FF00BF] text-white hover:bg-[#E000A8]`}
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              fullWidth: true,
+            })}
           >
             <Car aria-hidden="true" className="shrink-0" />
             <span>{t("myRides.openLyft")}</span>

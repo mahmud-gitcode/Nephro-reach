@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Calendar, Users, Video } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
-import { Button, Card, Progress } from "@/components/ui";
+import { Badge, Button, Card, Progress } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
@@ -75,21 +74,6 @@ const stats = [
     value: "2",
     icon: "stat-video.svg",
     tone: "bg-cat-5-soft",
-  },
-];
-
-const testimonials = [
-  {
-    name: "James Thompson",
-    title: "From Fear to Hope: My Dialysis Journey",
-  },
-  {
-    name: "James Thompson",
-    title: "From Fear to Hope: My Dialysis Journey",
-  },
-  {
-    name: "James Thompson",
-    title: "From Fear to Hope: My Dialysis Journey",
   },
 ];
 
@@ -246,79 +230,76 @@ export default function UserDashboard() {
 
       <Card
         as="section"
-        tone="flat"
         padding="none"
-        className="flex flex-col items-start gap-inset-md border-primary-soft-line bg-surface-sunken p-inset-lg sm:flex-row sm:items-center"
+        className="relative overflow-hidden p-inset-lg transition-all duration-150 hover:shadow-raised sm:p-inset-xl"
       >
-        <span
+        {/* Subtle accent indicator bar on the left edge */}
+        <div
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-card bg-primary-solid"
-        >
-          <Icon src={asset("class-video.svg")} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-body-sm text-fg-muted">
-            {dh?.upcomingClass?.badge || "Upcoming Live Class"}
-          </p>
-          <p className="text-heading-5 text-fg">
-            {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
-          </p>
-          <p className="text-body-sm text-fg-muted">
-            {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
-          </p>
-        </div>
-        <Button {...notBuiltYet("Joining a class")}>
-          {dh?.upcomingClass?.joinButton || "Join Class"}
-        </Button>
-      </Card>
+          className="absolute top-0 left-0 h-full w-1.5 bg-brand-600"
+        />
 
-      <section>
-        <div className="mb-stack-lg flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-heading-4 text-fg">
-            {dh?.testimonials?.title || "Testimonials - You're Not Alone"}
-          </h2>
-          <Link
-            href="/dashboard/reviews"
-            className="inline-flex items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand transition-colors duration-150 ease-standard hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Star
+        {/* Subtle ambient gradient highlight in corner */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-brand-50/70 blur-3xl"
+        />
+
+        <div className="relative flex flex-col gap-inset-lg sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-inline-lg sm:items-center">
+            {/* Visual Icon Container */}
+            <span
               aria-hidden="true"
-              className="h-4 w-4 fill-warning-500 text-warning-500"
-            />
-            {language === "ES" ? "Dejar una Reseña" : "Leave a Review"}
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 gap-inset-lg md:grid-cols-3">
-          {testimonials.map((item, index) => (
-            <Card
-              as="article"
-              key={`${item.name}-${index}`}
-              padding="small"
-              className="overflow-hidden"
+              className="flex size-14 shrink-0 items-center justify-center rounded-panel border border-primary-soft-line bg-primary-soft text-primary-fg shadow-xs"
             >
-              <div className="relative h-[182px] max-w-full overflow-hidden rounded-card">
-                <Image
-                  src={asset("testimonial.jpg")}
-                  alt=""
-                  fill
-                  sizes="(min-width: 768px) 33vw, 100vw"
-                  className="object-cover"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute top-1/2 left-1/2 flex size-[50px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill bg-surface/90"
-                >
-                  <Icon src={asset("play.svg")} />
+              <Video className="size-7" />
+            </span>
+
+            {/* Content Details */}
+            <div className="min-w-0 flex-1 space-y-stack-xs">
+              <div className="flex items-center gap-2">
+                <Badge tone="danger" variant="soft" className="gap-2">
+                  <span className="relative flex size-2 items-center justify-center">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger-500 opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-danger-600 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
+                  </span>
+                  {dh?.upcomingClass?.badge || "Upcoming Live Class"}
+                </Badge>
+              </div>
+
+              <h3 className="text-heading-4 text-fg">
+                {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
+              </h3>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 text-body-sm text-fg-muted">
+                <span className="flex items-center gap-1.5 font-medium text-fg-secondary">
+                  <Calendar className="size-4 shrink-0 text-brand-600" />
+                  {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
+                </span>
+                <span className="hidden text-line sm:inline">•</span>
+                <span className="flex items-center gap-1.5 text-fg-muted">
+                  <Users className="size-4 shrink-0 text-fg-muted" />
+                  {language === "ES"
+                    ? "Sesión interactiva en vivo"
+                    : "Interactive group session"}
                 </span>
               </div>
-              <p className="mt-stack-lg text-label-md text-fg">{item.name}</p>
-              <p className="mt-stack-xs text-caption text-fg-muted">
-                {dh?.testimonials?.storyTitle || item.title}
-              </p>
-            </Card>
-          ))}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="shrink-0 pt-2 sm:pt-0">
+            <Button
+              size="big"
+              leadingIcon={<Video className="size-5" />}
+              className="w-full sm:w-auto"
+              {...notBuiltYet("Joining a class")}
+            >
+              {dh?.upcomingClass?.joinButton || "Join Class"}
+            </Button>
+          </div>
         </div>
-      </section>
+      </Card>
 
       {/* Where's My Ride Modal.
           NOTE: nothing on this page sets isRideModalOpen — the Quick Action

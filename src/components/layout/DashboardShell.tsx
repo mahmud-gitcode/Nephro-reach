@@ -610,7 +610,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-md border-b border-line bg-canvas px-inset-sm py-2.5 sm:px-inset-md sm:py-inset-sm md:px-inset-xl print:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-md border-b border-line bg-white px-inset-sm py-2.5 sm:px-inset-md sm:py-inset-sm md:px-inset-xl print:hidden">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"

@@ -319,6 +319,7 @@ export default function MyRidesPage() {
                 rel="noopener noreferrer"
                 className={buttonStyles({
                   variant: "neutral",
+                  appearance: "fill-stroke",
                   fullWidth: true,
                 })}
               >
@@ -326,13 +327,15 @@ export default function MyRidesPage() {
                 <span>{t("myRides.openUber")}</span>
               </a>
 
-              {/* Lyft's brand magenta is a third-party brand colour, not ours —
-                  it stays a literal on purpose and must not be tokenised. */}
               <a
                 href="https://www.lyft.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${buttonStyles({ fullWidth: true })} border-transparent bg-[#FF00BF] text-white shadow-control hover:bg-[#E000A8]`}
+                className={buttonStyles({
+                  variant: "neutral",
+                  appearance: "fill-stroke",
+                  fullWidth: true,
+                })}
               >
                 <Car />
                 <span>{t("myRides.openLyft")}</span>
