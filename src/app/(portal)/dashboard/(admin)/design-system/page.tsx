@@ -285,9 +285,31 @@ export default function DesignSystemPage() {
                   "bg-danger-800", "bg-danger-900", "bg-danger-950",
                 ]}
               />
+              <Ramp
+                name="Categorical · 8 series · L 60% / C 0.13"
+                steps={[
+                  "bg-cat-1", "bg-cat-2", "bg-cat-3", "bg-cat-4",
+                  "bg-cat-5", "bg-cat-6", "bg-cat-7", "bg-cat-8",
+                ]}
+              />
+              <Ramp
+                name="Categorical soft · tints for the same eight"
+                steps={[
+                  "bg-cat-1-soft", "bg-cat-2-soft", "bg-cat-3-soft", "bg-cat-4-soft",
+                  "bg-cat-5-soft", "bg-cat-6-soft", "bg-cat-7-soft", "bg-cat-8-soft",
+                ]}
+              />
               <p className="text-caption text-fg-muted">
                 Step 500 = minimum for UI boundaries (3:1). Step 600 = minimum
                 for text (4.5:1). Holds in every ramp.
+              </p>
+              <p className="text-caption text-fg-muted">
+                The categorical eight are for things that DIFFER — chart
+                series, log types, legend keys — never for good or bad. They
+                all sit at one lightness and a moderate chroma, so beside a
+                status colour they read as data rather than as an alert. Every
+                solid clears 3:1 on white and on its own tint; none is rated
+                for text, so labels beside a swatch take a fg token.
               </p>
             </Card>
           </Block>

@@ -49,9 +49,9 @@ const KIND_LABEL: Record<CourseClassKind, string> = {
 };
 
 const KIND_PILL: Record<CourseClassKind, string> = {
-  video: "bg-blue-50 text-blue-600",
-  audio: "bg-violet-50 text-violet-600",
-  reading: "bg-amber-50 text-amber-700",
+  video: "bg-primary-soft text-fg-brand",
+  audio: "bg-accent-soft text-accent-fg",
+  reading: "bg-warning-surface text-warning",
 };
 
 /** Which class the editor is open on, and where it belongs. */
@@ -85,18 +85,18 @@ function ModuleSection({
   const minutes = moduleMinutes(courseModule);
 
   return (
-    <section className="rounded-[14px] border border-slate-200 bg-white shadow-sm">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4">
+    <section className="rounded-[14px] border border-line bg-surface shadow-card">
+      <header className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-fg-brand">
             Module {index + 1}
           </p>
-          <h2 className="truncate text-lg font-semibold text-slate-900">
+          <h2 className="truncate text-lg font-semibold text-fg">
             {courseModule.titleEn}
           </h2>
         </div>
 
-        <span className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+        <span className="flex items-center gap-3 text-xs font-semibold text-fg-muted">
           <span>{courseModule.classes.length} classes</span>
           <span aria-hidden="true">·</span>
           <span>{formatTotalDuration(minutes)}</span>
@@ -107,7 +107,7 @@ function ModuleSection({
             type="button"
             onClick={onEditModule}
             aria-label={`Rename ${courseModule.titleEn}`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
           >
             <Edit3 className="h-4 w-4" />
           </button>
@@ -115,14 +115,14 @@ function ModuleSection({
             type="button"
             onClick={onDeleteModule}
             aria-label={`Delete ${courseModule.titleEn}`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
           >
             <Trash2 className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={onAddClass}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-800 transition-colors hover:bg-slate-200 cursor-pointer"
+            className="flex h-9 items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Add Class
@@ -132,16 +132,16 @@ function ModuleSection({
 
       <div className="p-3">
         {visibleClasses.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm font-medium text-slate-500">
+          <p className="rounded-control border border-dashed border-line p-8 text-center text-sm font-medium text-fg-muted">
             {courseModule.classes.length === 0
               ? "No classes in this module yet."
               : "No classes of that type in this module."}
           </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
+            <div className="overflow-x-auto rounded-control border border-line">
               <table className="w-full min-w-[860px] border-collapse text-sm">
                 <thead>
-                  <tr className="bg-[#F4F6F8] text-left">
+                  <tr className="bg-surface-sunken text-left">
                     {[
                       "Class",
                       "Type",
@@ -152,11 +152,11 @@ function ModuleSection({
                     ].map((header) => (
                       <th
                         key={header}
-                        className={`h-[55px] border-b border-[#C4CDD5] px-3 font-semibold tracking-[0.07px] text-slate-900 ${
+                        className={`h-[55px] border-b border-line px-3 font-semibold tracking-[0.07px] text-fg ${
                           header === "Actions" ? "text-center" : ""
                         }`}
                       >
-                        <span className="block border-l border-[#C4CDD5] pl-3 leading-5 first:border-l-0">
+                        <span className="block border-l border-line pl-3 leading-5 first:border-l-0">
                           {header}
                         </span>
                       </th>
@@ -169,18 +169,18 @@ function ModuleSection({
                     return (
                       <tr
                         key={courseClass.id}
-                        className="border-b border-dashed border-[#C4CDD5] last:border-0"
+                        className="border-b border-dashed border-line last:border-0"
                       >
                         <td className="h-[62px] px-3 py-2">
                           <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#00A76F] text-xs font-bold text-white">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-cat-4-soft text-label-sm text-fg">
                               {classIndex + 1}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold leading-5 text-slate-800">
+                              <p className="truncate font-semibold leading-5 text-fg-secondary">
                                 {courseClass.titleEn}
                               </p>
-                              <p className="truncate text-xs leading-[18px] text-slate-600">
+                              <p className="truncate text-xs leading-[18px] text-fg-muted">
                                 {courseClass.mediaSrc || "No media path set"}
                               </p>
                             </div>
@@ -196,23 +196,23 @@ function ModuleSection({
                           </span>
                         </td>
 
-                        <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
+                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
                           <span className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4 text-slate-500" />
+                            <Clock3 className="h-4 w-4 text-fg-muted" />
                             {courseClass.durationMinutes} min
                           </span>
                         </td>
 
-                        <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
+                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
                           <span className="flex items-center gap-2">
-                            <Captions className="h-4 w-4 text-slate-500" />
+                            <Captions className="h-4 w-4 text-fg-muted" />
                             {courseClass.transcript.length} lines
                           </span>
                         </td>
 
-                        <td className="h-[62px] px-3 py-2 font-medium text-slate-800">
+                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
                           <span className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-slate-500" />
+                            <FileText className="h-4 w-4 text-fg-muted" />
                             {courseClass.documents.length}
                           </span>
                         </td>
@@ -222,7 +222,7 @@ function ModuleSection({
                             <button
                               type="button"
                               onClick={() => onEditClass(courseClass)}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold text-slate-900 transition-colors hover:bg-slate-100 cursor-pointer"
+                              className="inline-flex h-9 items-center gap-1.5 rounded-control px-2.5 text-xs font-bold text-fg transition-colors hover:bg-surface-sunken cursor-pointer"
                             >
                               <Edit3 className="h-4 w-4" />
                               Edit
@@ -231,7 +231,7 @@ function ModuleSection({
                               type="button"
                               onClick={() => onDeleteClass(courseClass.id)}
                               aria-label={`Delete ${courseClass.titleEn}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -277,16 +277,16 @@ export default function ManageCoursePage() {
 
   if (!course) {
     return (
-      <div className="rounded-[14px] border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">
+      <div className="rounded-[14px] border border-line bg-surface p-8 text-center shadow-card">
+        <h1 className="text-xl font-semibold text-fg">
           Course not found
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-fg-muted">
           It may have been deleted from this browser.
         </p>
         <Link
           href="/dashboard/manage-curriculum"
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700"
+          className="mt-5 inline-flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to courses
@@ -310,40 +310,40 @@ export default function ManageCoursePage() {
     <>
       <Link
         href="/dashboard/manage-curriculum"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
       >
         <ArrowLeft className="h-4 w-4" />
         All courses
       </Link>
 
-      <section className="mt-4 rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="mt-4 rounded-[14px] border border-line bg-surface p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
+            <h1 className="text-2xl font-semibold text-fg sm:text-3xl">
               {course.titleEn}
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-fg-muted">
               {course.descriptionEn || "No description yet."}
             </p>
 
             <ul className="mt-4 flex flex-wrap items-center gap-3">
-              <li className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-medium text-slate-600">
-                <Layers className="h-4 w-4 text-blue-600" />
-                <span className="font-bold text-slate-900">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+                <Layers className="h-4 w-4 text-fg-brand" />
+                <span className="font-bold text-fg">
                   {course.modules.length}
                 </span>
                 modules
               </li>
-              <li className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-medium text-slate-600">
-                <BookOpen className="h-4 w-4 text-blue-600" />
-                <span className="font-bold text-slate-900">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+                <BookOpen className="h-4 w-4 text-fg-brand" />
+                <span className="font-bold text-fg">
                   {courseClassCount(course)}
                 </span>
                 classes
               </li>
-              <li className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-medium text-slate-600">
-                <Clock3 className="h-4 w-4 text-blue-600" />
-                <span className="font-bold text-slate-900">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+                <Clock3 className="h-4 w-4 text-fg-brand" />
+                <span className="font-bold text-fg">
                   {formatTotalDuration(courseMinutes(course))}
                 </span>
                 total
@@ -355,15 +355,15 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setEditingCourse(true)}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 cursor-pointer"
+              className="flex items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken cursor-pointer"
             >
-              <Edit3 className="h-4 w-4 text-slate-600" />
+              <Edit3 className="h-4 w-4 text-fg-muted" />
               Edit course
             </button>
             <button
               type="button"
               onClick={() => setAddingModule(true)}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+              className="flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Add Module
@@ -388,16 +388,16 @@ export default function ManageCoursePage() {
               onClick={() => setActiveModuleId(courseModule.id)}
               className={`flex h-[38px] shrink-0 items-center gap-2 rounded-[10px] border px-4 text-sm font-medium transition-colors cursor-pointer ${
                 courseModule.id === selectedModule?.id
-                  ? "border-blue-600 bg-blue-600 font-bold text-white shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  ? "border-primary-edge bg-primary-solid font-bold text-primary-on-solid shadow-card"
+                  : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
               }`}
             >
               <span>Module {index + 1}</span>
               <span
-                className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
+                className={`rounded-pill px-1.5 py-0.5 text-[11px] font-bold ${
                   courseModule.id === selectedModule?.id
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 text-slate-500"
+                    ? "bg-surface/20 text-fg-inverse"
+                    : "bg-surface-sunken text-fg-muted"
                 }`}
               >
                 {courseModule.classes.length}
@@ -407,7 +407,7 @@ export default function ManageCoursePage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Filter className="h-4 w-4 shrink-0 text-slate-500" />
+            <Filter className="h-4 w-4 shrink-0 text-fg-muted" />
             <label className="sr-only" htmlFor="class-type-filter">
               Filter by class type
             </label>
@@ -417,7 +417,7 @@ export default function ManageCoursePage() {
               onChange={(event) =>
                 setTypeFilter(event.target.value as "all" | CourseClassKind)
               }
-              className="h-[38px] rounded-[10px] border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+              className="h-[38px] rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-fg-secondary outline-none transition-colors hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring cursor-pointer"
             >
               <option value="all">All Types</option>
               <option value="video">Video</option>
@@ -460,7 +460,7 @@ export default function ManageCoursePage() {
             onDeleteModule={() => deleteModule(course.id, selectedModule.id)}
           />
         ) : (
-          <p className="rounded-[14px] border border-dashed border-slate-300 bg-white p-10 text-center text-sm font-medium text-slate-500">
+          <p className="rounded-[14px] border border-dashed border-line-strong bg-surface p-10 text-center text-sm font-medium text-fg-muted">
             This course has no modules yet. Add one to start building classes.
           </p>
         )}

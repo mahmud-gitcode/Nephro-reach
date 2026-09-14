@@ -1,14 +1,20 @@
-import React from "react";
+"use client";
+
+import React, { useMemo, useState } from "react";
+import { Bell, Eye, Radar, Search, Users } from "lucide-react";
 import {
-  Bell,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Radar,
-  Search,
-  Users,
-} from "lucide-react";
+  Badge,
+  Button,
+  Card,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TablePagination,
+  TableRow,
+} from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -23,29 +29,29 @@ const summaryCards: Array<{
     title: "Total Members",
     value: "147",
     icon: Users,
-    tone: "bg-blue-100",
-    iconTone: "text-blue-600",
+    tone: "bg-cat-6-soft",
+    iconTone: "text-cat-6",
   },
   {
     title: "Active",
     value: "00",
     icon: Radar,
-    tone: "bg-emerald-100",
-    iconTone: "text-emerald-600",
+    tone: "bg-cat-4-soft",
+    iconTone: "text-cat-4",
   },
   {
     title: "Pending",
     value: "00",
     icon: Bell,
-    tone: "bg-lime-100",
-    iconTone: "text-lime-700",
+    tone: "bg-cat-3-soft",
+    iconTone: "text-cat-3",
   },
   {
     title: "Inactive",
     value: "00",
     icon: Radar,
-    tone: "bg-red-100",
-    iconTone: "text-red-500",
+    tone: "bg-cat-1-soft",
+    iconTone: "text-cat-1",
   },
 ];
 
@@ -144,144 +150,167 @@ const members = [
 
 function SummaryCard({ card }: { card: (typeof summaryCards)[number] }) {
   return (
-    <article className="min-h-[114px] rounded-[14px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <p className="text-base font-semibold tracking-[0.08px] text-slate-600">
-          {card.title}
-        </p>
-        <span className={`flex h-10 w-10 items-center justify-center rounded-[10px] ${card.tone}`}>
+    <Card as="article" padding="none" className="min-h-[114px] p-inset-lg">
+      <div className="mb-stack-xl flex items-start justify-between gap-inline-lg">
+        <p className="text-body-md text-fg-muted">{card.title}</p>
+        <span
+          aria-hidden="true"
+          className={`flex h-10 w-10 items-center justify-center rounded-control ${card.tone}`}
+        >
           <card.icon className={`h-5 w-5 ${card.iconTone}`} />
         </span>
       </div>
-      <p className="text-2xl font-semibold leading-8 tracking-[0.12px] text-slate-900">
-        {card.value}
-      </p>
-    </article>
+      <p className="text-metric-sm text-fg">{card.value}</p>
+    </Card>
   );
 }
 
 function StatusPill({ status }: { status: string }) {
-  const isActive = status === "Active";
-
   return (
-    <span
-      className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${
-        isActive
-          ? "bg-emerald-50 text-emerald-600"
-          : "bg-red-100 text-red-500"
-      }`}
-    >
-      {status}
-    </span>
+    <Badge tone={status === "Active" ? "success" : "danger"}>{status}</Badge>
   );
 }
 
+const PAGE_SIZE = 10;
+
 function MembersTable() {
+  /* Search and paging were both drawn but not wired: the chevrons had no
+     handlers and the count was the literal string "1-10 of 20". */
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((member) =>
+      [member.name, member.email, member.id, member.subscription].some((field) =>
+        field.toLowerCase().includes(q),
+      ),
+    );
+  }, [query]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const visible = filtered.slice(start, start + PAGE_SIZE);
+
   return (
-    <section className="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Member</h1>
-        <label className="relative block w-full sm:w-[277px]">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-600" />
-          <input
-            type="search"
-            placeholder="Search..."
-            className="h-10 w-full rounded-lg border border-[#CBD5ED] bg-white pl-10 pr-3 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+    <Card as="section" padding="small">
+      <div className="mb-stack-md flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-heading-4 text-fg">Members</h1>
+        <div className="relative w-full sm:w-[277px]">
+          <label htmlFor="member-search" className="sr-only">
+            Search members
+          </label>
+          <Search
+            aria-hidden="true"
+            className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-fg-muted"
           />
-        </label>
+          <Input
+            id="member-search"
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Search..."
+            className="pl-10"
+          />
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-[#C4CDD5]">
-        <table className="w-full min-w-[1080px] border-collapse text-sm">
-          <thead>
-            <tr className="bg-[#F4F6F8] text-left">
-              {["Member", "Contact", "Subscriptions", "Status", "Joined", "Actions"].map((header) => (
-                <th
-                  key={header}
-                  className={`h-[55px] border-b border-[#C4CDD5] px-3 font-semibold tracking-[0.07px] text-slate-900 ${
-                    header === "Actions" ? "text-center" : ""
-                  }`}
-                >
-                  <span className="block border-l border-[#C4CDD5] pl-3 leading-5 first:border-l-0">
-                    {header}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id} className="border-b border-dashed border-[#C4CDD5] last:border-0">
-                <td className="h-[52px] px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00A76F] text-sm font-medium tracking-[0.22px] text-white">
+      <div className="overflow-hidden rounded-control border border-line">
+        <Table minWidth={1080}>
+          <TableHead className="bg-surface-sunken">
+            <TableRow>
+              {["Member", "Contact", "Subscriptions", "Status", "Joined"].map(
+                (header) => (
+                  <TableHeaderCell key={header}>{header}</TableHeaderCell>
+                ),
+              )}
+              <TableHeaderCell className="text-center">Actions</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {visible.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>
+                  <span className="flex items-center gap-inline-lg">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-cat-4-soft text-label-sm text-fg"
+                    >
                       {member.initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium leading-5 text-slate-800">{member.name}</p>
-                      <p className="truncate text-xs leading-[18px] text-slate-600">{member.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="h-[52px] px-3 py-2">
-                  <p className="max-w-[190px] truncate font-semibold leading-5 text-slate-800">
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-label-md text-fg">
+                        {member.name}
+                      </span>
+                      <span className="block truncate text-caption text-fg-muted">
+                        {member.id}
+                      </span>
+                    </span>
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="block max-w-[190px] truncate text-label-md text-fg">
                     {member.email}
-                  </p>
-                  <p className="text-xs leading-[18px] text-slate-600">{member.phone}</p>
-                </td>
-                <td className="h-[52px] px-3 py-2 font-medium text-slate-800">
-                  {member.subscription}
-                </td>
-                <td className="h-[52px] px-3 py-2">
+                  </span>
+                  <span className="block text-caption text-fg-muted">
+                    {member.phone}
+                  </span>
+                </TableCell>
+                <TableCell>{member.subscription}</TableCell>
+                <TableCell>
                   <StatusPill status={member.status} />
-                </td>
-                <td className="h-[52px] px-3 py-2 font-medium text-slate-800">
-                  <span className="block max-w-[135px] truncate">{member.joined}</span>
-                </td>
-                <td className="h-[52px] px-3 py-2 text-center">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-900 transition-colors hover:bg-slate-100"
+                </TableCell>
+                <TableCell>
+                  <span className="block max-w-[135px] truncate">
+                    {member.joined}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="neutral"
+                    appearance="stroke"
+                    size="small"
+                    className="px-inset-xs"
                     aria-label={`View ${member.name}`}
                   >
-                    <Eye className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
+                    <Eye aria-hidden="true" />
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      <div className="flex h-16 flex-wrap items-center justify-end gap-4 px-3 text-sm text-slate-800">
-        <div className="flex items-center gap-2">
-          <span>Rows per page:</span>
-          <button type="button" className="flex items-center gap-1">
-            10 <ChevronDown className="h-4 w-4" />
-          </button>
-        </div>
-        <span>1-10&nbsp; of&nbsp; 20</span>
-        <button type="button" className="text-slate-400" aria-label="Previous page">
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <button type="button" aria-label="Next page">
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
-    </section>
+      <TablePagination
+        page={currentPage}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        summary={
+          filtered.length === 0
+            ? "No members match this search"
+            : `${start + 1}–${start + visible.length} of ${filtered.length}`
+        }
+      />
+    </Card>
   );
 }
 
 export default function MembersPage() {
   return (
     <>
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-inset-lg sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <SummaryCard key={card.title} card={card} />
         ))}
       </section>
 
-      <div className="mt-4">
+      <div className="mt-stack-lg">
         <MembersTable />
       </div>
     </>

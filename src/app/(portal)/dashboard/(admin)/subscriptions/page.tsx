@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Check, CreditCard, Plus, ToggleRight, X, Edit3, ShieldAlert } from "lucide-react";
+import { Check, CreditCard, Plus, X, Edit3, ShieldAlert } from "lucide-react";
+import {
+  Alert,
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  Select,
+  SwitchRow,
+  Textarea,
+} from "@/components/ui";
 import {
   SubscriptionPlan,
   DEFAULT_SUBSCRIPTION_PLANS,
@@ -11,11 +22,14 @@ import {
 
 function FeatureIcon({ included }: { included: boolean }) {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white">
+    <span
+      aria-hidden="true"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill border border-line bg-surface"
+    >
       {included ? (
-        <Check className="h-4 w-4 text-emerald-500" />
+        <Check className="h-4 w-4 text-success" />
       ) : (
-        <X className="h-4 w-4 text-slate-300" />
+        <X className="h-4 w-4 text-fg-subtle" />
       )}
     </span>
   );
@@ -30,17 +44,17 @@ function PricingCard({
 }) {
   const card = (
     <article
-      className={`flex h-full flex-col justify-between gap-6 overflow-hidden rounded-[32px] border border-slate-200 p-6 transition-all duration-300 hover:shadow-md ${
+      className={`flex h-full flex-col justify-between gap-inset-lg overflow-hidden rounded-panel border border-line p-inset-lg transition-shadow duration-300 hover:shadow-raised ${
         plan.popular
-          ? "bg-gradient-to-b from-white to-[#F2F7FF]"
-          : "bg-[#F8FAFC]"
+          ? "bg-gradient-to-b from-surface to-primary-soft"
+          : "bg-surface-sunken"
       }`}
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2
-            className={`text-lg font-bold ${
-              plan.popular ? "text-blue-600" : "text-slate-800"
+            className={`text-heading-5 ${
+              plan.popular ? "text-fg-brand" : "text-fg-secondary"
             }`}
           >
             {plan.name}
@@ -48,35 +62,37 @@ function PricingCard({
         </div>
 
         <div className="flex flex-wrap items-baseline gap-1">
-          <span className="text-3xl font-bold leading-none text-slate-900">{plan.price}</span>
-          <span className="text-sm font-medium text-slate-600">{plan.billing}</span>
+          <span className="text-metric-md text-fg">{plan.price}</span>
+          <span className="text-body-sm text-fg-muted">{plan.billing}</span>
         </div>
 
         {plan.accessDays && (
-          <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+          <div className="inline-flex items-center gap-inline-sm rounded-control-small bg-primary-soft px-inset-xs py-1 text-label-sm text-primary-fg">
             Full Access: {plan.accessDays} Days
           </div>
         )}
 
-        <button
-          type="button"
+        <Button
+          variant="neutral"
+          appearance="fill"
+          size="small"
           onClick={() => onEdit(plan)}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-800 cursor-pointer"
+          className="w-full"
         >
-          <Edit3 className="h-4 w-4" />
+          <Edit3 aria-hidden="true" />
           Edit Plan
-        </button>
+        </Button>
       </div>
 
-      <div className="border-t border-dashed border-slate-200" />
+      <div className="border-t border-dashed border-line" />
 
       <ul className="space-y-3">
         {plan.features.map((feature, idx) => (
           <li key={`${feature.label}-${idx}`} className="flex items-start gap-2.5">
             <FeatureIcon included={feature.included} />
             <span
-              className={`text-xs font-medium leading-5 ${
-                feature.included ? "text-slate-800" : "text-slate-400 line-through"
+              className={`text-caption ${
+                feature.included ? "text-fg-secondary" : "text-fg-subtle line-through"
               }`}
             >
               {feature.label}
@@ -90,8 +106,11 @@ function PricingCard({
   if (!plan.popular) return card;
 
   return (
-    <div className="flex h-full flex-col rounded-[36px] bg-gradient-to-r from-blue-600 via-indigo-600 to-red-500 p-1 pt-2.5 shadow-md">
-      <p className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-white">
+    // The "most popular" frame is a deliberate three-hue gradient, the one
+    // decorative flourish on this page. It takes the categorical steps rather
+    // than status colours, which would have read as good → bad.
+    <div className="flex h-full flex-col rounded-panel bg-gradient-to-r from-cat-6 via-cat-7 to-cat-8 p-1 pt-2.5 shadow-raised">
+      <p className="text-overline mb-stack-sm text-center text-fg-inverse">
         {plan.badge || "Most Popular"}
       </p>
       <div className="flex-1">{card}</div>
@@ -181,195 +200,214 @@ function EditPlanModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 sm:p-6 backdrop-blur-xs">
-      <section className="relative my-8 w-full max-w-[540px] overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200 cursor-pointer"
-          aria-label="Close subscription editor"
+    <Modal
+      open
+      onClose={onClose}
+      size="wide"
+      title={isNew ? "Create New Subscription Plan" : `Edit Plan: ${plan.name}`}
+      description="Edit pricing, billing cycle, access periods, and feature permissions dynamically."
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="subscription-plan-form">
+            Save Changes
+          </Button>
+        </>
+      }
+    >
+        <form
+          id="subscription-plan-form"
+          className="space-y-stack-xl"
+          onSubmit={handleSubmit}
         >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            {isNew ? "Create New Subscription Plan" : `Edit Plan: ${plan.name}`}
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Edit pricing, billing cycle, access periods, and feature permissions dynamically.
-          </p>
-        </div>
-
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           {/* Plan Name */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">Plan Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Essential Membership"
-              required
-              className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            />
-          </div>
+          <FormField label="Plan Name" required>
+            {(props) => (
+              <Input
+                {...props}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Essential Membership"
+              />
+            )}
+          </FormField>
 
           {/* Price & Billing Unit */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">Price ($ USD)</label>
-              <div className="relative mt-1.5 flex items-center">
-                <span className="absolute left-3 text-sm font-bold text-slate-500">$</span>
-                <input
+          <div className="grid grid-cols-2 gap-inline-lg">
+            <FormField label="Price ($ USD)" required>
+              {(props) => (
+                <div className="relative flex items-center">
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-3 text-label-md text-fg-muted"
+                  >
+                    $
+                  </span>
+                  <Input
+                    {...props}
+                    type="text"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="4.99"
+                    className="pl-7"
+                  />
+                </div>
+              )}
+            </FormField>
+            <FormField label="Billing Suffix">
+              {(props) => (
+                <Input
+                  {...props}
                   type="text"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="4.99"
-                  required
-                  className="h-10 w-full rounded-lg border border-slate-300 pl-7 pr-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  value={billing}
+                  onChange={(e) => setBilling(e.target.value)}
+                  placeholder="e.g. /Month, /Class, or One-time"
                 />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">Billing Suffix</label>
-              <input
-                type="text"
-                value={billing}
-                onChange={(e) => setBilling(e.target.value)}
-                placeholder="e.g. /Month, /Class, or One-time"
-                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-              />
-            </div>
+              )}
+            </FormField>
           </div>
 
           {/* Billing Type & Access Duration */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">Billing Type</label>
-              <select
-                value={billingType}
-                onChange={(e) => {
-                  const val = e.target.value as "recurring" | "one_time";
-                  setBillingType(val);
-                  if (val === "recurring") setBillingPeriodLabel("Recurring monthly");
-                  else setBillingPeriodLabel("One-time payment");
-                }}
-                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-              >
-                <option value="recurring">Recurring (Monthly)</option>
-                <option value="one_time">One-time Purchase</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Access Period (Days)
-              </label>
-              <input
-                type="number"
-                value={accessDays}
-                onChange={(e) => setAccessDays(e.target.value)}
-                placeholder="e.g. 21 for 21-Day Journey"
-                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-inline-lg">
+            <FormField label="Billing Type">
+              {(props) => (
+                <Select
+                  {...props}
+                  value={billingType}
+                  onChange={(e) => {
+                    const val = e.target.value as "recurring" | "one_time";
+                    setBillingType(val);
+                    if (val === "recurring") setBillingPeriodLabel("Recurring monthly");
+                    else setBillingPeriodLabel("One-time payment");
+                  }}
+                >
+                  <option value="recurring">Recurring (Monthly)</option>
+                  <option value="one_time">One-time Purchase</option>
+                </Select>
+              )}
+            </FormField>
+            <FormField label="Access Period (Days)">
+              {(props) => (
+                <Input
+                  {...props}
+                  type="number"
+                  value={accessDays}
+                  onChange={(e) => setAccessDays(e.target.value)}
+                  placeholder="e.g. 21 for 21-Day Journey"
+                />
+              )}
+            </FormField>
           </div>
 
           {/* Free Trial Period */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">
-              Free Trial Period (Days)
-            </label>
-            <input
-              type="number"
-              value={trialDays}
-              onChange={(e) => setTrialDays(e.target.value)}
-              placeholder="e.g. 7 (leave blank if no trial)"
-              className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            />
-            <p className="mt-1 text-[11px] text-slate-500">
-              Grants free trial days before recurring payment begins (e.g. 7 days).
-            </p>
-          </div>
+          <FormField
+            label="Free Trial Period (Days)"
+            hint="Grants free trial days before recurring payment begins (e.g. 7 days)."
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="number"
+                value={trialDays}
+                onChange={(e) => setTrialDays(e.target.value)}
+                placeholder="e.g. 7 (leave blank if no trial)"
+              />
+            )}
+          </FormField>
 
           {/* Description */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="What this plan includes..."
-              className="mt-1.5 w-full rounded-lg border border-slate-300 p-3 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            />
-          </div>
+          <FormField label="Description">
+            {(props) => (
+              <Textarea
+                {...props}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="What this plan includes..."
+              />
+            )}
+          </FormField>
 
           {/* Most Popular Toggle */}
-          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200">
-            <div>
-              <p className="text-xs font-bold text-slate-800">Highlight as Most Popular</p>
-              <p className="text-[11px] text-slate-500">Applies gradient badge & emphasis on landing page</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setPopular(!popular)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                popular ? "bg-blue-600" : "bg-slate-300"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  popular ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+          {/* Was a bare <button> drawing a track and a knob: no role="switch",
+              no aria-checked, and focus:outline-none removed the focus ring. */}
+          <SwitchRow
+            checked={popular}
+            onChange={setPopular}
+            title="Highlight as Most Popular"
+            description="Applies gradient badge and emphasis on the landing page"
+          />
 
           {/* Features Management */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <p className="text-overline mb-stack-xs text-fg-muted">
               Included Features ({features.length})
-            </label>
-            <div className="max-h-[160px] space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-2.5 bg-slate-50/50">
+            </p>
+            <div className="max-h-[160px] space-y-stack-sm overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
               {features.map((feat, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-white p-2 border border-slate-200/70"
+                  className="flex items-center justify-between gap-inline-md rounded-control border border-line bg-surface p-inset-xs"
                 >
+                  {/* Was a plain button toggling a tick: role and state now
+                      say so, and the name says which feature. */}
                   <button
                     type="button"
+                    role="checkbox"
+                    aria-checked={feat.included}
                     onClick={() => handleToggleFeature(index)}
-                    className="flex items-center gap-2 text-left text-xs font-medium flex-1 cursor-pointer"
+                    className="flex flex-1 cursor-pointer items-center gap-inline-md rounded-control-small text-left text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${
-                        feat.included ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"
+                      aria-hidden="true"
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-control-small ${
+                        feat.included
+                          ? "bg-success-600 text-white"
+                          : "bg-line text-fg-subtle"
                       }`}
                     >
                       <Check className="h-3 w-3" />
                     </span>
-                    <span className={feat.included ? "text-slate-800" : "text-slate-400 line-through"}>
+                    <span
+                      className={
+                        feat.included
+                          ? "text-fg-secondary"
+                          : "text-fg-subtle line-through"
+                      }
+                    >
                       {feat.label}
                     </span>
                   </button>
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
+                    appearance="stroke"
+                    size="small"
+                    className="px-inset-xs"
                     onClick={() => handleRemoveFeature(index)}
-                    className="text-slate-400 hover:text-red-500 cursor-pointer p-0.5"
+                    aria-label={`Remove feature: ${feat.label}`}
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                    <X aria-hidden="true" />
+                  </Button>
                 </div>
               ))}
             </div>
 
-            <div className="mt-2 flex gap-2">
-              <input
+            <div className="mt-stack-sm flex gap-inline-md">
+              <label htmlFor="new-feature" className="sr-only">
+                Add a new feature
+              </label>
+              <Input
+                id="new-feature"
+                inputSize="small"
                 type="text"
                 value={newFeatureText}
                 onChange={(e) => setNewFeatureText(e.target.value)}
                 placeholder="Add a new feature..."
-                className="h-8 flex-1 rounded-lg border border-slate-300 px-2.5 text-xs font-medium outline-none focus:border-blue-600"
+                className="flex-1"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -377,34 +415,20 @@ function EditPlanModal({
                   }
                 }}
               />
-              <button
-                type="button"
+              <Button
+                variant="neutral"
+                appearance="fill"
+                size="small"
                 onClick={handleAddFeature}
-                className="inline-flex h-8 items-center gap-1 rounded-lg bg-slate-800 px-3 text-xs font-bold text-white hover:bg-slate-700 cursor-pointer"
               >
-                <Plus className="h-3 w-3" /> Add
-              </button>
+                <Plus aria-hidden="true" />
+                Add
+              </Button>
             </div>
           </div>
 
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 h-11 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 h-11 rounded-lg bg-blue-600 text-xs font-bold text-white shadow-sm hover:bg-blue-700 cursor-pointer"
-            >
-              Save Changes
-            </button>
-          </div>
         </form>
-      </section>
-    </div>
+    </Modal>
   );
 }
 
@@ -438,40 +462,38 @@ export default function SubscriptionsPage() {
     <>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold leading-7 text-slate-900">Subscription & Pricing Plans</h1>
-          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
+          <h1 className="text-heading-4 text-fg">Subscription &amp; Pricing Plans</h1>
+          <p className="mt-stack-xs measure text-caption text-fg-muted">
             Manage your 4 customer packages, prices ($4.99, $7.99, $10, $49.99), trial periods, and feature permissions dynamically.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditingPlan("new")}
-          className="flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
+        <Button size="small" onClick={() => setEditingPlan("new")}>
+          <Plus aria-hidden="true" />
           Add New Plan
-        </button>
+        </Button>
       </div>
 
       {showSavedToast && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800 shadow-sm animate-fade-in">
-          <Check className="h-4 w-4 text-emerald-600" />
-          Changes saved successfully! Both the Admin Dashboard and Landing Page pricing have been updated.
-        </div>
+        <Alert tone="success" className="mb-stack-xl">
+          Changes saved successfully. Both the Admin Dashboard and the Landing
+          Page pricing have been updated.
+        </Alert>
       )}
 
       {/* Developer Rules & Notice Card */}
-      <div className="mb-8 rounded-2xl border border-blue-200 bg-blue-50/50 p-4 text-xs leading-relaxed text-blue-900">
-        <div className="flex items-center gap-2 font-bold text-blue-950 mb-1">
-          <ShieldAlert className="h-4 w-4 text-blue-600" />
-          Client Developer Rules Applied:
-        </div>
-        <ul className="list-disc pl-5 space-y-1 text-slate-700 text-[11px]">
+      <Alert
+        tone="info"
+        live={false}
+        icon={<ShieldAlert />}
+        title="Client Developer Rules Applied"
+        className="mb-stack-2xl"
+      >
+        <ul className="list-disc space-y-stack-xs pl-5 text-caption">
           <li><strong>21-Day Dialysis Journey ($49.99):</strong> Grants 21 days of Full Membership access upon start; curriculum access is lifetime. Auto-prompts for Essential or Full renewal after Day 21.</li>
           <li><strong>Live Class Only ($10.00):</strong> One-time single class unlock without creating recurring subscriptions.</li>
           <li><strong>Zero Hard-Coding:</strong> All 4 tiers can be edited directly here; values update dynamically across the frontend.</li>
         </ul>
-      </div>
+      </Alert>
 
       {/* 4 Plans Grid */}
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
@@ -487,13 +509,16 @@ export default function SubscriptionsPage() {
           ["Subscription Types", "2 Recurring + 2 One-Time"],
           ["Dynamic Storage", "Admin Synced"],
         ].map(([label, value]) => (
-          <article key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <Card as="article" key={label} padding="none" className="p-inset-lg">
+            <div
+              aria-hidden="true"
+              className="mb-stack-md flex h-9 w-9 items-center justify-center rounded-control bg-primary-soft text-fg-brand"
+            >
               <CreditCard className="h-4 w-4" />
             </div>
-            <p className="text-xs font-semibold text-slate-500">{label}</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
-          </article>
+            <p className="text-label-sm text-fg-muted">{label}</p>
+            <p className="mt-stack-xs text-metric-sm text-fg">{value}</p>
+          </Card>
         ))}
       </section>
 

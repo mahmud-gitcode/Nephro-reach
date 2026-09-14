@@ -22,34 +22,33 @@ function Icon({ src, className }: { src: string; className?: string }) {
   );
 }
 
-/* NOTE: these eight tints are categories, not states, and the palette has
-   no categorical ramp yet — so they borrow the status surfaces. It reads
-   fine (Before-the-ER on danger, Classes on success) but it is the third
-   place this gap has come up. A proper categorical ramp would replace them. */
+/* Eight tints, all categories rather than states, so they come off the
+   categorical ramp. They briefly borrowed the status surfaces, which made
+   "Community" look like a success and "Classes Attended" like one too. */
 const quickActions = [
   {
     label: "Where's My Ride",
     href: "/dashboard/my-rides",
     icon: "quick-car.svg",
-    tone: "bg-primary-soft",
+    tone: "bg-cat-6-soft",
   },
   {
     label: "Education Center",
     href: "/dashboard/education-center",
     icon: "quick-book.svg",
-    tone: "bg-accent-soft",
+    tone: "bg-cat-7-soft",
   },
   {
     label: "Community",
     href: "/dashboard/community",
     icon: "quick-messages.svg",
-    tone: "bg-success-surface",
+    tone: "bg-cat-4-soft",
   },
   {
     label: "Before the ER™",
     href: "/dashboard/before-the-er",
     icon: "quick-info.svg",
-    tone: "bg-danger-surface",
+    tone: "bg-cat-1-soft",
   },
 ];
 
@@ -58,25 +57,25 @@ const stats = [
     label: "Journal Entries",
     value: "1,247",
     icon: "stat-users.svg",
-    tone: "bg-primary-soft",
+    tone: "bg-cat-6-soft",
   },
   {
     label: "Notification Check-ins",
     value: "78%",
     icon: "stat-clipboard.svg",
-    tone: "bg-warning-surface",
+    tone: "bg-cat-3-soft",
   },
   {
     label: "Curriculum Progress",
     value: "892",
     icon: "stat-book.svg",
-    tone: "bg-accent-soft",
+    tone: "bg-cat-7-soft",
   },
   {
     label: "Classes Attended",
     value: "2",
     icon: "stat-video.svg",
-    tone: "bg-success-surface",
+    tone: "bg-cat-5-soft",
   },
 ];
 

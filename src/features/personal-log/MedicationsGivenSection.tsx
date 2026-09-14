@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, Check, ChevronDown, Pill, Trash2 } from "lucide-react";
+import { Plus, Check, Pill, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, Button, Input, Modal, Select } from "@/components/ui";
 

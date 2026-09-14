@@ -1034,7 +1034,7 @@ function DialysisManagementDashboard() {
                     <div
                       key={day}
                       className={`mb-1.5 flex min-w-0 break-inside-avoid items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-all ${isSelected
-                          ? "bg-gradient-to-r from-blue-50/80 via-white to-white border border-line shadow-card hover:shadow-md hover:border-line-strong"
+                          ? "bg-gradient-to-r from-primary-soft via-surface to-surface border border-line shadow-card hover:shadow-md hover:border-line-strong"
                           : "bg-surface/40 border border-dashed border-line/70"
                         }`}
                     >
@@ -1368,7 +1368,7 @@ function DialysisManagementDashboard() {
                         type="button"
                         disabled
                         tabIndex={-1}
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-gray-400 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-not-allowed text-center"
+                        className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-control border border-line bg-surface-sunken px-inset-md py-2.5 text-center text-label-md text-fg-subtle sm:py-inset-sm"
                       >
                         <span>{isEs ? "Próximo" : "Upcoming"}</span>
                       </button>

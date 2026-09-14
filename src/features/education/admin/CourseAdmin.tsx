@@ -8,7 +8,6 @@ import {
   FileText,
   Trash2,
   Upload,
-  X,
 } from "lucide-react";
 import {
   CourseClass,

@@ -44,6 +44,11 @@
    /* active · logo deep */
    --color-brand-900: #1b3d85;
    --color-brand-950: #132750;
+   /* The navigation rail's navy. Deeper and less saturated than brand-950 —
+      it is the one large brand-coloured surface in the product, so it gets
+      its own step rather than bending the ramp to fit. White on it is
+      14.62:1. */
+   --color-brand-1000: #06265b;
 
    /* ======================================================================
      PRIMITIVE — Secondary · violet · hue 300°
@@ -157,6 +162,42 @@
    --color-danger-950: #4d100e;
 
    /* Info reuses the brand ramp. A seventh hue would add nothing. */
+
+   /* ======================================================================
+     PRIMITIVE — Categorical · eight series colours
+     These are for things that DIFFER, not for things that are good or bad:
+     chart series, log types, legend keys, quick-action tiles. Status colours
+     were being borrowed for this in four places, which made "Nutrition Log"
+     look like a warning and "Classes Attended" look like a success.
+
+     A categorical set has to span the wheel, so some of these land near a
+     status hue. What separates them is weight, not hue: every one of these
+     sits at L 60% / C 0.13, while the status solids are darker and far more
+     saturated (danger-600 is L 52% / C 0.20). Side by side, these read as
+     data and those read as alerts.
+
+     Hues are 45° apart from 20°. Every solid clears 3:1 on white (min
+     3.73:1 — WCAG 1.4.11 for a graphical object) and 3:1 on its own soft
+     surface (min 3.32:1), so an icon on its tint is legible. They are NOT
+     rated for text: use a fg token for the label beside the swatch.
+     ====================================================================== */
+   --color-cat-1: #c25c5f;
+   --color-cat-2: #b46d10;
+   --color-cat-3: #868604;
+   --color-cat-4: #2c965d;
+   --color-cat-5: #009298;
+   --color-cat-6: #2d86c8;
+   --color-cat-7: #8071c8;
+   --color-cat-8: #af609f;
+
+   --color-cat-1-soft: #ffebea;
+   --color-cat-2-soft: #ffeddc;
+   --color-cat-3-soft: #f1f2dc;
+   --color-cat-4-soft: #e1f7e7;
+   --color-cat-5-soft: #daf7f8;
+   --color-cat-6-soft: #e4f2ff;
+   --color-cat-7-soft: #efeeff;
+   --color-cat-8-soft: #fee9f8;
 }
 
 /* ==========================================================================
@@ -179,6 +220,9 @@
    --surface-raised: #ffffff;
    /* dropdowns, popovers (+ shadow) */
    --surface-inverse: var(--color-gray-900);
+   --surface-nav: var(--color-brand-1000);
+   /* the sidebar rail */
+   --fg-on-nav: #ffffff;
    --surface-brand: var(--color-brand-600);
    --surface-brand-subtle: var(--color-brand-50);
    --surface-accent-subtle: var(--color-accent-50);
@@ -315,6 +359,8 @@
    --surface-sunken: var(--color-gray-950);
    --surface-raised: var(--color-gray-800);
    --surface-inverse: var(--color-gray-50);
+   --surface-nav: var(--color-gray-950);
+   --fg-on-nav: var(--color-gray-50);
    --surface-brand: var(--color-brand-600);
    --surface-brand-subtle: var(--color-brand-950);
    --surface-accent-subtle: var(--color-accent-950);
@@ -413,6 +459,8 @@
    --color-surface-sunken: var(--surface-sunken);
    --color-surface-raised: var(--surface-raised);
    --color-surface-inverse: var(--surface-inverse);
+   --color-surface-nav: var(--surface-nav);
+   --color-fg-on-nav: var(--fg-on-nav);
    --color-surface-brand: var(--surface-brand);
    --color-surface-brand-subtle: var(--surface-brand-subtle);
    --color-surface-accent-subtle: var(--surface-accent-subtle);

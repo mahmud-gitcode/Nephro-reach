@@ -401,13 +401,17 @@ function TrendLineCard({
   refRangeLabel?: string;
   latestLabel?: string;
 }) {
+  /* One lab panel, six series — these say "different test", not "good" or
+     "bad", so they come off the categorical ramp. They used to sit on the
+     status ramps, which put green and teal on success-600 and success-400:
+     two lines a member could barely tell apart, both reading as "healthy". */
   const themeMap = {
-    purple: { stroke: "var(--color-accent-500)" },
-    green: { stroke: "var(--color-success-600)" },
-    orange: { stroke: "var(--color-warning-500)" },
-    blue: { stroke: "var(--color-brand-500)" },
-    rose: { stroke: "var(--color-danger-500)" },
-    teal: { stroke: "var(--color-success-400)" },
+    purple: { stroke: "var(--color-cat-7)" },
+    green: { stroke: "var(--color-cat-4)" },
+    orange: { stroke: "var(--color-cat-2)" },
+    blue: { stroke: "var(--color-cat-6)" },
+    rose: { stroke: "var(--color-cat-1)" },
+    teal: { stroke: "var(--color-cat-5)" },
   };
 
   const theme = themeMap[colorTheme] || themeMap.purple;
@@ -1665,7 +1669,7 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 3: Understanding Your Labs */}
-          <div className="rounded-xl border border-primary-soft-line bg-gradient-to-br from-blue-50/70 to-indigo-50/70 p-4 space-y-3">
+          <div className="rounded-xl border border-primary-soft-line bg-gradient-to-br from-primary-soft to-accent-soft p-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-white">
                 <BookOpen className="h-4 w-4" />

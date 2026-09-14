@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { buttonStyles } from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import { UserRole } from "@/features/auth/auth";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
@@ -277,8 +278,8 @@ function Sidebar({
   const visibleSupport = supportItems.filter((item) => item.roles.includes(role));
 
   return (
-    <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-[#06265B] px-4 py-4 text-white print:hidden">
-      <div className="relative mb-3 flex shrink-0 items-center justify-center rounded bg-white p-3">
+    <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-surface-nav px-inset-md py-inset-md text-fg-on-nav print:hidden">
+      <div className="relative mb-stack-md flex shrink-0 items-center justify-center rounded-control-small bg-surface p-inset-sm">
         <Link href="/dashboard" className="flex items-center justify-center w-full">
           <Image
             src="/images/logo.svg"
@@ -293,7 +294,7 @@ function Sidebar({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-2 right-2 rounded-md p-1 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="absolute top-2 right-2 cursor-pointer rounded-control-small p-1 text-fg-muted transition-colors duration-150 ease-standard hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
             aria-label="Close dashboard menu"
           >
             <X className="h-5 w-5" />
@@ -304,7 +305,7 @@ function Sidebar({
 
       <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <div className="pt-2">
-          <p className="mb-2 px-4 text-xs font-medium text-white/80">
+          <p className="text-overline mb-stack-sm px-inset-md text-fg-on-nav/80">
             {language === "ES" ? "Menú" : "Menu"}
           </p>
           <nav className="space-y-2">
@@ -323,7 +324,7 @@ function Sidebar({
                   <button
                     key={item.label}
                     type="button"
-                    className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                    className="flex h-11 w-full cursor-pointer items-center gap-inline-lg rounded-control px-inset-sm text-left text-label-md text-fg-on-nav transition-colors duration-150 ease-standard hover:bg-fg-on-nav/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav"
                   >
                     {content}
                   </button>
@@ -335,10 +336,11 @@ function Sidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onClose}
-                  className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex h-11 w-full items-center gap-inline-lg rounded-control px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav ${
                     isActive
-                      ? "bg-white text-slate-700 shadow-sm"
-                      : "text-white hover:bg-white/10"
+                      ? "bg-surface text-fg-secondary shadow-sm"
+                      : "text-fg-on-nav hover:bg-fg-on-nav/10"
                   }`}
                 >
                   {content}
@@ -349,8 +351,8 @@ function Sidebar({
         </div>
 
         {visibleSupport.length > 0 ? (
-        <div className="mt-5 border-t border-white/80 py-5">
-          <p className="mb-2 px-4 text-xs font-medium text-white/80">
+        <div className="mt-stack-xl border-t border-fg-on-nav/30 py-inset-lg">
+          <p className="text-overline mb-stack-sm px-inset-md text-fg-on-nav/80">
             {language === "ES" ? "Ayuda" : "Help"}
           </p>
           <div className="space-y-2">
@@ -369,7 +371,7 @@ function Sidebar({
                   <button
                     key={item.label}
                     type="button"
-                    className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                    className="flex h-11 w-full cursor-pointer items-center gap-inline-lg rounded-control px-inset-sm text-left text-label-md text-fg-on-nav transition-colors duration-150 ease-standard hover:bg-fg-on-nav/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav"
                   >
                     {content}
                   </button>
@@ -381,10 +383,11 @@ function Sidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onClose}
-                  className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex h-11 w-full items-center gap-inline-lg rounded-control px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav ${
                     isActive
-                      ? "bg-white text-slate-700 shadow-sm"
-                      : "text-white hover:bg-white/10"
+                      ? "bg-surface text-fg-secondary shadow-sm"
+                      : "text-fg-on-nav hover:bg-fg-on-nav/10"
                   }`}
                 >
                   {content}
@@ -402,7 +405,7 @@ function Sidebar({
           logout();
           router.push("/");
         }}
-        className="mt-3 flex h-14 shrink-0 items-center justify-center gap-3 rounded-lg border-8 border-blue-200 bg-slate-100 text-sm font-bold text-red-500 transition-colors hover:bg-white cursor-pointer"
+        className="mt-stack-md flex h-14 shrink-0 cursor-pointer items-center justify-center gap-inline-lg rounded-control bg-surface text-label-md text-danger transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-on-nav"
       >
         <LogOut className="h-5 w-5" />
         {language === "ES" ? "Cerrar sesión" : "Log out"}
@@ -413,7 +416,9 @@ function Sidebar({
 
 function HeaderIcon({ src, className = "size-6" }: { src: string; className?: string }) {
   return (
-    <span className={`relative block overflow-clip shrink-0 ${className}`}>
+    <span className={`relative block shrink-0 overflow-clip ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element --
+          a small local decorative SVG; next/image cannot optimise SVG. */}
       <img src={src} alt="" className="size-full" />
     </span>
   );
@@ -428,10 +433,11 @@ function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setLangOpen((open) => !open)}
-        className="flex items-center gap-1 sm:gap-2.5 rounded-lg sm:rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100 cursor-pointer"
+        className="flex cursor-pointer items-center gap-inline-xs rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-colors duration-150 ease-standard hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:p-2.5"
         aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
       >
         <span className="relative h-4.5 w-6 sm:h-6 sm:w-[33px] overflow-clip rounded-[2px] shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element -- local SVG flag */}
           <img
             src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
             alt=""
@@ -441,13 +447,14 @@ function LanguageSwitcher() {
         <HeaderIcon src="/images/dashboard-header/arrow-down.svg" className="size-3 sm:size-4" />
       </button>
       {langOpen ? (
-        <div className="absolute right-0 z-50 mt-2 w-28 rounded-lg border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-md">
+        <div className="absolute right-0 z-50 mt-stack-sm w-28 rounded-control border border-line bg-surface-raised py-inset-xs text-body-sm shadow-md">
           {(["EN", "ES"] as const).map((code) => (
             <button
               key={code}
               type="button"
-              className={`block w-full px-3 py-1.5 text-left cursor-pointer ${
-                language === code ? "font-semibold text-blue-700" : "text-slate-700"
+              aria-current={language === code ? "true" : undefined}
+              className={`block w-full cursor-pointer px-inset-sm py-1.5 text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${
+                language === code ? "text-label-md text-fg-brand" : "text-fg-secondary"
               }`}
               onClick={() => {
                 setLanguage(code);
@@ -475,7 +482,7 @@ function ClassroomHeader() {
   const isEs = language === "ES";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E2E8F0] bg-white px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 print:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-lg border-b border-line bg-surface px-inset-sm py-inset-xs sm:px-inset-md sm:py-2.5 md:px-inset-lg print:hidden">
       <Link
         href="/dashboard"
         className="flex shrink-0 items-center"
@@ -497,7 +504,7 @@ function ClassroomHeader() {
         {/* Leaving a lesson drops back into the course, not the main dashboard. */}
         <Link
           href="/dashboard/education-center"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700 sm:px-4 sm:py-2.5 sm:text-sm"
+          className={buttonStyles({ size: "small" })}
         >
           <ArrowLeft className="size-4 shrink-0" />
           <span className="hidden min-[420px]:inline">
@@ -528,12 +535,12 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 sm:px-4 sm:py-3 md:px-8 print:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-md border-b border-line bg-canvas px-inset-sm py-2.5 sm:px-inset-md sm:py-inset-sm md:px-inset-xl print:hidden">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
-          className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-700 shadow-sm sm:p-2 lg:hidden cursor-pointer shrink-0"
+          className="shrink-0 cursor-pointer rounded-control border border-line bg-surface p-1.5 text-fg-secondary shadow-sm transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2 lg:hidden"
           aria-label={language === "ES" ? "Abrir menú del panel" : "Open dashboard menu"}
         >
           <Menu className="h-5 w-5" />
@@ -542,7 +549,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           {isUser ? (
             <>
               {/* Mobile: concise active page title */}
-              <span className="truncate text-xs sm:hidden font-semibold text-[#141A21]">
+              <span className="truncate text-label-md text-fg sm:hidden">
                 {trail[trail.length - 1] ?? "Dashboard"}
               </span>
               {/* Tablet/Desktop: full breadcrumbs trail */}
@@ -558,17 +565,22 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   return (
                     <span key={`${item}-${index}`} className="flex items-center gap-3 md:gap-4">
                       {index > 0 ? (
-                        <span className="text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
+                        <span aria-hidden="true" className="text-body-sm text-fg-subtle">/</span>
                       ) : null}
                       {href && !last ? (
                         <Link
                           href={href}
-                          className="text-[#64748B] hover:text-blue-600 hover:underline transition-colors"
+                          className="rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                           {item}
                         </Link>
                       ) : (
-                        <span className={last ? "text-[#141A21] font-semibold" : "text-[#64748B]"}>{item}</span>
+                        <span
+                          aria-current={last ? "page" : undefined}
+                          className={last ? "text-label-md text-fg" : "text-fg-muted"}
+                        >
+                          {item}
+                        </span>
                       )}
                     </span>
                   );
@@ -577,11 +589,11 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             </>
           ) : (
             <>
-              <Link href="/dashboard" className="hidden sm:inline text-[#64748B] hover:text-blue-600 hover:underline transition-colors">
+              <Link href="/dashboard" className="hidden rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline">
                 {language === "ES" ? "Panel" : "Dashboard"}
               </Link>
-              <span className="hidden sm:inline text-sm font-normal tracking-[0.22px] text-[#919EAB]">/</span>
-              <span className="text-[#0F172A] font-semibold truncate text-xs sm:text-base">{currentPage}</span>
+              <span aria-hidden="true" className="hidden text-body-sm text-fg-subtle sm:inline">/</span>
+              <span aria-current="page" className="truncate text-label-md text-fg">{currentPage}</span>
             </>
           )}
         </nav>
@@ -594,20 +606,20 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Notifications Button */}
         <button
           type="button"
-          className="flex items-center rounded-lg sm:rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          className="flex cursor-pointer items-center rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-all duration-150 ease-standard hover:bg-line hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2"
           aria-label={language === "ES" ? "Notificaciones" : "Notifications"}
         >
           <HeaderIcon src={bellSrc} className="size-4 sm:size-5" />
         </button>
 
-        <span className="hidden h-6 w-px bg-slate-300 sm:block" />
+        <span aria-hidden="true" className="hidden h-6 w-px bg-line sm:block" />
 
         {/* Emergency Button - Compact on mobile, full on desktop */}
         {isUser ? (
           <button
             type="button"
             onClick={() => setEmergencyOpen(true)}
-            className="flex items-center gap-1 sm:gap-2 rounded-lg sm:rounded bg-[#EF4444] px-2 py-1.5 sm:px-3.5 sm:py-3 text-xs sm:text-base font-bold tracking-[0.08px] text-white transition-all hover:bg-red-600 shadow-sm hover:shadow-md cursor-pointer active:scale-95 shrink-0"
+            className="flex shrink-0 cursor-pointer items-center gap-inline-xs rounded-control bg-danger-solid px-inset-xs py-1.5 text-label-md text-danger-on-solid shadow-sm transition-all duration-150 ease-standard hover:bg-danger-solid-hover hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:px-3.5 sm:py-inset-sm"
             title={language === "ES" ? "Emergencia" : "Emergency"}
           >
             <HeaderIcon src="/images/dashboard-header/danger.svg" className="size-3.5 sm:size-5" />
@@ -621,15 +633,15 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         ) : null}
 
         {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
-        <div className="flex items-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] p-1 sm:px-2 sm:py-1.5 shadow-sm shrink-0">
-          <div className="relative h-7 w-7 sm:h-10 sm:w-[42px] overflow-hidden rounded-full bg-slate-200 shrink-0">
+        <div className="flex shrink-0 items-center gap-inline-sm rounded-control border-y border-line bg-surface-sunken p-1 shadow-sm sm:gap-inline-lg sm:px-inset-xs sm:py-1.5">
+          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-line sm:h-10 sm:w-[42px]">
             <Image src={avatarSrc} alt="" fill sizes="42px" className="object-cover" />
           </div>
           <div className="hidden lg:block w-[140px] xl:w-[174px] min-w-0">
-            <p className="truncate text-base font-medium leading-6 tracking-[0.08px] text-[#33358E]">
+            <p className="truncate text-label-lg text-fg">
               {user?.name ?? (language === "ES" ? "Invitado" : "Guest")}
             </p>
-            <p className="truncate text-xs leading-4 tracking-[0.06px] text-[#4A4A68]">
+            <p className="truncate text-caption text-fg-muted">
               {user?.role === "admin"
                 ? (language === "ES" ? "Administrador" : "Admin")
                 : (language === "ES" ? "Usuario" : "User")}
@@ -666,7 +678,7 @@ export default function DashboardShell({
 
   if (isClassroomRoute(pathname)) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+      <div className="min-h-screen bg-canvas font-sans text-fg">
         <ClassroomHeader />
         <main className="px-4 py-5 md:px-6">{children}</main>
       </div>
@@ -674,7 +686,7 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen bg-canvas font-sans text-slate-900">
+    <div className="min-h-screen bg-canvas font-sans text-fg">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         <Sidebar onOpenRideModal={() => setRideModalOpen(true)} />
       </div>
@@ -683,7 +695,7 @@ export default function DashboardShell({
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/40"
+            className="absolute inset-0 bg-fg/50"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close dashboard menu overlay"
           />
