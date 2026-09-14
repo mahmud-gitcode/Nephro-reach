@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import { Button, Card, Progress } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 
@@ -266,7 +267,9 @@ export default function UserDashboard() {
             {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
           </p>
         </div>
-        <Button>{dh?.upcomingClass?.joinButton || "Join Class"}</Button>
+        <Button {...notBuiltYet("Joining a class")}>
+          {dh?.upcomingClass?.joinButton || "Join Class"}
+        </Button>
       </Card>
 
       <section>

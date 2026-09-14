@@ -16,6 +16,7 @@ import {
   TablePagination,
   TableRow,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 const latestResults = [
   {
@@ -78,6 +79,7 @@ function LabGoalsCard() {
           </p>
         </div>
         <Button
+          {...notBuiltYet("Editing lab goals")}
           variant="neutral"
           appearance="fill-stroke"
           size="small"
@@ -148,6 +150,7 @@ function TestHistoryCard() {
                 <TableCell>
                   <span className="flex gap-inline-md">
                     <Button
+                      {...notBuiltYet("Editing a result")}
                       iconOnly
                       size="small"
                       variant="neutral"
@@ -157,6 +160,7 @@ function TestHistoryCard() {
                       <Edit3 />
                     </Button>
                     <Button
+                      {...notBuiltYet("Deleting a result")}
                       iconOnly
                       size="small"
                       variant="danger"
@@ -190,6 +194,7 @@ export default function BloodResultsPage() {
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <Button
+          {...notBuiltYet("Scanning results")}
           variant="neutral"
           appearance="fill-stroke"
           leadingIcon={<ScanLine />}
@@ -211,6 +216,7 @@ export default function BloodResultsPage() {
           <div className="flex flex-wrap items-center gap-inline-md">
             <p className="text-caption text-fg-muted">June 1, 2026</p>
             <Button
+              {...notBuiltYet("Viewing a full result")}
               variant="neutral"
               appearance="fill-stroke"
               size="small"
@@ -219,6 +225,7 @@ export default function BloodResultsPage() {
               View
             </Button>
             <Button
+              {...notBuiltYet("Downloading results")}
               variant="neutral"
               appearance="fill-stroke"
               size="small"
@@ -241,7 +248,12 @@ export default function BloodResultsPage() {
         <TestHistoryCard />
       </section>
 
-      <Button variant="primary" appearance="stroke" fullWidth>
+      <Button
+        {...notBuiltYet("The full results list")}
+        variant="primary"
+        appearance="stroke"
+        fullWidth
+      >
         View All Results
       </Button>
     </div>

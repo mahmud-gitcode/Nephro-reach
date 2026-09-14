@@ -22,6 +22,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type Field = {
   label: string;
@@ -234,6 +235,7 @@ export default function AddBloodResultsPage() {
         </div>
         <div className="flex flex-wrap gap-inline-md">
           <Button
+            {...notBuiltYet("Scanning results")}
             variant="neutral"
             appearance="fill-stroke"
             leadingIcon={<ScanLine />}
@@ -241,6 +243,7 @@ export default function AddBloodResultsPage() {
             Scan Document
           </Button>
           <Button
+            {...notBuiltYet("Uploading a file")}
             variant="neutral"
             appearance="fill-stroke"
             leadingIcon={<Upload />}
@@ -314,7 +317,11 @@ export default function AddBloodResultsPage() {
         >
           Cancel
         </Link>
-        <Button fullWidth leadingIcon={<Save />}>
+        <Button
+          {...notBuiltYet("Saving results")}
+          fullWidth
+          leadingIcon={<Save />}
+        >
           Save Results
         </Button>
       </div>

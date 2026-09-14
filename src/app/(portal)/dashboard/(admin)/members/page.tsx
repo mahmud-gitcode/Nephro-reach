@@ -15,6 +15,7 @@ import {
   TablePagination,
   TableRow,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -272,6 +273,7 @@ function MembersTable() {
                 </TableCell>
                 <TableCell className="text-center">
                   <Button
+                    {...notBuiltYet("Member details")}
                     variant="neutral"
                     appearance="stroke"
                     size="small"

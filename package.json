@@ -14,7 +14,8 @@
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
     "prepare": "husky",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "audit:controls": "python scripts/dead-controls.py"
   },
   "dependencies": {
     "lucide-react": "^1.25.0",

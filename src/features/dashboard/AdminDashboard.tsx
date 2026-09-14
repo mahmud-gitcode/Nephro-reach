@@ -33,6 +33,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -266,7 +267,12 @@ function LiveClassTable() {
     <Card as="section" padding="small">
       <div className="mb-stack-lg flex items-center justify-between gap-inset-md">
         <h2 className="text-heading-4 text-fg">Live Class</h2>
-        <Button variant="neutral" appearance="fill-stroke" size="small">
+        <Button
+          {...notBuiltYet("The full live-class list")}
+          variant="neutral"
+          appearance="fill-stroke"
+          size="small"
+        >
           View all
         </Button>
       </div>
@@ -495,6 +501,7 @@ function EarningsOverview() {
       <div className="mb-stack-2xl flex items-center justify-between gap-inset-md">
         <h2 className="text-heading-5 text-fg">Earnings Overview</h2>
         <button
+          {...notBuiltYet("Changing the date range")}
           type="button"
           className="flex items-center gap-4 rounded-control-small border border-line bg-surface-sunken px-5 py-2 text-base font-bold text-fg"
         >

@@ -15,6 +15,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { FormField, Input, Modal } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -631,6 +632,7 @@ function ResourceCard() {
       <div className="mt-3 space-y-2">
         {items.map((resource: string) => (
           <button
+            {...notBuiltYet("Opening a resource")}
             key={resource}
             type="button"
             className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3 text-left transition-colors hover:border-primary-soft-line hover:bg-primary-soft"

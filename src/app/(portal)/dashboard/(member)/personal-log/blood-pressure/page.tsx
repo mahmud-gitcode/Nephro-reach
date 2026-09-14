@@ -25,6 +25,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 const statusTone = {
   High: "danger",
@@ -180,6 +181,7 @@ function DailyBloodPressureList() {
             {t("bloodPressure.addReading")}
           </Link>
           <Button
+            {...notBuiltYet("Exporting readings")}
             variant="neutral"
             appearance="fill-stroke"
             leadingIcon={<Download />}
@@ -264,6 +266,7 @@ function DailyBloodPressureList() {
                     <TableCell>
                       <span className="flex items-center gap-inline-md">
                         <Button
+                          {...notBuiltYet("Editing a reading")}
                           iconOnly
                           size="small"
                           variant="neutral"
@@ -273,6 +276,7 @@ function DailyBloodPressureList() {
                           <Edit3 />
                         </Button>
                         <Button
+                          {...notBuiltYet("Deleting a reading")}
                           iconOnly
                           size="small"
                           variant="danger"
@@ -282,6 +286,7 @@ function DailyBloodPressureList() {
                           <Trash2 />
                         </Button>
                         <Button
+                          {...notBuiltYet("More actions")}
                           iconOnly
                           size="small"
                           variant="neutral"

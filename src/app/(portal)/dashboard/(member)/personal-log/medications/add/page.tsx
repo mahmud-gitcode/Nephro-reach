@@ -22,6 +22,7 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 interface FieldConfig {
   labelKey: string;
@@ -222,7 +223,11 @@ export default function AddMedicationPage() {
           >
             {t("medicationsLog.cancel")}
           </Link>
-          <Button fullWidth leadingIcon={<Plus />}>
+          <Button
+            {...notBuiltYet("Adding a medication")}
+            fullWidth
+            leadingIcon={<Plus />}
+          >
             {t("medicationsLog.addMedication")}
           </Button>
         </div>

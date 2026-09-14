@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -717,6 +718,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
         {/* Notifications Button */}
         <button
+          {...notBuiltYet("Notifications")}
           type="button"
           className="flex cursor-pointer items-center rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-all duration-150 ease-standard hover:bg-line hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2"
           aria-label={language === "ES" ? "Notificaciones" : "Notifications"}

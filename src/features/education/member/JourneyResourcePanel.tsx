@@ -24,6 +24,7 @@ import {
   downloadNoteAsText,
   NoteSaveState,
 } from "@/features/education/useJourneyNotes";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 export type JourneyPanelTab = "transcript" | "overview" | "documents" | "notes";
 
@@ -265,6 +266,7 @@ function DocumentsTab({
         return (
           <li key={doc.id}>
             <button
+              {...notBuiltYet("Opening a document")}
               type="button"
               tabIndex={interactive ? 0 : -1}
               className="flex w-full cursor-pointer items-center gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-line-strong hover:bg-surface-sunken"

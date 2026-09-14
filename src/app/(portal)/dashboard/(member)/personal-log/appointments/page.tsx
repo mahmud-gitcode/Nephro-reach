@@ -13,6 +13,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { Button, Card, FormField, Input, Modal } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 interface AppointmentItem {
   id: string;
@@ -163,6 +164,7 @@ function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
       </div>
 
       <Button
+        {...notBuiltYet("Appointment details")}
         iconOnly
         size="small"
         variant="neutral"
@@ -189,7 +191,12 @@ function UpcomingAppointments({ items }: { items: AppointmentItem[] }) {
         ))}
       </Card>
       <div className="mt-stack-md">
-        <Button variant="primary" appearance="stroke" fullWidth>
+        <Button
+          {...notBuiltYet("The full appointment list")}
+          variant="primary"
+          appearance="stroke"
+          fullWidth
+        >
           {t("appointments.viewAll")}
         </Button>
       </div>

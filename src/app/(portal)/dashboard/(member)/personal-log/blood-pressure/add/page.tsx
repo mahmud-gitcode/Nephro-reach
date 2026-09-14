@@ -15,6 +15,7 @@ import {
   RadioGroup,
   Textarea,
 } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 function MetaTile({
   icon,
@@ -236,7 +237,11 @@ export default function AddBloodPressurePage() {
           >
             {t("bloodPressure.add.cancel")}
           </Link>
-          <Button fullWidth leadingIcon={<Plus />}>
+          <Button
+            {...notBuiltYet("Adding a reading")}
+            fullWidth
+            leadingIcon={<Plus />}
+          >
             {t("bloodPressure.add.saveEntry")}
           </Button>
         </div>

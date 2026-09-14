@@ -11,6 +11,7 @@ import {
   Users,
   Video,
 } from "lucide-react";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -174,7 +175,7 @@ function ClassRegistrations() {
     <Card as="section" padding="small">
       <div className="mb-stack-lg flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-heading-4 text-fg">Class Registrations</h1>
-        <Button size="small">
+        <Button {...notBuiltYet("Scheduling a class")} size="small">
           <Plus aria-hidden="true" />
           Schedule Class
         </Button>

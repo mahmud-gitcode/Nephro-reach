@@ -39,6 +39,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 export interface MedicationReminder {
   id: string;
@@ -422,12 +423,20 @@ function DoseSchedule({ reminders }: { reminders: MedicationReminder[] }) {
       <div className="flex flex-col gap-inline-md lg:flex-row lg:items-center lg:justify-between">
         <SectionTitle number="2" title={t("medicationsLog.section2")} />
         <div className="flex flex-wrap gap-inline-md">
-          <Button variant="neutral" appearance="fill-stroke">
+          <Button
+            {...notBuiltYet("Changing the day")}
+            variant="neutral"
+            appearance="fill-stroke"
+          >
             <ChevronLeft aria-hidden="true" />
             {language === "ES" ? "Mayo 20" : "May 20"}
             <ChevronRight aria-hidden="true" />
           </Button>
-          <Button variant="neutral" appearance="fill-stroke">
+          <Button
+            {...notBuiltYet("Jumping to today")}
+            variant="neutral"
+            appearance="fill-stroke"
+          >
             {t("medicationsLog.today")}
           </Button>
         </div>
@@ -917,7 +926,10 @@ function AlertsAndMood({
             </FormField>
           </div>
 
-          <Button className="mt-stack-md w-full">
+          <Button
+            {...notBuiltYet("Saving the mood log")}
+            className="mt-stack-md w-full"
+          >
             {t("medicationsLog.mood.saveLog")}
           </Button>
         </Card>
@@ -982,6 +994,7 @@ function ExportReporting() {
               </div>
             </div>
             <Button
+              {...notBuiltYet("Exporting a report")}
               variant="neutral"
               appearance="fill-stroke"
               className="mt-stack-lg w-full"
