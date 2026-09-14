@@ -18,9 +18,14 @@ import {
   Weight,
 } from "lucide-react";
 
+import type { DonutSegment } from "@/components/ui";
 import {
+  BarChart,
   Button,
   Card,
+  ChartLegend,
+  DonutChart,
+  Progress,
   Table,
   TableBody,
   TableCell,
@@ -193,34 +198,27 @@ const confidenceRows = [
   },
 ];
 
-const educationLegend = [
-  { label: "Videos Watched", value: "19,428 (34%)", color: "bg-cat-6" },
-  { label: "Modules Completed", value: "16,478 (29%)", color: "bg-cat-2" },
-  { label: "Live Classes Attended", value: "8,321 (15%)", color: "bg-cat-5" },
-  { label: "Members Downloaded", value: "4,421 (8%)", color: "bg-cat-4" },
-  { label: "Quantities Submitted", value: "4,258 (7%)", color: "bg-cat-1" },
+/* Values, not percentages and degrees. DonutChart works the shares out, so
+   the ring and the legend can no longer disagree. */
+const educationSegments: DonutSegment[] = [
+  { label: "Videos Watched", value: 19428, tone: "cat-6" },
+  { label: "Modules Completed", value: 16478, tone: "cat-2" },
+  { label: "Live Classes Attended", value: 8321, tone: "cat-5" },
+  { label: "Members Downloaded", value: 4421, tone: "cat-4" },
+  { label: "Quantities Submitted", value: 4258, tone: "cat-1" },
 ];
 
-const engagementLegend = [
-  {
-    label: "High Engagement",
-    detail: "Completed 5+ modules",
-    value: "29 (50%)",
-    color: "bg-cat-6",
-  },
-  {
-    label: "Medium Engagement",
-    detail: "Completed 2-4 modules",
-    value: "16 (28%)",
-    color: "bg-cat-2",
-  },
-  {
-    label: "Low Engagement",
-    detail: "No login or 30 days",
-    value: "13 (22%)",
-    color: "bg-cat-1",
-  },
+const engagementSegments: DonutSegment[] = [
+  { label: "High Engagement", value: 29, tone: "cat-6" },
+  { label: "Medium Engagement", value: 16, tone: "cat-2" },
+  { label: "Low Engagement", value: 13, tone: "cat-1" },
 ];
+
+const engagementDetail: Record<string, string> = {
+  "High Engagement": "Completed 5+ modules",
+  "Medium Engagement": "Completed 2-4 modules",
+  "Low Engagement": "No login for 30 days",
+};
 
 const activityRows = [
   { status: "New Member", name: "Rakib Roy", time: "10 min ago" },
@@ -300,16 +298,12 @@ function LiveClassTable() {
                 <TableCell>{log.members}</TableCell>
                 <TableCell>
                   <span className="flex items-center justify-end gap-inline-lg">
-                    <span
-                      role="progressbar"
-                      aria-valuenow={85}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`${log.label} completion rate`}
-                      className="block h-1.5 w-16 rounded-pill bg-surface-sunken"
-                    >
-                      <span className="block h-full w-[85%] rounded-pill bg-primary-solid" />
-                    </span>
+                    <Progress
+                      value={85}
+                      label={`${log.label} completion rate`}
+                      size="small"
+                      className="w-16"
+                    />
                     {log.rate}
                   </span>
                 </TableCell>
@@ -386,60 +380,49 @@ function ConfidencePanel() {
 
 function DonutPanel({
   title,
-  legend,
-  gradient,
+  segments,
+  detail,
   footer,
 }: {
   title: string;
-  legend: Array<{
-    label: string;
-    value: string;
-    color: string;
-    detail?: string;
-  }>;
-  gradient: string;
+  segments: DonutSegment[];
+  /** Optional second line per segment, keyed by label. */
+  detail?: Record<string, string>;
   footer?: React.ReactNode;
 }) {
-  return (
-    <section className="rounded-card border border-line bg-surface p-4 shadow-card">
-      <h2 className="mb-7 text-base font-semibold text-fg">{title}</h2>
-      <div className="grid items-center gap-7 sm:grid-cols-[200px_minmax(0,1fr)]">
-        <div
-          className="mx-auto flex h-[200px] w-[200px] items-center justify-center rounded-pill"
-          style={{ background: gradient }}
-        >
-          <div className="flex h-[118px] w-[118px] flex-col items-center justify-center rounded-pill bg-surface">
-            <p className="text-2xl font-semibold text-fg">86%</p>
-            <p className="text-sm text-fg-muted">Overall</p>
-          </div>
-        </div>
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
 
-        <div className="space-y-4">
-          {legend.map((item) => (
-            <div
-              key={item.label}
-              className="grid grid-cols-[1fr_auto] items-start gap-4 text-sm"
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  className={`mt-1 h-4 w-4 shrink-0 rounded-pill ${item.color}`}
-                />
-                <div>
-                  <p className="font-semibold text-fg-secondary">
-                    {item.label}
-                  </p>
-                  {item.detail && (
-                    <p className="mt-2 text-fg-muted">{item.detail}</p>
-                  )}
-                </div>
-              </div>
-              <p className="font-medium text-fg-muted">{item.value}</p>
-            </div>
-          ))}
-        </div>
+  return (
+    <Card as="section" padding="small">
+      <h2 className="mb-stack-2xl text-heading-5 text-fg">{title}</h2>
+      <div className="grid items-center gap-inset-lg sm:grid-cols-[200px_minmax(0,1fr)]">
+        <DonutChart
+          segments={segments}
+          label={title}
+          size={200}
+          thickness={41}
+          centerValue="86%"
+          centerLabel="Overall"
+          className="mx-auto"
+        />
+
+        <ChartLegend
+          items={segments.map((segment) => ({
+            label: segment.label,
+            tone: segment.tone ?? "cat-1",
+            detail: detail?.[segment.label],
+            value: `${segment.value.toLocaleString()} (${Math.round(
+              (segment.value / total) * 100,
+            )}%)`,
+          }))}
+        />
       </div>
-      {footer && <div className="mt-6 border-t border-line pt-4">{footer}</div>}
-    </section>
+      {footer && (
+        <div className="mt-stack-xl border-t border-line pt-inset-md">
+          {footer}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -508,9 +491,9 @@ function RecentActivity() {
 
 function EarningsOverview() {
   return (
-    <section className="rounded-card border border-line bg-surface p-4 shadow-card">
-      <div className="mb-7 flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-fg">Earnings Overview</h2>
+    <Card as="section" padding="small">
+      <div className="mb-stack-2xl flex items-center justify-between gap-inset-md">
+        <h2 className="text-heading-5 text-fg">Earnings Overview</h2>
         <button
           type="button"
           className="flex items-center gap-4 rounded-control-small border border-line bg-surface-sunken px-5 py-2 text-base font-bold text-fg"
@@ -520,43 +503,19 @@ function EarningsOverview() {
         </button>
       </div>
 
-      <div className="grid grid-cols-[34px_minmax(0,1fr)] gap-3">
-        <div className="flex h-[230px] flex-col justify-between text-sm font-medium text-fg-muted">
-          {[100, 90, 80, 70, 60].map((tick) => (
-            <span key={tick}>{tick}</span>
-          ))}
-        </div>
-        <div className="relative h-[230px] border-b border-line-strong">
-          <div className="absolute inset-0 flex flex-col justify-between">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="border-t border-dashed border-line" />
-            ))}
-          </div>
-          <div className="relative z-10 flex h-full items-end justify-between gap-3 px-2">
-            {weeklyBars.map((bar) => (
-              <div
-                key={bar.day}
-                className="flex h-full flex-1 flex-col justify-end gap-2"
-              >
-                <div className="flex flex-1 items-end">
-                  <div
-                    className={`w-full rounded-t-md ${
-                      bar.day === "Wed"
-                        ? "bg-gradient-to-b from-primary-solid to-primary-soft"
-                        : "bg-primary-soft"
-                    }`}
-                    style={{ height: `${bar.value}%` }}
-                  />
-                </div>
-                <span className="text-center text-sm font-medium text-fg-muted">
-                  {bar.day}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
+      <BarChart
+        bars={weeklyBars.map((bar) => ({
+          label: bar.day,
+          value: bar.value,
+          // Wednesday is the peak and was picked out by a gradient; a solid
+          // brand fill against the soft one says the same thing.
+          tone: bar.day === "Wed" ? "brand" : undefined,
+        }))}
+        label="Earnings this week"
+        yMax={100}
+        height={230}
+      />
+    </Card>
   );
 }
 
@@ -578,8 +537,7 @@ export default function AdminDashboard() {
         <div className="space-y-3">
           <DonutPanel
             title="Education Engagement"
-            legend={educationLegend}
-            gradient="conic-gradient(var(--color-cat-6) 0deg 180deg, var(--color-cat-2) 180deg 240deg, var(--color-cat-5) 240deg 282deg, var(--color-cat-4) 282deg 330deg, var(--color-cat-1) 330deg 360deg)"
+            segments={educationSegments}
             footer={<EducationFooter />}
           />
           <RecentActivity />
@@ -588,8 +546,8 @@ export default function AdminDashboard() {
         <div className="space-y-5">
           <DonutPanel
             title="Engagement Level"
-            legend={engagementLegend}
-            gradient="conic-gradient(var(--color-cat-6) 0deg 180deg, var(--color-cat-2) 180deg 300deg, var(--color-cat-1) 300deg 360deg)"
+            segments={engagementSegments}
+            detail={engagementDetail}
           />
           <EarningsOverview />
         </div>

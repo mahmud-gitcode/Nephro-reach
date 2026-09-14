@@ -25,15 +25,58 @@ import { cn } from "@/lib/utils/cn";
    needed later, that is the point to reconsider a charting library.
    ========================================================================== */
 
-export type SeriesTone = "brand" | "accent" | "success" | "warning" | "danger";
+/* Two kinds of tone, and the distinction matters.
 
-const toneVar: Record<SeriesTone, string> = {
+   The status names say something is good or bad — use them when that is the
+   point, as in a "recovery pattern" chart whose whole subject is better and
+   worse.
+
+   `cat-1` to `cat-8` say only "these differ". Any chart with more than two
+   or three series wants these: they are held at one lightness and a moderate
+   chroma so no line shouts louder than another, and so a green series does
+   not read as the healthy one. */
+export type SeriesTone =
+  | "brand"
+  | "accent"
+  | "success"
+  | "warning"
+  | "danger"
+  | "cat-1"
+  | "cat-2"
+  | "cat-3"
+  | "cat-4"
+  | "cat-5"
+  | "cat-6"
+  | "cat-7"
+  | "cat-8";
+
+export const toneVar: Record<SeriesTone, string> = {
   brand: "var(--color-brand-600)",
   accent: "var(--color-accent-600)",
   success: "var(--color-success-600)",
   warning: "var(--color-warning-600)",
   danger: "var(--color-danger-600)",
+  "cat-1": "var(--color-cat-1)",
+  "cat-2": "var(--color-cat-2)",
+  "cat-3": "var(--color-cat-3)",
+  "cat-4": "var(--color-cat-4)",
+  "cat-5": "var(--color-cat-5)",
+  "cat-6": "var(--color-cat-6)",
+  "cat-7": "var(--color-cat-7)",
+  "cat-8": "var(--color-cat-8)",
 };
+
+/** The eight categorical tones in order, for charts that just need N. */
+export const CATEGORICAL_TONES: SeriesTone[] = [
+  "cat-1",
+  "cat-2",
+  "cat-3",
+  "cat-4",
+  "cat-5",
+  "cat-6",
+  "cat-7",
+  "cat-8",
+];
 
 export type ChartSeries = {
   id: string;

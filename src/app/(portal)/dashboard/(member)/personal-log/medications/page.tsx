@@ -19,6 +19,9 @@ import { useClientValue } from "@/lib/storage/useClientValue";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Badge,
+  BarChart,
+  ChartLegend,
+  DonutChart,
   Button,
   buttonStyles,
   Card,
@@ -582,58 +585,51 @@ function AdherenceChart() {
           <div className="mt-stack-xl flex flex-col items-center justify-center gap-inset-lg sm:flex-row">
             {/* Taken / late / missed are the three outcomes a dose can have,
                 so the ring uses the status tones rather than three new hues. */}
-            <div
-              role="img"
-              aria-label={`${t("medicationsLog.adherence.overall")}: 86%`}
-              className="relative h-[182px] w-[182px] shrink-0 rounded-full"
-              style={{
-                background:
-                  "conic-gradient(var(--color-success-600) 0deg 180deg, var(--color-warning-600) 180deg 288deg, var(--color-danger-600) 288deg 360deg)",
-              }}
-            >
-              <div className="absolute inset-[26px] rounded-full bg-surface" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-metric-sm text-fg">86%</p>
-                <p className="text-caption text-fg-muted">
-                  {t("medicationsLog.adherence.overall")}
-                </p>
-              </div>
-            </div>
-
-            <ul className="w-[103px] space-y-stack-md">
-              {[
+            <DonutChart
+              segments={[
                 {
                   label: t("medicationsLog.adherence.taken"),
-                  value: "50%",
-                  dot: "bg-success-600",
+                  value: 50,
+                  tone: "success",
                 },
                 {
                   label: t("medicationsLog.adherence.late"),
-                  value: "30%",
-                  dot: "bg-warning-600",
+                  value: 30,
+                  tone: "warning",
                 },
                 {
                   label: t("medicationsLog.adherence.missed"),
-                  value: "20%",
-                  dot: "bg-danger-600",
+                  value: 20,
+                  tone: "danger",
                 },
-              ].map((item) => (
-                <li key={item.label} className="text-center">
-                  <div className="flex items-center gap-inline-md">
-                    <span
-                      aria-hidden="true"
-                      className={`h-4 w-4 rounded-full ${item.dot}`}
-                    />
-                    <span className="text-body-md text-fg-muted">
-                      {item.label}
-                    </span>
-                  </div>
-                  <p className="mt-stack-sm text-body-sm text-fg-muted">
-                    {item.value}
-                  </p>
-                </li>
-              ))}
-            </ul>
+              ]}
+              label={t("medicationsLog.adherence.overallTitle")}
+              size={182}
+              thickness={26}
+              centerValue="86%"
+              centerLabel={t("medicationsLog.adherence.overall")}
+            />
+
+            <ChartLegend
+              className="w-[140px]"
+              items={[
+                {
+                  label: t("medicationsLog.adherence.taken"),
+                  tone: "success",
+                  value: "50%",
+                },
+                {
+                  label: t("medicationsLog.adherence.late"),
+                  tone: "warning",
+                  value: "30%",
+                },
+                {
+                  label: t("medicationsLog.adherence.missed"),
+                  tone: "danger",
+                  value: "20%",
+                },
+              ]}
+            />
           </div>
         </Card>
 
@@ -646,74 +642,17 @@ function AdherenceChart() {
             <span className="text-label-md text-danger">8</span>
           </p>
 
-          {/* The bars carry no text, so the numbers are repeated for a screen
-              reader the same way <LineChart> does it. */}
-          <div className="mt-stack-xl">
-            <div
-              role="img"
-              aria-label={t("medicationsLog.adherence.missedTitle")}
-              aria-describedby="missed-doses-table"
-            >
-              <div className="grid h-[137px] grid-cols-[24px_minmax(0,1fr)] gap-inline-md">
-                <div className="flex flex-col justify-between text-right text-caption text-fg-muted">
-                  {[10, 8, 6, 4, 2, 0].map((label) => (
-                    <span key={label}>{label}</span>
-                  ))}
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-0 flex flex-col justify-between">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <span
-                        key={index}
-                        className="border-t border-dashed border-line"
-                      />
-                    ))}
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-between">
-                    {missedDoses.map((dose) => (
-                      <span
-                        key={dose.day}
-                        className="w-[22px] rounded-t bg-primary-solid"
-                        style={{
-                          height: `${Math.max((dose.value / 10) * 137, 2)}px`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-stack-sm grid grid-cols-[36px_minmax(0,1fr)] gap-inline-md">
-                <span />
-                <div className="flex justify-between text-caption text-fg-secondary">
-                  {missedDoses.map((dose) => (
-                    <span key={dose.day} className="w-[30px] text-center">
-                      {dose.day}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <table id="missed-doses-table" className="sr-only">
-              <caption>{t("medicationsLog.adherence.missedTitle")}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
-                  <th scope="col">
-                    {t("medicationsLog.adherence.missedTitle")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {missedDoses.map((dose) => (
-                  <tr key={dose.day}>
-                    <th scope="row">{dose.day}</th>
-                    <td>{dose.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <BarChart
+            bars={missedDoses.map((dose) => ({
+              label: dose.day,
+              value: dose.value,
+            }))}
+            label={t("medicationsLog.adherence.missedTitle")}
+            yMax={10}
+            yTicks={6}
+            height={137}
+            className="mt-stack-xl"
+          />
         </Card>
 
         <Card as="article" tone="flat" padding="small">

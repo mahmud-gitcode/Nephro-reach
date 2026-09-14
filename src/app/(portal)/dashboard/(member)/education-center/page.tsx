@@ -27,6 +27,7 @@ import {
   useJourneyProgress,
 } from "@/features/education/useJourneyProgress";
 import { Badge, buttonStyles, Card } from "@/components/ui";
+import { Progress } from "@/components/ui";
 
 export const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,
@@ -116,20 +117,12 @@ function JourneyHero({
             {overallPercent}%
           </span>
         </div>
-        {/* A bare filled <div> told a screen reader nothing at all. */}
-        <div
-          role="progressbar"
-          aria-valuenow={Math.round(overallPercent)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={progressLabel}
-          className="mt-stack-sm h-3 w-full overflow-hidden rounded-pill bg-surface-sunken"
-        >
-          <div
-            className="h-full rounded-pill bg-primary-solid transition-[width] duration-500"
-            style={{ width: `${overallPercent}%` }}
-          />
-        </div>
+        <Progress
+          value={overallPercent}
+          label={progressLabel}
+          size="large"
+          className="mt-stack-sm"
+        />
       </div>
 
       {/* Buttons: Continue / Start Day 1 & View Details side-by-side */}
@@ -249,21 +242,13 @@ export function DayCard({
         </span>
       </div>
 
-      <div
-        role="progressbar"
-        aria-valuenow={Math.round(percent)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={statusLabel}
-        className="mt-stack-sm h-1.5 w-full overflow-hidden rounded-pill bg-surface-sunken"
-      >
-        <div
-          className={`h-full rounded-pill transition-[width] duration-500 ${
-            isComplete ? "bg-success-600" : "bg-primary-solid"
-          }`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      <Progress
+        value={percent}
+        label={statusLabel}
+        tone={isComplete ? "success" : "primary"}
+        size="small"
+        className="mt-stack-sm"
+      />
     </Link>
   );
 }

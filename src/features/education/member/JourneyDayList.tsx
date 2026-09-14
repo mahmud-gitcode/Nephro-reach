@@ -22,6 +22,7 @@ import {
   PHASE_ORDER,
 } from "@/features/education/dialysisJourneyData";
 import type { JourneyDayProgress } from "@/features/education/useJourneyProgress";
+import { Progress } from "@/components/ui";
 
 const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,
@@ -190,12 +191,12 @@ export default function JourneyDayList({
         <p className="mt-1 text-sm font-bold text-fg">
           {completedCount}/{totalDays} {j?.daysLabel || "days"}
         </p>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-pill bg-surface-sunken">
-          <div
-            className="h-full rounded-pill bg-success-600 transition-[width] duration-500"
-            style={{ width: `${overallPercent}%` }}
-          />
-        </div>
+        <Progress
+          value={overallPercent}
+          label={`${completedCount} of ${totalDays} days complete`}
+          tone="success"
+          className="mt-stack-sm"
+        />
       </header>
 
       <nav

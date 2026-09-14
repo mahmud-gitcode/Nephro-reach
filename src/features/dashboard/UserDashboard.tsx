@@ -7,7 +7,7 @@ import { Star } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Progress } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
@@ -205,16 +205,11 @@ export default function UserDashboard() {
                   {dh?.curriculum?.completed || "25% complete"}
                 </p>
               </div>
-              <div
-                role="progressbar"
-                aria-valuenow={25}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={dh?.curriculum?.title || "Curriculum Progress"}
-                className="mt-stack-sm h-2.5 overflow-hidden rounded-pill bg-primary-soft"
-              >
-                <div className="h-full w-1/4 rounded-pill bg-primary-solid" />
-              </div>
+              <Progress
+                value={25}
+                label={dh?.curriculum?.title || "Curriculum Progress"}
+                className="mt-stack-sm"
+              />
               <p className="mt-stack-lg measure text-body-sm text-fg-secondary">
                 {dh?.curriculum?.description ||
                   "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}

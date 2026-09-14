@@ -71,10 +71,19 @@ export type { SwitchProps, SwitchRowProps, SwitchSize } from "./Switch";
 export { RadioGroup, RadioCard } from "./RadioGroup";
 export type { RadioGroupProps, RadioCardProps } from "./RadioGroup";
 
-export { LineChart, Sparkline } from "./Chart";
+export { LineChart, Sparkline, CATEGORICAL_TONES, toneVar } from "./Chart";
 export type {
   LineChartProps,
   SparklineProps,
   ChartSeries,
   SeriesTone,
 } from "./Chart";
+
+export { BarChart, ChartLegend } from "./BarChart";
+export type { BarChartProps, Bar, ChartLegendItem } from "./BarChart";
+
+export { DonutChart } from "./DonutChart";
+export type { DonutChartProps, DonutSegment } from "./DonutChart";
+
+export { Progress } from "./Progress";
+export type { ProgressProps, ProgressTone, ProgressSize } from "./Progress";

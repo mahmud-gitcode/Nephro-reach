@@ -32,6 +32,11 @@ import {
   FormField,
   Input,
   Modal,
+  BarChart,
+  ChartLegend,
+  DonutChart,
+  LineChart,
+  Progress,
   RadioCard,
   RadioGroup,
   Select,
@@ -162,6 +167,8 @@ const COMPONENTS = [
   { id: "chip", label: "Chip" },
   { id: "switch", label: "Switch" },
   { id: "radiogroup", label: "RadioGroup" },
+  { id: "progress", label: "Progress" },
+  { id: "chart", label: "Charts" },
 ] as const;
 
 type ComponentId = (typeof COMPONENTS)[number]["id"];
@@ -1764,6 +1771,176 @@ export default function DesignSystemPage() {
                   a ref written during render, so it stays right when options
                   are filtered. These lists were plain buttons before: a screen
                   reader heard unrelated controls, not one choice.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Progress -------- */}
+          {show("progress") ? (
+            <Block title="Progress">
+              <Row label="Tones and sizes">
+                <div className="w-full max-w-md space-y-stack-lg">
+                  <Progress value={25} label="Curriculum progress" showValue />
+                  <Progress
+                    value={72}
+                    label="Fluid goal"
+                    tone="success"
+                    size="small"
+                  />
+                  <Progress
+                    value={91}
+                    label="Potassium against the safe range"
+                    tone="warning"
+                  />
+                  <Progress
+                    value={100}
+                    label="Doses missed this week"
+                    tone="danger"
+                    size="large"
+                  />
+                </div>
+              </Row>
+
+              <Row label="Any scale, not only percentages">
+                <div className="w-full max-w-md">
+                  <Progress value={14} max={21} label="Day 14 of 21" />
+                </div>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    The label is required.
+                  </strong>{" "}
+                  Eight of these were hand-written before, and four told a
+                  screen reader nothing at all: no role, no value, no name. A
+                  progress bar without an accessible name is a decorative
+                  stripe, so this one refuses to be one — pass{" "}
+                  <code>label</code>, or <code>labelledBy</code> when visible
+                  text already names it.
+                </p>
+              </Card>
+            </Block>
+          ) : null}
+
+          {/* -------- Charts -------- */}
+          {show("chart") ? (
+            <Block title="Charts">
+              <Row label="LineChart — trend over time">
+                <Card className="w-full max-w-2xl">
+                  <LineChart
+                    label="Blood pressure, last 7 days"
+                    xLabels={["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]}
+                    yMin={60}
+                    yMax={180}
+                    unit="mmHg"
+                    series={[
+                      {
+                        id: "systolic",
+                        label: "Systolic",
+                        tone: "cat-1",
+                        points: [148, 132, 140, 128, 136, 124, 130],
+                      },
+                      {
+                        id: "diastolic",
+                        label: "Diastolic",
+                        tone: "cat-6",
+                        points: [92, 84, 88, 80, 86, 78, 82],
+                      },
+                    ]}
+                  />
+                </Card>
+              </Row>
+
+              <Row label="BarChart — one value per category">
+                <Card className="w-full max-w-2xl">
+                  <BarChart
+                    label="Missed doses by day"
+                    unit="doses"
+                    yMax={10}
+                    yTicks={6}
+                    bars={[
+                      { label: "Sun", value: 2 },
+                      { label: "Mon", value: 1 },
+                      { label: "Tue", value: 0 },
+                      { label: "Wed", value: 2 },
+                      { label: "Thu", value: 0 },
+                      { label: "Fri", value: 2 },
+                      { label: "Sat", value: 1 },
+                    ]}
+                  />
+                </Card>
+              </Row>
+
+              <Row label="BarChart — categorical, a tone per bar">
+                <Card className="w-full max-w-2xl">
+                  <BarChart
+                    label="Entries by log type"
+                    colorBy="categorical"
+                    bars={[
+                      { label: "BP", value: 28 },
+                      { label: "Weight", value: 31 },
+                      { label: "Meds", value: 27 },
+                      { label: "Labs", value: 33 },
+                      { label: "Fluid", value: 24 },
+                    ]}
+                  />
+                </Card>
+              </Row>
+
+              <Row label="DonutChart — parts of a whole">
+                <Card className="w-full max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-inset-xl">
+                    <DonutChart
+                      label="Dose adherence"
+                      centerValue="86%"
+                      centerLabel="Overall"
+                      segments={[
+                        { label: "Taken", value: 50, tone: "success" },
+                        { label: "Late", value: 30, tone: "warning" },
+                        { label: "Missed", value: 20, tone: "danger" },
+                      ]}
+                    />
+                    <ChartLegend
+                      className="min-w-[160px]"
+                      items={[
+                        { label: "Taken", tone: "success", value: "50%" },
+                        { label: "Late", tone: "warning", value: "30%" },
+                        { label: "Missed", tone: "danger", value: "20%" },
+                      ]}
+                    />
+                  </div>
+                </Card>
+              </Row>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    Every chart carries its numbers twice.
+                  </strong>{" "}
+                  Once as the drawing, once as a visually-hidden table. On a
+                  health log the numbers are the content, and a bare{" "}
+                  <code>&lt;svg&gt;</code> or a ring of colour gives a screen
+                  reader nothing. The donut takes values and works out the
+                  degrees itself — the three hand-written rings had their degree
+                  stops typed in by a person, which drifts the moment the data
+                  changes.
+                </p>
+              </Card>
+
+              <Card tone="flat">
+                <p className="text-body-sm text-fg-secondary">
+                  <strong className="font-semibold text-fg">
+                    Status tones versus categorical tones.
+                  </strong>{" "}
+                  <code>success</code>, <code>warning</code> and{" "}
+                  <code>danger</code> say something is good or bad — right for
+                  adherence, wrong for a list of log types. Use{" "}
+                  <code>cat-1</code> to <code>cat-8</code> when the series only
+                  differ: they sit at one lightness so no line shouts louder
+                  than another, and a green series does not read as the healthy
+                  one.
                 </p>
               </Card>
             </Block>
