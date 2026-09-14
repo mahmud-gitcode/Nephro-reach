@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -22,7 +22,6 @@ import {
   buttonStyles,
   Card,
   EmptyState,
-  FormField,
   Input,
 } from "@/components/ui";
 
@@ -147,32 +146,26 @@ function HealthcareTeam() {
         <h2 className="text-heading-5 text-fg">
           {t("personalLogHub.team.title")}
         </h2>
-        <p className="mt-stack-xs text-body-sm text-fg-muted">
-          {t("personalLogHub.team.subtitle")}
-        </p>
       </div>
 
-      <form onSubmit={handleAdd} className="flex items-end gap-inline-lg">
-        <FormField
-          label={t("personalLogHub.team.title")}
-          hint={t("personalLogHub.team.note")}
+      <form onSubmit={handleAdd} className="flex gap-inline-md">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t("personalLogHub.team.placeholder")}
+          leadingIcon={<Mail />}
+          aria-label={t("personalLogHub.team.title")}
           className="flex-1"
-        >
-          {(props) => (
-            <Input
-              {...props}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("personalLogHub.team.placeholder")}
-              leadingIcon={<Mail />}
-            />
-          )}
-        </FormField>
+        />
         <Button type="submit" leadingIcon={<Plus />}>
           {t("personalLogHub.team.add")}
         </Button>
       </form>
+
+      <p className="text-body-xs text-fg-muted">
+        {t("personalLogHub.team.note")}
+      </p>
 
       <Card padding="none">
         {clinicians.length === 0 ? (

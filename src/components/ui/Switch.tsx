@@ -79,7 +79,7 @@ export function Switch({
     >
       <span
         aria-hidden="true"
-        className={cn("rounded-pill bg-surface shadow-control", thumb[size])}
+        className={cn("rounded-pill bg-surface shadow-sm", thumb[size])}
       />
     </button>
   );
@@ -120,8 +120,8 @@ export function SwitchRow({
       onClick={() => onChange(!checked)}
       className={cn(
         "flex w-full cursor-pointer items-center justify-between gap-inline-lg",
-        "rounded-card bg-surface-sunken p-inset-sm text-left",
-        "transition-colors duration-150 ease-standard hover:bg-gray-100",
+        "rounded-card border border-line-subtle bg-surface p-inset-sm text-left shadow-sm",
+        "transition-all duration-150 ease-standard hover:bg-surface-sunken hover:shadow-md",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
@@ -151,7 +151,7 @@ export function SwitchRow({
           checked ? "justify-end bg-action" : "justify-start bg-line-strong",
         )}
       >
-        <span className="h-5 w-5 rounded-pill bg-surface shadow-control" />
+        <span className="h-5 w-5 rounded-pill bg-surface shadow-sm" />
       </span>
     </button>
   );

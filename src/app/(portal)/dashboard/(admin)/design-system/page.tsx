@@ -143,7 +143,7 @@ function TypeSpec({
 
 /* ------------------------------------------------------------------ */
 
-type Tab = "color" | "typography" | "component";
+type Tab = "color" | "typography" | "shadow" | "component";
 
 const COMPONENTS = [
   { id: "all", label: "All" },
@@ -212,6 +212,7 @@ export default function DesignSystemPage() {
           [
             ["color", "Color"],
             ["typography", "Typography"],
+            ["shadow", "Shadow"],
             ["component", "Component"],
           ] as const
         ).map(([id, label]) => (
@@ -431,6 +432,181 @@ export default function DesignSystemPage() {
         </Card>
       ) : null}
 
+      {/* ================= SHADOW ================= */}
+      {tab === "shadow" ? (
+        <div className="space-y-stack-2xl">
+          <Block title="3 Elevation Shadows">
+            <Card tone="flat" className="space-y-stack-md">
+              <p className="text-body-md text-fg-secondary">
+                Our design system defines three primary levels of elevation. Unlike harsh pure-black drop shadows,
+                every shadow uses our neutral gray-950 palette base (<code className="text-label-sm text-fg-brand">rgb(16 20 28 / ...)</code>)
+                with a dual-layer approach: a focused key-light shadow paired with a soft ambient dispersion for natural, realistic depth.
+              </p>
+            </Card>
+
+            <div className="grid gap-inline-lg lg:grid-cols-3">
+              {/* Level 1: Low / Card */}
+              <div className="flex flex-col justify-between rounded-card border border-line bg-surface p-inset-lg shadow-sm">
+                <div className="space-y-stack-md">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                      Level 1
+                    </span>
+                    <Badge tone="neutral" variant="soft">Resting</Badge>
+                  </div>
+                  <div>
+                    <h3 className="text-heading-4 text-fg">Shadow Small</h3>
+                    <p className="text-caption text-fg-muted">Low / Card Elevation</p>
+                  </div>
+                  <p className="text-body-sm text-fg-secondary">
+                    Designed for resting content containers, cards, tables, and form panels that sit directly on the page canvas.
+                  </p>
+                </div>
+                <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Tailwind Class</span>
+                    <code className="text-label-sm text-fg-brand">shadow-sm</code>
+                  </div>
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Semantic Alias</span>
+                    <code className="text-label-sm text-fg">shadow-card</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 2: Medium / Raised */}
+              <div className="flex flex-col justify-between rounded-card border border-line bg-surface-raised p-inset-lg shadow-md">
+                <div className="space-y-stack-md">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                      Level 2
+                    </span>
+                    <Badge tone="info" variant="soft">Floating</Badge>
+                  </div>
+                  <div>
+                    <h3 className="text-heading-4 text-fg">Shadow Medium</h3>
+                    <p className="text-caption text-fg-muted">Medium / Raised Elevation</p>
+                  </div>
+                  <p className="text-body-sm text-fg-secondary">
+                    Designed for floating elements, dropdown menus, popovers, hovering cards, and active navigation controls.
+                  </p>
+                </div>
+                <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Tailwind Class</span>
+                    <code className="text-label-sm text-fg-brand">shadow-md</code>
+                  </div>
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Semantic Alias</span>
+                    <code className="text-label-sm text-fg">shadow-raised</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 3: High / Overlay */}
+              <div className="flex flex-col justify-between rounded-panel border border-line bg-surface p-inset-lg shadow-lg">
+                <div className="space-y-stack-md">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                      Level 3
+                    </span>
+                    <Badge tone="success" variant="soft">Overlay</Badge>
+                  </div>
+                  <div>
+                    <h3 className="text-heading-4 text-fg">Shadow Large</h3>
+                    <p className="text-caption text-fg-muted">High / Overlay Elevation</p>
+                  </div>
+                  <p className="text-body-sm text-fg-secondary">
+                    Designed for high-elevation layers such as dialogs, modals, bottom sheets, command palettes, and drawer panels.
+                  </p>
+                </div>
+                <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Tailwind Class</span>
+                    <code className="text-label-sm text-fg-brand">shadow-lg</code>
+                  </div>
+                  <div className="flex items-center justify-between text-caption">
+                    <span className="text-fg-muted">Semantic Alias</span>
+                    <code className="text-label-sm text-fg">shadow-overlay</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Block>
+
+          {/* Interactive Elevation Playground */}
+          <Block title="Interactive Elevation & Hover Transitions">
+            <Card tone="flat" className="space-y-stack-lg">
+              <p className="text-body-sm text-fg-secondary">
+                Hover over the cards below to see dynamic elevation transitions. Moving between Level 1 and Level 2 on hover provides tactile depth feedback without jarring motion.
+              </p>
+
+              <div className="grid gap-inline-lg sm:grid-cols-3">
+                <div className="group rounded-card border border-line bg-surface p-inset-md shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
+                  <p className="text-overline text-fg-muted">Hover to lift</p>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">Card Elevation</h4>
+                  <p className="mt-stack-xs text-body-sm text-fg-secondary">
+                    Starts at <code className="text-label-sm">shadow-sm</code>, elevates to <code className="text-label-sm">shadow-md</code> on hover.
+                  </p>
+                </div>
+
+                <div className="group rounded-card border border-line bg-surface p-inset-md shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
+                  <p className="text-overline text-fg-muted">Hover to expand</p>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">Raised Elevation</h4>
+                  <p className="mt-stack-xs text-body-sm text-fg-secondary">
+                    Starts at <code className="text-label-sm">shadow-md</code>, elevates to <code className="text-label-sm">shadow-lg</code> on hover.
+                  </p>
+                </div>
+
+                <div className="rounded-panel border border-line bg-surface p-inset-md shadow-lg">
+                  <p className="text-overline text-fg-muted">Deep Focus</p>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">Modal Elevation</h4>
+                  <p className="mt-stack-xs text-body-sm text-fg-secondary">
+                    Full <code className="text-label-sm">shadow-lg</code> for dialogs and prominent floating sheets.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </Block>
+
+          {/* Specs & Values */}
+          <Block title="Elevation Token Specifications">
+            <Card tone="flat" padding="none">
+              <Table minWidth={600}>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Level</TableHeaderCell>
+                    <TableHeaderCell>Tailwind Class</TableHeaderCell>
+                    <TableHeaderCell>Semantic Alias</TableHeaderCell>
+                    <TableHeaderCell>Computed Dual-Layer Shadow</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell emphasis>Level 1 (Low)</TableCell>
+                    <TableCell><code className="text-label-sm text-fg-brand">shadow-sm</code></TableCell>
+                    <TableCell><code className="text-label-sm text-fg-muted">shadow-card</code></TableCell>
+                    <TableCell><code className="text-caption text-fg-secondary">0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04)</code></TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell emphasis>Level 2 (Medium)</TableCell>
+                    <TableCell><code className="text-label-sm text-fg-brand">shadow-md</code></TableCell>
+                    <TableCell><code className="text-label-sm text-fg-muted">shadow-raised</code></TableCell>
+                    <TableCell><code className="text-caption text-fg-secondary">0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04)</code></TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell emphasis>Level 3 (High)</TableCell>
+                    <TableCell><code className="text-label-sm text-fg-brand">shadow-lg</code></TableCell>
+                    <TableCell><code className="text-label-sm text-fg-muted">shadow-overlay</code></TableCell>
+                    <TableCell><code className="text-caption text-fg-secondary">0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06)</code></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Card>
+          </Block>
+        </div>
+      ) : null}
+
       {/* ================= COMPONENT ================= */}
       {tab === "component" ? (
         <div className="space-y-stack-2xl">
@@ -627,47 +803,162 @@ export default function DesignSystemPage() {
           {/* -------- Input -------- */}
           {show("input") ? (
             <Block title="Input · Textarea · Select">
-              <Card tone="flat" className="grid max-w-3xl gap-stack-lg sm:grid-cols-2">
-                <Input placeholder="Search members…" leadingIcon={<Search />} />
-                <Input type="date" defaultValue="2024-04-30" />
-                <Input placeholder="Disabled" disabled />
-                <Input placeholder="Invalid" aria-invalid />
-                <Input inputSize="small" placeholder="Small" />
-                <Select defaultValue="all">
-                  <option value="all">All Categories</option>
-                  <option value="counts">Blood Counts</option>
-                  <option value="chem">Chemistry</option>
-                </Select>
-                <Textarea
-                  className="sm:col-span-2"
-                  defaultValue="Mild cramping in the last hour. Resolved after the rate was lowered."
-                />
-              </Card>
+              {/* 1. Input States */}
+              <div className="space-y-stack-lg">
+                <h3 className="text-overline text-fg-muted">Input Field States</h3>
+                <div className="grid gap-inline-lg sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Default / Placeholder */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <Input placeholder="Type member name…" />
+                  </Card>
+
+                  {/* Filled / With Value */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">With Value</span>
+                    <Input defaultValue="Dr. Robert Chen, MD" />
+                  </Card>
+
+                  {/* With Leading Icon */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Leading Icon</span>
+                    <Input leadingIcon={<Search />} placeholder="Search records…" />
+                  </Card>
+
+                  {/* Focus / Focus-Visible */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Focus</span>
+                    <Input defaultValue="Click or Tab here" />
+                  </Card>
+
+                  {/* Invalid / Error */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Error</span>
+                    <Input aria-invalid defaultValue="invalid-reading-999" />
+                  </Card>
+
+                  {/* Disabled */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
+                    <Input placeholder="System managed field" disabled defaultValue="Synchronized clinic ID" />
+                  </Card>
+
+                  {/* Size: Small (36px) */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Small (36px)</span>
+                    <Input inputSize="small" placeholder="Small input (36px)" />
+                  </Card>
+
+                  {/* Date Input */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Date</span>
+                    <Input type="date" defaultValue="2026-09-14" />
+                  </Card>
+                </div>
+              </div>
+
+              {/* 2. Dropdown (Select) States */}
+              <div className="space-y-stack-lg">
+                <h3 className="text-overline text-fg-muted">Dropdown (Select) States</h3>
+                <div className="grid gap-inline-lg sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Select Default */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <Select defaultValue="all">
+                      <option value="all">All Categories</option>
+                      <option value="counts">Blood Counts</option>
+                      <option value="chem">Chemistry</option>
+                    </Select>
+                  </Card>
+
+                  {/* Select Invalid / Error */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Error</span>
+                    <Select aria-invalid defaultValue="">
+                      <option value="" disabled>Select category…</option>
+                      <option value="counts">Blood Counts</option>
+                    </Select>
+                  </Card>
+
+                  {/* Select Disabled */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
+                    <Select disabled defaultValue="chem">
+                      <option value="chem">Chemistry (Locked)</option>
+                    </Select>
+                  </Card>
+                </div>
+              </div>
+
+              {/* 3. Textarea States */}
+              <div className="space-y-stack-lg">
+                <h3 className="text-overline text-fg-muted">Textarea States</h3>
+                <div className="grid gap-inline-lg sm:grid-cols-2">
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <Textarea
+                      rows={3}
+                      defaultValue="Mild cramping in the last hour of dialysis. Resolved after ultrafiltration rate was lowered."
+                    />
+                  </Card>
+
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
+                    <Textarea
+                      rows={3}
+                      disabled
+                      defaultValue="Archived physician notes from previous visit (Read-only)."
+                    />
+                  </Card>
+                </div>
+              </div>
             </Block>
           ) : null}
 
           {/* -------- FormField -------- */}
           {show("formfield") ? (
             <Block title="FormField">
-              <Card tone="flat" className="grid max-w-3xl gap-stack-xl sm:grid-cols-2">
-                <FormField label="Pre-treatment weight" hint="Recorded in kilograms." required>
-                  {(props) => <Input {...props} defaultValue="72.4" />}
-                </FormField>
-                <FormField label="Dry weight" error="Enter a value between 30 and 250 kg.">
-                  {(props) => <Input {...props} defaultValue="4" />}
-                </FormField>
-                <FormField label="Category" optionalLabel="optional">
-                  {(props) => (
-                    <Select {...props} defaultValue="chem">
-                      <option value="counts">Blood Counts</option>
-                      <option value="chem">Chemistry</option>
-                    </Select>
-                  )}
-                </FormField>
-                <FormField label="Session notes" hint="Shared with your care team.">
-                  {(props) => <Textarea {...props} rows={2} />}
-                </FormField>
-              </Card>
+              <div className="space-y-stack-lg">
+                <h3 className="text-overline text-fg-muted">FormField States</h3>
+                <div className="grid gap-inline-lg sm:grid-cols-2">
+                  {/* Required State */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Required</span>
+                    <FormField label="Pre-treatment weight" required>
+                      {(props) => <Input {...props} defaultValue="72.4" />}
+                    </FormField>
+                  </Card>
+
+                  {/* Error State */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Error</span>
+                    <FormField label="Dry weight" error="Enter a valid weight between 30 and 250 kg.">
+                      {(props) => <Input {...props} defaultValue="4" />}
+                    </FormField>
+                  </Card>
+
+                  {/* Optional State */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Optional</span>
+                    <FormField label="Category" optionalLabel="optional">
+                      {(props) => (
+                        <Select {...props} defaultValue="chem">
+                          <option value="counts">Blood Counts</option>
+                          <option value="chem">Chemistry</option>
+                        </Select>
+                      )}
+                    </FormField>
+                  </Card>
+
+                  {/* Hint State */}
+                  <Card tone="flat" className="space-y-stack-sm">
+                    <span className="text-label-sm font-semibold text-fg">Helper Text</span>
+                    <FormField label="Session notes" hint="Helper text">
+                      {(props) => <Textarea {...props} rows={2} />}
+                    </FormField>
+                  </Card>
+                </div>
+              </div>
             </Block>
           ) : null}
 

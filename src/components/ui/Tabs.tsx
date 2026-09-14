@@ -72,7 +72,7 @@ function tabClass(variant: TabsVariant, selected: boolean) {
       base,
       "rounded-control-small px-inset-md py-inset-xs text-label-md",
       selected
-        ? "bg-surface text-fg-brand shadow-control"
+        ? "bg-surface text-fg-brand shadow-sm"
         : "text-fg-secondary hover:text-fg",
     );
   }

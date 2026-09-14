@@ -55,7 +55,7 @@ const tone: Record<ButtonVariant, Record<ButtonAppearance, string>> = {
 };
 
 /* `[&_svg]` sizes any icon the caller passes, including the spinner. */
-const sizes: Record<ButtonSize, string> = {
+const standardSizes: Record<ButtonSize, string> = {
   big:
     "h-control-big min-w-control-big px-control-x-big gap-inline-md " +
     "rounded-control text-button-lg [&_svg]:h-icon-big [&_svg]:w-icon-big",
@@ -64,9 +64,13 @@ const sizes: Record<ButtonSize, string> = {
     "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
 };
 
-const iconOnly: Record<ButtonSize, string> = {
-  big: "w-control-big px-0",
-  small: "w-control-small px-0",
+const iconOnlySizes: Record<ButtonSize, string> = {
+  big:
+    "h-control-big w-control-big min-w-control-big aspect-square p-0 " +
+    "rounded-control text-button-lg [&_svg]:h-icon-big [&_svg]:w-icon-big",
+  small:
+    "h-control-small w-control-small min-w-control-small aspect-square p-0 " +
+    "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
 };
 
 export type ButtonStyleOptions = {
@@ -93,9 +97,8 @@ export function buttonStyles({
   return cn(
     base,
     tone[variant][appearance],
-    sizes[size],
-    only && iconOnly[size],
-    fullWidth && "w-full",
+    only ? iconOnlySizes[size] : standardSizes[size],
+    fullWidth && !only && "w-full",
   );
 }
 

@@ -27,7 +27,6 @@ import {
   MessageCircle,
   MessagesSquare,
   Palette,
-  Search,
   Settings,
   Star,
   Users,
@@ -302,14 +301,6 @@ function Sidebar({
         )}
       </div>
 
-      <label className="relative mb-4 block shrink-0">
-        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
-        <input
-          type="search"
-          placeholder={language === "ES" ? "Buscar..." : "Search..."}
-          className="h-10 w-full rounded-lg border border-white/20 bg-white pl-10 pr-3 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-blue-300"
-        />
-      </label>
 
       <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <div className="border-t border-white/80 pt-5">
@@ -603,7 +594,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Notifications Button */}
         <button
           type="button"
-          className="flex items-center rounded-lg sm:rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2 shadow-[0_1px_2px_rgba(0,0,0,0.1)] cursor-pointer"
+          className="flex items-center rounded-lg sm:rounded-[20px] border-b-2 border-[#111827] bg-[#F1F5FA] p-1.5 sm:p-2 shadow-sm hover:shadow-md transition-all cursor-pointer"
           aria-label={language === "ES" ? "Notificaciones" : "Notifications"}
         >
           <HeaderIcon src={bellSrc} className="size-4 sm:size-5" />
@@ -616,7 +607,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <button
             type="button"
             onClick={() => setEmergencyOpen(true)}
-            className="flex items-center gap-1 sm:gap-2 rounded-lg sm:rounded bg-[#EF4444] px-2 py-1.5 sm:px-3.5 sm:py-3 text-xs sm:text-base font-bold tracking-[0.08px] text-white transition-colors hover:bg-red-600 shadow-xs cursor-pointer active:scale-95 shrink-0"
+            className="flex items-center gap-1 sm:gap-2 rounded-lg sm:rounded bg-[#EF4444] px-2 py-1.5 sm:px-3.5 sm:py-3 text-xs sm:text-base font-bold tracking-[0.08px] text-white transition-all hover:bg-red-600 shadow-sm hover:shadow-md cursor-pointer active:scale-95 shrink-0"
             title={language === "ES" ? "Emergencia" : "Emergency"}
           >
             <HeaderIcon src="/images/dashboard-header/danger.svg" className="size-3.5 sm:size-5" />
@@ -630,7 +621,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         ) : null}
 
         {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
-        <div className="flex items-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] p-1 sm:px-2 sm:py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl border-y border-[#E2E8F0] bg-[#F6FAFD] p-1 sm:px-2 sm:py-1.5 shadow-sm shrink-0">
           <div className="relative h-7 w-7 sm:h-10 sm:w-[42px] overflow-hidden rounded-full bg-slate-200 shrink-0">
             <Image src={avatarSrc} alt="" fill sizes="42px" className="object-cover" />
           </div>

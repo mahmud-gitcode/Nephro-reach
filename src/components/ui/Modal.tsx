@@ -10,7 +10,6 @@ import React, {
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { Button } from "./Button";
 
 /* ==========================================================================
    Modal
@@ -185,7 +184,7 @@ export function Modal({
         onKeyDown={handleKeyDown}
         className={cn(
           "flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-panel border border-line",
-          "bg-surface shadow-overlay outline-none",
+          "bg-surface shadow-lg outline-none",
           sizes[size],
           className,
         )}
@@ -204,16 +203,14 @@ export function Modal({
           </div>
 
           {!hideCloseButton ? (
-            <Button
-              variant="neutral"
-              appearance="stroke"
-              size="small"
-              iconOnly
+            <button
+              type="button"
               onClick={onClose}
+              className="rounded-control-small p-1 text-fg-muted transition-colors duration-150 hover:bg-surface-sunken hover:text-fg cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge"
               aria-label="Close dialog"
             >
-              <X />
-            </Button>
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           ) : null}
         </div>
 

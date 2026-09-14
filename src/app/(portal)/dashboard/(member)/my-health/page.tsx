@@ -211,7 +211,7 @@ const severityBadge: Record<
   AllergySeverity,
   Pick<BadgeProps, "tone" | "variant">
 > = {
-  Severe: { tone: "danger", variant: "solid" },
+  Severe: { tone: "danger", variant: "soft" },
   Moderate: { tone: "warning", variant: "soft" },
   Mild: { tone: "neutral", variant: "soft" },
 };
@@ -228,27 +228,33 @@ function RowActions({
   label,
   editLabel,
   deleteLabel,
+  onEdit,
+  onDelete,
 }: {
   label: string;
   editLabel?: string;
   deleteLabel?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <div className="flex items-center justify-center gap-inline-md">
       <Button
-        variant="neutral"
-        appearance="stroke"
+        iconOnly
         size="small"
-        className="px-inset-xs"
+        variant="neutral"
+        appearance="fill-stroke"
+        onClick={onEdit}
         aria-label={`${editLabel || "Edit"} ${label}`}
       >
         <Edit3 aria-hidden="true" />
       </Button>
       <Button
-        variant="danger"
-        appearance="stroke"
+        iconOnly
         size="small"
-        className="px-inset-xs"
+        variant="danger"
+        appearance="fill-stroke"
+        onClick={onDelete}
         aria-label={`${deleteLabel || "Delete"} ${label}`}
       >
         <Trash2 aria-hidden="true" />
@@ -276,15 +282,22 @@ function SectionHeader({
           {description}
         </p>
       </div>
-      <Button onClick={onAddClick} className="shrink-0">
-        <Plus aria-hidden="true" />
+      <Button onClick={onAddClick} leadingIcon={<Plus aria-hidden="true" />} className="shrink-0">
         {buttonLabel}
       </Button>
     </div>
   );
 }
 
-function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
+function AllergiesTable({
+  rows,
+  onEdit,
+  onDelete,
+}: {
+  rows: AllergyRow[];
+  onEdit: (row: AllergyRow) => void;
+  onDelete: (id: string) => void;
+}) {
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
@@ -354,16 +367,12 @@ function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
                 <TableCell emphasis className="max-w-[358px] truncate">
                   {nameText}
                 </TableCell>
-                <TableCell>
-                  <Badge tone="neutral" variant="outline">
-                    {getTypeName(row.type)}
-                  </Badge>
-                </TableCell>
+                <TableCell>{getTypeName(row.type)}</TableCell>
                 <TableCell className="max-w-[160px] truncate">
                   {reactionText}
                 </TableCell>
                 <TableCell>
-                  <Badge {...severityBadge[row.severity]}>
+                  <Badge {...severityBadge[row.severity]} className="w-[92px]">
                     {getSeverityName(row.severity)}
                   </Badge>
                 </TableCell>
@@ -373,6 +382,8 @@ function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
                     label={nameText}
                     editLabel={h?.actions?.edit}
                     deleteLabel={h?.actions?.delete}
+                    onEdit={() => onEdit(row)}
+                    onDelete={() => onDelete(row.id)}
                   />
                 </TableCell>
               </TableRow>
@@ -384,7 +395,15 @@ function AllergiesTable({ rows }: { rows: AllergyRow[] }) {
   );
 }
 
-function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
+function MedicalHistoryTable({
+  rows,
+  onEdit,
+  onDelete,
+}: {
+  rows: HistoryRow[];
+  onEdit: (row: HistoryRow) => void;
+  onDelete: (id: string) => void;
+}) {
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
@@ -442,7 +461,7 @@ function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
                   {conditionText}
                 </TableCell>
                 <TableCell>
-                  <Badge {...statusBadge[row.status]}>
+                  <Badge {...statusBadge[row.status]} className="w-[84px]">
                     {getStatusName(row.status)}
                   </Badge>
                 </TableCell>
@@ -453,6 +472,8 @@ function MedicalHistoryTable({ rows }: { rows: HistoryRow[] }) {
                     label={conditionText}
                     editLabel={h?.actions?.edit}
                     deleteLabel={h?.actions?.delete}
+                    onEdit={() => onEdit(row)}
+                    onDelete={() => onDelete(row.id)}
                   />
                 </TableCell>
               </TableRow>
@@ -503,22 +524,42 @@ function ModalShell({
   );
 }
 
-function AddAllergyModal({
+function AllergyModal({
+  initialData,
   onClose,
   onSave,
 }: {
+  initialData?: AllergyRow | null;
   onClose: () => void;
-  onSave: (row: Omit<AllergyRow, "id">) => void;
+  onSave: (row: Omit<AllergyRow, "id">, id?: string) => void;
 }) {
   const { language, dictionary } = useLanguage();
   const h = dictionary?.myHealth;
   const isEs = language === "ES";
+  const sampleName = h?.allergies?.sampleName || "Introduction to Wellness";
+  const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
-  const [name, setName] = React.useState("");
-  const [type, setType] = React.useState<AllergyType>("Medication");
-  const [reaction, setReaction] = React.useState("");
-  const [severity, setSeverity] = React.useState<AllergySeverity>("Moderate");
-  const [notes, setNotes] = React.useState("");
+  const getReaction = (key: string, fallback: string) => {
+    const reactions = h?.allergies?.reactions;
+    if (reactions && typeof reactions === "object" && key in reactions) {
+      return (reactions as Record<string, string>)[key] || fallback;
+    }
+    return fallback;
+  };
+
+  const initialName = initialData?.name || (initialData ? sampleName : "");
+  const initialReaction = initialData
+    ? (initialData.reactionKey ? getReaction(initialData.reactionKey, initialData.reactionDefault) : initialData.reactionDefault)
+    : "";
+  const initialNotes = initialData
+    ? (initialData.notes ?? (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
+    : "";
+
+  const [name, setName] = React.useState(initialName);
+  const [type, setType] = React.useState<AllergyType>(initialData?.type || "Medication");
+  const [reaction, setReaction] = React.useState(initialReaction);
+  const [severity, setSeverity] = React.useState<AllergySeverity>(initialData?.severity || "Moderate");
+  const [notes, setNotes] = React.useState(initialNotes);
   const [error, setError] = React.useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -531,25 +572,35 @@ function AddAllergyModal({
       setError(isEs ? "Ingrese la reacción." : "Enter a reaction.");
       return;
     }
-    onSave({
-      name: name.trim(),
-      type,
-      reactionDefault: reaction.trim(),
-      severity,
-      notes: notes.trim() || "—",
-    });
+    onSave(
+      {
+        name: name.trim(),
+        type,
+        reactionDefault: reaction.trim(),
+        severity,
+        notes: notes.trim() || "—",
+      },
+      initialData?.id,
+    );
   };
+
+  const title = initialData
+    ? (isEs ? "Editar Alergia" : "Edit Allergy")
+    : (h?.allergies?.addBtn || "Add Allergy");
+  const submitLabel = initialData
+    ? (isEs ? "Guardar Cambios" : "Save Changes")
+    : (h?.allergies?.addBtn || "Add Allergy");
 
   return (
     <ModalShell
-      title={h?.allergies?.addBtn || "Add Allergy"}
-      formId="add-allergy-form"
+      title={title}
+      formId="allergy-form"
       onClose={onClose}
       cancelLabel={isEs ? "Cancelar" : "Cancel"}
-      submitLabel={h?.allergies?.addBtn || "Add Allergy"}
+      submitLabel={submitLabel}
     >
       <form
-        id="add-allergy-form"
+        id="allergy-form"
         onSubmit={handleSubmit}
         className="space-y-stack-lg"
       >
@@ -639,21 +690,50 @@ function AddAllergyModal({
   );
 }
 
-function AddConditionModal({
+function ConditionModal({
+  initialData,
   onClose,
   onSave,
 }: {
+  initialData?: HistoryRow | null;
   onClose: () => void;
-  onSave: (row: Omit<HistoryRow, "id">) => void;
+  onSave: (row: Omit<HistoryRow, "id">, id?: string) => void;
 }) {
   const { language, dictionary } = useLanguage();
   const h = dictionary?.myHealth;
   const isEs = language === "ES";
+  const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
-  const [condition, setCondition] = React.useState("");
-  const [status, setStatus] = React.useState<ConditionStatus>("Current");
-  const [diagnosed, setDiagnosed] = React.useState("");
-  const [notes, setNotes] = React.useState("");
+  const getConditionName = (key: string, fallback: string) => {
+    const conditions = h?.history?.conditions;
+    if (conditions && typeof conditions === "object" && key in conditions) {
+      return (conditions as Record<string, string>)[key] || fallback;
+    }
+    return fallback;
+  };
+
+  const parseToDateInput = (ddmmyyyy?: string) => {
+    if (!ddmmyyyy || ddmmyyyy === "—") return "";
+    const parts = ddmmyyyy.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return ddmmyyyy;
+  };
+
+  const initialCondition = initialData
+    ? (initialData.conditionKey ? getConditionName(initialData.conditionKey, initialData.conditionDefault) : initialData.conditionDefault)
+    : "";
+  const initialDiagnosed = parseToDateInput(initialData?.diagnosed);
+  const initialNotes = initialData
+    ? (initialData.notes ?? (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
+    : "";
+
+  const [condition, setCondition] = React.useState(initialCondition);
+  const [status, setStatus] = React.useState<ConditionStatus>(initialData?.status || "Current");
+  const [diagnosed, setDiagnosed] = React.useState(initialDiagnosed);
+  const [notes, setNotes] = React.useState(initialNotes);
   const [error, setError] = React.useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -670,24 +750,34 @@ function AddConditionModal({
       diagnosedText = `${day}/${month}/${year}`;
     }
 
-    onSave({
-      conditionDefault: condition.trim(),
-      status,
-      diagnosed: diagnosedText,
-      notes: notes.trim() || "—",
-    });
+    onSave(
+      {
+        conditionDefault: condition.trim(),
+        status,
+        diagnosed: diagnosedText,
+        notes: notes.trim() || "—",
+      },
+      initialData?.id,
+    );
   };
+
+  const title = initialData
+    ? (isEs ? "Editar Condición" : "Edit Condition")
+    : (h?.history?.addBtn || "Add Condition");
+  const submitLabel = initialData
+    ? (isEs ? "Guardar Cambios" : "Save Changes")
+    : (h?.history?.addBtn || "Add Condition");
 
   return (
     <ModalShell
-      title={h?.history?.addBtn || "Add Condition"}
-      formId="add-condition-form"
+      title={title}
+      formId="condition-form"
       onClose={onClose}
       cancelLabel={isEs ? "Cancelar" : "Cancel"}
-      submitLabel={h?.history?.addBtn || "Add Condition"}
+      submitLabel={submitLabel}
     >
       <form
-        id="add-condition-form"
+        id="condition-form"
         onSubmit={handleSubmit}
         className="space-y-stack-lg"
       >
@@ -773,15 +863,59 @@ export default function MyHealthPage() {
 
   const [isAllergyModalOpen, setIsAllergyModalOpen] = React.useState(false);
   const [isConditionModalOpen, setIsConditionModalOpen] = React.useState(false);
+  const [editingAllergy, setEditingAllergy] = React.useState<AllergyRow | null>(null);
+  const [editingCondition, setEditingCondition] = React.useState<HistoryRow | null>(null);
 
-  const handleAddAllergy = (row: Omit<AllergyRow, "id">) => {
-    setAllergyRows((prev) => [{ ...row, id: `allergy-${Date.now()}` }, ...prev]);
-    setIsAllergyModalOpen(false);
+  const handleOpenAddAllergy = () => {
+    setEditingAllergy(null);
+    setIsAllergyModalOpen(true);
   };
 
-  const handleAddCondition = (row: Omit<HistoryRow, "id">) => {
-    setHistoryRows((prev) => [{ ...row, id: `history-${Date.now()}` }, ...prev]);
+  const handleOpenEditAllergy = (row: AllergyRow) => {
+    setEditingAllergy(row);
+    setIsAllergyModalOpen(true);
+  };
+
+  const handleDeleteAllergy = (id: string) => {
+    setAllergyRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleSaveAllergy = (row: Omit<AllergyRow, "id">, id?: string) => {
+    if (id) {
+      setAllergyRows((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...row, reactionKey: undefined } : r)),
+      );
+    } else {
+      setAllergyRows((prev) => [{ ...row, id: `allergy-${Date.now()}` }, ...prev]);
+    }
+    setIsAllergyModalOpen(false);
+    setEditingAllergy(null);
+  };
+
+  const handleOpenAddCondition = () => {
+    setEditingCondition(null);
+    setIsConditionModalOpen(true);
+  };
+
+  const handleOpenEditCondition = (row: HistoryRow) => {
+    setEditingCondition(row);
+    setIsConditionModalOpen(true);
+  };
+
+  const handleDeleteCondition = (id: string) => {
+    setHistoryRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleSaveCondition = (row: Omit<HistoryRow, "id">, id?: string) => {
+    if (id) {
+      setHistoryRows((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...row, conditionKey: undefined } : r)),
+      );
+    } else {
+      setHistoryRows((prev) => [{ ...row, id: `history-${Date.now()}` }, ...prev]);
+    }
     setIsConditionModalOpen(false);
+    setEditingCondition(null);
   };
 
   const tabItems: ReadonlyArray<TabItem<HealthTab>> = [
@@ -807,9 +941,13 @@ export default function MyHealthPage() {
               "List of substances, medications, foods or environmental factors you are allergic to."
             }
             buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
-            onAddClick={() => setIsAllergyModalOpen(true)}
+            onAddClick={handleOpenAddAllergy}
           />
-          <AllergiesTable rows={allergyRows} />
+          <AllergiesTable
+            rows={allergyRows}
+            onEdit={handleOpenEditAllergy}
+            onDelete={handleDeleteAllergy}
+          />
         </Card>
       </TabPanel>
 
@@ -822,23 +960,37 @@ export default function MyHealthPage() {
               "Your past and current medical conditions, surgeries and major health events."
             }
             buttonLabel={h?.history?.addBtn || "Add Condition"}
-            onAddClick={() => setIsConditionModalOpen(true)}
+            onAddClick={handleOpenAddCondition}
           />
-          <MedicalHistoryTable rows={historyRows} />
+          <MedicalHistoryTable
+            rows={historyRows}
+            onEdit={handleOpenEditCondition}
+            onDelete={handleDeleteCondition}
+          />
         </Card>
       </TabPanel>
 
       {isAllergyModalOpen ? (
-        <AddAllergyModal
-          onClose={() => setIsAllergyModalOpen(false)}
-          onSave={handleAddAllergy}
+        <AllergyModal
+          key={editingAllergy ? `edit-${editingAllergy.id}` : "add"}
+          initialData={editingAllergy}
+          onClose={() => {
+            setIsAllergyModalOpen(false);
+            setEditingAllergy(null);
+          }}
+          onSave={handleSaveAllergy}
         />
       ) : null}
 
       {isConditionModalOpen ? (
-        <AddConditionModal
-          onClose={() => setIsConditionModalOpen(false)}
-          onSave={handleAddCondition}
+        <ConditionModal
+          key={editingCondition ? `edit-${editingCondition.id}` : "add"}
+          initialData={editingCondition}
+          onClose={() => {
+            setIsConditionModalOpen(false);
+            setEditingCondition(null);
+          }}
+          onSave={handleSaveCondition}
         />
       ) : null}
     </div>

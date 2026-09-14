@@ -203,8 +203,8 @@
    /* card and panel edges */
    --line-strong: var(--color-gray-300);
    /* emphasis, selected */
-   --field: var(--color-gray-500);
-   /* input borders — needs 3:1 */
+   --field: var(--line);
+   /* input borders — matches table border (border-line) */
    --ring: var(--color-brand-500);
    /* focus ring */
 
@@ -330,7 +330,7 @@
    --line-subtle: var(--color-gray-800);
    --line: var(--color-gray-700);
    --line-strong: var(--color-gray-600);
-   --field: var(--color-gray-500);
+   --field: var(--line);
    --ring: var(--color-brand-400);
 
    --action: var(--color-brand-600);

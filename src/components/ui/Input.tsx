@@ -32,8 +32,8 @@ const sizeClasses: Record<ControlSize, string> = {
 const shared =
   "w-full border bg-surface text-fg transition-colors duration-150 ease-standard " +
   "placeholder:text-fg-muted " +
-  "border-field hover:border-line-strong " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:border-primary-edge " +
+  "border-line hover:border-line-strong " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge focus-visible:border-neutral-edge " +
   "aria-invalid:border-danger-edge aria-invalid:focus-visible:outline-danger-edge " +
   "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle";
 
@@ -109,7 +109,7 @@ export function Select({
         className={cn(
           shared,
           sizeClasses[selectSize],
-          "cursor-pointer appearance-none pr-10",
+          "cursor-pointer appearance-none pr-10 [&_option]:bg-surface [&_option]:text-fg",
           className,
         )}
         {...rest}

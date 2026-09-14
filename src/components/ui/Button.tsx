@@ -81,12 +81,17 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <Loader2 className="animate-spin" aria-hidden="true" />
+        <>
+          <Loader2 className="animate-spin" aria-hidden="true" />
+          {!iconOnly && children}
+        </>
       ) : (
-        leadingIcon
+        <>
+          {leadingIcon}
+          {children}
+          {trailingIcon}
+        </>
       )}
-      {children}
-      {!loading && trailingIcon}
     </button>
   );
 }

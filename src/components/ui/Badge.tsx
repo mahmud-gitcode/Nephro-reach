@@ -83,7 +83,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-inline-xs rounded-pill border",
+        "inline-flex items-center justify-center gap-inline-xs rounded-pill border",
         "px-inset-xs py-0.5 text-label-sm whitespace-nowrap",
         "[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0",
         tones[tone][variant],

@@ -21,14 +21,14 @@ export type CardTone = "default" | "flat" | "sunken" | "raised";
 export type CardPadding = "none" | "small" | "big";
 
 const tones: Record<CardTone, string> = {
-  /* A real object on the page. */
-  default: "bg-surface border border-line shadow-card",
+  /* A real object on the page: Level 1 elevation */
+  default: "bg-surface border border-line shadow-sm",
   /* Grouping only — no elevation, no claim to be its own object. */
   flat: "bg-surface border border-line",
   /* A well: recessed area inside another surface. */
   sunken: "bg-surface-sunken border border-line-subtle",
-  /* Floats above the page: dropdowns, popovers, hover states. */
-  raised: "bg-surface-raised border border-line shadow-raised",
+  /* Floats above the page: Level 2 elevation (dropdowns, popovers, raised cards). */
+  raised: "bg-surface-raised border border-line shadow-md",
 };
 
 const paddings: Record<CardPadding, string> = {
@@ -40,7 +40,7 @@ const paddings: Record<CardPadding, string> = {
 export type CardProps = React.HTMLAttributes<HTMLElement> & {
   tone?: CardTone;
   padding?: CardPadding;
-  /** Adds hover feedback. Only for a card that is actually clickable. */
+  /** Adds hover feedback and elevation. Only for a card that is actually clickable. */
   interactive?: boolean;
   /** `li` for a card inside a list, `article` for standalone content,
       `form` for a form that is itself the card. */
@@ -67,7 +67,7 @@ export function Card({
         tones[tone],
         paddings[padding],
         interactive &&
-          "cursor-pointer transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken",
+          "cursor-pointer transition-all duration-200 ease-standard hover:border-line-strong hover:shadow-md hover:-translate-y-0.5",
         className,
       )}
       {...rest}

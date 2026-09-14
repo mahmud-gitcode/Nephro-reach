@@ -96,7 +96,7 @@ export function Alert({
       role={live ? (assertive ? "alert" : "status") : undefined}
       aria-live={live ? (assertive ? "assertive" : "polite") : undefined}
       className={cn(
-        "flex items-start gap-inline-lg rounded-card border p-inset-md",
+        "flex items-start gap-inline-lg rounded-card border p-inset-md shadow-sm",
         "[&_svg]:h-icon-small [&_svg]:w-icon-small [&_svg]:shrink-0",
         shell,
         className,

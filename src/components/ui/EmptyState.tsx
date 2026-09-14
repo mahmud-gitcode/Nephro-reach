@@ -53,7 +53,7 @@ export function EmptyState({
           aria-hidden="true"
           className={cn(
             "mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill",
-            "bg-surface text-fg-subtle shadow-control",
+            "bg-surface text-fg-subtle shadow-sm",
             "[&_svg]:h-icon-big [&_svg]:w-icon-big",
           )}
         >

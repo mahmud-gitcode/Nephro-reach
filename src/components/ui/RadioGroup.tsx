@@ -202,8 +202,8 @@ export function RadioCard({
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle",
           selected
-            ? "border-primary-soft-line bg-primary-soft"
-            : "border-line bg-surface hover:bg-surface-sunken",
+            ? "border-primary-soft-line bg-primary-soft shadow-sm"
+            : "border-line bg-surface shadow-sm hover:bg-surface-sunken hover:shadow-md transition-all duration-150",
           className,
         )}
       >
@@ -261,8 +261,8 @@ export function RadioCard({
           ? "rounded-card p-inset-sm"
           : "h-control-big rounded-card px-inset-sm",
         selected
-          ? "border-primary-soft-line bg-primary-soft"
-          : "border-line bg-surface hover:bg-surface-sunken",
+          ? "border-primary-soft-line bg-primary-soft shadow-sm"
+          : "border-line bg-surface shadow-sm hover:bg-surface-sunken hover:shadow-md transition-all duration-150",
         className,
       )}
     >
