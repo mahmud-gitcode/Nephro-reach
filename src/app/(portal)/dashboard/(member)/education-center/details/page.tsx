@@ -30,7 +30,8 @@ function EducationCenterDetailsContent() {
   const j = dictionary?.educationJourney;
 
   const searchParams = useSearchParams();
-  const initialModule = (searchParams.get("module") as JourneyPhaseKey) || "all";
+  const initialModule =
+    (searchParams.get("module") as JourneyPhaseKey) || "all";
 
   const { getProgress, progress } = useJourneyProgress();
 
@@ -91,11 +92,14 @@ function EducationCenterDetailsContent() {
             <ArrowLeft aria-hidden="true" className="h-4 w-4" />
             <span>
               {j?.backToEducationCenter ||
-                (isEs ? "Volver al Centro Educativo" : "Back to Education Center")}
+                (isEs
+                  ? "Volver al Centro Educativo"
+                  : "Back to Education Center")}
             </span>
           </Link>
           <h1 className="mt-stack-sm text-heading-2 text-fg">
-            {j?.allClassesTab || (isEs ? "Todas las Clases y Módulos" : "All Classes & Modules")}
+            {j?.allClassesTab ||
+              (isEs ? "Todas las Clases y Módulos" : "All Classes & Modules")}
           </h1>
         </div>
       </div>
@@ -120,7 +124,10 @@ function EducationCenterDetailsContent() {
 
         {/* Status Filter Dropdown */}
         <div className="flex shrink-0 items-center gap-inline-md">
-          <Filter aria-hidden="true" className="h-4 w-4 shrink-0 text-fg-muted" />
+          <Filter
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-fg-muted"
+          />
           <label htmlFor="journey-status-filter" className="sr-only">
             {j?.filterLabel || "Filter classes"}
           </label>

@@ -205,9 +205,21 @@ export function checkFlaggedMedicalContent(text: string): boolean {
 const COMPOSE_CATEGORIES = [
   { id: "general", labelEn: "General Kidney", labelEs: "Salud Renal General" },
   { id: "dialysis", labelEn: "Dialysis", labelEs: "Diálisis" },
-  { id: "transplant", labelEn: "Kidney Transplant", labelEs: "Trasplante Renal" },
-  { id: "nutrition", labelEn: "Nutrition & Wellness", labelEs: "Nutrición y Bienestar" },
-  { id: "caregiver", labelEn: "Caregiver Support", labelEs: "Apoyo al Cuidador" },
+  {
+    id: "transplant",
+    labelEn: "Kidney Transplant",
+    labelEs: "Trasplante Renal",
+  },
+  {
+    id: "nutrition",
+    labelEn: "Nutrition & Wellness",
+    labelEs: "Nutrición y Bienestar",
+  },
+  {
+    id: "caregiver",
+    labelEn: "Caregiver Support",
+    labelEs: "Apoyo al Cuidador",
+  },
 ];
 
 function ComposeModal({
@@ -226,15 +238,8 @@ function ComposeModal({
 
   const [body, setBody] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(
-    initialCategory === "all" ? "general" : initialCategory
+    initialCategory === "all" ? "general" : initialCategory,
   );
-
-  // Sync initialCategory when opened
-  React.useEffect(() => {
-    if (open) {
-      setSelectedCategory(initialCategory === "all" ? "general" : initialCategory);
-    }
-  }, [open, initialCategory]);
 
   const isFlagged = checkFlaggedMedicalContent(body);
 
@@ -364,7 +369,8 @@ const defaultReplies: Record<string, ReplyItem[]> = {
       author: "Dr. Evelyn Reed",
       badge: "Nephrologist",
       time: "2m ago",
-      content: "Great milestone! Gentle, regular exercise has wonderful benefits for blood pressure and energy.",
+      content:
+        "Great milestone! Gentle, regular exercise has wonderful benefits for blood pressure and energy.",
       likes: 14,
     },
   ],
@@ -375,7 +381,8 @@ const defaultReplies: Record<string, ReplyItem[]> = {
       author: "Maria Gonzalez",
       badge: "Family Caregiver",
       time: "1m ago",
-      content: "So inspiring to see your progress! Sharing these wins really encourages the whole community.",
+      content:
+        "So inspiring to see your progress! Sharing these wins really encourages the whole community.",
       likes: 8,
     },
   ],
@@ -401,12 +408,17 @@ export default function CommunityPage() {
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
-  const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>({});
+  const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>(
+    {},
+  );
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
 
   // Reply States
-  const [replies, setReplies] = useState<Record<string, ReplyItem[]>>(defaultReplies);
-  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [replies, setReplies] =
+    useState<Record<string, ReplyItem[]>>(defaultReplies);
+  const [expandedReplies, setExpandedReplies] = useState<
+    Record<string, boolean>
+  >({});
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyLikes, setReplyLikes] = useState<Record<string, boolean>>({});
 
@@ -416,12 +428,16 @@ export default function CommunityPage() {
       : defaultPosts;
 
   const allCombinedPosts = useMemo(() => {
-    return [...userPosts, ...dictPosts].filter((post) => !hiddenPostIds[post.id]);
+    return [...userPosts, ...dictPosts].filter(
+      (post) => !hiddenPostIds[post.id],
+    );
   }, [userPosts, dictPosts, hiddenPostIds]);
 
   const posts = useMemo(() => {
     if (activeTabId === "all") return allCombinedPosts;
-    const filtered = allCombinedPosts.filter((post) => post.categoryId === activeTabId);
+    const filtered = allCombinedPosts.filter(
+      (post) => post.categoryId === activeTabId,
+    );
     return filtered.length > 0 ? filtered : allCombinedPosts;
   }, [activeTabId, allCombinedPosts]);
 
@@ -429,12 +445,17 @@ export default function CommunityPage() {
     const newPost: PostItem = {
       id: `user-${Date.now()}`,
       author: user?.name || (language === "ES" ? "Usted" : "You"),
-      badge: comm?.compose?.memberBadge || (language === "ES" ? "Miembro" : "Member"),
-      time: comm?.compose?.justNow || (language === "ES" ? "Recién publicado" : "Just now"),
+      badge:
+        comm?.compose?.memberBadge ||
+        (language === "ES" ? "Miembro" : "Member"),
+      time:
+        comm?.compose?.justNow ||
+        (language === "ES" ? "Recién publicado" : "Just now"),
       paragraphs: [text],
       hashtags: "",
       likes: 0,
-      categoryId: categoryId || (activeTabId === "all" ? "general" : activeTabId),
+      categoryId:
+        categoryId || (activeTabId === "all" ? "general" : activeTabId),
     };
     setUserPosts((prev) => [newPost, ...prev]);
   };
@@ -459,7 +480,9 @@ export default function CommunityPage() {
       id: `reply-${Date.now()}`,
       postId,
       author: user?.name || (language === "ES" ? "Usted" : "You"),
-      badge: comm?.compose?.memberBadge || (language === "ES" ? "Miembro" : "Member"),
+      badge:
+        comm?.compose?.memberBadge ||
+        (language === "ES" ? "Miembro" : "Member"),
       time: language === "ES" ? "Recién publicado" : "Just now",
       content: text,
       likes: 0,
@@ -503,7 +526,11 @@ export default function CommunityPage() {
       </div>
 
       {/* Feed Posts */}
-      <TabPanel id={activeTabId} value={activeTabId} className="flex flex-col gap-inline-md">
+      <TabPanel
+        id={activeTabId}
+        value={activeTabId}
+        className="flex flex-col gap-inline-md"
+      >
         {posts.map((post) => {
           const isLiked = Boolean(liked[post.id]);
           const postReplies = replies[post.id] || [];
@@ -544,7 +571,9 @@ export default function CommunityPage() {
                     aria-label={comm?.postOptionsAria || "Post options"}
                     aria-expanded={menuOpen === post.id}
                     onClick={() =>
-                      setMenuOpen((current) => (current === post.id ? null : post.id))
+                      setMenuOpen((current) =>
+                        current === post.id ? null : post.id,
+                      )
                     }
                   >
                     <MoreVertical aria-hidden="true" />
@@ -573,7 +602,9 @@ export default function CommunityPage() {
                     <p key={pIdx} className={pIdx > 0 ? "mt-stack-lg" : ""}>
                       {p}
                       {pIdx === post.paragraphs.length - 1 && post.hashtags && (
-                        <span className="ml-1 text-fg-brand">{post.hashtags}</span>
+                        <span className="ml-1 text-fg-brand">
+                          {post.hashtags}
+                        </span>
                       )}
                     </p>
                   ))
@@ -619,7 +650,9 @@ export default function CommunityPage() {
                   className="group flex cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   onClick={() => toggleReplies(post.id)}
                   aria-expanded={isExpanded}
-                  aria-label={isEs ? "Responder a la publicación" : "Reply to post"}
+                  aria-label={
+                    isEs ? "Responder a la publicación" : "Reply to post"
+                  }
                 >
                   <MessageCircle
                     aria-hidden="true"
@@ -633,12 +666,12 @@ export default function CommunityPage() {
                               ? "respuesta"
                               : "Reply"
                             : isEs
-                            ? "respuestas"
-                            : "Replies"
+                              ? "respuestas"
+                              : "Replies"
                         }`
                       : isEs
-                      ? "Responder"
-                      : "Reply"}
+                        ? "Responder"
+                        : "Reply"}
                   </span>
                 </button>
               </div>
@@ -791,7 +824,10 @@ export default function CommunityPage() {
       </Button>
 
       {/* Compose Modal */}
+      {/* Keyed on the category so opening the composer starts from the tab
+          the member is looking at, without an effect syncing it. */}
       <ComposeModal
+        key={composeOpen ? `compose-${activeTabId}` : "compose-closed"}
         open={composeOpen}
         onClose={() => setComposeOpen(false)}
         onPost={handleAddPost}

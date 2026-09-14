@@ -8,7 +8,7 @@ import "@/features/landing-page/landing-animations.css";
 
 export default function PricingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sf text-[#0F172A]">
+    <div className="font-sf flex min-h-screen flex-col bg-white text-[#0F172A]">
       <Header />
       <main className="flex-grow">
         <Pricing eyebrow="Pricing" sideCtaVariant="outline" />

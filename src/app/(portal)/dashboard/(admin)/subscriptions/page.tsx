@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Check, CreditCard, Plus, X, Edit3, ShieldAlert } from "lucide-react";
 import {
   Alert,
@@ -19,6 +19,7 @@ import {
   getStoredSubscriptionPlans,
   saveStoredSubscriptionPlans,
 } from "@/features/billing/subscriptions";
+import { useClientValue } from "@/lib/storage/useClientValue";
 
 function FeatureIcon({ included }: { included: boolean }) {
   return (
@@ -88,11 +89,16 @@ function PricingCard({
 
       <ul className="space-y-3">
         {plan.features.map((feature, idx) => (
-          <li key={`${feature.label}-${idx}`} className="flex items-start gap-2.5">
+          <li
+            key={`${feature.label}-${idx}`}
+            className="flex items-start gap-2.5"
+          >
             <FeatureIcon included={feature.included} />
             <span
               className={`text-caption ${
-                feature.included ? "text-fg-secondary" : "text-fg-subtle line-through"
+                feature.included
+                  ? "text-fg-secondary"
+                  : "text-fg-subtle line-through"
               }`}
             >
               {feature.label}
@@ -110,7 +116,7 @@ function PricingCard({
     // decorative flourish on this page. It takes the categorical steps rather
     // than status colours, which would have read as good → bad.
     <div className="flex h-full flex-col rounded-panel bg-gradient-to-r from-cat-6 via-cat-7 to-cat-8 p-1 pt-2.5 shadow-raised">
-      <p className="text-overline mb-stack-sm text-center text-fg-inverse">
+      <p className="mb-stack-sm text-center text-overline text-fg-inverse">
         {plan.badge || "Most Popular"}
       </p>
       <div className="flex-1">{card}</div>
@@ -133,21 +139,23 @@ function EditPlanModal({
   const [price, setPrice] = useState(isNew ? "" : plan.price.replace("$", ""));
   const [billing, setBilling] = useState(isNew ? "/Month" : plan.billing);
   const [billingType, setBillingType] = useState<"recurring" | "one_time">(
-    isNew ? "recurring" : plan.billingType
+    isNew ? "recurring" : plan.billingType,
   );
   const [billingPeriodLabel, setBillingPeriodLabel] = useState(
-    isNew ? "Recurring monthly" : plan.billingPeriodLabel
+    isNew ? "Recurring monthly" : plan.billingPeriodLabel,
   );
   const [accessDays, setAccessDays] = useState<string>(
-    !isNew && plan.accessDays ? String(plan.accessDays) : ""
+    !isNew && plan.accessDays ? String(plan.accessDays) : "",
   );
   const [trialDays, setTrialDays] = useState<string>(
-    !isNew && plan.trialDays ? String(plan.trialDays) : ""
+    !isNew && plan.trialDays ? String(plan.trialDays) : "",
   );
   const [description, setDescription] = useState(isNew ? "" : plan.description);
   const [popular, setPopular] = useState(isNew ? false : !!plan.popular);
-  const [badge, setBadge] = useState(isNew ? "" : plan.badge || "");
-  const [features, setFeatures] = useState<Array<{ label: string; included: boolean }>>(
+  const [badge] = useState(isNew ? "" : plan.badge || "");
+  const [features, setFeatures] = useState<
+    Array<{ label: string; included: boolean }>
+  >(
     isNew
       ? [
           { label: "7-day free trial included", included: true },
@@ -156,7 +164,7 @@ function EditPlanModal({
           { label: "Patient logs & tracking tools", included: true },
           { label: "Live classes & Q&A", included: false },
         ]
-      : plan.features
+      : plan.features,
   );
   const [newFeatureText, setNewFeatureText] = useState("");
 
@@ -185,13 +193,18 @@ function EditPlanModal({
 
   const handleAddFeature = () => {
     if (!newFeatureText.trim()) return;
-    setFeatures([...features, { label: newFeatureText.trim(), included: true }]);
+    setFeatures([
+      ...features,
+      { label: newFeatureText.trim(), included: true },
+    ]);
     setNewFeatureText("");
   };
 
   const handleToggleFeature = (index: number) => {
     setFeatures(
-      features.map((f, i) => (i === index ? { ...f, included: !f.included } : f))
+      features.map((f, i) =>
+        i === index ? { ...f, included: !f.included } : f,
+      ),
     );
   };
 
@@ -217,229 +230,230 @@ function EditPlanModal({
         </>
       }
     >
-        <form
-          id="subscription-plan-form"
-          className="space-y-stack-xl"
-          onSubmit={handleSubmit}
-        >
-          {/* Plan Name */}
-          <FormField label="Plan Name" required>
+      <form
+        id="subscription-plan-form"
+        className="space-y-stack-xl"
+        onSubmit={handleSubmit}
+      >
+        {/* Plan Name */}
+        <FormField label="Plan Name" required>
+          {(props) => (
+            <Input
+              {...props}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Essential Membership"
+            />
+          )}
+        </FormField>
+
+        {/* Price & Billing Unit */}
+        <div className="grid grid-cols-2 gap-inline-lg">
+          <FormField label="Price ($ USD)" required>
+            {(props) => (
+              <div className="relative flex items-center">
+                <span
+                  aria-hidden="true"
+                  className="absolute left-3 text-label-md text-fg-muted"
+                >
+                  $
+                </span>
+                <Input
+                  {...props}
+                  type="text"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="4.99"
+                  className="pl-7"
+                />
+              </div>
+            )}
+          </FormField>
+          <FormField label="Billing Suffix">
             {(props) => (
               <Input
                 {...props}
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Essential Membership"
+                value={billing}
+                onChange={(e) => setBilling(e.target.value)}
+                placeholder="e.g. /Month, /Class, or One-time"
               />
             )}
           </FormField>
+        </div>
 
-          {/* Price & Billing Unit */}
-          <div className="grid grid-cols-2 gap-inline-lg">
-            <FormField label="Price ($ USD)" required>
-              {(props) => (
-                <div className="relative flex items-center">
-                  <span
-                    aria-hidden="true"
-                    className="absolute left-3 text-label-md text-fg-muted"
-                  >
-                    $
-                  </span>
-                  <Input
-                    {...props}
-                    type="text"
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="4.99"
-                    className="pl-7"
-                  />
-                </div>
-              )}
-            </FormField>
-            <FormField label="Billing Suffix">
-              {(props) => (
-                <Input
-                  {...props}
-                  type="text"
-                  value={billing}
-                  onChange={(e) => setBilling(e.target.value)}
-                  placeholder="e.g. /Month, /Class, or One-time"
-                />
-              )}
-            </FormField>
-          </div>
-
-          {/* Billing Type & Access Duration */}
-          <div className="grid grid-cols-2 gap-inline-lg">
-            <FormField label="Billing Type">
-              {(props) => (
-                <Select
-                  {...props}
-                  value={billingType}
-                  onChange={(e) => {
-                    const val = e.target.value as "recurring" | "one_time";
-                    setBillingType(val);
-                    if (val === "recurring") setBillingPeriodLabel("Recurring monthly");
-                    else setBillingPeriodLabel("One-time payment");
-                  }}
-                >
-                  <option value="recurring">Recurring (Monthly)</option>
-                  <option value="one_time">One-time Purchase</option>
-                </Select>
-              )}
-            </FormField>
-            <FormField label="Access Period (Days)">
-              {(props) => (
-                <Input
-                  {...props}
-                  type="number"
-                  value={accessDays}
-                  onChange={(e) => setAccessDays(e.target.value)}
-                  placeholder="e.g. 21 for 21-Day Journey"
-                />
-              )}
-            </FormField>
-          </div>
-
-          {/* Free Trial Period */}
-          <FormField
-            label="Free Trial Period (Days)"
-            hint="Grants free trial days before recurring payment begins (e.g. 7 days)."
-          >
+        {/* Billing Type & Access Duration */}
+        <div className="grid grid-cols-2 gap-inline-lg">
+          <FormField label="Billing Type">
+            {(props) => (
+              <Select
+                {...props}
+                value={billingType}
+                onChange={(e) => {
+                  const val = e.target.value as "recurring" | "one_time";
+                  setBillingType(val);
+                  if (val === "recurring")
+                    setBillingPeriodLabel("Recurring monthly");
+                  else setBillingPeriodLabel("One-time payment");
+                }}
+              >
+                <option value="recurring">Recurring (Monthly)</option>
+                <option value="one_time">One-time Purchase</option>
+              </Select>
+            )}
+          </FormField>
+          <FormField label="Access Period (Days)">
             {(props) => (
               <Input
                 {...props}
                 type="number"
-                value={trialDays}
-                onChange={(e) => setTrialDays(e.target.value)}
-                placeholder="e.g. 7 (leave blank if no trial)"
+                value={accessDays}
+                onChange={(e) => setAccessDays(e.target.value)}
+                placeholder="e.g. 21 for 21-Day Journey"
               />
             )}
           </FormField>
+        </div>
 
-          {/* Description */}
-          <FormField label="Description">
-            {(props) => (
-              <Textarea
-                {...props}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                placeholder="What this plan includes..."
-              />
-            )}
-          </FormField>
+        {/* Free Trial Period */}
+        <FormField
+          label="Free Trial Period (Days)"
+          hint="Grants free trial days before recurring payment begins (e.g. 7 days)."
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="number"
+              value={trialDays}
+              onChange={(e) => setTrialDays(e.target.value)}
+              placeholder="e.g. 7 (leave blank if no trial)"
+            />
+          )}
+        </FormField>
 
-          {/* Most Popular Toggle */}
-          {/* Was a bare <button> drawing a track and a knob: no role="switch",
+        {/* Description */}
+        <FormField label="Description">
+          {(props) => (
+            <Textarea
+              {...props}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="What this plan includes..."
+            />
+          )}
+        </FormField>
+
+        {/* Most Popular Toggle */}
+        {/* Was a bare <button> drawing a track and a knob: no role="switch",
               no aria-checked, and focus:outline-none removed the focus ring. */}
-          <SwitchRow
-            checked={popular}
-            onChange={setPopular}
-            title="Highlight as Most Popular"
-            description="Applies gradient badge and emphasis on the landing page"
-          />
+        <SwitchRow
+          checked={popular}
+          onChange={setPopular}
+          title="Highlight as Most Popular"
+          description="Applies gradient badge and emphasis on the landing page"
+        />
 
-          {/* Features Management */}
-          <div>
-            <p className="text-overline mb-stack-xs text-fg-muted">
-              Included Features ({features.length})
-            </p>
-            <div className="max-h-[160px] space-y-stack-sm overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
-              {features.map((feat, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between gap-inline-md rounded-control border border-line bg-surface p-inset-xs"
-                >
-                  {/* Was a plain button toggling a tick: role and state now
-                      say so, and the name says which feature. */}
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={feat.included}
-                    onClick={() => handleToggleFeature(index)}
-                    className="flex flex-1 cursor-pointer items-center gap-inline-md rounded-control-small text-left text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-control-small ${
-                        feat.included
-                          ? "bg-success-600 text-white"
-                          : "bg-line text-fg-subtle"
-                      }`}
-                    >
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span
-                      className={
-                        feat.included
-                          ? "text-fg-secondary"
-                          : "text-fg-subtle line-through"
-                      }
-                    >
-                      {feat.label}
-                    </span>
-                  </button>
-                  <Button
-                    variant="danger"
-                    appearance="stroke"
-                    size="small"
-                    className="px-inset-xs"
-                    onClick={() => handleRemoveFeature(index)}
-                    aria-label={`Remove feature: ${feat.label}`}
-                  >
-                    <X aria-hidden="true" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-stack-sm flex gap-inline-md">
-              <label htmlFor="new-feature" className="sr-only">
-                Add a new feature
-              </label>
-              <Input
-                id="new-feature"
-                inputSize="small"
-                type="text"
-                value={newFeatureText}
-                onChange={(e) => setNewFeatureText(e.target.value)}
-                placeholder="Add a new feature..."
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddFeature();
-                  }
-                }}
-              />
-              <Button
-                variant="neutral"
-                appearance="fill"
-                size="small"
-                onClick={handleAddFeature}
+        {/* Features Management */}
+        <div>
+          <p className="mb-stack-xs text-overline text-fg-muted">
+            Included Features ({features.length})
+          </p>
+          <div className="max-h-[160px] space-y-stack-sm overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
+            {features.map((feat, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-inline-md rounded-control border border-line bg-surface p-inset-xs"
               >
-                <Plus aria-hidden="true" />
-                Add
-              </Button>
-            </div>
+                {/* Was a plain button toggling a tick: role and state now
+                      say so, and the name says which feature. */}
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={feat.included}
+                  onClick={() => handleToggleFeature(index)}
+                  className="flex flex-1 cursor-pointer items-center gap-inline-md rounded-control-small text-left text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-control-small ${
+                      feat.included
+                        ? "bg-success-600 text-white"
+                        : "bg-line text-fg-subtle"
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </span>
+                  <span
+                    className={
+                      feat.included
+                        ? "text-fg-secondary"
+                        : "text-fg-subtle line-through"
+                    }
+                  >
+                    {feat.label}
+                  </span>
+                </button>
+                <Button
+                  variant="danger"
+                  appearance="stroke"
+                  size="small"
+                  className="px-inset-xs"
+                  onClick={() => handleRemoveFeature(index)}
+                  aria-label={`Remove feature: ${feat.label}`}
+                >
+                  <X aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
           </div>
 
-        </form>
+          <div className="mt-stack-sm flex gap-inline-md">
+            <label htmlFor="new-feature" className="sr-only">
+              Add a new feature
+            </label>
+            <Input
+              id="new-feature"
+              inputSize="small"
+              type="text"
+              value={newFeatureText}
+              onChange={(e) => setNewFeatureText(e.target.value)}
+              placeholder="Add a new feature..."
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddFeature();
+                }
+              }}
+            />
+            <Button
+              variant="neutral"
+              appearance="fill"
+              size="small"
+              onClick={handleAddFeature}
+            >
+              <Plus aria-hidden="true" />
+              Add
+            </Button>
+          </div>
+        </div>
+      </form>
     </Modal>
   );
 }
 
 export default function SubscriptionsPage() {
-  const [plans, setPlans] = useState<SubscriptionPlan[]>(DEFAULT_SUBSCRIPTION_PLANS);
-  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | "new" | null>(null);
+  const [plans, setPlans] = useClientValue(
+    getStoredSubscriptionPlans,
+    DEFAULT_SUBSCRIPTION_PLANS,
+  );
+  const [editingPlan, setEditingPlan] = useState<
+    SubscriptionPlan | "new" | null
+  >(null);
   const [showSavedToast, setShowSavedToast] = useState(false);
-
-  useEffect(() => {
-    setPlans(getStoredSubscriptionPlans());
-  }, []);
 
   const handleSavePlan = (updatedPlan: SubscriptionPlan) => {
     let newPlans: SubscriptionPlan[];
@@ -462,9 +476,12 @@ export default function SubscriptionsPage() {
     <>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-heading-4 text-fg">Subscription &amp; Pricing Plans</h1>
+          <h1 className="text-heading-4 text-fg">
+            Subscription &amp; Pricing Plans
+          </h1>
           <p className="mt-stack-xs measure text-caption text-fg-muted">
-            Manage your 4 customer packages, prices ($4.99, $7.99, $10, $49.99), trial periods, and feature permissions dynamically.
+            Manage your 4 customer packages, prices ($4.99, $7.99, $10, $49.99),
+            trial periods, and feature permissions dynamically.
           </p>
         </div>
         <Button size="small" onClick={() => setEditingPlan("new")}>
@@ -489,16 +506,30 @@ export default function SubscriptionsPage() {
         className="mb-stack-2xl"
       >
         <ul className="list-disc space-y-stack-xs pl-5 text-caption">
-          <li><strong>21-Day Dialysis Journey ($49.99):</strong> Grants 21 days of Full Membership access upon start; curriculum access is lifetime. Auto-prompts for Essential or Full renewal after Day 21.</li>
-          <li><strong>Live Class Only ($10.00):</strong> One-time single class unlock without creating recurring subscriptions.</li>
-          <li><strong>Zero Hard-Coding:</strong> All 4 tiers can be edited directly here; values update dynamically across the frontend.</li>
+          <li>
+            <strong>21-Day Dialysis Journey ($49.99):</strong> Grants 21 days of
+            Full Membership access upon start; curriculum access is lifetime.
+            Auto-prompts for Essential or Full renewal after Day 21.
+          </li>
+          <li>
+            <strong>Live Class Only ($10.00):</strong> One-time single class
+            unlock without creating recurring subscriptions.
+          </li>
+          <li>
+            <strong>Zero Hard-Coding:</strong> All 4 tiers can be edited
+            directly here; values update dynamically across the frontend.
+          </li>
         </ul>
       </Alert>
 
       {/* 4 Plans Grid */}
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
+      <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((plan) => (
-          <PricingCard key={plan.id || plan.name} plan={plan} onEdit={setEditingPlan} />
+          <PricingCard
+            key={plan.id || plan.name}
+            plan={plan}
+            onEdit={setEditingPlan}
+          />
         ))}
       </section>
 

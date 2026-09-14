@@ -18,8 +18,18 @@ import {
 } from "@/components/ui";
 
 const latestResults = [
-  { label: "CREATININE", value: "0.9", unit: "umol/L", normal: "Normal: 60-110" },
-  { label: "HEMOGLOBIN", value: "13.5", unit: "g/L", normal: "Normal: 115-165" },
+  {
+    label: "CREATININE",
+    value: "0.9",
+    unit: "umol/L",
+    normal: "Normal: 60-110",
+  },
+  {
+    label: "HEMOGLOBIN",
+    value: "13.5",
+    unit: "g/L",
+    normal: "Normal: 115-165",
+  },
   { label: "ALBUMIN", value: "4.5", unit: "g/L", normal: "Normal: 35-50" },
   { label: "UREA", value: "29.0", unit: "mmol/L", normal: "Normal: 2.5-7.8" },
 ];
@@ -179,7 +189,11 @@ export default function BloodResultsPage() {
       <PersonalLogDisclaimer />
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="neutral" appearance="fill-stroke" leadingIcon={<ScanLine />}>
+        <Button
+          variant="neutral"
+          appearance="fill-stroke"
+          leadingIcon={<ScanLine />}
+        >
           Scan Results
         </Button>
         <Link

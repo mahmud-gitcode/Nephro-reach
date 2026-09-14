@@ -17,6 +17,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
 
   {
+    /* `files` is load-bearing, not decoration. In flat config ESLint only
+       walks a directory for extensions some config block names; without this
+       line `eslint .` matches .js/.mjs, reports "0 problems" on a repo that
+       is entirely .ts/.tsx, and exits 0. The gate would pass by looking at
+       nothing. */
+    files: ["**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"],
     rules: {
       /* Unused code is either a mistake or a leftover. Both should be
          removed. `_`-prefixed names are the documented way to say "this
@@ -79,11 +85,24 @@ const eslintConfig = defineConfig([
        It keeps eslint-config-next's own checks; only the stricter overrides
        above are relaxed. Delete this block the day the landing page is
        unfrozen — it has 9 problems waiting behind it. */
-    files: ["src/features/landing-page/**", "src/app/(landing-page)/**"],
+    files: [
+      "src/features/landing-page/**",
+      "src/app/(landing-page)/**",
+      // Imported only by (landing-page) routes, so they are landing chrome
+      // rather than shared chrome.
+      "src/components/layout/Header.tsx",
+      "src/components/layout/Footer.tsx",
+    ],
     rules: {
       "@next/next/no-img-element": "off",
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/exhaustive-deps": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/static-components": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "jsx-a11y/click-events-have-key-events": "off",
+      "jsx-a11y/no-static-element-interactions": "off",
     },
   },
 

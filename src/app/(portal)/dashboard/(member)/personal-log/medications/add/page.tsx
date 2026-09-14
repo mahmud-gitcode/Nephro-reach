@@ -2,7 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bell, BriefcaseMedical, Plus, Search, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  BriefcaseMedical,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -37,10 +44,22 @@ const FIELD_CONFIGS: FieldConfig[] = [
   },
   { labelKey: "doseLabel", placeholderKey: "dosePlaceholder" },
   { labelKey: "routeLabel", placeholderKey: "routePlaceholder", select: true },
-  { labelKey: "frequencyLabel", placeholderKey: "frequencyPlaceholder", select: true },
+  {
+    labelKey: "frequencyLabel",
+    placeholderKey: "frequencyPlaceholder",
+    select: true,
+  },
   { labelKey: "purposeLabel", placeholderKey: "purposePlaceholder" },
-  { labelKey: "startDateLabel", placeholderKey: "startDatePlaceholder", type: "date" },
-  { labelKey: "endDateLabel", placeholderKey: "endDatePlaceholder", type: "date" },
+  {
+    labelKey: "startDateLabel",
+    placeholderKey: "startDatePlaceholder",
+    type: "date",
+  },
+  {
+    labelKey: "endDateLabel",
+    placeholderKey: "endDatePlaceholder",
+    type: "date",
+  },
   { labelKey: "providerLabel", placeholderKey: "providerPlaceholder" },
   { labelKey: "pharmacyLabel", placeholderKey: "pharmacyPlaceholder" },
   {
@@ -173,7 +192,9 @@ export default function AddMedicationPage() {
             <div className="border-t border-line-subtle pt-inset-sm">
               <FormField
                 label={
-                  language === "ES" ? "Seleccionar Hora" : "Select Reminder Time"
+                  language === "ES"
+                    ? "Seleccionar Hora"
+                    : "Select Reminder Time"
                 }
               >
                 {(props) => (

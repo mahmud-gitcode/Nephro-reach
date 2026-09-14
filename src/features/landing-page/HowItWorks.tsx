@@ -39,13 +39,13 @@ export default function HowItWorks() {
       id="how-it-works"
       className="w-full scroll-mt-24 bg-[#F8FAFF] pt-8 pb-16 lg:pt-10 lg:pb-20"
     >
-      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
-        <div className="flex flex-col items-center gap-2 text-center landing-reveal">
-          <h2 className="text-[28px] font-semibold leading-10 tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
+      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 min-[1344px]:px-0 sm:px-8 lg:px-12">
+        <div className="landing-reveal flex flex-col items-center gap-2 text-center">
+          <h2 className="text-[28px] leading-10 font-semibold tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
             How <span className="text-[#EF4444]">Nephro</span>
             <span className="text-[#2563EB]">Reach</span> Works
           </h2>
-          <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
+          <p className="text-lg leading-7 font-medium tracking-[0.1px] text-[#344056] sm:text-xl">
             {t("howItWorks.subtitle")}
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function HowItWorks() {
             return (
               <div
                 key={step.id}
-                className={`group flex flex-col items-center gap-6 rounded-lg border border-[#BBCFFD] bg-white px-6 py-4 sm:flex-row hover:shadow-xl hover:border-blue-400 hover:bg-blue-50/10 cursor-pointer landing-reveal card-smooth-hover ${delays[index] || ""}`}
+                className={`group landing-reveal card-smooth-hover flex cursor-pointer flex-col items-center gap-6 rounded-lg border border-[#BBCFFD] bg-white px-6 py-4 hover:border-blue-400 hover:bg-blue-50/10 hover:shadow-xl sm:flex-row ${delays[index] || ""}`}
               >
                 <div className="relative size-[150px] shrink-0 overflow-hidden rounded">
                   <Image
@@ -68,14 +68,14 @@ export default function HowItWorks() {
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <h3 className="pl-0 text-xl font-medium leading-7 tracking-[0.1px] text-[#0F172A] sm:pl-10 group-hover:text-blue-600 transition-colors">
+                  <h3 className="pl-0 text-xl leading-7 font-medium tracking-[0.1px] text-[#0F172A] transition-colors group-hover:text-blue-600 sm:pl-10">
                     {step.title}
                   </h3>
                   <div className="flex items-start gap-4">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#EF4444] text-base font-medium leading-6 text-white transition-transform duration-300 group-hover:scale-110 shadow-xs">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#EF4444] text-base leading-6 font-medium text-white shadow-xs transition-transform duration-300 group-hover:scale-110">
                       {step.id}
                     </span>
-                    <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#344056]">
+                    <p className="text-lg leading-7 font-medium tracking-[0.09px] text-[#344056]">
                       {step.desc}
                     </p>
                   </div>

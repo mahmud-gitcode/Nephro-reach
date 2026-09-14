@@ -105,7 +105,11 @@ export function RadioGroup({
     if (e.key === prev || e.key === "ArrowUp" || e.key === "ArrowLeft") {
       e.preventDefault();
       move(-1);
-    } else if (e.key === next || e.key === "ArrowDown" || e.key === "ArrowRight") {
+    } else if (
+      e.key === next ||
+      e.key === "ArrowDown" ||
+      e.key === "ArrowRight"
+    ) {
       e.preventDefault();
       move(1);
     } else if (e.key === "Home") {
@@ -203,7 +207,7 @@ export function RadioCard({
           "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle",
           selected
             ? "border-primary-soft-line bg-primary-soft shadow-sm"
-            : "border-line bg-surface shadow-sm hover:bg-surface-sunken hover:shadow-md transition-all duration-150",
+            : "border-line bg-surface shadow-sm transition-all duration-150 hover:bg-surface-sunken hover:shadow-md",
           className,
         )}
       >
@@ -234,7 +238,9 @@ export function RadioCard({
             {title}
           </span>
           {description ? (
-            <span className="block text-caption text-fg-muted">{description}</span>
+            <span className="block text-caption text-fg-muted">
+              {description}
+            </span>
           ) : null}
         </span>
       </button>
@@ -262,7 +268,7 @@ export function RadioCard({
           : "h-control-big rounded-card px-inset-sm",
         selected
           ? "border-primary-soft-line bg-primary-soft shadow-sm"
-          : "border-line bg-surface shadow-sm hover:bg-surface-sunken hover:shadow-md transition-all duration-150",
+          : "border-line bg-surface shadow-sm transition-all duration-150 hover:bg-surface-sunken hover:shadow-md",
         className,
       )}
     >
@@ -285,7 +291,9 @@ export function RadioCard({
           {title}
         </span>
         {description ? (
-          <span className="block text-caption text-fg-muted">{description}</span>
+          <span className="block text-caption text-fg-muted">
+            {description}
+          </span>
         ) : null}
       </span>
 

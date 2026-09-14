@@ -5,16 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  Angry,
   ArrowLeft,
   ArrowRight,
   Bell,
   Check,
   Droplets,
+  Frown,
   HeartPulse,
+  Laugh,
+  Meh,
   Minus,
   Plus,
   Printer,
   Scale,
+  Smile,
   X,
 } from "lucide-react";
 
@@ -69,43 +74,35 @@ export interface DialysisDayLogData {
   otherNotes: string;
 }
 
-import {
-  BsEmojiLaughingFill,
-  BsEmojiSmileFill,
-  BsEmojiNeutralFill,
-  BsEmojiFrownFill,
-  BsEmojiAngryFill,
-} from "react-icons/bs";
-
 const MOODS = [
   {
     level: 5,
     label: "Great",
-    icon: BsEmojiLaughingFill,
+    icon: Laugh,
     color: "text-success-700",
   },
   {
     level: 4,
     label: "Good",
-    icon: BsEmojiSmileFill,
+    icon: Smile,
     color: "text-success-500",
   },
   {
     level: 3,
     label: "Okay",
-    icon: BsEmojiNeutralFill,
+    icon: Meh,
     color: "text-warning",
   },
   {
     level: 2,
     label: "Low",
-    icon: BsEmojiFrownFill,
+    icon: Frown,
     color: "text-danger-500",
   },
   {
     level: 1,
     label: "Poor",
-    icon: BsEmojiAngryFill,
+    icon: Angry,
     color: "text-danger-700",
   },
 ];

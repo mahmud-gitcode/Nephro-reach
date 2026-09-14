@@ -183,8 +183,8 @@ function MembersTable() {
     const q = query.trim().toLowerCase();
     if (!q) return members;
     return members.filter((member) =>
-      [member.name, member.email, member.id, member.subscription].some((field) =>
-        field.toLowerCase().includes(q),
+      [member.name, member.email, member.id, member.subscription].some(
+        (field) => field.toLowerCase().includes(q),
       ),
     );
   }, [query]);

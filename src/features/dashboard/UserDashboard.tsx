@@ -8,16 +8,14 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import { Button, Card } from "@/components/ui";
+import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
 
 function Icon({ src, className }: { src: string; className?: string }) {
   return (
     <span className={`relative block size-6 overflow-clip ${className ?? ""}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element --
-          a small local decorative SVG; next/image cannot optimise SVG and
-          would only add a wrapper and a layout pass. */}
-      <img src={src} alt="" className="size-full" />
+      <LocalSvg src={src} alt="" className="size-full" />
     </span>
   );
 }

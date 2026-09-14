@@ -76,7 +76,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     fatigue: "Mild",
     intraSymptoms: ["None / Comfortable"],
     intraSeverity: {},
-    intraNotes: "Session ran smoothly. Machine arterial and venous pressures within normal target ranges. Ultrafiltration rate tolerated without difficulty.",
+    intraNotes:
+      "Session ran smoothly. Machine arterial and venous pressures within normal target ranges. Ultrafiltration rate tolerated without difficulty.",
     // Post-Treatment & Vitals
     postOverallFeel: 4,
     recoveryTime: "Mild",
@@ -88,7 +89,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     bloodPressurePost: "126/82 mmHg",
     heartRatePost: "72 bpm",
     medicationsGiven: ["EPO / Mircera", "Heparin"],
-    otherNotes: "Target dry weight reached. AV fistula access site clean, no bleeding after holding pressure for 10 minutes. Good bruit and thrill verified.",
+    otherNotes:
+      "Target dry weight reached. AV fistula access site clean, no bleeding after holding pressure for 10 minutes. Good bruit and thrill verified.",
   },
   {
     id: "entry-02",
@@ -120,7 +122,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     fatigue: "Moderate",
     intraSymptoms: ["Leg Cramps"],
     intraSeverity: { "Leg Cramps": 4 },
-    intraNotes: "Arrived 30 mins late due to medical transportation delay. Patient experienced calf cramps at 10:45 AM. Assisted with calf stretching and heat pack.",
+    intraNotes:
+      "Arrived 30 mins late due to medical transportation delay. Patient experienced calf cramps at 10:45 AM. Assisted with calf stretching and heat pack.",
     // Post-Treatment & Vitals
     postOverallFeel: 3,
     recoveryTime: "Moderate",
@@ -132,7 +135,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     bloodPressurePost: "118/76 mmHg",
     heartRatePost: "76 bpm",
     medicationsGiven: ["Heparin"],
-    otherNotes: "Cramps subsided after treatment. Advised to rest leg muscles and stay within interdialytic fluid limit over next 48 hours.",
+    otherNotes:
+      "Cramps subsided after treatment. Advised to rest leg muscles and stay within interdialytic fluid limit over next 48 hours.",
   },
   {
     id: "entry-03",
@@ -164,7 +168,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     fatigue: "Severe",
     intraSymptoms: ["Dizziness", "Lightheadedness"],
     intraSeverity: { "Blood Pressure Drop": 6, Dizziness: 5 },
-    intraNotes: "At 10:30 AM, patient felt sudden dizziness. Supine BP dropped to 96/60 mmHg. Administered 150mL normal saline bolus, lowered UF rate to zero. Session safely stopped 45 min early with nephrologist approval.",
+    intraNotes:
+      "At 10:30 AM, patient felt sudden dizziness. Supine BP dropped to 96/60 mmHg. Administered 150mL normal saline bolus, lowered UF rate to zero. Session safely stopped 45 min early with nephrologist approval.",
     // Post-Treatment & Vitals
     postOverallFeel: 2,
     recoveryTime: "Severe",
@@ -176,7 +181,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     bloodPressurePost: "106/68 mmHg",
     heartRatePost: "80 bpm",
     medicationsGiven: ["Iron", "Heparin"],
-    otherNotes: "Standing BP recovered to 106/68 mmHg before discharge. Patient instructed to take it easy, avoid hot showers, and monitor dizziness at home.",
+    otherNotes:
+      "Standing BP recovered to 106/68 mmHg before discharge. Patient instructed to take it easy, avoid hot showers, and monitor dizziness at home.",
   },
   {
     id: "entry-04",
@@ -208,7 +214,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     fatigue: "No",
     intraSymptoms: ["None / Comfortable"],
     intraSeverity: {},
-    intraNotes: "High ultrafiltration goal achieved without hypotensive episodes or machine alarm interruptions.",
+    intraNotes:
+      "High ultrafiltration goal achieved without hypotensive episodes or machine alarm interruptions.",
     // Post-Treatment & Vitals
     postOverallFeel: 5,
     recoveryTime: "Mild",
@@ -220,7 +227,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     bloodPressurePost: "130/84 mmHg",
     heartRatePost: "70 bpm",
     medicationsGiven: ["EPO / Mircera", "Zemplar / Hectorol", "Heparin"],
-    otherNotes: "Excellent session. Patient expressed feeling very refreshed and alert. Cannulation was smooth on first attempt.",
+    otherNotes:
+      "Excellent session. Patient expressed feeling very refreshed and alert. Cannulation was smooth on first attempt.",
   },
   {
     id: "entry-05",
@@ -252,7 +260,8 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     fatigue: "Mild",
     intraSymptoms: ["Mild Foot Cramps"],
     intraSeverity: { "Foot Cramps": 3 },
-    intraNotes: "Mild foot cramping at 10:15 AM, responded well to massage and reducing UF rate by 100 mL/hr for 15 minutes.",
+    intraNotes:
+      "Mild foot cramping at 10:15 AM, responded well to massage and reducing UF rate by 100 mL/hr for 15 minutes.",
     // Post-Treatment & Vitals
     postOverallFeel: 4,
     recoveryTime: "Mild",
@@ -264,6 +273,7 @@ export const mockDialysisEntries: DialysisLogEntry[] = [
     bloodPressurePost: "128/80 mmHg",
     heartRatePost: "74 bpm",
     medicationsGiven: ["Heparin"],
-    otherNotes: "Breathing was completely normal post-treatment. Clean access site, pressure dressing applied.",
+    otherNotes:
+      "Breathing was completely normal post-treatment. Clean access site, pressure dressing applied.",
   },
 ];

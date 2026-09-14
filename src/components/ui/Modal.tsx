@@ -138,7 +138,9 @@ export function Modal({
 
       const focusable = Array.from(
         panel.querySelectorAll<HTMLElement>(FOCUSABLE),
-      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+      ).filter(
+        (el) => el.offsetParent !== null || el === document.activeElement,
+      );
 
       if (focusable.length === 0) {
         // Nothing to tab to — keep focus on the panel rather than letting it
@@ -167,6 +169,12 @@ export function Modal({
 
   return createPortal(
     <div
+      // The scrim is decoration, not a control: role="presentation" says so.
+      // Clicking it is a mouse shortcut on top of the two affordances that
+      // actually matter, Escape and the close button, both of which work
+      // without it. It is deliberately not a <button> — a full-screen button
+      // announces itself to a screen reader as something worth pressing.
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center bg-fg/50 p-inset-md backdrop-blur-xs"
       onMouseDown={(e) => {
         // mousedown, not click: a drag that starts inside the panel and ends
@@ -174,6 +182,9 @@ export function Modal({
         if (closeOnBackdrop && e.target === e.currentTarget) onClose();
       }}
     >
+      {/* A focus trap has to watch Tab on the dialog container — that is what
+          makes it a trap. The rule is right in general and wrong here. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the focus trap needs the key handler */}
       <div
         ref={panelRef}
         role="dialog"
@@ -196,7 +207,10 @@ export function Modal({
               {title}
             </h2>
             {description ? (
-              <p id={descriptionId} className="mt-stack-xs text-body-sm text-fg-muted">
+              <p
+                id={descriptionId}
+                className="mt-stack-xs text-body-sm text-fg-muted"
+              >
                 {description}
               </p>
             ) : null}
@@ -206,7 +220,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-control-small p-1 text-fg-muted transition-colors duration-150 hover:bg-surface-sunken hover:text-fg cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge"
+              className="cursor-pointer rounded-control-small p-1 text-fg-muted transition-colors duration-150 hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge"
               aria-label="Close dialog"
             >
               <X className="h-5 w-5" aria-hidden="true" />

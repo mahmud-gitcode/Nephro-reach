@@ -112,7 +112,10 @@ export function LineChart({
         </div>
       ) : null}
 
-      <div className="grid gap-inline-md" style={{ gridTemplateColumns: "38px minmax(0,1fr)" }}>
+      <div
+        className="grid gap-inline-md"
+        style={{ gridTemplateColumns: "38px minmax(0,1fr)" }}
+      >
         {/* Y axis */}
         <div
           aria-hidden="true"
@@ -124,9 +127,15 @@ export function LineChart({
           ))}
         </div>
 
-        <div className="relative overflow-hidden rounded-card" style={{ height }}>
+        <div
+          className="relative overflow-hidden rounded-card"
+          style={{ height }}
+        >
           {/* Grid */}
-          <div aria-hidden="true" className="absolute inset-0 flex flex-col justify-between">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 flex flex-col justify-between"
+          >
             {ticks.map((tick) => (
               <span key={tick} className="border-t border-dashed border-line" />
             ))}
@@ -252,7 +261,8 @@ export function Sparkline({
 
   const line = points
     .map((v, i) => {
-      const x = points.length <= 1 ? width / 2 : (i * width) / (points.length - 1);
+      const x =
+        points.length <= 1 ? width / 2 : (i * width) / (points.length - 1);
       const y = height - 2 - ((v - min) / span) * (height - 4);
       return `${x},${y}`;
     })

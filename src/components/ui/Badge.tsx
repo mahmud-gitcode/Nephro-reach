@@ -23,12 +23,7 @@ import { cn } from "@/lib/utils/cn";
    ========================================================================== */
 
 export type BadgeTone =
-  | "neutral"
-  | "info"
-  | "success"
-  | "warning"
-  | "danger"
-  | "accent";
+  "neutral" | "info" | "success" | "warning" | "danger" | "accent";
 
 export type BadgeVariant = "soft" | "solid" | "outline";
 

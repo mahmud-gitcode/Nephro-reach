@@ -81,7 +81,9 @@ function Row({
   return (
     <Card tone="flat" padding="big" className="space-y-stack-md">
       {label ? <p className="text-overline text-fg-muted">{label}</p> : null}
-      <div className="flex flex-wrap items-center gap-inline-lg">{children}</div>
+      <div className="flex flex-wrap items-center gap-inline-lg">
+        {children}
+      </div>
     </Card>
   );
 }
@@ -89,7 +91,7 @@ function Row({
 function Ramp({ name, steps }: { name: string; steps: string[] }) {
   return (
     <div>
-      <p className="text-overline mb-stack-xs text-fg-muted">{name}</p>
+      <p className="mb-stack-xs text-overline text-fg-muted">{name}</p>
       <div className="flex overflow-hidden rounded-card border border-line">
         {steps.map((s) => (
           <div key={s} className={`h-12 flex-1 ${s}`} />
@@ -240,63 +242,123 @@ export default function DesignSystemPage() {
               <Ramp
                 name="Brand · hue 262.9° · 600 = #2563EB"
                 steps={[
-                  "bg-brand-50", "bg-brand-100", "bg-brand-200", "bg-brand-300",
-                  "bg-brand-400", "bg-brand-500", "bg-brand-600", "bg-brand-700",
-                  "bg-brand-800", "bg-brand-900", "bg-brand-950",
+                  "bg-brand-50",
+                  "bg-brand-100",
+                  "bg-brand-200",
+                  "bg-brand-300",
+                  "bg-brand-400",
+                  "bg-brand-500",
+                  "bg-brand-600",
+                  "bg-brand-700",
+                  "bg-brand-800",
+                  "bg-brand-900",
+                  "bg-brand-950",
                 ]}
               />
               <Ramp
                 name="Accent · violet · hue 300°"
                 steps={[
-                  "bg-accent-50", "bg-accent-100", "bg-accent-200", "bg-accent-300",
-                  "bg-accent-400", "bg-accent-500", "bg-accent-600", "bg-accent-700",
-                  "bg-accent-800", "bg-accent-900", "bg-accent-950",
+                  "bg-accent-50",
+                  "bg-accent-100",
+                  "bg-accent-200",
+                  "bg-accent-300",
+                  "bg-accent-400",
+                  "bg-accent-500",
+                  "bg-accent-600",
+                  "bg-accent-700",
+                  "bg-accent-800",
+                  "bg-accent-900",
+                  "bg-accent-950",
                 ]}
               />
               <Ramp
                 name="Gray · blue-biased · hue 262.9°"
                 steps={[
-                  "bg-gray-50", "bg-gray-100", "bg-gray-200", "bg-gray-300",
-                  "bg-gray-400", "bg-gray-500", "bg-gray-600", "bg-gray-700",
-                  "bg-gray-800", "bg-gray-900", "bg-gray-950",
+                  "bg-gray-50",
+                  "bg-gray-100",
+                  "bg-gray-200",
+                  "bg-gray-300",
+                  "bg-gray-400",
+                  "bg-gray-500",
+                  "bg-gray-600",
+                  "bg-gray-700",
+                  "bg-gray-800",
+                  "bg-gray-900",
+                  "bg-gray-950",
                 ]}
               />
               <Ramp
                 name="Success · hue 150°"
                 steps={[
-                  "bg-success-50", "bg-success-100", "bg-success-200", "bg-success-300",
-                  "bg-success-400", "bg-success-500", "bg-success-600", "bg-success-700",
-                  "bg-success-800", "bg-success-900", "bg-success-950",
+                  "bg-success-50",
+                  "bg-success-100",
+                  "bg-success-200",
+                  "bg-success-300",
+                  "bg-success-400",
+                  "bg-success-500",
+                  "bg-success-600",
+                  "bg-success-700",
+                  "bg-success-800",
+                  "bg-success-900",
+                  "bg-success-950",
                 ]}
               />
               <Ramp
                 name="Warning · hue 70°"
                 steps={[
-                  "bg-warning-50", "bg-warning-100", "bg-warning-200", "bg-warning-300",
-                  "bg-warning-400", "bg-warning-500", "bg-warning-600", "bg-warning-700",
-                  "bg-warning-800", "bg-warning-900", "bg-warning-950",
+                  "bg-warning-50",
+                  "bg-warning-100",
+                  "bg-warning-200",
+                  "bg-warning-300",
+                  "bg-warning-400",
+                  "bg-warning-500",
+                  "bg-warning-600",
+                  "bg-warning-700",
+                  "bg-warning-800",
+                  "bg-warning-900",
+                  "bg-warning-950",
                 ]}
               />
               <Ramp
                 name="Danger · hue 27°"
                 steps={[
-                  "bg-danger-50", "bg-danger-100", "bg-danger-200", "bg-danger-300",
-                  "bg-danger-400", "bg-danger-500", "bg-danger-600", "bg-danger-700",
-                  "bg-danger-800", "bg-danger-900", "bg-danger-950",
+                  "bg-danger-50",
+                  "bg-danger-100",
+                  "bg-danger-200",
+                  "bg-danger-300",
+                  "bg-danger-400",
+                  "bg-danger-500",
+                  "bg-danger-600",
+                  "bg-danger-700",
+                  "bg-danger-800",
+                  "bg-danger-900",
+                  "bg-danger-950",
                 ]}
               />
               <Ramp
                 name="Categorical · 8 series · L 60% / C 0.13"
                 steps={[
-                  "bg-cat-1", "bg-cat-2", "bg-cat-3", "bg-cat-4",
-                  "bg-cat-5", "bg-cat-6", "bg-cat-7", "bg-cat-8",
+                  "bg-cat-1",
+                  "bg-cat-2",
+                  "bg-cat-3",
+                  "bg-cat-4",
+                  "bg-cat-5",
+                  "bg-cat-6",
+                  "bg-cat-7",
+                  "bg-cat-8",
                 ]}
               />
               <Ramp
                 name="Categorical soft · tints for the same eight"
                 steps={[
-                  "bg-cat-1-soft", "bg-cat-2-soft", "bg-cat-3-soft", "bg-cat-4-soft",
-                  "bg-cat-5-soft", "bg-cat-6-soft", "bg-cat-7-soft", "bg-cat-8-soft",
+                  "bg-cat-1-soft",
+                  "bg-cat-2-soft",
+                  "bg-cat-3-soft",
+                  "bg-cat-4-soft",
+                  "bg-cat-5-soft",
+                  "bg-cat-6-soft",
+                  "bg-cat-7-soft",
+                  "bg-cat-8-soft",
                 ]}
               />
               <p className="text-caption text-fg-muted">
@@ -304,12 +366,12 @@ export default function DesignSystemPage() {
                 for text (4.5:1). Holds in every ramp.
               </p>
               <p className="text-caption text-fg-muted">
-                The categorical eight are for things that DIFFER — chart
-                series, log types, legend keys — never for good or bad. They
-                all sit at one lightness and a moderate chroma, so beside a
-                status colour they read as data rather than as an alert. Every
-                solid clears 3:1 on white and on its own tint; none is rated
-                for text, so labels beside a swatch take a fg token.
+                The categorical eight are for things that DIFFER — chart series,
+                log types, legend keys — never for good or bad. They all sit at
+                one lightness and a moderate chroma, so beside a status colour
+                they read as data rather than as an alert. Every solid clears
+                3:1 on white and on its own tint; none is rated for text, so
+                labels beside a swatch take a fg token.
               </p>
             </Card>
           </Block>
@@ -317,15 +379,51 @@ export default function DesignSystemPage() {
           <Block title="Semantic tokens">
             <Card tone="flat">
               <div className="grid gap-stack-md sm:grid-cols-2 lg:grid-cols-3">
-                <TokenSwatch name="bg-canvas" swatch="bg-canvas" note="Page background" />
-                <TokenSwatch name="bg-surface" swatch="bg-surface" note="Cards, inputs, modals" />
-                <TokenSwatch name="bg-surface-sunken" swatch="bg-surface-sunken" note="Wells, stripes" />
-                <TokenSwatch name="text-fg" swatch="bg-fg" note="Headings, values" />
-                <TokenSwatch name="text-fg-secondary" swatch="bg-fg-secondary" note="Supporting copy" />
-                <TokenSwatch name="text-fg-muted" swatch="bg-fg-muted" note="Labels, placeholders" />
-                <TokenSwatch name="border-line" swatch="bg-line" note="Card edges" />
-                <TokenSwatch name="border-field" swatch="bg-field" note="Input borders · 3.62:1" />
-                <TokenSwatch name="ring-ring" swatch="bg-ring" note="Focus ring" />
+                <TokenSwatch
+                  name="bg-canvas"
+                  swatch="bg-canvas"
+                  note="Page background"
+                />
+                <TokenSwatch
+                  name="bg-surface"
+                  swatch="bg-surface"
+                  note="Cards, inputs, modals"
+                />
+                <TokenSwatch
+                  name="bg-surface-sunken"
+                  swatch="bg-surface-sunken"
+                  note="Wells, stripes"
+                />
+                <TokenSwatch
+                  name="text-fg"
+                  swatch="bg-fg"
+                  note="Headings, values"
+                />
+                <TokenSwatch
+                  name="text-fg-secondary"
+                  swatch="bg-fg-secondary"
+                  note="Supporting copy"
+                />
+                <TokenSwatch
+                  name="text-fg-muted"
+                  swatch="bg-fg-muted"
+                  note="Labels, placeholders"
+                />
+                <TokenSwatch
+                  name="border-line"
+                  swatch="bg-line"
+                  note="Card edges"
+                />
+                <TokenSwatch
+                  name="border-field"
+                  swatch="bg-field"
+                  note="Input borders · 3.62:1"
+                />
+                <TokenSwatch
+                  name="ring-ring"
+                  swatch="bg-ring"
+                  note="Focus ring"
+                />
               </div>
             </Card>
           </Block>
@@ -333,20 +431,44 @@ export default function DesignSystemPage() {
           <Block title="Tones">
             <Card tone="flat">
               <div className="grid gap-stack-md sm:grid-cols-2 lg:grid-cols-4">
-                <TokenSwatch name="primary" swatch="bg-primary-solid" note="Brand actions" />
-                <TokenSwatch name="neutral" swatch="bg-neutral-solid" note="Inverts in dark mode" />
-                <TokenSwatch name="danger" swatch="bg-danger-solid" note="Destructive" />
-                <TokenSwatch name="accent" swatch="bg-accent-solid" note="Secondary emphasis" />
+                <TokenSwatch
+                  name="primary"
+                  swatch="bg-primary-solid"
+                  note="Brand actions"
+                />
+                <TokenSwatch
+                  name="neutral"
+                  swatch="bg-neutral-solid"
+                  note="Inverts in dark mode"
+                />
+                <TokenSwatch
+                  name="danger"
+                  swatch="bg-danger-solid"
+                  note="Destructive"
+                />
+                <TokenSwatch
+                  name="accent"
+                  swatch="bg-accent-solid"
+                  note="Secondary emphasis"
+                />
               </div>
             </Card>
           </Block>
 
           <Block title="Status">
             <Row>
-              <Badge tone="success" icon={<Check />}>At Target EDW</Badge>
-              <Badge tone="warning" icon={<TriangleAlert />}>Above Goal</Badge>
-              <Badge tone="danger" icon={<AlertTriangle />}>Below EDW</Badge>
-              <Badge tone="info" icon={<Info />}>Automatic</Badge>
+              <Badge tone="success" icon={<Check />}>
+                At Target EDW
+              </Badge>
+              <Badge tone="warning" icon={<TriangleAlert />}>
+                Above Goal
+              </Badge>
+              <Badge tone="danger" icon={<AlertTriangle />}>
+                Below EDW
+              </Badge>
+              <Badge tone="info" icon={<Info />}>
+                Automatic
+              </Badge>
               <Badge tone="neutral">Draft</Badge>
             </Row>
           </Block>
@@ -356,7 +478,9 @@ export default function DesignSystemPage() {
       {/* ================= TYPOGRAPHY ================= */}
       {tab === "typography" ? (
         <Card tone="flat" className="px-inset-md py-inset-xs">
-          <h3 className="text-overline pt-inset-sm pb-stack-xs text-fg-muted">Display</h3>
+          <h3 className="pt-inset-sm pb-stack-xs text-overline text-fg-muted">
+            Display
+          </h3>
           <TypeSpec token="text-display-lg" meta="48 / 1.05 · 700">
             <p className="text-display-lg">Understand your kidneys</p>
           </TypeSpec>
@@ -364,7 +488,9 @@ export default function DesignSystemPage() {
             <p className="text-display-md">Membership that fits</p>
           </TypeSpec>
 
-          <h3 className="text-overline pt-inset-lg pb-stack-xs text-fg-muted">Heading</h3>
+          <h3 className="pt-inset-lg pb-stack-xs text-overline text-fg-muted">
+            Heading
+          </h3>
           <TypeSpec token="text-heading-1" meta="32 / 1.20 · 700 · h1">
             <p className="text-heading-1">My Health Overview</p>
           </TypeSpec>
@@ -381,26 +507,28 @@ export default function DesignSystemPage() {
             <p className="text-heading-5">Condition / History</p>
           </TypeSpec>
 
-          <h3 className="text-overline pt-inset-lg pb-stack-xs text-fg-muted">Body</h3>
+          <h3 className="pt-inset-lg pb-stack-xs text-overline text-fg-muted">
+            Body
+          </h3>
           <TypeSpec token="text-body-lg" meta="18 / 1.60 · 400">
-            <p className="text-body-lg measure">
+            <p className="measure text-body-lg">
               Record your pre- and post-treatment weight after each session so
               your care team sees the trend, not a single reading.
             </p>
           </TypeSpec>
           <TypeSpec token="text-body-md" meta="16 / 1.55 · 400 · default">
-            <p className="text-body-md measure">
+            <p className="measure text-body-md">
               Your nephrologist reviews these entries before each monthly visit.
               Target interdialytic weight gain is under 4% of dry weight.
             </p>
           </TypeSpec>
           <TypeSpec token="text-body-sm" meta="14 / 1.50 · 400 · dense UI">
-            <p className="text-body-sm measure">
+            <p className="measure text-body-sm">
               Table cells and compact rows — not passages a member has to read.
             </p>
           </TypeSpec>
 
-          <h3 className="text-overline pt-inset-lg pb-stack-xs text-fg-muted">
+          <h3 className="pt-inset-lg pb-stack-xs text-overline text-fg-muted">
             Label &amp; caption
           </h3>
           <TypeSpec token="text-label-lg" meta="16 / 24 · 500">
@@ -416,10 +544,12 @@ export default function DesignSystemPage() {
             <p className="text-overline text-fg-muted">Blood Counts</p>
           </TypeSpec>
           <TypeSpec token="text-caption" meta="12 / 18 · 400 · floor">
-            <p className="text-caption text-fg-muted">Last synced 14 minutes ago</p>
+            <p className="text-caption text-fg-muted">
+              Last synced 14 minutes ago
+            </p>
           </TypeSpec>
 
-          <h3 className="text-overline pt-inset-lg pb-stack-xs text-fg-muted">
+          <h3 className="pt-inset-lg pb-stack-xs text-overline text-fg-muted">
             Metric · tabular-nums
           </h3>
           <TypeSpec token="text-metric-xl" meta="40 / 44 · 700">
@@ -435,7 +565,9 @@ export default function DesignSystemPage() {
             <p className="text-metric-sm">8.2 mg/dL</p>
           </TypeSpec>
 
-          <h3 className="text-overline pt-inset-lg pb-stack-xs text-fg-muted">Interactive</h3>
+          <h3 className="pt-inset-lg pb-stack-xs text-overline text-fg-muted">
+            Interactive
+          </h3>
           <TypeSpec token="text-button-lg" meta="16 / 24 · 600">
             <p className="text-button-lg">Log Treatment</p>
           </TypeSpec>
@@ -460,9 +592,14 @@ export default function DesignSystemPage() {
           <Block title="3 Elevation Shadows">
             <Card tone="flat" className="space-y-stack-md">
               <p className="text-body-md text-fg-secondary">
-                Our design system defines three primary levels of elevation. Unlike harsh pure-black drop shadows,
-                every shadow uses our neutral gray-950 palette base (<code className="text-label-sm text-fg-brand">rgb(16 20 28 / ...)</code>)
-                with a dual-layer approach: a focused key-light shadow paired with a soft ambient dispersion for natural, realistic depth.
+                Our design system defines three primary levels of elevation.
+                Unlike harsh pure-black drop shadows, every shadow uses our
+                neutral gray-950 palette base (
+                <code className="text-label-sm text-fg-brand">
+                  rgb(16 20 28 / ...)
+                </code>
+                ) with a dual-layer approach: a focused key-light shadow paired
+                with a soft ambient dispersion for natural, realistic depth.
               </p>
             </Card>
 
@@ -471,23 +608,30 @@ export default function DesignSystemPage() {
               <div className="flex flex-col justify-between rounded-card border border-line bg-surface p-inset-lg shadow-sm">
                 <div className="space-y-stack-md">
                   <div className="flex items-center justify-between">
-                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                    <span className="rounded-chip border border-line bg-surface-sunken px-inset-xs py-0.5 text-overline text-fg-muted">
                       Level 1
                     </span>
-                    <Badge tone="neutral" variant="soft">Resting</Badge>
+                    <Badge tone="neutral" variant="soft">
+                      Resting
+                    </Badge>
                   </div>
                   <div>
                     <h3 className="text-heading-4 text-fg">Shadow Small</h3>
-                    <p className="text-caption text-fg-muted">Low / Card Elevation</p>
+                    <p className="text-caption text-fg-muted">
+                      Low / Card Elevation
+                    </p>
                   </div>
                   <p className="text-body-sm text-fg-secondary">
-                    Designed for resting content containers, cards, tables, and form panels that sit directly on the page canvas.
+                    Designed for resting content containers, cards, tables, and
+                    form panels that sit directly on the page canvas.
                   </p>
                 </div>
                 <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Tailwind Class</span>
-                    <code className="text-label-sm text-fg-brand">shadow-sm</code>
+                    <code className="text-label-sm text-fg-brand">
+                      shadow-sm
+                    </code>
                   </div>
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Semantic Alias</span>
@@ -500,23 +644,30 @@ export default function DesignSystemPage() {
               <div className="flex flex-col justify-between rounded-card border border-line bg-surface-raised p-inset-lg shadow-md">
                 <div className="space-y-stack-md">
                   <div className="flex items-center justify-between">
-                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                    <span className="rounded-chip border border-line bg-surface-sunken px-inset-xs py-0.5 text-overline text-fg-muted">
                       Level 2
                     </span>
-                    <Badge tone="info" variant="soft">Floating</Badge>
+                    <Badge tone="info" variant="soft">
+                      Floating
+                    </Badge>
                   </div>
                   <div>
                     <h3 className="text-heading-4 text-fg">Shadow Medium</h3>
-                    <p className="text-caption text-fg-muted">Medium / Raised Elevation</p>
+                    <p className="text-caption text-fg-muted">
+                      Medium / Raised Elevation
+                    </p>
                   </div>
                   <p className="text-body-sm text-fg-secondary">
-                    Designed for floating elements, dropdown menus, popovers, hovering cards, and active navigation controls.
+                    Designed for floating elements, dropdown menus, popovers,
+                    hovering cards, and active navigation controls.
                   </p>
                 </div>
                 <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Tailwind Class</span>
-                    <code className="text-label-sm text-fg-brand">shadow-md</code>
+                    <code className="text-label-sm text-fg-brand">
+                      shadow-md
+                    </code>
                   </div>
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Semantic Alias</span>
@@ -529,27 +680,36 @@ export default function DesignSystemPage() {
               <div className="flex flex-col justify-between rounded-panel border border-line bg-surface p-inset-lg shadow-lg">
                 <div className="space-y-stack-md">
                   <div className="flex items-center justify-between">
-                    <span className="rounded-chip bg-surface-sunken border border-line px-inset-xs py-0.5 text-overline text-fg-muted">
+                    <span className="rounded-chip border border-line bg-surface-sunken px-inset-xs py-0.5 text-overline text-fg-muted">
                       Level 3
                     </span>
-                    <Badge tone="success" variant="soft">Overlay</Badge>
+                    <Badge tone="success" variant="soft">
+                      Overlay
+                    </Badge>
                   </div>
                   <div>
                     <h3 className="text-heading-4 text-fg">Shadow Large</h3>
-                    <p className="text-caption text-fg-muted">High / Overlay Elevation</p>
+                    <p className="text-caption text-fg-muted">
+                      High / Overlay Elevation
+                    </p>
                   </div>
                   <p className="text-body-sm text-fg-secondary">
-                    Designed for high-elevation layers such as dialogs, modals, bottom sheets, command palettes, and drawer panels.
+                    Designed for high-elevation layers such as dialogs, modals,
+                    bottom sheets, command palettes, and drawer panels.
                   </p>
                 </div>
                 <div className="mt-stack-xl space-y-stack-xs border-t border-line-subtle pt-inset-sm">
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Tailwind Class</span>
-                    <code className="text-label-sm text-fg-brand">shadow-lg</code>
+                    <code className="text-label-sm text-fg-brand">
+                      shadow-lg
+                    </code>
                   </div>
                   <div className="flex items-center justify-between text-caption">
                     <span className="text-fg-muted">Semantic Alias</span>
-                    <code className="text-label-sm text-fg">shadow-overlay</code>
+                    <code className="text-label-sm text-fg">
+                      shadow-overlay
+                    </code>
                   </div>
                 </div>
               </div>
@@ -560,31 +720,44 @@ export default function DesignSystemPage() {
           <Block title="Interactive Elevation & Hover Transitions">
             <Card tone="flat" className="space-y-stack-lg">
               <p className="text-body-sm text-fg-secondary">
-                Hover over the cards below to see dynamic elevation transitions. Moving between Level 1 and Level 2 on hover provides tactile depth feedback without jarring motion.
+                Hover over the cards below to see dynamic elevation transitions.
+                Moving between Level 1 and Level 2 on hover provides tactile
+                depth feedback without jarring motion.
               </p>
 
               <div className="grid gap-inline-lg sm:grid-cols-3">
-                <div className="group rounded-card border border-line bg-surface p-inset-md shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
+                <div className="group cursor-pointer rounded-card border border-line bg-surface p-inset-md shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
                   <p className="text-overline text-fg-muted">Hover to lift</p>
-                  <h4 className="mt-stack-xs text-heading-5 text-fg">Card Elevation</h4>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">
+                    Card Elevation
+                  </h4>
                   <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                    Starts at <code className="text-label-sm">shadow-sm</code>, elevates to <code className="text-label-sm">shadow-md</code> on hover.
+                    Starts at <code className="text-label-sm">shadow-sm</code>,
+                    elevates to <code className="text-label-sm">shadow-md</code>{" "}
+                    on hover.
                   </p>
                 </div>
 
-                <div className="group rounded-card border border-line bg-surface p-inset-md shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
+                <div className="group cursor-pointer rounded-card border border-line bg-surface p-inset-md shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
                   <p className="text-overline text-fg-muted">Hover to expand</p>
-                  <h4 className="mt-stack-xs text-heading-5 text-fg">Raised Elevation</h4>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">
+                    Raised Elevation
+                  </h4>
                   <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                    Starts at <code className="text-label-sm">shadow-md</code>, elevates to <code className="text-label-sm">shadow-lg</code> on hover.
+                    Starts at <code className="text-label-sm">shadow-md</code>,
+                    elevates to <code className="text-label-sm">shadow-lg</code>{" "}
+                    on hover.
                   </p>
                 </div>
 
                 <div className="rounded-panel border border-line bg-surface p-inset-md shadow-lg">
                   <p className="text-overline text-fg-muted">Deep Focus</p>
-                  <h4 className="mt-stack-xs text-heading-5 text-fg">Modal Elevation</h4>
+                  <h4 className="mt-stack-xs text-heading-5 text-fg">
+                    Modal Elevation
+                  </h4>
                   <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                    Full <code className="text-label-sm">shadow-lg</code> for dialogs and prominent floating sheets.
+                    Full <code className="text-label-sm">shadow-lg</code> for
+                    dialogs and prominent floating sheets.
                   </p>
                 </div>
               </div>
@@ -600,27 +773,68 @@ export default function DesignSystemPage() {
                     <TableHeaderCell>Level</TableHeaderCell>
                     <TableHeaderCell>Tailwind Class</TableHeaderCell>
                     <TableHeaderCell>Semantic Alias</TableHeaderCell>
-                    <TableHeaderCell>Computed Dual-Layer Shadow</TableHeaderCell>
+                    <TableHeaderCell>
+                      Computed Dual-Layer Shadow
+                    </TableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   <TableRow>
                     <TableCell emphasis>Level 1 (Low)</TableCell>
-                    <TableCell><code className="text-label-sm text-fg-brand">shadow-sm</code></TableCell>
-                    <TableCell><code className="text-label-sm text-fg-muted">shadow-card</code></TableCell>
-                    <TableCell><code className="text-caption text-fg-secondary">0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04)</code></TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-brand">
+                        shadow-sm
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-muted">
+                        shadow-card
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-caption text-fg-secondary">
+                        0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16
+                        20 28 / 0.04)
+                      </code>
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell emphasis>Level 2 (Medium)</TableCell>
-                    <TableCell><code className="text-label-sm text-fg-brand">shadow-md</code></TableCell>
-                    <TableCell><code className="text-label-sm text-fg-muted">shadow-raised</code></TableCell>
-                    <TableCell><code className="text-caption text-fg-secondary">0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04)</code></TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-brand">
+                        shadow-md
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-muted">
+                        shadow-raised
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-caption text-fg-secondary">
+                        0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px
+                        rgb(16 20 28 / 0.04)
+                      </code>
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell emphasis>Level 3 (High)</TableCell>
-                    <TableCell><code className="text-label-sm text-fg-brand">shadow-lg</code></TableCell>
-                    <TableCell><code className="text-label-sm text-fg-muted">shadow-overlay</code></TableCell>
-                    <TableCell><code className="text-caption text-fg-secondary">0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06)</code></TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-brand">
+                        shadow-lg
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-label-sm text-fg-muted">
+                        shadow-overlay
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-caption text-fg-secondary">
+                        0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px
+                        rgb(16 20 28 / 0.06)
+                      </code>
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -660,25 +874,33 @@ export default function DesignSystemPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {(["primary", "neutral", "danger", "accent"] as const).map((v) => (
-                      <TableRow key={v}>
-                        <TableCell emphasis>{v}</TableCell>
-                        {(["fill", "fill-stroke", "stroke"] as const).map((a) => (
-                          <TableCell key={a}>
-                            <Button variant={v} appearance={a}>
-                              Log Treatment
-                            </Button>
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                    {(["primary", "neutral", "danger", "accent"] as const).map(
+                      (v) => (
+                        <TableRow key={v}>
+                          <TableCell emphasis>{v}</TableCell>
+                          {(["fill", "fill-stroke", "stroke"] as const).map(
+                            (a) => (
+                              <TableCell key={a}>
+                                <Button variant={v} appearance={a}>
+                                  Log Treatment
+                                </Button>
+                              </TableCell>
+                            ),
+                          )}
+                        </TableRow>
+                      ),
+                    )}
                   </TableBody>
                 </Table>
               </Card>
 
               <Row label="Sizes · big 48 / small 36">
-                <Button size="big" leadingIcon={<Plus />}>Big</Button>
-                <Button size="small" leadingIcon={<Plus />}>Small</Button>
+                <Button size="big" leadingIcon={<Plus />}>
+                  Big
+                </Button>
+                <Button size="small" leadingIcon={<Plus />}>
+                  Small
+                </Button>
               </Row>
 
               <Row label="States">
@@ -688,24 +910,44 @@ export default function DesignSystemPage() {
               </Row>
 
               <Row label="Icon only · width locked to height">
-                <Button iconOnly variant="neutral" appearance="fill-stroke" aria-label="Edit">
+                <Button
+                  iconOnly
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  aria-label="Edit"
+                >
                   <Pencil />
                 </Button>
                 <Button iconOnly variant="danger" aria-label="Delete">
                   <Trash2 />
                 </Button>
-                <Button iconOnly variant="primary" appearance="stroke" aria-label="Copy">
+                <Button
+                  iconOnly
+                  variant="primary"
+                  appearance="stroke"
+                  aria-label="Copy"
+                >
                   <Copy />
                 </Button>
-                <Button iconOnly size="small" variant="neutral" appearance="stroke" aria-label="Close">
+                <Button
+                  iconOnly
+                  size="small"
+                  variant="neutral"
+                  appearance="stroke"
+                  aria-label="Close"
+                >
                   <X />
                 </Button>
               </Row>
 
               <Row label="Full width">
                 <div className="w-full max-w-sm space-y-stack-md">
-                  <Button fullWidth leadingIcon={<Plus />}>Add appointment</Button>
-                  <Button fullWidth variant="neutral" appearance="fill-stroke">Cancel</Button>
+                  <Button fullWidth leadingIcon={<Plus />}>
+                    Add appointment
+                  </Button>
+                  <Button fullWidth variant="neutral" appearance="fill-stroke">
+                    Cancel
+                  </Button>
                 </div>
               </Row>
             </Block>
@@ -716,10 +958,18 @@ export default function DesignSystemPage() {
             <Block title="Modal">
               <Row label="Focus trap · Escape · scroll lock · focus restore">
                 <Button onClick={() => setModalSize("small")}>Small</Button>
-                <Button variant="neutral" appearance="fill-stroke" onClick={() => setModalSize("big")}>
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => setModalSize("big")}
+                >
                   Big
                 </Button>
-                <Button variant="neutral" appearance="fill-stroke" onClick={() => setModalSize("wide")}>
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => setModalSize("wide")}
+                >
                   Wide
                 </Button>
               </Row>
@@ -732,19 +982,36 @@ export default function DesignSystemPage() {
                 description="Saved to your profile so the clinic can confirm pickup."
                 footer={
                   <>
-                    <Button variant="neutral" appearance="fill-stroke" onClick={() => setModalSize(null)}>
+                    <Button
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      onClick={() => setModalSize(null)}
+                    >
                       Cancel
                     </Button>
-                    <Button onClick={() => setModalSize(null)}>Save ride</Button>
+                    <Button onClick={() => setModalSize(null)}>
+                      Save ride
+                    </Button>
                   </>
                 }
               >
                 <div className="space-y-stack-lg">
                   <FormField label="Driver name" required>
-                    {(props) => <Input {...props} placeholder="e.g. Marcus Bell" />}
+                    {(props) => (
+                      <Input {...props} placeholder="e.g. Marcus Bell" />
+                    )}
                   </FormField>
-                  <FormField label="Phone" hint="Used only for pickup reminders.">
-                    {(props) => <Input {...props} type="tel" placeholder="(555) 018-2244" />}
+                  <FormField
+                    label="Phone"
+                    hint="Used only for pickup reminders."
+                  >
+                    {(props) => (
+                      <Input
+                        {...props}
+                        type="tel"
+                        placeholder="(555) 018-2244"
+                      />
+                    )}
                   </FormField>
                   <p className="text-body-sm text-fg-muted">
                     Press Tab — focus cycles inside this dialog and cannot reach
@@ -790,7 +1057,11 @@ export default function DesignSystemPage() {
                 <CardHeader
                   title="Avg. Fluid Intake"
                   description="Last 7 days"
-                  action={<Badge tone="success" icon={<Check />}>On target</Badge>}
+                  action={
+                    <Badge tone="success" icon={<Check />}>
+                      On target
+                    </Badge>
+                  }
                 />
                 <CardBody>
                   <p className="text-metric-lg text-fg">
@@ -798,7 +1069,12 @@ export default function DesignSystemPage() {
                   </p>
                 </CardBody>
                 <CardFooter>
-                  <Button size="small" variant="primary" appearance="stroke" leadingIcon={<Droplet />}>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    appearance="stroke"
+                    leadingIcon={<Droplet />}
+                  >
                     Log intake
                   </Button>
                 </CardFooter>
@@ -811,12 +1087,24 @@ export default function DesignSystemPage() {
             <Block title="Badge">
               {(["soft", "solid", "outline"] as const).map((v) => (
                 <Row key={v} label={v}>
-                  <Badge tone="neutral" variant={v}>Draft</Badge>
-                  <Badge tone="info" variant={v} icon={<Info />}>Automatic</Badge>
-                  <Badge tone="success" variant={v} icon={<Check />}>At Target EDW</Badge>
-                  <Badge tone="warning" variant={v} icon={<TriangleAlert />}>Above Goal</Badge>
-                  <Badge tone="danger" variant={v} icon={<AlertTriangle />}>Below EDW</Badge>
-                  <Badge tone="accent" variant={v}>Caregiver</Badge>
+                  <Badge tone="neutral" variant={v}>
+                    Draft
+                  </Badge>
+                  <Badge tone="info" variant={v} icon={<Info />}>
+                    Automatic
+                  </Badge>
+                  <Badge tone="success" variant={v} icon={<Check />}>
+                    At Target EDW
+                  </Badge>
+                  <Badge tone="warning" variant={v} icon={<TriangleAlert />}>
+                    Above Goal
+                  </Badge>
+                  <Badge tone="danger" variant={v} icon={<AlertTriangle />}>
+                    Below EDW
+                  </Badge>
+                  <Badge tone="accent" variant={v}>
+                    Caregiver
+                  </Badge>
                 </Row>
               ))}
             </Block>
@@ -827,53 +1115,78 @@ export default function DesignSystemPage() {
             <Block title="Input · Textarea · Select">
               {/* 1. Input States */}
               <div className="space-y-stack-lg">
-                <h3 className="text-overline text-fg-muted">Input Field States</h3>
+                <h3 className="text-overline text-fg-muted">
+                  Input Field States
+                </h3>
                 <div className="grid gap-inline-lg sm:grid-cols-2 lg:grid-cols-3">
                   {/* Default / Placeholder */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Default
+                    </span>
                     <Input placeholder="Type member name…" />
                   </Card>
 
                   {/* Filled / With Value */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">With Value</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      With Value
+                    </span>
                     <Input defaultValue="Dr. Robert Chen, MD" />
                   </Card>
 
                   {/* With Leading Icon */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Leading Icon</span>
-                    <Input leadingIcon={<Search />} placeholder="Search records…" />
+                    <span className="text-label-sm font-semibold text-fg">
+                      Leading Icon
+                    </span>
+                    <Input
+                      leadingIcon={<Search />}
+                      placeholder="Search records…"
+                    />
                   </Card>
 
                   {/* Focus / Focus-Visible */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Focus</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Focus
+                    </span>
                     <Input defaultValue="Click or Tab here" />
                   </Card>
 
                   {/* Invalid / Error */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Error</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Error
+                    </span>
                     <Input aria-invalid defaultValue="invalid-reading-999" />
                   </Card>
 
                   {/* Disabled */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
-                    <Input placeholder="System managed field" disabled defaultValue="Synchronized clinic ID" />
+                    <span className="text-label-sm font-semibold text-fg">
+                      Disabled
+                    </span>
+                    <Input
+                      placeholder="System managed field"
+                      disabled
+                      defaultValue="Synchronized clinic ID"
+                    />
                   </Card>
 
                   {/* Size: Small (36px) */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Small (36px)</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Small (36px)
+                    </span>
                     <Input inputSize="small" placeholder="Small input (36px)" />
                   </Card>
 
                   {/* Date Input */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Date</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Date
+                    </span>
                     <Input type="date" defaultValue="2026-09-14" />
                   </Card>
                 </div>
@@ -881,11 +1194,15 @@ export default function DesignSystemPage() {
 
               {/* 2. Dropdown (Select) States */}
               <div className="space-y-stack-lg">
-                <h3 className="text-overline text-fg-muted">Dropdown (Select) States</h3>
+                <h3 className="text-overline text-fg-muted">
+                  Dropdown (Select) States
+                </h3>
                 <div className="grid gap-inline-lg sm:grid-cols-2 lg:grid-cols-3">
                   {/* Select Default */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Default
+                    </span>
                     <Select defaultValue="all">
                       <option value="all">All Categories</option>
                       <option value="counts">Blood Counts</option>
@@ -895,16 +1212,22 @@ export default function DesignSystemPage() {
 
                   {/* Select Invalid / Error */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Error</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Error
+                    </span>
                     <Select aria-invalid defaultValue="">
-                      <option value="" disabled>Select category…</option>
+                      <option value="" disabled>
+                        Select category…
+                      </option>
                       <option value="counts">Blood Counts</option>
                     </Select>
                   </Card>
 
                   {/* Select Disabled */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Disabled
+                    </span>
                     <Select disabled defaultValue="chem">
                       <option value="chem">Chemistry (Locked)</option>
                     </Select>
@@ -917,7 +1240,9 @@ export default function DesignSystemPage() {
                 <h3 className="text-overline text-fg-muted">Textarea States</h3>
                 <div className="grid gap-inline-lg sm:grid-cols-2">
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Default</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Default
+                    </span>
                     <Textarea
                       rows={3}
                       defaultValue="Mild cramping in the last hour of dialysis. Resolved after ultrafiltration rate was lowered."
@@ -925,7 +1250,9 @@ export default function DesignSystemPage() {
                   </Card>
 
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Disabled</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Disabled
+                    </span>
                     <Textarea
                       rows={3}
                       disabled
@@ -941,11 +1268,15 @@ export default function DesignSystemPage() {
           {show("formfield") ? (
             <Block title="FormField">
               <div className="space-y-stack-lg">
-                <h3 className="text-overline text-fg-muted">FormField States</h3>
+                <h3 className="text-overline text-fg-muted">
+                  FormField States
+                </h3>
                 <div className="grid gap-inline-lg sm:grid-cols-2">
                   {/* Required State */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Required</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Required
+                    </span>
                     <FormField label="Pre-treatment weight" required>
                       {(props) => <Input {...props} defaultValue="72.4" />}
                     </FormField>
@@ -953,15 +1284,22 @@ export default function DesignSystemPage() {
 
                   {/* Error State */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Error</span>
-                    <FormField label="Dry weight" error="Enter a valid weight between 30 and 250 kg.">
+                    <span className="text-label-sm font-semibold text-fg">
+                      Error
+                    </span>
+                    <FormField
+                      label="Dry weight"
+                      error="Enter a valid weight between 30 and 250 kg."
+                    >
                       {(props) => <Input {...props} defaultValue="4" />}
                     </FormField>
                   </Card>
 
                   {/* Optional State */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Optional</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Optional
+                    </span>
                     <FormField label="Category" optionalLabel="optional">
                       {(props) => (
                         <Select {...props} defaultValue="chem">
@@ -974,7 +1312,9 @@ export default function DesignSystemPage() {
 
                   {/* Hint State */}
                   <Card tone="flat" className="space-y-stack-sm">
-                    <span className="text-label-sm font-semibold text-fg">Helper Text</span>
+                    <span className="text-label-sm font-semibold text-fg">
+                      Helper Text
+                    </span>
                     <FormField label="Session notes" hint="Helper text">
                       {(props) => <Textarea {...props} rows={2} />}
                     </FormField>
@@ -1049,21 +1389,31 @@ export default function DesignSystemPage() {
                           />
                         </TableEmptyRow>
                       ) : (
-                        (sort === "asc" ? LABS : [...LABS].reverse()).map((r) => (
-                          <TableRow key={r.test}>
-                            <TableCell emphasis>{r.test}</TableCell>
-                            <TableCell numeric>{r.result}</TableCell>
-                            <TableCell numeric>{r.range}</TableCell>
-                            <TableCell>
-                              <Badge
-                                tone={r.status === "High" ? "danger" : "success"}
-                                icon={r.status === "High" ? <AlertTriangle /> : <Check />}
-                              >
-                                {r.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        (sort === "asc" ? LABS : [...LABS].reverse()).map(
+                          (r) => (
+                            <TableRow key={r.test}>
+                              <TableCell emphasis>{r.test}</TableCell>
+                              <TableCell numeric>{r.result}</TableCell>
+                              <TableCell numeric>{r.range}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  tone={
+                                    r.status === "High" ? "danger" : "success"
+                                  }
+                                  icon={
+                                    r.status === "High" ? (
+                                      <AlertTriangle />
+                                    ) : (
+                                      <Check />
+                                    )
+                                  }
+                                >
+                                  {r.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        )
                       )}
                     </TableBody>
                   )}
@@ -1096,7 +1446,11 @@ export default function DesignSystemPage() {
                   tone="danger"
                   title="Weight gain above target"
                   action={
-                    <Button size="small" variant="danger" appearance="fill-stroke">
+                    <Button
+                      size="small"
+                      variant="danger"
+                      appearance="fill-stroke"
+                    >
                       Contact care team
                     </Button>
                   }
@@ -1112,8 +1466,9 @@ export default function DesignSystemPage() {
                     Role follows tone.
                   </strong>{" "}
                   Warning and danger use role=&quot;alert&quot; and interrupt a
-                  screen reader; info and success use role=&quot;status&quot; and
-                  wait. A notice that is simply part of the page passes live=
+                  screen reader; info and success use role=&quot;status&quot;
+                  and wait. A notice that is simply part of the page passes
+                  live=
                   {"{false}"} so it is not announced at all.
                 </p>
               </Card>
@@ -1136,12 +1491,20 @@ export default function DesignSystemPage() {
                       { id: "archive", label: "Archive", disabled: true },
                     ]}
                   />
-                  <TabPanel id="overview" value={demoTab} className="pt-inset-md">
+                  <TabPanel
+                    id="overview"
+                    value={demoTab}
+                    className="pt-inset-md"
+                  >
                     <p className="text-body-md text-fg-secondary">
                       Overview panel.
                     </p>
                   </TabPanel>
-                  <TabPanel id="history" value={demoTab} className="pt-inset-md">
+                  <TabPanel
+                    id="history"
+                    value={demoTab}
+                    className="pt-inset-md"
+                  >
                     <p className="text-body-md text-fg-secondary">
                       History panel.
                     </p>
@@ -1239,9 +1602,9 @@ export default function DesignSystemPage() {
                   <strong className="font-semibold text-fg">
                     A Chip is not a Badge.
                   </strong>{" "}
-                  Badge reports state and is a span; Chip is a control the member
-                  operates and is a real button with aria-pressed. They look
-                  alike, which is exactly why they drift together.
+                  Badge reports state and is a span; Chip is a control the
+                  member operates and is a real button with aria-pressed. They
+                  look alike, which is exactly why they drift together.
                 </p>
               </Card>
             </Block>
@@ -1307,11 +1670,35 @@ export default function DesignSystemPage() {
             <Block title="RadioGroup">
               <Row label="Rich options — icon and description">
                 <div className="w-full max-w-md">
-                  <RadioGroup label="How I feel" value={mood} onChange={setMood}>
-                    <RadioCard value="great" title="Great" description="No symptoms today" icon=":)" />
-                    <RadioCard value="good" title="Good" description="Mild tiredness" icon=":)" />
-                    <RadioCard value="okay" title="Okay" description="Some cramping" icon=":|" />
-                    <RadioCard value="tired" title="Tired" description="Needed a long rest" icon="-_-" />
+                  <RadioGroup
+                    label="How I feel"
+                    value={mood}
+                    onChange={setMood}
+                  >
+                    <RadioCard
+                      value="great"
+                      title="Great"
+                      description="No symptoms today"
+                      icon=":)"
+                    />
+                    <RadioCard
+                      value="good"
+                      title="Good"
+                      description="Mild tiredness"
+                      icon=":)"
+                    />
+                    <RadioCard
+                      value="okay"
+                      title="Okay"
+                      description="Some cramping"
+                      icon=":|"
+                    />
+                    <RadioCard
+                      value="tired"
+                      title="Tired"
+                      description="Needed a long rest"
+                      icon="-_-"
+                    />
                   </RadioGroup>
                 </div>
               </Row>
@@ -1325,10 +1712,30 @@ export default function DesignSystemPage() {
                     onChange={setMood}
                     className="grid grid-cols-4 gap-inline-md"
                   >
-                    <RadioCard layout="tile" value="great" title="Great" icon={<Smile />} />
-                    <RadioCard layout="tile" value="good" title="Good" icon={<Smile />} />
-                    <RadioCard layout="tile" value="okay" title="Okay" icon={<Meh />} />
-                    <RadioCard layout="tile" value="tired" title="Tired" icon={<Frown />} />
+                    <RadioCard
+                      layout="tile"
+                      value="great"
+                      title="Great"
+                      icon={<Smile />}
+                    />
+                    <RadioCard
+                      layout="tile"
+                      value="good"
+                      title="Good"
+                      icon={<Smile />}
+                    />
+                    <RadioCard
+                      layout="tile"
+                      value="okay"
+                      title="Okay"
+                      icon={<Meh />}
+                    />
+                    <RadioCard
+                      layout="tile"
+                      value="tired"
+                      title="Tired"
+                      icon={<Frown />}
+                    />
                   </RadioGroup>
                 </div>
               </Row>
@@ -1349,7 +1756,9 @@ export default function DesignSystemPage() {
 
               <Card tone="flat">
                 <p className="text-body-sm text-fg-secondary">
-                  <strong className="font-semibold text-fg">Arrow keys, one tab stop.</strong>{" "}
+                  <strong className="font-semibold text-fg">
+                    Arrow keys, one tab stop.
+                  </strong>{" "}
                   Selection follows focus, which is correct for radios. The
                   option order comes from the DOM at key-press time rather than
                   a ref written during render, so it stays right when options
@@ -1368,7 +1777,9 @@ export default function DesignSystemPage() {
                   icon={<Calendar />}
                   title="No appointments yet"
                   description="Add your next clinic visit and it will show up here."
-                  action={<Button leadingIcon={<Plus />}>Add appointment</Button>}
+                  action={
+                    <Button leadingIcon={<Plus />}>Add appointment</Button>
+                  }
                 />
                 <Card tone="flat" padding="none">
                   <EmptyState
@@ -1377,7 +1788,11 @@ export default function DesignSystemPage() {
                     title="Nothing logged today"
                     description="Your fluid intake for today has not been recorded."
                     action={
-                      <Button variant="primary" appearance="stroke" leadingIcon={<Plus />}>
+                      <Button
+                        variant="primary"
+                        appearance="stroke"
+                        leadingIcon={<Plus />}
+                      >
                         Log intake
                       </Button>
                     }

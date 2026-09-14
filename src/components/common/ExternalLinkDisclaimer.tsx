@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
@@ -31,7 +37,11 @@ function hostnameOf(url: string) {
   }
 }
 
-export function ExternalLinkProvider({ children }: { children: React.ReactNode }) {
+export function ExternalLinkProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
@@ -97,9 +107,7 @@ export function ExternalLinkProvider({ children }: { children: React.ReactNode }
               <p className="text-overline text-fg-muted">
                 {isEs ? "Destino" : "Destination"}
               </p>
-              <p className="text-label-md text-fg">
-                {hostnameOf(pendingUrl)}
-              </p>
+              <p className="text-label-md text-fg">{hostnameOf(pendingUrl)}</p>
               <p className="text-caption break-all text-fg-muted">
                 {pendingUrl}
               </p>
@@ -107,7 +115,9 @@ export function ExternalLinkProvider({ children }: { children: React.ReactNode }
 
             <div className="mt-stack-lg rounded-control border border-warning-line bg-warning-surface p-inset-sm">
               <p className="text-overline text-warning">
-                {isEs ? "Aviso de Enlaces Externos" : "External Links Disclaimer"}
+                {isEs
+                  ? "Aviso de Enlaces Externos"
+                  : "External Links Disclaimer"}
               </p>
               <p className="mt-stack-xs text-caption text-fg-secondary">
                 {isEs
@@ -121,7 +131,6 @@ export function ExternalLinkProvider({ children }: { children: React.ReactNode }
                 ? "En caso de emergencia, llame al 911. Consulte siempre a su equipo de nefrología antes de actuar sobre cualquier información encontrada en línea."
                 : "In an emergency, call 911. Always talk to your nephrology team before acting on information you find online."}
             </p>
-
           </div>
         </Modal>
       ) : null}
@@ -132,7 +141,9 @@ export function ExternalLinkProvider({ children }: { children: React.ReactNode }
 export function useExternalLink() {
   const context = useContext(ExternalLinkContext);
   if (!context) {
-    throw new Error("useExternalLink must be used within an ExternalLinkProvider");
+    throw new Error(
+      "useExternalLink must be used within an ExternalLinkProvider",
+    );
   }
   return context;
 }

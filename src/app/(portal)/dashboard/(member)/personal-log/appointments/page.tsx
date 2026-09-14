@@ -12,13 +12,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import {
-  Button,
-  Card,
-  FormField,
-  Input,
-  Modal,
-} from "@/components/ui";
+import { Button, Card, FormField, Input, Modal } from "@/components/ui";
 
 interface AppointmentItem {
   id: string;
@@ -111,7 +105,10 @@ function IconText({
 }) {
   return (
     <div className="flex items-center gap-inline-md text-body-md">
-      <span aria-hidden="true" className="text-fg-muted [&_svg]:h-icon-small [&_svg]:w-icon-small">
+      <span
+        aria-hidden="true"
+        className="text-fg-muted [&_svg]:h-icon-small [&_svg]:w-icon-small"
+      >
         {icon}
       </span>
       <span className={primary ? "text-fg-brand" : "text-fg"}>{children}</span>
@@ -119,15 +116,12 @@ function IconText({
   );
 }
 
-function AppointmentRow({
-  appointment,
-}: {
-  appointment: AppointmentItem;
-}) {
+function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
   const { language, t } = useLanguage();
 
   const month = language === "ES" ? appointment.monthEs : appointment.monthEn;
-  const weekday = language === "ES" ? appointment.weekdayEs : appointment.weekdayEn;
+  const weekday =
+    language === "ES" ? appointment.weekdayEs : appointment.weekdayEn;
   const title = appointment.titleKey
     ? t(`appointments.${appointment.titleKey}`)
     : appointment.customTitle || "Nephrology";
@@ -156,9 +150,7 @@ function AppointmentRow({
         </div>
 
         <div className="shrink-0">
-          <p className="text-heading-5 text-fg">
-            {t("appointments.reminder")}
-          </p>
+          <p className="text-heading-5 text-fg">{t("appointments.reminder")}</p>
           <div className="mt-stack-sm space-y-stack-xs">
             <IconText icon={<Clock3 className="h-5 w-5" />}>
               {appointment.reminderTime}
@@ -183,11 +175,7 @@ function AppointmentRow({
   );
 }
 
-function UpcomingAppointments({
-  items,
-}: {
-  items: AppointmentItem[];
-}) {
+function UpcomingAppointments({ items }: { items: AppointmentItem[] }) {
   const { t } = useLanguage();
 
   return (
@@ -298,7 +286,8 @@ function NextAppointment() {
 
 export default function AppointmentsPage() {
   const { t } = useLanguage();
-  const [appointments, setAppointments] = useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
+  const [appointments, setAppointments] =
+    useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form state
@@ -321,11 +310,18 @@ export default function AppointmentsPage() {
     if (date) {
       const parsed = new Date(date + "T00:00:00");
       if (!isNaN(parsed.getTime())) {
-        monthEn = parsed.toLocaleString("en-US", { month: "short" }).toUpperCase();
-        monthEs = parsed.toLocaleString("es-ES", { month: "short" }).toUpperCase().replace(".", "");
+        monthEn = parsed
+          .toLocaleString("en-US", { month: "short" })
+          .toUpperCase();
+        monthEs = parsed
+          .toLocaleString("es-ES", { month: "short" })
+          .toUpperCase()
+          .replace(".", "");
         day = String(parsed.getDate());
         weekdayEn = parsed.toLocaleString("en-US", { weekday: "short" });
-        weekdayEs = parsed.toLocaleString("es-ES", { weekday: "short" }).replace(".", "");
+        weekdayEs = parsed
+          .toLocaleString("es-ES", { weekday: "short" })
+          .replace(".", "");
       }
     }
 
@@ -379,7 +375,10 @@ export default function AppointmentsPage() {
         onClose={() => setIsModalOpen(false)}
         title={
           <span className="flex items-center gap-inline-md">
-            <Calendar aria-hidden="true" className="h-icon-big w-icon-big text-fg-brand" />
+            <Calendar
+              aria-hidden="true"
+              className="h-icon-big w-icon-big text-fg-brand"
+            />
             {t("appointments.modalTitle")}
           </span>
         }

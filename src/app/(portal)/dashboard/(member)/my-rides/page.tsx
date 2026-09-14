@@ -1,7 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Phone, Pencil, Plus, Trash2, X, Car, Star, ShieldAlert } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Phone,
+  Pencil,
+  Plus,
+  Trash2,
+  Car,
+  Star,
+  ShieldAlert,
+} from "lucide-react";
 import {
   Badge,
   Button,
@@ -13,6 +21,7 @@ import {
   Modal,
 } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
+import { useClientValue } from "@/lib/storage/useClientValue";
 
 export interface RideContact {
   id: string;
@@ -20,6 +29,25 @@ export interface RideContact {
   phone: string;
   note?: string;
   isPrimary?: boolean;
+}
+
+const RIDES_KEY = "nephroreach_my_rides";
+
+function readStoredRides(): RideContact[] {
+  try {
+    const raw = localStorage.getItem(RIDES_KEY);
+    if (!raw) return DEFAULT_RIDES;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_RIDES;
+    // Older saves put the word "primary" in the note as well as the flag.
+    return parsed.map((r: RideContact) =>
+      r.isPrimary && r.note && /primary/i.test(r.note)
+        ? { ...r, note: undefined }
+        : r,
+    );
+  } catch {
+    return DEFAULT_RIDES;
+  }
 }
 
 const DEFAULT_RIDES: RideContact[] = [
@@ -34,8 +62,7 @@ const DEFAULT_RIDES: RideContact[] = [
 export default function MyRidesPage() {
   const { t } = useLanguage();
 
-  const [rides, setRides] = useState<RideContact[]>(DEFAULT_RIDES);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [rides, setRides] = useClientValue(readStoredRides, DEFAULT_RIDES);
 
   // Modal / Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,32 +75,10 @@ export default function MyRidesPage() {
   const [formIsPrimary, setFormIsPrimary] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Load saved rides from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("nephroreach_my_rides");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.map((r: RideContact) => {
-            if (r.isPrimary && r.note && /primary/i.test(r.note)) {
-              return { ...r, note: undefined };
-            }
-            return r;
-          });
-          setRides(cleaned);
-        }
-      }
-    } catch {
-      // ignore
-    }
-    setIsLoaded(true);
-  }, []);
-
   const saveRides = (newRides: RideContact[]) => {
     setRides(newRides);
     try {
-      localStorage.setItem("nephroreach_my_rides", JSON.stringify(newRides));
+      localStorage.setItem(RIDES_KEY, JSON.stringify(newRides));
     } catch {
       // ignore
     }
@@ -134,7 +139,7 @@ export default function MyRidesPage() {
       updated.push(newRide);
       saveRides(updated);
     } else if (modalMode === "edit" && editingId) {
-      let updated = rides.map((r) => {
+      const updated = rides.map((r) => {
         if (r.id === editingId) {
           return {
             ...r,
@@ -164,7 +169,7 @@ export default function MyRidesPage() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 pb-10">
+    <div className="mx-auto w-full max-w-7xl space-y-8 pb-10">
       {/* Header Section */}
       <div className="flex flex-col gap-inline-lg border-b border-line pb-inset-lg sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-inline-lg">
@@ -185,10 +190,9 @@ export default function MyRidesPage() {
       </div>
 
       {/* Main 2-Column Responsive Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         {/* SECTION 1: Saved Drivers & Personal Transport */}
-        <section className="lg:col-span-7 xl:col-span-7 space-y-4">
-
+        <section className="space-y-4 lg:col-span-7 xl:col-span-7">
           {rides.length === 0 ? (
             <EmptyState
               icon={<Car />}
@@ -201,19 +205,21 @@ export default function MyRidesPage() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {rides.map((ride) => (
                 <Card
                   key={ride.id}
                   as="article"
                   className={`flex flex-col justify-between gap-inline-lg ${
-                    ride.isPrimary ? "border-primary-soft-line bg-primary-soft" : ""
+                    ride.isPrimary
+                      ? "border-primary-soft-line bg-primary-soft"
+                      : ""
                   }`}
                 >
                   {/* Card Top: Driver Info & Action buttons */}
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex min-w-0 items-center gap-3">
                         <span
                           aria-hidden="true"
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-heading-5 ${
@@ -234,15 +240,17 @@ export default function MyRidesPage() {
                                 {t("myRides.primaryBadge")}
                               </Badge>
                             )}
-                            {ride.note && (!ride.isPrimary || !/primary/i.test(ride.note)) && (
-                              <Badge tone="neutral">{ride.note}</Badge>
-                            )}
+                            {ride.note &&
+                              (!ride.isPrimary ||
+                                !/primary/i.test(ride.note)) && (
+                                <Badge tone="neutral">{ride.note}</Badge>
+                              )}
                           </div>
                         </div>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex shrink-0 items-center gap-1">
                         <Button
                           variant="neutral"
                           appearance="fill-stroke"
@@ -293,11 +301,10 @@ export default function MyRidesPage() {
               ))}
             </div>
           )}
-
         </section>
 
         {/* SECTION 2: SEPARATE RIDESHARE APPS SECTION */}
-        <section className="lg:col-span-5 xl:col-span-5 space-y-4">
+        <section className="space-y-4 lg:col-span-5 xl:col-span-5">
           <Card className="space-y-stack-xl">
             <div className="border-b border-line-subtle pb-inset-sm">
               <h2 className="text-heading-4 text-fg">
@@ -310,7 +317,10 @@ export default function MyRidesPage() {
                 href="https://m.uber.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonStyles({ variant: "neutral", fullWidth: true })}
+                className={buttonStyles({
+                  variant: "neutral",
+                  fullWidth: true,
+                })}
               >
                 <Car />
                 <span>{t("myRides.openUber")}</span>
@@ -331,7 +341,10 @@ export default function MyRidesPage() {
 
             <Card tone="sunken" className="space-y-stack-sm text-left">
               <p className="flex items-center gap-inline-xs text-label-md text-fg">
-                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0 text-fg-muted" />
+                <ShieldAlert
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 text-fg-muted"
+                />
                 <span>
                   {t("myRides.disclaimerTitle") ||
                     "Third-Party Transportation Disclaimer:"}
@@ -371,7 +384,11 @@ export default function MyRidesPage() {
           </>
         }
       >
-        <form id="ride-form" onSubmit={handleSubmit} className="space-y-stack-lg">
+        <form
+          id="ride-form"
+          onSubmit={handleSubmit}
+          className="space-y-stack-lg"
+        >
           <FormField
             label={t("myRides.driverNameLabel")}
             required
@@ -401,7 +418,10 @@ export default function MyRidesPage() {
             )}
           </FormField>
 
-          <FormField label={t("myRides.relationshipLabel")} optionalLabel="optional">
+          <FormField
+            label={t("myRides.relationshipLabel")}
+            optionalLabel="optional"
+          >
             {(props) => (
               <Input
                 {...props}

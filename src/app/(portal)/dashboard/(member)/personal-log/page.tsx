@@ -223,7 +223,9 @@ export default function PersonalLogPage() {
             <span
               className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}
             >
-              <tile.icon className={`h-icon-big w-icon-big ${tile.iconClass}`} />
+              <tile.icon
+                className={`h-icon-big w-icon-big ${tile.iconClass}`}
+              />
             </span>
             <span className="text-center text-heading-5 text-fg">
               {t(`personalLogHub.tiles.${tile.key}`)}

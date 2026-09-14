@@ -98,7 +98,10 @@ function JourneyHero({
             key={stat.label}
             className="flex items-center gap-inline-md rounded-control border border-line bg-surface-sunken px-inset-sm py-inset-xs text-body-sm text-fg-muted"
           >
-            <stat.icon aria-hidden="true" className="h-4 w-4 shrink-0 text-fg-brand" />
+            <stat.icon
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-fg-brand"
+            />
             <span className="text-label-md text-fg">{stat.value}</span>
             <span>{stat.label}</span>
           </li>
@@ -145,7 +148,10 @@ function JourneyHero({
 
         <Link
           href="/dashboard/education-center/details"
-          className={buttonStyles({ variant: "neutral", appearance: "fill-stroke" })}
+          className={buttonStyles({
+            variant: "neutral",
+            appearance: "fill-stroke",
+          })}
         >
           <LayoutList aria-hidden="true" />
           {j?.viewDetails || "View Details"}
@@ -196,7 +202,12 @@ export function DayCard({
         </span>
 
         {isComplete && (
-          <Badge tone="success" variant="solid" className="absolute top-2 right-2" icon={<Check aria-hidden="true" />}>
+          <Badge
+            tone="success"
+            variant="solid"
+            className="absolute top-2 right-2"
+            icon={<Check aria-hidden="true" />}
+          >
             {j?.completed || "Completed"}
           </Badge>
         )}
@@ -258,12 +269,8 @@ export function DayCard({
 }
 
 export default function EducationCenterPage() {
-  const {
-    completedCount,
-    overallPercent,
-    nextDay,
-    hasStarted,
-  } = useJourneyProgress();
+  const { completedCount, overallPercent, nextDay, hasStarted } =
+    useJourneyProgress();
 
   return (
     <div className="space-y-stack-xl">

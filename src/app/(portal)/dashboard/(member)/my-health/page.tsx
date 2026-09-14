@@ -282,7 +282,11 @@ function SectionHeader({
           {description}
         </p>
       </div>
-      <Button onClick={onAddClick} leadingIcon={<Plus aria-hidden="true" />} className="shrink-0">
+      <Button
+        onClick={onAddClick}
+        leadingIcon={<Plus aria-hidden="true" />}
+        className="shrink-0"
+      >
         {buttonLabel}
       </Button>
     </div>
@@ -333,8 +337,7 @@ function AllergiesTable({
     h?.allergies?.headers?.actions || "Actions",
   ];
 
-  const sampleName =
-    h?.allergies?.sampleName || "Introduction to Wellness";
+  const sampleName = h?.allergies?.sampleName || "Introduction to Wellness";
   const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
   return (
@@ -416,8 +419,7 @@ function MedicalHistoryTable({
   };
 
   const getStatusName = (status: "Current" | "Past") => {
-    if (status === "Current")
-      return h?.history?.statuses?.current || "Current";
+    if (status === "Current") return h?.history?.statuses?.current || "Current";
     return h?.history?.statuses?.past || "Past";
   };
 
@@ -549,23 +551,32 @@ function AllergyModal({
 
   const initialName = initialData?.name || (initialData ? sampleName : "");
   const initialReaction = initialData
-    ? (initialData.reactionKey ? getReaction(initialData.reactionKey, initialData.reactionDefault) : initialData.reactionDefault)
+    ? initialData.reactionKey
+      ? getReaction(initialData.reactionKey, initialData.reactionDefault)
+      : initialData.reactionDefault
     : "";
   const initialNotes = initialData
-    ? (initialData.notes ?? (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
+    ? (initialData.notes ??
+      (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
     : "";
 
   const [name, setName] = React.useState(initialName);
-  const [type, setType] = React.useState<AllergyType>(initialData?.type || "Medication");
+  const [type, setType] = React.useState<AllergyType>(
+    initialData?.type || "Medication",
+  );
   const [reaction, setReaction] = React.useState(initialReaction);
-  const [severity, setSeverity] = React.useState<AllergySeverity>(initialData?.severity || "Moderate");
+  const [severity, setSeverity] = React.useState<AllergySeverity>(
+    initialData?.severity || "Moderate",
+  );
   const [notes, setNotes] = React.useState(initialNotes);
   const [error, setError] = React.useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError(isEs ? "Ingrese el nombre de la alergia." : "Enter an allergy name.");
+      setError(
+        isEs ? "Ingrese el nombre de la alergia." : "Enter an allergy name.",
+      );
       return;
     }
     if (!reaction.trim()) {
@@ -585,11 +596,15 @@ function AllergyModal({
   };
 
   const title = initialData
-    ? (isEs ? "Editar Alergia" : "Edit Allergy")
-    : (h?.allergies?.addBtn || "Add Allergy");
+    ? isEs
+      ? "Editar Alergia"
+      : "Edit Allergy"
+    : h?.allergies?.addBtn || "Add Allergy";
   const submitLabel = initialData
-    ? (isEs ? "Guardar Cambios" : "Save Changes")
-    : (h?.allergies?.addBtn || "Add Allergy");
+    ? isEs
+      ? "Guardar Cambios"
+      : "Save Changes"
+    : h?.allergies?.addBtn || "Add Allergy";
 
   return (
     <ModalShell
@@ -629,7 +644,9 @@ function AllergyModal({
                 <option value="Medication">
                   {h?.allergies?.types?.medication || "Medication"}
                 </option>
-                <option value="Food">{h?.allergies?.types?.food || "Food"}</option>
+                <option value="Food">
+                  {h?.allergies?.types?.food || "Food"}
+                </option>
                 <option value="Environmental">
                   {h?.allergies?.types?.environmental || "Environmental"}
                 </option>
@@ -660,13 +677,18 @@ function AllergyModal({
           </FormField>
         </div>
 
-        <FormField label={h?.allergies?.headers?.reaction || "Reaction"} required>
+        <FormField
+          label={h?.allergies?.headers?.reaction || "Reaction"}
+          required
+        >
           {(props) => (
             <Input
               {...props}
               value={reaction}
               onChange={(event) => setReaction(event.target.value)}
-              placeholder={isEs ? "ej. Sarpullido, urticaria" : "e.g. Rash, Hives"}
+              placeholder={
+                isEs ? "ej. Sarpullido, urticaria" : "e.g. Rash, Hives"
+              }
             />
           )}
         </FormField>
@@ -723,15 +745,20 @@ function ConditionModal({
   };
 
   const initialCondition = initialData
-    ? (initialData.conditionKey ? getConditionName(initialData.conditionKey, initialData.conditionDefault) : initialData.conditionDefault)
+    ? initialData.conditionKey
+      ? getConditionName(initialData.conditionKey, initialData.conditionDefault)
+      : initialData.conditionDefault
     : "";
   const initialDiagnosed = parseToDateInput(initialData?.diagnosed);
   const initialNotes = initialData
-    ? (initialData.notes ?? (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
+    ? (initialData.notes ??
+      (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
     : "";
 
   const [condition, setCondition] = React.useState(initialCondition);
-  const [status, setStatus] = React.useState<ConditionStatus>(initialData?.status || "Current");
+  const [status, setStatus] = React.useState<ConditionStatus>(
+    initialData?.status || "Current",
+  );
   const [diagnosed, setDiagnosed] = React.useState(initialDiagnosed);
   const [notes, setNotes] = React.useState(initialNotes);
   const [error, setError] = React.useState("");
@@ -762,11 +789,15 @@ function ConditionModal({
   };
 
   const title = initialData
-    ? (isEs ? "Editar Condición" : "Edit Condition")
-    : (h?.history?.addBtn || "Add Condition");
+    ? isEs
+      ? "Editar Condición"
+      : "Edit Condition"
+    : h?.history?.addBtn || "Add Condition";
   const submitLabel = initialData
-    ? (isEs ? "Guardar Cambios" : "Save Changes")
-    : (h?.history?.addBtn || "Add Condition");
+    ? isEs
+      ? "Guardar Cambios"
+      : "Save Changes"
+    : h?.history?.addBtn || "Add Condition";
 
   return (
     <ModalShell
@@ -855,16 +886,25 @@ export default function MyHealthPage() {
   const h = dictionary?.myHealth;
 
   const [allergyRows, setAllergyRows] = React.useState<AllergyRow[]>(() =>
-    rawAllergyRows.map((row, index) => ({ ...row, id: `allergy-seed-${index}` })),
+    rawAllergyRows.map((row, index) => ({
+      ...row,
+      id: `allergy-seed-${index}`,
+    })),
   );
   const [historyRows, setHistoryRows] = React.useState<HistoryRow[]>(() =>
-    rawHistoryRows.map((row, index) => ({ ...row, id: `history-seed-${index}` })),
+    rawHistoryRows.map((row, index) => ({
+      ...row,
+      id: `history-seed-${index}`,
+    })),
   );
 
   const [isAllergyModalOpen, setIsAllergyModalOpen] = React.useState(false);
   const [isConditionModalOpen, setIsConditionModalOpen] = React.useState(false);
-  const [editingAllergy, setEditingAllergy] = React.useState<AllergyRow | null>(null);
-  const [editingCondition, setEditingCondition] = React.useState<HistoryRow | null>(null);
+  const [editingAllergy, setEditingAllergy] = React.useState<AllergyRow | null>(
+    null,
+  );
+  const [editingCondition, setEditingCondition] =
+    React.useState<HistoryRow | null>(null);
 
   const handleOpenAddAllergy = () => {
     setEditingAllergy(null);
@@ -883,10 +923,15 @@ export default function MyHealthPage() {
   const handleSaveAllergy = (row: Omit<AllergyRow, "id">, id?: string) => {
     if (id) {
       setAllergyRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...row, reactionKey: undefined } : r)),
+        prev.map((r) =>
+          r.id === id ? { ...r, ...row, reactionKey: undefined } : r,
+        ),
       );
     } else {
-      setAllergyRows((prev) => [{ ...row, id: `allergy-${Date.now()}` }, ...prev]);
+      setAllergyRows((prev) => [
+        { ...row, id: `allergy-${Date.now()}` },
+        ...prev,
+      ]);
     }
     setIsAllergyModalOpen(false);
     setEditingAllergy(null);
@@ -909,10 +954,15 @@ export default function MyHealthPage() {
   const handleSaveCondition = (row: Omit<HistoryRow, "id">, id?: string) => {
     if (id) {
       setHistoryRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...row, conditionKey: undefined } : r)),
+        prev.map((r) =>
+          r.id === id ? { ...r, ...row, conditionKey: undefined } : r,
+        ),
       );
     } else {
-      setHistoryRows((prev) => [{ ...row, id: `history-${Date.now()}` }, ...prev]);
+      setHistoryRows((prev) => [
+        { ...row, id: `history-${Date.now()}` },
+        ...prev,
+      ]);
     }
     setIsConditionModalOpen(false);
     setEditingCondition(null);

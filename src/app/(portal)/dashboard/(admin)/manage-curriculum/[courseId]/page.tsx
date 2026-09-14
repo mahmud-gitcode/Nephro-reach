@@ -88,7 +88,7 @@ function ModuleSection({
     <section className="rounded-[14px] border border-line bg-surface shadow-card">
       <header className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-fg-brand">
+          <p className="text-[11px] font-bold tracking-wider text-fg-brand uppercase">
             Module {index + 1}
           </p>
           <h2 className="truncate text-lg font-semibold text-fg">
@@ -107,7 +107,7 @@ function ModuleSection({
             type="button"
             onClick={onEditModule}
             aria-label={`Rename ${courseModule.titleEn}`}
-            className="flex h-9 w-9 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
           >
             <Edit3 className="h-4 w-4" />
           </button>
@@ -115,14 +115,14 @@ function ModuleSection({
             type="button"
             onClick={onDeleteModule}
             aria-label={`Delete ${courseModule.titleEn}`}
-            className="flex h-9 w-9 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
           >
             <Trash2 className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={onAddClass}
-            className="flex h-9 items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line cursor-pointer"
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line"
           >
             <Plus className="h-4 w-4" />
             Add Class
@@ -137,112 +137,112 @@ function ModuleSection({
               ? "No classes in this module yet."
               : "No classes of that type in this module."}
           </p>
-          ) : (
-            <div className="overflow-x-auto rounded-control border border-line">
-              <table className="w-full min-w-[860px] border-collapse text-sm">
-                <thead>
-                  <tr className="bg-surface-sunken text-left">
-                    {[
-                      "Class",
-                      "Type",
-                      "Duration",
-                      "Transcript",
-                      "Documents",
-                      "Actions",
-                    ].map((header) => (
-                      <th
-                        key={header}
-                        className={`h-[55px] border-b border-line px-3 font-semibold tracking-[0.07px] text-fg ${
-                          header === "Actions" ? "text-center" : ""
-                        }`}
-                      >
-                        <span className="block border-l border-line pl-3 leading-5 first:border-l-0">
-                          {header}
+        ) : (
+          <div className="overflow-x-auto rounded-control border border-line">
+            <table className="w-full min-w-[860px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-surface-sunken text-left">
+                  {[
+                    "Class",
+                    "Type",
+                    "Duration",
+                    "Transcript",
+                    "Documents",
+                    "Actions",
+                  ].map((header) => (
+                    <th
+                      key={header}
+                      className={`h-[55px] border-b border-line px-3 font-semibold tracking-[0.07px] text-fg ${
+                        header === "Actions" ? "text-center" : ""
+                      }`}
+                    >
+                      <span className="block border-l border-line pl-3 leading-5 first:border-l-0">
+                        {header}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleClasses.map((courseClass, classIndex) => {
+                  const KindIcon = KIND_ICON[courseClass.kind];
+                  return (
+                    <tr
+                      key={courseClass.id}
+                      className="border-b border-dashed border-line last:border-0"
+                    >
+                      <td className="h-[62px] px-3 py-2">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-cat-4-soft text-label-sm text-fg">
+                            {classIndex + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate leading-5 font-semibold text-fg-secondary">
+                              {courseClass.titleEn}
+                            </p>
+                            <p className="truncate text-xs leading-[18px] text-fg-muted">
+                              {courseClass.mediaSrc || "No media path set"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="h-[62px] px-3 py-2">
+                        <span
+                          className={`inline-flex h-6 items-center gap-1.5 rounded px-2 text-xs font-semibold ${KIND_PILL[courseClass.kind]}`}
+                        >
+                          <KindIcon className="h-3.5 w-3.5" />
+                          {KIND_LABEL[courseClass.kind]}
                         </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleClasses.map((courseClass, classIndex) => {
-                    const KindIcon = KIND_ICON[courseClass.kind];
-                    return (
-                      <tr
-                        key={courseClass.id}
-                        className="border-b border-dashed border-line last:border-0"
-                      >
-                        <td className="h-[62px] px-3 py-2">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-cat-4-soft text-label-sm text-fg">
-                              {classIndex + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold leading-5 text-fg-secondary">
-                                {courseClass.titleEn}
-                              </p>
-                              <p className="truncate text-xs leading-[18px] text-fg-muted">
-                                {courseClass.mediaSrc || "No media path set"}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+                      </td>
 
-                        <td className="h-[62px] px-3 py-2">
-                          <span
-                            className={`inline-flex h-6 items-center gap-1.5 rounded px-2 text-xs font-semibold ${KIND_PILL[courseClass.kind]}`}
+                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
+                        <span className="flex items-center gap-2">
+                          <Clock3 className="h-4 w-4 text-fg-muted" />
+                          {courseClass.durationMinutes} min
+                        </span>
+                      </td>
+
+                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
+                        <span className="flex items-center gap-2">
+                          <Captions className="h-4 w-4 text-fg-muted" />
+                          {courseClass.transcript.length} lines
+                        </span>
+                      </td>
+
+                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
+                        <span className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-fg-muted" />
+                          {courseClass.documents.length}
+                        </span>
+                      </td>
+
+                      <td className="h-[62px] px-3 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onEditClass(courseClass)}
+                            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-control px-2.5 text-xs font-bold text-fg transition-colors hover:bg-surface-sunken"
                           >
-                            <KindIcon className="h-3.5 w-3.5" />
-                            {KIND_LABEL[courseClass.kind]}
-                          </span>
-                        </td>
-
-                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                          <span className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4 text-fg-muted" />
-                            {courseClass.durationMinutes} min
-                          </span>
-                        </td>
-
-                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                          <span className="flex items-center gap-2">
-                            <Captions className="h-4 w-4 text-fg-muted" />
-                            {courseClass.transcript.length} lines
-                          </span>
-                        </td>
-
-                        <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                          <span className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-fg-muted" />
-                            {courseClass.documents.length}
-                          </span>
-                        </td>
-
-                        <td className="h-[62px] px-3 py-2">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => onEditClass(courseClass)}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-control px-2.5 text-xs font-bold text-fg transition-colors hover:bg-surface-sunken cursor-pointer"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteClass(courseClass.id)}
-                              aria-label={`Delete ${courseClass.titleEn}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            <Edit3 className="h-4 w-4" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteClass(courseClass.id)}
+                            aria-label={`Delete ${courseClass.titleEn}`}
+                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>
@@ -271,16 +271,12 @@ export default function ManageCoursePage() {
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<"all" | CourseClassKind>(
-    "all",
-  );
+  const [typeFilter, setTypeFilter] = useState<"all" | CourseClassKind>("all");
 
   if (!course) {
     return (
       <div className="rounded-[14px] border border-line bg-surface p-8 text-center shadow-card">
-        <h1 className="text-xl font-semibold text-fg">
-          Course not found
-        </h1>
+        <h1 className="text-xl font-semibold text-fg">Course not found</h1>
         <p className="mt-2 text-sm text-fg-muted">
           It may have been deleted from this browser.
         </p>
@@ -355,7 +351,7 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setEditingCourse(true)}
-              className="flex items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <Edit3 className="h-4 w-4 text-fg-muted" />
               Edit course
@@ -363,7 +359,7 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setAddingModule(true)}
-              className="flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
               Add Module
@@ -379,31 +375,31 @@ export default function ManageCoursePage() {
             aria-label="Modules"
             className="flex gap-2.5 overflow-x-auto pb-1"
           >
-          {course.modules.map((courseModule, index) => (
-            <button
-              key={courseModule.id}
-              type="button"
-              role="tab"
-              aria-selected={courseModule.id === selectedModule?.id}
-              onClick={() => setActiveModuleId(courseModule.id)}
-              className={`flex h-[38px] shrink-0 items-center gap-2 rounded-[10px] border px-4 text-sm font-medium transition-colors cursor-pointer ${
-                courseModule.id === selectedModule?.id
-                  ? "border-primary-edge bg-primary-solid font-bold text-primary-on-solid shadow-card"
-                  : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
-              }`}
-            >
-              <span>Module {index + 1}</span>
-              <span
-                className={`rounded-pill px-1.5 py-0.5 text-[11px] font-bold ${
+            {course.modules.map((courseModule, index) => (
+              <button
+                key={courseModule.id}
+                type="button"
+                role="tab"
+                aria-selected={courseModule.id === selectedModule?.id}
+                onClick={() => setActiveModuleId(courseModule.id)}
+                className={`flex h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-[10px] border px-4 text-sm font-medium transition-colors ${
                   courseModule.id === selectedModule?.id
-                    ? "bg-surface/20 text-fg-inverse"
-                    : "bg-surface-sunken text-fg-muted"
+                    ? "border-primary-edge bg-primary-solid font-bold text-primary-on-solid shadow-card"
+                    : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
                 }`}
               >
-                {courseModule.classes.length}
-              </span>
-            </button>
-          ))}
+                <span>Module {index + 1}</span>
+                <span
+                  className={`rounded-pill px-1.5 py-0.5 text-[11px] font-bold ${
+                    courseModule.id === selectedModule?.id
+                      ? "bg-surface/20 text-fg-inverse"
+                      : "bg-surface-sunken text-fg-muted"
+                  }`}
+                >
+                  {courseModule.classes.length}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -417,7 +413,7 @@ export default function ManageCoursePage() {
               onChange={(event) =>
                 setTypeFilter(event.target.value as "all" | CourseClassKind)
               }
-              className="h-[38px] rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-fg-secondary outline-none transition-colors hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring cursor-pointer"
+              className="h-[38px] cursor-pointer rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring"
             >
               <option value="all">All Types</option>
               <option value="video">Video</option>

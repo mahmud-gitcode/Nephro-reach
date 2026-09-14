@@ -167,7 +167,10 @@ function SectionHeading({
         {Icon ? (
           <Icon className="h-icon-small w-icon-small shrink-0 text-fg-brand" />
         ) : (
-          <span aria-hidden="true" className="h-6 w-1 rounded-pill bg-primary-solid" />
+          <span
+            aria-hidden="true"
+            className="h-6 w-1 rounded-pill bg-primary-solid"
+          />
         )}
         <h2 className="truncate text-heading-5 text-fg">{title}</h2>
       </div>
@@ -186,7 +189,11 @@ function LabSectionCard({ section }: { section: LabSection }) {
 
   return (
     <Card as="section" padding="none" className="overflow-hidden">
-      <SectionHeading title={section.title} icon={section.icon} metricCount={section.metricCount} />
+      <SectionHeading
+        title={section.title}
+        icon={section.icon}
+        metricCount={section.metricCount}
+      />
       <div className={`grid gap-stack-lg p-inset-md ${columns}`}>
         {section.fields.map((field) => (
           <TextField key={`${section.title}-${field.label}`} {...field} />
@@ -217,17 +224,27 @@ export default function AddBloodResultsPage() {
             <ArrowLeft />
             Back to Blood Results
           </Link>
-          <h1 className="mt-stack-lg text-heading-1 text-fg">Add Blood Results</h1>
+          <h1 className="mt-stack-lg text-heading-1 text-fg">
+            Add Blood Results
+          </h1>
           <p className="mt-stack-xs measure text-body-lg text-fg-secondary">
             Enter your lab results to track your kidney health trends and
             monitor treatment efficacy.
           </p>
         </div>
         <div className="flex flex-wrap gap-inline-md">
-          <Button variant="neutral" appearance="fill-stroke" leadingIcon={<ScanLine />}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            leadingIcon={<ScanLine />}
+          >
             Scan Document
           </Button>
-          <Button variant="neutral" appearance="fill-stroke" leadingIcon={<Upload />}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            leadingIcon={<Upload />}
+          >
             Upload PDF
           </Button>
         </div>
@@ -235,7 +252,10 @@ export default function AddBloodResultsPage() {
 
       <Card as="section" tone="sunken" padding="small">
         <div className="mb-stack-md flex items-center gap-inline-md">
-          <span aria-hidden="true" className="h-6 w-1 rounded-pill bg-primary-solid" />
+          <span
+            aria-hidden="true"
+            className="h-6 w-1 rounded-pill bg-primary-solid"
+          />
           <h2 className="text-heading-3 text-fg">General Information</h2>
         </div>
         <div className="grid grid-cols-1 gap-stack-lg md:grid-cols-2">
@@ -266,7 +286,10 @@ export default function AddBloodResultsPage() {
 
       <Card as="section">
         <div className="mb-stack-md flex items-center gap-inline-md">
-          <FileText aria-hidden="true" className="h-icon-big w-icon-big text-fg-brand" />
+          <FileText
+            aria-hidden="true"
+            className="h-icon-big w-icon-big text-fg-brand"
+          />
           <h2 className="text-heading-3 text-fg">Clinical Notes</h2>
         </div>
         <FormField label="Clinical notes">

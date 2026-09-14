@@ -1,7 +1,12 @@
 "use client";
 
 import React from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./Button";
 
@@ -106,7 +111,7 @@ export function TableHeaderCell({
               : "none"
       }
       className={cn(
-        "text-overline border-b border-line px-inset-sm py-inset-xs text-fg-muted",
+        "border-b border-line px-inset-sm py-inset-xs text-overline text-fg-muted",
         numeric && "text-right",
         className,
       )}
@@ -129,7 +134,10 @@ export function TableHeaderCell({
           ) : sortDirection === "desc" ? (
             <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
           ) : (
-            <ChevronDown className="h-3.5 w-3.5 opacity-30" aria-hidden="true" />
+            <ChevronDown
+              className="h-3.5 w-3.5 opacity-30"
+              aria-hidden="true"
+            />
           )}
         </button>
       ) : (
@@ -157,7 +165,7 @@ export function TableCell({
       className={cn(
         "px-inset-sm py-inset-sm align-middle",
         numeric
-          ? "text-metric-sm text-right text-fg"
+          ? "text-right text-metric-sm text-fg"
           : emphasis
             ? "text-body-sm font-semibold text-fg"
             : "text-body-sm text-fg-secondary",

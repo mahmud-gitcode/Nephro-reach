@@ -13,7 +13,9 @@ export default function LandingAnimationObserver() {
     // Fallback if IntersectionObserver not available
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       document
-        .querySelectorAll(".landing-reveal, .landing-reveal-left, .landing-reveal-right")
+        .querySelectorAll(
+          ".landing-reveal, .landing-reveal-left, .landing-reveal-right",
+        )
         .forEach((el) => el.classList.add("is-revealed"));
       return;
     }
@@ -34,7 +36,7 @@ export default function LandingAnimationObserver() {
                 "delay-225",
                 "delay-300",
                 "delay-375",
-                "delay-450"
+                "delay-450",
               );
             }, 800);
           }
@@ -43,11 +45,11 @@ export default function LandingAnimationObserver() {
       {
         threshold: 0.05,
         rootMargin: "50px 0px 0px 0px",
-      }
+      },
     );
 
     const elements = document.querySelectorAll(
-      ".landing-reveal, .landing-reveal-left, .landing-reveal-right"
+      ".landing-reveal, .landing-reveal-left, .landing-reveal-right",
     );
     elements.forEach((el) => observer.observe(el));
 
@@ -55,7 +57,7 @@ export default function LandingAnimationObserver() {
     const timer = setTimeout(() => {
       document
         .querySelectorAll(
-          ".landing-reveal:not(.is-revealed), .landing-reveal-left:not(.is-revealed), .landing-reveal-right:not(.is-revealed)"
+          ".landing-reveal:not(.is-revealed), .landing-reveal-left:not(.is-revealed), .landing-reveal-right:not(.is-revealed)",
         )
         .forEach((el) => el.classList.add("is-revealed"));
     }, 450);

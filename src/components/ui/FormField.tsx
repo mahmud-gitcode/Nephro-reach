@@ -92,7 +92,10 @@ export function FormField({
           role="alert"
           className="flex items-start gap-inline-xs text-caption text-danger"
         >
-          <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <AlertCircle
+            className="mt-px h-3.5 w-3.5 shrink-0"
+            aria-hidden="true"
+          />
           {error}
         </p>
       ) : hint ? (

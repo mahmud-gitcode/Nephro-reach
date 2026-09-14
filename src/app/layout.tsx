@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${inter.className} h-full antialiased`}
     >
-      <body className={`${inter.className} min-h-full flex flex-col`}>
+      <body className={`${inter.className} flex min-h-full flex-col`}>
         <LanguageProvider>
           <AuthProvider>
             <LandingAnimationObserver />

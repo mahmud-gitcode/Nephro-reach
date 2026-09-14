@@ -62,7 +62,10 @@ function NewEntryModal({
     { key: "Positive", label: dj?.modal?.moods?.positive || "Positive" },
     { key: "Calm", label: dj?.modal?.moods?.calm || "Calm" },
     { key: "Reflective", label: dj?.modal?.moods?.reflective || "Reflective" },
-    { key: "Challenging", label: dj?.modal?.moods?.challenging || "Challenging" },
+    {
+      key: "Challenging",
+      label: dj?.modal?.moods?.challenging || "Challenging",
+    },
     { key: "Anxious", label: dj?.modal?.moods?.anxious || "Anxious" },
   ];
 
@@ -102,7 +105,7 @@ function NewEntryModal({
     >
       <div className="space-y-stack-lg">
         <fieldset>
-          <legend className="text-label-lg mb-stack-sm text-fg">
+          <legend className="mb-stack-sm text-label-lg text-fg">
             {dj?.modal?.moodLabel || "Mood (optional)"}
           </legend>
           <ChipGroup label={dj?.modal?.moodLabel || "Mood"}>
@@ -125,7 +128,9 @@ function NewEntryModal({
               rows={4}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder={dj?.modal?.placeholder || "Write your thoughts here..."}
+              placeholder={
+                dj?.modal?.placeholder || "Write your thoughts here..."
+              }
             />
           )}
         </FormField>
@@ -184,7 +189,9 @@ function JournalCard({
       </div>
 
       <div className="mt-stack-md h-px bg-line" />
-      <p className="mt-stack-md text-body-md text-fg-secondary">{entry.preview}</p>
+      <p className="mt-stack-md text-body-md text-fg-secondary">
+        {entry.preview}
+      </p>
       {open && (
         <p
           id={`entry-${entry.id}-details`}
@@ -203,22 +210,24 @@ export default function DialysisJournalPage() {
   const dj = dictionary?.dialysisJournal;
   const [modalOpen, setModalOpen] = useState(false);
 
-  const [entries, setEntries] = useState(() =>
+  /* The seeded entries come from the dictionary, so they change with the
+     language. That was being copied into state and re-synced by an effect;
+     deriving instead means switching language cannot leave stale copy on
+     screen. `added` holds entries the member wrote this session. */
+  const seeded =
     dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0
       ? dj.entries
-      : defaultJournalEntries
-  );
+      : defaultJournalEntries;
+  const [added, setAdded] = useState<typeof defaultJournalEntries>([]);
+  const entries = [...added, ...seeded];
 
-  React.useEffect(() => {
-    if (dj?.entries && Array.isArray(dj.entries) && dj.entries.length > 0) {
-      setEntries(dj.entries);
-    }
-  }, [dj?.entries]);
-
-  const handleAddEntry = (newEntryData: { preview: string; details: string }) => {
+  const handleAddEntry = (newEntryData: {
+    preview: string;
+    details: string;
+  }) => {
     const formattedDate = new Date().toLocaleDateString(
       language === "ES" ? "es-ES" : "en-US",
-      { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+      { weekday: "long", year: "numeric", month: "long", day: "numeric" },
     );
     const newEntry = {
       id: String(Date.now()),
@@ -226,7 +235,7 @@ export default function DialysisJournalPage() {
       preview: newEntryData.preview,
       details: newEntryData.details,
     };
-    setEntries((prev) => [newEntry, ...prev]);
+    setAdded((prev) => [newEntry, ...prev]);
   };
 
   const greeting = (() => {

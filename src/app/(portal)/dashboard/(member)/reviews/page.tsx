@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -28,6 +28,11 @@ import {
   FormField,
   Textarea,
 } from "@/components/ui";
+import { useClientValue } from "@/lib/storage/useClientValue";
+
+/* See the note in the admin page: a stable reference for the pre-hydration
+   value, so it does not change identity on every render. */
+const NO_REVIEWS: Review[] = [];
 
 export default function UserReviewsPage() {
   const { user } = useAuth();
@@ -38,37 +43,38 @@ export default function UserReviewsPage() {
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [role, setRole] = useState<string>("Dialysis Member");
   const [comment, setComment] = useState<string>("");
-  const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
   const userEmail = user?.email || "user@nephroreach.com";
+
+  const readMyReviews = useCallback(
+    () => getUserReviews(userEmail),
+    [userEmail],
+  );
+  const [myReviews, , refresh] = useClientValue(readMyReviews, NO_REVIEWS);
   const userName = user?.name || "Charles Xavier";
 
   const roleOptions = [
-    { key: "Dialysis Member", label: isEs ? "Miembro en Diálisis" : "Dialysis Member" },
-    { key: "Family Caregiver", label: isEs ? "Cuidador Familiar" : "Family Caregiver" },
+    {
+      key: "Dialysis Member",
+      label: isEs ? "Miembro en Diálisis" : "Dialysis Member",
+    },
+    {
+      key: "Family Caregiver",
+      label: isEs ? "Cuidador Familiar" : "Family Caregiver",
+    },
     { key: "CKD Learner", label: isEs ? "Estudiante de ERC" : "CKD Learner" },
   ];
 
-  const loadUserReviews = () => {
-    const list = getUserReviews(userEmail);
-    setMyReviews(list);
-  };
-
+  /* The effect now only subscribes; the first read happens during render. */
   useEffect(() => {
-    loadUserReviews();
-
-    const handleReviewsChange = () => {
-      loadUserReviews();
-    };
-
-    window.addEventListener(REVIEWS_EVENT, handleReviewsChange);
-    window.addEventListener("storage", handleReviewsChange);
+    window.addEventListener(REVIEWS_EVENT, refresh);
+    window.addEventListener("storage", refresh);
     return () => {
-      window.removeEventListener(REVIEWS_EVENT, handleReviewsChange);
-      window.removeEventListener("storage", handleReviewsChange);
+      window.removeEventListener(REVIEWS_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
     };
-  }, [userEmail]);
+  }, [refresh]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +160,7 @@ export default function UserReviewsPage() {
           </fieldset>
 
           <fieldset>
-            <legend className="text-overline mb-stack-sm text-fg-muted">
+            <legend className="mb-stack-sm text-overline text-fg-muted">
               {isEs ? "Su Rol" : "Your Role"}
             </legend>
             <ChipGroup label={isEs ? "Su Rol" : "Your Role"}>
@@ -170,10 +176,7 @@ export default function UserReviewsPage() {
             </ChipGroup>
           </fieldset>
 
-          <FormField
-            label={isEs ? "Su Mensaje" : "Your Review"}
-            required
-          >
+          <FormField label={isEs ? "Su Mensaje" : "Your Review"} required>
             {(props) => (
               <Textarea
                 {...props}
@@ -269,7 +272,9 @@ export default function UserReviewsPage() {
                     tone="danger"
                     live={false}
                     icon={<AlertCircle />}
-                    title={isEs ? "Comentario del Administrador:" : "Admin Feedback:"}
+                    title={
+                      isEs ? "Comentario del Administrador:" : "Admin Feedback:"
+                    }
                     className="mt-stack-md"
                   >
                     {rev.adminFeedback}

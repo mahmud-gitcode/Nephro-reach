@@ -3,16 +3,18 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Plus, X } from "lucide-react";
-
-import { GiKidneys } from "react-icons/gi";
 import {
-  FaFlask,
-  FaBone,
-  FaDroplet,
-  FaAppleWhole,
-  FaHeartPulse,
-} from "react-icons/fa6";
+  Apple,
+  Bone,
+  CheckCircle2,
+  Droplet,
+  FlaskConical,
+  HeartPulse,
+  Plus,
+  X,
+} from "lucide-react";
+import { Kidneys } from "@/components/icons/Kidneys";
+
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -52,7 +54,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "kidney-function",
     name: "KIDNEY FUNCTION",
-    icon: GiKidneys,
+    icon: Kidneys,
     tests: [
       {
         id: "bun",
@@ -80,7 +82,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "electrolytes",
     name: "ELECTROLYTES",
-    icon: FaFlask,
+    icon: FlaskConical,
     tests: [
       {
         id: "sodium",
@@ -115,7 +117,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "mineral-bone",
     name: "MINERAL & BONE",
-    icon: FaBone,
+    icon: Bone,
     tests: [
       {
         id: "calcium",
@@ -150,7 +152,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "blood-counts",
     name: "BLOOD COUNTS",
-    icon: FaDroplet,
+    icon: Droplet,
     tests: [
       {
         id: "hemoglobin",
@@ -185,7 +187,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "nutrition",
     name: "NUTRITION",
-    icon: FaAppleWhole,
+    icon: Apple,
     tests: [
       {
         id: "albumin",
@@ -206,7 +208,7 @@ const designCategories: CategoryGroup[] = [
   {
     id: "dialysis-adequacy",
     name: "DIALYSIS ADEQUACY",
-    icon: FaHeartPulse,
+    icon: HeartPulse,
     tests: [
       {
         id: "ktv",
@@ -228,15 +230,17 @@ export default function AddLabTrackingPage() {
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>("");
 
-  const [testValues, setTestValues] = useState<{ [key: string]: string }>(() => {
-    const initial: { [key: string]: string } = {};
-    designCategories.forEach((cat) => {
-      cat.tests.forEach((t) => {
-        initial[t.name] = t.defaultVal;
+  const [testValues, setTestValues] = useState<{ [key: string]: string }>(
+    () => {
+      const initial: { [key: string]: string } = {};
+      designCategories.forEach((cat) => {
+        cat.tests.forEach((t) => {
+          initial[t.name] = t.defaultVal;
+        });
       });
-    });
-    return initial;
-  });
+      return initial;
+    },
+  );
 
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
@@ -245,12 +249,9 @@ export default function AddLabTrackingPage() {
       return l?.categories?.kidneyFunction || fallback;
     if (catId === "electrolytes")
       return l?.categories?.electrolytes || fallback;
-    if (catId === "mineral-bone")
-      return l?.categories?.mineralBone || fallback;
-    if (catId === "blood-counts")
-      return l?.categories?.bloodCounts || fallback;
-    if (catId === "nutrition")
-      return l?.categories?.nutrition || fallback;
+    if (catId === "mineral-bone") return l?.categories?.mineralBone || fallback;
+    if (catId === "blood-counts") return l?.categories?.bloodCounts || fallback;
+    if (catId === "nutrition") return l?.categories?.nutrition || fallback;
     if (catId === "dialysis-adequacy")
       return l?.categories?.dialysisAdequacy || fallback;
     return fallback;
@@ -318,7 +319,7 @@ export default function AddLabTrackingPage() {
   };
 
   const availableCategoriesToAdd = designCategories.filter(
-    (c) => !activeCategoryIds.includes(c.id)
+    (c) => !activeCategoryIds.includes(c.id),
   );
 
   return (
@@ -379,9 +380,13 @@ export default function AddLabTrackingPage() {
               {designCategories
                 .filter((cat) => activeCategoryIds.includes(cat.id))
                 .map((category) => (
-                  <Card key={category.id} padding="none" className="overflow-hidden">
+                  <Card
+                    key={category.id}
+                    padding="none"
+                    className="overflow-hidden"
+                  >
                     <div className="flex items-center justify-between gap-inline-md border-b border-line bg-surface-sunken px-inset-md py-inset-xs">
-                      <h2 className="text-overline flex items-center gap-inline-md text-fg-brand">
+                      <h2 className="flex items-center gap-inline-md text-overline text-fg-brand">
                         <category.icon
                           aria-hidden="true"
                           className="h-4 w-4 shrink-0 fill-current"
@@ -405,13 +410,15 @@ export default function AddLabTrackingPage() {
                             {l?.addModal?.headers?.test || "Test"}
                           </TableHeaderCell>
                           <TableHeaderCell>
-                            {l?.addModal?.headers?.resultValue || "Result Value"}
+                            {l?.addModal?.headers?.resultValue ||
+                              "Result Value"}
                           </TableHeaderCell>
                           <TableHeaderCell>
                             {l?.addModal?.headers?.unit || "Unit"}
                           </TableHeaderCell>
                           <TableHeaderCell numeric>
-                            {l?.addModal?.headers?.refRange || "Reference Range"}
+                            {l?.addModal?.headers?.refRange ||
+                              "Reference Range"}
                           </TableHeaderCell>
                         </TableRow>
                       </TableHead>

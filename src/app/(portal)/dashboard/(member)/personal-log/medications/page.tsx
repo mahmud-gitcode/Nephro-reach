@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -15,6 +15,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useClientValue } from "@/lib/storage/useClientValue";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Badge,
@@ -311,75 +312,99 @@ function MedicationMasterList({
 
       <div className="mt-stack-md overflow-hidden rounded-control border border-line">
         <Table minWidth={1140}>
-            <TableHead className="bg-surface-sunken">
-              <TableRow>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.name")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.dose")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.route")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.frequency")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.purpose")}</TableHeaderCell>
-                <TableHeaderCell className="text-center">
-                  {language === "ES" ? "Hora Recordatorio" : "Reminder Alert"}
-                </TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.startDate")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.endDate")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.pharmacy")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.status")}</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {medicationsData.map((medication) => {
-                const rem = reminders.find(
-                  (r) => r.medicationName.toLowerCase() === medication.name.toLowerCase() && r.enabled
-                );
+          <TableHead className="bg-surface-sunken">
+            <TableRow>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.name")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.dose")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.route")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.frequency")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.purpose")}
+              </TableHeaderCell>
+              <TableHeaderCell className="text-center">
+                {language === "ES" ? "Hora Recordatorio" : "Reminder Alert"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.startDate")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.endDate")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.pharmacy")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.status")}
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {medicationsData.map((medication) => {
+              const rem = reminders.find(
+                (r) =>
+                  r.medicationName.toLowerCase() ===
+                    medication.name.toLowerCase() && r.enabled,
+              );
 
-                return (
-                  <TableRow key={`${medication.name}-${medication.startDate}`}>
-                    <TableCell emphasis>{medication.name}</TableCell>
-                    <TableCell>{medication.dose}</TableCell>
-                    <TableCell>{medication.route}</TableCell>
-                    <TableCell>
-                      {language === "ES" ? medication.frequencyEs : medication.frequencyEn}
-                    </TableCell>
-                    <TableCell>
-                      {language === "ES" ? medication.purposeEs : medication.purposeEn}
-                    </TableCell>
-                    {/* The cell itself used to carry the onClick, which a
+              return (
+                <TableRow key={`${medication.name}-${medication.startDate}`}>
+                  <TableCell emphasis>{medication.name}</TableCell>
+                  <TableCell>{medication.dose}</TableCell>
+                  <TableCell>{medication.route}</TableCell>
+                  <TableCell>
+                    {language === "ES"
+                      ? medication.frequencyEs
+                      : medication.frequencyEn}
+                  </TableCell>
+                  <TableCell>
+                    {language === "ES"
+                      ? medication.purposeEs
+                      : medication.purposeEn}
+                  </TableCell>
+                  {/* The cell itself used to carry the onClick, which a
                         keyboard can never reach. The button alone now does. */}
-                    <TableCell className="text-center">
-                      <Button
-                        variant="neutral"
-                        appearance={rem ? "fill-stroke" : "stroke"}
-                        size="small"
-                        onClick={() => onOpenReminderModal(medication.name)}
-                        aria-label={
-                          rem
-                            ? language === "ES"
-                              ? `Editar recordatorio de ${medication.name}, ${rem.time}`
-                              : `Edit reminder for ${medication.name}, ${rem.time}`
-                            : language === "ES"
-                              ? `Establecer recordatorio para ${medication.name}`
-                              : `Set reminder for ${medication.name}`
-                        }
-                      >
-                        <Bell aria-hidden="true" />
-                        {rem
-                          ? rem.time
+                  <TableCell className="text-center">
+                    <Button
+                      variant="neutral"
+                      appearance={rem ? "fill-stroke" : "stroke"}
+                      size="small"
+                      onClick={() => onOpenReminderModal(medication.name)}
+                      aria-label={
+                        rem
+                          ? language === "ES"
+                            ? `Editar recordatorio de ${medication.name}, ${rem.time}`
+                            : `Edit reminder for ${medication.name}, ${rem.time}`
                           : language === "ES"
-                            ? "Recordatorio"
-                            : "Set Alert"}
-                      </Button>
-                    </TableCell>
-                    <TableCell>{medication.startDate}</TableCell>
-                    <TableCell>{medication.endDate}</TableCell>
-                    <TableCell>{medication.pharmacy}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={medication.status} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
+                            ? `Establecer recordatorio para ${medication.name}`
+                            : `Set reminder for ${medication.name}`
+                      }
+                    >
+                      <Bell aria-hidden="true" />
+                      {rem
+                        ? rem.time
+                        : language === "ES"
+                          ? "Recordatorio"
+                          : "Set Alert"}
+                    </Button>
+                  </TableCell>
+                  <TableCell>{medication.startDate}</TableCell>
+                  <TableCell>{medication.endDate}</TableCell>
+                  <TableCell>{medication.pharmacy}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={medication.status} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
         </Table>
       </div>
     </Card>
@@ -407,68 +432,92 @@ function DoseSchedule({ reminders }: { reminders: MedicationReminder[] }) {
 
       <div className="mt-stack-md overflow-hidden rounded-control border border-line">
         <Table minWidth={900}>
-            <TableHead className="bg-surface-sunken">
-              <TableRow>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.time")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.medication")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.instructions")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.status")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.timeStamp")}</TableHeaderCell>
-                <TableHeaderCell>{t("medicationsLog.tableHeaders.sideEffects")}</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {doseScheduleData.map((dose, idx) => {
-                const rem = reminders.find(
-                  (r) => r.medicationName.toLowerCase() === dose.medication.toLowerCase() && r.enabled
-                );
+          <TableHead className="bg-surface-sunken">
+            <TableRow>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.time")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.medication")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.instructions")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.status")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.timeStamp")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("medicationsLog.tableHeaders.sideEffects")}
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {doseScheduleData.map((dose, idx) => {
+              const rem = reminders.find(
+                (r) =>
+                  r.medicationName.toLowerCase() ===
+                    dose.medication.toLowerCase() && r.enabled,
+              );
 
-                return (
-                  <TableRow key={`${dose.time}-${idx}`}>
-                    <TableCell>
-                      <span className="flex items-center gap-inline-sm">
-                        {dose.time}
-                        {rem && (
-                          <Bell
-                            className="h-3 w-3 shrink-0 text-fg-brand"
-                            aria-label={
-                              language === "ES"
-                                ? `Recordatorio a las ${rem.time}`
-                                : `Reminder set for ${rem.time}`
-                            }
-                          />
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="block text-label-md text-fg">{dose.medication}</span>
-                      <span className="block text-caption text-fg-muted">{dose.generic}</span>
-                    </TableCell>
-                    <TableCell>
-                      {language === "ES" ? dose.instructionsEs : dose.instructionsEn}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={dose.status} />
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`block text-label-md ${
-                          dose.status === "Late" ? "text-warning" : "text-fg-secondary"
-                        }`}
-                      >
-                        {dose.stamp}
-                      </span>
-                      <span className="block text-caption text-fg-muted">
-                        {t("medicationsLog.today")}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {language === "ES" ? dose.sideEffectsEs : dose.sideEffectsEn}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
+              return (
+                <TableRow key={`${dose.time}-${idx}`}>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-sm">
+                      {dose.time}
+                      {rem && (
+                        <Bell
+                          className="h-3 w-3 shrink-0 text-fg-brand"
+                          aria-label={
+                            language === "ES"
+                              ? `Recordatorio a las ${rem.time}`
+                              : `Reminder set for ${rem.time}`
+                          }
+                        />
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="block text-label-md text-fg">
+                      {dose.medication}
+                    </span>
+                    <span className="block text-caption text-fg-muted">
+                      {dose.generic}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {language === "ES"
+                      ? dose.instructionsEs
+                      : dose.instructionsEn}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={dose.status} />
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`block text-label-md ${
+                        dose.status === "Late"
+                          ? "text-warning"
+                          : "text-fg-secondary"
+                      }`}
+                    >
+                      {dose.stamp}
+                    </span>
+                    <span className="block text-caption text-fg-muted">
+                      {t("medicationsLog.today")}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {language === "ES"
+                      ? dose.sideEffectsEs
+                      : dose.sideEffectsEn}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
         </Table>
       </div>
     </Card>
@@ -478,9 +527,10 @@ function DoseSchedule({ reminders }: { reminders: MedicationReminder[] }) {
 function AdherenceChart() {
   const { language, t } = useLanguage();
 
-  const dayLabels = language === "ES"
-    ? ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
-    : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayLabels =
+    language === "ES"
+      ? ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const missedDoses = [
     { day: dayLabels[0], value: 2 },
@@ -507,7 +557,9 @@ function AdherenceChart() {
   const xFor = (index: number) => 18 + index * 36;
   const bpY = (value: number) => 8 + ((160 - value) / 80) * 136;
   const adherenceY = (value: number) => 8 + ((100 - value) / 100) * 136;
-  const bpLine = bpPoints.map((point, index) => `${xFor(index)},${bpY(point.bp)}`).join(" ");
+  const bpLine = bpPoints
+    .map((point, index) => `${xFor(index)},${bpY(point.bp)}`)
+    .join(" ");
   const adherenceLine = bpPoints
     .map((point, index) => `${xFor(index)},${adherenceY(point.adherence)}`)
     .join(" ");
@@ -550,16 +602,35 @@ function AdherenceChart() {
 
             <ul className="w-[103px] space-y-stack-md">
               {[
-                { label: t("medicationsLog.adherence.taken"), value: "50%", dot: "bg-success-600" },
-                { label: t("medicationsLog.adherence.late"), value: "30%", dot: "bg-warning-600" },
-                { label: t("medicationsLog.adherence.missed"), value: "20%", dot: "bg-danger-600" },
+                {
+                  label: t("medicationsLog.adherence.taken"),
+                  value: "50%",
+                  dot: "bg-success-600",
+                },
+                {
+                  label: t("medicationsLog.adherence.late"),
+                  value: "30%",
+                  dot: "bg-warning-600",
+                },
+                {
+                  label: t("medicationsLog.adherence.missed"),
+                  value: "20%",
+                  dot: "bg-danger-600",
+                },
               ].map((item) => (
                 <li key={item.label} className="text-center">
                   <div className="flex items-center gap-inline-md">
-                    <span aria-hidden="true" className={`h-4 w-4 rounded-full ${item.dot}`} />
-                    <span className="text-body-md text-fg-muted">{item.label}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`h-4 w-4 rounded-full ${item.dot}`}
+                    />
+                    <span className="text-body-md text-fg-muted">
+                      {item.label}
+                    </span>
                   </div>
-                  <p className="mt-stack-sm text-body-sm text-fg-muted">{item.value}</p>
+                  <p className="mt-stack-sm text-body-sm text-fg-muted">
+                    {item.value}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -592,7 +663,10 @@ function AdherenceChart() {
                 <div className="relative">
                   <div className="absolute inset-0 flex flex-col justify-between">
                     {Array.from({ length: 6 }).map((_, index) => (
-                      <span key={index} className="border-t border-dashed border-line" />
+                      <span
+                        key={index}
+                        className="border-t border-dashed border-line"
+                      />
                     ))}
                   </div>
                   <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-between">
@@ -600,7 +674,9 @@ function AdherenceChart() {
                       <span
                         key={dose.day}
                         className="w-[22px] rounded-t bg-primary-solid"
-                        style={{ height: `${Math.max((dose.value / 10) * 137, 2)}px` }}
+                        style={{
+                          height: `${Math.max((dose.value / 10) * 137, 2)}px`,
+                        }}
                       />
                     ))}
                   </div>
@@ -623,7 +699,9 @@ function AdherenceChart() {
               <thead>
                 <tr>
                   <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
-                  <th scope="col">{t("medicationsLog.adherence.missedTitle")}</th>
+                  <th scope="col">
+                    {t("medicationsLog.adherence.missedTitle")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -646,11 +724,17 @@ function AdherenceChart() {
               stays hand-drawn. The tones are still the chart tones. */}
           <div className="mt-stack-sm flex items-center gap-inline-lg text-caption text-fg-muted">
             <span className="inline-flex items-center gap-inline-sm">
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-accent-600" />
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 rounded-full bg-accent-600"
+              />
               {t("medicationsLog.adherence.bp")}
             </span>
             <span className="inline-flex items-center gap-inline-sm">
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-brand-600" />
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 rounded-full bg-brand-600"
+              />
               {t("medicationsLog.adherence.adherencePercent")}
             </span>
           </div>
@@ -670,12 +754,18 @@ function AdherenceChart() {
               <div className="relative overflow-hidden">
                 <div className="absolute inset-0 flex flex-col justify-between py-1.5">
                   {Array.from({ length: 5 }).map((_, index) => (
-                    <span key={index} className="border-t border-dashed border-line" />
+                    <span
+                      key={index}
+                      className="border-t border-dashed border-line"
+                    />
                   ))}
                 </div>
                 <div className="absolute inset-0 flex justify-between px-px">
                   {Array.from({ length: 7 }).map((_, index) => (
-                    <span key={index} className="border-l border-dashed border-line" />
+                    <span
+                      key={index}
+                      className="border-l border-dashed border-line"
+                    />
                   ))}
                 </div>
                 <svg
@@ -745,7 +835,9 @@ function AdherenceChart() {
               <tr>
                 <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
                 <th scope="col">{t("medicationsLog.adherence.bp")}</th>
-                <th scope="col">{t("medicationsLog.adherence.adherencePercent")}</th>
+                <th scope="col">
+                  {t("medicationsLog.adherence.adherencePercent")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -791,7 +883,7 @@ function AlertsAndMood({
         {/* Scheduled Reminders Ribbon */}
         {reminders && reminders.filter((r) => r.enabled).length > 0 && (
           <div className="mt-stack-md space-y-stack-sm rounded-control border border-primary-soft-line bg-primary-soft p-inset-xs">
-            <p className="text-overline flex items-center gap-inline-sm text-primary-fg">
+            <p className="flex items-center gap-inline-sm text-overline text-primary-fg">
               <Bell aria-hidden="true" className="h-3.5 w-3.5" />
               <span>
                 {language === "ES"
@@ -1016,17 +1108,10 @@ function SimpleTimeReminderModal({
   onDeleteReminder?: (medicationName: string) => void;
 }) {
   const { language } = useLanguage();
-  const [timeValue, setTimeValue] = useState("08:00");
+  const [timeValue, setTimeValue] = useState(
+    currentTime ? formatTo24Hour(currentTime) : "08:00",
+  );
   const [savedSuccess, setSavedSuccess] = useState(false);
-
-  useEffect(() => {
-    if (currentTime) {
-      setTimeValue(formatTo24Hour(currentTime));
-    } else {
-      setTimeValue("08:00");
-    }
-    setSavedSuccess(false);
-  }, [currentTime, isOpen, medicationName]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1086,7 +1171,7 @@ function SimpleTimeReminderModal({
             value={timeValue}
             onChange={(e) => setTimeValue(e.target.value)}
             aria-label={language === "ES" ? "Seleccionar Hora" : "Select Time"}
-            className="text-metric-md h-auto py-inset-xs text-center"
+            className="h-auto py-inset-xs text-center text-metric-md"
             required
           />
         </div>
@@ -1110,46 +1195,55 @@ function SimpleTimeReminderModal({
   );
 }
 
+function readStoredReminders(): MedicationReminder[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_REMINDERS_KEY);
+    if (!raw) return INITIAL_REMINDERS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? (parsed as MedicationReminder[])
+      : INITIAL_REMINDERS;
+  } catch {
+    return INITIAL_REMINDERS;
+  }
+}
+
 const LOCAL_STORAGE_REMINDERS_KEY = "nephroreach_medication_reminders_v1";
 
 export default function MedicationLogPage() {
   const { t } = useLanguage();
 
-  const [reminders, setReminders] = useState<MedicationReminder[]>(INITIAL_REMINDERS);
+  const [reminders, setReminders] = useClientValue(
+    readStoredReminders,
+    INITIAL_REMINDERS,
+  );
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [selectedMedForReminder, setSelectedMedForReminder] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_REMINDERS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setReminders(parsed);
-        }
-      }
-    } catch {
-      // fallback
-    }
-  }, []);
+  const [selectedMedForReminder, setSelectedMedForReminder] = useState<
+    string | undefined
+  >(undefined);
 
   const saveReminders = (updated: MedicationReminder[]) => {
     setReminders(updated);
     try {
-      localStorage.setItem(LOCAL_STORAGE_REMINDERS_KEY, JSON.stringify(updated));
+      localStorage.setItem(
+        LOCAL_STORAGE_REMINDERS_KEY,
+        JSON.stringify(updated),
+      );
     } catch {
       // fallback
     }
   };
 
   const handleOpenReminderModal = (medName?: string) => {
-    setSelectedMedForReminder(medName || medicationsData[0]?.name || "Potassium");
+    setSelectedMedForReminder(
+      medName || medicationsData[0]?.name || "Potassium",
+    );
     setIsReminderModalOpen(true);
   };
 
   const handleSaveReminderTime = (medicationName: string, time: string) => {
     const existingIndex = reminders.findIndex(
-      (r) => r.medicationName.toLowerCase() === medicationName.toLowerCase()
+      (r) => r.medicationName.toLowerCase() === medicationName.toLowerCase(),
     );
     let updated: MedicationReminder[];
     if (existingIndex >= 0) {
@@ -1175,14 +1269,16 @@ export default function MedicationLogPage() {
 
   const handleDeleteReminder = (medicationName: string) => {
     const updated = reminders.filter(
-      (r) => r.medicationName.toLowerCase() !== medicationName.toLowerCase()
+      (r) => r.medicationName.toLowerCase() !== medicationName.toLowerCase(),
     );
     saveReminders(updated);
   };
 
   const activeExistingReminder = selectedMedForReminder
     ? reminders.find(
-        (r) => r.medicationName.toLowerCase() === selectedMedForReminder.toLowerCase()
+        (r) =>
+          r.medicationName.toLowerCase() ===
+          selectedMedForReminder.toLowerCase(),
       )
     : null;
 
@@ -1208,7 +1304,14 @@ export default function MedicationLogPage() {
         onOpenReminderModal={handleOpenReminderModal}
       />
       <ExportReporting />
+      {/* Keyed on the medication, so opening it for another one starts from
+          that medication's stored time without an effect syncing it. */}
       <SimpleTimeReminderModal
+        key={
+          isReminderModalOpen
+            ? `reminder-${selectedMedForReminder ?? ""}`
+            : "reminder-closed"
+        }
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
         medicationName={selectedMedForReminder || ""}

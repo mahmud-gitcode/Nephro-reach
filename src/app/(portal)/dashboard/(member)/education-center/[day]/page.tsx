@@ -77,7 +77,7 @@ function DayStage({
     <div className="space-y-stack-lg">
       {day.kind === "reading" ? (
         <Card as="section" padding="none" className="p-inset-lg">
-          <p className="text-overline flex items-center gap-inline-md text-warning">
+          <p className="flex items-center gap-inline-md text-overline text-warning">
             <BookOpen aria-hidden="true" className="h-4 w-4" />
             {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
             {j?.minutesShort || "min"}
@@ -85,7 +85,10 @@ function DayStage({
 
           <article className="mt-stack-lg space-y-stack-lg">
             {day.transcript.map((cue) => (
-              <p key={cue.at} className="measure text-body-md text-fg-secondary">
+              <p
+                key={cue.at}
+                className="measure text-body-md text-fg-secondary"
+              >
                 {isEs ? cue.textEs : cue.textEn}
               </p>
             ))}
@@ -105,9 +108,15 @@ function DayStage({
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
                 {day.kind === "audio" ? (
-                  <Headphones aria-hidden="true" className="h-12 w-12 text-fg-inverse/70" />
+                  <Headphones
+                    aria-hidden="true"
+                    className="h-12 w-12 text-fg-inverse/70"
+                  />
                 ) : (
-                  <PlayCircle aria-hidden="true" className="h-12 w-12 text-fg-inverse/70" />
+                  <PlayCircle
+                    aria-hidden="true"
+                    className="h-12 w-12 text-fg-inverse/70"
+                  />
                 )}
                 <p className="text-label-lg text-fg-inverse">
                   {j?.videoUnavailableTitle || "Video coming soon"}
@@ -130,7 +139,10 @@ function DayStage({
                   priority
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Headphones aria-hidden="true" className="h-12 w-12 text-fg-inverse/80" />
+                  <Headphones
+                    aria-hidden="true"
+                    className="h-12 w-12 text-fg-inverse/80"
+                  />
                   <p className="text-label-md text-fg-inverse/90">
                     {kindLabel(day.kind, j)} · {day.durationMinutes}{" "}
                     {j?.minutesShort || "min"}
@@ -264,7 +276,9 @@ export default function JourneyDayPage() {
     unavailable: false,
   });
   const currentPlayback =
-    playback.slug === slug ? playback : { slug, seconds: 0, unavailable: false };
+    playback.slug === slug
+      ? playback
+      : { slug, seconds: 0, unavailable: false };
 
   const handleTimeUpdate = useCallback(() => {
     const video = mediaRef.current;
@@ -358,14 +372,19 @@ export default function JourneyDayPage() {
 
   // The last cue whose timestamp has passed is the one being spoken.
   const activeCueIndex = day.transcript.reduce(
-    (active, cue, index) => (currentPlayback.seconds >= cue.at ? index : active),
+    (active, cue, index) =>
+      currentPlayback.seconds >= cue.at ? index : active,
     -1,
   );
 
-  const currentIndex = JOURNEY_DAYS.findIndex((entry) => entry.slug === day.slug);
+  const currentIndex = JOURNEY_DAYS.findIndex(
+    (entry) => entry.slug === day.slug,
+  );
   const previousDay = currentIndex > 0 ? JOURNEY_DAYS[currentIndex - 1] : null;
   const nextDay =
-    currentIndex < JOURNEY_DAYS.length - 1 ? JOURNEY_DAYS[currentIndex + 1] : null;
+    currentIndex < JOURNEY_DAYS.length - 1
+      ? JOURNEY_DAYS[currentIndex + 1]
+      : null;
 
   return (
     <div className="space-y-stack-lg">
@@ -437,7 +456,8 @@ export default function JourneyDayPage() {
                   })}
                 >
                   <span className="truncate">
-                    {j?.nextDay || "Next"} · {j?.dayLabel || "Day"} {nextDay.day}
+                    {j?.nextDay || "Next"} · {j?.dayLabel || "Day"}{" "}
+                    {nextDay.day}
                   </span>
                   <ChevronRight aria-hidden="true" className="shrink-0" />
                 </Link>
@@ -505,7 +525,9 @@ export default function JourneyDayPage() {
           }`}
         >
           <header className="flex items-center justify-between gap-inline-lg border-b border-line p-inset-md">
-            <h2 className="text-heading-5 text-fg">{j?.allDays || "All days"}</h2>
+            <h2 className="text-heading-5 text-fg">
+              {j?.allDays || "All days"}
+            </h2>
             <button
               type="button"
               tabIndex={dayListOpen ? 0 : -1}

@@ -26,7 +26,8 @@ export type ControlSize = "big" | "small";
 
 const sizeClasses: Record<ControlSize, string> = {
   big: "h-control-big px-control-x-small rounded-control text-body-md",
-  small: "h-control-small px-control-x-small rounded-control-small text-body-sm",
+  small:
+    "h-control-small px-control-x-small rounded-control-small text-body-sm",
 };
 
 const shared =

@@ -6,15 +6,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { canAccessPath, DEMO_ACCOUNTS, homeForRole } from "@/features/auth/auth";
+import {
+  canAccessPath,
+  DEMO_ACCOUNTS,
+  homeForRole,
+} from "@/features/auth/auth";
+import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const inputClassName =
   "h-12 w-full rounded border border-[#CBD5ED] bg-white py-3 pl-12 pr-3 text-base leading-6 tracking-[0.08px] text-[#0F172A] outline-none placeholder:text-[#64748B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#DBE9FE]";
 
 function FieldIcon({ src }: { src: string }) {
   return (
-    <span className="pointer-events-none absolute left-4 top-1/2 size-6 -translate-y-1/2 overflow-clip">
-      <img src={src} alt="" className="size-full" />
+    <span className="pointer-events-none absolute top-1/2 left-4 size-6 -translate-y-1/2 overflow-clip">
+      <LocalSvg src={src} alt="" className="size-full" />
     </span>
   );
 }
@@ -42,7 +47,7 @@ function LoginForm() {
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden bg-white font-sans">
       {/* Top right language switcher */}
-      <div className="absolute right-5 top-5 sm:right-8 sm:top-8 z-30">
+      <div className="absolute top-5 right-5 z-30 sm:top-8 sm:right-8">
         <div className="relative">
           <button
             type="button"
@@ -50,7 +55,7 @@ function LoginForm() {
             className="flex items-center gap-1.5 rounded-xl border-b-2 border-[#111827] bg-[#F1F5FA] p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-colors hover:bg-slate-100"
             aria-label="Change language"
           >
-            <img
+            <LocalSvg
               src={
                 language === "ES"
                   ? "/images/dashboard-header/spain-flag.svg"
@@ -59,7 +64,7 @@ function LoginForm() {
               alt={language === "ES" ? "Español" : "English"}
               className="h-6 w-[33px] rounded-xs object-cover"
             />
-            <img
+            <LocalSvg
               src="/images/dashboard-header/arrow-down.svg"
               alt=""
               className={`size-3 transition-transform duration-200 ${
@@ -69,7 +74,7 @@ function LoginForm() {
           </button>
 
           {isLangOpen && (
-            <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white py-1 shadow-lg z-50">
+            <div className="absolute top-full right-0 z-50 mt-2 w-36 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
               <button
                 type="button"
                 onClick={() => {
@@ -82,7 +87,7 @@ function LoginForm() {
                     : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <img
+                <LocalSvg
                   src="/images/dashboard-header/usa-flag.svg"
                   alt=""
                   className="h-4 w-6 rounded-xs object-cover"
@@ -101,7 +106,7 @@ function LoginForm() {
                     : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <img
+                <LocalSvg
                   src="/images/dashboard-header/spain-flag.svg"
                   alt=""
                   className="h-4 w-6 rounded-xs object-cover"
@@ -117,9 +122,9 @@ function LoginForm() {
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute left-1/2 top-0 h-full w-[1440px] -translate-x-1/2">
-          <div className="absolute left-[510px] top-[-217px] size-[992px] rounded-full bg-[#55A8F5] opacity-70 blur-[198px]" />
-          <div className="absolute left-[1293px] top-[-142px] size-[992px] rounded-full bg-[#FF0000] opacity-70 blur-[198px]" />
+        <div className="absolute top-0 left-1/2 h-full w-[1440px] -translate-x-1/2">
+          <div className="absolute top-[-217px] left-[510px] size-[992px] rounded-full bg-[#55A8F5] opacity-70 blur-[198px]" />
+          <div className="absolute top-[-142px] left-[1293px] size-[992px] rounded-full bg-[#FF0000] opacity-70 blur-[198px]" />
         </div>
       </div>
 
@@ -134,7 +139,7 @@ function LoginForm() {
                 width={517}
                 height={408}
                 priority
-                className="h-auto w-full max-h-[220px] object-contain sm:max-h-[280px] lg:max-h-[408px]"
+                className="h-auto max-h-[220px] w-full object-contain sm:max-h-[280px] lg:max-h-[408px]"
               />
             </Link>
           </div>
@@ -143,10 +148,10 @@ function LoginForm() {
           <div className="w-full max-w-[548px] shrink-0">
             <div className="flex w-full flex-col gap-10 px-0 sm:px-5">
               <div className="flex flex-col gap-2">
-                <h1 className="text-[36px] font-medium leading-10 tracking-[0.18px] text-[#0F172A]">
+                <h1 className="text-[36px] leading-10 font-medium tracking-[0.18px] text-[#0F172A]">
                   {l?.title || "Welcome Back"}
                 </h1>
-                <p className="text-lg font-medium leading-7 tracking-[0.09px] text-[#0F172A]">
+                <p className="text-lg leading-7 font-medium tracking-[0.09px] text-[#0F172A]">
                   {l?.subtitle || "Access your nephrology care dashboard."}
                 </p>
               </div>
@@ -159,7 +164,7 @@ function LoginForm() {
                   if (!next) {
                     setError(
                       l?.errors?.invalid ||
-                        "Use a demo account or an email you registered."
+                        "Use a demo account or an email you registered.",
                     );
                     return;
                   }
@@ -170,7 +175,7 @@ function LoginForm() {
                   <div className="flex w-full flex-col gap-2">
                     <label
                       htmlFor="login-email"
-                      className="text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]"
+                      className="text-base leading-6 font-medium tracking-[0.08px] text-[#0F172A]"
                     >
                       {l?.emailLabel || "Email or Phone Number"}
                     </label>
@@ -194,7 +199,7 @@ function LoginForm() {
                   <div className="flex w-full flex-col gap-2">
                     <label
                       htmlFor="login-password"
-                      className="text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]"
+                      className="text-base leading-6 font-medium tracking-[0.08px] text-[#0F172A]"
                     >
                       {l?.passwordLabel || "Password"}
                     </label>
@@ -218,7 +223,7 @@ function LoginForm() {
                     <div className="flex justify-end">
                       <Link
                         href="#"
-                        className="text-sm font-medium leading-5 tracking-[0.07px] text-[#1D4ED8] hover:underline"
+                        className="text-sm leading-5 font-medium tracking-[0.07px] text-[#1D4ED8] hover:underline"
                       >
                         {l?.forgotPassword || "Forgot Password?"}
                       </Link>
@@ -232,7 +237,7 @@ function LoginForm() {
 
                 <button
                   type="submit"
-                  className="relative flex h-12 w-full items-center justify-center rounded bg-[#2563EB] px-3.5 py-3 text-base font-bold leading-6 tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
+                  className="relative flex h-12 w-full items-center justify-center rounded bg-[#2563EB] px-3.5 py-3 text-base leading-6 font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_0_#DBE9FE] transition-colors hover:bg-[#1D4ED8]"
                 >
                   {l?.signInButton || "Sign in"}
                 </button>
@@ -241,7 +246,7 @@ function LoginForm() {
               <div className="flex w-full flex-col gap-6">
                 <div className="flex w-full items-center justify-center gap-4 py-2.5">
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
-                  <span className="text-base font-medium leading-6 tracking-[0.08px] text-[#294957]">
+                  <span className="text-base leading-6 font-medium tracking-[0.08px] text-[#294957]">
                     {l?.dividerOr || "Or"}
                   </span>
                   <div className="h-px flex-1 bg-[#CBD5ED]/80" />
@@ -260,7 +265,7 @@ function LoginForm() {
                   className="flex h-[52px] w-full items-center justify-center gap-4 rounded-xl border border-[#E2E8F0] bg-white px-[9px] py-3 transition-colors hover:bg-[#F8FAFC]"
                 >
                   <span className="relative block size-7 shrink-0 overflow-clip">
-                    <img
+                    <LocalSvg
                       src="/images/login/google.svg"
                       alt=""
                       className="size-full"
@@ -272,7 +277,7 @@ function LoginForm() {
                 </button>
               </div>
 
-              <p className="w-full text-center text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]">
+              <p className="w-full text-center text-base leading-6 font-medium tracking-[0.08px] text-[#0F172A]">
                 {l?.noAccount || "Don't you have an account?"}{" "}
                 <Link
                   href="/registration"

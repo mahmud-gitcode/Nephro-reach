@@ -203,7 +203,10 @@ export function TabPanel({
       role="tabpanel"
       aria-labelledby={`${id}-tab`}
       tabIndex={0}
-      className={cn("focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring", className)}
+      className={cn(
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        className,
+      )}
       {...rest}
     >
       {children}

@@ -16,7 +16,10 @@ import {
   Scale,
   Timer,
 } from "lucide-react";
-import { mockDialysisEntries, DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
+import {
+  mockDialysisEntries,
+  DialysisLogEntry,
+} from "@/features/personal-log/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
@@ -86,10 +89,30 @@ function SummaryCards() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const summaryCards = [
-    { label: dt?.summary?.attended || "Treatment attended", value: "90%", icon: CheckCircle2, tone: "success" as const },
-    { label: dt?.summary?.arrivedLate || "Arrived late", value: "2", icon: Clock, tone: "warning" as const },
-    { label: dt?.summary?.endedEarly || "Ended early", value: "4", icon: Timer, tone: "danger" as const },
-    { label: dt?.summary?.missed || "Missed treatments", value: "2", icon: CalendarX, tone: "danger" as const },
+    {
+      label: dt?.summary?.attended || "Treatment attended",
+      value: "90%",
+      icon: CheckCircle2,
+      tone: "success" as const,
+    },
+    {
+      label: dt?.summary?.arrivedLate || "Arrived late",
+      value: "2",
+      icon: Clock,
+      tone: "warning" as const,
+    },
+    {
+      label: dt?.summary?.endedEarly || "Ended early",
+      value: "4",
+      icon: Timer,
+      tone: "danger" as const,
+    },
+    {
+      label: dt?.summary?.missed || "Missed treatments",
+      value: "2",
+      icon: CalendarX,
+      tone: "danger" as const,
+    },
   ];
 
   return (
@@ -111,17 +134,43 @@ function ClinicalMeasurementsCards() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const clinicalMeasurements = [
-    { label: dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed", value: "2.3", unit: dt?.clinicalMeasurements?.liters || "Liters", icon: Droplets, tone: "brand" as const },
-    { label: dt?.clinicalMeasurements?.postWeight || "Post Weight", value: "72.4", unit: "kg (pre: 74.7)", icon: Scale, tone: "success" as const },
-    { label: dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure", value: "118 / 72", unit: dt?.clinicalMeasurements?.mmHg || "mmHg", icon: Activity, tone: "accent" as const },
-    { label: dt?.clinicalMeasurements?.heartRate || "Heart Rate", value: "78", unit: dt?.clinicalMeasurements?.bpm || "bpm", icon: HeartPulse, tone: "danger" as const },
+    {
+      label: dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed",
+      value: "2.3",
+      unit: dt?.clinicalMeasurements?.liters || "Liters",
+      icon: Droplets,
+      tone: "brand" as const,
+    },
+    {
+      label: dt?.clinicalMeasurements?.postWeight || "Post Weight",
+      value: "72.4",
+      unit: "kg (pre: 74.7)",
+      icon: Scale,
+      tone: "success" as const,
+    },
+    {
+      label: dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure",
+      value: "118 / 72",
+      unit: dt?.clinicalMeasurements?.mmHg || "mmHg",
+      icon: Activity,
+      tone: "accent" as const,
+    },
+    {
+      label: dt?.clinicalMeasurements?.heartRate || "Heart Rate",
+      value: "78",
+      unit: dt?.clinicalMeasurements?.bpm || "bpm",
+      icon: HeartPulse,
+      tone: "danger" as const,
+    },
   ];
 
   return (
     <section className="space-y-stack-md">
       <h2 className="flex items-center gap-inline-md text-heading-5 text-fg">
         <Activity aria-hidden="true" className="h-4 w-4 text-fg-brand" />
-        <span>{dt?.clinicalMeasurements?.title || "Clinical Measurements"}</span>
+        <span>
+          {dt?.clinicalMeasurements?.title || "Clinical Measurements"}
+        </span>
       </h2>
 
       <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
@@ -172,12 +221,15 @@ function SymptomsDonut() {
   let accumulatedOffset = 0;
 
   return (
-    <Card as="section" className="flex flex-col justify-between space-y-stack-lg">
+    <Card
+      as="section"
+      className="flex flex-col justify-between space-y-stack-lg"
+    >
       <h2 className="text-heading-5 text-fg">
         {dt?.symptomsDonut?.title || "Symptoms During Treatment"}
       </h2>
 
-      <div className="relative flex justify-center items-center py-2">
+      <div className="relative flex items-center justify-center py-2">
         <div className="relative" style={{ width: size, height: size }}>
           <svg
             width={size}
@@ -185,7 +237,10 @@ function SymptomsDonut() {
             className="-rotate-90"
             role="img"
             aria-label={symptomSlices
-              .map((slice) => `${slice.label}: ${slice.count}, ${slice.percent} percent`)
+              .map(
+                (slice) =>
+                  `${slice.label}: ${slice.count}, ${slice.percent} percent`,
+              )
               .join(". ")}
           >
             <circle
@@ -348,7 +403,11 @@ export default function DialysisTreatmentPage() {
   );
 }
 
-function AttendanceBadge({ status }: { status: DialysisLogEntry["attendance"] }) {
+function AttendanceBadge({
+  status,
+}: {
+  status: DialysisLogEntry["attendance"];
+}) {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const tone = {
@@ -389,7 +448,11 @@ function TreatmentEntriesTable({
             : "No treatment logged on this date."
         }
         action={
-          <Button variant="neutral" appearance="fill-stroke" onClick={onShowAll}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onShowAll}
+          >
             {isEs ? "Ver todas las fechas" : "Show all dates"}
           </Button>
         }
@@ -403,11 +466,21 @@ function TreatmentEntriesTable({
         <TableHead>
           <TableRow>
             <TableHeaderCell>{dt?.table?.date || "Date"}</TableHeaderCell>
-            <TableHeaderCell>{dt?.table?.treatmentType || "Treatment Type"}</TableHeaderCell>
-            <TableHeaderCell numeric>{dt?.table?.fluidRemoved || "Fluid Removed"}</TableHeaderCell>
-            <TableHeaderCell numeric>{dt?.table?.weight || "Pre / Post Weight"}</TableHeaderCell>
-            <TableHeaderCell numeric>{dt?.table?.bloodPressure || "Blood Pressure"}</TableHeaderCell>
-            <TableHeaderCell>{dt?.table?.symptoms || "Symptoms"}</TableHeaderCell>
+            <TableHeaderCell>
+              {dt?.table?.treatmentType || "Treatment Type"}
+            </TableHeaderCell>
+            <TableHeaderCell numeric>
+              {dt?.table?.fluidRemoved || "Fluid Removed"}
+            </TableHeaderCell>
+            <TableHeaderCell numeric>
+              {dt?.table?.weight || "Pre / Post Weight"}
+            </TableHeaderCell>
+            <TableHeaderCell numeric>
+              {dt?.table?.bloodPressure || "Blood Pressure"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {dt?.table?.symptoms || "Symptoms"}
+            </TableHeaderCell>
             <TableHeaderCell>{dt?.table?.status || "Status"}</TableHeaderCell>
             <TableHeaderCell>{dt?.table?.actions || "Actions"}</TableHeaderCell>
           </TableRow>
@@ -422,7 +495,9 @@ function TreatmentEntriesTable({
             return (
               <TableRow key={entry.id}>
                 <TableCell emphasis>
-                  <span className="block">{entry.displayDate.split(",")[1]}</span>
+                  <span className="block">
+                    {entry.displayDate.split(",")[1]}
+                  </span>
                   <span className="block text-caption font-normal text-fg-muted">
                     {entry.startTime} – {entry.endTime}
                   </span>
@@ -480,7 +555,9 @@ function TreatmentEntriesTable({
                         size: "small",
                         iconOnly: true,
                       })}
-                      title={dt?.table?.viewTooltip || "View Full Entry Details"}
+                      title={
+                        dt?.table?.viewTooltip || "View Full Entry Details"
+                      }
                       aria-label={`View full entry for ${entry.displayDate}`}
                     >
                       <Eye />

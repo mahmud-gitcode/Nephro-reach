@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -86,7 +86,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-2",
         date: "Jun 19, 2026",
-        order: "Keep vascular access dressing clean and dry for 6 hours post-treatment",
+        order:
+          "Keep vascular access dressing clean and dry for 6 hours post-treatment",
         completed: true,
       },
       {
@@ -122,7 +123,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         symptoms: ["Fatigue", "Mild dizziness"],
         severity: "Mild",
         recoveryTime: "2 – 4 hours",
-        notes: "Rested for 3 hours after clinic. Felt back to baseline by evening.",
+        notes:
+          "Rested for 3 hours after clinic. Felt back to baseline by evening.",
       },
       {
         id: "sym-2",
@@ -131,7 +133,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         symptoms: ["Mild ankle swelling", "Itching"],
         severity: "Mild",
         recoveryTime: "< 2 hours",
-        notes: "Elevated legs while watching TV. Applied prescribed moisturizing cream.",
+        notes:
+          "Elevated legs while watching TV. Applied prescribed moisturizing cream.",
       },
       {
         id: "sym-3",
@@ -173,7 +176,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-204",
         date: "Jun 23, 2026",
-        order: "Hold morning antihypertensive if pre-dialysis systolic BP < 110 mmHg",
+        order:
+          "Hold morning antihypertensive if pre-dialysis systolic BP < 110 mmHg",
         completed: true,
       },
       {
@@ -185,7 +189,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-206",
         date: "Jun 24, 2026",
-        order: "Apply cool compress to cannulation sites if mild tenderness occurs",
+        order:
+          "Apply cool compress to cannulation sites if mild tenderness occurs",
         completed: false,
       },
     ],
@@ -221,7 +226,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-301",
         date: "Jun 24, 2026",
-        order: "Increase dietary protein intake with high biological value snacks",
+        order:
+          "Increase dietary protein intake with high biological value snacks",
         completed: false,
       },
       {
@@ -233,13 +239,15 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-303",
         date: "Jun 25, 2026",
-        order: "Elevate lower extremities for 30 minutes twice daily to reduce edema",
+        order:
+          "Elevate lower extremities for 30 minutes twice daily to reduce edema",
         completed: true,
       },
       {
         id: "ord-304",
         date: "Jun 26, 2026",
-        order: "Avoid lifting heavy objects (> 10 lbs) with vascular access arm",
+        order:
+          "Avoid lifting heavy objects (> 10 lbs) with vascular access arm",
         completed: true,
       },
       {
@@ -278,13 +286,15 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-402",
         date: "Jun 28, 2026",
-        order: "Strict adherence to 3-day weekend fluid restriction (< 1.5 L total)",
+        order:
+          "Strict adherence to 3-day weekend fluid restriction (< 1.5 L total)",
         completed: true,
       },
       {
         id: "ord-403",
         date: "Jun 28, 2026",
-        order: "Inspect access puncture sites daily for erythema, warmth, or drainage",
+        order:
+          "Inspect access puncture sites daily for erythema, warmth, or drainage",
         completed: true,
       },
       {
@@ -296,7 +306,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-405",
         date: "Jun 30, 2026",
-        order: "Notify on-call nephrologist if weekend weight gain exceeds 2.5 kg",
+        order:
+          "Notify on-call nephrologist if weekend weight gain exceeds 2.5 kg",
         completed: false,
       },
     ],
@@ -320,12 +331,14 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
     endDate: "Saturday, Jun 27, 2026",
     isExtra: true,
     clinicalReason: "Fluid Overload (Extra Ultrafiltration needed)",
-    additionalNotes: "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg) and alleviate shortness of breath.",
+    additionalNotes:
+      "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg) and alleviate shortness of breath.",
     orders: [
       {
         id: "ord-ext-1",
         date: "Jun 26, 2026",
-        order: "Complete 3.5-hour ultrafiltration-only cycle to achieve target dry weight",
+        order:
+          "Complete 3.5-hour ultrafiltration-only cycle to achieve target dry weight",
         completed: true,
       },
       {
@@ -337,7 +350,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
       {
         id: "ord-ext-3",
         date: "Jun 27, 2026",
-        order: "Strict adherence to 32 oz interdialytic fluid limit over the weekend",
+        order:
+          "Strict adherence to 32 oz interdialytic fluid limit over the weekend",
         completed: false,
       },
     ],
@@ -349,7 +363,8 @@ const INTERVAL_VIEW_DATA: Record<string, TreatmentIntervalMeta> = {
         symptoms: ["Shortness of breath", "Pedal edema"],
         severity: "Moderate",
         recoveryTime: "2 – 4 hours",
-        notes: "Breathing significantly improved following 2.1 L fluid removal.",
+        notes:
+          "Breathing significantly improved following 2.1 L fluid removal.",
       },
     ],
   },
@@ -370,31 +385,99 @@ const TREATMENT_VALID_DATES: Record<
   { dateStr: string; dayLabel: string; shortDate: string }[]
 > = {
   "tx-1": [
-    { dateStr: "Friday, Jun 19, 2026", dayLabel: "Friday", shortDate: "Jun 19, 2026" },
-    { dateStr: "Saturday, Jun 20, 2026", dayLabel: "Saturday", shortDate: "Jun 20, 2026" },
-    { dateStr: "Sunday, Jun 21, 2026", dayLabel: "Sunday", shortDate: "Jun 21, 2026" },
-    { dateStr: "Monday, Jun 22, 2026", dayLabel: "Monday", shortDate: "Jun 22, 2026" },
+    {
+      dateStr: "Friday, Jun 19, 2026",
+      dayLabel: "Friday",
+      shortDate: "Jun 19, 2026",
+    },
+    {
+      dateStr: "Saturday, Jun 20, 2026",
+      dayLabel: "Saturday",
+      shortDate: "Jun 20, 2026",
+    },
+    {
+      dateStr: "Sunday, Jun 21, 2026",
+      dayLabel: "Sunday",
+      shortDate: "Jun 21, 2026",
+    },
+    {
+      dateStr: "Monday, Jun 22, 2026",
+      dayLabel: "Monday",
+      shortDate: "Jun 22, 2026",
+    },
   ],
   "tx-2": [
-    { dateStr: "Monday, Jun 22, 2026", dayLabel: "Monday", shortDate: "Jun 22, 2026" },
-    { dateStr: "Tuesday, Jun 23, 2026", dayLabel: "Tuesday", shortDate: "Jun 23, 2026" },
-    { dateStr: "Wednesday, Jun 24, 2026", dayLabel: "Wednesday", shortDate: "Jun 24, 2026" },
+    {
+      dateStr: "Monday, Jun 22, 2026",
+      dayLabel: "Monday",
+      shortDate: "Jun 22, 2026",
+    },
+    {
+      dateStr: "Tuesday, Jun 23, 2026",
+      dayLabel: "Tuesday",
+      shortDate: "Jun 23, 2026",
+    },
+    {
+      dateStr: "Wednesday, Jun 24, 2026",
+      dayLabel: "Wednesday",
+      shortDate: "Jun 24, 2026",
+    },
   ],
   "tx-3": [
-    { dateStr: "Wednesday, Jun 24, 2026", dayLabel: "Wednesday", shortDate: "Jun 24, 2026" },
-    { dateStr: "Thursday, Jun 25, 2026", dayLabel: "Thursday", shortDate: "Jun 25, 2026" },
-    { dateStr: "Friday, Jun 26, 2026", dayLabel: "Friday", shortDate: "Jun 26, 2026" },
-    { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27, 2026" },
+    {
+      dateStr: "Wednesday, Jun 24, 2026",
+      dayLabel: "Wednesday",
+      shortDate: "Jun 24, 2026",
+    },
+    {
+      dateStr: "Thursday, Jun 25, 2026",
+      dayLabel: "Thursday",
+      shortDate: "Jun 25, 2026",
+    },
+    {
+      dateStr: "Friday, Jun 26, 2026",
+      dayLabel: "Friday",
+      shortDate: "Jun 26, 2026",
+    },
+    {
+      dateStr: "Saturday, Jun 27, 2026",
+      dayLabel: "Saturday",
+      shortDate: "Jun 27, 2026",
+    },
   ],
   "tx-4": [
-    { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27, 2026" },
-    { dateStr: "Sunday, Jun 28, 2026", dayLabel: "Sunday", shortDate: "Jun 28, 2026" },
-    { dateStr: "Monday, Jun 29, 2026", dayLabel: "Monday", shortDate: "Jun 29, 2026" },
-    { dateStr: "Tuesday, Jun 30, 2026", dayLabel: "Tuesday", shortDate: "Jun 30, 2026" },
+    {
+      dateStr: "Saturday, Jun 27, 2026",
+      dayLabel: "Saturday",
+      shortDate: "Jun 27, 2026",
+    },
+    {
+      dateStr: "Sunday, Jun 28, 2026",
+      dayLabel: "Sunday",
+      shortDate: "Jun 28, 2026",
+    },
+    {
+      dateStr: "Monday, Jun 29, 2026",
+      dayLabel: "Monday",
+      shortDate: "Jun 29, 2026",
+    },
+    {
+      dateStr: "Tuesday, Jun 30, 2026",
+      dayLabel: "Tuesday",
+      shortDate: "Jun 30, 2026",
+    },
   ],
   "tx-extra-3-1": [
-    { dateStr: "Friday, Jun 26, 2026", dayLabel: "Friday", shortDate: "Jun 26, 2026" },
-    { dateStr: "Saturday, Jun 27, 2026", dayLabel: "Saturday", shortDate: "Jun 27, 2026" },
+    {
+      dateStr: "Friday, Jun 26, 2026",
+      dayLabel: "Friday",
+      shortDate: "Jun 26, 2026",
+    },
+    {
+      dateStr: "Saturday, Jun 27, 2026",
+      dayLabel: "Saturday",
+      shortDate: "Jun 27, 2026",
+    },
   ],
 };
 
@@ -499,12 +582,21 @@ function getDayAndDate(dateStr: string, isEs: boolean) {
   if (!dayName) {
     const parsed = new Date(datePart);
     if (!isNaN(parsed.getTime())) {
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const days = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
       dayName = days[parsed.getDay()];
     }
   }
 
-  const localizedDay = isEs && SPANISH_DAYS[dayName] ? SPANISH_DAYS[dayName] : dayName;
+  const localizedDay =
+    isEs && SPANISH_DAYS[dayName] ? SPANISH_DAYS[dayName] : dayName;
 
   return {
     day: localizedDay || "-",
@@ -518,26 +610,38 @@ function ViewRecordContent() {
   const queryTitle = searchParams.get("title");
   const queryReason = searchParams.get("reason");
   const queryNotes = searchParams.get("notes");
-  const isExtraQuery = searchParams.get("isExtra") === "true" || treatmentParam.toLowerCase().includes("extra");
+  const isExtraQuery =
+    searchParams.get("isExtra") === "true" ||
+    treatmentParam.toLowerCase().includes("extra");
 
-  const activeKey = INTERVAL_VIEW_DATA[treatmentParam] ? treatmentParam : "tx-1";
+  const activeKey = INTERVAL_VIEW_DATA[treatmentParam]
+    ? treatmentParam
+    : "tx-1";
   const baseData = INTERVAL_VIEW_DATA[activeKey] || INTERVAL_VIEW_DATA["tx-1"];
-  const availableDates = TREATMENT_VALID_DATES[activeKey] || TREATMENT_VALID_DATES["tx-1"];
+  const availableDates =
+    TREATMENT_VALID_DATES[activeKey] || TREATMENT_VALID_DATES["tx-1"];
 
   const { language } = useLanguage();
   const isEs = language === "ES";
 
   const isExtra = isExtraQuery || Boolean(baseData.isExtra);
-  const clinicalReason = isExtra ? (queryReason || baseData.clinicalReason || "") : "";
-  const additionalNotes = isExtra ? (queryNotes || baseData.additionalNotes || "") : "";
+  const clinicalReason = isExtra
+    ? queryReason || baseData.clinicalReason || ""
+    : "";
+  const additionalNotes = isExtra
+    ? queryNotes || baseData.additionalNotes || ""
+    : "";
 
   const intervalData: TreatmentIntervalMeta = {
     ...baseData,
     id: treatmentParam,
     name: queryTitle || baseData.name,
-    label: isExtra && !INTERVAL_VIEW_DATA[treatmentParam]
-      ? (isEs ? "Sesión Extra de Diálisis" : "Extra Dialysis Session")
-      : baseData.label,
+    label:
+      isExtra && !INTERVAL_VIEW_DATA[treatmentParam]
+        ? isEs
+          ? "Sesión Extra de Diálisis"
+          : "Extra Dialysis Session"
+        : baseData.label,
     isExtra,
     clinicalReason,
     additionalNotes,
@@ -546,9 +650,19 @@ function ViewRecordContent() {
   const startParsed = parseDayAndDate(intervalData.startDate);
   const endParsed = parseDayAndDate(intervalData.endDate);
 
-  const [orders, setOrders] = useState<ProviderOrder[]>(intervalData.orders);
+  /* Edits are held per treatment and fall back to that treatment's seed, so
+     switching treatments shows the right list without an effect copying it
+     into state on every change. */
+  const [orderEdits, setOrderEdits] = useState<Record<string, ProviderOrder[]>>(
+    {},
+  );
+  const orders = orderEdits[activeKey] ?? intervalData.orders;
+  const setOrders = (update: (prev: ProviderOrder[]) => ProviderOrder[]) =>
+    setOrderEdits((prev) => ({ ...prev, [activeKey]: update(orders) }));
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [formOrderDate, setFormOrderDate] = useState(availableDates[0].shortDate);
+  const [formOrderDate, setFormOrderDate] = useState(
+    availableDates[0].shortDate,
+  );
   const [formOrderText, setFormOrderText] = useState("");
   const [formOrderError, setFormOrderError] = useState("");
 
@@ -565,7 +679,7 @@ function ViewRecordContent() {
       setFormOrderError(
         isEs
           ? "Por favor escribe la instrucción u orden"
-          : "Please enter the order instruction"
+          : "Please enter the order instruction",
       );
       return;
     }
@@ -581,23 +695,36 @@ function ViewRecordContent() {
 
   const toggleOrderCompleted = (id: string) => {
     setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, completed: !o.completed } : o))
+      prev.map((o) => (o.id === id ? { ...o, completed: !o.completed } : o)),
     );
   };
 
   // Symptoms state & handlers:
-  const [symptomsList, setSymptomsList] = useState<LoggedSymptomEntry[]>(() =>
-    intervalData.symptomEntries.map((s) => ({
-      ...s,
-      date: s.date.includes(",") ? s.date.slice(s.date.indexOf(",") + 1).trim() : s.date,
-    }))
-  );
+  const seededSymptoms = intervalData.symptomEntries.map((entry) => ({
+    ...entry,
+    date: entry.date.includes(",")
+      ? entry.date.slice(entry.date.indexOf(",") + 1).trim()
+      : entry.date,
+  }));
+  const [symptomEdits, setSymptomEdits] = useState<
+    Record<string, LoggedSymptomEntry[]>
+  >({});
+  const symptomsList = symptomEdits[activeKey] ?? seededSymptoms;
+  const setSymptomsList = (
+    update: (prev: LoggedSymptomEntry[]) => LoggedSymptomEntry[],
+  ) =>
+    setSymptomEdits((prev) => ({ ...prev, [activeKey]: update(symptomsList) }));
   const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
   const [editingSymptomId, setEditingSymptomId] = useState<string | null>(null);
-  const [formSymptomDate, setFormSymptomDate] = useState(availableDates[0].shortDate);
-  const [formSelectedSymptoms, setFormSelectedSymptoms] = useState<string[]>([]);
+  const [formSymptomDate, setFormSymptomDate] = useState(
+    availableDates[0].shortDate,
+  );
+  const [formSelectedSymptoms, setFormSelectedSymptoms] = useState<string[]>(
+    [],
+  );
   const [formCustomSymptom, setFormCustomSymptom] = useState("");
-  const [formRecoveryTime, setFormRecoveryTime] = useState<string>("2 – 4 hours");
+  const [formRecoveryTime, setFormRecoveryTime] =
+    useState<string>("2 – 4 hours");
   const [symptomFormError, setSymptomFormError] = useState("");
 
   const handleOpenAddSymptom = () => {
@@ -622,7 +749,7 @@ function ViewRecordContent() {
 
   const toggleSymptomSelection = (sym: string) => {
     setFormSelectedSymptoms((prev) =>
-      prev.includes(sym) ? prev.filter((s) => s !== sym) : [...prev, sym]
+      prev.includes(sym) ? prev.filter((s) => s !== sym) : [...prev, sym],
     );
     if (symptomFormError) setSymptomFormError("");
   };
@@ -640,7 +767,9 @@ function ViewRecordContent() {
     e.preventDefault();
     if (formSelectedSymptoms.length === 0) {
       setSymptomFormError(
-        isEs ? "Selecciona al menos un síntoma" : "Please select at least one symptom"
+        isEs
+          ? "Selecciona al menos un síntoma"
+          : "Please select at least one symptom",
       );
       return;
     }
@@ -655,8 +784,8 @@ function ViewRecordContent() {
                 symptoms: formSelectedSymptoms,
                 recoveryTime: formRecoveryTime,
               }
-            : s
-        )
+            : s,
+        ),
       );
     } else {
       const newEntry: LoggedSymptomEntry = {
@@ -673,18 +802,8 @@ function ViewRecordContent() {
     setIsSymptomModalOpen(false);
   };
 
-  useEffect(() => {
-    setOrders(intervalData.orders);
-    setSymptomsList(
-      intervalData.symptomEntries.map((s) => ({
-        ...s,
-        date: s.date.includes(",") ? s.date.slice(s.date.indexOf(",") + 1).trim() : s.date,
-      }))
-    );
-  }, [activeKey]);
-
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 pb-16">
+    <div className="mx-auto w-full max-w-7xl space-y-8 pb-16">
       {/* Top Breadcrumb Navigation */}
       <div>
         <Link
@@ -692,7 +811,9 @@ function ViewRecordContent() {
           className="inline-flex items-center gap-inline-sm rounded-control-small text-label-md text-fg-muted transition-colors duration-150 ease-standard hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <ArrowLeft className="h-4 w-4" />
-          {isEs ? "Volver a Gestión de Diálisis" : "Back to Dialysis Management"}
+          {isEs
+            ? "Volver a Gestión de Diálisis"
+            : "Back to Dialysis Management"}
         </Link>
       </div>
 
@@ -700,12 +821,10 @@ function ViewRecordContent() {
       {/* TOP HEADER CARD: TREATMENT TITLE, INTERVAL BADGE & DATES                 */}
       {/* ========================================================================= */}
       <Card as="section" padding="none" className="p-inset-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           {/* Left: Treatment 1 and beside it Treatment 1 ➔ Treatment 2 */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-heading-2 text-fg">
-              {intervalData.name}
-            </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-heading-2 text-fg">{intervalData.name}</h1>
             <Badge tone={intervalData.isExtra ? "accent" : "info"}>
               {intervalData.label}
             </Badge>
@@ -714,20 +833,34 @@ function ViewRecordContent() {
           {/* Right: Date block in place of the removed record button */}
           <div className="flex items-center gap-3 text-xs sm:text-sm">
             {intervalData.isExtra ? (
-              <div className="leading-snug text-right">
-                <span className="block text-label-md text-fg">{startParsed.day}</span>
-                <span className="block text-label-md text-accent-fg">{startParsed.date}</span>
+              <div className="text-right leading-snug">
+                <span className="block text-label-md text-fg">
+                  {startParsed.day}
+                </span>
+                <span className="block text-label-md text-accent-fg">
+                  {startParsed.date}
+                </span>
               </div>
             ) : (
               <>
                 <div className="leading-snug">
-                  <span className="block text-label-md text-fg">{startParsed.day}</span>
-                  <span className="block text-body-sm text-fg-muted">{startParsed.date}</span>
+                  <span className="block text-label-md text-fg">
+                    {startParsed.day}
+                  </span>
+                  <span className="block text-body-sm text-fg-muted">
+                    {startParsed.date}
+                  </span>
                 </div>
-                <span className="text-body-md text-fg-subtle select-none">-</span>
+                <span className="text-body-md text-fg-subtle select-none">
+                  -
+                </span>
                 <div className="leading-snug">
-                  <span className="block text-label-md text-fg">{endParsed.day}</span>
-                  <span className="block text-body-sm text-fg-muted">{endParsed.date}</span>
+                  <span className="block text-label-md text-fg">
+                    {endParsed.day}
+                  </span>
+                  <span className="block text-body-sm text-fg-muted">
+                    {endParsed.date}
+                  </span>
                 </div>
               </>
             )}
@@ -738,68 +871,77 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* CLINICAL REASON & ADDITIONAL NOTES CARD (ONLY FOR EXTRA TREATMENTS)       */}
       {/* ========================================================================= */}
-      {intervalData.isExtra && (intervalData.clinicalReason || intervalData.additionalNotes) && (
-        <section className="rounded-card sm:rounded-panel border border-accent-soft-line bg-gradient-to-br from-accent-soft/40 via-surface to-surface p-6 sm:p-7 shadow-control space-y-4 animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-accent-soft-line">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border bg-accent-soft border-accent-soft-line text-accent-fg">
-                <Activity className="h-5 w-5 stroke-[2.2]" />
+      {intervalData.isExtra &&
+        (intervalData.clinicalReason || intervalData.additionalNotes) && (
+          <section className="animate-in fade-in space-y-4 rounded-card border border-accent-soft-line bg-gradient-to-br from-accent-soft/40 via-surface to-surface p-6 shadow-control duration-200 sm:rounded-panel sm:p-7">
+            <div className="flex flex-col justify-between gap-3 border-b border-accent-soft-line pb-3 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-accent-soft-line bg-accent-soft text-accent-fg">
+                  <Activity className="h-5 w-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h2 className="text-heading-5 text-fg">
+                    {isEs
+                      ? "Información Clínica de la Sesión Extra"
+                      : "Clinical Reason & Additional Notes"}
+                  </h2>
+                  <p className="text-caption text-fg-muted">
+                    {isEs
+                      ? "Motivo médico registrado y notas adicionales o síntomas para esta sesión extra"
+                      : "Physician documented clinical indication and patient notes for this extra session"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-heading-5 text-fg">
-                  {isEs ? "Información Clínica de la Sesión Extra" : "Clinical Reason & Additional Notes"}
-                </h2>
-                <p className="text-caption text-fg-muted">
-                  {isEs
-                    ? "Motivo médico registrado y notas adicionales o síntomas para esta sesión extra"
-                    : "Physician documented clinical indication and patient notes for this extra session"}
-                </p>
-              </div>
+
+              <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-accent-soft-line bg-accent-100 px-3 py-1 text-xs font-bold text-accent-900 shadow-control sm:self-center">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-accent-solid" />
+                {isEs
+                  ? "Sesión de Tratamiento Extra"
+                  : "Extra Treatment Session"}
+              </span>
             </div>
 
-            <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-accent-100 text-accent-900 border border-accent-soft-line shadow-control">
-              <span className="h-2 w-2 rounded-full bg-accent-solid animate-pulse" />
-              {isEs ? "Sesión de Tratamiento Extra" : "Extra Treatment Session"}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-            {/* Box 1: Clinical Reason */}
-            <div className="rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 text-accent-fg" />
-                <span className="text-overline text-accent-fg">
-                  {isEs ? "Motivo Clínico" : "Clinical Reason"}
-                </span>
+            <div className="grid grid-cols-1 gap-4 pt-1 md:grid-cols-2">
+              {/* Box 1: Clinical Reason */}
+              <div className="flex flex-col justify-between space-y-2 rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-accent-fg" />
+                  <span className="text-overline text-accent-fg">
+                    {isEs ? "Motivo Clínico" : "Clinical Reason"}
+                  </span>
+                </div>
+                <div className="pt-1">
+                  <span className="inline-flex items-center rounded-control border border-accent-soft-line bg-surface px-3.5 py-1.5 text-sm font-bold text-accent-900 shadow-control sm:text-base">
+                    {intervalData.clinicalReason ||
+                      (isEs
+                        ? "Motivo no especificado"
+                        : "Reason not specified")}
+                  </span>
+                </div>
               </div>
-              <div className="pt-1">
-                <span className="inline-flex items-center px-3.5 py-1.5 rounded-control text-sm sm:text-base font-bold border shadow-control bg-surface text-accent-900 border-accent-soft-line">
-                  {intervalData.clinicalReason ||
-                    (isEs ? "Motivo no especificado" : "Reason not specified")}
-                </span>
+
+              {/* Box 2: Additional Notes / Symptoms */}
+              <div className="flex flex-col justify-between space-y-2 rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 shrink-0 text-accent-fg" />
+                  <span className="text-overline text-accent-fg">
+                    {isEs
+                      ? "Notas Adicionales / Síntomas"
+                      : "Additional Notes / Symptoms"}
+                  </span>
+                </div>
+                <div className="pt-1">
+                  <p className="rounded-control border border-accent-soft-line bg-surface p-3 text-sm leading-relaxed font-medium text-fg-secondary shadow-control sm:p-3.5 sm:text-base">
+                    {intervalData.additionalNotes ||
+                      (isEs
+                        ? "Sin notas adicionales registradas para esta sesión extra."
+                        : "No additional notes or symptoms recorded for this extra session.")}
+                  </p>
+                </div>
               </div>
             </div>
-
-            {/* Box 2: Additional Notes / Symptoms */}
-            <div className="rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-accent-fg shrink-0" />
-                <span className="text-overline text-accent-fg">
-                  {isEs ? "Notas Adicionales / Síntomas" : "Additional Notes / Symptoms"}
-                </span>
-              </div>
-              <div className="pt-1">
-                <p className="text-sm sm:text-base font-medium text-fg-secondary leading-relaxed bg-surface border border-accent-soft-line rounded-control p-3 sm:p-3.5 shadow-control">
-                  {intervalData.additionalNotes ||
-                    (isEs
-                      ? "Sin notas adicionales registradas para esta sesión extra."
-                      : "No additional notes or symptoms recorded for this extra session.")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
       {/* ========================================================================= */}
       {/* 1. RECOVERY PATTERN TRACKING                                              */}
@@ -811,10 +953,12 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* 2. PROVIDER ORDERS & INSTRUCTIONS                                         */}
       {/* ========================================================================= */}
-      <section className="space-y-3.5 animate-in fade-in duration-200">
+      <section className="animate-in fade-in space-y-3.5 duration-200">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-heading-5 text-fg">
-            {isEs ? "Órdenes e Instrucciones del Proveedor" : "Provider Orders & Instructions"}
+            {isEs
+              ? "Órdenes e Instrucciones del Proveedor"
+              : "Provider Orders & Instructions"}
           </h2>
 
           <Button size="small" onClick={handleOpenAddOrder}>
@@ -871,7 +1015,10 @@ function ViewRecordContent() {
                         }`}
                       >
                         {item.completed && (
-                          <Check aria-hidden="true" className="h-3.5 w-3.5 stroke-[3]" />
+                          <Check
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 stroke-[3]"
+                          />
                         )}
                       </button>
                     </TableCell>
@@ -886,10 +1033,12 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* 3. SYMPTOMS BETWEEN TREATMENTS                                            */}
       {/* ========================================================================= */}
-      <section className="space-y-3.5 animate-in fade-in duration-200">
+      <section className="animate-in fade-in space-y-3.5 duration-200">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-heading-5 text-fg">
-            {isEs ? "Síntomas Entre Tratamientos" : "Symptoms Between Treatments"}
+            {isEs
+              ? "Síntomas Entre Tratamientos"
+              : "Symptoms Between Treatments"}
           </h2>
 
           <Button size="small" onClick={handleOpenAddSymptom}>
@@ -908,7 +1057,9 @@ function ViewRecordContent() {
                 <TableHeaderCell className="w-32 sm:w-36">
                   {isEs ? "Fecha" : "Date"}
                 </TableHeaderCell>
-                <TableHeaderCell>{isEs ? "Síntomas" : "Symptoms"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Síntomas" : "Symptoms"}
+                </TableHeaderCell>
                 <TableHeaderCell className="w-44">
                   {isEs ? "Tiempo de Recuperación" : "Recovery Time"}
                 </TableHeaderCell>
@@ -937,7 +1088,10 @@ function ViewRecordContent() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {entry.recoveryTime ? (
-                        <Badge tone="success" icon={<Clock aria-hidden="true" />}>
+                        <Badge
+                          tone="success"
+                          icon={<Clock aria-hidden="true" />}
+                        >
                           {isEs
                             ? LOCALIZED_RECOVERY_TIME[entry.recoveryTime] ||
                               entry.recoveryTime
@@ -1002,68 +1156,65 @@ function ViewRecordContent() {
           </>
         }
       >
-            <form
-              id="add-order-form"
-              onSubmit={handleAddOrderSubmit}
-              className="space-y-stack-lg"
-            >
-              {/* Step 1: Select date strictly from this treatment interval.
+        <form
+          id="add-order-form"
+          onSubmit={handleAddOrderSubmit}
+          className="space-y-stack-lg"
+        >
+          {/* Step 1: Select date strictly from this treatment interval.
                   One date out of a fixed set is a radio group, so it is one —
                   arrow keys move between days, Tab leaves the group. */}
-              <div className="space-y-stack-sm">
-                <span className="block text-label-md text-fg-secondary">
-                  {isEs
-                    ? "1. Seleccionar Fecha del Intervalo"
-                    : "1. Select Treatment Interval Date"}
-                </span>
-                <RadioGroup
-                  label={
-                    isEs ? "Fecha del intervalo" : "Treatment interval date"
+          <div className="space-y-stack-sm">
+            <span className="block text-label-md text-fg-secondary">
+              {isEs
+                ? "1. Seleccionar Fecha del Intervalo"
+                : "1. Select Treatment Interval Date"}
+            </span>
+            <RadioGroup
+              label={isEs ? "Fecha del intervalo" : "Treatment interval date"}
+              value={formOrderDate}
+              onChange={setFormOrderDate}
+              orientation="horizontal"
+              className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
+            >
+              {availableDates.map((d) => (
+                <RadioCard
+                  key={d.shortDate}
+                  value={d.shortDate}
+                  title={
+                    isEs
+                      ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
+                      : d.dayLabel
                   }
-                  value={formOrderDate}
-                  onChange={setFormOrderDate}
-                  orientation="horizontal"
-                  className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
-                >
-                  {availableDates.map((d) => (
-                    <RadioCard
-                      key={d.shortDate}
-                      value={d.shortDate}
-                      title={
-                        isEs
-                          ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
-                          : d.dayLabel
-                      }
-                      description={d.shortDate}
-                    />
-                  ))}
-                </RadioGroup>
-              </div>
+                  description={d.shortDate}
+                />
+              ))}
+            </RadioGroup>
+          </div>
 
-              {/* Step 2: Order text */}
-              <FormField
-                label={isEs ? "2. Orden / Instrucción" : "2. Order / Instruction"}
-                error={formOrderError || undefined}
-              >
-                {(props) => (
-                  <Textarea
-                    {...props}
-                    rows={3}
-                    value={formOrderText}
-                    onChange={(e) => {
-                      setFormOrderText(e.target.value);
-                      if (formOrderError) setFormOrderError("");
-                    }}
-                    placeholder={
-                      isEs
-                        ? "Ej: Tomar aglutinante de fosfato con todas las comidas sólidas..."
-                        : "e.g. Take phosphate binder with all solid meals or schedule access ultrasound..."
-                    }
-                  />
-                )}
-              </FormField>
-
-            </form>
+          {/* Step 2: Order text */}
+          <FormField
+            label={isEs ? "2. Orden / Instrucción" : "2. Order / Instruction"}
+            error={formOrderError || undefined}
+          >
+            {(props) => (
+              <Textarea
+                {...props}
+                rows={3}
+                value={formOrderText}
+                onChange={(e) => {
+                  setFormOrderText(e.target.value);
+                  if (formOrderError) setFormOrderError("");
+                }}
+                placeholder={
+                  isEs
+                    ? "Ej: Tomar aglutinante de fosfato con todas las comidas sólidas..."
+                    : "e.g. Take phosphate binder with all solid meals or schedule access ultrasound..."
+                }
+              />
+            )}
+          </FormField>
+        </form>
       </Modal>
 
       {/* Add / Edit Symptom Modal */}
@@ -1100,137 +1251,136 @@ function ViewRecordContent() {
           </>
         }
       >
-            <form
-              id="symptom-form"
-              onSubmit={handleSymptomSubmit}
-              className="space-y-stack-lg"
+        <form
+          id="symptom-form"
+          onSubmit={handleSymptomSubmit}
+          className="space-y-stack-lg"
+        >
+          {/* Step 1: Select Date */}
+          <div className="space-y-stack-sm">
+            <span className="block text-label-md text-fg-secondary">
+              {isEs
+                ? "1. Seleccionar Fecha del Tratamiento"
+                : "1. Select Treatment Date"}
+            </span>
+            <RadioGroup
+              label={isEs ? "Fecha del tratamiento" : "Treatment date"}
+              value={formSymptomDate}
+              onChange={setFormSymptomDate}
+              orientation="horizontal"
+              className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
             >
-              {/* Step 1: Select Date */}
-              <div className="space-y-stack-sm">
-                <span className="block text-label-md text-fg-secondary">
-                  {isEs
-                    ? "1. Seleccionar Fecha del Tratamiento"
-                    : "1. Select Treatment Date"}
-                </span>
-                <RadioGroup
-                  label={isEs ? "Fecha del tratamiento" : "Treatment date"}
-                  value={formSymptomDate}
-                  onChange={setFormSymptomDate}
-                  orientation="horizontal"
-                  className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
-                >
-                  {availableDates.map((d) => (
-                    <RadioCard
-                      key={d.shortDate}
-                      value={d.shortDate}
-                      title={
-                        isEs
-                          ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
-                          : d.dayLabel
-                      }
-                      description={d.shortDate}
-                    />
-                  ))}
-                </RadioGroup>
-              </div>
+              {availableDates.map((d) => (
+                <RadioCard
+                  key={d.shortDate}
+                  value={d.shortDate}
+                  title={
+                    isEs
+                      ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
+                      : d.dayLabel
+                  }
+                  description={d.shortDate}
+                />
+              ))}
+            </RadioGroup>
+          </div>
 
-              {/* Step 2: Select Symptoms — any number of them, so the chips
+          {/* Step 2: Select Symptoms — any number of them, so the chips
                   carry aria-pressed rather than posing as radio buttons. */}
-              <div className="space-y-stack-sm">
-                <span className="block text-label-md text-fg-secondary">
-                  {isEs ? "2. Seleccionar Síntomas" : "2. Select Symptoms"}
-                </span>
-                <div className="max-h-48 overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
-                  <ChipGroup
-                    selection="multiple"
-                    label={isEs ? "Síntomas" : "Symptoms"}
-                    className="gap-inline-md"
-                  >
-                    {COMMON_SYMPTOM_OPTIONS.map((sym) => {
-                      const isSelected = formSelectedSymptoms.includes(sym);
-                      return (
-                        <Chip
-                          key={sym}
-                          selected={isSelected}
-                          onClick={() => toggleSymptomSelection(sym)}
-                          icon={
-                            isSelected ? (
-                              <Check aria-hidden="true" className="stroke-[3]" />
-                            ) : undefined
-                          }
-                        >
-                          {isEs ? LOCALIZED_SYMPTOMS[sym] || sym : sym}
-                        </Chip>
-                      );
-                    })}
-                  </ChipGroup>
-                </div>
-                {symptomFormError && (
-                  <p role="alert" className="text-caption text-danger">
-                    {symptomFormError}
-                  </p>
-                )}
-              </div>
-
-              {/* Step 3: Custom Symptom Input */}
-              <FormField
-                label={isEs ? "3. Otro Síntoma" : "3. Other Symptom"}
-                optionalLabel={isEs ? "Opcional" : "Optional"}
+          <div className="space-y-stack-sm">
+            <span className="block text-label-md text-fg-secondary">
+              {isEs ? "2. Seleccionar Síntomas" : "2. Select Symptoms"}
+            </span>
+            <div className="max-h-48 overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
+              <ChipGroup
+                selection="multiple"
+                label={isEs ? "Síntomas" : "Symptoms"}
+                className="gap-inline-md"
               >
-                {(props) => (
-                  <div className="flex gap-inline-md">
-                    <Input
-                      {...props}
-                      type="text"
-                      value={formCustomSymptom}
-                      onChange={(e) => setFormCustomSymptom(e.target.value)}
-                      placeholder={
-                        isEs
-                          ? "Escribir síntoma personalizado..."
-                          : "Type custom symptom..."
+                {COMMON_SYMPTOM_OPTIONS.map((sym) => {
+                  const isSelected = formSelectedSymptoms.includes(sym);
+                  return (
+                    <Chip
+                      key={sym}
+                      selected={isSelected}
+                      onClick={() => toggleSymptomSelection(sym)}
+                      icon={
+                        isSelected ? (
+                          <Check aria-hidden="true" className="stroke-[3]" />
+                        ) : undefined
                       }
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="neutral"
-                      appearance="fill"
-                      onClick={handleAddCustomSymptom}
                     >
-                      {isEs ? "Agregar" : "Add"}
-                    </Button>
-                  </div>
-                )}
-              </FormField>
+                      {isEs ? LOCALIZED_SYMPTOMS[sym] || sym : sym}
+                    </Chip>
+                  );
+                })}
+              </ChipGroup>
+            </div>
+            {symptomFormError && (
+              <p role="alert" className="text-caption text-danger">
+                {symptomFormError}
+              </p>
+            )}
+          </div>
 
-              {/* Step 4: Recovery Time Tracking */}
-              <FormField
-                label={
-                  isEs
-                    ? "4. ¿Cuánto tiempo te tomó sentirte mejor? (Tiempo de Recuperación)"
-                    : "4. How long did it take you to feel better? (Recovery Time)"
-                }
-                hint={
-                  isEs
-                    ? "Este dato alimenta el seguimiento del patrón de recuperación del paciente."
-                    : "This entry directly tracks your recovery pattern across dialysis treatments."
-                }
+          {/* Step 3: Custom Symptom Input */}
+          <FormField
+            label={isEs ? "3. Otro Síntoma" : "3. Other Symptom"}
+            optionalLabel={isEs ? "Opcional" : "Optional"}
+          >
+            {(props) => (
+              <div className="flex gap-inline-md">
+                <Input
+                  {...props}
+                  type="text"
+                  value={formCustomSymptom}
+                  onChange={(e) => setFormCustomSymptom(e.target.value)}
+                  placeholder={
+                    isEs
+                      ? "Escribir síntoma personalizado..."
+                      : "Type custom symptom..."
+                  }
+                  className="flex-1"
+                />
+                <Button
+                  variant="neutral"
+                  appearance="fill"
+                  onClick={handleAddCustomSymptom}
+                >
+                  {isEs ? "Agregar" : "Add"}
+                </Button>
+              </div>
+            )}
+          </FormField>
+
+          {/* Step 4: Recovery Time Tracking */}
+          <FormField
+            label={
+              isEs
+                ? "4. ¿Cuánto tiempo te tomó sentirte mejor? (Tiempo de Recuperación)"
+                : "4. How long did it take you to feel better? (Recovery Time)"
+            }
+            hint={
+              isEs
+                ? "Este dato alimenta el seguimiento del patrón de recuperación del paciente."
+                : "This entry directly tracks your recovery pattern across dialysis treatments."
+            }
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={formRecoveryTime}
+                onChange={(e) => setFormRecoveryTime(e.target.value)}
               >
-                {(props) => (
-                  <Select
-                    {...props}
-                    value={formRecoveryTime}
-                    onChange={(e) => setFormRecoveryTime(e.target.value)}
-                  >
-                    {RECOVERY_TIME_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {isEs ? LOCALIZED_RECOVERY_TIME[opt] || opt : opt}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </FormField>
-
-            </form>
+                {RECOVERY_TIME_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {isEs ? LOCALIZED_RECOVERY_TIME[opt] || opt : opt}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+        </form>
       </Modal>
     </div>
   );
@@ -1241,7 +1391,13 @@ export default function DialysisManagementViewPage() {
     <>
       <PersonalLogDisclaimer />
 
-      <Suspense fallback={<div className="p-inset-xl text-center text-body-md text-fg-muted">Loading...</div>}>
+      <Suspense
+        fallback={
+          <div className="p-inset-xl text-center text-body-md text-fg-muted">
+            Loading...
+          </div>
+        }
+      >
         <ViewRecordContent />
       </Suspense>
     </>

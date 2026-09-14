@@ -193,85 +193,109 @@ function DailyBloodPressureList() {
         <Table minWidth={1080}>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.date")}</TableHeaderCell>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.time")}</TableHeaderCell>
-              <TableHeaderCell numeric>{t("bloodPressure.tableHeaders.systolic")}</TableHeaderCell>
-              <TableHeaderCell numeric>{t("bloodPressure.tableHeaders.diastolic")}</TableHeaderCell>
-              <TableHeaderCell numeric>{t("bloodPressure.tableHeaders.pulse")}</TableHeaderCell>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.position")}</TableHeaderCell>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.symptoms")}</TableHeaderCell>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.medication")}</TableHeaderCell>
-              <TableHeaderCell>{t("bloodPressure.tableHeaders.action")}</TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.date")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.time")}
+              </TableHeaderCell>
+              <TableHeaderCell numeric>
+                {t("bloodPressure.tableHeaders.systolic")}
+              </TableHeaderCell>
+              <TableHeaderCell numeric>
+                {t("bloodPressure.tableHeaders.diastolic")}
+              </TableHeaderCell>
+              <TableHeaderCell numeric>
+                {t("bloodPressure.tableHeaders.pulse")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.position")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.symptoms")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.medication")}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {t("bloodPressure.tableHeaders.action")}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-              {readingGroupsData.map((group) => {
-                const dateLabel = language === "ES" ? group.dateEs : group.dateEn;
-                return group.readings.map((reading, index) => {
-                  const positionLabel = t(`bloodPressure.positions.${reading.position}`) || reading.position;
-                  const symptomsLabel = t(`bloodPressure.symptoms.${reading.symptoms}`) || reading.symptoms;
-                  const medicationLabel = t(`bloodPressure.medications.${reading.medication}`) || reading.medication;
+            {readingGroupsData.map((group) => {
+              const dateLabel = language === "ES" ? group.dateEs : group.dateEn;
+              return group.readings.map((reading, index) => {
+                const positionLabel =
+                  t(`bloodPressure.positions.${reading.position}`) ||
+                  reading.position;
+                const symptomsLabel =
+                  t(`bloodPressure.symptoms.${reading.symptoms}`) ||
+                  reading.symptoms;
+                const medicationLabel =
+                  t(`bloodPressure.medications.${reading.medication}`) ||
+                  reading.medication;
 
-                  return (
-                    <TableRow key={`${dateLabel}-${reading.time}`}>
-                      {index === 0 && (
-                        <TableCell
-                          rowSpan={group.readings.length}
-                          emphasis
-                          className="border-r border-line align-top"
+                return (
+                  <TableRow key={`${dateLabel}-${reading.time}`}>
+                    {index === 0 && (
+                      <TableCell
+                        rowSpan={group.readings.length}
+                        emphasis
+                        className="border-r border-line align-top"
+                      >
+                        {dateLabel}
+                      </TableCell>
+                    )}
+                    <TableCell>{reading.time}</TableCell>
+                    <TableCell numeric>{reading.systolic}</TableCell>
+                    <TableCell numeric>{reading.diastolic}</TableCell>
+                    <TableCell numeric>{reading.pulse}</TableCell>
+                    <TableCell>{positionLabel}</TableCell>
+                    <TableCell>{symptomsLabel}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-inline-md">
+                        <ReadingStatus status={reading.status} />
+                        <span className="text-body-sm text-fg-secondary">
+                          {medicationLabel}
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-inline-md">
+                        <Button
+                          iconOnly
+                          size="small"
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          aria-label={`Edit reading from ${dateLabel} at ${reading.time}`}
                         >
-                          {dateLabel}
-                        </TableCell>
-                      )}
-                      <TableCell>{reading.time}</TableCell>
-                      <TableCell numeric>{reading.systolic}</TableCell>
-                      <TableCell numeric>{reading.diastolic}</TableCell>
-                      <TableCell numeric>{reading.pulse}</TableCell>
-                      <TableCell>{positionLabel}</TableCell>
-                      <TableCell>{symptomsLabel}</TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-inline-md">
-                          <ReadingStatus status={reading.status} />
-                          <span className="text-body-sm text-fg-secondary">
-                            {medicationLabel}
-                          </span>
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-inline-md">
-                          <Button
-                            iconOnly
-                            size="small"
-                            variant="neutral"
-                            appearance="fill-stroke"
-                            aria-label={`Edit reading from ${dateLabel} at ${reading.time}`}
-                          >
-                            <Edit3 />
-                          </Button>
-                          <Button
-                            iconOnly
-                            size="small"
-                            variant="danger"
-                            appearance="fill-stroke"
-                            aria-label={`Delete reading from ${dateLabel} at ${reading.time}`}
-                          >
-                            <Trash2 />
-                          </Button>
-                          <Button
-                            iconOnly
-                            size="small"
-                            variant="neutral"
-                            appearance="stroke"
-                            aria-label={`More actions for ${dateLabel} at ${reading.time}`}
-                          >
-                            <MoreHorizontal />
-                          </Button>
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                });
-              })}
+                          <Edit3 />
+                        </Button>
+                        <Button
+                          iconOnly
+                          size="small"
+                          variant="danger"
+                          appearance="fill-stroke"
+                          aria-label={`Delete reading from ${dateLabel} at ${reading.time}`}
+                        >
+                          <Trash2 />
+                        </Button>
+                        <Button
+                          iconOnly
+                          size="small"
+                          variant="neutral"
+                          appearance="stroke"
+                          aria-label={`More actions for ${dateLabel} at ${reading.time}`}
+                        >
+                          <MoreHorizontal />
+                        </Button>
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              });
+            })}
           </TableBody>
         </Table>
       </Card>
@@ -322,9 +346,21 @@ function ReadingGuide() {
   const { t } = useLanguage();
 
   const guideRows = [
-    { label: t("bloodPressure.guide.high"), status: t("bloodPressure.statuses.High"), tone: "danger" as const },
-    { label: t("bloodPressure.guide.elevated"), status: t("bloodPressure.statuses.Elevated"), tone: "warning" as const },
-    { label: t("bloodPressure.guide.normal"), status: t("bloodPressure.statuses.Normal"), tone: "success" as const },
+    {
+      label: t("bloodPressure.guide.high"),
+      status: t("bloodPressure.statuses.High"),
+      tone: "danger" as const,
+    },
+    {
+      label: t("bloodPressure.guide.elevated"),
+      status: t("bloodPressure.statuses.Elevated"),
+      tone: "warning" as const,
+    },
+    {
+      label: t("bloodPressure.guide.normal"),
+      status: t("bloodPressure.statuses.Normal"),
+      tone: "success" as const,
+    },
   ];
 
   return (

@@ -97,7 +97,13 @@ function BathroomScaleIcon({ className = "h-9 w-9" }: { className?: string }) {
       />
       {/* Top Dial / Display Window */}
       <circle cx="22" cy="14" r="5.5" fill="var(--color-surface)" />
-      <circle cx="22" cy="14" r="5.5" stroke="var(--color-brand-300)" strokeWidth="1" />
+      <circle
+        cx="22"
+        cy="14"
+        r="5.5"
+        stroke="var(--color-brand-300)"
+        strokeWidth="1"
+      />
       {/* Dial Needle */}
       <line
         x1="22"
@@ -163,8 +169,8 @@ function MetricCards({
   let diffSign = "+";
   let statusTextColor = "text-danger";
   let statusIconBg = "bg-danger-surface border border-danger-line";
-  let StatusIcon = () => (
-    <ArrowUp className="h-6 w-6 sm:h-7 sm:w-7 text-danger stroke-[2.5]" />
+  let statusIcon = (
+    <ArrowUp className="h-6 w-6 stroke-[2.5] text-danger sm:h-7 sm:w-7" />
   );
 
   if (isBelow) {
@@ -173,8 +179,8 @@ function MetricCards({
     diffSign = "-";
     statusTextColor = "text-warning";
     statusIconBg = "bg-warning-surface border border-warning-line";
-    StatusIcon = () => (
-      <ArrowDown className="h-6 w-6 sm:h-7 sm:w-7 text-warning stroke-[2.5]" />
+    statusIcon = (
+      <ArrowDown className="h-6 w-6 stroke-[2.5] text-warning sm:h-7 sm:w-7" />
     );
   } else if (isTarget) {
     statusTitle = w?.edwMetrics?.atEdw || "At Target EDW";
@@ -182,12 +188,10 @@ function MetricCards({
     diffSign = "";
     statusTextColor = "text-success";
     statusIconBg = "bg-success-surface border border-success-line";
-    StatusIcon = () => (
-      <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-success" />
+    statusIcon = (
+      <CheckCircle2 className="h-6 w-6 text-success sm:h-7 sm:w-7" />
     );
   }
-
-  const dateStr = language === "ES" ? "31 May, 7:30 AM" : "May 31, 7:30 AM";
 
   const secondaryCards = [
     {
@@ -237,12 +241,9 @@ function MetricCards({
       {/* Primary EDW Comparison Cards - Exactly matching the screenshot */}
       <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
         {/* Card 1: Estimated Dry Weight */}
-        <div
-          onClick={onOpenEdwModal}
-          className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md cursor-pointer"
-        >
+        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5">
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card bg-[var(--color-brand-50)] border border-primary-soft-line shadow-control group-hover:scale-105 transition-transform">
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] shadow-control transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
@@ -256,17 +257,14 @@ function MetricCards({
                 </span>
               </p>
               <p className="mt-stack-xs text-caption text-fg-muted">
-                {edwNote || (w?.edwMetrics?.edwSetBy || "Set by care team.")}
+                {edwNote || w?.edwMetrics?.edwSetBy || "Set by care team."}
               </p>
             </div>
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenEdwModal();
-            }}
-            className="flex items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all hover:bg-primary-soft hover:text-fg-brand hover:border-primary-soft-line cursor-pointer shadow-control active:scale-95 shrink-0"
+            onClick={onOpenEdwModal}
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -274,12 +272,9 @@ function MetricCards({
         </div>
 
         {/* Card 2: Today's Weight */}
-        <div
-          onClick={onOpenEdwModal}
-          className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md cursor-pointer"
-        >
+        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5">
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card bg-[var(--color-brand-50)] border border-primary-soft-line shadow-control group-hover:scale-105 transition-transform">
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] shadow-control transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
@@ -299,11 +294,8 @@ function MetricCards({
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenEdwModal();
-            }}
-            className="flex items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all hover:bg-primary-soft hover:text-fg-brand hover:border-primary-soft-line cursor-pointer shadow-control active:scale-95 shrink-0"
+            onClick={onOpenEdwModal}
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -311,16 +303,14 @@ function MetricCards({
         </div>
 
         {/* Card 3: Difference Above / Below EDW */}
-        <div className="flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:shadow-md">
+        <div className="flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:shadow-md sm:p-5">
           <div
-            className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${statusIconBg} shadow-control`}
+            className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14 ${statusIconBg} shadow-control`}
           >
-            <StatusIcon />
+            {statusIcon}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-label-md text-fg">
-              {statusTitle}
-            </p>
+            <p className="truncate text-label-md text-fg">{statusTitle}</p>
             <p className="mt-stack-xs text-metric-md text-fg">
               {diffSign}
               {Math.abs(diffVal).toFixed(1)}
@@ -328,7 +318,9 @@ function MetricCards({
                 {unit}
               </span>
             </p>
-            <p className={`mt-0.5 text-xs sm:text-[13px] font-bold ${statusTextColor}`}>
+            <p
+              className={`mt-0.5 text-xs font-bold sm:text-[13px] ${statusTextColor}`}
+            >
               {statusSubtitle}
             </p>
           </div>
@@ -340,17 +332,17 @@ function MetricCards({
         {secondaryCards.map((card) => (
           <article
             key={card.label}
-            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 sm:p-5 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md"
+            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5"
           >
             <div
-              className={`flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-card ${card.iconBg} shadow-control group-hover:scale-105 transition-transform`}
+              className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-card sm:h-14 sm:w-14 ${card.iconBg} shadow-control transition-transform group-hover:scale-105`}
             >
-              <card.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconClass}`} />
+              <card.icon
+                className={`h-7 w-7 sm:h-8 sm:w-8 ${card.iconClass}`}
+              />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-label-md text-fg">
-                {card.label}
-              </p>
+              <p className="truncate text-label-md text-fg">{card.label}</p>
               <p className="mt-stack-xs text-metric-md text-fg">
                 {card.value}
                 {card.unit && (
@@ -359,7 +351,9 @@ function MetricCards({
                   </span>
                 )}
               </p>
-              <p className={`mt-0.5 text-xs sm:text-[13px] truncate ${card.subtitleClass}`}>
+              <p
+                className={`mt-0.5 truncate text-xs sm:text-[13px] ${card.subtitleClass}`}
+              >
                 {card.subtitle}
               </p>
             </div>
@@ -627,15 +621,12 @@ function FluidIntakeTrend() {
           ))}
         </div>
         <div className="relative min-w-0 flex-1">
-          <div className="absolute inset-x-0 bottom-6 top-0 flex flex-col justify-between">
+          <div className="absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="border-t border-dashed border-line"
-              />
+              <div key={index} className="border-t border-dashed border-line" />
             ))}
           </div>
-          <div className="absolute inset-x-0 bottom-6 top-1 flex items-end justify-between gap-0.5">
+          <div className="absolute inset-x-0 top-1 bottom-6 flex items-end justify-between gap-0.5">
             {fluidIntakeBars.map((value, index) => (
               <div
                 key={index}
@@ -727,7 +718,9 @@ function UrinaryOutput() {
                 key={row.date}
                 className="border-b border-dashed border-[var(--color-gray-300)] last:border-b-0"
               >
-                <td className="px-3 py-3 text-[var(--color-gray-950)]">{row.date}</td>
+                <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                  {row.date}
+                </td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-3">
                     <TrendIcon type={row.icon} />
@@ -758,8 +751,7 @@ function AlertsInsights() {
 
   const alerts = [
     {
-      title:
-        w?.alerts?.items?.weightGain?.title || "Weight Gain Notice",
+      title: w?.alerts?.items?.weightGain?.title || "Weight Gain Notice",
       body:
         w?.alerts?.items?.weightGain?.body ||
         "+2.6 lbs this month. Possible fluid retention — contact your nurse if swelling increases.",
@@ -808,9 +800,7 @@ function AlertsInsights() {
                 <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
               )}
               <div>
-                <p className="text-xs font-medium text-fg">
-                  {alert.title}
-                </p>
+                <p className="text-xs font-medium text-fg">{alert.title}</p>
                 <p className="mt-0.5 text-[11px] leading-[13px] text-fg-muted">
                   {alert.body}
                 </p>
@@ -1027,28 +1017,6 @@ function AddWeightLogModal({
   const [formGoal, setFormGoal] = useState("48 OZ");
   const [formGoalMet, setFormGoalMet] = useState(true);
 
-  // Reset inputs when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setFormDate(getTodayDateString());
-      setFormMorning("");
-      setFormEvening("");
-      setFormIntake("");
-      setFormGoal("48 OZ");
-      setFormGoalMet(true);
-      setFormSwelling(false);
-      setFormSob(false);
-      setFormRapidGain(false);
-      setFormDizziness(false);
-      setFormCramping(false);
-      setFormWeakness(false);
-      setFormNausea(false);
-      setFormUoAmount("Moderate");
-      setFormUoTrend("decreasing");
-      setFormNotes("");
-    }
-  }, [isOpen]);
-
   // Symptoms: Possible Fluid Overload
   const [formSwelling, setFormSwelling] = useState(false);
   const [formSob, setFormSob] = useState(false);
@@ -1061,25 +1029,40 @@ function AddWeightLogModal({
   const [formNausea, setFormNausea] = useState(false);
 
   const [formUoAmount, setFormUoAmount] = useState("Moderate");
-  const [formUoTrend, setFormUoTrend] = useState<"decreasing" | "noChange" | "increasing">("decreasing");
+  const [formUoTrend, setFormUoTrend] = useState<
+    "decreasing" | "noChange" | "increasing"
+  >("decreasing");
   const [formNotes, setFormNotes] = useState("");
 
   // Estimated Dry Weight (EDW) Connection Logic
-  const edwNum = unit === "kg" ? edwKg : parseFloat((edwKg * 2.20462).toFixed(1));
-  const [weightCompareMode, setWeightCompareMode] = useState<"evening" | "morning">("evening");
+  const edwNum =
+    unit === "kg" ? edwKg : parseFloat((edwKg * 2.20462).toFixed(1));
+  const [weightCompareMode, setWeightCompareMode] = useState<
+    "evening" | "morning"
+  >("evening");
   const morningWeightNum = parseFloat(formMorning.replace(/[^0-9.]/g, "")) || 0;
   const eveningWeightNum = parseFloat(formEvening.replace(/[^0-9.]/g, "")) || 0;
 
   // Active weight being evaluated against EDW
   const currentWeightNum =
     weightCompareMode === "morning"
-      ? (morningWeightNum || eveningWeightNum)
-      : (eveningWeightNum || morningWeightNum);
+      ? morningWeightNum || eveningWeightNum
+      : eveningWeightNum || morningWeightNum;
 
-  const weightDiff = currentWeightNum > 0 ? parseFloat((currentWeightNum - edwNum).toFixed(1)) : 0;
+  const weightDiff =
+    currentWeightNum > 0
+      ? parseFloat((currentWeightNum - edwNum).toFixed(1))
+      : 0;
 
-  const overloadCount = [formSwelling, formSob, formRapidGain].filter(Boolean).length;
-  const deficitCount = [formDizziness, formCramping, formWeakness, formNausea].filter(Boolean).length;
+  const overloadCount = [formSwelling, formSob, formRapidGain].filter(
+    Boolean,
+  ).length;
+  const deficitCount = [
+    formDizziness,
+    formCramping,
+    formWeakness,
+    formNausea,
+  ].filter(Boolean).length;
 
   let fluidStatus: "Above EDW" | "Near EDW" | "Below EDW" = "Near EDW";
   let fluidStatusMsg = "Appears On Target";
@@ -1113,8 +1096,34 @@ function AddWeightLogModal({
       const parts = formDate.split("-").map(Number);
       if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
         const [y, m, d] = parts;
-        const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const monthsEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        const monthsEn = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        const monthsEs = [
+          "Ene",
+          "Feb",
+          "Mar",
+          "Abr",
+          "May",
+          "Jun",
+          "Jul",
+          "Ago",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dic",
+        ];
         dateEn = `${monthsEn[m - 1]} ${d}, ${y}`;
         dateEs = `${d} ${monthsEs[m - 1]}, ${y}`;
       }
@@ -1151,7 +1160,10 @@ function AddWeightLogModal({
       size="wide"
       title={
         <span className="flex items-center gap-inline-md">
-          <Scale aria-hidden="true" className="h-icon-big w-icon-big text-fg-brand" />
+          <Scale
+            aria-hidden="true"
+            className="h-icon-big w-icon-big text-fg-brand"
+          />
           {language === "ES"
             ? "Registrar Nuevo Control de Peso"
             : "Entry New Weight Log"}
@@ -1168,507 +1180,532 @@ function AddWeightLogModal({
         </>
       }
     >
-      <form id="weight-log-form" onSubmit={handleSave} className="space-y-stack-lg">
-          {/* Row 1: Date Input Box */}
+      <form
+        id="weight-log-form"
+        onSubmit={handleSave}
+        className="space-y-stack-lg"
+      >
+        {/* Row 1: Date Input Box */}
+        <div className="space-y-1">
+          <label className="block text-label-md text-fg">
+            {language === "ES" ? "Fecha" : "Date"}
+          </label>
+          <input
+            type="date"
+            value={formDate}
+            onChange={(e) => setFormDate(e.target.value)}
+            onClick={(e) => {
+              try {
+                (e.target as HTMLInputElement).showPicker?.();
+              } catch {}
+            }}
+            className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+          />
+        </div>
+
+        {/* Row 2: Morning Weight & Evening Weight Inputs */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="block text-label-md text-fg">
-              {language === "ES" ? "Fecha" : "Date"}
+              {language === "ES"
+                ? `Peso Mañana (${unit.toUpperCase()})`
+                : `Morning Weight (${unit.toUpperCase()})`}
+            </label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={formMorning}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9.]/g, "");
+                setFormMorning(val);
+                setWeightCompareMode("morning");
+              }}
+              placeholder={
+                unit === "kg"
+                  ? language === "ES"
+                    ? "ej. 72.9"
+                    : "e.g. 72.9"
+                  : language === "ES"
+                    ? "ej. 125"
+                    : "e.g. 125"
+              }
+              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-label-md text-fg">
+              {language === "ES"
+                ? `Peso Tarde (${unit.toUpperCase()})`
+                : `Evening Weight (${unit.toUpperCase()})`}
+            </label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={formEvening}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9.]/g, "");
+                setFormEvening(val);
+                setWeightCompareMode("evening");
+              }}
+              placeholder={
+                unit === "kg"
+                  ? language === "ES"
+                    ? "ej. 73.2"
+                    : "e.g. 73.2"
+                  : language === "ES"
+                    ? "ej. 122"
+                    : "e.g. 122"
+              }
+              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+
+        {/* Row 3: Fluid Intake & Fluid Goal Inputs */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="block text-label-md text-fg">
+              {language === "ES" ? "Ingesta de Líquidos" : "Fluid Intake"}
             </label>
             <input
-              type="date"
-              value={formDate}
-              onChange={(e) => setFormDate(e.target.value)}
-              onClick={(e) => {
-                try {
-                  (e.target as HTMLInputElement).showPicker?.();
-                } catch {}
-              }}
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control cursor-pointer"
+              type="text"
+              value={formIntake}
+              onChange={(e) => setFormIntake(e.target.value)}
+              placeholder={language === "ES" ? "ej. 48 OZ" : "e.g. 48 OZ"}
+              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
 
-          {/* Row 2: Morning Weight & Evening Weight Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block text-label-md text-fg">
-                {language === "ES"
-                  ? `Peso Mañana (${unit.toUpperCase()})`
-                  : `Morning Weight (${unit.toUpperCase()})`}
-              </label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={formMorning}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9.]/g, "");
-                  setFormMorning(val);
-                  setWeightCompareMode("morning");
-                }}
-                placeholder={
-                  unit === "kg"
-                    ? (language === "ES" ? "ej. 72.9" : "e.g. 72.9")
-                    : (language === "ES" ? "ej. 125" : "e.g. 125")
-                }
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-label-md text-fg">
-                {language === "ES"
-                  ? `Peso Tarde (${unit.toUpperCase()})`
-                  : `Evening Weight (${unit.toUpperCase()})`}
-              </label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={formEvening}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9.]/g, "");
-                  setFormEvening(val);
-                  setWeightCompareMode("evening");
-                }}
-                placeholder={
-                  unit === "kg"
-                    ? (language === "ES" ? "ej. 73.2" : "e.g. 73.2")
-                    : (language === "ES" ? "ej. 122" : "e.g. 122")
-                }
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Fluid Intake & Fluid Goal Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block text-label-md text-fg">
-                {language === "ES" ? "Ingesta de Líquidos" : "Fluid Intake"}
-              </label>
-              <input
-                type="text"
-                value={formIntake}
-                onChange={(e) => setFormIntake(e.target.value)}
-                placeholder={language === "ES" ? "ej. 48 OZ" : "e.g. 48 OZ"}
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-label-md text-fg">
-                {language === "ES" ? "Meta de Líquidos" : "Fluid Goal"}
-              </label>
-              <input
-                type="text"
-                value={formGoal}
-                onChange={(e) => setFormGoal(e.target.value)}
-                placeholder="48 OZ"
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg placeholder:text-fg-subtle outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring shadow-control"
-              />
-            </div>
-          </div>
-
-          {/* Goal Met Row */}
-          <div className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-2.5">
-            <span className="text-xs sm:text-sm font-bold text-fg-secondary">
-              {language === "ES" ? "Meta Cumplida" : "Goal Met"}
-            </span>
-            <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-              <button
-                type="button"
-                onClick={() => setFormGoalMet(true)}
-                className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  formGoalMet
-                    ? "bg-surface text-fg shadow-control"
-                    : "text-fg-secondary hover:text-fg"
-                }`}
-              >
-                {language === "ES" ? "Sí" : "Yes"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormGoalMet(false)}
-                className={`px-4 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  !formGoalMet
-                    ? "bg-surface text-fg shadow-control"
-                    : "text-fg-secondary hover:text-fg"
-                }`}
-              >
-                {language === "ES" ? "No" : "No"}
-              </button>
-            </div>
-          </div>
-
-          {/* Fluid Status Check Section */}
-          <div className="rounded-card border border-line bg-surface p-3.5 space-y-3 shadow-control">
-            {/* Section Header */}
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-fg-brand">
-                  <Droplets className="h-3.5 w-3.5" />
-                </div>
-                <h3 className="text-sm font-bold text-fg">
-                  {language === "ES" ? "Control del Estado Hídrico" : "Fluid Status Check"}
-                </h3>
-              </div>
-              <p className="mt-1 text-xs font-medium text-fg-muted">
-                {language === "ES"
-                  ? "Ayúdenos a comprender cómo se siente después de la diálisis."
-                  : "Help us understand how you’re feeling after dialysis."}
-              </p>
-            </div>
-
-
-
-            {/* Subsection 1: Possible Fluid Overload */}
-            <div className="space-y-2 pt-1 border-t border-line-subtle">
-              <div className="flex items-center gap-inline-sm">
-                <span className="h-2 w-2 rounded-full bg-primary-solid" />
-                <h4 className="text-label-md text-fg">
-                  {language === "ES" ? "Posible Sobrecarga de Líquidos" : "Possible Fluid Overload"}
-                </h4>
-              </div>
-
-              <div className="space-y-1.5">
-                {/* Swelling */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Hinchazón" : "Swelling"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormSwelling(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formSwelling
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormSwelling(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formSwelling
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Shortness of Breath */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Falta de Aire" : "Shortness of Breath"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormSob(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formSob
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormSob(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formSob
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sudden / Rapid Weight Gain */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Aumento de Peso Repentino / Rápido" : "Sudden / Rapid Weight Gain"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormRapidGain(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formRapidGain
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormRapidGain(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formRapidGain
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Subsection 2: Possible Too Much Fluid Removed */}
-            <div className="space-y-2 pt-2 border-t border-line-subtle">
-              <div className="flex items-center gap-inline-sm">
-                <span className="h-2 w-2 rounded-full bg-brand-500" />
-                <h4 className="text-label-md text-fg">
-                  {language === "ES" ? "Posible Exceso de Líquido Eliminado" : "Possible Too Much Fluid Removed"}
-                </h4>
-              </div>
-
-              <div className="space-y-1.5">
-                {/* Dizziness */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Mareos" : "Dizziness"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormDizziness(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formDizziness
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormDizziness(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formDizziness
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Cramping */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Calambres" : "Cramping"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormCramping(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formCramping
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormCramping(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formCramping
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Weakness (Reused existing field) */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Debilidad" : "Weakness"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormWeakness(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formWeakness
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormWeakness(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formWeakness
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Nausea */}
-                <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
-                  <span className="text-body-sm text-fg-secondary">
-                    {language === "ES" ? "Náuseas" : "Nausea"}
-                  </span>
-                  <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormNausea(true)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        formNausea
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "Sí" : "Yes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormNausea(false)}
-                      className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        !formNausea
-                          ? "bg-surface text-fg shadow-control"
-                          : "text-fg-secondary hover:text-fg"
-                      }`}
-                    >
-                      {language === "ES" ? "No" : "No"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Urinary Output (24 Hours) Card */}
-          <div className="rounded-card border border-line bg-surface p-3.5 space-y-2.5">
-            <div className="flex items-baseline gap-1.5">
-              <h3 className="text-xs sm:text-sm font-bold text-fg">
-                {language === "ES" ? "Gasto Urinario" : "Urinary Output"}
-              </h3>
-              <span className="text-[11px] font-semibold text-fg-muted">
-                {language === "ES" ? "(24 Horas)" : "(24 Hours)"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-2.5">
-              <div className="space-y-1">
-                <label className="block text-caption text-fg-muted">
-                  {language === "ES" ? "Cantidad" : "Amount"}
-                </label>
-                <div className="relative">
-                  <select
-                    value={formUoAmount}
-                    onChange={(e) => setFormUoAmount(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-fg-secondary outline-none focus:border-primary-edge cursor-pointer pr-7 shadow-control"
-                  >
-                    <option value="Moderate">{language === "ES" ? "Moderada" : "Moderate"}</option>
-                    <option value="Low">{language === "ES" ? "Baja" : "Low"}</option>
-                    <option value="Normal">{language === "ES" ? "Normal" : "Normal"}</option>
-                    <option value="High">{language === "ES" ? "Alta" : "High"}</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-caption text-fg-muted">
-                  {language === "ES" ? "Tendencia" : "Trend"}
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setFormUoTrend("decreasing")}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      formUoTrend === "decreasing"
-                        ? "bg-danger-surface border-2 border-danger-edge text-danger shadow-control"
-                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-danger-solid text-white">
-                      <ArrowDown className="h-2.5 w-2.5 stroke-[3]" />
-                    </span>
-                    <span className="truncate text-caption">
-                      {language === "ES" ? "Disminuyendo" : "Decreasing"}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormUoTrend("noChange")}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      formUoTrend === "noChange"
-                        ? "bg-primary-soft border-2 border-primary-edge text-fg-brand shadow-control"
-                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-solid text-white">
-                      <Minus className="h-2.5 w-2.5 stroke-[3]" />
-                    </span>
-                    <span className="truncate text-caption">
-                      {language === "ES" ? "Sin Cambios" : "No Change"}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormUoTrend("increasing")}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      formUoTrend === "increasing"
-                        ? "bg-success-surface border-2 border-success-600 text-success shadow-control"
-                        : "bg-surface-sunken border border-line text-fg-secondary hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success-600 text-white">
-                      <ArrowUp className="h-2.5 w-2.5 stroke-[3]" />
-                    </span>
-                    <span className="truncate text-caption">
-                      {language === "ES" ? "Aumentando" : "Increasing"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes (Optional) Card */}
-          <div className="rounded-card border border-line bg-surface p-3.5 space-y-1.5">
+          <div className="space-y-1">
             <label className="block text-label-md text-fg">
-              {language === "ES" ? "Notas (Opcional)" : "Notes (Optional)"}
+              {language === "ES" ? "Meta de Líquidos" : "Fluid Goal"}
             </label>
-            <Textarea
-              rows={2}
-              value={formNotes}
-              onChange={(e) => setFormNotes(e.target.value)}
-              placeholder={
-                language === "ES"
-                  ? "ej. Tomé todos los medicamentos después de la sesión."
-                  : "e.g. Took all meds after session."
-              }
+            <input
+              type="text"
+              value={formGoal}
+              onChange={(e) => setFormGoal(e.target.value)}
+              placeholder="48 OZ"
+              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
+        </div>
 
+        {/* Goal Met Row */}
+        <div className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-2.5">
+          <span className="text-xs font-bold text-fg-secondary sm:text-sm">
+            {language === "ES" ? "Meta Cumplida" : "Goal Met"}
+          </span>
+          <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+            <button
+              type="button"
+              onClick={() => setFormGoalMet(true)}
+              className={`cursor-pointer rounded-lg px-4 py-1 text-xs font-bold transition-all ${
+                formGoalMet
+                  ? "bg-surface text-fg shadow-control"
+                  : "text-fg-secondary hover:text-fg"
+              }`}
+            >
+              {language === "ES" ? "Sí" : "Yes"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormGoalMet(false)}
+              className={`cursor-pointer rounded-lg px-4 py-1 text-xs font-bold transition-all ${
+                !formGoalMet
+                  ? "bg-surface text-fg shadow-control"
+                  : "text-fg-secondary hover:text-fg"
+              }`}
+            >
+              {language === "ES" ? "No" : "No"}
+            </button>
+          </div>
+        </div>
+
+        {/* Fluid Status Check Section */}
+        <div className="space-y-3 rounded-card border border-line bg-surface p-3.5 shadow-control">
+          {/* Section Header */}
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-fg-brand">
+                <Droplets className="h-3.5 w-3.5" />
+              </div>
+              <h3 className="text-sm font-bold text-fg">
+                {language === "ES"
+                  ? "Control del Estado Hídrico"
+                  : "Fluid Status Check"}
+              </h3>
+            </div>
+            <p className="mt-1 text-xs font-medium text-fg-muted">
+              {language === "ES"
+                ? "Ayúdenos a comprender cómo se siente después de la diálisis."
+                : "Help us understand how you’re feeling after dialysis."}
+            </p>
+          </div>
+
+          {/* Subsection 1: Possible Fluid Overload */}
+          <div className="space-y-2 border-t border-line-subtle pt-1">
+            <div className="flex items-center gap-inline-sm">
+              <span className="h-2 w-2 rounded-full bg-primary-solid" />
+              <h4 className="text-label-md text-fg">
+                {language === "ES"
+                  ? "Posible Sobrecarga de Líquidos"
+                  : "Possible Fluid Overload"}
+              </h4>
+            </div>
+
+            <div className="space-y-1.5">
+              {/* Swelling */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Hinchazón" : "Swelling"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormSwelling(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formSwelling
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormSwelling(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formSwelling
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Shortness of Breath */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Falta de Aire" : "Shortness of Breath"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormSob(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formSob
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormSob(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formSob
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sudden / Rapid Weight Gain */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES"
+                    ? "Aumento de Peso Repentino / Rápido"
+                    : "Sudden / Rapid Weight Gain"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormRapidGain(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formRapidGain
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormRapidGain(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formRapidGain
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Subsection 2: Possible Too Much Fluid Removed */}
+          <div className="space-y-2 border-t border-line-subtle pt-2">
+            <div className="flex items-center gap-inline-sm">
+              <span className="h-2 w-2 rounded-full bg-brand-500" />
+              <h4 className="text-label-md text-fg">
+                {language === "ES"
+                  ? "Posible Exceso de Líquido Eliminado"
+                  : "Possible Too Much Fluid Removed"}
+              </h4>
+            </div>
+
+            <div className="space-y-1.5">
+              {/* Dizziness */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Mareos" : "Dizziness"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormDizziness(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formDizziness
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormDizziness(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formDizziness
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Cramping */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Calambres" : "Cramping"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormCramping(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formCramping
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormCramping(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formCramping
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Weakness (Reused existing field) */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Debilidad" : "Weakness"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormWeakness(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formWeakness
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormWeakness(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formWeakness
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Nausea */}
+              <div className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard">
+                <span className="text-body-sm text-fg-secondary">
+                  {language === "ES" ? "Náuseas" : "Nausea"}
+                </span>
+                <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormNausea(true)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      formNausea
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "Sí" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormNausea(false)}
+                    className={`cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all ${
+                      !formNausea
+                        ? "bg-surface text-fg shadow-control"
+                        : "text-fg-secondary hover:text-fg"
+                    }`}
+                  >
+                    {language === "ES" ? "No" : "No"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Urinary Output (24 Hours) Card */}
+        <div className="space-y-2.5 rounded-card border border-line bg-surface p-3.5">
+          <div className="flex items-baseline gap-1.5">
+            <h3 className="text-xs font-bold text-fg sm:text-sm">
+              {language === "ES" ? "Gasto Urinario" : "Urinary Output"}
+            </h3>
+            <span className="text-[11px] font-semibold text-fg-muted">
+              {language === "ES" ? "(24 Horas)" : "(24 Hours)"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[130px_1fr]">
+            <div className="space-y-1">
+              <label className="block text-caption text-fg-muted">
+                {language === "ES" ? "Cantidad" : "Amount"}
+              </label>
+              <div className="relative">
+                <select
+                  value={formUoAmount}
+                  onChange={(e) => setFormUoAmount(e.target.value)}
+                  className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-surface px-3 py-2 pr-7 text-xs font-bold text-fg-secondary shadow-control outline-none focus:border-primary-edge"
+                >
+                  <option value="Moderate">
+                    {language === "ES" ? "Moderada" : "Moderate"}
+                  </option>
+                  <option value="Low">
+                    {language === "ES" ? "Baja" : "Low"}
+                  </option>
+                  <option value="Normal">
+                    {language === "ES" ? "Normal" : "Normal"}
+                  </option>
+                  <option value="High">
+                    {language === "ES" ? "Alta" : "High"}
+                  </option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-caption text-fg-muted">
+                {language === "ES" ? "Tendencia" : "Trend"}
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setFormUoTrend("decreasing")}
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                    formUoTrend === "decreasing"
+                      ? "border-2 border-danger-edge bg-danger-surface text-danger shadow-control"
+                      : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"
+                  }`}
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-danger-solid text-white">
+                    <ArrowDown className="h-2.5 w-2.5 stroke-[3]" />
+                  </span>
+                  <span className="truncate text-caption">
+                    {language === "ES" ? "Disminuyendo" : "Decreasing"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormUoTrend("noChange")}
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                    formUoTrend === "noChange"
+                      ? "border-2 border-primary-edge bg-primary-soft text-fg-brand shadow-control"
+                      : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"
+                  }`}
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-solid text-white">
+                    <Minus className="h-2.5 w-2.5 stroke-[3]" />
+                  </span>
+                  <span className="truncate text-caption">
+                    {language === "ES" ? "Sin Cambios" : "No Change"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormUoTrend("increasing")}
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                    formUoTrend === "increasing"
+                      ? "border-2 border-success-600 bg-success-surface text-success shadow-control"
+                      : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"
+                  }`}
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success-600 text-white">
+                    <ArrowUp className="h-2.5 w-2.5 stroke-[3]" />
+                  </span>
+                  <span className="truncate text-caption">
+                    {language === "ES" ? "Aumentando" : "Increasing"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Notes (Optional) Card */}
+        <div className="space-y-1.5 rounded-card border border-line bg-surface p-3.5">
+          <label className="block text-label-md text-fg">
+            {language === "ES" ? "Notas (Opcional)" : "Notes (Optional)"}
+          </label>
+          <Textarea
+            rows={2}
+            value={formNotes}
+            onChange={(e) => setFormNotes(e.target.value)}
+            placeholder={
+              language === "ES"
+                ? "ej. Tomé todos los medicamentos después de la sesión."
+                : "e.g. Took all meds after session."
+            }
+          />
+        </div>
       </form>
     </Modal>
   );
@@ -1685,16 +1722,23 @@ function RecentEntries({
   const w = dictionary?.weightFluidTracker;
 
   const translateGoal = (goal: string) => {
-    if (goal === "Goal Met") return w?.recentEntries?.values?.goalMet || "Goal Met";
-    if (goal === "Above Goal") return w?.recentEntries?.values?.aboveGoal || "Above Goal";
+    if (goal === "Goal Met")
+      return w?.recentEntries?.values?.goalMet || "Goal Met";
+    if (goal === "Above Goal")
+      return w?.recentEntries?.values?.aboveGoal || "Above Goal";
     return goal;
   };
 
   const translateSwelling = (swelling: string) => {
-    if (swelling === "None" || swelling === "NO") return w?.recentEntries?.values?.none || (language === "ES" ? "Ninguna" : "None");
+    if (swelling === "None" || swelling === "NO")
+      return (
+        w?.recentEntries?.values?.none ||
+        (language === "ES" ? "Ninguna" : "None")
+      );
     if (swelling === "YES") return language === "ES" ? "Sí" : "Yes";
     if (swelling === "Mild") return w?.recentEntries?.values?.mild || "Mild";
-    if (swelling === "Moderate") return language === "ES" ? "Moderada" : "Moderate";
+    if (swelling === "Moderate")
+      return language === "ES" ? "Moderada" : "Moderate";
     if (swelling === "Severe") return language === "ES" ? "Grave" : "Severe";
     return swelling;
   };
@@ -1730,13 +1774,13 @@ function RecentEntries({
   return (
     <section className="rounded-[14px] border border-line bg-surface p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-fg">
+        <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
           {w?.recentEntries?.title || "Recent Entries"}
         </h2>
         <button
           type="button"
           onClick={onOpenAddModal}
-          className="flex h-12 items-center justify-center gap-2 rounded bg-primary-solid px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-primary-solid-hover cursor-pointer active:scale-[0.98]"
+          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded bg-primary-solid px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-primary-solid-hover active:scale-[0.98]"
         >
           <Plus className="h-5 w-5" />
           {w?.recentEntries?.addNewEntry || "New Entry"}
@@ -1744,7 +1788,7 @@ function RecentEntries({
       </div>
       <div className="mt-4 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
         <div className="max-h-[430px] overflow-auto">
-          <table className="min-w-[1080px] w-full text-left text-sm">
+          <table className="w-full min-w-[1080px] text-left text-sm">
             <thead className="sticky top-0 bg-[var(--color-gray-50)]">
               <tr>
                 {headers.map((header) => (
@@ -1759,7 +1803,8 @@ function RecentEntries({
             </thead>
             <tbody>
               {entries.map((entry, index) => {
-                const dateLabel = language === "ES" ? entry.dateEs : entry.dateEn;
+                const dateLabel =
+                  language === "ES" ? entry.dateEs : entry.dateEn;
                 const isGoalMet = entry.goal === "Goal Met";
                 const goalLabel = translateGoal(entry.goal);
                 const uoLabel = w?.recentEntries?.values?.high || entry.uo;
@@ -1771,29 +1816,37 @@ function RecentEntries({
                 return (
                   <tr
                     key={entry.id || `${entry.dateEn}-${index}`}
-                    className="border-b border-dashed border-[var(--color-gray-300)] last:border-b-0 hover:bg-surface-sunken/60 transition-colors"
+                    className="border-b border-dashed border-[var(--color-gray-300)] transition-colors last:border-b-0 hover:bg-surface-sunken/60"
                   >
-                    <td className="px-3 py-3 text-[var(--color-gray-950)] font-semibold">{dateLabel}</td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.morning}</td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.evening}</td>
+                    <td className="px-3 py-3 font-semibold text-[var(--color-gray-950)]">
+                      {dateLabel}
+                    </td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {entry.morning}
+                    </td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {entry.evening}
+                    </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <TrendIcon type="up" />
                         <span>{uoLabel}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{entry.intake}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {entry.intake}
+                    </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-1">
                         <GoalBadge status={goalLabel} isGoalMet={isGoalMet} />
                         {entry.fluidStatus && (
                           <span
-                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold w-fit ${
+                            className={`inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${
                               entry.fluidStatus === "Above EDW"
                                 ? "bg-warning-surface text-warning"
                                 : entry.fluidStatus === "Below EDW"
-                                ? "bg-brand-50 text-brand-700"
-                                : "bg-success-surface text-success"
+                                  ? "bg-brand-50 text-brand-700"
+                                  : "bg-success-surface text-success"
                             }`}
                           >
                             <span className="h-1 w-1 rounded-full bg-current" />
@@ -1801,17 +1854,25 @@ function RecentEntries({
                               ? entry.fluidStatus === "Above EDW"
                                 ? "Sobre EDW"
                                 : entry.fluidStatus === "Below EDW"
-                                ? "Bajo EDW"
-                                : "En EDW"
+                                  ? "Bajo EDW"
+                                  : "En EDW"
                               : entry.fluidStatus}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{swellingLabel}</td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{sobLabel}</td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{weaknessLabel}</td>
-                    <td className="px-3 py-3 text-[var(--color-gray-950)]">{notesLabel}</td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {swellingLabel}
+                    </td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {sobLabel}
+                    </td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {weaknessLabel}
+                    </td>
+                    <td className="px-3 py-3 text-[var(--color-gray-950)]">
+                      {notesLabel}
+                    </td>
                   </tr>
                 );
               })}
@@ -1827,8 +1888,14 @@ function RecentEntries({
 function formatNowStamp(language: string) {
   const now = new Date();
   const locale = language === "ES" ? "es-ES" : "en-US";
-  const date = now.toLocaleDateString(locale, { month: "short", day: "numeric" });
-  const time = now.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  const date = now.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+  });
+  const time = now.toLocaleTimeString(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   return `${date}, ${time}`;
 }
 
@@ -1859,22 +1926,12 @@ function EditEdwModal({
 
   const isKg = unit === "kg";
   const [formEdw, setFormEdw] = useState(
-    isKg ? edwKg.toString() : (edwKg * 2.20462).toFixed(1)
+    isKg ? edwKg.toString() : (edwKg * 2.20462).toFixed(1),
   );
   const [formToday, setFormToday] = useState(
-    isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
+    isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1),
   );
   const [formNote, setFormNote] = useState(edwNote);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormEdw(isKg ? edwKg.toString() : (edwKg * 2.20462).toFixed(1));
-      setFormToday(
-        isKg ? todayWeightKg.toString() : (todayWeightKg * 2.20462).toFixed(1)
-      );
-      setFormNote(edwNote);
-    }
-  }, [isOpen, isKg, edwKg, todayWeightKg, edwNote]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1924,68 +1981,68 @@ function EditEdwModal({
       }
     >
       <form id="edw-form" onSubmit={handleSave} className="space-y-stack-lg">
-          <div>
-            <label className="mb-stack-xs block text-label-md text-fg">
-              {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"} ({unit})
-            </label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={formEdw}
-              onChange={(e) => setFormEdw(e.target.value.replace(/[^0-9.]/g, ""))}
-              placeholder={isKg ? "72.5" : "159.8"}
-            />
-          </div>
+        <div>
+          <label className="mb-stack-xs block text-label-md text-fg">
+            {w?.edwMetrics?.estimatedDryWeight || "Estimated Dry Weight"} (
+            {unit})
+          </label>
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={formEdw}
+            onChange={(e) => setFormEdw(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder={isKg ? "72.5" : "159.8"}
+          />
+        </div>
 
-          <div>
-            <label className="mb-stack-xs block text-label-md text-fg">
-              {language === "ES"
-                ? "Nota de EDW / Proveedor"
-                : "EDW Care Team Note"}
-            </label>
-            <input
-              type="text"
-              value={formNote}
-              onChange={(e) => setFormNote(e.target.value)}
-              placeholder={
-                language === "ES"
-                  ? "ej. Establecido por el equipo de atención."
-                  : "e.g. Set by care team."
-              }
-            />
-          </div>
+        <div>
+          <label className="mb-stack-xs block text-label-md text-fg">
+            {language === "ES"
+              ? "Nota de EDW / Proveedor"
+              : "EDW Care Team Note"}
+          </label>
+          <input
+            type="text"
+            value={formNote}
+            onChange={(e) => setFormNote(e.target.value)}
+            placeholder={
+              language === "ES"
+                ? "ej. Establecido por el equipo de atención."
+                : "e.g. Set by care team."
+            }
+          />
+        </div>
 
-          <div>
-            <label className="mb-stack-xs block text-label-md text-fg">
-              {w?.edwMetrics?.todaysWeight || "Today's Weight"} ({unit})
-            </label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={formToday}
-              onChange={(e) =>
-                setFormToday(e.target.value.replace(/[^0-9.]/g, ""))
-              }
-              placeholder={isKg ? "72.9" : "160.7"}
-            />
-          </div>
+        <div>
+          <label className="mb-stack-xs block text-label-md text-fg">
+            {w?.edwMetrics?.todaysWeight || "Today's Weight"} ({unit})
+          </label>
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={formToday}
+            onChange={(e) =>
+              setFormToday(e.target.value.replace(/[^0-9.]/g, ""))
+            }
+            placeholder={isKg ? "72.9" : "160.7"}
+          />
+        </div>
 
-          <div>
-            <label className="mb-stack-xs block text-label-md text-fg">
-              {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
-            </label>
-            {/* Recorded automatically from the clock when the settings are saved */}
-            <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-sunken px-3.5 py-2.5">
-              <Clock className="h-4 w-4 shrink-0 text-fg-brand" />
-              <span className="text-sm font-semibold text-fg">
-                {formatNowStamp(language)}
-              </span>
-              <span className="ml-auto text-[11px] font-semibold text-fg-muted">
-                {language === "ES" ? "Automático" : "Automatic"}
-              </span>
-            </div>
+        <div>
+          <label className="mb-stack-xs block text-label-md text-fg">
+            {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
+          </label>
+          {/* Recorded automatically from the clock when the settings are saved */}
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-sunken px-3.5 py-2.5">
+            <Clock className="h-4 w-4 shrink-0 text-fg-brand" />
+            <span className="text-sm font-semibold text-fg">
+              {formatNowStamp(language)}
+            </span>
+            <span className="ml-auto text-[11px] font-semibold text-fg-muted">
+              {language === "ES" ? "Automático" : "Automatic"}
+            </span>
           </div>
-
+        </div>
       </form>
     </Modal>
   );
@@ -2021,8 +2078,16 @@ export default function FluidTrackerPage() {
       }
       setTodayDateStr(
         language === "ES"
-          ? "Hoy, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          ? "Hoy, " +
+              new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+          : "Today, " +
+              new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
       );
     }
   };
@@ -2040,7 +2105,9 @@ export default function FluidTrackerPage() {
   };
 
   // Date Picker filter state: "today" or "custom"
-  const [selectedDateFilter, setSelectedDateFilter] = useState<"today" | "custom">("today");
+  const [selectedDateFilter, setSelectedDateFilter] = useState<
+    "today" | "custom"
+  >("today");
   const [selectedCustomDate, setSelectedCustomDate] = useState<string>(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -2050,7 +2117,10 @@ export default function FluidTrackerPage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
         setIsDatePickerOpen(false);
       }
     }
@@ -2076,7 +2146,11 @@ export default function FluidTrackerPage() {
     if (selectedDateFilter === "custom" && selectedCustomDate) {
       const parts = selectedCustomDate.split("-");
       if (parts.length === 3) {
-        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const d = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2]),
+        );
         return d.toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
           month: "short",
           day: "numeric",
@@ -2092,17 +2166,17 @@ export default function FluidTrackerPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-medium leading-none text-fg sm:text-[32px]">
+          <h1 className="text-[28px] leading-none font-medium text-fg sm:text-[32px]">
             {w?.title || "Weight & Fluid Management Center"}
           </h1>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           {/* Unit Switcher: kg / lbs */}
-          <div className="flex h-10 sm:h-12 items-center rounded-xl border border-line bg-[var(--color-gray-100)] p-1 shadow-control">
+          <div className="flex h-10 items-center rounded-xl border border-line bg-[var(--color-gray-100)] p-1 shadow-control sm:h-12">
             <button
               type="button"
               onClick={() => setUnit("kg")}
-              className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`h-full cursor-pointer rounded-lg px-2.5 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
                 unit === "kg"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"
@@ -2113,7 +2187,7 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setUnit("lbs")}
-              className={`h-full px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`h-full cursor-pointer rounded-lg px-2.5 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
                 unit === "lbs"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"
@@ -2126,9 +2200,9 @@ export default function FluidTrackerPage() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-primary-solid px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] text-white shadow-control transition-colors hover:bg-primary-solid-hover cursor-pointer active:scale-[0.98] whitespace-nowrap"
+            className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary-solid px-3 text-xs font-bold tracking-[0.08px] whitespace-nowrap text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98] sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
           >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <Plus className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
             <span>{w?.recentEntries?.addNewEntry || "New Entry"}</span>
           </button>
 
@@ -2137,16 +2211,16 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-              className={`flex h-10 sm:h-12 shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl border px-3 sm:px-4 text-xs sm:text-base font-bold tracking-[0.08px] transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold tracking-[0.08px] whitespace-nowrap transition-all sm:h-12 sm:gap-2 sm:px-4 sm:text-base ${
                 isDatePickerOpen
                   ? "border-primary-edge bg-primary-soft/50 text-fg-brand shadow-control"
                   : "border-line bg-[var(--color-gray-50)] text-fg hover:bg-surface"
               }`}
             >
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-fg-secondary" />
+              <Calendar className="h-4 w-4 shrink-0 text-fg-secondary sm:h-5 sm:w-5" />
               <span>{displayDateText}</span>
               <ChevronDown
-                className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-fg-muted transition-transform duration-200 ${
+                className={`h-3 w-3 text-fg-muted transition-transform duration-200 sm:h-3.5 sm:w-3.5 ${
                   isDatePickerOpen ? "rotate-180 text-fg-brand" : ""
                 }`}
               />
@@ -2154,16 +2228,16 @@ export default function FluidTrackerPage() {
 
             {/* Floating Date Picker Dropdown Popover */}
             {isDatePickerOpen && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-72 sm:w-80 rounded-card border border-line bg-surface p-3.5 sm:p-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="animate-in fade-in zoom-in-95 absolute top-full right-0 z-50 mt-2 w-72 rounded-card border border-line bg-surface p-3.5 shadow-xl duration-150 sm:w-80 sm:p-4">
                 {/* Header with Title and Close */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-line-subtle mb-2.5">
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-fg-muted">
+                <div className="mb-2.5 flex items-center justify-between border-b border-line-subtle pb-2.5">
+                  <span className="text-[11px] font-bold tracking-wider text-fg-muted uppercase sm:text-xs">
                     {language === "ES" ? "Seleccionar Fecha" : "Select Date"}
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsDatePickerOpen(false)}
-                    className="flex h-6 w-6 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-sunken hover:text-fg-muted transition-colors cursor-pointer"
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-muted"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -2177,15 +2251,15 @@ export default function FluidTrackerPage() {
                       setSelectedDateFilter("today");
                       setIsDatePickerOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all cursor-pointer ${
+                    className={`flex w-full cursor-pointer items-center justify-between rounded-xl p-2.5 text-left transition-all sm:p-3 ${
                       selectedDateFilter === "today"
-                        ? "bg-primary-soft border border-primary-soft-line text-primary-fg"
-                        : "hover:bg-surface-sunken border border-transparent text-fg-secondary"
+                        ? "border border-primary-soft-line bg-primary-soft text-primary-fg"
+                        : "border border-transparent text-fg-secondary hover:bg-surface-sunken"
                     }`}
                   >
                     <div className="flex items-center gap-inline-md">
                       <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                           selectedDateFilter === "today"
                             ? "bg-primary-solid text-white shadow-control"
                             : "bg-surface-sunken text-fg-muted"
@@ -2194,28 +2268,35 @@ export default function FluidTrackerPage() {
                         <Calendar className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="text-xs sm:text-sm font-bold leading-tight">
-                          {language === "ES" ? "Hoy (Fecha actual)" : "Today (Current Date)"}
+                        <div className="text-xs leading-tight font-bold sm:text-sm">
+                          {language === "ES"
+                            ? "Hoy (Fecha actual)"
+                            : "Today (Current Date)"}
                         </div>
-                        <div className="text-[11px] text-fg-muted font-medium">
-                          {new Date().toLocaleDateString(language === "ES" ? "es-ES" : "en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                        <div className="text-[11px] font-medium text-fg-muted">
+                          {new Date().toLocaleDateString(
+                            language === "ES" ? "es-ES" : "en-US",
+                            {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
                         </div>
                       </div>
                     </div>
                     {selectedDateFilter === "today" && (
-                      <CheckCircle2 className="h-4 w-4 text-fg-brand shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-fg-brand" />
                     )}
                   </button>
                 </div>
 
                 {/* Divider: Custom Date Picker */}
-                <div className="mt-3 pt-3 border-t border-line-subtle">
-                  <label className="text-xs font-bold text-fg-secondary block mb-1.5">
-                    {language === "ES" ? "Elegir Fecha (Date Picker):" : "Pick Date (Date Picker):"}
+                <div className="mt-3 border-t border-line-subtle pt-3">
+                  <label className="mb-1.5 block text-xs font-bold text-fg-secondary">
+                    {language === "ES"
+                      ? "Elegir Fecha (Date Picker):"
+                      : "Pick Date (Date Picker):"}
                   </label>
                   <div className="relative">
                     <input
@@ -2232,7 +2313,7 @@ export default function FluidTrackerPage() {
                           (e.target as HTMLInputElement).showPicker?.();
                         } catch {}
                       }}
-                      className="w-full rounded-xl border border-line bg-surface-sunken hover:bg-surface focus:bg-surface px-3 py-2 text-xs sm:text-sm font-semibold text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring transition-colors cursor-pointer"
+                      className="w-full cursor-pointer rounded-xl border border-line bg-surface-sunken px-3 py-2 text-xs font-semibold text-fg-secondary transition-colors outline-none hover:bg-surface focus:border-primary-edge focus:bg-surface focus:ring-1 focus:ring-ring sm:text-sm"
                     />
                   </div>
                   <button
@@ -2241,7 +2322,7 @@ export default function FluidTrackerPage() {
                       setSelectedDateFilter("custom");
                       setIsDatePickerOpen(false);
                     }}
-                    className="mt-2.5 w-full flex items-center justify-center rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-white font-bold text-xs py-2 shadow-control transition-colors cursor-pointer active:scale-[0.98]"
+                    className="mt-2.5 flex w-full cursor-pointer items-center justify-center rounded-xl bg-primary-solid py-2 text-xs font-bold text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98]"
                   >
                     {language === "ES" ? "Aplicar Fecha" : "Apply Date"}
                   </button>
@@ -2279,6 +2360,7 @@ export default function FluidTrackerPage() {
 
       {/* Entry New Weight Log Modal */}
       <AddWeightLogModal
+        key={isModalOpen ? "weight-open" : "weight-closed"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEntry}
@@ -2288,6 +2370,7 @@ export default function FluidTrackerPage() {
 
       {/* Quick Edit EDW & Weight Settings Modal */}
       <EditEdwModal
+        key={isEdwModalOpen ? "edw-open" : "edw-closed"}
         isOpen={isEdwModalOpen}
         onClose={() => setIsEdwModalOpen(false)}
         edwKg={edwKg}

@@ -45,10 +45,10 @@ function renderFormattedText(text: string) {
       <ExternalLink
         key={match.index}
         href={linkUrl}
-        className="text-fg-brand hover:text-primary-fg underline font-semibold transition-colors"
+        className="font-semibold text-fg-brand underline transition-colors hover:text-primary-fg"
       >
         {linkText}
-      </ExternalLink>
+      </ExternalLink>,
     );
     lastIndex = regex.lastIndex;
   }
@@ -66,7 +66,10 @@ function formatBulletText(text: string): string {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-function parseWatchForContent(text: string): { bullets: string[]; directive?: string } {
+function parseWatchForContent(text: string): {
+  bullets: string[];
+  directive?: string;
+} {
   if (!text) return { bullets: [] };
 
   // Special case for dialysis-access-emergencies which uses "Fistula/graft: ... Catheter: ... Heavy/spurting..."
@@ -83,7 +86,10 @@ function parseWatchForContent(text: string): { bullets: string[]; directive?: st
 
   // Check if text has semicolons separating symptoms
   if (text.includes(";")) {
-    const rawSegments = text.split(";").map((s) => s.trim()).filter(Boolean);
+    const rawSegments = text
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const bullets: string[] = [];
     let directive = "";
 
@@ -131,7 +137,9 @@ function SymptomDetailContent() {
   const currentSlug = rawSlug.toLowerCase().replace(/%20/g, "-");
 
   const currentTopic = useMemo(() => {
-    return getBeforeTheErTopic(currentSlug) || BEFORE_THE_ER_TOPICS["chest-pain"];
+    return (
+      getBeforeTheErTopic(currentSlug) || BEFORE_THE_ER_TOPICS["chest-pain"]
+    );
   }, [currentSlug]);
 
   const selectedParam = searchParams.get("selected");
@@ -169,7 +177,7 @@ function SymptomDetailContent() {
       {selectedSlugList.length > 1 && (
         <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary-fg flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary-fg uppercase">
               <Activity className="h-4 w-4 text-fg-brand" />
               <span>
                 {isEs
@@ -191,10 +199,10 @@ function SymptomDetailContent() {
                   key={slug}
                   type="button"
                   onClick={() => handleSelectTopic(slug)}
-                  className={`flex items-center gap-1.5 rounded-control px-3.5 py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-control px-3.5 py-2 text-xs font-bold transition-all sm:text-sm ${
                     isActive
                       ? "bg-primary-solid text-primary-on-solid shadow-control"
-                      : "bg-surface text-fg-secondary border border-primary-soft-line hover:bg-primary-soft-hover"
+                      : "border border-primary-soft-line bg-surface text-fg-secondary hover:bg-primary-soft-hover"
                   }`}
                 >
                   <span className="h-2 w-2 rounded-full bg-success-600" />
@@ -209,13 +217,13 @@ function SymptomDetailContent() {
       {/* 1. EMERGENCY NOTICE CARD (Normal neutral bg & border) */}
       <Card as="section" padding="none" className="space-y-stack-sm p-inset-lg">
         <div>
-          <span className="text-xs font-black uppercase tracking-wider text-danger">
+          <span className="text-xs font-black tracking-wider text-danger uppercase">
             {isEs ? "AVISO DE EMERGENCIA" : "EMERGENCY NOTICE"}
           </span>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm sm:text-base font-medium text-fg-secondary leading-relaxed">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
             {isEs
               ? "Before-the-ER™ no diagnostica afecciones médicas. Si cree que está experimentando una emergencia potencialmente mortal, llame al 911 de inmediato."
               : "Before-the-ER™ does not diagnose medical conditions. If you believe you are experiencing a life-threatening emergency, call 911 immediately."}
@@ -223,7 +231,7 @@ function SymptomDetailContent() {
 
           <a
             href="tel:911"
-            className="text-sm sm:text-base font-bold text-danger underline underline-offset-4 hover:text-danger transition-colors shrink-0 whitespace-nowrap"
+            className="shrink-0 text-sm font-bold whitespace-nowrap text-danger underline underline-offset-4 transition-colors hover:text-danger sm:text-base"
           >
             {isEs ? "Llamar al 911" : "Call 911"}
           </a>
@@ -232,13 +240,13 @@ function SymptomDetailContent() {
 
       {/* 2. YOUR NEXT STEP ESCALATION CARD */}
       <section
-        className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} p-5 sm:p-6 space-y-3.5 shadow-control`}
+        className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 shadow-control sm:p-6`}
       >
         <div className="space-y-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-fg-muted">
+          <span className="text-xs font-black tracking-wider text-fg-muted uppercase">
             {isEs ? "SU SIGUIENTE PASO" : "YOUR NEXT STEP"}
           </span>
-          <p className="text-sm sm:text-base font-semibold text-fg leading-relaxed">
+          <p className="text-sm leading-relaxed font-semibold text-fg sm:text-base">
             {isEs ? nextStepConfig.descriptionEs : nextStepConfig.descriptionEn}
           </p>
         </div>
@@ -246,10 +254,7 @@ function SymptomDetailContent() {
         <div className="flex flex-wrap items-center gap-3 pt-1">
           {nextStepLevel === "call911" && (
             <>
-              <a
-                href="tel:911"
-                className={buttonStyles({ variant: "danger" })}
-              >
+              <a href="tel:911" className={buttonStyles({ variant: "danger" })}>
                 <Phone aria-hidden="true" />
                 <span>{t("beforeTheEr.detail.call911")}</span>
               </a>
@@ -268,12 +273,13 @@ function SymptomDetailContent() {
 
           {nextStepLevel === "callDialysis" && (
             <>
-              <a
-                href="tel:5550100"
-                className={CTA_WARNING}
-              >
+              <a href="tel:5550100" className={CTA_WARNING}>
                 <Phone aria-hidden="true" />
-                <span>{isEs ? "Llamar a la Clínica de Diálisis" : "Call Dialysis Clinic"}</span>
+                <span>
+                  {isEs
+                    ? "Llamar a la Clínica de Diálisis"
+                    : "Call Dialysis Clinic"}
+                </span>
               </a>
               <a
                 href="tel:911"
@@ -294,7 +300,9 @@ function SymptomDetailContent() {
                 className={CTA_WARNING}
               >
                 <MapPin aria-hidden="true" />
-                <span>{isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}</span>
+                <span>
+                  {isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}
+                </span>
               </ExternalLink>
               <a
                 href="tel:911"
@@ -314,32 +322,38 @@ function SymptomDetailContent() {
               href="/dashboard/personal-log/dialysis-journal"
               className={CTA_SUCCESS}
             >
-              <span>{isEs ? "Registrar en Diario" : "Log in Health Journal"}</span>
+              <span>
+                {isEs ? "Registrar en Diario" : "Log in Health Journal"}
+              </span>
             </Link>
           )}
         </div>
       </section>
 
       {/* MAIN SYMPTOM DETAILS CARD */}
-      <section className="rounded-panel border border-line bg-surface p-6 space-y-6 shadow-control">
+      <section className="space-y-6 rounded-panel border border-line bg-surface p-6 shadow-control">
         <div className="border-b border-line-subtle pb-4">
-          <div className="relative inline-flex items-center gap-2 group">
-            <h1 className="text-2xl sm:text-3xl font-bold text-fg flex items-center gap-2">
+          <div className="group relative inline-flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-fg sm:text-3xl">
               <span>{title}</span>
-              <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6 text-fg-subtle group-hover:text-fg-secondary transition-colors pointer-events-none" />
+              <ChevronDown className="pointer-events-none h-5 w-5 text-fg-subtle transition-colors group-hover:text-fg-secondary sm:h-6 sm:w-6" />
             </h1>
             <select
               id="topic-selector"
               value={currentTopic.slug}
               onChange={(e) => handleSelectTopic(e.target.value)}
               aria-label={isEs ? "Seleccionar Tema" : "Select Topic"}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-base"
+              className="absolute inset-0 h-full w-full cursor-pointer text-base opacity-0"
             >
               {SLUG_LIST.map((slug) => {
                 const item = BEFORE_THE_ER_TOPICS[slug];
                 const itemTitle = isEs ? item.titleEs : item.titleEn;
                 return (
-                  <option key={slug} value={slug} className="text-fg font-semibold text-base py-1">
+                  <option
+                    key={slug}
+                    value={slug}
+                    className="py-1 text-base font-semibold text-fg"
+                  >
                     {itemTitle}
                   </option>
                 );
@@ -350,7 +364,7 @@ function SymptomDetailContent() {
 
         {/* What to Watch For Section */}
         <div className="space-y-3">
-          <h2 className="text-base sm:text-lg font-bold text-fg">
+          <h2 className="text-base font-bold text-fg sm:text-lg">
             {isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}
           </h2>
 
@@ -358,9 +372,9 @@ function SymptomDetailContent() {
             {parsedWatchFor.bullets.map((bullet, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-fg-secondary leading-relaxed"
+                className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-fg-muted shrink-0 mt-2" />
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
                 <span>{renderFormattedText(formatBulletText(bullet))}</span>
               </li>
             ))}
@@ -368,8 +382,8 @@ function SymptomDetailContent() {
 
           {/* Emergency Directive & Source Citation Callout */}
           {parsedWatchFor.directive && (
-            <div className="inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs sm:text-sm font-medium text-danger leading-relaxed mt-2">
-              <AlertTriangle className="h-4 w-4 text-danger shrink-0 mt-0.5" />
+            <div className="mt-2 inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs leading-relaxed font-medium text-danger sm:text-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
               <div className="leading-relaxed">
                 {renderFormattedText(parsedWatchFor.directive)}
               </div>
@@ -378,8 +392,8 @@ function SymptomDetailContent() {
         </div>
 
         {/* Subsection 2: Especially Important In */}
-        <div className="space-y-3 pt-2 border-t border-line-subtle">
-          <h2 className="text-base sm:text-lg font-bold text-fg">
+        <div className="space-y-3 border-t border-line-subtle pt-2">
+          <h2 className="text-base font-bold text-fg sm:text-lg">
             {t("beforeTheEr.detail.importantIn")}
           </h2>
 
@@ -387,9 +401,9 @@ function SymptomDetailContent() {
             {importantInList.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-fg-secondary leading-relaxed"
+                className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-fg-muted shrink-0 mt-2" />
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
                 <span>{item}</span>
               </li>
             ))}
@@ -398,27 +412,27 @@ function SymptomDetailContent() {
       </section>
 
       {/* RELATED EDUCATION CARD */}
-      <section className="rounded-panel border border-line bg-surface p-6 space-y-4 shadow-control">
+      <section className="space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-fg">
             {t("beforeTheEr.detail.relatedEducation")}
           </h2>
           <Link
             href="/dashboard/education-center"
-            className="text-xs font-bold text-fg-brand hover:underline flex items-center gap-1"
+            className="flex items-center gap-1 text-xs font-bold text-fg-brand hover:underline"
           >
             <span>{isEs ? "Ver Todos los Videos" : "View All Videos"}</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Video Item */}
           <Link
             href="/dashboard/education-center"
-            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 hover:bg-primary-soft hover:border-primary-soft-line transition-colors"
+            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
+            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
               <Image
                 src="/images/logo.svg"
                 alt="NephroReach"
@@ -432,7 +446,7 @@ function SymptomDetailContent() {
               <h3 className="text-sm font-bold text-fg">
                 {t("beforeTheEr.detail.videoTitle")}
               </h3>
-              <p className="text-xs font-medium text-fg-muted flex items-center gap-1 mt-0.5">
+              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-fg-muted">
                 <PlayCircle className="h-3.5 w-3.5 text-fg-brand" />
                 {t("beforeTheEr.detail.video")} • 8:30
               </p>
@@ -442,9 +456,9 @@ function SymptomDetailContent() {
           {/* Article Item */}
           <Link
             href="/dashboard/education-center"
-            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 hover:bg-primary-soft hover:border-primary-soft-line transition-colors"
+            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
+            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
               <Image
                 src="/images/logo.svg"
                 alt="NephroReach"
@@ -458,9 +472,10 @@ function SymptomDetailContent() {
               <h3 className="text-sm font-bold text-fg">
                 {t("beforeTheEr.detail.articleTitle")}
               </h3>
-              <p className="text-xs font-medium text-fg-muted flex items-center gap-1 mt-0.5">
+              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-fg-muted">
                 <FileText className="h-3.5 w-3.5 text-fg-brand" />
-                {t("beforeTheEr.detail.article")} • {t("beforeTheEr.detail.readTime")}
+                {t("beforeTheEr.detail.article")} •{" "}
+                {t("beforeTheEr.detail.readTime")}
               </p>
             </div>
           </Link>
@@ -492,7 +507,7 @@ export default function SymptomDetailPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex h-64 w-full items-center justify-center text-fg-muted font-medium">
+        <div className="flex h-64 w-full items-center justify-center font-medium text-fg-muted">
           Loading Before-the-ER guidance...
         </div>
       }

@@ -119,7 +119,9 @@ function DetailRow({
 function ClassCard({ item }: { item: (typeof classColumns)[number]["class"] }) {
   return (
     <Card as="article" padding="small">
-      <Badge tone={item.isComplete ? "neutral" : "success"}>{item.status}</Badge>
+      <Badge tone={item.isComplete ? "neutral" : "success"}>
+        {item.status}
+      </Badge>
 
       <div className="mt-stack-xl">
         <h3 className="text-heading-4 text-fg">{item.title}</h3>
@@ -132,15 +134,13 @@ function ClassCard({ item }: { item: (typeof classColumns)[number]["class"] }) {
         <DetailRow icon={CalendarDays}>{item.date}</DetailRow>
         <DetailRow icon={Clock3}>{item.time}</DetailRow>
         <DetailRow icon={Users}>{item.enrollment}</DetailRow>
-        <DetailRow icon={UserRoundCheck}>Instructor: {item.instructor}</DetailRow>
+        <DetailRow icon={UserRoundCheck}>
+          Instructor: {item.instructor}
+        </DetailRow>
       </ul>
 
       <div className="mt-stack-xl space-y-stack-md">
-        <Button
-          size="small"
-          disabled={item.isComplete}
-          className="w-full"
-        >
+        <Button size="small" disabled={item.isComplete} className="w-full">
           Join in
         </Button>
 
@@ -187,7 +187,9 @@ function ClassRegistrations() {
               key={column.title}
               className="min-h-[540px] border-b border-line p-inset-md last:border-b-0 lg:border-b-0 lg:border-l lg:first:border-l-0"
             >
-              <h2 className="mb-stack-lg text-heading-5 text-fg">{column.title}</h2>
+              <h2 className="mb-stack-lg text-heading-5 text-fg">
+                {column.title}
+              </h2>
               <ClassCard item={column.class} />
             </section>
           ))}

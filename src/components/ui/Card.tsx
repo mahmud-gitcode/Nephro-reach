@@ -67,7 +67,7 @@ export function Card({
         tones[tone],
         paddings[padding],
         interactive &&
-          "cursor-pointer transition-all duration-200 ease-standard hover:border-line-strong hover:shadow-md hover:-translate-y-0.5",
+          "cursor-pointer transition-all duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-md",
         className,
       )}
       {...rest}
@@ -104,7 +104,9 @@ export function CardHeader({
       <div className="min-w-0">
         <h3 className="text-heading-5 text-fg">{title}</h3>
         {description ? (
-          <p className="mt-stack-xs text-body-sm text-fg-muted">{description}</p>
+          <p className="mt-stack-xs text-body-sm text-fg-muted">
+            {description}
+          </p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

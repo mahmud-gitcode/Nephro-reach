@@ -13,7 +13,8 @@ interface ActionConfig {
   callActionHref: string;
   isCallLink?: boolean;
   secondaryActionHref?: string;
-  secondaryActionKey?: "findSchedule" | "urgentEducation" | "learnMoreEducation";
+  secondaryActionKey?:
+    "findSchedule" | "urgentEducation" | "learnMoreEducation";
 }
 
 const ACTION_CONFIGS: ActionConfig[] = [
@@ -72,14 +73,38 @@ const SYMPTOMS: SymptomConfig[] = [
   { id: "severe-fluid-overload", key: "severeFluidOverload", urgent: false },
   { id: "signs-of-stroke", key: "signsOfStroke", urgent: true },
   { id: "loss-of-consciousness", key: "lossOfConsciousness", urgent: false },
-  { id: "severe-allergic-reactions", key: "severeAllergicReactions", urgent: true },
-  { id: "severe-shortness-of-breath", key: "severeShortnessOfBreath", urgent: false },
+  {
+    id: "severe-allergic-reactions",
+    key: "severeAllergicReactions",
+    urgent: true,
+  },
+  {
+    id: "severe-shortness-of-breath",
+    key: "severeShortnessOfBreath",
+    urgent: false,
+  },
   { id: "seizures", key: "seizures", urgent: true },
-  { id: "dialysis-access-emergencies", key: "dialysisAccessEmergencies", urgent: false },
+  {
+    id: "dialysis-access-emergencies",
+    key: "dialysisAccessEmergencies",
+    urgent: false,
+  },
   { id: "severe-bleeding", key: "severeBleeding", urgent: true },
-  { id: "severe-hyperkalemia-symptoms", key: "severeHyperkalemia", urgent: false },
-  { id: "fever-with-dialysis-catheter", key: "feverDialysisCatheter", urgent: false },
-  { id: "confusion-or-mental-status-changes", key: "confusionMentalStatus", urgent: false },
+  {
+    id: "severe-hyperkalemia-symptoms",
+    key: "severeHyperkalemia",
+    urgent: false,
+  },
+  {
+    id: "fever-with-dialysis-catheter",
+    key: "feverDialysisCatheter",
+    urgent: false,
+  },
+  {
+    id: "confusion-or-mental-status-changes",
+    key: "confusionMentalStatus",
+    urgent: false,
+  },
 ];
 
 /* The four themes the content author can pick collapse onto the palette's
@@ -101,12 +126,22 @@ const ACTION_ALERT_TONE: Record<
   blue: "info",
 };
 
+type ActionCopy = {
+  title: string;
+  purpose: string;
+  reminder: string;
+  callAction: string;
+  symptoms: string[];
+};
+
 export default function BeforeTheErPage() {
   const router = useRouter();
   const { t, dictionary } = useLanguage();
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [activeModalKey, setActiveModalKey] = useState<ActionConfig["key"] | null>(null);
+  const [activeModalKey, setActiveModalKey] = useState<
+    ActionConfig["key"] | null
+  >(null);
 
   const selectedCount = selectedSymptoms.length;
 
@@ -133,15 +168,15 @@ export default function BeforeTheErPage() {
     ? ACTION_CONFIGS.find((c) => c.key === activeModalKey)
     : null;
 
-  const modalData = activeModalKey && (dictionary as any)?.beforeTheEr?.[activeModalKey]
-    ? ((dictionary as any).beforeTheEr[activeModalKey] as {
-        title: string;
-        purpose: string;
-        reminder: string;
-        callAction: string;
-        symptoms: string[];
-      })
-    : null;
+  /* The copy for each action is looked up by key, so the dictionary is read
+     as a map here rather than through its generated property names. */
+  const beforeTheEr = dictionary?.beforeTheEr as unknown as
+    Record<string, ActionCopy | undefined> | undefined;
+
+  const modalData =
+    activeModalKey && beforeTheEr?.[activeModalKey]
+      ? (beforeTheEr[activeModalKey] as ActionCopy)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -184,7 +219,9 @@ export default function BeforeTheErPage() {
                   padding="small"
                   className="flex min-h-[60px] items-center justify-between gap-inline-md"
                 >
-                  <span className="truncate text-body-md text-fg">{itemTitle}</span>
+                  <span className="truncate text-body-md text-fg">
+                    {itemTitle}
+                  </span>
                   {/* title= is a tooltip, not a name. aria-label is. */}
                   <Button
                     variant="neutral"

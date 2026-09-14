@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button, EmptyState, Tabs, Textarea } from "@/components/ui";
 import {
@@ -20,38 +19,34 @@ import {
   Trash2,
   Check,
   X,
-  AlertCircle,
-  Send,
 } from "lucide-react";
+import { useClientValue } from "@/lib/storage/useClientValue";
+
+/* Stable empty array: useClientValue returns this before hydration, and a
+   fresh [] each render would be a new reference every time. */
+const NO_REVIEWS: Review[] = [];
 
 export default function AdminReviewsPage() {
-  const { user } = useAuth();
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "declined">("all");
+  const [reviews, , refresh] = useClientValue(getReviews, NO_REVIEWS);
+  const [activeTab, setActiveTab] = useState<
+    "all" | "pending" | "approved" | "declined"
+  >("all");
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineFeedback, setDeclineFeedback] = useState<string>("");
 
-  const loadAllReviews = () => {
-    setReviews(getReviews());
-  };
-
+  /* The effect now only subscribes. The first read happens during render,
+     via useClientValue, instead of in a second pass. */
   useEffect(() => {
-    loadAllReviews();
-
-    const handleReviewsChange = () => {
-      loadAllReviews();
-    };
-
-    window.addEventListener(REVIEWS_EVENT, handleReviewsChange);
-    window.addEventListener("storage", handleReviewsChange);
+    window.addEventListener(REVIEWS_EVENT, refresh);
+    window.addEventListener("storage", refresh);
     return () => {
-      window.removeEventListener(REVIEWS_EVENT, handleReviewsChange);
-      window.removeEventListener("storage", handleReviewsChange);
+      window.removeEventListener(REVIEWS_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
     };
-  }, []);
+  }, [refresh]);
 
   const handleAccept = (id: string) => {
     updateReviewStatus(id, "approved");
@@ -99,7 +94,7 @@ export default function AdminReviewsPage() {
         </div>
 
         {/* Status Count Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-bold text-fg-secondary shadow-control">
             {isEs ? "Total" : "Total"}: {reviews.length}
           </span>
@@ -119,10 +114,22 @@ export default function AdminReviewsPage() {
       <div className="overflow-x-auto">
         <Tabs
           items={[
-            { id: "all", label: `${isEs ? "Todas" : "All"} (${reviews.length})` },
-            { id: "pending", label: `${isEs ? "Pendientes" : "Pending"} (${pendingCount})` },
-            { id: "approved", label: `${isEs ? "Aprobadas" : "Approved"} (${approvedCount})` },
-            { id: "declined", label: `${isEs ? "Rechazadas" : "Declined"} (${declinedCount})` },
+            {
+              id: "all",
+              label: `${isEs ? "Todas" : "All"} (${reviews.length})`,
+            },
+            {
+              id: "pending",
+              label: `${isEs ? "Pendientes" : "Pending"} (${pendingCount})`,
+            },
+            {
+              id: "approved",
+              label: `${isEs ? "Aprobadas" : "Approved"} (${approvedCount})`,
+            },
+            {
+              id: "declined",
+              label: `${isEs ? "Rechazadas" : "Declined"} (${declinedCount})`,
+            },
           ]}
           value={activeTab}
           onChange={setActiveTab}
@@ -145,42 +152,49 @@ export default function AdminReviewsPage() {
           filtered.map((rev) => (
             <div
               key={rev.id}
-              className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-control transition-all hover:border-line-strong"
+              className="rounded-card border border-line bg-surface p-5 shadow-control transition-all hover:border-line-strong sm:p-6"
             >
               {/* Top Row: User details & Status Badge */}
               <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <h3 className="text-base font-bold text-fg">{rev.userName}</h3>
+                    <h3 className="text-base font-bold text-fg">
+                      {rev.userName}
+                    </h3>
                     <span className="rounded-control-small bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-fg-brand">
                       {rev.role}
                     </span>
                   </div>
-                  <p className="text-xs font-medium text-fg-subtle mt-0.5">
+                  <p className="mt-0.5 text-xs font-medium text-fg-subtle">
                     {rev.userEmail} •{" "}
-                    {new Date(rev.createdAt).toLocaleDateString(isEs ? "es-ES" : "en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(rev.createdAt).toLocaleDateString(
+                      isEs ? "es-ES" : "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {rev.status === "approved" && (
-                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-success-surface px-3 py-1 text-xs font-bold text-success border border-success-line">
+                    <span className="inline-flex items-center gap-1.5 rounded-pill border border-success-line bg-success-surface px-3 py-1 text-xs font-bold text-success">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {isEs ? "Aprobada (En sitio web)" : "Approved (Live on site)"}
+                      {isEs
+                        ? "Aprobada (En sitio web)"
+                        : "Approved (Live on site)"}
                     </span>
                   )}
                   {rev.status === "pending" && (
-                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-warning-surface px-3 py-1 text-xs font-bold text-warning border border-warning-line">
+                    <span className="inline-flex items-center gap-1.5 rounded-pill border border-warning-line bg-warning-surface px-3 py-1 text-xs font-bold text-warning">
                       <Clock className="h-3.5 w-3.5" />
                       {isEs ? "Pendiente de revisión" : "Pending Review"}
                     </span>
                   )}
                   {rev.status === "declined" && (
-                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-danger-surface px-3 py-1 text-xs font-bold text-danger border border-danger-line">
+                    <span className="inline-flex items-center gap-1.5 rounded-pill border border-danger-line bg-danger-surface px-3 py-1 text-xs font-bold text-danger">
                       <XCircle className="h-3.5 w-3.5" />
                       {isEs ? "Rechazada" : "Declined"}
                     </span>
@@ -200,18 +214,22 @@ export default function AdminReviewsPage() {
                     }`}
                   />
                 ))}
-                <span className="ml-1.5 text-xs font-bold text-fg-muted">{rev.rating}.0</span>
+                <span className="ml-1.5 text-xs font-bold text-fg-muted">
+                  {rev.rating}.0
+                </span>
               </div>
 
               {/* Review Text */}
-              <p className="mt-2.5 text-sm sm:text-base leading-relaxed text-fg-secondary font-medium">
-                "{rev.comment}"
+              <p className="mt-2.5 text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
+                &ldquo;{rev.comment}&rdquo;
               </p>
 
               {/* Existing Decline Feedback if any */}
               {rev.status === "declined" && rev.adminFeedback && (
                 <div className="mt-3 rounded-control border border-danger-line bg-danger-surface/70 p-inset-sm text-caption text-danger">
-                  <span className="font-bold">{isEs ? "Motivo del rechazo:" : "Decline Feedback:"}</span>{" "}
+                  <span className="font-bold">
+                    {isEs ? "Motivo del rechazo:" : "Decline Feedback:"}
+                  </span>{" "}
                   {rev.adminFeedback}
                 </div>
               )}

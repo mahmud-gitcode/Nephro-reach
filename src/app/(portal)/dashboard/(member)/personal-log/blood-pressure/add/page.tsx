@@ -26,7 +26,11 @@ function MetaTile({
   value: string;
 }) {
   return (
-    <Card tone="flat" padding="small" className="flex items-center gap-inline-md">
+    <Card
+      tone="flat"
+      padding="small"
+      className="flex items-center gap-inline-md"
+    >
       <span
         aria-hidden="true"
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand [&_svg]:h-icon-small [&_svg]:w-icon-small"
@@ -52,16 +56,49 @@ export default function AddBloodPressurePage() {
   const [notes, setNotes] = useState("");
 
   const moods = [
-    { id: "great", label: t("bloodPressure.add.moods.great"), mark: t("bloodPressure.add.moods.greatMark"), emoji: ":)" },
-    { id: "good", label: t("bloodPressure.add.moods.good"), mark: t("bloodPressure.add.moods.goodMark"), emoji: ":)" },
-    { id: "okay", label: t("bloodPressure.add.moods.okay"), mark: t("bloodPressure.add.moods.okayMark"), emoji: ":|" },
-    { id: "tired", label: t("bloodPressure.add.moods.tired"), mark: t("bloodPressure.add.moods.tiredMark"), emoji: "-_-" },
-    { id: "stressed", label: t("bloodPressure.add.moods.stressed"), mark: t("bloodPressure.add.moods.stressedMark"), emoji: ":/" },
+    {
+      id: "great",
+      label: t("bloodPressure.add.moods.great"),
+      mark: t("bloodPressure.add.moods.greatMark"),
+      emoji: ":)",
+    },
+    {
+      id: "good",
+      label: t("bloodPressure.add.moods.good"),
+      mark: t("bloodPressure.add.moods.goodMark"),
+      emoji: ":)",
+    },
+    {
+      id: "okay",
+      label: t("bloodPressure.add.moods.okay"),
+      mark: t("bloodPressure.add.moods.okayMark"),
+      emoji: ":|",
+    },
+    {
+      id: "tired",
+      label: t("bloodPressure.add.moods.tired"),
+      mark: t("bloodPressure.add.moods.tiredMark"),
+      emoji: "-_-",
+    },
+    {
+      id: "stressed",
+      label: t("bloodPressure.add.moods.stressed"),
+      mark: t("bloodPressure.add.moods.stressedMark"),
+      emoji: ":/",
+    },
   ];
 
   const vitals = [
-    { label: t("bloodPressure.add.systolic"), value: systolic, set: setSystolic },
-    { label: t("bloodPressure.add.diastolic"), value: diastolic, set: setDiastolic },
+    {
+      label: t("bloodPressure.add.systolic"),
+      value: systolic,
+      set: setSystolic,
+    },
+    {
+      label: t("bloodPressure.add.diastolic"),
+      value: diastolic,
+      set: setDiastolic,
+    },
     { label: t("bloodPressure.add.pulse"), value: pulse, set: setPulse },
   ];
 

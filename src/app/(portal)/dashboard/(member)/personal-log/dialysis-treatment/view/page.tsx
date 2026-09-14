@@ -5,35 +5,66 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Activity,
+  Angry,
   ArrowLeft,
   Calendar,
   Droplets,
+  Frown,
   HeartPulse,
+  Laugh,
+  Meh,
   Pencil,
   Pill,
   Scale,
+  Smile,
 } from "lucide-react";
 import {
-  BsEmojiLaughingFill,
-  BsEmojiSmileFill,
-  BsEmojiNeutralFill,
-  BsEmojiFrownFill,
-  BsEmojiAngryFill,
-} from "react-icons/bs";
-import { mockDialysisEntries, DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
+  mockDialysisEntries,
+  DialysisLogEntry,
+} from "@/features/personal-log/dialysisTreatmentData";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { Badge, buttonStyles, Card } from "@/components/ui";
 
 const MOOD_CONFIG: Record<
   number,
-  { key: "great" | "good" | "okay" | "low" | "poor"; defaultLabel: string; icon: React.ComponentType<{ className?: string }>; color: string }
+  {
+    key: "great" | "good" | "okay" | "low" | "poor";
+    defaultLabel: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }
 > = {
-  5: { key: "great", defaultLabel: "Great", icon: BsEmojiLaughingFill, color: "text-success-600" },
-  4: { key: "good", defaultLabel: "Good", icon: BsEmojiSmileFill, color: "text-success-500" },
-  3: { key: "okay", defaultLabel: "Okay", icon: BsEmojiNeutralFill, color: "text-warning-600" },
-  2: { key: "low", defaultLabel: "Low", icon: BsEmojiFrownFill, color: "text-warning-700" },
-  1: { key: "poor", defaultLabel: "Poor", icon: BsEmojiAngryFill, color: "text-danger-600" },
+  5: {
+    key: "great",
+    defaultLabel: "Great",
+    icon: Laugh,
+    color: "text-success-600",
+  },
+  4: {
+    key: "good",
+    defaultLabel: "Good",
+    icon: Smile,
+    color: "text-success-500",
+  },
+  3: {
+    key: "okay",
+    defaultLabel: "Okay",
+    icon: Meh,
+    color: "text-warning-600",
+  },
+  2: {
+    key: "low",
+    defaultLabel: "Low",
+    icon: Frown,
+    color: "text-warning-700",
+  },
+  1: {
+    key: "poor",
+    defaultLabel: "Poor",
+    icon: Angry,
+    color: "text-danger-600",
+  },
 };
 
 function DetailRow({
@@ -47,7 +78,10 @@ function DetailRow({
 }) {
   const isAffirmative = value === "Yes" || value === "Sí";
   return (
-    <Card padding="small" className="flex h-full items-center justify-between gap-inline-lg">
+    <Card
+      padding="small"
+      className="flex h-full items-center justify-between gap-inline-lg"
+    >
       <span className="text-body-md text-fg-secondary">{label}</span>
       <Badge tone={isHighlight || isAffirmative ? "info" : "neutral"}>
         {value}
@@ -103,7 +137,7 @@ function TreatmentDetailContent() {
 
       {/* CARD 1: SESSION INFORMATION (MATCHING FORM CARD 1) */}
       <div className="w-full space-y-stack-lg rounded-card border border-line bg-surface p-inset-lg shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-heading-3 text-fg">
               {dt?.detail?.title || "Dialysis Day Log"}
@@ -126,73 +160,93 @@ function TreatmentDetailContent() {
         </div>
 
         {/* 6-Column Summary Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-card border border-line bg-surface-sunken p-inset-sm text-caption shadow-control divide-y divide-line-subtle sm:divide-x sm:divide-y-0">
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+        <div className="grid grid-cols-2 divide-y divide-line-subtle rounded-card border border-line bg-surface-sunken p-inset-sm text-caption shadow-control sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.treatmentType || "Treatment Type"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.treatmentType}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.treatmentType}
+            </p>
           </div>
 
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.startTime || "Start Time"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.startTime}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.startTime}
+            </p>
           </div>
 
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.endTime || "End Time"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.endTime}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.endTime}
+            </p>
           </div>
 
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.location || "Location"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.location}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.location}
+            </p>
           </div>
 
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.careTeam || "Care Team"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.careTeam}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.careTeam}
+            </p>
           </div>
 
-          <div className="px-3 py-1.5 sm:py-0 min-w-0">
+          <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.postWeight || "Post Weight"}
             </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">{entry.postWeightSummary}</p>
+            <p className="mt-stack-xs truncate text-label-sm text-fg">
+              {entry.postWeightSummary}
+            </p>
           </div>
         </div>
       </div>
 
       {/* CARD 2: LOGGED CLINICAL DATA (MATCHING FORM CARD 2 / STEPS) */}
-      <div className="w-full bg-surface rounded-panel border border-line p-6 sm:p-8 shadow-card space-y-8">
+      <div className="w-full space-y-8 rounded-panel border border-line bg-surface p-6 shadow-card sm:p-8">
         {/* 1. ATTENDANCE & SCHEDULE */}
         <section className="space-y-3">
           <h2 className="text-heading-5 text-fg">
             {dt?.detail?.attendanceSchedule?.title || "Attendance & Schedule"}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <DetailRow
-              label={dt?.detail?.attendanceSchedule?.attended || "Treatment attended"}
+              label={
+                dt?.detail?.attendanceSchedule?.attended || "Treatment attended"
+              }
               value={formatYesNo(entry.attended)}
             />
             <DetailRow
-              label={dt?.detail?.attendanceSchedule?.arrivedLate || "Arrived late"}
+              label={
+                dt?.detail?.attendanceSchedule?.arrivedLate || "Arrived late"
+              }
               value={formatYesNo(entry.arrivedLate)}
             />
             <DetailRow
-              label={dt?.detail?.attendanceSchedule?.endedEarly || "Ended early"}
+              label={
+                dt?.detail?.attendanceSchedule?.endedEarly || "Ended early"
+              }
               value={formatYesNo(entry.endedEarly)}
             />
             <DetailRow
-              label={dt?.detail?.attendanceSchedule?.missed || "Missed treatments"}
+              label={
+                dt?.detail?.attendanceSchedule?.missed || "Missed treatments"
+              }
               value={entry.missedTreatments}
             />
             <div className="md:col-span-2">
@@ -214,14 +268,16 @@ function TreatmentDetailContent() {
           </h2>
 
           {/* Selected Mood Display */}
-          <div className="flex items-center justify-between gap-3 p-4 rounded-card border border-line bg-surface-sunken">
+          <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-surface-sunken p-4">
             <span className="text-body-md text-fg-secondary">
               {dt?.detail?.preTreatment?.overallFeel || "Overall Feel"}
             </span>
             <div className="flex items-center gap-2.5 rounded-card border border-primary-edge bg-surface px-inset-md py-inset-xs shadow-control">
               <div className="relative flex items-center justify-center">
                 <span className="absolute inset-0.5 rounded-full bg-surface shadow-control" />
-                <PreMoodIcon className={`relative size-7 ${preMoodConfig.color}`} />
+                <PreMoodIcon
+                  className={`relative size-7 ${preMoodConfig.color}`}
+                />
               </div>
               <span className="text-sm font-bold text-fg">{preMoodLabel}</span>
             </div>
@@ -254,15 +310,18 @@ function TreatmentDetailContent() {
           {Object.keys(entry.preSeverity).length > 0 && (
             <div className="space-y-2.5">
               <h3 className="text-heading-5 text-fg">
-                {dt?.detail?.preTreatment?.severity || "Symptom Severity (0–10)"}
+                {dt?.detail?.preTreatment?.severity ||
+                  "Symptom Severity (0–10)"}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
                 {Object.entries(entry.preSeverity).map(([symptom, score]) => (
                   <div
                     key={symptom}
                     className="flex items-center justify-between gap-4 rounded-xl border border-line-subtle bg-surface-sunken/50 p-3"
                   >
-                    <span className="text-body-md text-fg-secondary">{symptom}</span>
+                    <span className="text-body-md text-fg-secondary">
+                      {symptom}
+                    </span>
                     <span className="flex size-7 items-center justify-center rounded-control-small bg-primary-solid text-label-sm text-primary-on-solid shadow-control">
                       {score}
                     </span>
@@ -281,7 +340,10 @@ function TreatmentDetailContent() {
 
           {/* Sequential for extra fluid removal */}
           <DetailRow
-            label={dt?.detail?.duringTreatment?.sequential || "Sequential for extra fluid removal"}
+            label={
+              dt?.detail?.duringTreatment?.sequential ||
+              "Sequential for extra fluid removal"
+            }
             value={formatYesNo(entry.sequentialFluidRemoval || "No")}
           />
 
@@ -309,7 +371,8 @@ function TreatmentDetailContent() {
           {entry.intraSymptoms.length > 0 && (
             <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
               <h3 className="text-heading-5 text-fg">
-                {dt?.detail?.duringTreatment?.additionalSymptoms || "Additional Symptoms"}
+                {dt?.detail?.duringTreatment?.additionalSymptoms ||
+                  "Additional Symptoms"}
               </h3>
               <div className="flex flex-wrap gap-inline-md">
                 {entry.intraSymptoms.map((sym) => (
@@ -326,7 +389,7 @@ function TreatmentDetailContent() {
 
           {/* Session Notes */}
           {entry.intraNotes && (
-            <div className="rounded-card border border-line-subtle bg-surface-sunken p-4 space-y-2">
+            <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-4">
               <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.duringTreatment?.sessionNotes || "Session Notes"}
               </h3>
@@ -346,7 +409,9 @@ function TreatmentDetailContent() {
           {/* Post-Treatment Recovery */}
           <div className="space-y-2">
             <DetailRow
-              label={dt?.detail?.recoveryVitals?.recoveryTime || "Recovery time"}
+              label={
+                dt?.detail?.recoveryVitals?.recoveryTime || "Recovery time"
+              }
               value={formatYesNo(entry.recoveryTime)}
             />
             <DetailRow
@@ -359,12 +424,13 @@ function TreatmentDetailContent() {
           </div>
 
           {/* Clinical Measurements (4 Vitals Cards from Form) */}
-          <div className="pt-2 space-y-3">
+          <div className="space-y-3 pt-2">
             <h3 className="text-heading-5 text-fg">
-              {dt?.detail?.recoveryVitals?.measurements || "Clinical Measurements"}
+              {dt?.detail?.recoveryVitals?.measurements ||
+                "Clinical Measurements"}
             </h3>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
@@ -373,7 +439,9 @@ function TreatmentDetailContent() {
                   <Droplets className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">{entry.fluidRemoved}</span>
+                  <span className="text-metric-sm text-fg">
+                    {entry.fluidRemoved}
+                  </span>
                   <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.liters || "Liters"}
                   </span>
@@ -388,20 +456,27 @@ function TreatmentDetailContent() {
                   <Scale className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">{entry.postWeight}</span>
-                  <span className="text-caption text-fg-muted">kg (pre: {entry.preWeight})</span>
+                  <span className="text-metric-sm text-fg">
+                    {entry.postWeight}
+                  </span>
+                  <span className="text-caption text-fg-muted">
+                    kg (pre: {entry.preWeight})
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
-                    {dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure"}
+                    {dt?.clinicalMeasurements?.bloodPressure ||
+                      "Blood Pressure"}
                   </span>
                   <HeartPulse className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">{entry.bloodPressurePost}</span>
+                  <span className="text-metric-sm text-fg">
+                    {entry.bloodPressurePost}
+                  </span>
                   <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.mmHg || "mmHg"}
                   </span>
@@ -416,7 +491,9 @@ function TreatmentDetailContent() {
                   <Activity className="size-4 text-fg-subtle" />
                 </div>
                 <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">{entry.heartRatePost}</span>
+                  <span className="text-metric-sm text-fg">
+                    {entry.heartRatePost}
+                  </span>
                   <span className="text-caption text-fg-muted">
                     {dt?.clinicalMeasurements?.bpm || "bpm"}
                   </span>
@@ -454,7 +531,7 @@ function TreatmentDetailContent() {
 
           {/* Recovery Notes */}
           {entry.otherNotes && (
-            <div className="rounded-card border border-line-subtle bg-surface-sunken p-4 space-y-2">
+            <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-4">
               <h3 className="text-heading-5 text-fg">
                 {dt?.detail?.recoveryVitals?.recoveryNotes || "Recovery Notes"}
               </h3>
@@ -473,7 +550,7 @@ function FallbackLoading() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   return (
-    <div className="w-full max-w-5xl mx-auto py-12 text-center text-fg-muted font-medium">
+    <div className="mx-auto w-full max-w-5xl py-12 text-center font-medium text-fg-muted">
       {dt?.detail?.loading || "Loading treatment details..."}
     </div>
   );

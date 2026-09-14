@@ -1500,7 +1500,12 @@
       "subjectLabel": "Asunto",
       "subjectPlaceholder": "¿Con qué necesita ayuda?",
       "categoryLabel": "Categoría",
-      "categories": ["Consulta General", "Problema Técnico", "Cuenta y Facturación", "Registros de Tratamiento"],
+      "categories": [
+        "Consulta General",
+        "Problema Técnico",
+        "Cuenta y Facturación",
+        "Registros de Tratamiento"
+      ],
       "messageLabel": "Mensaje",
       "messagePlaceholder": "Describa su problema en detalle...",
       "cancelButton": "Cancelar",

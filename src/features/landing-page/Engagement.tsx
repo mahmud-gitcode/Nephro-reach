@@ -114,12 +114,12 @@ export default function Engagement() {
           isPinned ? "sticky top-0 h-screen overflow-hidden" : "",
         ].join(" ")}
       >
-        <div className="mx-auto flex w-full max-w-[1344px] flex-col items-center gap-12 px-5 sm:px-8 lg:px-12 min-[1344px]:px-0">
+        <div className="mx-auto flex w-full max-w-[1344px] flex-col items-center gap-12 px-5 min-[1344px]:px-0 sm:px-8 lg:px-12">
           <div className="flex w-full flex-col items-center gap-3 text-center">
-            <h2 className="text-[28px] font-semibold leading-10 tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
+            <h2 className="text-[28px] leading-10 font-semibold tracking-[0.72px] text-[#0F172A] sm:text-[36px]">
               {t("engagement.title")}
             </h2>
-            <p className="text-lg font-medium leading-7 tracking-[0.1px] text-[#344056] sm:text-xl">
+            <p className="text-lg leading-7 font-medium tracking-[0.1px] text-[#344056] sm:text-xl">
               {t("engagement.subtitle")}
             </p>
           </div>
@@ -137,12 +137,12 @@ export default function Engagement() {
                 <div className="absolute inset-0 rounded-[24px] bg-[rgba(0,99,255,0.1)]" />
               </div>
 
-              <div className="absolute left-1/2 top-1/2 flex w-[min(380px,88%)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[7.915px] rounded-[12.861px] border-[0.989px] border-[rgba(37,34,30,0.18)] bg-white px-[0.989px] pb-[9.893px] pt-[0.989px] drop-shadow-[0_5.947px_7.434px_rgba(0,0,0,0.1)]">
+              <div className="absolute top-1/2 left-1/2 flex w-[min(380px,88%)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[7.915px] rounded-[12.861px] border-[0.989px] border-[rgba(37,34,30,0.18)] bg-white px-[0.989px] pt-[0.989px] pb-[9.893px] drop-shadow-[0_5.947px_7.434px_rgba(0,0,0,0.1)]">
                 <div className="flex w-full flex-col gap-[7.915px] p-[11.872px]">
-                  <p className="text-[15.829px] font-medium leading-[23.744px] tracking-[0.079px] text-[#0F172A]">
+                  <p className="text-[15.829px] leading-[23.744px] font-medium tracking-[0.079px] text-[#0F172A]">
                     check-in
                   </p>
-                  <p className="text-[13.851px] font-medium leading-[19.787px] tracking-[0.069px] text-[#344056]">
+                  <p className="text-[13.851px] leading-[19.787px] font-medium tracking-[0.069px] text-[#344056]">
                     Have you Taken Medication
                   </p>
                 </div>
@@ -150,13 +150,13 @@ export default function Engagement() {
                 <div className="flex w-full items-center justify-end gap-[12.861px] px-[11.872px]">
                   <button
                     type="button"
-                    className="flex h-[35.616px] items-center justify-center rounded-[7.915px] border-[0.989px] border-[#E2E8F0] bg-[#F9F9F9] p-[11.872px] text-[13.7px] font-medium leading-[19.575px] tracking-[0.069px] text-[#0F172A]"
+                    className="flex h-[35.616px] items-center justify-center rounded-[7.915px] border-[0.989px] border-[#E2E8F0] bg-[#F9F9F9] p-[11.872px] text-[13.7px] leading-[19.575px] font-medium tracking-[0.069px] text-[#0F172A]"
                   >
                     Not yet
                   </button>
                   <button
                     type="button"
-                    className="flex h-[35.616px] items-center justify-center rounded-[7.915px] bg-[#2563EB] p-[11.872px] text-[13.7px] font-medium leading-[19.575px] tracking-[0.069px] text-white shadow-[inset_0_-0.989px_0_0_#DBE9FE]"
+                    className="flex h-[35.616px] items-center justify-center rounded-[7.915px] bg-[#2563EB] p-[11.872px] text-[13.7px] leading-[19.575px] font-medium tracking-[0.069px] text-white shadow-[inset_0_-0.989px_0_0_#DBE9FE]"
                   >
                     Yes, I have
                   </button>
@@ -164,9 +164,9 @@ export default function Engagement() {
               </div>
             </div>
 
-            <div className="relative flex w-full flex-1 items-start lg:max-w-[620px] lg:self-stretch lg:pl-12 lg:pr-0 lg:py-16">
+            <div className="relative flex w-full flex-1 items-start lg:max-w-[620px] lg:self-stretch lg:py-16 lg:pr-0 lg:pl-12">
               {isPinned && (
-                <div className="absolute left-0 top-[72px] flex shrink-0 flex-col gap-2">
+                <div className="absolute top-[72px] left-0 flex shrink-0 flex-col gap-2">
                   {steps.map((step, index) => (
                     <button
                       key={step.title}
@@ -205,10 +205,10 @@ export default function Engagement() {
                     ].join(" ")}
                   >
                     <div className="flex flex-col gap-6">
-                      <h3 className="text-[32px] font-normal leading-none tracking-[0.24px] text-[#0F172A] sm:text-[40px] xl:text-[48px]">
+                      <h3 className="text-[32px] leading-none font-normal tracking-[0.24px] text-[#0F172A] sm:text-[40px] xl:text-[48px]">
                         {step.title}
                       </h3>
-                      <p className="font-inter text-lg font-medium leading-[32.8px] text-[rgba(37,34,30,0.66)] sm:text-[20.5px]">
+                      <p className="font-inter text-lg leading-[32.8px] font-medium text-[rgba(37,34,30,0.66)] sm:text-[20.5px]">
                         {step.desc}
                       </p>
                     </div>

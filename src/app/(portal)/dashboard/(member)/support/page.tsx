@@ -121,7 +121,13 @@ function TicketMeta({ category, date }: { category: string; date: string }) {
   );
 }
 
-function Avatar({ initial, isSupport }: { initial: string; isSupport?: boolean }) {
+function Avatar({
+  initial,
+  isSupport,
+}: {
+  initial: string;
+  isSupport?: boolean;
+}) {
   return (
     <span
       aria-hidden="true"
@@ -207,7 +213,11 @@ function NewTicketModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; category: string; message: string }) => void;
+  onSubmit: (data: {
+    title: string;
+    category: string;
+    message: string;
+  }) => void;
   modalData?: {
     title: string;
     closeAria: string;
@@ -304,7 +314,8 @@ function NewTicketModal({
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder={
-                modalData?.messagePlaceholder || "Describe your issue in detail..."
+                modalData?.messagePlaceholder ||
+                "Describe your issue in detail..."
               }
             />
           )}
@@ -376,10 +387,16 @@ function TicketCard({
       </div>
 
       {expanded ? (
-        <div id={panelId} className="mt-stack-xl space-y-stack-lg border-t border-line-subtle pt-inset-md">
+        <div
+          id={panelId}
+          className="mt-stack-xl space-y-stack-lg border-t border-line-subtle pt-inset-md"
+        >
           {ticket.comments && ticket.comments.length > 0
             ? ticket.comments.map((comment, index) => (
-                <CommentCard key={`${ticket.id}-cmt-${index}`} comment={comment} />
+                <CommentCard
+                  key={`${ticket.id}-cmt-${index}`}
+                  comment={comment}
+                />
               ))
             : null}
 
@@ -506,7 +523,9 @@ export default function SupportPage() {
               expanded={isExpanded}
               onToggleExpand={() => handleToggleExpand(ticket.id)}
               statusLabel={statusLabel}
-              resolvedText={sup?.ticketResolved || "This ticket has been resolved"}
+              resolvedText={
+                sup?.ticketResolved || "This ticket has been resolved"
+              }
               replyPlaceholder={sup?.replyPlaceholder || "Type your reply..."}
               sendReplyButton={sup?.sendReplyButton || "Send Reply"}
               onAddComment={(msg) => handleAddComment(ticket.id, msg)}

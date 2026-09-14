@@ -45,7 +45,7 @@ function SummaryCard({
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-fg-muted">{label}</p>
-          <p className="mt-3 text-3xl font-semibold leading-8 text-fg">
+          <p className="mt-3 text-3xl leading-8 font-semibold text-fg">
             {value}
           </p>
         </div>
@@ -83,7 +83,7 @@ function CourseCard({
               {course.titleEn}
             </h3>
             {course.seeded && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fg-muted">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-[10px] font-bold tracking-wide text-fg-muted uppercase">
                 <Lock className="h-3 w-3" />
                 Built-in
               </span>
@@ -97,7 +97,7 @@ function CourseCard({
 
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line-subtle pt-4 text-center">
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
             Modules
           </dt>
           <dd className="mt-0.5 text-base font-bold text-fg">
@@ -105,15 +105,13 @@ function CourseCard({
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
             Classes
           </dt>
-          <dd className="mt-0.5 text-base font-bold text-fg">
-            {classes}
-          </dd>
+          <dd className="mt-0.5 text-base font-bold text-fg">{classes}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
             Length
           </dt>
           <dd className="mt-0.5 text-base font-bold text-fg">
@@ -136,7 +134,7 @@ function CourseCard({
             type="button"
             onClick={onDelete}
             aria-label={`Delete ${course.titleEn}`}
-            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-control border border-line text-fg-muted transition-colors hover:border-danger-line hover:bg-danger-surface hover:text-danger cursor-pointer"
+            className="flex h-[42px] w-[42px] shrink-0 cursor-pointer items-center justify-center rounded-control border border-line text-fg-muted transition-colors hover:border-danger-line hover:bg-danger-surface hover:text-danger"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -169,7 +167,7 @@ export default function ManageCurriculumPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-[32px] font-semibold leading-tight tracking-[0.3px] text-fg sm:text-[40px]">
+        <h1 className="text-[32px] leading-tight font-semibold tracking-[0.3px] text-fg sm:text-[40px]">
           Class Management
         </h1>
         <p className="mt-2 text-sm font-medium text-fg-muted">
@@ -215,9 +213,7 @@ export default function ManageCurriculumPage() {
       <section className="mt-6 rounded-[14px] border border-line bg-surface p-4 shadow-card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-fg">
-              Course Library
-            </h2>
+            <h2 className="text-xl font-semibold text-fg">Course Library</h2>
             <p className="mt-1 text-sm font-medium text-fg-muted">
               Open a course to manage its modules and classes.
             </p>
@@ -225,20 +221,20 @@ export default function ManageCurriculumPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="relative block w-full sm:w-[277px]">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-fg-muted" />
+              <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-fg-muted" />
               <input
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search courses..."
-                className="h-10 w-full rounded-control border border-field bg-surface pl-10 pr-3 text-sm font-medium text-fg-secondary outline-none placeholder:text-fg-muted focus:border-primary-edge focus:ring-2 focus:ring-ring"
+                className="h-10 w-full rounded-control border border-field bg-surface pr-3 pl-10 text-sm font-medium text-fg-secondary outline-none placeholder:text-fg-muted focus:border-primary-edge focus:ring-2 focus:ring-ring"
               />
             </label>
 
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-control bg-primary-solid px-4 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover cursor-pointer"
+              className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control bg-primary-solid px-4 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
               New Course

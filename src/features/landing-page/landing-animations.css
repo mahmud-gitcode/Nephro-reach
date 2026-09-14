@@ -23,10 +23,12 @@
 }
 
 @keyframes cursorBlink {
-  0%, 45% {
+  0%,
+  45% {
     opacity: 1;
   }
-  50%, 95% {
+  50%,
+  95% {
     opacity: 0;
   }
   100% {
@@ -37,7 +39,6 @@
 .animate-cursor-blink {
   animation: cursorBlink 0.75s step-start infinite;
 }
-
 
 .animate-timed-line-1 {
   animation: timedLineReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
@@ -73,7 +74,8 @@
 }
 
 @keyframes heroFloat {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -82,7 +84,8 @@
 }
 
 @keyframes gentlePulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
   }
   50% {
@@ -121,60 +124,67 @@
 .landing-reveal {
   opacity: 0;
   transform: translate3d(0, 28px, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
 .landing-reveal.is-revealed {
   opacity: 1;
   transform: translate3d(0, 0, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .landing-reveal-left {
   opacity: 0;
   transform: translate3d(-32px, 0, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
 .landing-reveal-left.is-revealed {
   opacity: 1;
   transform: translate3d(0, 0, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .landing-reveal-right {
   opacity: 0;
   transform: translate3d(32px, 0, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
 .landing-reveal-right.is-revealed {
   opacity: 1;
   transform: translate3d(0, 0, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Premium buttery-smooth card hover animation */
 .card-smooth-hover {
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-              background-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   will-change: transform, box-shadow;
 }
 
@@ -189,7 +199,6 @@
 .landing-reveal-right:hover {
   transition-delay: 0s !important;
 }
-
 
 .delay-75 {
   transition-delay: 75ms;

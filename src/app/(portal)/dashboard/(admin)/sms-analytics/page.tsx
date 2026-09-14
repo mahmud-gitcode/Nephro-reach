@@ -27,7 +27,8 @@ const templates = [
     typeClass: "border-field bg-surface text-fg-brand",
     status: "Active",
     statusClass: "border-success-600 bg-success-600 text-white",
-    message: "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)",
+    message:
+      "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)",
     schedule: "Every Monday at 9:00 AM",
   },
   {
@@ -46,7 +47,8 @@ const templates = [
     typeClass: "border-field bg-surface text-warning",
     status: "Inactive",
     statusClass: "border-line bg-line text-fg-muted",
-    message: '"[QUOTE]" - Remember, every step counts! Reply with INSPIRE for a new quote.',
+    message:
+      '"[QUOTE]" - Remember, every step counts! Reply with INSPIRE for a new quote.',
     schedule: "Every Wednesday at 8:00 AM",
   },
 ];
@@ -67,7 +69,9 @@ function TemplateBadge({
   className: string;
 }) {
   return (
-    <span className={`inline-flex h-[30px] items-center rounded-control border px-[9px] text-sm font-medium ${className}`}>
+    <span
+      className={`inline-flex h-[30px] items-center rounded-control border px-[9px] text-sm font-medium ${className}`}
+    >
       {children}
     </span>
   );
@@ -85,14 +89,22 @@ function SmsTemplateCard({
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-medium leading-7 text-fg">{template.title}</h2>
-            <TemplateBadge className={template.typeClass}>{template.type}</TemplateBadge>
-            <TemplateBadge className={template.statusClass}>{template.status}</TemplateBadge>
+            <h2 className="text-lg leading-7 font-medium text-fg">
+              {template.title}
+            </h2>
+            <TemplateBadge className={template.typeClass}>
+              {template.type}
+            </TemplateBadge>
+            <TemplateBadge className={template.statusClass}>
+              {template.status}
+            </TemplateBadge>
           </div>
 
-          <p className="text-base font-medium leading-6 text-fg-muted">{template.message}</p>
+          <p className="text-base leading-6 font-medium text-fg-muted">
+            {template.message}
+          </p>
 
-          <p className="flex items-center gap-2 text-base font-medium leading-6 text-fg-muted">
+          <p className="flex items-center gap-2 text-base leading-6 font-medium text-fg-muted">
             <Clock3 className="h-5 w-5 shrink-0" />
             <span>Schedule: {template.schedule}</span>
           </p>
@@ -101,7 +113,10 @@ function SmsTemplateCard({
         <button
           type="button"
           onClick={onEdit}
-          className={buttonStyles({ variant: "neutral", appearance: "fill-stroke" }) + " w-full md:w-auto"}
+          className={
+            buttonStyles({ variant: "neutral", appearance: "fill-stroke" }) +
+            " w-full md:w-auto"
+          }
         >
           <Edit3 className="h-5 w-5" />
           Edit
@@ -113,17 +128,28 @@ function SmsTemplateCard({
 
 function CalendarPicker() {
   return (
-    <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-[342px] max-w-[calc(100vw-48px)] rounded-card border border-line bg-surface-raised p-inset-md shadow-raised">
+    <div className="absolute top-[calc(100%+8px)] right-0 z-20 w-[342px] max-w-[calc(100vw-48px)] rounded-card border border-line bg-surface-raised p-inset-md shadow-raised">
       <div className="mb-4 flex h-9 items-center justify-between">
-        <button type="button" className="flex items-center gap-2 text-xl font-medium text-fg">
+        <button
+          type="button"
+          className="flex items-center gap-2 text-xl font-medium text-fg"
+        >
           June 2026
           <ChevronRight className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-4 text-fg">
-          <button type="button" aria-label="Previous month" className="cursor-pointer rounded-control-small focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <button
+            type="button"
+            aria-label="Previous month"
+            className="cursor-pointer rounded-control-small focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
             <ChevronLeft className="h-6 w-6" />
           </button>
-          <button type="button" aria-label="Next month" className="cursor-pointer rounded-control-small focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <button
+            type="button"
+            aria-label="Next month"
+            className="cursor-pointer rounded-control-small focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
             <ChevronRight className="h-6 w-6" />
           </button>
         </div>
@@ -131,7 +157,10 @@ function CalendarPicker() {
 
       <div className="grid grid-cols-7 gap-y-3 text-center">
         {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
-          <span key={day} className="text-sm font-medium leading-5 text-fg-muted">
+          <span
+            key={day}
+            className="text-sm leading-5 font-medium text-fg-muted"
+          >
             {day}
           </span>
         ))}
@@ -162,7 +191,10 @@ function CalendarPicker() {
             09 : 41
           </span>
           <div className="flex h-9 rounded-control bg-surface-sunken p-0.5 text-sm font-medium text-fg">
-            <button type="button" className="rounded-control-small border border-line bg-surface px-3 shadow-card">
+            <button
+              type="button"
+              className="rounded-control-small border border-line bg-surface px-3 shadow-card"
+            >
               AM
             </button>
             <button type="button" className="px-3">
@@ -211,79 +243,80 @@ function TemplateModal({
         </>
       }
     >
-        <form
-          id="sms-template-form"
-          onSubmit={(event) => event.preventDefault()}
-        >
-          <div className="space-y-stack-lg">
-            <FormField label="Template Name">
-              {(props) => (
-                <Input
-                  {...props}
-                  defaultValue={isEdit ? "Weekly Wellness Check" : ""}
-                  placeholder="e.g. Weekly Wellness Check"
-                />
-              )}
-            </FormField>
+      <form id="sms-template-form" onSubmit={(event) => event.preventDefault()}>
+        <div className="space-y-stack-lg">
+          <FormField label="Template Name">
+            {(props) => (
+              <Input
+                {...props}
+                defaultValue={isEdit ? "Weekly Wellness Check" : ""}
+                placeholder="e.g. Weekly Wellness Check"
+              />
+            )}
+          </FormField>
 
-            {/* Was a <button> shaped like a select that opened nothing. A
+          {/* Was a <button> shaped like a select that opened nothing. A
                 select is what it always meant to be. */}
-            <FormField label="Message Type">
-              {(props) => (
-                <Select {...props} defaultValue="check-in">
-                  <option value="check-in">Check-in</option>
-                  <option value="reminder">Reminder</option>
-                  <option value="education">Education</option>
-                </Select>
-              )}
-            </FormField>
+          <FormField label="Message Type">
+            {(props) => (
+              <Select {...props} defaultValue="check-in">
+                <option value="check-in">Check-in</option>
+                <option value="reminder">Reminder</option>
+                <option value="education">Education</option>
+              </Select>
+            )}
+          </FormField>
 
-            <div className="relative space-y-stack-sm">
-              <FieldLabel>Schedule</FieldLabel>
-              <button
-                type="button"
-                onClick={() => setShowCalendar((current) => !current)}
-                aria-expanded={showCalendar}
-                className="flex h-control-big w-full cursor-pointer items-center justify-between rounded-control border border-field bg-surface px-inset-md text-left text-body-md text-fg-muted transition-colors duration-150 ease-standard hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                {isEdit ? "Every Monday at 9:00 AM" : "e.g. dd/mm/yyyy at 00:00 AM"}
-                <CalendarDays aria-hidden="true" className="h-5 w-5 text-fg-muted" />
-              </button>
-              {showCalendar && <CalendarPicker />}
-            </div>
-
-            <div className="space-y-stack-sm">
-              <label
-                htmlFor="sms-message-content"
-                className="block text-body-md text-fg"
-              >
-                Message Content
-              </label>
-              <div className="flex min-h-[100px] flex-col justify-between rounded-control border border-field bg-surface px-inset-md py-inset-sm transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
-                <textarea
-                  id="sms-message-content"
-                  defaultValue={
-                    isEdit
-                      ? "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)"
-                      : ""
-                  }
-                  placeholder="Enter your message..."
-                  maxLength={200}
-                  aria-describedby="sms-message-count"
-                  className="min-h-12 w-full resize-none bg-transparent text-body-sm text-fg outline-none placeholder:text-fg-muted"
-                />
-                <p
-                  id="sms-message-count"
-                  className="flex items-center justify-end gap-inline-xs text-caption text-fg-muted"
-                >
-                  <FileText aria-hidden="true" className="h-4 w-4" />
-                  0/200
-                </p>
-              </div>
-            </div>
+          <div className="relative space-y-stack-sm">
+            <FieldLabel>Schedule</FieldLabel>
+            <button
+              type="button"
+              onClick={() => setShowCalendar((current) => !current)}
+              aria-expanded={showCalendar}
+              className="flex h-control-big w-full cursor-pointer items-center justify-between rounded-control border border-field bg-surface px-inset-md text-left text-body-md text-fg-muted transition-colors duration-150 ease-standard hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {isEdit
+                ? "Every Monday at 9:00 AM"
+                : "e.g. dd/mm/yyyy at 00:00 AM"}
+              <CalendarDays
+                aria-hidden="true"
+                className="h-5 w-5 text-fg-muted"
+              />
+            </button>
+            {showCalendar && <CalendarPicker />}
           </div>
 
-        </form>
+          <div className="space-y-stack-sm">
+            <label
+              htmlFor="sms-message-content"
+              className="block text-body-md text-fg"
+            >
+              Message Content
+            </label>
+            <div className="flex min-h-[100px] flex-col justify-between rounded-control border border-field bg-surface px-inset-md py-inset-sm transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
+              <textarea
+                id="sms-message-content"
+                defaultValue={
+                  isEdit
+                    ? "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)"
+                    : ""
+                }
+                placeholder="Enter your message..."
+                maxLength={200}
+                aria-describedby="sms-message-count"
+                className="min-h-12 w-full resize-none bg-transparent text-body-sm text-fg outline-none placeholder:text-fg-muted"
+              />
+              <p
+                id="sms-message-count"
+                className="flex items-center justify-end gap-inline-xs text-caption text-fg-muted"
+              >
+                <FileText aria-hidden="true" className="h-4 w-4" />
+                0/200
+              </p>
+            </div>
+          </div>
+        </div>
+      </form>
     </Modal>
   );
 }
@@ -296,8 +329,10 @@ export default function SmsAnalyticsPage() {
       <section className="rounded-card border border-line bg-surface px-3 py-4 shadow-card">
         <div className="mb-[14px] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-medium leading-8 text-fg">Notification Configuration</h1>
-            <p className="mt-2 text-base font-medium leading-6 text-fg-secondary">
+            <h1 className="text-2xl leading-8 font-medium text-fg">
+              Notification Configuration
+            </h1>
+            <p className="mt-2 text-base leading-6 font-medium text-fg-secondary">
               Configure automated messages and check-ins
             </p>
           </div>
@@ -324,17 +359,24 @@ export default function SmsAnalyticsPage() {
           ["Reply Rate", "68%"],
           ["Active Automations", "02"],
         ].map(([label, value]) => (
-          <article key={label} className="rounded-card border border-line bg-surface p-5 shadow-card">
+          <article
+            key={label}
+            className="rounded-card border border-line bg-surface p-5 shadow-card"
+          >
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand-100 text-fg-brand">
               <MessageCircle className="h-5 w-5" />
             </div>
             <p className="text-sm font-semibold text-fg-muted">{label}</p>
-            <p className="mt-2 text-3xl font-semibold leading-8 text-fg">{value}</p>
+            <p className="mt-2 text-3xl leading-8 font-semibold text-fg">
+              {value}
+            </p>
           </article>
         ))}
       </section>
 
-      {modalMode && <TemplateModal mode={modalMode} onClose={() => setModalMode(null)} />}
+      {modalMode && (
+        <TemplateModal mode={modalMode} onClose={() => setModalMode(null)} />
+      )}
     </>
   );
 }

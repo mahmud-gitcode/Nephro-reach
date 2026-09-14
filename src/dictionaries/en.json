@@ -1516,7 +1516,12 @@
       "subjectLabel": "Subject",
       "subjectPlaceholder": "What do you need help with?",
       "categoryLabel": "Category",
-      "categories": ["General Inquiry", "Technical Issue", "Account & Billing", "Treatment Records"],
+      "categories": [
+        "General Inquiry",
+        "Technical Issue",
+        "Account & Billing",
+        "Treatment Records"
+      ],
       "messageLabel": "Message",
       "messagePlaceholder": "Describe your issue in detail...",
       "cancelButton": "Cancel",

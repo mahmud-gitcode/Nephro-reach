@@ -22,7 +22,8 @@ const defaultNotifications = [
   {
     id: "medicationReminders",
     title: "Medication Reminders",
-    description: "Daily notifications and alerts for scheduled medication times",
+    description:
+      "Daily notifications and alerts for scheduled medication times",
   },
   {
     id: "weeklyCheckIn",
@@ -93,13 +94,17 @@ function SettingsMenu({
 }) {
   const items = [
     { id: "profile" as const, label: tabsLabels.profile, icon: <UserCircle /> },
-    { id: "notification" as const, label: tabsLabels.notification, icon: <Bell /> },
+    {
+      id: "notification" as const,
+      label: tabsLabels.notification,
+      icon: <Bell />,
+    },
     { id: "password" as const, label: tabsLabels.password, icon: <KeyRound /> },
   ];
 
   return (
     <Card as="section" className="w-full lg:sticky lg:top-24 lg:w-[289px]">
-      <p className="text-overline mb-stack-sm px-inset-sm text-fg-muted">
+      <p className="mb-stack-sm px-inset-sm text-overline text-fg-muted">
         {generalHeader}
       </p>
       <Tabs

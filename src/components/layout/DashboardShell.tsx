@@ -34,24 +34,60 @@ import {
   Video,
   X,
 } from "lucide-react";
+import { LocalSvg } from "@/components/icons/LocalSvg";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
-type NavItem = { label: string; href: string; icon: IconType; roles: UserRole[] };
+type NavItem = {
+  label: string;
+  href: string;
+  icon: IconType;
+  roles: UserRole[];
+};
 
 const sidebarItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "user"] },
-  { label: "Where's My Ride", href: "/dashboard/my-rides", icon: Car, roles: ["user"] },
-  { label: "Before-the-ER", href: "/dashboard/before-the-er", icon: Hospital, roles: ["user"] },
-  { label: "MyHealth", href: "/dashboard/my-health", icon: HeartPulse, roles: ["user"] },
-  { label: "Personal Log", href: "/dashboard/personal-log", icon: Layers, roles: ["user"] },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["admin", "user"],
+  },
+  {
+    label: "Where's My Ride",
+    href: "/dashboard/my-rides",
+    icon: Car,
+    roles: ["user"],
+  },
+  {
+    label: "Before-the-ER",
+    href: "/dashboard/before-the-er",
+    icon: Hospital,
+    roles: ["user"],
+  },
+  {
+    label: "MyHealth",
+    href: "/dashboard/my-health",
+    icon: HeartPulse,
+    roles: ["user"],
+  },
+  {
+    label: "Personal Log",
+    href: "/dashboard/personal-log",
+    icon: Layers,
+    roles: ["user"],
+  },
   {
     label: "Dialysis Journal",
     href: "/dashboard/personal-log/dialysis-journal",
     icon: Notebook,
     roles: ["user"],
   },
-  { label: "Member", href: "/dashboard/members", icon: Users, roles: ["admin"] },
+  {
+    label: "Member",
+    href: "/dashboard/members",
+    icon: Users,
+    roles: ["admin"],
+  },
   {
     label: "Class Management",
     href: "/dashboard/manage-curriculum",
@@ -64,8 +100,18 @@ const sidebarItems: NavItem[] = [
     icon: BookOpen,
     roles: ["user"],
   },
-  { label: "Live Class", href: "/dashboard/live-class", icon: Video, roles: ["admin"] },
-  { label: "Community", href: "/dashboard/community", icon: MessagesSquare, roles: ["user"] },
+  {
+    label: "Live Class",
+    href: "/dashboard/live-class",
+    icon: Video,
+    roles: ["admin"],
+  },
+  {
+    label: "Community",
+    href: "/dashboard/community",
+    icon: MessagesSquare,
+    roles: ["user"],
+  },
   {
     label: "Notification Analytics",
     href: "/dashboard/sms-analytics",
@@ -94,8 +140,18 @@ const sidebarItems: NavItem[] = [
 ];
 
 const supportItems: NavItem[] = [
-  { label: "Support", href: "/dashboard/support", icon: HelpCircle, roles: ["user"] },
-  { label: "Setting", href: "/dashboard/settings", icon: Settings, roles: ["user"] },
+  {
+    label: "Support",
+    href: "/dashboard/support",
+    icon: HelpCircle,
+    roles: ["user"],
+  },
+  {
+    label: "Setting",
+    href: "/dashboard/settings",
+    icon: Settings,
+    roles: ["user"],
+  },
 ];
 
 function getBreadcrumb(pathname: string, language?: string) {
@@ -113,31 +169,44 @@ function getBreadcrumb(pathname: string, language?: string) {
         "loss-of-consciousness": "Pérdida del Conocimiento",
         "severe-allergic-reactions": "Reacciones Alérgicas Graves",
         "severe-shortness-of-breath": "Dificultad Respiratoria Grave",
-        "seizures": "Convulsiones",
+        seizures: "Convulsiones",
         "dialysis-access-emergencies": "Emergencias del Acceso de Diálisis",
         "severe-bleeding": "Sangrado Intenso",
         "severe-hyperkalemia-symptoms": "Síntomas de Hiperpotasemia Grave",
         "fever-with-dialysis-catheter": "Fiebre con Catéter de Diálisis",
-        "confusion-or-mental-status-changes": "Confusión o Cambios en el Estado Mental",
+        "confusion-or-mental-status-changes":
+          "Confusión o Cambios en el Estado Mental",
       };
       if (spanishTitles[slug]) return spanishTitles[slug];
     }
-    const formatted = slug.replace(/-/g, " ").replace(/%20/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const formatted = slug
+      .replace(/-/g, " ")
+      .replace(/%20/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
     return formatted || "Symptom Detail";
   }
-  if (pathname.startsWith("/dashboard/before-the-er")) return language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
-  if (pathname.startsWith("/dashboard/my-health")) return language === "ES" ? "Mi Salud" : "MyHealth";
+  if (pathname.startsWith("/dashboard/before-the-er"))
+    return language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
+  if (pathname.startsWith("/dashboard/my-health"))
+    return language === "ES" ? "Mi Salud" : "MyHealth";
   if (pathname.startsWith("/dashboard/personal-log/blood-results/add"))
     return "Add Blood Results";
   if (pathname.startsWith("/dashboard/personal-log/blood-results"))
     return "Blood Results";
-  if (pathname.startsWith("/dashboard/my-rides")) return language === "ES" ? "¿Dónde está mi conductor?" : "Where's My Ride";
+  if (pathname.startsWith("/dashboard/my-rides"))
+    return language === "ES" ? "¿Dónde está mi conductor?" : "Where's My Ride";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure/add"))
-    return language === "ES" ? "Agregar Presión Arterial" : "Add Blood Pressure";
+    return language === "ES"
+      ? "Agregar Presión Arterial"
+      : "Add Blood Pressure";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure"))
-    return language === "ES" ? "Registro de Presión Arterial" : "Blood Pressure Log";
+    return language === "ES"
+      ? "Registro de Presión Arterial"
+      : "Blood Pressure Log";
   if (pathname.startsWith("/dashboard/personal-log/lab-tracking/add"))
-    return language === "ES" ? "Agregar Resultado de Laboratorio" : "Add Lab Result";
+    return language === "ES"
+      ? "Agregar Resultado de Laboratorio"
+      : "Add Lab Result";
   if (pathname.startsWith("/dashboard/personal-log/lab-tracking"))
     return language === "ES" ? "Mis Laboratorios" : "My Labs";
   if (pathname.startsWith("/dashboard/personal-log/medications/add"))
@@ -149,13 +218,17 @@ function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/personal-log/nutrition"))
     return language === "ES" ? "Nutrición" : "Nutrition";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-treatment/add"))
-    return language === "ES" ? "Registrar Tratamiento de Diálisis" : "Log Dialysis Treatment";
+    return language === "ES"
+      ? "Registrar Tratamiento de Diálisis"
+      : "Log Dialysis Treatment";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-treatment/view"))
     return language === "ES" ? "Detalles del Tratamiento" : "Treatment Details";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-treatment"))
     return language === "ES" ? "Tratamiento de Diálisis" : "Dialysis Treatment";
   if (pathname.startsWith("/dashboard/personal-log/fluid-tracker"))
-    return language === "ES" ? "Control de Peso y Líquidos" : "Weight & Fluid Tracker";
+    return language === "ES"
+      ? "Control de Peso y Líquidos"
+      : "Weight & Fluid Tracker";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-journal"))
     return language === "ES" ? "Diario de Diálisis" : "Dialysis Journal";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-management"))
@@ -185,7 +258,9 @@ function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/community"))
     return language === "ES" ? "Comunidad" : "Community";
   if (pathname.startsWith("/dashboard/sms-analytics"))
-    return language === "ES" ? "Análisis de Notificaciones" : "Notification Analytics";
+    return language === "ES"
+      ? "Análisis de Notificaciones"
+      : "Notification Analytics";
   if (pathname.startsWith("/dashboard/subscriptions"))
     return language === "ES" ? "Suscripciones" : "Subscriptions";
   if (pathname.startsWith("/dashboard/admin-reviews"))
@@ -199,7 +274,11 @@ function getBreadcrumb(pathname: string, language?: string) {
   return language === "ES" ? "Panel" : "Breadcrumb";
 }
 
-function getNavLabel(href: string, defaultLabel: string, language?: string): string {
+function getNavLabel(
+  href: string,
+  defaultLabel: string,
+  language?: string,
+): string {
   if (language !== "ES") return defaultLabel;
   const spanishLabels: Record<string, string> = {
     "/dashboard": "Panel",
@@ -228,9 +307,12 @@ function getNavLabel(href: string, defaultLabel: string, language?: string): str
 function getBreadcrumbTrail(pathname: string, language?: string) {
   const current = getBreadcrumb(pathname, language);
   const dashboardLabel = language === "ES" ? "Panel" : "Dashboard";
-  const beforeTheErLabel = language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
-  const personalLogLabel = language === "ES" ? "Registro Personal" : "Personal Log";
-  const educationCenterLabel = language === "ES" ? "Centro Educativo" : "Education Center";
+  const beforeTheErLabel =
+    language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
+  const personalLogLabel =
+    language === "ES" ? "Registro Personal" : "Personal Log";
+  const educationCenterLabel =
+    language === "ES" ? "Centro Educativo" : "Education Center";
 
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
     return [dashboardLabel];
@@ -262,25 +344,24 @@ function isActiveRoute(href: string, pathname: string) {
   return href !== "#" && pathname.startsWith(href);
 }
 
-function Sidebar({
-  onClose,
-  onOpenRideModal,
-}: {
-  onClose?: () => void;
-  onOpenRideModal?: () => void;
-}) {
+function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
   const { language } = useLanguage();
   const role = user?.role ?? "user";
   const visibleItems = sidebarItems.filter((item) => item.roles.includes(role));
-  const visibleSupport = supportItems.filter((item) => item.roles.includes(role));
+  const visibleSupport = supportItems.filter((item) =>
+    item.roles.includes(role),
+  );
 
   return (
     <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-surface-nav px-inset-md py-inset-md text-fg-on-nav print:hidden">
       <div className="relative mb-stack-md flex shrink-0 items-center justify-center rounded-control-small bg-surface p-inset-sm">
-        <Link href="/dashboard" className="flex items-center justify-center w-full">
+        <Link
+          href="/dashboard"
+          className="flex w-full items-center justify-center"
+        >
           <Image
             src="/images/logo.svg"
             alt="NephroReach"
@@ -302,10 +383,9 @@ function Sidebar({
         )}
       </div>
 
-
       <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <div className="pt-2">
-          <p className="text-overline mb-stack-sm px-inset-md text-fg-on-nav/80">
+          <p className="mb-stack-sm px-inset-md text-overline text-fg-on-nav/80">
             {language === "ES" ? "Menú" : "Menu"}
           </p>
           <nav className="space-y-2">
@@ -318,18 +398,6 @@ function Sidebar({
                   <span>{label}</span>
                 </>
               );
-
-              if (item.href === "#") {
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    className="flex h-11 w-full cursor-pointer items-center gap-inline-lg rounded-control px-inset-sm text-left text-label-md text-fg-on-nav transition-colors duration-150 ease-standard hover:bg-fg-on-nav/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav"
-                  >
-                    {content}
-                  </button>
-                );
-              }
 
               return (
                 <Link
@@ -351,51 +419,39 @@ function Sidebar({
         </div>
 
         {visibleSupport.length > 0 ? (
-        <div className="mt-stack-xl border-t border-fg-on-nav/30 py-inset-lg">
-          <p className="text-overline mb-stack-sm px-inset-md text-fg-on-nav/80">
-            {language === "ES" ? "Ayuda" : "Help"}
-          </p>
-          <div className="space-y-2">
-            {visibleSupport.map((item) => {
-              const isActive = isActiveRoute(item.href, pathname);
-              const label = getNavLabel(item.href, item.label, language);
-              const content = (
-                <>
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{label}</span>
-                </>
-              );
+          <div className="mt-stack-xl border-t border-fg-on-nav/30 py-inset-lg">
+            <p className="mb-stack-sm px-inset-md text-overline text-fg-on-nav/80">
+              {language === "ES" ? "Ayuda" : "Help"}
+            </p>
+            <div className="space-y-2">
+              {visibleSupport.map((item) => {
+                const isActive = isActiveRoute(item.href, pathname);
+                const label = getNavLabel(item.href, item.label, language);
+                const content = (
+                  <>
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span>{label}</span>
+                  </>
+                );
 
-              if (item.href === "#") {
                 return (
-                  <button
+                  <Link
                     key={item.label}
-                    type="button"
-                    className="flex h-11 w-full cursor-pointer items-center gap-inline-lg rounded-control px-inset-sm text-left text-label-md text-fg-on-nav transition-colors duration-150 ease-standard hover:bg-fg-on-nav/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav"
+                    href={item.href}
+                    onClick={onClose}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex h-11 w-full items-center gap-inline-lg rounded-control px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav ${
+                      isActive
+                        ? "bg-surface text-fg-secondary shadow-sm"
+                        : "text-fg-on-nav hover:bg-fg-on-nav/10"
+                    }`}
                   >
                     {content}
-                  </button>
+                  </Link>
                 );
-              }
-
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={onClose}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`flex h-11 w-full items-center gap-inline-lg rounded-control px-inset-sm text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg-on-nav ${
-                    isActive
-                      ? "bg-surface text-fg-secondary shadow-sm"
-                      : "text-fg-on-nav hover:bg-fg-on-nav/10"
-                  }`}
-                >
-                  {content}
-                </Link>
-              );
-            })}
+              })}
+            </div>
           </div>
-        </div>
         ) : null}
       </div>
 
@@ -414,12 +470,16 @@ function Sidebar({
   );
 }
 
-function HeaderIcon({ src, className = "size-6" }: { src: string; className?: string }) {
+function HeaderIcon({
+  src,
+  className = "size-6",
+}: {
+  src: string;
+  className?: string;
+}) {
   return (
     <span className={`relative block shrink-0 overflow-clip ${className}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element --
-          a small local decorative SVG; next/image cannot optimise SVG. */}
-      <img src={src} alt="" className="size-full" />
+      <LocalSvg src={src} alt="" className="size-full" />
     </span>
   );
 }
@@ -436,15 +496,21 @@ function LanguageSwitcher() {
         className="flex cursor-pointer items-center gap-inline-xs rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-colors duration-150 ease-standard hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:p-2.5"
         aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
       >
-        <span className="relative h-4.5 w-6 sm:h-6 sm:w-[33px] overflow-clip rounded-[2px] shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element -- local SVG flag */}
-          <img
-            src={language === "ES" ? "/images/dashboard-header/spain-flag.svg" : "/images/dashboard-header/usa-flag.svg"}
+        <span className="relative h-4.5 w-6 shrink-0 overflow-clip rounded-[2px] sm:h-6 sm:w-[33px]">
+          <LocalSvg
+            src={
+              language === "ES"
+                ? "/images/dashboard-header/spain-flag.svg"
+                : "/images/dashboard-header/usa-flag.svg"
+            }
             alt=""
             className="size-full object-cover"
           />
         </span>
-        <HeaderIcon src="/images/dashboard-header/arrow-down.svg" className="size-3 sm:size-4" />
+        <HeaderIcon
+          src="/images/dashboard-header/arrow-down.svg"
+          className="size-3 sm:size-4"
+        />
       </button>
       {langOpen ? (
         <div className="absolute right-0 z-50 mt-stack-sm w-28 rounded-control border border-line bg-surface-raised py-inset-xs text-body-sm shadow-md">
@@ -454,14 +520,22 @@ function LanguageSwitcher() {
               type="button"
               aria-current={language === code ? "true" : undefined}
               className={`block w-full cursor-pointer px-inset-sm py-1.5 text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${
-                language === code ? "text-label-md text-fg-brand" : "text-fg-secondary"
+                language === code
+                  ? "text-label-md text-fg-brand"
+                  : "text-fg-secondary"
               }`}
               onClick={() => {
                 setLanguage(code);
                 setLangOpen(false);
               }}
             >
-              {code === "EN" ? (language === "ES" ? "Inglés" : "English") : (language === "ES" ? "Español" : "Spanish")}
+              {code === "EN"
+                ? language === "ES"
+                  ? "Inglés"
+                  : "English"
+                : language === "ES"
+                  ? "Español"
+                  : "Spanish"}
             </button>
           ))}
         </div>
@@ -541,11 +615,13 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           type="button"
           onClick={onMenuClick}
           className="shrink-0 cursor-pointer rounded-control border border-line bg-surface p-1.5 text-fg-secondary shadow-sm transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2 lg:hidden"
-          aria-label={language === "ES" ? "Abrir menú del panel" : "Open dashboard menu"}
+          aria-label={
+            language === "ES" ? "Abrir menú del panel" : "Open dashboard menu"
+          }
         >
           <Menu className="h-5 w-5" />
         </button>
-        <nav className="flex min-w-0 items-center gap-2 sm:gap-4 text-xs sm:text-base font-medium tracking-[0.08px] overflow-hidden">
+        <nav className="flex min-w-0 items-center gap-2 overflow-hidden text-xs font-medium tracking-[0.08px] sm:gap-4 sm:text-base">
           {isUser ? (
             <>
               {/* Mobile: concise active page title */}
@@ -553,19 +629,40 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                 {trail[trail.length - 1] ?? "Dashboard"}
               </span>
               {/* Tablet/Desktop: full breadcrumbs trail */}
-              <div className="hidden sm:flex items-center gap-3 md:gap-4 truncate">
+              <div className="hidden items-center gap-3 truncate sm:flex md:gap-4">
                 {trail.map((item, index) => {
                   const last = index === trail.length - 1;
                   let href: string | null = null;
-                  if (item === "Dashboard" || item === "Panel") href = "/dashboard";
-                  else if (item === "Before-the-ER" || item === "Antes de Urgencias") href = "/dashboard/before-the-er";
-                  else if (item === "Personal Log" || item === "Registro Personal") href = "/dashboard/personal-log";
-                  else if (item === "Education Center" || item === "Centro Educativo") href = "/dashboard/education-center";
+                  if (item === "Dashboard" || item === "Panel")
+                    href = "/dashboard";
+                  else if (
+                    item === "Before-the-ER" ||
+                    item === "Antes de Urgencias"
+                  )
+                    href = "/dashboard/before-the-er";
+                  else if (
+                    item === "Personal Log" ||
+                    item === "Registro Personal"
+                  )
+                    href = "/dashboard/personal-log";
+                  else if (
+                    item === "Education Center" ||
+                    item === "Centro Educativo"
+                  )
+                    href = "/dashboard/education-center";
 
                   return (
-                    <span key={`${item}-${index}`} className="flex items-center gap-3 md:gap-4">
+                    <span
+                      key={`${item}-${index}`}
+                      className="flex items-center gap-3 md:gap-4"
+                    >
                       {index > 0 ? (
-                        <span aria-hidden="true" className="text-body-sm text-fg-subtle">/</span>
+                        <span
+                          aria-hidden="true"
+                          className="text-body-sm text-fg-subtle"
+                        >
+                          /
+                        </span>
                       ) : null}
                       {href && !last ? (
                         <Link
@@ -577,7 +674,9 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                       ) : (
                         <span
                           aria-current={last ? "page" : undefined}
-                          className={last ? "text-label-md text-fg" : "text-fg-muted"}
+                          className={
+                            last ? "text-label-md text-fg" : "text-fg-muted"
+                          }
                         >
                           {item}
                         </span>
@@ -589,11 +688,24 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             </>
           ) : (
             <>
-              <Link href="/dashboard" className="hidden rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline">
+              <Link
+                href="/dashboard"
+                className="hidden rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline"
+              >
                 {language === "ES" ? "Panel" : "Dashboard"}
               </Link>
-              <span aria-hidden="true" className="hidden text-body-sm text-fg-subtle sm:inline">/</span>
-              <span aria-current="page" className="truncate text-label-md text-fg">{currentPage}</span>
+              <span
+                aria-hidden="true"
+                className="hidden text-body-sm text-fg-subtle sm:inline"
+              >
+                /
+              </span>
+              <span
+                aria-current="page"
+                className="truncate text-label-md text-fg"
+              >
+                {currentPage}
+              </span>
             </>
           )}
         </nav>
@@ -622,7 +734,10 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             className="flex shrink-0 cursor-pointer items-center gap-inline-xs rounded-control bg-danger-solid px-inset-xs py-1.5 text-label-md text-danger-on-solid shadow-sm transition-all duration-150 ease-standard hover:bg-danger-solid-hover hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:px-3.5 sm:py-inset-sm"
             title={language === "ES" ? "Emergencia" : "Emergency"}
           >
-            <HeaderIcon src="/images/dashboard-header/danger.svg" className="size-3.5 sm:size-5" />
+            <HeaderIcon
+              src="/images/dashboard-header/danger.svg"
+              className="size-3.5 sm:size-5"
+            />
             <span className="hidden min-[440px]:inline">
               {language === "ES" ? "Emergencia" : "Emergency"}
             </span>
@@ -635,16 +750,26 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
         <div className="flex shrink-0 items-center gap-inline-sm rounded-control border-y border-line bg-surface-sunken p-1 shadow-sm sm:gap-inline-lg sm:px-inset-xs sm:py-1.5">
           <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-line sm:h-10 sm:w-[42px]">
-            <Image src={avatarSrc} alt="" fill sizes="42px" className="object-cover" />
+            <Image
+              src={avatarSrc}
+              alt=""
+              fill
+              sizes="42px"
+              className="object-cover"
+            />
           </div>
-          <div className="hidden lg:block w-[140px] xl:w-[174px] min-w-0">
+          <div className="hidden w-[140px] min-w-0 lg:block xl:w-[174px]">
             <p className="truncate text-label-lg text-fg">
               {user?.name ?? (language === "ES" ? "Invitado" : "Guest")}
             </p>
             <p className="truncate text-caption text-fg-muted">
               {user?.role === "admin"
-                ? (language === "ES" ? "Administrador" : "Admin")
-                : (language === "ES" ? "Usuario" : "User")}
+                ? language === "ES"
+                  ? "Administrador"
+                  : "Admin"
+                : language === "ES"
+                  ? "Usuario"
+                  : "User"}
             </p>
           </div>
         </div>
@@ -688,7 +813,7 @@ export default function DashboardShell({
   return (
     <div className="min-h-screen bg-canvas font-sans text-fg">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
-        <Sidebar onOpenRideModal={() => setRideModalOpen(true)} />
+        <Sidebar />
       </div>
 
       {sidebarOpen && (
@@ -700,10 +825,7 @@ export default function DashboardShell({
             aria-label="Close dashboard menu overlay"
           />
           <div className="relative h-full">
-            <Sidebar
-              onClose={() => setSidebarOpen(false)}
-              onOpenRideModal={() => setRideModalOpen(true)}
-            />
+            <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}

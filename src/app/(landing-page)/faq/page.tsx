@@ -35,27 +35,27 @@ export default function FAQPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-between font-sans">
+    <div className="flex min-h-screen flex-col justify-between bg-white font-sans">
       <div>
         <Header />
 
         <main className="w-full">
           {/* FAQ Hero Banner */}
-          <div className="relative overflow-hidden bg-[#E4F2FE] w-full">
+          <div className="relative w-full overflow-hidden bg-[#E4F2FE]">
             {/* Soft decorative background shape matching the diagonal gray-blue in screenshot */}
-            <div className="absolute top-0 right-[-10%] w-[60%] h-full bg-[#DFE6F5] transform -skew-x-[35deg] pointer-events-none hidden md:block" />
+            <div className="pointer-events-none absolute top-0 right-[-10%] hidden h-full w-[60%] -skew-x-[35deg] transform bg-[#DFE6F5] md:block" />
 
-            <div className="relative z-10 w-full px-4 sm:px-8 md:px-[60px] py-12 md:py-16 space-y-4">
-              <h1 className="text-[28px] sm:text-[34px] lg:text-[40px] font-semibold text-slate-800 tracking-tight">
+            <div className="relative z-10 w-full space-y-4 px-4 py-12 sm:px-8 md:px-[60px] md:py-16">
+              <h1 className="text-[28px] font-semibold tracking-tight text-slate-800 sm:text-[34px] lg:text-[40px]">
                 {t("faq.title")}
               </h1>
-              <p className="text-slate-600 text-sm sm:text-[15px] lg:text-base font-medium leading-relaxed max-w-md">
+              <p className="max-w-md text-sm leading-relaxed font-medium text-slate-600 sm:text-[15px] lg:text-base">
                 {t("faq.subtitle")}
               </p>
               <div className="pt-2">
                 <Link
                   href="/registration"
-                  className="inline-block bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-all active:scale-95 text-sm"
+                  className="inline-block rounded-md bg-[#2563EB] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95 active:bg-blue-800"
                 >
                   {t("faq.button")}
                 </Link>
@@ -77,7 +77,7 @@ export default function FAQPage() {
                     aria-expanded={isOpen}
                     className="flex w-full items-center justify-between gap-4 text-left focus:outline-none"
                   >
-                    <span className="font-poppins text-base font-medium leading-7 tracking-[0.1px] text-[#0F172A] sm:text-lg lg:text-xl">
+                    <span className="font-poppins text-base leading-7 font-medium tracking-[0.1px] text-[#0F172A] sm:text-lg lg:text-xl">
                       {item.question}
                     </span>
                     <span
@@ -98,7 +98,7 @@ export default function FAQPage() {
                   {/* Accordion Content */}
                   {isOpen && (
                     <div className="flex w-full items-center justify-center rounded-lg bg-white p-5 sm:p-6">
-                      <p className="flex-1 whitespace-pre-wrap font-poppins text-base font-normal leading-7 tracking-[0.09px] text-[#344056] sm:text-lg">
+                      <p className="font-poppins flex-1 text-base leading-7 font-normal tracking-[0.09px] whitespace-pre-wrap text-[#344056] sm:text-lg">
                         {item.answer}
                       </p>
                     </div>

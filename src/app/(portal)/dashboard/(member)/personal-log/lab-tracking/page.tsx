@@ -3,30 +3,46 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
+  Apple,
   ArrowDown,
   ArrowUp,
+  Bone,
   BookOpen,
+  CalendarDays,
   ChevronDown,
+  CircleCheck,
   Download,
+  Droplet,
+  FlaskConical,
+  HeartPulse,
   Info,
+  Layers,
   Plus,
+  TrendingDown,
+  TrendingUp,
+  TriangleAlert,
 } from "lucide-react";
+import { Kidneys } from "@/components/icons/Kidneys";
 
-import { GiKidneys } from "react-icons/gi";
-import {
-  FaFlask,
-  FaBone,
-  FaDroplet,
-  FaAppleWhole,
-  FaHeartPulse,
-  FaLayerGroup,
-  FaCalendarDays,
-  FaCircleCheck,
-  FaTriangleExclamation,
-  FaArrowTrendUp,
-  FaArrowTrendDown,
-} from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
+import { useClientValue } from "@/lib/storage/useClientValue";
+
+type CustomLabResult = {
+  date?: string;
+  values?: { [key: string]: string };
+  notes?: string;
+} | null;
+
+const CUSTOM_LAB_KEY = "nr_custom_lab_results";
+
+function readCustomLabResults(): CustomLabResult {
+  try {
+    const saved = localStorage.getItem(CUSTOM_LAB_KEY);
+    return saved ? (JSON.parse(saved) as CustomLabResult) : null;
+  } catch {
+    return null;
+  }
+}
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -55,7 +71,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "kidney-function",
     name: "KIDNEY FUNCTION",
-    icon: GiKidneys,
+    icon: Kidneys,
     tests: [
       {
         id: "bun",
@@ -98,7 +114,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "electrolytes",
     name: "ELECTROLYTES",
-    icon: FaFlask,
+    icon: FlaskConical,
     tests: [
       {
         id: "sodium",
@@ -153,7 +169,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "mineral-bone",
     name: "MINERAL & BONE",
-    icon: FaBone,
+    icon: Bone,
     tests: [
       {
         id: "calcium",
@@ -208,7 +224,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "blood-counts",
     name: "BLOOD COUNTS",
-    icon: FaDroplet,
+    icon: Droplet,
     tests: [
       {
         id: "hemoglobin",
@@ -263,7 +279,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "nutrition",
     name: "NUTRITION",
-    icon: FaAppleWhole,
+    icon: Apple,
     tests: [
       {
         id: "albumin",
@@ -294,7 +310,7 @@ const categoriesData: CategoryGroup[] = [
   {
     id: "dialysis-adequacy",
     name: "DIALYSIS ADEQUACY",
-    icon: FaHeartPulse,
+    icon: HeartPulse,
     tests: [
       {
         id: "ktv",
@@ -306,7 +322,7 @@ const categoriesData: CategoryGroup[] = [
         changeColor: "green",
         refRange: "≥ 1.20",
         status: "In Range",
-        sparkline: [1.22, 1.25, 1.28, 1.30, 1.35],
+        sparkline: [1.22, 1.25, 1.28, 1.3, 1.35],
       },
     ],
   },
@@ -326,8 +342,8 @@ function Sparkline({
     status === "In Range"
       ? "var(--color-success-600)"
       : status === "High"
-      ? "var(--color-danger-600)"
-      : "var(--color-warning-600)";
+        ? "var(--color-danger-600)"
+        : "var(--color-warning-600)";
 
   const points = data
     .map((val, idx) => {
@@ -342,7 +358,7 @@ function Sparkline({
   const lastY = 20 - ((data[lastIndex] - min) / range) * 14;
 
   return (
-    <svg className="h-6 w-20 overflow-visible shrink-0">
+    <svg className="h-6 w-20 shrink-0 overflow-visible">
       <polyline
         fill="none"
         stroke={strokeColor}
@@ -452,13 +468,12 @@ function TrendLineCard({
   const lastY = getY(latestVal);
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 space-y-3">
+    <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h4 className="text-sm font-bold text-fg">{testName}</h4>
           <p className="text-xs text-fg-muted">
-            {refRangeLabel || "Ref Range"}:{" "}
-            {unit ? `(${unit})` : ""}
+            {refRangeLabel || "Ref Range"}: {unit ? `(${unit})` : ""}
           </p>
         </div>
         <div className="text-right">
@@ -474,7 +489,7 @@ function TrendLineCard({
       <div className="w-full">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-28 overflow-visible"
+          className="h-28 w-full overflow-visible"
         >
           {[0, 0.5, 1].map((ratio, i) => {
             const y = paddingTop + chartH * ratio;
@@ -542,29 +557,17 @@ export default function MyLabsPage() {
   const l = dictionary?.labTracking;
 
   const [activeTab, setActiveTab] = useState<"overview" | "trends" | "history">(
-    "overview"
+    "overview",
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [compareDateId, setCompareDateId] = useState<string>("2024-04-30");
-  const [customData, setCustomData] = useState<{
-    date?: string;
-    values?: { [key: string]: string };
-    notes?: string;
-  } | null>(null);
-  const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(
-    0
+  const [customData] = useClientValue(
+    readCustomLabResults,
+    null as CustomLabResult,
   );
-
-  React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nr_custom_lab_results");
-      if (saved) {
-        setCustomData(JSON.parse(saved));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(
+    0,
+  );
 
   const pastDrawDates = [
     {
@@ -617,23 +620,20 @@ export default function MyLabsPage() {
   const latestDrawDate = customData?.date
     ? new Date(customData.date).toLocaleDateString(
         language === "ES" ? "es-ES" : "en-US",
-        { month: "short", day: "numeric", year: "numeric" }
+        { month: "short", day: "numeric", year: "numeric" },
       )
     : language === "ES"
-    ? "31 May, 2024"
-    : "May 31, 2024";
+      ? "31 May, 2024"
+      : "May 31, 2024";
 
   const getCategoryName = (catId: string, fallback: string) => {
     if (catId === "kidney-function")
       return l?.categories?.kidneyFunction || fallback;
     if (catId === "electrolytes")
       return l?.categories?.electrolytes || fallback;
-    if (catId === "mineral-bone")
-      return l?.categories?.mineralBone || fallback;
-    if (catId === "blood-counts")
-      return l?.categories?.bloodCounts || fallback;
-    if (catId === "nutrition")
-      return l?.categories?.nutrition || fallback;
+    if (catId === "mineral-bone") return l?.categories?.mineralBone || fallback;
+    if (catId === "blood-counts") return l?.categories?.bloodCounts || fallback;
+    if (catId === "nutrition") return l?.categories?.nutrition || fallback;
     if (catId === "dialysis-adequacy")
       return l?.categories?.dialysisAdequacy || fallback;
     return fallback;
@@ -713,13 +713,13 @@ export default function MyLabsPage() {
         {/* Card 1: Latest Lab Date */}
         <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-fg-brand">
-            <FaCalendarDays className="h-5 w-5" />
+            <CalendarDays className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-fg-muted">
               {l?.kpis?.latestDate || "Latest Lab Date"}
             </p>
-            <p className="text-xl font-bold text-fg truncate">
+            <p className="truncate text-xl font-bold text-fg">
               {latestDrawDate}
             </p>
           </div>
@@ -728,14 +728,14 @@ export default function MyLabsPage() {
         {/* Card 2: Values In Range */}
         <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
-            <FaCircleCheck className="h-5 w-5" />
+            <CircleCheck className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-semibold text-fg-muted">
                 {l?.kpis?.inRange || "In Range"}
               </p>
-              <span className="text-xs font-bold text-success bg-success-surface px-1.5 py-0.5 rounded">
+              <span className="rounded bg-success-surface px-1.5 py-0.5 text-xs font-bold text-success">
                 64%
               </span>
             </div>
@@ -746,14 +746,14 @@ export default function MyLabsPage() {
         {/* Card 3: Values Out of Range */}
         <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-surface text-warning">
-            <FaTriangleExclamation className="h-5 w-5" />
+            <TriangleAlert className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-semibold text-fg-muted">
                 {l?.kpis?.outOfRange || "Out of Range"}
               </p>
-              <span className="text-xs font-bold text-warning bg-warning-surface px-1.5 py-0.5 rounded">
+              <span className="rounded bg-warning-surface px-1.5 py-0.5 text-xs font-bold text-warning">
                 24%
               </span>
             </div>
@@ -764,7 +764,7 @@ export default function MyLabsPage() {
         {/* Card 4: Trending Up */}
         <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
-            <FaArrowTrendUp className="h-5 w-5" />
+            <TrendingUp className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-fg-muted">
@@ -777,7 +777,7 @@ export default function MyLabsPage() {
         {/* Card 5: Trending Down */}
         <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-surface text-danger">
-            <FaArrowTrendDown className="h-5 w-5" />
+            <TrendingDown className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-fg-muted">
@@ -791,19 +791,19 @@ export default function MyLabsPage() {
       {/* 3. Main Grid Layout (Left Content + Right Sidebar) */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
         {/* Left Column (Table Area) */}
-        <div className="xl:col-span-3 space-y-4">
+        <div className="space-y-4 xl:col-span-3">
           {/* Unified Top Control Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface p-3">
             {/* Left Controls Group: Tab Switcher + Category Filter */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Segmented Pill Tab Switcher */}
-              <div className="inline-flex items-center rounded-xl bg-[var(--color-gray-100)] p-1 border border-line/60">
+              <div className="inline-flex items-center rounded-xl border border-line/60 bg-[var(--color-gray-100)] p-1">
                 <button
                   type="button"
                   onClick={() => setActiveTab("overview")}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                     activeTab === "overview"
-                      ? "bg-surface text-fg-brand border border-line/80"
+                      ? "border border-line/80 bg-surface text-fg-brand"
                       : "text-fg-secondary hover:text-fg"
                   }`}
                 >
@@ -812,9 +812,9 @@ export default function MyLabsPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("trends")}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                     activeTab === "trends"
-                      ? "bg-surface text-fg-brand border border-line/80"
+                      ? "border border-line/80 bg-surface text-fg-brand"
                       : "text-fg-secondary hover:text-fg"
                   }`}
                 >
@@ -823,9 +823,9 @@ export default function MyLabsPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("history")}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                     activeTab === "history"
-                      ? "bg-surface text-fg-brand border border-line/80"
+                      ? "border border-line/80 bg-surface text-fg-brand"
                       : "text-fg-secondary hover:text-fg"
                   }`}
                 >
@@ -840,7 +840,7 @@ export default function MyLabsPage() {
                   aria-label="Filter by category"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-9 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-fg-secondary outline-none focus:border-primary-edge cursor-pointer"
+                  className="h-9 cursor-pointer rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-fg-secondary outline-none focus:border-primary-edge"
                 >
                   <option value="all">
                     {l?.categories?.all || "All Categories"}
@@ -872,7 +872,7 @@ export default function MyLabsPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-xs font-semibold text-fg-secondary hover:bg-surface-sunken transition-colors cursor-pointer"
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
               >
                 <Download className="h-3.5 w-3.5" />
                 {l?.actions?.exportPdf || "Export PDF"}
@@ -880,7 +880,7 @@ export default function MyLabsPage() {
 
               <Link
                 href="/dashboard/personal-log/lab-tracking/add"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-action px-3.5 text-xs font-semibold text-white hover:bg-action-hover transition-colors"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-action px-3.5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {l?.actions?.addLabResult || "Add Lab Result"}
@@ -893,32 +893,33 @@ export default function MyLabsPage() {
             <div className="overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-[var(--color-gray-50)] text-sm font-semibold text-fg-muted border-b border-line">
+                  <thead className="border-b border-line bg-[var(--color-gray-50)] text-sm font-semibold text-fg-muted">
                     <tr>
-                      <th className="px-4 py-3 min-w-[200px]">
+                      <th className="min-w-[200px] px-4 py-3">
                         {l?.overview?.headers?.test || "Test"}
                       </th>
-                      <th className="px-4 py-3 min-w-[140px] font-bold text-fg">
+                      <th className="min-w-[140px] px-4 py-3 font-bold text-fg">
                         {l?.overview?.headers?.latestResult || "Latest Result"}{" "}
                         <span className="block text-sm font-semibold text-fg-muted">
                           {latestDrawDate}
                         </span>
                       </th>
-                      <th className="px-4 py-3 min-w-[150px] font-bold text-fg">
-                        {l?.overview?.headers?.previousResult || "Previous Result"}
-                        <div className="relative flex items-center justify-between mt-0.5">
+                      <th className="min-w-[150px] px-4 py-3 font-bold text-fg">
+                        {l?.overview?.headers?.previousResult ||
+                          "Previous Result"}
+                        <div className="relative mt-0.5 flex items-center justify-between">
                           <select
                             aria-label="Select comparison lab draw date"
                             value={compareDateId}
                             onChange={(e) => setCompareDateId(e.target.value)}
-                            className="w-full appearance-none bg-transparent pr-4 text-xs font-semibold text-fg-brand outline-none cursor-pointer hover:underline"
+                            className="w-full cursor-pointer appearance-none bg-transparent pr-4 text-xs font-semibold text-fg-brand outline-none hover:underline"
                           >
                             <optgroup
                               label={
                                 l?.overview?.compare?.pastDrawDatesGroup ||
                                 "Past Lab Draw Dates"
                               }
-                              className="font-bold text-fg bg-surface"
+                              className="bg-surface font-bold text-fg"
                             >
                               {pastDrawDates
                                 .filter((d) => d.type === "draw")
@@ -926,7 +927,7 @@ export default function MyLabsPage() {
                                   <option
                                     key={date.id}
                                     value={date.id}
-                                    className="text-fg bg-surface font-medium"
+                                    className="bg-surface font-medium text-fg"
                                   >
                                     {date.label}
                                   </option>
@@ -937,7 +938,7 @@ export default function MyLabsPage() {
                                 l?.overview?.compare?.presetsGroup ||
                                 "Timeframe Presets"
                               }
-                              className="font-bold text-fg bg-surface"
+                              className="bg-surface font-bold text-fg"
                             >
                               {pastDrawDates
                                 .filter((d) => d.type === "preset")
@@ -945,7 +946,7 @@ export default function MyLabsPage() {
                                   <option
                                     key={date.id}
                                     value={date.id}
-                                    className="text-fg bg-surface font-medium"
+                                    className="bg-surface font-medium text-fg"
                                   >
                                     {date.label}
                                   </option>
@@ -955,16 +956,16 @@ export default function MyLabsPage() {
                           <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-fg-brand" />
                         </div>
                       </th>
-                      <th className="px-4 py-3 min-w-[100px]">
+                      <th className="min-w-[100px] px-4 py-3">
                         {l?.overview?.headers?.change || "Change"}
                       </th>
-                      <th className="px-4 py-3 min-w-[150px]">
+                      <th className="min-w-[150px] px-4 py-3">
                         {l?.overview?.headers?.refRange || "Reference Range"}
                       </th>
-                      <th className="px-4 py-3 min-w-[100px]">
+                      <th className="min-w-[100px] px-4 py-3">
                         {l?.overview?.headers?.status || "Status"}
                       </th>
-                      <th className="px-4 py-3 min-w-[120px]">
+                      <th className="min-w-[120px] px-4 py-3">
                         {l?.overview?.headers?.trend || "Trend"}
                       </th>
                     </tr>
@@ -975,8 +976,8 @@ export default function MyLabsPage() {
                         {/* Category Header Row */}
                         <tr className="bg-[var(--color-gray-100)]">
                           <td colSpan={7} className="px-4 py-2.5">
-                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--color-brand-900)] tracking-wider uppercase">
-                              <category.icon className="h-4.5 w-4.5 fill-current text-fg-brand shrink-0" />
+                            <div className="flex items-center gap-2 text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
+                              <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
                               {category.displayName}
                             </div>
                           </td>
@@ -986,7 +987,7 @@ export default function MyLabsPage() {
                         {category.tests.map((test) => (
                           <tr
                             key={test.id}
-                            className="hover:bg-surface-sunken transition-colors group"
+                            className="group transition-colors hover:bg-surface-sunken"
                           >
                             <td className="px-4 py-3 font-semibold text-fg">
                               {test.displayName}
@@ -997,14 +998,14 @@ export default function MyLabsPage() {
                             <td className="px-4 py-3 font-medium text-fg-secondary">
                               {test.previousResult}
                             </td>
-                            <td className="px-4 py-3 font-semibold text-xs">
+                            <td className="px-4 py-3 text-xs font-semibold">
                               <span
                                 className={`inline-flex items-center gap-0.5 ${
                                   test.changeColor === "red"
                                     ? "text-danger"
                                     : test.changeColor === "orange"
-                                    ? "text-warning"
-                                    : "text-success"
+                                      ? "text-warning"
+                                      : "text-success"
                                 }`}
                               >
                                 {test.changeDirection === "up" ? (
@@ -1051,14 +1052,14 @@ export default function MyLabsPage() {
                 {filteredCategories.map((category) => (
                   <div key={category.id} className="space-y-3">
                     <div className="flex items-center gap-2 border-b border-line pb-2">
-                      <category.icon className="h-4.5 w-4.5 fill-current text-fg-brand shrink-0" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-900)]">
+                      <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
+                      <h3 className="text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
                         {category.displayName} ({category.tests.length}{" "}
                         {l?.trends?.testsCount || "TESTS"})
                       </h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {category.tests.map((test) => {
                         let theme:
                           | "purple"
@@ -1070,13 +1071,17 @@ export default function MyLabsPage() {
                         if (test.name.includes("Potassium")) theme = "purple";
                         else if (test.name.includes("Phosphorus"))
                           theme = "green";
-                        else if (test.name.includes("Calcium")) theme = "orange";
-                        else if (test.name.includes("Creatinine")) theme = "rose";
+                        else if (test.name.includes("Calcium"))
+                          theme = "orange";
+                        else if (test.name.includes("Creatinine"))
+                          theme = "rose";
                         else if (test.name.includes("eGFR")) theme = "blue";
                         else if (test.name.includes("Sodium")) theme = "teal";
-                        else if (test.name.includes("Hemoglobin")) theme = "rose";
+                        else if (test.name.includes("Hemoglobin"))
+                          theme = "rose";
                         else if (test.name.includes("Kt/V")) theme = "green";
-                        else if (test.name.includes("Albumin")) theme = "orange";
+                        else if (test.name.includes("Albumin"))
+                          theme = "orange";
                         else if (test.name.includes("BUN")) theme = "purple";
                         else theme = "blue";
 
@@ -1122,7 +1127,7 @@ export default function MyLabsPage() {
                         ? categoriesData
                             .map((cat) => {
                               const recordedForCat = cat.tests.filter(
-                                (t) => customData.values?.[t.name]
+                                (t) => customData.values?.[t.name],
                               );
                               if (recordedForCat.length === 0) return null;
                               return {
@@ -1145,13 +1150,10 @@ export default function MyLabsPage() {
                                 }),
                               };
                             })
+                            // NonNullable<typeof g> keeps the mapped shape
+                            // instead of restating it and drifting from it.
                             .filter(
-                              (
-                                g
-                              ): g is {
-                                category: string;
-                                tests: any[];
-                              } => g !== null
+                              (g): g is NonNullable<typeof g> => g !== null,
                             )
                         : [
                             {
@@ -1168,7 +1170,7 @@ export default function MyLabsPage() {
                                 {
                                   name: getTestDisplayName(
                                     "creatinine",
-                                    "Creatinine"
+                                    "Creatinine",
                                   ),
                                   val: "6.48 mg/dL",
                                   ref: "0.6 – 1.3 mg/dL",
@@ -1177,7 +1179,7 @@ export default function MyLabsPage() {
                                 {
                                   name: getTestDisplayName(
                                     "egfr",
-                                    "eGFR (CKD-EPI)"
+                                    "eGFR (CKD-EPI)",
                                   ),
                                   val: "9 mL/min",
                                   ref: "> 90 mL/min",
@@ -1192,7 +1194,7 @@ export default function MyLabsPage() {
                                 {
                                   name: getTestDisplayName(
                                     "potassium",
-                                    "Potassium"
+                                    "Potassium",
                                   ),
                                   val: "5.2 mEq/L",
                                   ref: "3.5 – 5.0 mEq/L",
@@ -1229,17 +1231,14 @@ export default function MyLabsPage() {
                           {
                             name: getTestDisplayName(
                               "creatinine",
-                              "Creatinine"
+                              "Creatinine",
                             ),
                             val: "6.12 mg/dL",
                             ref: "0.6 – 1.3 mg/dL",
                             status: "High" as const,
                           },
                           {
-                            name: getTestDisplayName(
-                              "egfr",
-                              "eGFR (CKD-EPI)"
-                            ),
+                            name: getTestDisplayName("egfr", "eGFR (CKD-EPI)"),
                             val: "10 mL/min",
                             ref: "> 90 mL/min",
                             status: "Low" as const,
@@ -1247,8 +1246,7 @@ export default function MyLabsPage() {
                         ],
                       },
                       {
-                        category:
-                          l?.categories?.electrolytes || "ELECTROLYTES",
+                        category: l?.categories?.electrolytes || "ELECTROLYTES",
                         tests: [
                           {
                             name: getTestDisplayName("sodium", "Sodium"),
@@ -1257,10 +1255,7 @@ export default function MyLabsPage() {
                             status: "In Range" as const,
                           },
                           {
-                            name: getTestDisplayName(
-                              "potassium",
-                              "Potassium"
-                            ),
+                            name: getTestDisplayName("potassium", "Potassium"),
                             val: "5.0 mEq/L",
                             ref: "3.5 – 5.0 mEq/L",
                             status: "In Range" as const,
@@ -1291,17 +1286,14 @@ export default function MyLabsPage() {
                           {
                             name: getTestDisplayName(
                               "creatinine",
-                              "Creatinine"
+                              "Creatinine",
                             ),
                             val: "5.80 mg/dL",
                             ref: "0.6 – 1.3 mg/dL",
                             status: "High" as const,
                           },
                           {
-                            name: getTestDisplayName(
-                              "egfr",
-                              "eGFR (CKD-EPI)"
-                            ),
+                            name: getTestDisplayName("egfr", "eGFR (CKD-EPI)"),
                             val: "11 mL/min",
                             ref: "> 90 mL/min",
                             status: "Low" as const,
@@ -1332,7 +1324,7 @@ export default function MyLabsPage() {
                           {
                             name: getTestDisplayName(
                               "creatinine",
-                              "Creatinine"
+                              "Creatinine",
                             ),
                             val: "5.50 mg/dL",
                             ref: "0.6 – 1.3 mg/dL",
@@ -1364,7 +1356,7 @@ export default function MyLabsPage() {
                           {
                             name: getTestDisplayName(
                               "creatinine",
-                              "Creatinine"
+                              "Creatinine",
                             ),
                             val: "5.20 mg/dL",
                             ref: "0.6 – 1.3 mg/dL",
@@ -1379,7 +1371,7 @@ export default function MyLabsPage() {
                   return (
                     <div
                       key={idx}
-                      className={`rounded-xl border bg-surface transition-all overflow-hidden ${
+                      className={`overflow-hidden rounded-xl border bg-surface transition-all ${
                         isExpanded
                           ? "border-primary-edge ring-1 ring-ring"
                           : "border-line hover:border-primary-soft-line"
@@ -1434,23 +1426,21 @@ export default function MyLabsPage() {
                           .flatMap((g) => g.tests)
                           .map((t, tIdx) => (
                             <div key={tIdx}>
-                              <span className="block text-sm font-semibold text-fg-muted truncate">
+                              <span className="block truncate text-sm font-semibold text-fg-muted">
                                 {t.name}
                               </span>
-                              <span className="font-bold text-fg">
-                                {t.val}
-                              </span>
+                              <span className="font-bold text-fg">{t.val}</span>
                             </div>
                           ))}
                       </div>
 
                       {/* Notes Section */}
                       {draw.notes && (
-                        <div className="bg-surface-sunken/90 border-b border-line-subtle px-4 py-2 flex items-start gap-2 text-xs text-fg-secondary">
-                          <span className="font-bold text-fg shrink-0">
+                        <div className="flex items-start gap-2 border-b border-line-subtle bg-surface-sunken/90 px-4 py-2 text-xs text-fg-secondary">
+                          <span className="shrink-0 font-bold text-fg">
                             {l?.history?.noteLabel || "Note:"}
                           </span>
-                          <p className="font-medium text-fg-muted leading-normal">
+                          <p className="leading-normal font-medium text-fg-muted">
                             {draw.notes}
                           </p>
                         </div>
@@ -1458,21 +1448,22 @@ export default function MyLabsPage() {
 
                       {/* EXPANDED DETAILED LAB VALUE TABLE BREAKDOWN */}
                       {isExpanded && (
-                        <div className="p-4 bg-surface space-y-4">
+                        <div className="space-y-4 bg-surface p-4">
                           <div className="space-y-4">
                             {draw.detailedTests.map((group, gIdx) => (
                               <div
                                 key={gIdx}
-                                className="rounded-lg border border-line overflow-hidden"
+                                className="overflow-hidden rounded-lg border border-line"
                               >
-                                <div className="bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold text-[var(--color-brand-900)] tracking-wider uppercase border-b border-line">
+                                <div className="border-b border-line bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
                                   {group.category}
                                 </div>
                                 <table className="w-full text-left text-xs">
-                                  <thead className="bg-surface-sunken text-fg-muted font-semibold border-b border-line">
+                                  <thead className="border-b border-line bg-surface-sunken font-semibold text-fg-muted">
                                     <tr>
                                       <th className="px-3.5 py-2">
-                                        {l?.history?.tableHeaders?.test || "Test"}
+                                        {l?.history?.tableHeaders?.test ||
+                                          "Test"}
                                       </th>
                                       <th className="px-3.5 py-2">
                                         {l?.history?.tableHeaders
@@ -1507,15 +1498,11 @@ export default function MyLabsPage() {
                                           <StatusBadge
                                             status={
                                               t.status as
-                                                | "High"
-                                                | "In Range"
-                                                | "Low"
+                                                "High" | "In Range" | "Low"
                                             }
                                             label={getStatusLabel(
                                               t.status as
-                                                | "High"
-                                                | "In Range"
-                                                | "Low"
+                                                "High" | "In Range" | "Low",
                                             )}
                                           />
                                         </td>
@@ -1539,9 +1526,9 @@ export default function MyLabsPage() {
         {/* Right Sidebar Column */}
         <div className="space-y-6">
           {/* Card 1: Latest Lab Summary */}
-          <div className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-4 space-y-4">
+          <div className="space-y-4 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
             <div className="flex items-center justify-between border-b border-line-subtle pb-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-fg-secondary flex items-center gap-1.5">
+              <h2 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-fg-secondary uppercase">
                 {l?.sidebar?.latestSummary?.title || "LATEST LAB SUMMARY"}
               </h2>
               <Info className="h-4 w-4 text-fg-subtle" />
@@ -1570,19 +1557,19 @@ export default function MyLabsPage() {
             </div>
 
             {/* Encouragement Box */}
-            <div className="rounded-lg bg-surface-sunken border border-line p-3.5 space-y-2">
+            <div className="space-y-2 rounded-lg border border-line bg-surface-sunken p-3.5">
               <p className="text-xs font-bold text-fg">
                 {l?.sidebar?.latestSummary?.keepUpTitle ||
                   "Keep up the good work!"}
               </p>
-              <p className="text-xs text-fg-muted leading-relaxed">
+              <p className="text-xs leading-relaxed text-fg-muted">
                 {l?.sidebar?.latestSummary?.keepUpDesc ||
                   "Continue following your care plan and attend your dialysis treatments."}
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab("trends")}
-                className="w-full mt-2 rounded-lg border border-line bg-surface py-1.5 text-xs font-semibold text-fg-secondary hover:bg-surface-sunken transition-colors cursor-pointer"
+                className="mt-2 w-full cursor-pointer rounded-lg border border-line bg-surface py-1.5 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
               >
                 {l?.sidebar?.latestSummary?.viewTrends || "View Trends"}
               </button>
@@ -1590,8 +1577,8 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 2: Lab Categories */}
-          <div className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-4 space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-fg-secondary pb-2 border-b border-line-subtle">
+          <div className="space-y-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
+            <h2 className="border-b border-line-subtle pb-2 text-xs font-bold tracking-wider text-fg-secondary uppercase">
               {l?.sidebar?.categories?.title || "LAB CATEGORIES"}
             </h2>
             <div className="space-y-1">
@@ -1599,44 +1586,43 @@ export default function MyLabsPage() {
                 {
                   name: l?.categories?.all || "All Categories",
                   count: language === "ES" ? "25 Pruebas" : "25 Tests",
-                  icon: FaLayerGroup,
+                  icon: Layers,
                   key: "all",
                 },
                 {
                   name: l?.categories?.kidneyFunction || "Kidney Function",
                   count: language === "ES" ? "3 Pruebas" : "3 Tests",
-                  icon: GiKidneys,
+                  icon: Kidneys,
                   key: "kidney-function",
                 },
                 {
                   name: l?.categories?.electrolytes || "Electrolytes",
                   count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                  icon: FaFlask,
+                  icon: FlaskConical,
                   key: "electrolytes",
                 },
                 {
                   name: l?.categories?.mineralBone || "Mineral & Bone",
                   count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                  icon: FaBone,
+                  icon: Bone,
                   key: "mineral-bone",
                 },
                 {
                   name: l?.categories?.bloodCounts || "Blood Counts",
                   count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                  icon: FaDroplet,
+                  icon: Droplet,
                   key: "blood-counts",
                 },
                 {
                   name: l?.categories?.nutrition || "Nutrition",
                   count: language === "ES" ? "2 Pruebas" : "2 Tests",
-                  icon: FaAppleWhole,
+                  icon: Apple,
                   key: "nutrition",
                 },
                 {
-                  name:
-                    l?.categories?.dialysisAdequacy || "Dialysis Adequacy",
+                  name: l?.categories?.dialysisAdequacy || "Dialysis Adequacy",
                   count: language === "ES" ? "1 Prueba" : "1 Test",
-                  icon: FaHeartPulse,
+                  icon: HeartPulse,
                   key: "dialysis-adequacy",
                 },
               ].map((cat) => (
@@ -1644,14 +1630,14 @@ export default function MyLabsPage() {
                   key={cat.key}
                   type="button"
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
                     selectedCategory === cat.key
-                      ? "bg-primary-soft text-fg-brand font-bold"
+                      ? "bg-primary-soft font-bold text-fg-brand"
                       : "text-fg-secondary hover:bg-surface-sunken"
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <cat.icon className="h-4 w-4 fill-current text-fg-muted shrink-0" />
+                    <cat.icon className="h-4 w-4 shrink-0 fill-current text-fg-muted" />
                     {cat.name}
                   </span>
                   <span className="text-xs text-fg-subtle">{cat.count}</span>
@@ -1662,29 +1648,29 @@ export default function MyLabsPage() {
             <button
               type="button"
               onClick={() => setSelectedCategory("all")}
-              className="w-full mt-2 rounded-lg border border-line bg-surface-sunken py-2 text-xs font-semibold text-fg-secondary hover:bg-surface-sunken transition-colors cursor-pointer"
+              className="mt-2 w-full cursor-pointer rounded-lg border border-line bg-surface-sunken py-2 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               {l?.sidebar?.categories?.viewAllTrends || "View All Trends"}
             </button>
           </div>
 
           {/* Card 3: Understanding Your Labs */}
-          <div className="rounded-xl border border-primary-soft-line bg-gradient-to-br from-primary-soft to-accent-soft p-4 space-y-3">
+          <div className="space-y-3 rounded-xl border border-primary-soft-line bg-gradient-to-br from-primary-soft to-accent-soft p-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-white">
                 <BookOpen className="h-4 w-4" />
               </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-fg">
+              <h2 className="text-xs font-bold tracking-wider text-fg uppercase">
                 {l?.sidebar?.understanding?.title || "UNDERSTANDING YOUR LABS"}
               </h2>
             </div>
-            <p className="text-xs text-fg-muted leading-relaxed">
+            <p className="text-xs leading-relaxed text-fg-muted">
               {l?.sidebar?.understanding?.desc ||
                 "Learn what your lab numbers mean and how they affect your health."}
             </p>
             <Link
               href="/dashboard/education-center"
-              className="block w-full text-center rounded-lg border border-primary-soft-line bg-surface py-2 text-xs font-semibold text-fg-brand hover:bg-primary-soft transition-colors"
+              className="block w-full rounded-lg border border-primary-soft-line bg-surface py-2 text-center text-xs font-semibold text-fg-brand transition-colors hover:bg-primary-soft"
             >
               {l?.sidebar?.understanding?.visitCenter ||
                 "Visit Education Center"}

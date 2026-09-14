@@ -124,7 +124,7 @@ export function submitReview(input: {
 export function updateReviewStatus(
   reviewId: string,
   status: "approved" | "declined" | "pending",
-  adminFeedback?: string
+  adminFeedback?: string,
 ): void {
   const all = getReviews();
   const updated = all.map((r) => {
@@ -132,8 +132,10 @@ export function updateReviewStatus(
       return {
         ...r,
         status,
-        adminFeedback: status === "declined" ? adminFeedback?.trim() : undefined,
-        approvedAt: status === "approved" ? new Date().toISOString() : r.approvedAt,
+        adminFeedback:
+          status === "declined" ? adminFeedback?.trim() : undefined,
+        approvedAt:
+          status === "approved" ? new Date().toISOString() : r.approvedAt,
       };
     }
     return r;
