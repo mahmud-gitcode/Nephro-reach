@@ -24,107 +24,139 @@
    ========================================================================== */
 
 @theme {
-  /* ======================================================================
+   /* ======================================================================
      PRIMITIVE — Brand · blue · hue 262.9°
      600 is anchored exactly on the existing brand colour.
      ====================================================================== */
-  --color-brand-50: #f1f5fe;
-  --color-brand-100: #dfe9fc;
-  --color-brand-200: #c6d9fb;
-  --color-brand-300: #a1c1fd;
-  --color-brand-400: #709efa; /* dark-mode text — 7.10:1 on dark */
-  --color-brand-500: #4780f6; /* focus ring only — 3.69:1, never text */
-  --color-brand-600: #2563eb; /* PRIMARY — 5.17:1, safe as text AND fill */
-  --color-brand-700: #1450d6; /* hover · logo */
-  --color-brand-800: #1443ab; /* active · logo deep */
-  --color-brand-900: #1b3d85;
-  --color-brand-950: #132750;
+   --color-brand-50: #f1f5fe;
+   --color-brand-100: #dfe9fc;
+   --color-brand-200: #c6d9fb;
+   --color-brand-300: #a1c1fd;
+   --color-brand-400: #709efa;
+   /* dark-mode text — 7.10:1 on dark */
+   --color-brand-500: #4780f6;
+   /* focus ring only — 3.69:1, never text */
+   --color-brand-600: #2563eb;
+   /* PRIMARY — 5.17:1, safe as text AND fill */
+   --color-brand-700: #1450d6;
+   /* hover · logo */
+   --color-brand-800: #1443ab;
+   /* active · logo deep */
+   --color-brand-900: #1b3d85;
+   --color-brand-950: #132750;
 
-  /* ======================================================================
+   /* ======================================================================
      PRIMITIVE — Secondary · violet · hue 300°
      37° from the brand. The old #7C6CFF sat at 283° — only 20° away, which
      is why it read as "another blue" rather than a secondary.
      Never appears in the same component as a primary action.
      ====================================================================== */
-  --color-accent-50: #f6f3fc;
-  --color-accent-100: #ebe5f9;
-  --color-accent-200: #ddd1f6;
-  --color-accent-300: #c9b3f4;
-  --color-accent-400: #af8aed;
-  --color-accent-500: #9a65e5;
-  --color-accent-600: #8743d8; /* 5.49:1 */
-  --color-accent-700: #762fc3;
-  --color-accent-800: #5f2a9d;
-  --color-accent-900: #4e2c7b;
-  --color-accent-950: #301e4a;
+   --color-accent-50: #f6f3fc;
+   --color-accent-100: #ebe5f9;
+   --color-accent-200: #ddd1f6;
+   --color-accent-300: #c9b3f4;
+   --color-accent-400: #af8aed;
+   --color-accent-500: #9a65e5;
+   --color-accent-600: #8743d8;
+   /* 5.49:1 */
+   --color-accent-700: #762fc3;
+   --color-accent-800: #5f2a9d;
+   --color-accent-900: #4e2c7b;
+   --color-accent-950: #301e4a;
 
-  /* ======================================================================
-     PRIMITIVE — Gray · hue 262.9° (same as brand, chroma 0.042)
+   /* ======================================================================
+     PRIMITIVE — Gray · hue 262.9° (the brand's own hue)
      A neutral that shares the brand's hue reads as chosen, not inherited.
-     gray-500 hits 3.62:1 — which is why input borders can finally clear
-     the 3:1 WCAG 1.4.11 requirement without going near-black.
-     ====================================================================== */
-  --color-gray-50: #f4f5f7;
-  --color-gray-100: #e6e8ec;
-  --color-gray-200: #d5d8df;
-  --color-gray-300: #bac1cd;
-  --color-gray-400: #97a1b3; /* 2.60:1 — disabled only (WCAG-exempt) */
-  --color-gray-500: #7b879e; /* 3.62:1 — UI boundaries, input borders */
-  --color-gray-600: #64718a; /* 4.92:1 — muted text floor */
-  --color-gray-700: #536078;
-  --color-gray-800: #444e61;
-  --color-gray-900: #3b4250;
-  --color-gray-950: #252931;
 
-  /* ======================================================================
+     Two rules hold this ramp together:
+
+     1. Chroma peaks at 0.028 in the middle and falls away at both ends.
+        The first version held ~0.042 from 500 to 800 while the light steps
+        sat near 0.005, so surfaces read as neutral paper and the text on
+        them read as blue — two families on one screen. 0.028 is about
+        Tailwind's `gray`; 0.042 is its `slate`, the bluest neutral it ships.
+
+     2. Lightness steps run 3.5 → 5.5 → 7.5 → 9.5 → 9.0 → 8.0 → 7.5 →
+        7.5 → 8.0 → 12.5. Tight at the top where surfaces must stay close,
+        even through the middle, then a deliberate drop to a true dark.
+        The first version stepped 3.9 then 10.2 then 4.4, which made 50/100
+        and 800/900 near-duplicates and left holes in between.
+
+     Contrast on white, which the semantic layer below depends on:
+       gray-500  3.57:1  — UI boundaries and input borders (needs 3:1)
+       gray-600  4.97:1  — the floor for muted text (needs 4.5:1)
+       gray-400  2.53:1  — disabled only, WCAG-exempt, never for real text
+     ====================================================================== */
+   --color-gray-50: #f5f7fb;
+   --color-gray-100: #e8ebf2;
+   --color-gray-200: #d5d9e1;
+   --color-gray-300: #bbc1cc;
+   --color-gray-400: #9ca3b1;
+   --color-gray-500: #7f8898;
+   --color-gray-600: #687081;
+   --color-gray-700: #535b6b;
+   --color-gray-800: #3f4754;
+   --color-gray-900: #2c323d;
+   --color-gray-950: #10141c;
+
+   /* ======================================================================
      PRIMITIVE — Status
      Each ramp has a TEXT value (600+, AA-safe) and FILL values (300-500).
      The bright steps may never carry a word: #00A24A is 3.35:1 and fails.
      ====================================================================== */
 
-  /* Success · hue 150° */
-  --color-success-50: #f0f7f1;
-  --color-success-100: #ddeee0;
-  --color-success-200: #c3e2c8;
-  --color-success-300: #99d1a4;
-  --color-success-400: #5bb872;
-  --color-success-500: #00a24a; /* fill only — 3.35:1 */
-  --color-success-600: #00873d; /* 4.63:1 */
-  --color-success-700: #007433; /* 5.92:1 — badge text */
-  --color-success-800: #005f28;
-  --color-success-900: #005121;
-  --color-success-950: #033314;
+   /* Success · hue 150° */
+   --color-success-50: #f0f7f1;
+   --color-success-100: #ddeee0;
+   --color-success-200: #c3e2c8;
+   --color-success-300: #99d1a4;
+   --color-success-400: #5bb872;
+   --color-success-500: #00a24a;
+   /* fill only — 3.35:1 */
+   --color-success-600: #00873d;
+   /* 4.63:1 */
+   --color-success-700: #007433;
+   /* 5.92:1 — badge text */
+   --color-success-800: #005f28;
+   --color-success-900: #005121;
+   --color-success-950: #033314;
 
-  /* Warning · hue 70°
+   /* Warning · hue 70°
      warning-500 is a dark gold, not a bright yellow. Yellow cannot carry
      text at any lightness where it still looks yellow — bright amber lives
      at 300/400 for fills, 600/700 for words. */
-  --color-warning-50: #faf4ed;
-  --color-warning-100: #f4e6d7;
-  --color-warning-200: #ecd4b8;
-  --color-warning-300: #e3b887;
-  --color-warning-400: #d3913b;
-  --color-warning-500: #ba7600; /* fill only — 3.70:1 */
-  --color-warning-600: #9b6200; /* 5.07:1 */
-  --color-warning-700: #855300; /* 6.49:1 — badge text */
-  --color-warning-800: #6e4400;
-  --color-warning-900: #5d3900;
-  --color-warning-950: #3c2300;
+   --color-warning-50: #faf4ed;
+   --color-warning-100: #f4e6d7;
+   --color-warning-200: #ecd4b8;
+   --color-warning-300: #e3b887;
+   --color-warning-400: #d3913b;
+   --color-warning-500: #ba7600;
+   /* fill only — 3.70:1 */
+   --color-warning-600: #9b6200;
+   /* 5.07:1 */
+   --color-warning-700: #855300;
+   /* 6.49:1 — badge text */
+   --color-warning-800: #6e4400;
+   --color-warning-900: #5d3900;
+   --color-warning-950: #3c2300;
 
-  /* Danger · hue 27° */
-  --color-danger-50: #fff2f0;
-  --color-danger-100: #fde1dd;
-  --color-danger-200: #fdcac3;
-  --color-danger-300: #fda69c;
-  --color-danger-400: #f67266;
-  --color-danger-500: #ec3b37; /* fill only — 4.00:1 */
-  --color-danger-600: #d30016; /* 5.55:1 */
-  --color-danger-700: #b60011; /* 7.01:1 — badge text */
-  --color-danger-800: #96000c;
-  --color-danger-900: #7e0b0f;
-  --color-danger-950: #4d100e;
+   /* Danger · hue 27° */
+   --color-danger-50: #fff2f0;
+   --color-danger-100: #fde1dd;
+   --color-danger-200: #fdcac3;
+   --color-danger-300: #fda69c;
+   --color-danger-400: #f67266;
+   --color-danger-500: #ec3b37;
+   /* fill only — 4.00:1 */
+   --color-danger-600: #d30016;
+   /* 5.55:1 */
+   --color-danger-700: #b60011;
+   /* 7.01:1 — badge text */
+   --color-danger-800: #96000c;
+   --color-danger-900: #7e0b0f;
+   --color-danger-950: #4d100e;
 
-  /* Info reuses the brand ramp. A seventh hue would add nothing. */
+   /* Info reuses the brand ramp. A seventh hue would add nothing. */
 }
 
 /* ==========================================================================
@@ -137,60 +169,74 @@
    ========================================================================== */
 
 :root {
-  /* ---- surfaces ---- */
-  --canvas: var(--color-gray-50); /* page background */
-  --surface: #ffffff; /* cards, inputs, modals */
-  --surface-sunken: var(--color-gray-100); /* table stripes, wells */
-  --surface-raised: #ffffff; /* dropdowns, popovers (+ shadow) */
-  --surface-inverse: var(--color-gray-900);
-  --surface-brand: var(--color-brand-600);
-  --surface-brand-subtle: var(--color-brand-50);
-  --surface-accent-subtle: var(--color-accent-50);
+   /* ---- surfaces ---- */
+   --canvas: var(--color-gray-50);
+   /* page background */
+   --surface: #ffffff;
+   /* cards, inputs, modals */
+   --surface-sunken: var(--color-gray-50);
+   /* table stripes, wells */
+   --surface-raised: #ffffff;
+   /* dropdowns, popovers (+ shadow) */
+   --surface-inverse: var(--color-gray-900);
+   --surface-brand: var(--color-brand-600);
+   --surface-brand-subtle: var(--color-brand-50);
+   --surface-accent-subtle: var(--color-accent-50);
 
-  /* ---- foreground ---- */
-  --fg: var(--color-gray-950); /* headings, values, body */
-  --fg-secondary: var(--color-gray-700); /* supporting copy */
-  --fg-muted: var(--color-gray-600); /* labels, captions, placeholders */
-  --fg-subtle: var(--color-gray-400); /* DISABLED ONLY — fails contrast */
-  --fg-brand: var(--color-brand-600);
-  --fg-on-brand: #ffffff;
-  --fg-inverse: #ffffff;
+   /* ---- foreground ---- */
+   --fg: var(--color-gray-950);
+   /* headings, values, body */
+   --fg-secondary: var(--color-gray-700);
+   /* supporting copy */
+   --fg-muted: var(--color-gray-600);
+   /* labels, captions, placeholders */
+   --fg-subtle: var(--color-gray-400);
+   /* DISABLED ONLY — fails contrast */
+   --fg-brand: var(--color-brand-600);
+   --fg-on-brand: #ffffff;
+   --fg-inverse: #ffffff;
 
-  /* ---- lines ---- */
-  --line-subtle: var(--color-gray-100); /* internal dividers */
-  --line: var(--color-gray-200); /* card and panel edges */
-  --line-strong: var(--color-gray-300); /* emphasis, selected */
-  --field: var(--color-gray-500); /* input borders — needs 3:1 */
-  --ring: var(--color-brand-500); /* focus ring */
+   /* ---- lines ---- */
+   --line-subtle: var(--color-gray-100);
+   /* internal dividers */
+   --line: var(--color-gray-200);
+   /* card and panel edges */
+   --line-strong: var(--color-gray-300);
+   /* emphasis, selected */
+   --field: var(--color-gray-500);
+   /* input borders — needs 3:1 */
+   --ring: var(--color-brand-500);
+   /* focus ring */
 
-  /* ---- actions ---- */
-  --action: var(--color-brand-600);
-  --action-hover: var(--color-brand-700);
-  --action-active: var(--color-brand-800);
-  --action-subtle-hover: var(--color-brand-50); /* ghost hover */
-  --action-danger: var(--color-danger-600);
-  --action-danger-hover: var(--color-danger-700);
-  --action-accent: var(--color-accent-600);
-  --action-accent-hover: var(--color-accent-700);
+   /* ---- actions ---- */
+   --action: var(--color-brand-600);
+   --action-hover: var(--color-brand-700);
+   --action-active: var(--color-brand-800);
+   --action-subtle-hover: var(--color-brand-50);
+   /* ghost hover */
+   --action-danger: var(--color-danger-600);
+   --action-danger-hover: var(--color-danger-700);
+   --action-accent: var(--color-accent-600);
+   --action-accent-hover: var(--color-accent-700);
 
-  /* ---- status: text / surface / line ---- */
-  --success: var(--color-success-700);
-  --success-surface: var(--color-success-50);
-  --success-line: var(--color-success-200);
+   /* ---- status: text / surface / line ---- */
+   --success: var(--color-success-700);
+   --success-surface: var(--color-success-50);
+   --success-line: var(--color-success-200);
 
-  --warning: var(--color-warning-700);
-  --warning-surface: var(--color-warning-50);
-  --warning-line: var(--color-warning-200);
+   --warning: var(--color-warning-700);
+   --warning-surface: var(--color-warning-50);
+   --warning-line: var(--color-warning-200);
 
-  --danger: var(--color-danger-700);
-  --danger-surface: var(--color-danger-50);
-  --danger-line: var(--color-danger-200);
+   --danger: var(--color-danger-700);
+   --danger-surface: var(--color-danger-50);
+   --danger-line: var(--color-danger-200);
 
-  --info: var(--color-brand-700);
-  --info-surface: var(--color-brand-50);
-  --info-line: var(--color-brand-200);
+   --info: var(--color-brand-700);
+   --info-surface: var(--color-brand-50);
+   --info-line: var(--color-brand-200);
 
-  /* ---- tones ----------------------------------------------------------
+   /* ---- tones ----------------------------------------------------------
      One tone = the full expression of a colour role across the three
      button appearances. Nine slots per tone:
 
@@ -202,51 +248,51 @@
      to a light solid, so a literal name would become wrong.
      -------------------------------------------------------------------- */
 
-  /* primary */
-  --tone-primary-solid: var(--color-brand-600);
-  --tone-primary-solid-hover: var(--color-brand-700);
-  --tone-primary-on-solid: #ffffff;
-  --tone-primary-soft: var(--color-brand-50);
-  --tone-primary-soft-hover: var(--color-brand-100);
-  --tone-primary-soft-line: var(--color-brand-200);
-  --tone-primary-edge: var(--color-brand-600);
-  --tone-primary-edge-hover: var(--color-brand-50);
-  --tone-primary-fg: var(--color-brand-700);
+   /* primary */
+   --tone-primary-solid: var(--color-brand-600);
+   --tone-primary-solid-hover: var(--color-brand-700);
+   --tone-primary-on-solid: #ffffff;
+   --tone-primary-soft: var(--color-brand-50);
+   --tone-primary-soft-hover: var(--color-brand-100);
+   --tone-primary-soft-line: var(--color-brand-200);
+   --tone-primary-edge: var(--color-brand-600);
+   --tone-primary-edge-hover: var(--color-brand-50);
+   --tone-primary-fg: var(--color-brand-700);
 
-  /* neutral — the classic white-on-grey secondary button.
+   /* neutral — the classic white-on-grey secondary button.
      `soft` is the page surface rather than a grey tint, because white +
      grey border is the pattern this app already uses most. */
-  --tone-neutral-solid: var(--color-gray-950);
-  --tone-neutral-solid-hover: var(--color-gray-800);
-  --tone-neutral-on-solid: #ffffff;
-  --tone-neutral-soft: #ffffff;
-  --tone-neutral-soft-hover: var(--color-gray-50);
-  --tone-neutral-soft-line: var(--color-gray-300);
-  --tone-neutral-edge: var(--color-gray-950);
-  --tone-neutral-edge-hover: var(--color-gray-100);
-  --tone-neutral-fg: var(--color-gray-800);
+   --tone-neutral-solid: var(--color-gray-950);
+   --tone-neutral-solid-hover: var(--color-gray-800);
+   --tone-neutral-on-solid: #ffffff;
+   --tone-neutral-soft: #ffffff;
+   --tone-neutral-soft-hover: var(--color-gray-50);
+   --tone-neutral-soft-line: var(--color-gray-300);
+   --tone-neutral-edge: var(--color-gray-950);
+   --tone-neutral-edge-hover: var(--color-gray-100);
+   --tone-neutral-fg: var(--color-gray-800);
 
-  /* danger */
-  --tone-danger-solid: var(--color-danger-600);
-  --tone-danger-solid-hover: var(--color-danger-700);
-  --tone-danger-on-solid: #ffffff;
-  --tone-danger-soft: var(--color-danger-50);
-  --tone-danger-soft-hover: var(--color-danger-100);
-  --tone-danger-soft-line: var(--color-danger-200);
-  --tone-danger-edge: var(--color-danger-600);
-  --tone-danger-edge-hover: var(--color-danger-50);
-  --tone-danger-fg: var(--color-danger-700);
+   /* danger */
+   --tone-danger-solid: var(--color-danger-600);
+   --tone-danger-solid-hover: var(--color-danger-700);
+   --tone-danger-on-solid: #ffffff;
+   --tone-danger-soft: var(--color-danger-50);
+   --tone-danger-soft-hover: var(--color-danger-100);
+   --tone-danger-soft-line: var(--color-danger-200);
+   --tone-danger-edge: var(--color-danger-600);
+   --tone-danger-edge-hover: var(--color-danger-50);
+   --tone-danger-fg: var(--color-danger-700);
 
-  /* accent */
-  --tone-accent-solid: var(--color-accent-600);
-  --tone-accent-solid-hover: var(--color-accent-700);
-  --tone-accent-on-solid: #ffffff;
-  --tone-accent-soft: var(--color-accent-50);
-  --tone-accent-soft-hover: var(--color-accent-100);
-  --tone-accent-soft-line: var(--color-accent-200);
-  --tone-accent-edge: var(--color-accent-600);
-  --tone-accent-edge-hover: var(--color-accent-50);
-  --tone-accent-fg: var(--color-accent-700);
+   /* accent */
+   --tone-accent-solid: var(--color-accent-600);
+   --tone-accent-solid-hover: var(--color-accent-700);
+   --tone-accent-on-solid: #ffffff;
+   --tone-accent-soft: var(--color-accent-50);
+   --tone-accent-soft-hover: var(--color-accent-100);
+   --tone-accent-soft-line: var(--color-accent-200);
+   --tone-accent-edge: var(--color-accent-600);
+   --tone-accent-edge-hover: var(--color-accent-50);
+   --tone-accent-fg: var(--color-accent-700);
 }
 
 /* ==========================================================================
@@ -264,95 +310,95 @@
    ========================================================================== */
 
 [data-theme="dark"] {
-  --canvas: var(--color-gray-950);
-  --surface: var(--color-gray-900);
-  --surface-sunken: var(--color-gray-950);
-  --surface-raised: var(--color-gray-800);
-  --surface-inverse: var(--color-gray-50);
-  --surface-brand: var(--color-brand-600);
-  --surface-brand-subtle: var(--color-brand-950);
-  --surface-accent-subtle: var(--color-accent-950);
+   --canvas: var(--color-gray-950);
+   --surface: var(--color-gray-900);
+   --surface-sunken: var(--color-gray-950);
+   --surface-raised: var(--color-gray-800);
+   --surface-inverse: var(--color-gray-50);
+   --surface-brand: var(--color-brand-600);
+   --surface-brand-subtle: var(--color-brand-950);
+   --surface-accent-subtle: var(--color-accent-950);
 
-  --fg: var(--color-gray-50);
-  --fg-secondary: var(--color-gray-300);
-  --fg-muted: var(--color-gray-400);
-  --fg-subtle: var(--color-gray-600);
-  --fg-brand: var(--color-brand-400);
-  --fg-on-brand: #ffffff;
-  --fg-inverse: var(--color-gray-950);
+   --fg: var(--color-gray-50);
+   --fg-secondary: var(--color-gray-300);
+   --fg-muted: var(--color-gray-400);
+   --fg-subtle: var(--color-gray-600);
+   --fg-brand: var(--color-brand-400);
+   --fg-on-brand: #ffffff;
+   --fg-inverse: var(--color-gray-950);
 
-  --line-subtle: var(--color-gray-800);
-  --line: var(--color-gray-700);
-  --line-strong: var(--color-gray-600);
-  --field: var(--color-gray-500);
-  --ring: var(--color-brand-400);
+   --line-subtle: var(--color-gray-800);
+   --line: var(--color-gray-700);
+   --line-strong: var(--color-gray-600);
+   --field: var(--color-gray-500);
+   --ring: var(--color-brand-400);
 
-  --action: var(--color-brand-600);
-  --action-hover: var(--color-brand-500);
-  --action-active: var(--color-brand-400);
-  --action-subtle-hover: var(--color-brand-950);
-  --action-danger: var(--color-danger-600);
-  --action-danger-hover: var(--color-danger-500);
-  --action-accent: var(--color-accent-600);
-  --action-accent-hover: var(--color-accent-500);
+   --action: var(--color-brand-600);
+   --action-hover: var(--color-brand-500);
+   --action-active: var(--color-brand-400);
+   --action-subtle-hover: var(--color-brand-950);
+   --action-danger: var(--color-danger-600);
+   --action-danger-hover: var(--color-danger-500);
+   --action-accent: var(--color-accent-600);
+   --action-accent-hover: var(--color-accent-500);
 
-  --success: var(--color-success-300);
-  --success-surface: var(--color-success-950);
-  --success-line: var(--color-success-800);
+   --success: var(--color-success-300);
+   --success-surface: var(--color-success-950);
+   --success-line: var(--color-success-800);
 
-  --warning: var(--color-warning-300);
-  --warning-surface: var(--color-warning-950);
-  --warning-line: var(--color-warning-800);
+   --warning: var(--color-warning-300);
+   --warning-surface: var(--color-warning-950);
+   --warning-line: var(--color-warning-800);
 
-  --danger: var(--color-danger-300);
-  --danger-surface: var(--color-danger-950);
-  --danger-line: var(--color-danger-800);
+   --danger: var(--color-danger-300);
+   --danger-surface: var(--color-danger-950);
+   --danger-line: var(--color-danger-800);
 
-  --info: var(--color-brand-300);
-  --info-surface: var(--color-brand-950);
-  --info-line: var(--color-brand-800);
+   --info: var(--color-brand-300);
+   --info-surface: var(--color-brand-950);
+   --info-line: var(--color-brand-800);
 
-  /* ---- tones, dark ---- */
-  --tone-primary-solid: var(--color-brand-600);
-  --tone-primary-solid-hover: var(--color-brand-500);
-  --tone-primary-on-solid: #ffffff;
-  --tone-primary-soft: var(--color-brand-950);
-  --tone-primary-soft-hover: var(--color-brand-900);
-  --tone-primary-soft-line: var(--color-brand-800);
-  --tone-primary-edge: var(--color-brand-400);
-  --tone-primary-edge-hover: var(--color-brand-950);
-  --tone-primary-fg: var(--color-brand-300);
+   /* ---- tones, dark ---- */
+   --tone-primary-solid: var(--color-brand-600);
+   --tone-primary-solid-hover: var(--color-brand-500);
+   --tone-primary-on-solid: #ffffff;
+   --tone-primary-soft: var(--color-brand-950);
+   --tone-primary-soft-hover: var(--color-brand-900);
+   --tone-primary-soft-line: var(--color-brand-800);
+   --tone-primary-edge: var(--color-brand-400);
+   --tone-primary-edge-hover: var(--color-brand-950);
+   --tone-primary-fg: var(--color-brand-300);
 
-  /* neutral inverts — a "black" button would vanish on a dark ground */
-  --tone-neutral-solid: var(--color-gray-50);
-  --tone-neutral-solid-hover: var(--color-gray-200);
-  --tone-neutral-on-solid: var(--color-gray-950);
-  --tone-neutral-soft: var(--color-gray-900);
-  --tone-neutral-soft-hover: var(--color-gray-800);
-  --tone-neutral-soft-line: var(--color-gray-700);
-  --tone-neutral-edge: var(--color-gray-300);
-  --tone-neutral-edge-hover: var(--color-gray-800);
-  --tone-neutral-fg: var(--color-gray-200);
+   /* neutral inverts — a "black" button would vanish on a dark ground */
+   --tone-neutral-solid: var(--color-gray-50);
+   --tone-neutral-solid-hover: var(--color-gray-200);
+   --tone-neutral-on-solid: var(--color-gray-950);
+   --tone-neutral-soft: var(--color-gray-900);
+   --tone-neutral-soft-hover: var(--color-gray-800);
+   --tone-neutral-soft-line: var(--color-gray-700);
+   --tone-neutral-edge: var(--color-gray-300);
+   --tone-neutral-edge-hover: var(--color-gray-800);
+   --tone-neutral-fg: var(--color-gray-200);
 
-  --tone-danger-solid: var(--color-danger-600);
-  --tone-danger-solid-hover: var(--color-danger-500);
-  --tone-danger-on-solid: #ffffff;
-  --tone-danger-soft: var(--color-danger-950);
-  --tone-danger-soft-hover: var(--color-danger-900);
-  --tone-danger-soft-line: var(--color-danger-800);
-  --tone-danger-edge: var(--color-danger-400);
-  --tone-danger-edge-hover: var(--color-danger-950);
-  --tone-danger-fg: var(--color-danger-300);
+   --tone-danger-solid: var(--color-danger-600);
+   --tone-danger-solid-hover: var(--color-danger-500);
+   --tone-danger-on-solid: #ffffff;
+   --tone-danger-soft: var(--color-danger-950);
+   --tone-danger-soft-hover: var(--color-danger-900);
+   --tone-danger-soft-line: var(--color-danger-800);
+   --tone-danger-edge: var(--color-danger-400);
+   --tone-danger-edge-hover: var(--color-danger-950);
+   --tone-danger-fg: var(--color-danger-300);
 
-  --tone-accent-solid: var(--color-accent-600);
-  --tone-accent-solid-hover: var(--color-accent-500);
-  --tone-accent-on-solid: #ffffff;
-  --tone-accent-soft: var(--color-accent-950);
-  --tone-accent-soft-hover: var(--color-accent-900);
-  --tone-accent-soft-line: var(--color-accent-800);
-  --tone-accent-edge: var(--color-accent-400);
-  --tone-accent-edge-hover: var(--color-accent-950);
-  --tone-accent-fg: var(--color-accent-300);
+   --tone-accent-solid: var(--color-accent-600);
+   --tone-accent-solid-hover: var(--color-accent-500);
+   --tone-accent-on-solid: #ffffff;
+   --tone-accent-soft: var(--color-accent-950);
+   --tone-accent-soft-hover: var(--color-accent-900);
+   --tone-accent-soft-line: var(--color-accent-800);
+   --tone-accent-edge: var(--color-accent-400);
+   --tone-accent-edge-hover: var(--color-accent-950);
+   --tone-accent-fg: var(--color-accent-300);
 }
 
 /* ==========================================================================
@@ -362,92 +408,92 @@
    ========================================================================== */
 
 @theme inline {
-  --color-canvas: var(--canvas);
-  --color-surface: var(--surface);
-  --color-surface-sunken: var(--surface-sunken);
-  --color-surface-raised: var(--surface-raised);
-  --color-surface-inverse: var(--surface-inverse);
-  --color-surface-brand: var(--surface-brand);
-  --color-surface-brand-subtle: var(--surface-brand-subtle);
-  --color-surface-accent-subtle: var(--surface-accent-subtle);
+   --color-canvas: var(--canvas);
+   --color-surface: var(--surface);
+   --color-surface-sunken: var(--surface-sunken);
+   --color-surface-raised: var(--surface-raised);
+   --color-surface-inverse: var(--surface-inverse);
+   --color-surface-brand: var(--surface-brand);
+   --color-surface-brand-subtle: var(--surface-brand-subtle);
+   --color-surface-accent-subtle: var(--surface-accent-subtle);
 
-  --color-fg: var(--fg);
-  --color-fg-secondary: var(--fg-secondary);
-  --color-fg-muted: var(--fg-muted);
-  --color-fg-subtle: var(--fg-subtle);
-  --color-fg-brand: var(--fg-brand);
-  --color-fg-on-brand: var(--fg-on-brand);
-  --color-fg-inverse: var(--fg-inverse);
+   --color-fg: var(--fg);
+   --color-fg-secondary: var(--fg-secondary);
+   --color-fg-muted: var(--fg-muted);
+   --color-fg-subtle: var(--fg-subtle);
+   --color-fg-brand: var(--fg-brand);
+   --color-fg-on-brand: var(--fg-on-brand);
+   --color-fg-inverse: var(--fg-inverse);
 
-  --color-line-subtle: var(--line-subtle);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-field: var(--field);
-  --color-ring: var(--ring);
+   --color-line-subtle: var(--line-subtle);
+   --color-line: var(--line);
+   --color-line-strong: var(--line-strong);
+   --color-field: var(--field);
+   --color-ring: var(--ring);
 
-  --color-action: var(--action);
-  --color-action-hover: var(--action-hover);
-  --color-action-active: var(--action-active);
-  --color-action-subtle-hover: var(--action-subtle-hover);
-  --color-action-danger: var(--action-danger);
-  --color-action-danger-hover: var(--action-danger-hover);
-  --color-action-accent: var(--action-accent);
-  --color-action-accent-hover: var(--action-accent-hover);
+   --color-action: var(--action);
+   --color-action-hover: var(--action-hover);
+   --color-action-active: var(--action-active);
+   --color-action-subtle-hover: var(--action-subtle-hover);
+   --color-action-danger: var(--action-danger);
+   --color-action-danger-hover: var(--action-danger-hover);
+   --color-action-accent: var(--action-accent);
+   --color-action-accent-hover: var(--action-accent-hover);
 
-  --color-success: var(--success);
-  --color-success-surface: var(--success-surface);
-  --color-success-line: var(--success-line);
+   --color-success: var(--success);
+   --color-success-surface: var(--success-surface);
+   --color-success-line: var(--success-line);
 
-  --color-warning: var(--warning);
-  --color-warning-surface: var(--warning-surface);
-  --color-warning-line: var(--warning-line);
+   --color-warning: var(--warning);
+   --color-warning-surface: var(--warning-surface);
+   --color-warning-line: var(--warning-line);
 
-  --color-danger: var(--danger);
-  --color-danger-surface: var(--danger-surface);
-  --color-danger-line: var(--danger-line);
+   --color-danger: var(--danger);
+   --color-danger-surface: var(--danger-surface);
+   --color-danger-line: var(--danger-line);
 
-  --color-info: var(--info);
-  --color-info-surface: var(--info-surface);
-  --color-info-line: var(--info-line);
+   --color-info: var(--info);
+   --color-info-surface: var(--info-surface);
+   --color-info-line: var(--info-line);
 
-  /* tones */
-  --color-primary-solid: var(--tone-primary-solid);
-  --color-primary-solid-hover: var(--tone-primary-solid-hover);
-  --color-primary-on-solid: var(--tone-primary-on-solid);
-  --color-primary-soft: var(--tone-primary-soft);
-  --color-primary-soft-hover: var(--tone-primary-soft-hover);
-  --color-primary-soft-line: var(--tone-primary-soft-line);
-  --color-primary-edge: var(--tone-primary-edge);
-  --color-primary-edge-hover: var(--tone-primary-edge-hover);
-  --color-primary-fg: var(--tone-primary-fg);
+   /* tones */
+   --color-primary-solid: var(--tone-primary-solid);
+   --color-primary-solid-hover: var(--tone-primary-solid-hover);
+   --color-primary-on-solid: var(--tone-primary-on-solid);
+   --color-primary-soft: var(--tone-primary-soft);
+   --color-primary-soft-hover: var(--tone-primary-soft-hover);
+   --color-primary-soft-line: var(--tone-primary-soft-line);
+   --color-primary-edge: var(--tone-primary-edge);
+   --color-primary-edge-hover: var(--tone-primary-edge-hover);
+   --color-primary-fg: var(--tone-primary-fg);
 
-  --color-neutral-solid: var(--tone-neutral-solid);
-  --color-neutral-solid-hover: var(--tone-neutral-solid-hover);
-  --color-neutral-on-solid: var(--tone-neutral-on-solid);
-  --color-neutral-soft: var(--tone-neutral-soft);
-  --color-neutral-soft-hover: var(--tone-neutral-soft-hover);
-  --color-neutral-soft-line: var(--tone-neutral-soft-line);
-  --color-neutral-edge: var(--tone-neutral-edge);
-  --color-neutral-edge-hover: var(--tone-neutral-edge-hover);
-  --color-neutral-fg: var(--tone-neutral-fg);
+   --color-neutral-solid: var(--tone-neutral-solid);
+   --color-neutral-solid-hover: var(--tone-neutral-solid-hover);
+   --color-neutral-on-solid: var(--tone-neutral-on-solid);
+   --color-neutral-soft: var(--tone-neutral-soft);
+   --color-neutral-soft-hover: var(--tone-neutral-soft-hover);
+   --color-neutral-soft-line: var(--tone-neutral-soft-line);
+   --color-neutral-edge: var(--tone-neutral-edge);
+   --color-neutral-edge-hover: var(--tone-neutral-edge-hover);
+   --color-neutral-fg: var(--tone-neutral-fg);
 
-  --color-danger-solid: var(--tone-danger-solid);
-  --color-danger-solid-hover: var(--tone-danger-solid-hover);
-  --color-danger-on-solid: var(--tone-danger-on-solid);
-  --color-danger-soft: var(--tone-danger-soft);
-  --color-danger-soft-hover: var(--tone-danger-soft-hover);
-  --color-danger-soft-line: var(--tone-danger-soft-line);
-  --color-danger-edge: var(--tone-danger-edge);
-  --color-danger-edge-hover: var(--tone-danger-edge-hover);
-  --color-danger-fg: var(--tone-danger-fg);
+   --color-danger-solid: var(--tone-danger-solid);
+   --color-danger-solid-hover: var(--tone-danger-solid-hover);
+   --color-danger-on-solid: var(--tone-danger-on-solid);
+   --color-danger-soft: var(--tone-danger-soft);
+   --color-danger-soft-hover: var(--tone-danger-soft-hover);
+   --color-danger-soft-line: var(--tone-danger-soft-line);
+   --color-danger-edge: var(--tone-danger-edge);
+   --color-danger-edge-hover: var(--tone-danger-edge-hover);
+   --color-danger-fg: var(--tone-danger-fg);
 
-  --color-accent-solid: var(--tone-accent-solid);
-  --color-accent-solid-hover: var(--tone-accent-solid-hover);
-  --color-accent-on-solid: var(--tone-accent-on-solid);
-  --color-accent-soft: var(--tone-accent-soft);
-  --color-accent-soft-hover: var(--tone-accent-soft-hover);
-  --color-accent-soft-line: var(--tone-accent-soft-line);
-  --color-accent-edge: var(--tone-accent-edge);
-  --color-accent-edge-hover: var(--tone-accent-edge-hover);
-  --color-accent-fg: var(--tone-accent-fg);
+   --color-accent-solid: var(--tone-accent-solid);
+   --color-accent-solid-hover: var(--tone-accent-solid-hover);
+   --color-accent-on-solid: var(--tone-accent-on-solid);
+   --color-accent-soft: var(--tone-accent-soft);
+   --color-accent-soft-hover: var(--tone-accent-soft-hover);
+   --color-accent-soft-line: var(--tone-accent-soft-line);
+   --color-accent-edge: var(--tone-accent-edge);
+   --color-accent-edge-hover: var(--tone-accent-edge-hover);
+   --color-accent-fg: var(--tone-accent-fg);
 }

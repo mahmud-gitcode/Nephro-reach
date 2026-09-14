@@ -28,7 +28,6 @@ import {
 } from "react-icons/fa6";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { Badge, Button, Card } from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -325,10 +324,10 @@ function Sparkline({
   const range = max - min || 1;
   const strokeColor =
     status === "In Range"
-      ? "#16A34A"
+      ? "var(--color-success-600)"
       : status === "High"
-      ? "#DC2626"
-      : "#EA580C";
+      ? "var(--color-danger-600)"
+      : "var(--color-warning-600)";
 
   const points = data
     .map((val, idx) => {
@@ -366,20 +365,20 @@ function StatusBadge({
 }) {
   if (status === "In Range") {
     return (
-      <span className="inline-flex items-center rounded-md bg-[#DCFCE7] px-2.5 py-1 text-xs font-semibold text-[#15803D]">
+      <span className="inline-flex items-center rounded-md bg-success-100 px-2.5 py-1 text-xs font-semibold text-success">
         {label || "In Range"}
       </span>
     );
   }
   if (status === "High") {
     return (
-      <span className="inline-flex items-center rounded-md bg-[#FEE2E2] px-2.5 py-1 text-xs font-semibold text-[#DC2626]">
+      <span className="inline-flex items-center rounded-md bg-danger-100 px-2.5 py-1 text-xs font-semibold text-danger">
         {label || "High"}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-md bg-[#FFEDD5] px-2.5 py-1 text-xs font-semibold text-[#C2410C]">
+    <span className="inline-flex items-center rounded-md bg-warning-100 px-2.5 py-1 text-xs font-semibold text-warning-800">
       {label || "Low"}
     </span>
   );
@@ -403,12 +402,12 @@ function TrendLineCard({
   latestLabel?: string;
 }) {
   const themeMap = {
-    purple: { stroke: "#8B5CF6" },
-    green: { stroke: "#10B981" },
-    orange: { stroke: "#F59E0B" },
-    blue: { stroke: "#3B82F6" },
-    rose: { stroke: "#F43F5E" },
-    teal: { stroke: "#14B8A6" },
+    purple: { stroke: "var(--color-accent-500)" },
+    green: { stroke: "var(--color-success-600)" },
+    orange: { stroke: "var(--color-warning-500)" },
+    blue: { stroke: "var(--color-brand-500)" },
+    rose: { stroke: "var(--color-danger-500)" },
+    teal: { stroke: "var(--color-success-400)" },
   };
 
   const theme = themeMap[colorTheme] || themeMap.purple;
@@ -482,7 +481,7 @@ function TrendLineCard({
                 y1={y}
                 x2={width - paddingRight}
                 y2={y}
-                stroke="#F1F5F9"
+                stroke="var(--color-gray-100)"
                 strokeWidth="1"
                 strokeDasharray="2 2"
               />
@@ -516,7 +515,7 @@ function TrendLineCard({
             x={paddingLeft}
             y={height - 3}
             textAnchor="start"
-            className="fill-slate-400 text-xs font-medium"
+            className="fill-gray-400 text-xs font-medium"
           >
             {dates[0]}
           </text>
@@ -524,7 +523,7 @@ function TrendLineCard({
             x={width - paddingRight}
             y={height - 3}
             textAnchor="end"
-            className="fill-slate-400 text-xs font-medium"
+            className="fill-gray-400 text-xs font-medium"
           >
             {dates[dates.length - 1]}
           </text>
@@ -708,7 +707,7 @@ export default function MyLabsPage() {
       {/* 1. Top KPI Summary Cards */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Card 1: Latest Lab Date */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-fg-brand">
             <FaCalendarDays className="h-5 w-5" />
           </div>
@@ -723,7 +722,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 2: Values In Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
             <FaCircleCheck className="h-5 w-5" />
           </div>
@@ -741,7 +740,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 3: Values Out of Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-surface text-warning">
             <FaTriangleExclamation className="h-5 w-5" />
           </div>
@@ -759,7 +758,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 4: Trending Up */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
             <FaArrowTrendUp className="h-5 w-5" />
           </div>
@@ -772,7 +771,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 5: Trending Down */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[#E2E8F0] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-surface text-danger">
             <FaArrowTrendDown className="h-5 w-5" />
           </div>
@@ -794,7 +793,7 @@ export default function MyLabsPage() {
             {/* Left Controls Group: Tab Switcher + Category Filter */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Segmented Pill Tab Switcher */}
-              <div className="inline-flex items-center rounded-xl bg-[#F1F5F9] p-1 border border-line/60">
+              <div className="inline-flex items-center rounded-xl bg-[var(--color-gray-100)] p-1 border border-line/60">
                 <button
                   type="button"
                   onClick={() => setActiveTab("overview")}
@@ -887,10 +886,10 @@ export default function MyLabsPage() {
 
           {/* TAB 1: OVERVIEW & COMPARE VIEW */}
           {activeTab === "overview" && (
-            <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-surface">
+            <div className="overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-[#F8FAFC] text-sm font-semibold text-fg-muted border-b border-line">
+                  <thead className="bg-[var(--color-gray-50)] text-sm font-semibold text-fg-muted border-b border-line">
                     <tr>
                       <th className="px-4 py-3 min-w-[200px]">
                         {l?.overview?.headers?.test || "Test"}
@@ -970,9 +969,9 @@ export default function MyLabsPage() {
                     {filteredCategories.map((category) => (
                       <React.Fragment key={category.id}>
                         {/* Category Header Row */}
-                        <tr className="bg-[#F1F5FA]">
+                        <tr className="bg-[var(--color-gray-100)]">
                           <td colSpan={7} className="px-4 py-2.5">
-                            <div className="flex items-center gap-2 font-bold text-xs text-[#06265B] tracking-wider uppercase">
+                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--color-brand-900)] tracking-wider uppercase">
                               <category.icon className="h-4.5 w-4.5 fill-current text-fg-brand shrink-0" />
                               {category.displayName}
                             </div>
@@ -1049,7 +1048,7 @@ export default function MyLabsPage() {
                   <div key={category.id} className="space-y-3">
                     <div className="flex items-center gap-2 border-b border-line pb-2">
                       <category.icon className="h-4.5 w-4.5 fill-current text-fg-brand shrink-0" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#06265B]">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-900)]">
                         {category.displayName} ({category.tests.length}{" "}
                         {l?.trends?.testsCount || "TESTS"})
                       </h3>
@@ -1462,7 +1461,7 @@ export default function MyLabsPage() {
                                 key={gIdx}
                                 className="rounded-lg border border-line overflow-hidden"
                               >
-                                <div className="bg-[#F1F5FA] px-3.5 py-2 text-xs font-bold text-[#06265B] tracking-wider uppercase border-b border-line">
+                                <div className="bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold text-[var(--color-brand-900)] tracking-wider uppercase border-b border-line">
                                   {group.category}
                                 </div>
                                 <table className="w-full text-left text-xs">
@@ -1536,7 +1535,7 @@ export default function MyLabsPage() {
         {/* Right Sidebar Column */}
         <div className="space-y-6">
           {/* Card 1: Latest Lab Summary */}
-          <div className="rounded-xl border border-[#E2E8F0] bg-surface p-4 space-y-4">
+          <div className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-line-subtle pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-fg-secondary flex items-center gap-1.5">
                 {l?.sidebar?.latestSummary?.title || "LATEST LAB SUMMARY"}
@@ -1587,7 +1586,7 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 2: Lab Categories */}
-          <div className="rounded-xl border border-[#E2E8F0] bg-surface p-4 space-y-3">
+          <div className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-4 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-fg-secondary pb-2 border-b border-line-subtle">
               {l?.sidebar?.categories?.title || "LAB CATEGORIES"}
             </h2>

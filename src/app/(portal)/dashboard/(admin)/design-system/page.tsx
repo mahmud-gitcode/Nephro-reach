@@ -7,10 +7,13 @@ import {
   Check,
   Copy,
   Droplet,
+  Frown,
   Info,
+  Meh,
   Pencil,
   Plus,
   Search,
+  Smile,
   Trash2,
   TriangleAlert,
   X,
@@ -996,6 +999,23 @@ export default function DesignSystemPage() {
                     <RadioCard value="good" title="Good" description="Mild tiredness" icon=":)" />
                     <RadioCard value="okay" title="Okay" description="Some cramping" icon=":|" />
                     <RadioCard value="tired" title="Tired" description="Needed a long rest" icon="-_-" />
+                  </RadioGroup>
+                </div>
+              </Row>
+
+              <Row label="Tiles — a short set shown side by side">
+                <div className="w-full max-w-md">
+                  <RadioGroup
+                    label="Mood"
+                    orientation="horizontal"
+                    value={mood}
+                    onChange={setMood}
+                    className="grid grid-cols-4 gap-inline-md"
+                  >
+                    <RadioCard layout="tile" value="great" title="Great" icon={<Smile />} />
+                    <RadioCard layout="tile" value="good" title="Good" icon={<Smile />} />
+                    <RadioCard layout="tile" value="okay" title="Okay" icon={<Meh />} />
+                    <RadioCard layout="tile" value="tired" title="Tired" icon={<Frown />} />
                   </RadioGroup>
                 </div>
               </Row>

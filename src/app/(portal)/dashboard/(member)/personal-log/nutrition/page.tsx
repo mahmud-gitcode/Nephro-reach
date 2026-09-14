@@ -11,10 +11,10 @@ import {
   Target,
   Trash2,
   Utensils,
-  X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { FormField, Input, Modal } from "@/components/ui";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -203,7 +203,7 @@ function statusForPercent(percent: number) {
 
 function ProgressBar({ value, className }: { value: number; className: string }) {
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+    <div className="h-2 overflow-hidden rounded-full bg-line">
       <div
         className={`h-full rounded-full transition-[width] duration-300 ${className}`}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
@@ -226,7 +226,7 @@ interface MetricItem {
 
 function KeyMetricCard({ metric }: { metric: MetricItem }) {
   return (
-    <article className="rounded-[10px] border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-[10px] border border-line bg-surface p-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${metric.iconBg}`}
@@ -234,27 +234,27 @@ function KeyMetricCard({ metric }: { metric: MetricItem }) {
           <metric.icon className={`h-5 w-5 ${metric.iconClass}`} />
         </div>
         {metric.value && (
-          <p className="text-xl font-semibold leading-7 tracking-[0.1px] text-slate-950">
+          <p className="text-xl font-semibold leading-7 tracking-[0.1px] text-fg">
             {metric.value}
           </p>
         )}
       </div>
-      <h2 className="mt-3 text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+      <h2 className="mt-3 text-lg font-medium leading-7 tracking-[0.09px] text-fg">
         {metric.title}
       </h2>
-      <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-slate-500">
+      <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-fg-muted">
         {metric.description}
       </p>
       {metric.progress !== undefined && (
         <div className="mt-3">
-          <ProgressBar value={metric.progress} className="bg-blue-600" />
+          <ProgressBar value={metric.progress} className="bg-action" />
         </div>
       )}
       {metric.footer && (
         <button
           type="button"
           onClick={metric.onFooterClick}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-fg-brand hover:text-fg-brand cursor-pointer"
         >
           {metric.footer}
           <ChevronRight className="h-4 w-4" />
@@ -277,24 +277,24 @@ function NutrientOverview({
   const statusStyles = {
     within: {
       label: n?.nutrientOverview?.statuses?.within || "Within Goal",
-      dot: "bg-emerald-500",
-      text: "text-emerald-600",
-      track: "bg-emerald-500",
-      bg: "bg-emerald-50",
+      dot: "bg-success-600",
+      text: "text-success",
+      track: "bg-success-600",
+      bg: "bg-success-surface",
     },
     near: {
       label: n?.nutrientOverview?.statuses?.near || "Near Limit",
-      dot: "bg-amber-500",
-      text: "text-amber-600",
-      track: "bg-amber-500",
-      bg: "bg-amber-50",
+      dot: "bg-warning-500",
+      text: "text-warning",
+      track: "bg-warning-500",
+      bg: "bg-warning-surface",
     },
     over: {
       label: n?.nutrientOverview?.statuses?.over || "Over Limit",
-      dot: "bg-red-500",
-      text: "text-red-600",
-      track: "bg-red-500",
-      bg: "bg-red-50",
+      dot: "bg-danger-solid",
+      text: "text-danger",
+      track: "bg-danger-solid",
+      bg: "bg-danger-surface",
     },
   };
 
@@ -310,12 +310,12 @@ function NutrientOverview({
   };
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+        <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-fg">
           {n?.nutrientOverview?.title || "Nutrient Overview"}
         </h2>
-        <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-fg-muted">
           {Object.entries(statusStyles).map(([key, style]) => (
             <span key={key} className="inline-flex items-center gap-1.5">
               <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
@@ -336,14 +336,14 @@ function NutrientOverview({
           return (
             <article
               key={key}
-              className="rounded-xl border border-[#E9EEF4] bg-white p-3.5"
+              className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+                  <h3 className="text-base font-medium leading-6 tracking-[0.08px] text-fg">
                     {name}
                   </h3>
-                  <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-slate-500">
+                  <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-fg-muted">
                     {formatNumber(consumed)} / {formatNumber(goal)} {NUTRIENT_UNITS[key]}
                   </p>
                 </div>
@@ -386,30 +386,30 @@ function MealTable({
   })).filter((meal) => meal.foods.length > 0);
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">
+          <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-fg">
             {n?.mealsTable?.title || "Today's Meals"}
           </h2>
-          <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-slate-500">
+          <p className="mt-1 text-sm font-medium leading-5 tracking-[0.07px] text-fg-muted">
             {n?.mealsTable?.subtitle || "Review meals and key kidney-related nutrients."}
           </p>
         </div>
         <button
           type="button"
           onClick={() => onAddFood()}
-          className="flex h-11 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-sm font-bold tracking-[0.07px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
+          className="flex h-11 shrink-0 items-center justify-center gap-2 rounded bg-action px-4 text-sm font-bold tracking-[0.07px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover cursor-pointer"
         >
           <Plus className="h-5 w-5" />
           {n?.mealsTable?.addFood || "Add Food"}
         </button>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-[#E9EEF4] bg-white">
+      <div className="mt-3 overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
         <div className="overflow-x-auto">
           <table className="min-w-[760px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-[0.06px] text-slate-500">
+            <thead className="bg-surface-sunken text-xs font-semibold uppercase tracking-[0.06px] text-fg-muted">
               <tr>
                 <th className="px-4 py-3">{n?.mealsTable?.headers?.food || "Food"}</th>
                 <th className="px-4 py-3">{n?.mealsTable?.headers?.portion || "Portion"}</th>
@@ -422,14 +422,14 @@ function MealTable({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-subtle">
               {mealsWithFood.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center">
-                    <p className="text-sm font-semibold text-slate-600">
+                    <p className="text-sm font-semibold text-fg-muted">
                       {isEs ? "Aún no hay comidas registradas hoy." : "No meals logged yet today."}
                     </p>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-1 text-sm text-fg-subtle">
                       {isEs
                         ? "Usa Agregar Alimento para empezar."
                         : "Use Add Food to get started."}
@@ -445,22 +445,22 @@ function MealTable({
 
                   return (
                     <React.Fragment key={meal.key}>
-                      <tr className="bg-[#F8FAFC]">
+                      <tr className="bg-[var(--color-gray-50)]">
                         <td colSpan={7} className="px-4 py-3">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="inline-flex items-center gap-2 text-base font-medium text-slate-950">
-                              <Utensils className="h-5 w-5 text-blue-600" />
+                            <span className="inline-flex items-center gap-2 text-base font-medium text-fg">
+                              <Utensils className="h-5 w-5 text-fg-brand" />
                               {meal.label}
                             </span>
-                            <span className="text-sm font-medium text-slate-500">
+                            <span className="text-sm font-medium text-fg-muted">
                               {formatNumber(mealCalories)} kcal
                             </span>
                           </div>
                         </td>
                       </tr>
                       {meal.foods.map((food) => (
-                        <tr key={food.id} className="text-slate-700">
-                          <td className="px-4 py-3 font-medium text-slate-950">{food.name}</td>
+                        <tr key={food.id} className="text-fg-secondary">
+                          <td className="px-4 py-3 font-medium text-fg">{food.name}</td>
                           <td className="px-4 py-3">{food.portion || "—"}</td>
                           <td className="px-4 py-3">{formatNumber(food.calories)}</td>
                           <td className="px-4 py-3">{formatNumber(food.sodium)} mg</td>
@@ -470,7 +470,7 @@ function MealTable({
                             <button
                               type="button"
                               onClick={() => onRemoveFood(food.id)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
                               aria-label={
                                 isEs ? `Eliminar ${food.name}` : `Remove ${food.name}`
                               }
@@ -493,7 +493,7 @@ function MealTable({
       <button
         type="button"
         onClick={() => onAddFood()}
-        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold tracking-[0.08px] text-blue-600 transition-colors hover:bg-white cursor-pointer"
+        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded border border-line bg-[var(--color-gray-50)] px-4 text-base font-bold tracking-[0.08px] text-fg-brand transition-colors hover:bg-surface cursor-pointer"
       >
         <Plus className="h-5 w-5" />
         {n?.mealsTable?.logMeal || "Log Meal"}
@@ -519,23 +519,23 @@ function FluidTracker({
   const filledDrops = Math.min(7, Math.round((percent / 100) * 7));
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
-      <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+      <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-fg">
         {n?.fluidTracker?.title || "Fluid Tracker"}
       </h2>
-      <div className="mt-3 rounded-xl border border-[#E9EEF4] bg-white p-3.5">
+      <div className="mt-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[32px] font-semibold leading-none text-slate-950">
+            <p className="text-[32px] font-semibold leading-none text-fg">
               {formatNumber(fluidMl)} ml
             </p>
-            <p className="mt-1 text-sm font-medium leading-5 text-slate-500">
+            <p className="mt-1 text-sm font-medium leading-5 text-fg-muted">
               of {formatNumber(goalMl)} ml
             </p>
           </div>
           <p
             className={`text-xl font-semibold ${
-              percent >= 100 ? "text-red-600" : "text-blue-600"
+              percent >= 100 ? "text-danger" : "text-fg-brand"
             }`}
           >
             {percent}%
@@ -544,7 +544,7 @@ function FluidTracker({
         <div className="mt-4">
           <ProgressBar
             value={percent}
-            className={percent >= 100 ? "bg-red-500" : "bg-blue-600"}
+            className={percent >= 100 ? "bg-danger-solid" : "bg-action"}
           />
         </div>
         <div className="mt-4 grid grid-cols-7 gap-1.5">
@@ -553,8 +553,8 @@ function FluidTracker({
               key={index}
               className={`flex h-8 items-center justify-center rounded-lg ${
                 index < filledDrops
-                  ? "bg-blue-100 text-blue-600"
-                  : "bg-slate-100 text-slate-300"
+                  ? "bg-brand-100 text-fg-brand"
+                  : "bg-surface-sunken text-fg-subtle"
               }`}
             >
               <Droplet className="h-4 w-4" />
@@ -564,7 +564,7 @@ function FluidTracker({
         <button
           type="button"
           onClick={onAddWater}
-          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded bg-blue-600 px-4 text-sm font-bold text-white transition-colors hover:bg-blue-700 cursor-pointer"
+          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded bg-action px-4 text-sm font-bold text-white transition-colors hover:bg-action-hover cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           {n?.fluidTracker?.addWater || "Add Water"}
@@ -587,9 +587,9 @@ function ResourceCard() {
   const items = n?.resources?.items || defaultResources;
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+        <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-fg">
           {n?.resources?.title || "Resources"}
         </h2>
       </div>
@@ -598,15 +598,15 @@ function ResourceCard() {
           <button
             key={resource}
             type="button"
-            className="flex w-full items-center gap-3 rounded-xl border border-[#E9EEF4] bg-white p-3 text-left transition-colors hover:border-blue-200 hover:bg-blue-50 cursor-pointer"
+            className="flex w-full items-center gap-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3 text-left transition-colors hover:border-primary-soft-line hover:bg-primary-soft cursor-pointer"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-fg-brand">
               <FileText className="h-5 w-5" />
             </span>
-            <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-slate-950">
+            <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-fg">
               {resource}
             </span>
-            <span className="rounded bg-slate-100 px-2 py-1 text-sm font-semibold text-slate-600">
+            <span className="rounded bg-surface-sunken px-2 py-1 text-sm font-semibold text-fg-muted">
               PDF
             </span>
           </button>
@@ -630,17 +630,17 @@ function TipsCard() {
   const items = n?.dietTips?.items || defaultTips;
 
   return (
-    <section className="rounded-[10px] border border-slate-200 bg-[#F1F5FA] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
+        <h2 className="text-lg font-medium leading-7 tracking-[0.09px] text-fg">
           {n?.dietTips?.title || "Diet Tips"}
         </h2>
       </div>
       <div className="mt-3 space-y-2">
         {items.map((tip: string) => (
-          <div key={tip} className="flex gap-2 rounded-xl border border-[#E9EEF4] bg-white p-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-            <p className="text-sm font-medium leading-5 text-slate-700">{tip}</p>
+          <div key={tip} className="flex gap-2 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+            <p className="text-sm font-medium leading-5 text-fg-secondary">{tip}</p>
           </div>
         ))}
       </div>
@@ -649,8 +649,10 @@ function TipsCard() {
 }
 
 const FIELD_CLASS =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
 
+/* All three modals on this page go through here, so swapping the shell for
+   <Modal> gives every one of them a focus trap, Escape and scroll lock. */
 function ModalShell({
   title,
   subtitle,
@@ -663,58 +665,42 @@ function ModalShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-      <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-            {subtitle ? (
-              <p className="mt-0.5 text-xs font-medium text-slate-500">{subtitle}</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
+    <Modal open onClose={onClose} size="wide" title={title} description={subtitle}>
+      {children}
+    </Modal>
   );
 }
 
 function NumberField({
-  id,
   label,
   unit,
   value,
   onChange,
 }: {
-  id: string;
   label: string;
   unit: string;
   value: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-xs font-bold text-slate-800">
-        {label} <span className="font-semibold text-slate-400">({unit})</span>
-      </label>
-      <input
-        id={id}
-        type="text"
-        inputMode="decimal"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="0"
-        className={FIELD_CLASS}
-      />
-    </div>
+    <FormField
+      label={
+        <>
+          {label} <span className="text-fg-muted">({unit})</span>
+        </>
+      }
+    >
+      {(props) => (
+        <Input
+          {...props}
+          type="text"
+          inputMode="decimal"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="0"
+        />
+      )}
+    </FormField>
   );
 }
 
@@ -788,13 +774,13 @@ function AddFoodModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         {error ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+          <p className="rounded-xl border border-danger-line bg-danger-surface p-3 text-xs font-semibold text-danger">
             {error}
           </p>
         ) : null}
 
         <div className="space-y-1.5">
-          <label htmlFor="food-meal" className="block text-xs font-bold text-slate-800">
+          <label htmlFor="food-meal" className="block text-xs font-bold text-fg-secondary">
             {isEs ? "Comida" : "Meal"}
           </label>
           <select
@@ -813,9 +799,9 @@ function AddFoodModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <label htmlFor="food-name" className="block text-xs font-bold text-slate-800">
+            <label htmlFor="food-name" className="block text-xs font-bold text-fg-secondary">
               {n?.mealsTable?.headers?.food || "Food"}{" "}
-              <span className="text-rose-500">*</span>
+              <span className="text-danger">*</span>
             </label>
             <input
               id="food-name"
@@ -827,7 +813,7 @@ function AddFoodModal({
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="food-portion" className="block text-xs font-bold text-slate-800">
+            <label htmlFor="food-portion" className="block text-xs font-bold text-fg-secondary">
               {n?.mealsTable?.headers?.portion || "Portion"}
             </label>
             <input
@@ -840,34 +826,30 @@ function AddFoodModal({
           </div>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+        <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
+          <p className="text-xs font-bold uppercase tracking-wider text-fg-muted">
             {isEs ? "Nutrientes Renales" : "Kidney Nutrients"}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <NumberField
-              id="food-calories"
               label={nutrientLabel("calories", "Calories")}
               unit={NUTRIENT_UNITS.calories}
               value={values.calories}
               onChange={(next) => setValue("calories", next)}
             />
             <NumberField
-              id="food-sodium"
               label={nutrientLabel("sodium", "Sodium")}
               unit={NUTRIENT_UNITS.sodium}
               value={values.sodium}
               onChange={(next) => setValue("sodium", next)}
             />
             <NumberField
-              id="food-potassium"
               label={nutrientLabel("potassium", "Potassium")}
               unit={NUTRIENT_UNITS.potassium}
               value={values.potassium}
               onChange={(next) => setValue("potassium", next)}
             />
             <NumberField
-              id="food-phosphorus"
               label={nutrientLabel("phosphorus", "Phosphorus")}
               unit={NUTRIENT_UNITS.phosphorus}
               value={values.phosphorus}
@@ -876,34 +858,30 @@ function AddFoodModal({
           </div>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+        <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
+          <p className="text-xs font-bold uppercase tracking-wider text-fg-muted">
             {isEs ? "Macronutrientes (opcional)" : "Macros (optional)"}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <NumberField
-              id="food-protein"
               label={nutrientLabel("protein", "Protein")}
               unit={NUTRIENT_UNITS.protein}
               value={values.protein}
               onChange={(next) => setValue("protein", next)}
             />
             <NumberField
-              id="food-carbs"
               label={nutrientLabel("carbs", "Carbs")}
               unit={NUTRIENT_UNITS.carbs}
               value={values.carbs}
               onChange={(next) => setValue("carbs", next)}
             />
             <NumberField
-              id="food-fats"
               label={nutrientLabel("fats", "Fats")}
               unit={NUTRIENT_UNITS.fats}
               value={values.fats}
               onChange={(next) => setValue("fats", next)}
             />
             <NumberField
-              id="food-fiber"
               label={nutrientLabel("fiber", "Fiber")}
               unit={NUTRIENT_UNITS.fiber}
               value={values.fiber}
@@ -912,17 +890,17 @@ function AddFoodModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-line-subtle pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            className="rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken cursor-pointer"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700 cursor-pointer"
+            className="rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover cursor-pointer"
           >
             {n?.mealsTable?.addFood || "Add Food"}
           </button>
@@ -988,7 +966,6 @@ function GoalsModal({
           {NUTRIENT_ORDER.map((key) => (
             <NumberField
               key={key}
-              id={`goal-${key}`}
               label={n?.nutrientOverview?.nutrients?.[key] || fallbackNames[key]}
               unit={NUTRIENT_UNITS[key]}
               value={draft[key]}
@@ -996,7 +973,6 @@ function GoalsModal({
             />
           ))}
           <NumberField
-            id="goal-fluid"
             label={n?.keyMetrics?.fluids?.title || "Fluids"}
             unit="ml"
             value={draft.fluid}
@@ -1004,17 +980,17 @@ function GoalsModal({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-line-subtle pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            className="rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken cursor-pointer"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700 cursor-pointer"
+            className="rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover cursor-pointer"
           >
             {isEs ? "Guardar Metas" : "Save Goals"}
           </button>
@@ -1064,8 +1040,8 @@ function AddWaterModal({
                 onClick={() => setAmount(`${preset}`)}
                 className={`rounded-xl border px-2 py-2.5 text-sm font-bold transition-all cursor-pointer ${
                   isSelected
-                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    ? "border-primary-edge bg-primary-soft text-fg-brand"
+                    : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
                 }`}
               >
                 {preset} ml
@@ -1075,24 +1051,23 @@ function AddWaterModal({
         </div>
 
         <NumberField
-          id="water-amount"
           label={isEs ? "Cantidad" : "Amount"}
           unit="ml"
           value={amount}
           onChange={setAmount}
         />
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-line-subtle pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            className="rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken cursor-pointer"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-2xs transition-colors hover:bg-blue-700 cursor-pointer"
+            className="rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover cursor-pointer"
           >
             {n?.fluidTracker?.addWater || "Add Water"}
           </button>
@@ -1172,8 +1147,8 @@ export default function NutritionPage() {
         n?.keyMetrics?.dailyGoal?.description || "Stay within your daily nutrient goals",
       value: `${nutrientsWithinGoal} / ${NUTRIENT_ORDER.length}`,
       icon: Target,
-      iconClass: "text-blue-600",
-      iconBg: "bg-blue-100",
+      iconClass: "text-fg-brand",
+      iconBg: "bg-brand-100",
       footer: n?.keyMetrics?.dailyGoal?.footer || "View Goals",
       onFooterClick: () => setIsGoalsOpen(true),
     },
@@ -1187,8 +1162,8 @@ export default function NutritionPage() {
             : "Keep logging your meals.",
       value: `${mainMealsLogged} / 3`,
       icon: Utensils,
-      iconClass: "text-emerald-600",
-      iconBg: "bg-emerald-100",
+      iconClass: "text-success",
+      iconBg: "bg-success-100",
     },
     {
       title: n?.keyMetrics?.fluids?.title || "Fluids",
@@ -1196,8 +1171,8 @@ export default function NutritionPage() {
       value: `${fluidPercent}%`,
       progress: fluidPercent,
       icon: Droplet,
-      iconClass: "text-sky-600",
-      iconBg: "bg-sky-100",
+      iconClass: "text-brand-600",
+      iconBg: "bg-brand-100",
     },
     {
       title: n?.keyMetrics?.sodium?.title || "Sodium",
@@ -1205,8 +1180,8 @@ export default function NutritionPage() {
       value: `${sodiumPercent}%`,
       progress: sodiumPercent,
       icon: Apple,
-      iconClass: "text-orange-600",
-      iconBg: "bg-orange-100",
+      iconClass: "text-warning",
+      iconBg: "bg-warning-100",
     },
   ];
 
@@ -1216,10 +1191,10 @@ export default function NutritionPage() {
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-medium leading-none text-slate-950">
+          <h1 className="text-[32px] font-medium leading-none text-fg">
             {n?.header?.greeting || "Good morning, Sarah"}
           </h1>
-          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-700">
+          <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-fg-secondary">
             {n?.header?.subtitle ||
               "Track your daily food and nutrients to support your kidney health."}
           </p>
@@ -1227,7 +1202,7 @@ export default function NutritionPage() {
         <button
           type="button"
           onClick={() => setAddFoodMeal("breakfast")}
-          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-blue-600 px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
+          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded bg-action px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover cursor-pointer"
         >
           <Plus className="h-5 w-5" />
           {n?.header?.logMeal || "Log Meal"}

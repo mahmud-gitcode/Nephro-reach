@@ -162,6 +162,10 @@ export type RadioCardProps = {
   description?: React.ReactNode;
   /** Leading badge — an icon, an emoji, an initial. */
   icon?: React.ReactNode;
+  /** `row` is the default list shape. `tile` stacks the icon over the title
+      and centres both — for a short set of options shown side by side, like a
+      mood or severity picker, where a row of five rows would not fit. */
+  layout?: "row" | "tile";
   disabled?: boolean;
   className?: string;
 };
@@ -171,6 +175,7 @@ export function RadioCard({
   title,
   description,
   icon,
+  layout = "row",
   disabled,
   className,
 }: RadioCardProps) {
@@ -178,6 +183,63 @@ export function RadioCard({
   const selected = selectedValue === value;
 
   const rich = Boolean(icon || description);
+  const tile = layout === "tile";
+
+  if (tile) {
+    return (
+      <button
+        type="button"
+        role="radio"
+        data-value={value}
+        aria-checked={selected}
+        disabled={disabled}
+        tabIndex={selected ? 0 : -1}
+        onClick={() => onChange(value)}
+        className={cn(
+          "relative flex w-full cursor-pointer flex-col items-center justify-center gap-inline-md",
+          "rounded-card border p-inset-sm text-center",
+          "transition-colors duration-150 ease-standard",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle",
+          selected
+            ? "border-primary-soft-line bg-primary-soft"
+            : "border-line bg-surface hover:bg-surface-sunken",
+          className,
+        )}
+      >
+        {/* The mark sits in the corner so the icon keeps the centre. */}
+        <span className="absolute top-inset-xs right-inset-xs">
+          <RadioMark selected={selected} />
+        </span>
+
+        {icon ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "[&_svg]:h-icon-big [&_svg]:w-icon-big",
+              selected ? "text-primary-fg" : "text-fg-muted",
+            )}
+          >
+            {icon}
+          </span>
+        ) : null}
+
+        <span className="min-w-0">
+          <span
+            className={cn(
+              "block text-label-md",
+              selected ? "text-primary-fg" : "text-fg",
+            )}
+          >
+            {title}
+          </span>
+          {description ? (
+            <span className="block text-caption text-fg-muted">{description}</span>
+          ) : null}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <button

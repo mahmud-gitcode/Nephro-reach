@@ -7,17 +7,34 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Download,
   FileText,
   Plus,
   Share2,
   Smile,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Badge,
+  Button,
+  buttonStyles,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  RadioCard,
+  RadioGroup,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Textarea,
+} from "@/components/ui";
+import type { BadgeTone } from "@/components/ui";
 
 export interface MedicationReminder {
   id: string;
@@ -239,22 +256,27 @@ const alertsData = [
   },
 ];
 
-const statusClass: Record<string, string> = {
-  Active: "bg-emerald-50 text-emerald-600",
-  PRN: "bg-blue-50 text-blue-600",
-  Stopped: "bg-red-50 text-red-500",
-  Taken: "bg-emerald-50 text-emerald-600",
-  Late: "bg-amber-50 text-amber-600",
-  Missed: "bg-red-50 text-red-500",
+/* Six statuses, four meanings. Mapping them to Badge tones instead of raw
+   classes means a status here reads the same as a status anywhere else. */
+const statusTone: Record<string, BadgeTone> = {
+  Active: "success",
+  PRN: "info",
+  Stopped: "danger",
+  Taken: "success",
+  Late: "warning",
+  Missed: "danger",
 };
 
 function SectionTitle({ number, title }: { number: string; title: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-blue-700 text-base font-medium text-white">
+    <div className="flex items-center gap-inline-md">
+      <span
+        aria-hidden="true"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-label-lg text-on-primary"
+      >
         {number}
       </span>
-      <h2 className="text-xl font-medium leading-7 tracking-[0.1px] text-slate-950">{title}</h2>
+      <h2 className="text-heading-4 text-fg">{title}</h2>
     </div>
   );
 }
@@ -262,11 +284,7 @@ function SectionTitle({ number, title }: { number: string; title: string }) {
 function StatusBadge({ status }: { status: string }) {
   const { t } = useLanguage();
   const label = t(`medicationsLog.statuses.${status}`) || status;
-  return (
-    <span className={`inline-flex h-6 items-center rounded px-2 text-sm font-semibold ${statusClass[status] || "bg-slate-100 text-slate-700"}`}>
-      {label}
-    </span>
-  );
+  return <Badge tone={statusTone[status] || "neutral"}>{label}</Badge>;
 }
 
 function MedicationMasterList({
@@ -279,194 +297,181 @@ function MedicationMasterList({
   const { language, t } = useLanguage();
 
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <Card as="section" padding="small">
+      <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <SectionTitle number="1" title={t("medicationsLog.section1")} />
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link
-            href="/dashboard/personal-log/medications/add"
-            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm sm:text-base font-bold tracking-[0.08px] text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
-          >
-            <Plus className="h-5 w-5" />
-            <span>{t("medicationsLog.addMedication")}</span>
-          </Link>
-        </div>
+        <Link
+          href="/dashboard/personal-log/medications/add"
+          className={buttonStyles()}
+        >
+          <Plus aria-hidden="true" />
+          {t("medicationsLog.addMedication")}
+        </Link>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="min-w-[1140px] w-full text-left text-sm">
-            <thead className="bg-[#F1F5FA] text-sm font-medium text-slate-950">
-              <tr>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.name")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.dose")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.route")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.frequency")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.purpose")}</th>
-                <th className="border-b border-slate-200 px-3 py-3 text-center">
+      <div className="mt-stack-md overflow-hidden rounded-control border border-line">
+        <Table minWidth={1140}>
+            <TableHead className="bg-surface-sunken">
+              <TableRow>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.name")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.dose")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.route")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.frequency")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.purpose")}</TableHeaderCell>
+                <TableHeaderCell className="text-center">
                   {language === "ES" ? "Hora Recordatorio" : "Reminder Alert"}
-                </th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.startDate")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.endDate")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.pharmacy")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.status")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dashed divide-slate-200">
+                </TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.startDate")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.endDate")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.pharmacy")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.status")}</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {medicationsData.map((medication) => {
                 const rem = reminders.find(
                   (r) => r.medicationName.toLowerCase() === medication.name.toLowerCase() && r.enabled
                 );
 
                 return (
-                  <tr key={`${medication.name}-${medication.startDate}`} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.name}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.dose}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-950">{medication.route}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">
+                  <TableRow key={`${medication.name}-${medication.startDate}`}>
+                    <TableCell emphasis>{medication.name}</TableCell>
+                    <TableCell>{medication.dose}</TableCell>
+                    <TableCell>{medication.route}</TableCell>
+                    <TableCell>
                       {language === "ES" ? medication.frequencyEs : medication.frequencyEn}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">
+                    </TableCell>
+                    <TableCell>
                       {language === "ES" ? medication.purposeEs : medication.purposeEn}
-                    </td>
-                    <td
-                      className="px-3 py-2.5 text-center cursor-pointer hover:bg-blue-50/40 transition-colors"
-                      onClick={() => onOpenReminderModal(medication.name)}
-                      title={language === "ES" ? "Haga clic para establecer hora de recordatorio" : "Click to set reminder time"}
-                    >
-                      {rem ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenReminderModal(medication.name);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer shadow-2xs"
-                          title="Click to edit reminder time"
-                        >
-                          <Bell className="h-3 w-3 text-blue-600" />
-                          <span>{rem.time}</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenReminderModal(medication.name);
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-blue-600 hover:underline cursor-pointer"
-                        >
-                          <Bell className="h-3 w-3" />
-                          <span>{language === "ES" ? "+ Recordatorio" : "+ Set Alert"}</span>
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.startDate}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.endDate}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{medication.pharmacy}</td>
-                    <td className="px-3 py-2.5">
+                    </TableCell>
+                    {/* The cell itself used to carry the onClick, which a
+                        keyboard can never reach. The button alone now does. */}
+                    <TableCell className="text-center">
+                      <Button
+                        variant="neutral"
+                        appearance={rem ? "fill-stroke" : "stroke"}
+                        size="small"
+                        onClick={() => onOpenReminderModal(medication.name)}
+                        aria-label={
+                          rem
+                            ? language === "ES"
+                              ? `Editar recordatorio de ${medication.name}, ${rem.time}`
+                              : `Edit reminder for ${medication.name}, ${rem.time}`
+                            : language === "ES"
+                              ? `Establecer recordatorio para ${medication.name}`
+                              : `Set reminder for ${medication.name}`
+                        }
+                      >
+                        <Bell aria-hidden="true" />
+                        {rem
+                          ? rem.time
+                          : language === "ES"
+                            ? "Recordatorio"
+                            : "Set Alert"}
+                      </Button>
+                    </TableCell>
+                    <TableCell>{medication.startDate}</TableCell>
+                    <TableCell>{medication.endDate}</TableCell>
+                    <TableCell>{medication.pharmacy}</TableCell>
+                    <TableCell>
                       <StatusBadge status={medication.status} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+        </Table>
       </div>
-    </section>
+    </Card>
   );
 }
 
-function DoseSchedule({
-  reminders,
-  onOpenReminderModal,
-}: {
-  reminders: MedicationReminder[];
-  onOpenReminderModal: (medName?: string) => void;
-}) {
+function DoseSchedule({ reminders }: { reminders: MedicationReminder[] }) {
   const { language, t } = useLanguage();
 
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <Card as="section" padding="small">
+      <div className="flex flex-col gap-inline-md lg:flex-row lg:items-center lg:justify-between">
         <SectionTitle number="2" title={t("medicationsLog.section2")} />
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="flex h-12 items-center justify-center gap-2 rounded border border-slate-200 bg-[#F9F9F9] px-4 text-base font-bold text-slate-950 cursor-pointer"
-          >
-            <ChevronLeft className="h-5 w-5" />
+        <div className="flex flex-wrap gap-inline-md">
+          <Button variant="neutral" appearance="fill-stroke">
+            <ChevronLeft aria-hidden="true" />
             {language === "ES" ? "Mayo 20" : "May 20"}
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            className="h-12 rounded border border-slate-200 bg-[#F1F5FA] px-4 text-base font-bold text-slate-950 cursor-pointer"
-          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
+          <Button variant="neutral" appearance="fill-stroke">
             {t("medicationsLog.today")}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="min-w-[900px] w-full text-left text-sm">
-            <thead className="bg-[#F1F5FA] text-sm font-medium text-slate-950">
-              <tr>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.time")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.medication")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.instructions")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.status")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.timeStamp")}</th>
-                <th className="border-b border-slate-200 px-3 py-3">{t("medicationsLog.tableHeaders.sideEffects")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dashed divide-slate-200">
+      <div className="mt-stack-md overflow-hidden rounded-control border border-line">
+        <Table minWidth={900}>
+            <TableHead className="bg-surface-sunken">
+              <TableRow>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.time")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.medication")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.instructions")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.status")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.timeStamp")}</TableHeaderCell>
+                <TableHeaderCell>{t("medicationsLog.tableHeaders.sideEffects")}</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {doseScheduleData.map((dose, idx) => {
                 const rem = reminders.find(
                   (r) => r.medicationName.toLowerCase() === dose.medication.toLowerCase() && r.enabled
                 );
 
                 return (
-                  <tr key={`${dose.time}-${idx}`}>
-                    <td className="px-3 py-3 font-medium text-slate-800">
-                      <div className="flex items-center gap-1.5">
-                        <span>{dose.time}</span>
+                  <TableRow key={`${dose.time}-${idx}`}>
+                    <TableCell>
+                      <span className="flex items-center gap-inline-sm">
+                        {dose.time}
                         {rem && (
-                          <span title={`Reminder set for ${rem.time}`}>
-                            <Bell className="h-3 w-3 text-blue-600 shrink-0" />
-                          </span>
+                          <Bell
+                            className="h-3 w-3 shrink-0 text-fg-brand"
+                            aria-label={
+                              language === "ES"
+                                ? `Recordatorio a las ${rem.time}`
+                                : `Reminder set for ${rem.time}`
+                            }
+                          />
                         )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <p className="font-medium text-slate-950">{dose.medication}</p>
-                      <p className="text-xs text-slate-600">{dose.generic}</p>
-                    </td>
-                    <td className="px-3 py-3 font-medium text-slate-950">
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="block text-label-md text-fg">{dose.medication}</span>
+                      <span className="block text-caption text-fg-muted">{dose.generic}</span>
+                    </TableCell>
+                    <TableCell>
                       {language === "ES" ? dose.instructionsEs : dose.instructionsEn}
-                    </td>
-                    <td className="px-3 py-3">
+                    </TableCell>
+                    <TableCell>
                       <StatusBadge status={dose.status} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <p className={`font-medium ${dose.status === "Late" ? "text-amber-600" : "text-slate-800"}`}>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`block text-label-md ${
+                          dose.status === "Late" ? "text-warning" : "text-fg-secondary"
+                        }`}
+                      >
                         {dose.stamp}
-                      </p>
-                      <p className="text-xs text-slate-600">{t("medicationsLog.today")}</p>
-                    </td>
-                    <td className="px-3 py-3 font-medium text-slate-800">
+                      </span>
+                      <span className="block text-caption text-fg-muted">
+                        {t("medicationsLog.today")}
+                      </span>
+                    </TableCell>
+                    <TableCell>
                       {language === "ES" ? dose.sideEffectsEs : dose.sideEffectsEn}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+        </Table>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -508,114 +513,156 @@ function AdherenceChart() {
     .join(" ");
 
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
+    <Card as="section" padding="small">
       <SectionTitle number="3" title={t("medicationsLog.section3")} />
 
-      <div className="mt-3 grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <article className="rounded-xl border border-[#E3E6F0] bg-white p-3.5">
+      <div className="mt-stack-md grid grid-cols-1 gap-inset-md xl:grid-cols-3">
+        <Card as="article" tone="flat" padding="small">
           <div>
-            <h3 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+            <h3 className="text-heading-5 text-fg">
               {t("medicationsLog.adherence.overallTitle")}
             </h3>
-            <p className="mt-2 text-xs font-medium leading-4 tracking-[0.06px] text-slate-500">
+            <p className="mt-stack-sm text-caption text-fg-muted">
               {t("medicationsLog.adherence.totalDoses")}
             </p>
           </div>
 
-          <div className="mt-5 flex flex-col items-center justify-center gap-6 sm:flex-row">
-            <div className="relative h-[182px] w-[182px] shrink-0 rounded-full bg-[conic-gradient(#0AA76F_0deg_180deg,#F59E0B_180deg_288deg,#FF5536_288deg_360deg)]">
-              <div className="absolute inset-[26px] rounded-full bg-white" />
+          <div className="mt-stack-xl flex flex-col items-center justify-center gap-inset-lg sm:flex-row">
+            {/* Taken / late / missed are the three outcomes a dose can have,
+                so the ring uses the status tones rather than three new hues. */}
+            <div
+              role="img"
+              aria-label={`${t("medicationsLog.adherence.overall")}: 86%`}
+              className="relative h-[182px] w-[182px] shrink-0 rounded-full"
+              style={{
+                background:
+                  "conic-gradient(var(--color-success-600) 0deg 180deg, var(--color-warning-600) 180deg 288deg, var(--color-danger-600) 288deg 360deg)",
+              }}
+            >
+              <div className="absolute inset-[26px] rounded-full bg-surface" />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">86%</p>
-                <p className="text-xs leading-4 tracking-[0.06px] text-slate-600">{t("medicationsLog.adherence.overall")}</p>
+                <p className="text-metric-sm text-fg">86%</p>
+                <p className="text-caption text-fg-muted">
+                  {t("medicationsLog.adherence.overall")}
+                </p>
               </div>
             </div>
 
-            <div className="w-[103px] space-y-3.5">
+            <ul className="w-[103px] space-y-stack-md">
               {[
-                { label: t("medicationsLog.adherence.taken"), value: "50%", color: "bg-[#0AA76F]" },
-                { label: t("medicationsLog.adherence.late"), value: "30%", color: "bg-[#F59E0B]" },
-                { label: t("medicationsLog.adherence.missed"), value: "20%", color: "bg-[#FF5536]" },
+                { label: t("medicationsLog.adherence.taken"), value: "50%", dot: "bg-success-600" },
+                { label: t("medicationsLog.adherence.late"), value: "30%", dot: "bg-warning-600" },
+                { label: t("medicationsLog.adherence.missed"), value: "20%", dot: "bg-danger-600" },
               ].map((item) => (
-                <div key={item.label} className="text-center">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-4 w-4 rounded-full ${item.color}`} />
-                    <span className="text-base font-medium leading-6 tracking-[0.08px] text-slate-600">
-                      {item.label}
-                    </span>
+                <li key={item.label} className="text-center">
+                  <div className="flex items-center gap-inline-md">
+                    <span aria-hidden="true" className={`h-4 w-4 rounded-full ${item.dot}`} />
+                    <span className="text-body-md text-fg-muted">{item.label}</span>
                   </div>
-                  <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-600">
-                    {item.value}
-                  </p>
-                </div>
+                  <p className="mt-stack-sm text-body-sm text-fg-muted">{item.value}</p>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
-        </article>
+        </Card>
 
-        <article className="rounded-xl border border-slate-200 bg-[#FCFDFD] p-3.5">
-          <h3 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+        <Card as="article" tone="flat" padding="small">
+          <h3 className="text-heading-5 text-fg">
             {t("medicationsLog.adherence.missedTitle")}
           </h3>
-          <p className="mt-2 text-sm font-medium leading-5 tracking-[0.07px] text-slate-500">
-            {t("medicationsLog.adherence.totalMissed")} <span className="text-red-500 font-bold">8</span>
+          <p className="mt-stack-sm text-body-sm text-fg-muted">
+            {t("medicationsLog.adherence.totalMissed")}{" "}
+            <span className="text-label-md text-danger">8</span>
           </p>
 
-          <div className="mt-5">
-            <div className="grid h-[137px] grid-cols-[24px_minmax(0,1fr)] gap-3">
-              <div className="flex flex-col justify-between text-right text-[13px] leading-5 tracking-[0.2px] text-slate-600">
-                {[10, 8, 6, 4, 2, 0].map((label) => (
-                  <span key={label}>{label}</span>
-                ))}
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 flex flex-col justify-between">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <span key={index} className="border-t border-dashed border-slate-200" />
+          {/* The bars carry no text, so the numbers are repeated for a screen
+              reader the same way <LineChart> does it. */}
+          <div className="mt-stack-xl">
+            <div
+              role="img"
+              aria-label={t("medicationsLog.adherence.missedTitle")}
+              aria-describedby="missed-doses-table"
+            >
+              <div className="grid h-[137px] grid-cols-[24px_minmax(0,1fr)] gap-inline-md">
+                <div className="flex flex-col justify-between text-right text-caption text-fg-muted">
+                  {[10, 8, 6, 4, 2, 0].map((label) => (
+                    <span key={label}>{label}</span>
                   ))}
                 </div>
-                <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-between">
+                <div className="relative">
+                  <div className="absolute inset-0 flex flex-col justify-between">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <span key={index} className="border-t border-dashed border-line" />
+                    ))}
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-between">
+                    {missedDoses.map((dose) => (
+                      <span
+                        key={dose.day}
+                        className="w-[22px] rounded-t bg-primary-solid"
+                        style={{ height: `${Math.max((dose.value / 10) * 137, 2)}px` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-stack-sm grid grid-cols-[36px_minmax(0,1fr)] gap-inline-md">
+                <span />
+                <div className="flex justify-between text-caption text-fg-secondary">
                   {missedDoses.map((dose) => (
-                    <span
-                      key={dose.day}
-                      className="w-[22px] rounded-t bg-blue-500"
-                      style={{ height: `${Math.max((dose.value / 10) * 137, 2)}px` }}
-                    />
+                    <span key={dose.day} className="w-[30px] text-center">
+                      {dose.day}
+                    </span>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] gap-3">
-              <span />
-              <div className="flex justify-between text-xs leading-4 tracking-[0.06px] text-slate-700 font-medium">
-                {missedDoses.map((dose) => (
-                  <span key={dose.day} className="w-[30px] text-center">
-                    {dose.day}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </article>
 
-        <article className="rounded-xl border border-[#E3E6F0] bg-white p-3.5">
-          <h3 className="text-base font-medium leading-6 tracking-[0.08px] text-slate-950">
+            <table id="missed-doses-table" className="sr-only">
+              <caption>{t("medicationsLog.adherence.missedTitle")}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
+                  <th scope="col">{t("medicationsLog.adherence.missedTitle")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {missedDoses.map((dose) => (
+                  <tr key={dose.day}>
+                    <th scope="row">{dose.day}</th>
+                    <td>{dose.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card as="article" tone="flat" padding="small">
+          <h3 className="text-heading-5 text-fg">
             {t("medicationsLog.adherence.bpVsAdherence")}
           </h3>
-          <div className="mt-2 flex items-center gap-3 text-xs leading-4 text-slate-600">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#7C6CFF]" />
+          {/* Two series, two axes — <LineChart> draws one axis, so this one
+              stays hand-drawn. The tones are still the chart tones. */}
+          <div className="mt-stack-sm flex items-center gap-inline-lg text-caption text-fg-muted">
+            <span className="inline-flex items-center gap-inline-sm">
+              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-accent-600" />
               {t("medicationsLog.adherence.bp")}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#FF7A70]" />
+            <span className="inline-flex items-center gap-inline-sm">
+              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-brand-600" />
               {t("medicationsLog.adherence.adherencePercent")}
             </span>
           </div>
 
-          <div className="mt-4">
+          <div
+            className="mt-stack-lg"
+            role="img"
+            aria-label={t("medicationsLog.adherence.bpVsAdherence")}
+            aria-describedby="bp-adherence-table"
+          >
             <div className="grid h-[166px] grid-cols-[32px_minmax(0,1fr)_40px] gap-2">
-              <div className="flex flex-col justify-between text-right text-xs leading-4 tracking-[0.06px] text-slate-500">
+              <div className="flex flex-col justify-between text-right text-caption text-fg-muted">
                 {[160, 140, 120, 100, 80].map((label) => (
                   <span key={label}>{label}</span>
                 ))}
@@ -623,12 +670,12 @@ function AdherenceChart() {
               <div className="relative overflow-hidden">
                 <div className="absolute inset-0 flex flex-col justify-between py-1.5">
                   {Array.from({ length: 5 }).map((_, index) => (
-                    <span key={index} className="border-t border-dashed border-slate-200" />
+                    <span key={index} className="border-t border-dashed border-line" />
                   ))}
                 </div>
                 <div className="absolute inset-0 flex justify-between px-px">
                   {Array.from({ length: 7 }).map((_, index) => (
-                    <span key={index} className="border-l border-dashed border-slate-200" />
+                    <span key={index} className="border-l border-dashed border-line" />
                   ))}
                 </div>
                 <svg
@@ -640,41 +687,48 @@ function AdherenceChart() {
                   <polyline
                     points={bpLine}
                     fill="none"
-                    stroke="#7C6CFF"
+                    stroke="var(--color-accent-600)"
                     strokeWidth="2"
                     vectorEffect="non-scaling-stroke"
                   />
                   <polyline
                     points={adherenceLine}
                     fill="none"
-                    stroke="#FF7A70"
+                    stroke="var(--color-brand-600)"
                     strokeWidth="2"
                     vectorEffect="non-scaling-stroke"
                   />
                   {bpPoints.map((point, index) => (
                     <React.Fragment key={point.day}>
-                      <circle cx={xFor(index)} cy={bpY(point.bp)} r="4" fill="white" stroke="#7C6CFF" strokeWidth="2" />
+                      <circle
+                        cx={xFor(index)}
+                        cy={bpY(point.bp)}
+                        r="4"
+                        fill="var(--color-surface)"
+                        stroke="var(--color-accent-600)"
+                        strokeWidth="2"
+                      />
                       <circle
                         cx={xFor(index)}
                         cy={adherenceY(point.adherence)}
                         r="4"
-                        fill="white"
-                        stroke="#FF7A70"
+                        fill="var(--color-surface)"
+                        stroke="var(--color-brand-600)"
                         strokeWidth="2"
                       />
                     </React.Fragment>
                   ))}
                 </svg>
               </div>
-              <div className="flex flex-col justify-between text-xs leading-4 tracking-[0.06px] text-slate-500">
+              <div className="flex flex-col justify-between text-caption text-fg-muted">
                 {["100%", "75%", "50%", "25%", "0%"].map((label) => (
                   <span key={label}>{label}</span>
                 ))}
               </div>
             </div>
-            <div className="mt-2 grid grid-cols-[32px_minmax(0,1fr)_40px] gap-2">
+            <div className="mt-stack-sm grid grid-cols-[32px_minmax(0,1fr)_40px] gap-inline-md">
               <span />
-              <div className="flex justify-between text-xs leading-4 tracking-[0.06px] text-slate-700 font-medium">
+              <div className="flex justify-between text-caption text-fg-secondary">
                 {bpPoints.map((point) => (
                   <span key={point.day} className="w-[30px] text-center">
                     {point.day}
@@ -684,9 +738,29 @@ function AdherenceChart() {
               <span />
             </div>
           </div>
-        </article>
+
+          <table id="bp-adherence-table" className="sr-only">
+            <caption>{t("medicationsLog.adherence.bpVsAdherence")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
+                <th scope="col">{t("medicationsLog.adherence.bp")}</th>
+                <th scope="col">{t("medicationsLog.adherence.adherencePercent")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bpPoints.map((point) => (
+                <tr key={point.day}>
+                  <th scope="row">{point.day}</th>
+                  <td>{point.bp} mmHg</td>
+                  <td>{point.adherence}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -710,99 +784,113 @@ function AlertsAndMood({
   ];
 
   return (
-    <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <div className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
-        <div className="flex items-center justify-between">
-          <SectionTitle number="4" title={t("medicationsLog.section4")} />
-        </div>
+    <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
+      <Card padding="small">
+        <SectionTitle number="4" title={t("medicationsLog.section4")} />
 
         {/* Scheduled Reminders Ribbon */}
         {reminders && reminders.filter((r) => r.enabled).length > 0 && (
-          <div className="mt-3 p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 space-y-1.5">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
-              <Bell className="h-3.5 w-3.5 text-blue-600" />
-              <span>{language === "ES" ? "Recordatorios Programados Activos" : "Active Scheduled Dose Reminders"}</span>
+          <div className="mt-stack-md space-y-stack-sm rounded-control border border-primary-soft-line bg-primary-soft p-inset-xs">
+            <p className="text-overline flex items-center gap-inline-sm text-primary-fg">
+              <Bell aria-hidden="true" className="h-3.5 w-3.5" />
+              <span>
+                {language === "ES"
+                  ? "Recordatorios Programados Activos"
+                  : "Active Scheduled Dose Reminders"}
+              </span>
             </p>
-            <div className="flex flex-wrap gap-2 pt-0.5">
+            <div className="flex flex-wrap gap-inline-md pt-0.5">
               {reminders
                 .filter((r) => r.enabled)
                 .map((rem) => (
-                  <button
+                  <Button
                     key={rem.id}
-                    type="button"
+                    variant="neutral"
+                    appearance="fill-stroke"
+                    size="small"
                     onClick={() => onOpenReminderModal(rem.medicationName)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-xs font-semibold text-slate-800 hover:border-blue-400 hover:shadow-2xs transition-all cursor-pointer"
-                    title={language === "ES" ? "Haga clic para editar hora" : "Click to edit time"}
+                    aria-label={
+                      language === "ES"
+                        ? `Editar hora de ${rem.medicationName}, ${rem.time}`
+                        : `Edit time for ${rem.medicationName}, ${rem.time}`
+                    }
                   >
-                    <span className="font-bold text-blue-700">{rem.medicationName}</span>
-                    <span className="text-slate-500">• {rem.time}</span>
-                  </button>
+                    <span className="text-fg-brand">{rem.medicationName}</span>
+                    <span className="text-fg-muted">• {rem.time}</span>
+                  </Button>
                 ))}
             </div>
           </div>
         )}
 
-        <div className="mt-3 max-h-[290px] space-y-1 overflow-y-auto pr-1">
+        <div className="mt-stack-md max-h-[290px] space-y-stack-xs overflow-y-auto pr-1">
           {alertsData.map((alert, idx) => (
-            <article key={idx} className="rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-sm font-medium leading-5 text-slate-950">
+            <article
+              key={idx}
+              className="rounded-control border border-transparent px-inset-sm py-inset-xs transition-colors duration-150 ease-standard hover:border-line-subtle hover:bg-surface-sunken"
+            >
+              <div className="flex items-start justify-between gap-inline-lg">
+                <h3 className="text-label-md text-fg">
                   {language === "ES" ? alert.titleEs : alert.titleEn}
                 </h3>
-                <p className="shrink-0 text-xs leading-4 text-slate-500">
+                <p className="shrink-0 text-caption text-fg-muted">
                   {language === "ES" ? alert.timeEs : alert.timeEn}
                 </p>
               </div>
-              <p className="mt-1 text-sm leading-5 text-slate-600">
+              <p className="mt-stack-xs text-body-sm text-fg-muted">
                 {language === "ES" ? alert.bodyEs : alert.bodyEn}
               </p>
             </article>
           ))}
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
+      <Card padding="small">
         <SectionTitle number="5" title={t("medicationsLog.section5")} />
-        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3.5">
-          <p className="text-base font-medium leading-6 text-slate-950">
+        <Card tone="flat" padding="small" className="mt-stack-md">
+          <p className="text-body-md text-fg">
             {t("medicationsLog.mood.howDoYouFeel")}
           </p>
-          <div className="mt-2 grid grid-cols-5 gap-2">
-            {moods.map((m, index) => (
-              <button
-                key={m.label}
-                type="button"
-                onClick={() => setSelectedMood(index)}
-                className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                  selectedMood === index
-                    ? "border-blue-300 bg-blue-50 text-blue-700 shadow-xs"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <Smile className="h-7 w-7 sm:h-8 sm:w-8" />
-                <span className="leading-tight">{m.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-4 border-t border-slate-200 pt-3">
-            <p className="text-base font-medium leading-6 text-slate-950">
-              {t("medicationsLog.mood.notes")}
-            </p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-2 h-24 w-full resize-none rounded border border-[#CBD5ED] bg-white p-3 text-sm text-slate-700 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              placeholder={t("medicationsLog.mood.notesPlaceholder")}
-            />
-          </div>
-          <button
-            type="button"
-            className="mt-3 flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 text-base font-bold text-white shadow-[inset_0_-1px_0_#DBE9FE] transition-colors hover:bg-blue-700 cursor-pointer"
+
+          {/* Five moods, one answer — a radio group, so arrow keys move
+              between them and only the chosen one is a tab stop. */}
+          <RadioGroup
+            label={t("medicationsLog.mood.howDoYouFeel")}
+            value={String(selectedMood)}
+            onChange={(next) => setSelectedMood(Number(next))}
+            orientation="horizontal"
+            className="mt-stack-sm grid grid-cols-5 gap-inline-md"
           >
+            {moods.map((m, index) => (
+              <RadioCard
+                key={m.label}
+                layout="tile"
+                value={String(index)}
+                title={m.label}
+                icon={<Smile />}
+              />
+            ))}
+          </RadioGroup>
+
+          <div className="mt-stack-lg border-t border-line pt-inset-sm">
+            <FormField label={t("medicationsLog.mood.notes")}>
+              {(props) => (
+                <Textarea
+                  {...props}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="h-24 resize-none"
+                  placeholder={t("medicationsLog.mood.notesPlaceholder")}
+                />
+              )}
+            </FormField>
+          </div>
+
+          <Button className="mt-stack-md w-full">
             {t("medicationsLog.mood.saveLog")}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Card>
+      </Card>
     </section>
   );
 }
@@ -832,39 +920,52 @@ function ExportReporting() {
   ];
 
   return (
-    <section className="rounded-[14px] border border-[#E3E6F0] bg-white p-3.5">
+    <Card as="section" padding="small">
       <SectionTitle number="6" title={t("medicationsLog.section6")} />
 
-      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="mt-stack-md grid grid-cols-1 gap-inset-md lg:grid-cols-3">
         {reports.map((report) => (
-          <article
+          <Card
             key={report.title}
-            className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5"
+            as="article"
+            tone="flat"
+            padding="small"
+            className="flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  {report.isShare ? <UserPlus className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+              <div className="flex items-center gap-inline-lg">
+                <span
+                  aria-hidden="true"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand"
+                >
+                  {report.isShare ? (
+                    <UserPlus className="h-icon-big w-icon-big" />
+                  ) : (
+                    <FileText className="h-icon-big w-icon-big" />
+                  )}
                 </span>
-                <h3 className="text-lg font-medium leading-7 tracking-[0.09px] text-slate-950">
-                  {report.title}
-                </h3>
+                <h3 className="text-heading-5 text-fg">{report.title}</h3>
               </div>
-              <div className="mt-4 border-t border-slate-200 pt-2">
-                <p className="text-sm leading-5 tracking-[0.07px] text-slate-500">{report.desc}</p>
+              <div className="mt-stack-lg border-t border-line pt-inset-xs">
+                <p className="text-body-sm text-fg-muted">{report.desc}</p>
               </div>
             </div>
-            <button
-              type="button"
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded border border-slate-200 bg-[#F1F5FA] px-4 text-base font-bold text-slate-950 transition-colors hover:bg-white cursor-pointer"
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              className="mt-stack-lg w-full"
             >
-              {report.isShare ? <Share2 className="h-5 w-5" /> : <Download className="h-5 w-5" />}
+              {report.isShare ? (
+                <Share2 aria-hidden="true" />
+              ) : (
+                <Download aria-hidden="true" />
+              )}
               {report.action}
-            </button>
-          </article>
+            </Button>
+          </Card>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -927,8 +1028,6 @@ function SimpleTimeReminderModal({
     setSavedSuccess(false);
   }, [currentTime, isOpen, medicationName]);
 
-  if (!isOpen) return null;
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const formatted = formatTo12Hour(timeValue);
@@ -948,90 +1047,66 @@ function SimpleTimeReminderModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px] p-4 animate-in fade-in duration-150"
-      onClick={onClose}
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="small"
+      title={language === "ES" ? "Alerta de Recordatorio" : "Reminder Alert"}
+      description={medicationName}
+      footer={
+        <>
+          {currentTime && onDeleteReminder ? (
+            <Button
+              variant="danger"
+              appearance="stroke"
+              onClick={handleDelete}
+              className="mr-auto"
+            >
+              {language === "ES" ? "Eliminar alerta" : "Remove alert"}
+            </Button>
+          ) : null}
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {language === "ES" ? "Cancelar" : "Cancel"}
+          </Button>
+          <Button type="submit" form="reminder-time-form">
+            <Check aria-hidden="true" />
+            {language === "ES" ? "Guardar" : "Save"}
+          </Button>
+        </>
+      }
     >
-      <div
-        className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-left shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 space-y-4"
-        onClick={(e) => e.stopPropagation()}
+      <form
+        id="reminder-time-form"
+        onSubmit={handleSave}
+        className="space-y-stack-lg"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                {language === "ES" ? "Alerta de Recordatorio" : "Reminder Alert"}
-              </h3>
-              <p className="text-xs font-semibold text-blue-600 truncate max-w-[190px]">
-                {medicationName}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="flex flex-col items-center justify-center rounded-control border border-line bg-surface-sunken p-inset-sm">
+          <Input
+            type="time"
+            value={timeValue}
+            onChange={(e) => setTimeValue(e.target.value)}
+            aria-label={language === "ES" ? "Seleccionar Hora" : "Select Time"}
+            className="text-metric-md h-auto py-inset-xs text-center"
+            required
+          />
         </div>
 
-        {/* Simple Form: only timepicker and save button */}
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="flex flex-col items-center justify-center bg-slate-50 rounded-xl p-3.5 border border-slate-200">
-            <input
-              type="time"
-              value={timeValue}
-              onChange={(e) => setTimeValue(e.target.value)}
-              aria-label={language === "ES" ? "Seleccionar Hora" : "Select Time"}
-              className="w-full text-center text-3xl font-extrabold tracking-wider text-slate-900 bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-2xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
-              required
-            />
-          </div>
-
-          {savedSuccess && (
-            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2 animate-in fade-in duration-100">
-              <Check className="h-4 w-4" />
-              <span>{language === "ES" ? "¡Guardado exitosamente!" : "Saved successfully!"}</span>
-            </div>
-          )}
-
-          <div className="space-y-2 pt-1">
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 text-sm transition-colors shadow-sm cursor-pointer"
-            >
-              <Check className="h-4 w-4" />
-              <span>{language === "ES" ? "Guardar" : "Save"}</span>
-            </button>
-
-            <div className="flex items-center justify-between px-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline cursor-pointer"
-              >
-                {language === "ES" ? "Cancelar" : "Cancel"}
-              </button>
-
-              {currentTime && onDeleteReminder && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
-                >
-                  {language === "ES" ? "Eliminar alerta" : "Remove alert"}
-                </button>
-              )}
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+        {/* role="status" so the confirmation is announced, not just shown. */}
+        {savedSuccess && (
+          <p
+            role="status"
+            className="flex items-center justify-center gap-inline-sm rounded-control border border-success-line bg-success-surface py-inset-xs text-label-md text-success"
+          >
+            <Check aria-hidden="true" className="h-4 w-4" />
+            <span>
+              {language === "ES"
+                ? "¡Guardado exitosamente!"
+                : "Saved successfully!"}
+            </span>
+          </p>
+        )}
+      </form>
+    </Modal>
   );
 }
 
@@ -1116,10 +1191,8 @@ export default function MedicationLogPage() {
       <PersonalLogDisclaimer />
 
       <header>
-        <h1 className="text-[32px] font-medium leading-none text-slate-950">
-          {t("medicationsLog.title")}
-        </h1>
-        <p className="mt-1 text-lg font-medium leading-7 tracking-[0.09px] text-slate-700">
+        <h1 className="text-heading-1 text-fg">{t("medicationsLog.title")}</h1>
+        <p className="mt-stack-xs text-body-lg text-fg-secondary">
           {t("medicationsLog.subtitle")}
         </p>
       </header>
@@ -1128,10 +1201,7 @@ export default function MedicationLogPage() {
         reminders={reminders}
         onOpenReminderModal={handleOpenReminderModal}
       />
-      <DoseSchedule
-        reminders={reminders}
-        onOpenReminderModal={handleOpenReminderModal}
-      />
+      <DoseSchedule reminders={reminders} />
       <AdherenceChart />
       <AlertsAndMood
         reminders={reminders}

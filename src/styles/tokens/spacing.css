@@ -102,11 +102,15 @@
      Replaces eight Tailwind shadow steps plus eight hand-written arbitrary
      shadows. Note that shadow-[inset_0_-1px_0_#DBE9FE] (20 uses) is not
      elevation at all — it is a bottom rule and becomes a border-bottom.
+
+     The shadow colour is gray-950 (#10141c) rather than pure black, so a
+     shadow sits in the same hue family as everything it falls on. Keep the
+     two in step: if gray-950 moves, these move with it.
      ====================================================================== */
-  --shadow-control: 0 1px 2px 0 rgb(37 41 49 / 0.05);
-  --shadow-card: 0 1px 3px 0 rgb(37 41 49 / 0.08);
-  --shadow-raised: 0 4px 12px -2px rgb(37 41 49 / 0.08);
-  --shadow-overlay: 0 12px 32px -8px rgb(37 41 49 / 0.12);
+  --shadow-control: 0 1px 2px 0 rgb(16 20 28 / 0.05);
+  --shadow-card: 0 1px 3px 0 rgb(16 20 28 / 0.08);
+  --shadow-raised: 0 4px 12px -2px rgb(16 20 28 / 0.08);
+  --shadow-overlay: 0 12px 32px -8px rgb(16 20 28 / 0.12);
 
   /* ======================================================================
      MOTION — one easing curve, three durations.

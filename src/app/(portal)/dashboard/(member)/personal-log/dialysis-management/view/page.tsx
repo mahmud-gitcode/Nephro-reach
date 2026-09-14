@@ -5,22 +5,38 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  Calendar,
   Check,
   Clock,
-  ShieldCheck,
   FileText,
-  HelpCircle,
   Activity,
   AlertCircle,
   Plus,
-  X,
   Pencil,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import {
+  Badge,
+  Button,
+  Card,
+  Chip,
+  ChipGroup,
+  FormField,
+  Input,
+  Modal,
+  RadioCard,
+  RadioGroup,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Textarea,
+} from "@/components/ui";
 
 interface ProviderOrder {
   id: string;
@@ -673,7 +689,7 @@ function ViewRecordContent() {
       <div>
         <Link
           href="/dashboard/personal-log/dialysis-management"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-inline-sm rounded-control-small text-label-md text-fg-muted transition-colors duration-150 ease-standard hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <ArrowLeft className="h-4 w-4" />
           {isEs ? "Volver a Gestión de Diálisis" : "Back to Dialysis Management"}
@@ -683,63 +699,57 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* TOP HEADER CARD: TREATMENT TITLE, INTERVAL BADGE & DATES                 */}
       {/* ========================================================================= */}
-      <section className="rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs">
+      <Card as="section" padding="none" className="p-inset-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Left: Treatment 1 and beside it Treatment 1 ➔ Treatment 2 */}
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-heading-2 text-fg">
               {intervalData.name}
             </h1>
-            {intervalData.isExtra ? (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                {intervalData.label}
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-[#2563EB] border border-blue-100">
-                {intervalData.label}
-              </span>
-            )}
+            <Badge tone={intervalData.isExtra ? "accent" : "info"}>
+              {intervalData.label}
+            </Badge>
           </div>
 
           {/* Right: Date block in place of the removed record button */}
           <div className="flex items-center gap-3 text-xs sm:text-sm">
             {intervalData.isExtra ? (
               <div className="leading-snug text-right">
-                <span className="block font-bold text-slate-900">{startParsed.day}</span>
-                <span className="block text-purple-700 font-semibold">{startParsed.date}</span>
+                <span className="block text-label-md text-fg">{startParsed.day}</span>
+                <span className="block text-label-md text-accent-fg">{startParsed.date}</span>
               </div>
             ) : (
               <>
                 <div className="leading-snug">
-                  <span className="block font-bold text-slate-900">{startParsed.day}</span>
-                  <span className="block text-slate-600 font-medium">{startParsed.date}</span>
+                  <span className="block text-label-md text-fg">{startParsed.day}</span>
+                  <span className="block text-body-sm text-fg-muted">{startParsed.date}</span>
                 </div>
-                <span className="text-slate-400 font-bold text-base select-none">-</span>
+                <span className="text-body-md text-fg-subtle select-none">-</span>
                 <div className="leading-snug">
-                  <span className="block font-bold text-slate-900">{endParsed.day}</span>
-                  <span className="block text-slate-600 font-medium">{endParsed.date}</span>
+                  <span className="block text-label-md text-fg">{endParsed.day}</span>
+                  <span className="block text-body-sm text-fg-muted">{endParsed.date}</span>
                 </div>
               </>
             )}
           </div>
         </div>
-      </section>
+      </Card>
 
       {/* ========================================================================= */}
       {/* CLINICAL REASON & ADDITIONAL NOTES CARD (ONLY FOR EXTRA TREATMENTS)       */}
       {/* ========================================================================= */}
       {intervalData.isExtra && (intervalData.clinicalReason || intervalData.additionalNotes) && (
-        <section className="rounded-2xl sm:rounded-3xl border border-purple-200 bg-gradient-to-br from-purple-50/40 via-white to-white p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-100">
+        <section className="rounded-card sm:rounded-panel border border-accent-soft-line bg-gradient-to-br from-accent-soft/40 via-surface to-surface p-6 sm:p-7 shadow-control space-y-4 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-accent-soft-line">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-purple-100/70 border-purple-200 text-purple-700">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border bg-accent-soft border-accent-soft-line text-accent-fg">
                 <Activity className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <h2 className="text-heading-5 text-fg">
                   {isEs ? "Información Clínica de la Sesión Extra" : "Clinical Reason & Additional Notes"}
                 </h2>
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-caption text-fg-muted">
                   {isEs
                     ? "Motivo médico registrado y notas adicionales o síntomas para esta sesión extra"
                     : "Physician documented clinical indication and patient notes for this extra session"}
@@ -747,23 +757,23 @@ function ViewRecordContent() {
               </div>
             </div>
 
-            <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200/80 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+            <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-accent-100 text-accent-900 border border-accent-soft-line shadow-control">
+              <span className="h-2 w-2 rounded-full bg-accent-solid animate-pulse" />
               {isEs ? "Sesión de Tratamiento Extra" : "Extra Treatment Session"}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
             {/* Box 1: Clinical Reason */}
-            <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+            <div className="rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 text-purple-600" />
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-accent-fg" />
+                <span className="text-overline text-accent-fg">
                   {isEs ? "Motivo Clínico" : "Clinical Reason"}
                 </span>
               </div>
               <div className="pt-1">
-                <span className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-bold border shadow-2xs bg-white text-purple-900 border-purple-200">
+                <span className="inline-flex items-center px-3.5 py-1.5 rounded-control text-sm sm:text-base font-bold border shadow-control bg-surface text-accent-900 border-accent-soft-line">
                   {intervalData.clinicalReason ||
                     (isEs ? "Motivo no especificado" : "Reason not specified")}
                 </span>
@@ -771,15 +781,15 @@ function ViewRecordContent() {
             </div>
 
             {/* Box 2: Additional Notes / Symptoms */}
-            <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
+            <div className="rounded-card border border-accent-soft-line bg-accent-soft/30 p-4 sm:p-5 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-purple-600 shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                <FileText className="h-4 w-4 text-accent-fg shrink-0" />
+                <span className="text-overline text-accent-fg">
                   {isEs ? "Notas Adicionales / Síntomas" : "Additional Notes / Symptoms"}
                 </span>
               </div>
               <div className="pt-1">
-                <p className="text-sm sm:text-base font-medium text-slate-800 leading-relaxed bg-white border border-purple-100 rounded-xl p-3 sm:p-3.5 shadow-2xs">
+                <p className="text-sm sm:text-base font-medium text-fg-secondary leading-relaxed bg-surface border border-accent-soft-line rounded-control p-3 sm:p-3.5 shadow-control">
                   {intervalData.additionalNotes ||
                     (isEs
                       ? "Sin notas adicionales registradas para esta sesión extra."
@@ -803,64 +813,74 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       <section className="space-y-3.5 animate-in fade-in duration-200">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+          <h2 className="text-heading-5 text-fg">
             {isEs ? "Órdenes e Instrucciones del Proveedor" : "Provider Orders & Instructions"}
           </h2>
 
-          <button
-            type="button"
-            onClick={handleOpenAddOrder}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-            <span>{isEs ? "Nueva Orden" : "Add Order"}</span>
-          </button>
+          <Button size="small" onClick={handleOpenAddOrder}>
+            <Plus aria-hidden="true" />
+            {isEs ? "Nueva Orden" : "Add Order"}
+          </Button>
         </div>
 
-        {/* Orders Table - Matched with Add Page format */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                <th className="py-3 px-4 w-28 sm:w-32">{isEs ? "Día" : "Day"}</th>
-                <th className="py-3 px-4 w-32 sm:w-36">{isEs ? "Fecha" : "Date"}</th>
-                <th className="py-3 px-4">{isEs ? "Orden / Instrucción" : "Order / Instruction"}</th>
-                <th className="py-3 px-4 text-center w-28">{isEs ? "Completado" : "Completed"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+        <Card padding="none" className="overflow-hidden">
+          <Table>
+            <TableHead>
+              <TableRow className="bg-surface-sunken">
+                <TableHeaderCell className="w-28 sm:w-32">
+                  {isEs ? "Día" : "Day"}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-32 sm:w-36">
+                  {isEs ? "Fecha" : "Date"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Orden / Instrucción" : "Order / Instruction"}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-28 text-center">
+                  {isEs ? "Completado" : "Completed"}
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {orders.map((item) => {
                 const { day, date } = getDayAndDate(item.date, isEs);
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-900 whitespace-nowrap font-bold text-xs sm:text-sm">
+                  <TableRow key={item.id}>
+                    <TableCell emphasis className="whitespace-nowrap">
                       {day}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap font-medium text-xs sm:text-sm">
-                      {date}
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-slate-800 text-xs sm:text-sm leading-snug">
-                      {item.order}
-                    </td>
-                    <td className="py-3 px-4 text-center whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{date}</TableCell>
+                    <TableCell className="leading-snug">{item.order}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      {/* Was a bare <button>: a screen reader announced only
+                          "button", never whether the order was done. */}
                       <button
                         type="button"
+                        role="checkbox"
+                        aria-checked={item.completed}
+                        aria-label={
+                          isEs
+                            ? `Marcar como completado: ${item.order}`
+                            : `Mark completed: ${item.order}`
+                        }
                         onClick={() => toggleOrderCompleted(item.id)}
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
+                        className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-control-small border transition-colors duration-150 ease-standard select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                           item.completed
-                            ? "bg-[#2563EB] border-[#2563EB] text-white"
-                            : "bg-white border-slate-300 hover:border-slate-400"
+                            ? "border-primary-solid bg-primary-solid text-on-primary"
+                            : "border-line-strong bg-surface hover:border-fg-subtle"
                         }`}
                       >
-                        {item.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                        {item.completed && (
+                          <Check aria-hidden="true" className="h-3.5 w-3.5 stroke-[3]" />
+                        )}
                       </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       </section>
 
       {/* ========================================================================= */}
@@ -868,83 +888,89 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       <section className="space-y-3.5 animate-in fade-in duration-200">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+          <h2 className="text-heading-5 text-fg">
             {isEs ? "Síntomas Entre Tratamientos" : "Symptoms Between Treatments"}
           </h2>
 
-          <button
-            type="button"
-            onClick={handleOpenAddSymptom}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-            <span>{isEs ? "Agregar Nuevo" : "Add New"}</span>
-          </button>
+          <Button size="small" onClick={handleOpenAddSymptom}>
+            <Plus aria-hidden="true" />
+            {isEs ? "Agregar Nuevo" : "Add New"}
+          </Button>
         </div>
 
-        {/* Symptoms Table - Clean Design (Day, Date, Symptoms, Recovery Time, Edit Icon) */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
-                <th className="py-3 px-4 w-28 sm:w-32">{isEs ? "Día" : "Day"}</th>
-                <th className="py-3 px-4 w-32 sm:w-36">{isEs ? "Fecha" : "Date"}</th>
-                <th className="py-3 px-4">{isEs ? "Síntomas" : "Symptoms"}</th>
-                <th className="py-3 px-4 w-44">{isEs ? "Tiempo de Recuperación" : "Recovery Time"}</th>
-                <th className="py-3 px-4 text-center w-24">{isEs ? "Editar" : "Edit"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+        <Card padding="none" className="overflow-hidden">
+          <Table minWidth={720}>
+            <TableHead>
+              <TableRow className="bg-surface-sunken">
+                <TableHeaderCell className="w-28 sm:w-32">
+                  {isEs ? "Día" : "Day"}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-32 sm:w-36">
+                  {isEs ? "Fecha" : "Date"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Síntomas" : "Symptoms"}</TableHeaderCell>
+                <TableHeaderCell className="w-44">
+                  {isEs ? "Tiempo de Recuperación" : "Recovery Time"}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-24 text-center">
+                  {isEs ? "Editar" : "Edit"}
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {symptomsList.map((entry) => {
                 const { day, date } = getDayAndDate(entry.date, isEs);
                 return (
-                  <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-900 whitespace-nowrap font-bold text-xs sm:text-sm">
+                  <TableRow key={entry.id}>
+                    <TableCell emphasis className="whitespace-nowrap">
                       {day}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap font-medium text-xs sm:text-sm">
-                      {date}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{date}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-inline-sm">
                         {entry.symptoms.map((sym, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-[#2563EB] border border-blue-100"
-                          >
+                          <Badge key={idx} tone="info">
                             {sym}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {entry.recoveryTime ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                          <Clock className="h-3 w-3 text-emerald-600" />
-                          {isEs ? LOCALIZED_RECOVERY_TIME[entry.recoveryTime] || entry.recoveryTime : entry.recoveryTime}
-                        </span>
+                        <Badge tone="success" icon={<Clock aria-hidden="true" />}>
+                          {isEs
+                            ? LOCALIZED_RECOVERY_TIME[entry.recoveryTime] ||
+                              entry.recoveryTime
+                            : entry.recoveryTime}
+                        </Badge>
                       ) : (
-                        <span className="text-xs text-slate-400 font-medium italic">
+                        <span className="text-caption text-fg-subtle italic">
                           {isEs ? "No registrado" : "Not logged"}
                         </span>
                       )}
-                    </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <button
-                        type="button"
+                    </TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      <Button
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
                         onClick={() => handleOpenEditSymptom(entry)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-slate-600 hover:text-[#2563EB] transition-colors cursor-pointer select-none active:scale-95"
-                        title={isEs ? "Editar Síntomas" : "Edit Symptoms"}
+                        aria-label={
+                          isEs
+                            ? `Editar síntomas del ${date}`
+                            : `Edit symptoms for ${date}`
+                        }
+                        className="px-inset-xs"
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
+                        <Pencil aria-hidden="true" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       </section>
 
       {/* ========================================================================= */}
@@ -957,264 +983,255 @@ function ViewRecordContent() {
       {/* ========================================================================= */}
       {/* ADD ORDER MODAL (RESTRICTED STRICTLY TO ACTIVE INTERVAL DATES)            */}
       {/* ========================================================================= */}
-      {isOrderModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-2xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h4 className="text-base font-bold text-slate-900">
-                {isEs ? "Agregar Nueva Orden" : "Add New Order"}
-              </h4>
-              <button
-                type="button"
-                onClick={() => setIsOrderModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddOrderSubmit} className="space-y-4">
-              {/* Step 1: Select date strictly from this treatment interval */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  {isEs ? "1. Seleccionar Fecha del Intervalo" : "1. Select Treatment Interval Date"}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {availableDates.map((d) => {
-                    const isSelected = formOrderDate === d.shortDate;
-                    return (
-                      <button
-                        key={d.shortDate}
-                        type="button"
-                        onClick={() => setFormOrderDate(d.shortDate)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer select-none ${
-                          isSelected
-                            ? "border-[#2563EB] bg-blue-50/80 ring-2 ring-[#2563EB]/20 text-[#2563EB]"
-                            : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">
-                          {isEs ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel : d.dayLabel}
-                        </span>
-                        <span className="block text-[11px] font-semibold text-slate-500">
-                          {d.shortDate}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+      <Modal
+        open={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        title={isEs ? "Agregar Nueva Orden" : "Add New Order"}
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsOrderModalOpen(false)}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="add-order-form">
+              {isEs ? "Guardar Orden" : "Save Order"}
+            </Button>
+          </>
+        }
+      >
+            <form
+              id="add-order-form"
+              onSubmit={handleAddOrderSubmit}
+              className="space-y-stack-lg"
+            >
+              {/* Step 1: Select date strictly from this treatment interval.
+                  One date out of a fixed set is a radio group, so it is one —
+                  arrow keys move between days, Tab leaves the group. */}
+              <div className="space-y-stack-sm">
+                <span className="block text-label-md text-fg-secondary">
+                  {isEs
+                    ? "1. Seleccionar Fecha del Intervalo"
+                    : "1. Select Treatment Interval Date"}
+                </span>
+                <RadioGroup
+                  label={
+                    isEs ? "Fecha del intervalo" : "Treatment interval date"
+                  }
+                  value={formOrderDate}
+                  onChange={setFormOrderDate}
+                  orientation="horizontal"
+                  className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
+                >
+                  {availableDates.map((d) => (
+                    <RadioCard
+                      key={d.shortDate}
+                      value={d.shortDate}
+                      title={
+                        isEs
+                          ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
+                          : d.dayLabel
+                      }
+                      description={d.shortDate}
+                    />
+                  ))}
+                </RadioGroup>
               </div>
 
               {/* Step 2: Order text */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {isEs ? "2. Orden / Instrucción" : "2. Order / Instruction"}
-                </label>
-                <textarea
-                  rows={3}
-                  value={formOrderText}
-                  onChange={(e) => {
-                    setFormOrderText(e.target.value);
-                    if (formOrderError) setFormOrderError("");
-                  }}
-                  placeholder={
-                    isEs
-                      ? "Ej: Tomar aglutinante de fosfato con todas las comidas sólidas..."
-                      : "e.g. Take phosphate binder with all solid meals or schedule access ultrasound..."
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none shadow-2xs"
-                />
-                {formOrderError && (
-                  <p className="text-xs font-medium text-rose-500 mt-1">
-                    {formOrderError}
-                  </p>
+              <FormField
+                label={isEs ? "2. Orden / Instrucción" : "2. Order / Instruction"}
+                error={formOrderError || undefined}
+              >
+                {(props) => (
+                  <Textarea
+                    {...props}
+                    rows={3}
+                    value={formOrderText}
+                    onChange={(e) => {
+                      setFormOrderText(e.target.value);
+                      if (formOrderError) setFormOrderError("");
+                    }}
+                    placeholder={
+                      isEs
+                        ? "Ej: Tomar aglutinante de fosfato con todas las comidas sólidas..."
+                        : "e.g. Take phosphate binder with all solid meals or schedule access ultrasound..."
+                    }
+                  />
                 )}
-              </div>
+              </FormField>
 
-              {/* Form Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsOrderModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {isEs ? "Cancelar" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition-colors shadow-2xs cursor-pointer"
-                >
-                  {isEs ? "Guardar Orden" : "Save Order"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Add / Edit Symptom Modal */}
-      {isSymptomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-2xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h4 className="text-base font-bold text-slate-900">
-                {editingSymptomId
-                  ? isEs
-                    ? "Editar Síntomas"
-                    : "Edit Symptoms"
-                  : isEs
-                  ? "Agregar Síntomas"
-                  : "Add Symptoms"}
-              </h4>
-              <button
-                type="button"
-                onClick={() => setIsSymptomModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSymptomSubmit} className="space-y-4">
+      <Modal
+        open={isSymptomModalOpen}
+        onClose={() => setIsSymptomModalOpen(false)}
+        title={
+          editingSymptomId
+            ? isEs
+              ? "Editar Síntomas"
+              : "Edit Symptoms"
+            : isEs
+              ? "Agregar Síntomas"
+              : "Add Symptoms"
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setIsSymptomModalOpen(false)}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button type="submit" form="symptom-form">
+              {editingSymptomId
+                ? isEs
+                  ? "Actualizar"
+                  : "Update Symptoms"
+                : isEs
+                  ? "Guardar"
+                  : "Save Symptoms"}
+            </Button>
+          </>
+        }
+      >
+            <form
+              id="symptom-form"
+              onSubmit={handleSymptomSubmit}
+              className="space-y-stack-lg"
+            >
               {/* Step 1: Select Date */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  {isEs ? "1. Seleccionar Fecha del Tratamiento" : "1. Select Treatment Date"}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {availableDates.map((d) => {
-                    const isSelected = formSymptomDate === d.shortDate;
-                    return (
-                      <button
-                        key={d.shortDate}
-                        type="button"
-                        onClick={() => setFormSymptomDate(d.shortDate)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer select-none ${
-                          isSelected
-                            ? "border-[#2563EB] bg-blue-50/80 ring-2 ring-[#2563EB]/20 text-[#2563EB]"
-                            : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">
-                          {isEs ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel : d.dayLabel}
-                        </span>
-                        <span className="block text-[11px] font-semibold text-slate-500">
-                          {d.shortDate}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="space-y-stack-sm">
+                <span className="block text-label-md text-fg-secondary">
+                  {isEs
+                    ? "1. Seleccionar Fecha del Tratamiento"
+                    : "1. Select Treatment Date"}
+                </span>
+                <RadioGroup
+                  label={isEs ? "Fecha del tratamiento" : "Treatment date"}
+                  value={formSymptomDate}
+                  onChange={setFormSymptomDate}
+                  orientation="horizontal"
+                  className="grid grid-cols-2 gap-inline-md sm:grid-cols-4"
+                >
+                  {availableDates.map((d) => (
+                    <RadioCard
+                      key={d.shortDate}
+                      value={d.shortDate}
+                      title={
+                        isEs
+                          ? LOCALIZED_SPANISH_DAYS[d.dayLabel] || d.dayLabel
+                          : d.dayLabel
+                      }
+                      description={d.shortDate}
+                    />
+                  ))}
+                </RadioGroup>
               </div>
 
-              {/* Step 2: Select Symptoms */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              {/* Step 2: Select Symptoms — any number of them, so the chips
+                  carry aria-pressed rather than posing as radio buttons. */}
+              <div className="space-y-stack-sm">
+                <span className="block text-label-md text-fg-secondary">
                   {isEs ? "2. Seleccionar Síntomas" : "2. Select Symptoms"}
-                </label>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50/50">
-                  {COMMON_SYMPTOM_OPTIONS.map((sym) => {
-                    const isSelected = formSelectedSymptoms.includes(sym);
-                    return (
-                      <button
-                        key={sym}
-                        type="button"
-                        onClick={() => toggleSymptomSelection(sym)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
-                          isSelected
-                            ? "bg-[#2563EB] text-white shadow-2xs"
-                            : "bg-white text-slate-700 border border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                        <span>{isEs ? LOCALIZED_SYMPTOMS[sym] || sym : sym}</span>
-                      </button>
-                    );
-                  })}
+                </span>
+                <div className="max-h-48 overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
+                  <ChipGroup
+                    selection="multiple"
+                    label={isEs ? "Síntomas" : "Symptoms"}
+                    className="gap-inline-md"
+                  >
+                    {COMMON_SYMPTOM_OPTIONS.map((sym) => {
+                      const isSelected = formSelectedSymptoms.includes(sym);
+                      return (
+                        <Chip
+                          key={sym}
+                          selected={isSelected}
+                          onClick={() => toggleSymptomSelection(sym)}
+                          icon={
+                            isSelected ? (
+                              <Check aria-hidden="true" className="stroke-[3]" />
+                            ) : undefined
+                          }
+                        >
+                          {isEs ? LOCALIZED_SYMPTOMS[sym] || sym : sym}
+                        </Chip>
+                      );
+                    })}
+                  </ChipGroup>
                 </div>
                 {symptomFormError && (
-                  <p className="text-xs font-medium text-rose-500 mt-1">
+                  <p role="alert" className="text-caption text-fg-danger">
                     {symptomFormError}
                   </p>
                 )}
               </div>
 
               {/* Step 3: Custom Symptom Input */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {isEs ? "3. Otro Síntoma (Opcional)" : "3. Other Symptom (Optional)"}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formCustomSymptom}
-                    onChange={(e) => setFormCustomSymptom(e.target.value)}
-                    placeholder={
-                      isEs ? "Escribir síntoma personalizado..." : "Type custom symptom..."
-                    }
-                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 shadow-2xs"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomSymptom}
-                    className="rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-                  >
-                    {isEs ? "Agregar" : "Add"}
-                  </button>
-                </div>
-              </div>
+              <FormField
+                label={isEs ? "3. Otro Síntoma" : "3. Other Symptom"}
+                optionalLabel={isEs ? "Opcional" : "Optional"}
+              >
+                {(props) => (
+                  <div className="flex gap-inline-md">
+                    <Input
+                      {...props}
+                      type="text"
+                      value={formCustomSymptom}
+                      onChange={(e) => setFormCustomSymptom(e.target.value)}
+                      placeholder={
+                        isEs
+                          ? "Escribir síntoma personalizado..."
+                          : "Type custom symptom..."
+                      }
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="neutral"
+                      appearance="fill"
+                      onClick={handleAddCustomSymptom}
+                    >
+                      {isEs ? "Agregar" : "Add"}
+                    </Button>
+                  </div>
+                )}
+              </FormField>
 
               {/* Step 4: Recovery Time Tracking */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  {isEs
+              <FormField
+                label={
+                  isEs
                     ? "4. ¿Cuánto tiempo te tomó sentirte mejor? (Tiempo de Recuperación)"
-                    : "4. How long did it take you to feel better? (Recovery Time)"}
-                </label>
-                <select
-                  value={formRecoveryTime}
-                  onChange={(e) => setFormRecoveryTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
-                >
-                  {RECOVERY_TIME_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {isEs ? LOCALIZED_RECOVERY_TIME[opt] || opt : opt}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] font-medium text-slate-500">
-                  {isEs
+                    : "4. How long did it take you to feel better? (Recovery Time)"
+                }
+                hint={
+                  isEs
                     ? "Este dato alimenta el seguimiento del patrón de recuperación del paciente."
-                    : "This entry directly tracks your recovery pattern across dialysis treatments."}
-                </p>
-              </div>
+                    : "This entry directly tracks your recovery pattern across dialysis treatments."
+                }
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={formRecoveryTime}
+                    onChange={(e) => setFormRecoveryTime(e.target.value)}
+                  >
+                    {RECOVERY_TIME_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {isEs ? LOCALIZED_RECOVERY_TIME[opt] || opt : opt}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </FormField>
 
-              {/* Form Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsSymptomModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {isEs ? "Cancelar" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition-colors shadow-2xs cursor-pointer"
-                >
-                  {editingSymptomId
-                    ? isEs
-                      ? "Actualizar"
-                      : "Update Symptoms"
-                    : isEs
-                    ? "Guardar"
-                    : "Save Symptoms"}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -1224,7 +1241,7 @@ export default function DialysisManagementViewPage() {
     <>
       <PersonalLogDisclaimer />
 
-      <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading...</div>}>
+      <Suspense fallback={<div className="p-inset-xl text-center text-body-md text-fg-muted">Loading...</div>}>
         <ViewRecordContent />
       </Suspense>
     </>
