@@ -91,24 +91,106 @@ const liveClassLogs: Array<{
   icon: IconType;
   color: string;
 }> = [
-  { label: "Blood Pressure Log", entries: "28,456", members: "6,231", rate: "85.3%", icon: HeartPulse, color: "text-cat-1" },
-  { label: "Weight & Fluid Log", entries: "31,782", members: "7,142", rate: "85.3%", icon: Weight, color: "text-cat-6" },
-  { label: "Medication Log", entries: "27,934", members: "5,987", rate: "85.3%", icon: Pill, color: "text-cat-7" },
-  { label: "Lab Tracking Log", entries: "33,210", members: "8,450", rate: "85.3%", icon: Microscope, color: "text-cat-2" },
-  { label: "Dialysis Treatment", entries: "29,865", members: "6,789", rate: "85.3%", icon: UserRoundCheck, color: "text-cat-4" },
-  { label: "Nutrition & Meal Log", entries: "30,498", members: "7,305", rate: "85.3%", icon: Activity, color: "text-cat-3" },
-  { label: "How I Feel Today Log", entries: "32,120", members: "5,623", rate: "85.3%", icon: MessageSquareText, color: "text-cat-5" },
-  { label: "Before the ER Log", entries: "32,120", members: "5,623", rate: "85.3%", icon: Truck, color: "text-cat-8" },
+  {
+    label: "Blood Pressure Log",
+    entries: "28,456",
+    members: "6,231",
+    rate: "85.3%",
+    icon: HeartPulse,
+    color: "text-cat-1",
+  },
+  {
+    label: "Weight & Fluid Log",
+    entries: "31,782",
+    members: "7,142",
+    rate: "85.3%",
+    icon: Weight,
+    color: "text-cat-6",
+  },
+  {
+    label: "Medication Log",
+    entries: "27,934",
+    members: "5,987",
+    rate: "85.3%",
+    icon: Pill,
+    color: "text-cat-7",
+  },
+  {
+    label: "Lab Tracking Log",
+    entries: "33,210",
+    members: "8,450",
+    rate: "85.3%",
+    icon: Microscope,
+    color: "text-cat-2",
+  },
+  {
+    label: "Dialysis Treatment",
+    entries: "29,865",
+    members: "6,789",
+    rate: "85.3%",
+    icon: UserRoundCheck,
+    color: "text-cat-4",
+  },
+  {
+    label: "Nutrition & Meal Log",
+    entries: "30,498",
+    members: "7,305",
+    rate: "85.3%",
+    icon: Activity,
+    color: "text-cat-3",
+  },
+  {
+    label: "How I Feel Today Log",
+    entries: "32,120",
+    members: "5,623",
+    rate: "85.3%",
+    icon: MessageSquareText,
+    color: "text-cat-5",
+  },
+  {
+    label: "Before the ER Log",
+    entries: "32,120",
+    members: "5,623",
+    rate: "85.3%",
+    icon: Truck,
+    color: "text-cat-8",
+  },
 ];
 
 const confidenceRows = [
   { label: "Understanding Dialysis", before: 8.9, after: 4.1, change: "+4.7" },
-  { label: "Understanding Lab Results", before: 5.2, after: 3.8, change: "+1.4" },
-  { label: "Fluid Management Knowledge", before: 7.4, after: 6.0, change: "+3.2" },
-  { label: "Diet & Nutrition Knowledge", before: 2.1, after: 5.5, change: "-1.1", negative: true },
-  { label: "Medication Understanding", before: 4.9, after: 8.1, change: "+4.7" },
+  {
+    label: "Understanding Lab Results",
+    before: 5.2,
+    after: 3.8,
+    change: "+1.4",
+  },
+  {
+    label: "Fluid Management Knowledge",
+    before: 7.4,
+    after: 6.0,
+    change: "+3.2",
+  },
+  {
+    label: "Diet & Nutrition Knowledge",
+    before: 2.1,
+    after: 5.5,
+    change: "-1.1",
+    negative: true,
+  },
+  {
+    label: "Medication Understanding",
+    before: 4.9,
+    after: 8.1,
+    change: "+4.7",
+  },
   { label: "Managing Symptoms", before: 9.0, after: 7.3, change: "+2.5" },
-  { label: "Kidney Disease Understanding", before: 3.3, after: 4.4, change: "+0.9" },
+  {
+    label: "Kidney Disease Understanding",
+    before: 3.3,
+    after: 4.4,
+    change: "+0.9",
+  },
 ];
 
 const educationLegend = [
@@ -120,9 +202,24 @@ const educationLegend = [
 ];
 
 const engagementLegend = [
-  { label: "High Engagement", detail: "Completed 5+ modules", value: "29 (50%)", color: "bg-cat-6" },
-  { label: "Medium Engagement", detail: "Completed 2-4 modules", value: "16 (28%)", color: "bg-cat-2" },
-  { label: "Low Engagement", detail: "No login or 30 days", value: "13 (22%)", color: "bg-cat-1" },
+  {
+    label: "High Engagement",
+    detail: "Completed 5+ modules",
+    value: "29 (50%)",
+    color: "bg-cat-6",
+  },
+  {
+    label: "Medium Engagement",
+    detail: "Completed 2-4 modules",
+    value: "16 (28%)",
+    color: "bg-cat-2",
+  },
+  {
+    label: "Low Engagement",
+    detail: "No login or 30 days",
+    value: "13 (22%)",
+    color: "bg-cat-1",
+  },
 ];
 
 const activityRows = [
@@ -248,7 +345,9 @@ function ConfidencePanel() {
         {confidenceRows.map((row) => (
           <div key={row.label} className="space-y-2">
             <div className="flex items-center justify-between gap-inline-lg text-caption">
-              <span className="text-label-sm text-fg-secondary">{row.label}</span>
+              <span className="text-label-sm text-fg-secondary">
+                {row.label}
+              </span>
               <span className="flex shrink-0 gap-inline-lg text-label-sm">
                 <span className="text-cat-6">{row.before.toFixed(1)}</span>
                 <span className="text-cat-7">{row.after.toFixed(1)}</span>
@@ -292,7 +391,12 @@ function DonutPanel({
   footer,
 }: {
   title: string;
-  legend: Array<{ label: string; value: string; color: string; detail?: string }>;
+  legend: Array<{
+    label: string;
+    value: string;
+    color: string;
+    detail?: string;
+  }>;
   gradient: string;
   footer?: React.ReactNode;
 }) {
@@ -312,12 +416,21 @@ function DonutPanel({
 
         <div className="space-y-4">
           {legend.map((item) => (
-            <div key={item.label} className="grid grid-cols-[1fr_auto] items-start gap-4 text-sm">
+            <div
+              key={item.label}
+              className="grid grid-cols-[1fr_auto] items-start gap-4 text-sm"
+            >
               <div className="flex items-start gap-3">
-                <span className={`mt-1 h-4 w-4 shrink-0 rounded-pill ${item.color}`} />
+                <span
+                  className={`mt-1 h-4 w-4 shrink-0 rounded-pill ${item.color}`}
+                />
                 <div>
-                  <p className="font-semibold text-fg-secondary">{item.label}</p>
-                  {item.detail && <p className="mt-2 text-fg-muted">{item.detail}</p>}
+                  <p className="font-semibold text-fg-secondary">
+                    {item.label}
+                  </p>
+                  {item.detail && (
+                    <p className="mt-2 text-fg-muted">{item.detail}</p>
+                  )}
                 </div>
               </div>
               <p className="font-medium text-fg-muted">{item.value}</p>
@@ -342,8 +455,12 @@ function EducationFooter() {
     <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
       {items.map((item) => (
         <div key={item.label}>
-          <p className="min-h-10 text-sm font-medium leading-5 text-fg">{item.label}</p>
-          <p className="text-xl font-bold leading-6 text-fg-brand">{item.value}</p>
+          <p className="min-h-10 text-sm leading-5 font-medium text-fg">
+            {item.label}
+          </p>
+          <p className="text-xl leading-6 font-bold text-fg-brand">
+            {item.value}
+          </p>
           <p className="text-sm font-medium text-fg-secondary">{item.unit}</p>
         </div>
       ))}
@@ -356,7 +473,9 @@ function RecentActivity() {
     <section className="rounded-card border border-line bg-surface shadow-card">
       <div className="px-4 py-4">
         <h2 className="text-lg font-semibold text-fg">Recent Activity</h2>
-        <p className="mt-2 text-xs font-medium text-fg-secondary">Recent Activity</p>
+        <p className="mt-2 text-xs font-medium text-fg-secondary">
+          Recent Activity
+        </p>
       </div>
       <div className="border-t border-line-subtle">
         {activityRows.map((row, index) => (
@@ -365,13 +484,18 @@ function RecentActivity() {
             className="grid grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line px-3 py-2 last:border-0"
           >
             <div className="relative h-8 w-8 overflow-hidden rounded-pill bg-surface-sunken">
-              <Image src="/images/aboutImage.png" alt="" fill className="object-cover object-top" />
+              <Image
+                src="/images/aboutImage.png"
+                alt=""
+                fill
+                className="object-cover object-top"
+              />
             </div>
             <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-sm">
               <span className="font-semibold text-fg">{row.status}</span>
               <span className="font-medium text-fg-secondary">{row.name}</span>
             </div>
-            <span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium text-fg-muted">
+            <span className="flex items-center gap-2 text-xs font-medium whitespace-nowrap text-fg-muted">
               <Clock3 className="h-4 w-4" />
               {row.time}
             </span>
@@ -410,7 +534,10 @@ function EarningsOverview() {
           </div>
           <div className="relative z-10 flex h-full items-end justify-between gap-3 px-2">
             {weeklyBars.map((bar) => (
-              <div key={bar.day} className="flex h-full flex-1 flex-col justify-end gap-2">
+              <div
+                key={bar.day}
+                className="flex h-full flex-1 flex-col justify-end gap-2"
+              >
                 <div className="flex flex-1 items-end">
                   <div
                     className={`w-full rounded-t-md ${
@@ -421,7 +548,9 @@ function EarningsOverview() {
                     style={{ height: `${bar.value}%` }}
                   />
                 </div>
-                <span className="text-center text-sm font-medium text-fg-muted">{bar.day}</span>
+                <span className="text-center text-sm font-medium text-fg-muted">
+                  {bar.day}
+                </span>
               </div>
             ))}
           </div>

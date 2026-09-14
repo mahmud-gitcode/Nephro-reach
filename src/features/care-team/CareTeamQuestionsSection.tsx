@@ -67,7 +67,8 @@ const INITIAL_QUESTIONS: CareTeamQuestion[] = [
   {
     id: "q7",
     role: "Dietitian",
-    question: "What protein-rich snacks can I safely eat between dialysis days?",
+    question:
+      "What protein-rich snacks can I safely eat between dialysis days?",
     status: "Answered",
     answer:
       "Egg whites, Greek yogurt (monitored for potassium), renal-friendly protein bars, and roasted unsalted chicken strips are great low-phosphorus high-protein options.",
@@ -91,7 +92,8 @@ const INITIAL_QUESTIONS: CareTeamQuestion[] = [
   {
     id: "q10",
     role: "Social Worker",
-    question: "Can the clinic social worker help with prescription co-pay assistance?",
+    question:
+      "Can the clinic social worker help with prescription co-pay assistance?",
     status: "Answered",
     answer:
       "Social worker enrolled you in the non-profit medication foundation co-pay relief program, covering up to 90% of binder and calcitriol costs.",
@@ -99,7 +101,8 @@ const INITIAL_QUESTIONS: CareTeamQuestion[] = [
   {
     id: "q11",
     role: "Nurse",
-    question: "My fistula access site has a slight tingling sensation after treatment",
+    question:
+      "My fistula access site has a slight tingling sensation after treatment",
     status: "Answered",
     answer:
       "Nurse assessed thrill and bruit; blood flow is strong and clear. Tingling was determined to be transient nerve sensitivity from arm positioning during the run. Advised warm compress and to report any throbbing.",
@@ -125,10 +128,13 @@ export default function CareTeamQuestionsSection({
 }: CareTeamQuestionsSectionProps = {}) {
   const { language } = useLanguage();
 
-  const [questions, setQuestions] = useState<CareTeamQuestion[]>(INITIAL_QUESTIONS);
+  const [questions, setQuestions] =
+    useState<CareTeamQuestion[]>(INITIAL_QUESTIONS);
   const [selectedRole, setSelectedRole] = useState<CareTeamRole | "All">("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | QuestionStatus>("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | QuestionStatus>(
+    "All",
+  );
 
   // Modal State for Add / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -214,7 +220,9 @@ export default function CareTeamQuestionsSection({
     e.preventDefault();
     if (!formQuestion.trim()) {
       setFormError(
-        language === "ES" ? "Por favor escribe la pregunta." : "Please enter the question."
+        language === "ES"
+          ? "Por favor escribe la pregunta."
+          : "Please enter the question.",
       );
       return;
     }
@@ -242,7 +250,8 @@ export default function CareTeamQuestionsSection({
         role: formRole,
         question: formQuestion.trim(),
         answer: formAnswer.trim(),
-        status: hasAnswer && formStatus === "Submitted" ? "Answered" : formStatus,
+        status:
+          hasAnswer && formStatus === "Submitted" ? "Answered" : formStatus,
       };
       saveQuestions([newQuestion, ...questions]);
     }
@@ -320,19 +329,19 @@ export default function CareTeamQuestionsSection({
       {/* Optional Section Title (if !hideTitle) */}
       {!hideTitle && (
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-primary-fg tracking-tight uppercase">
+          <h2 className="text-lg font-bold tracking-tight text-primary-fg uppercase">
             {language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"}
           </h2>
         </div>
       )}
 
       {/* SINGLE UNIFIED ROW: Search (Small & First), Role Dropdown, Status Dropdown, and Add Question Button */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left cluster: Search Input (Small) followed by the 2 Dropdowns */}
-        <div className="flex items-center gap-3 flex-wrap flex-1">
+        <div className="flex flex-1 flex-wrap items-center gap-3">
           {/* 1. Search Bar (Small, placed before dropdowns) */}
           <div className="relative w-48 sm:w-56">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-subtle" />
+            <Search className="absolute top-1/2 left-3.5 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
             <label htmlFor="care-team-search" className="sr-only">
               {language === "ES" ? "Buscar preguntas" : "Search questions"}
             </label>
@@ -358,7 +367,9 @@ export default function CareTeamQuestionsSection({
             <Select
               id="care-team-role"
               value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as CareTeamRole | "All")}
+              onChange={(e) =>
+                setSelectedRole(e.target.value as CareTeamRole | "All")
+              }
             >
               {roleTabs.map((tab) => (
                 <option key={tab.id} value={tab.id}>
@@ -376,7 +387,9 @@ export default function CareTeamQuestionsSection({
             <Select
               id="care-team-status"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "All" | QuestionStatus)}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "All" | QuestionStatus)
+              }
             >
               <option value="All">
                 {language === "ES" ? "Todos los Estados" : "All Status"}
@@ -404,8 +417,8 @@ export default function CareTeamQuestionsSection({
       {/* Clean Q & Ans Card List */}
       <div className="space-y-3.5">
         {filteredQuestions.length === 0 ? (
-          <div className="rounded-card border border-line bg-surface p-12 text-center text-fg-subtle space-y-2">
-            <HelpCircle className="h-8 w-8 mx-auto text-fg-subtle" />
+          <div className="space-y-2 rounded-card border border-line bg-surface p-12 text-center text-fg-subtle">
+            <HelpCircle className="mx-auto h-8 w-8 text-fg-subtle" />
             <p className="text-sm font-semibold text-fg-muted">
               {language === "ES"
                 ? "No se encontraron preguntas para este miembro o filtro."
@@ -421,18 +434,18 @@ export default function CareTeamQuestionsSection({
           filteredQuestions.map((q) => (
             <div
               key={q.id}
-              className="rounded-card border border-line bg-surface p-5 sm:p-6 shadow-control hover:shadow-control transition-shadow space-y-3"
+              className="space-y-3 rounded-card border border-line bg-surface p-5 shadow-control transition-shadow hover:shadow-control sm:p-6"
             >
               {/* Question Row with Status Tag, Edit Button, and Delete */}
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div className="flex-1">
-                  <h3 className="text-base font-semibold text-fg leading-snug">
+                  <h3 className="text-base leading-snug font-semibold text-fg">
                     {q.question}
                   </h3>
                 </div>
 
                 {/* Status Tag, Edit Button & Delete */}
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                <div className="flex shrink-0 items-center gap-2 self-start sm:self-center">
                   {/* Status Tag */}
                   <button
                     type="button"
@@ -442,8 +455,8 @@ export default function CareTeamQuestionsSection({
                         ? "Clic para cambiar estado (Pendiente → Discutida → Respondida)"
                         : "Click to cycle status (Submitted → Discussed → Answered)"
                     }
-                    className={`px-3 py-1 rounded-pill text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 shadow-control ${getStatusBadgeStyle(
-                      q.status
+                    className={`cursor-pointer rounded-pill border px-3 py-1 text-xs font-bold shadow-control transition-all select-none active:scale-95 ${getStatusBadgeStyle(
+                      q.status,
                     )}`}
                   >
                     {q.status === "Answered"
@@ -451,19 +464,19 @@ export default function CareTeamQuestionsSection({
                         ? "Respondida"
                         : "Answered"
                       : q.status === "Discussed"
-                      ? language === "ES"
-                        ? "Discutida"
-                        : "Discussed"
-                      : language === "ES"
-                      ? "Pendiente"
-                      : "Submitted"}
+                        ? language === "ES"
+                          ? "Discutida"
+                          : "Discussed"
+                        : language === "ES"
+                          ? "Pendiente"
+                          : "Submitted"}
                   </button>
 
                   {/* Edit Button beside Status Tag */}
                   <button
                     type="button"
                     onClick={() => handleOpenEditModal(q)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill border border-line bg-surface hover:bg-primary-soft hover:border-primary-soft-line text-fg-secondary hover:text-fg-brand text-xs font-semibold shadow-control transition-all cursor-pointer active:scale-95"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1 text-xs font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
                     title={
                       language === "ES"
                         ? "Editar pregunta y respuesta"
@@ -478,7 +491,7 @@ export default function CareTeamQuestionsSection({
                   <button
                     type="button"
                     onClick={() => handleDeleteQuestion(q.id)}
-                    className="p-1.5 rounded-control text-fg-subtle hover:text-danger hover:bg-danger-surface transition-colors cursor-pointer"
+                    className="cursor-pointer rounded-control p-1.5 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
                     title={language === "ES" ? "Eliminar" : "Delete"}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -487,12 +500,12 @@ export default function CareTeamQuestionsSection({
               </div>
 
               {/* Answer Row */}
-              <div className="pt-3 border-t border-line-subtle flex items-start gap-2.5">
-                <span className="text-sm font-bold text-fg-secondary shrink-0 select-none">
+              <div className="flex items-start gap-2.5 border-t border-line-subtle pt-3">
+                <span className="shrink-0 text-sm font-bold text-fg-secondary select-none">
                   Ans:
                 </span>
                 {q.answer && q.answer.trim().length > 0 ? (
-                  <p className="text-sm text-fg-muted leading-relaxed font-normal flex-1">
+                  <p className="flex-1 text-sm leading-relaxed font-normal text-fg-muted">
                     {q.answer}
                   </p>
                 ) : (
@@ -505,9 +518,11 @@ export default function CareTeamQuestionsSection({
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal(q)}
-                      className="text-fg-brand font-semibold not-italic hover:underline cursor-pointer"
+                      className="cursor-pointer font-semibold text-fg-brand not-italic hover:underline"
                     >
-                      {language === "ES" ? "+ Agregar Respuesta" : "+ Add Answer"}
+                      {language === "ES"
+                        ? "+ Agregar Respuesta"
+                        : "+ Add Answer"}
                     </button>
                   </div>
                 )}
@@ -552,96 +567,100 @@ export default function CareTeamQuestionsSection({
           </>
         }
       >
-            {formError && (
-              <Alert tone="danger" className="mb-stack-lg">
-                {formError}
-              </Alert>
-            )}
+        {formError && (
+          <Alert tone="danger" className="mb-stack-lg">
+            {formError}
+          </Alert>
+        )}
 
-            <form
-              id="care-team-question-form"
-              onSubmit={handleFormSubmit}
-              className="space-y-stack-lg"
+        <form
+          id="care-team-question-form"
+          onSubmit={handleFormSubmit}
+          className="space-y-stack-lg"
+        >
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES"
+                ? "Destinatario / Especialidad"
+                : "Care Team Member"}{" "}
+              <span className="text-danger">*</span>
+            </label>
+            <Select
+              value={formRole}
+              onChange={(e) => setFormRole(e.target.value as CareTeamRole)}
             >
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Destinatario / Especialidad" : "Care Team Member"}{" "}
-                  <span className="text-danger">*</span>
-                </label>
-                <Select
-                  value={formRole}
-                  onChange={(e) => setFormRole(e.target.value as CareTeamRole)}
-                >
-                  <option value="Provider">
-                    {language === "ES" ? "Proveedor (Provider)" : "Provider"}
-                  </option>
-                  <option value="Dietitian">
-                    {language === "ES" ? "Dietista (Dietitian)" : "Dietitian"}
-                  </option>
-                  <option value="Social Worker">
-                    {language === "ES" ? "Trabajador Social (Social Worker)" : "Social Worker"}
-                  </option>
-                  <option value="Nurse">
-                    {language === "ES" ? "Enfermero/a (Nurse)" : "Nurse"}
-                  </option>
-                </Select>
-              </div>
+              <option value="Provider">
+                {language === "ES" ? "Proveedor (Provider)" : "Provider"}
+              </option>
+              <option value="Dietitian">
+                {language === "ES" ? "Dietista (Dietitian)" : "Dietitian"}
+              </option>
+              <option value="Social Worker">
+                {language === "ES"
+                  ? "Trabajador Social (Social Worker)"
+                  : "Social Worker"}
+              </option>
+              <option value="Nurse">
+                {language === "ES" ? "Enfermero/a (Nurse)" : "Nurse"}
+              </option>
+            </Select>
+          </div>
 
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Pregunta" : "Question"} <span className="text-danger">*</span>
-                </label>
-                <Textarea
-                  rows={3}
-                  value={formQuestion}
-                  onChange={(e) => setFormQuestion(e.target.value)}
-                  placeholder={
-                    language === "ES"
-                      ? "p.ej. ¿Por qué cambiaron mi peso seco?"
-                      : "e.g. Why was my dry weight changed?"
-                  }
-                  autoFocus
-                />
-              </div>
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Pregunta" : "Question"}{" "}
+              <span className="text-danger">*</span>
+            </label>
+            <Textarea
+              rows={3}
+              value={formQuestion}
+              onChange={(e) => setFormQuestion(e.target.value)}
+              placeholder={
+                language === "ES"
+                  ? "p.ej. ¿Por qué cambiaron mi peso seco?"
+                  : "e.g. Why was my dry weight changed?"
+              }
+              autoFocus
+            />
+          </div>
 
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Respuesta (Ans)" : "Answer (Ans)"}
-                </label>
-                <Textarea
-                  rows={4}
-                  value={formAnswer}
-                  onChange={(e) => setFormAnswer(e.target.value)}
-                  placeholder={
-                    language === "ES"
-                      ? "Documenta la respuesta o indicaciones que te dio el equipo médico..."
-                      : "Document what the care team member answered or instructed..."
-                  }
-                />
-              </div>
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Respuesta (Ans)" : "Answer (Ans)"}
+            </label>
+            <Textarea
+              rows={4}
+              value={formAnswer}
+              onChange={(e) => setFormAnswer(e.target.value)}
+              placeholder={
+                language === "ES"
+                  ? "Documenta la respuesta o indicaciones que te dio el equipo médico..."
+                  : "Document what the care team member answered or instructed..."
+              }
+            />
+          </div>
 
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Estado" : "Status"}
-                </label>
-                <Select
-                  value={formStatus}
-                  onChange={(e) => setFormStatus(e.target.value as QuestionStatus)}
-                  className="w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
-                >
-                  <option value="Answered">
-                    {language === "ES" ? "Respondida (Answered)" : "Answered"}
-                  </option>
-                  <option value="Discussed">
-                    {language === "ES" ? "Discutida (Discussed)" : "Discussed"}
-                  </option>
-                  <option value="Submitted">
-                    {language === "ES" ? "Pendiente (Submitted)" : "Submitted"}
-                  </option>
-                </Select>
-              </div>
-
-            </form>
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Estado" : "Status"}
+            </label>
+            <Select
+              value={formStatus}
+              onChange={(e) => setFormStatus(e.target.value as QuestionStatus)}
+              className="w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg-secondary outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+            >
+              <option value="Answered">
+                {language === "ES" ? "Respondida (Answered)" : "Answered"}
+              </option>
+              <option value="Discussed">
+                {language === "ES" ? "Discutida (Discussed)" : "Discussed"}
+              </option>
+              <option value="Submitted">
+                {language === "ES" ? "Pendiente (Submitted)" : "Submitted"}
+              </option>
+            </Select>
+          </div>
+        </form>
       </Modal>
     </div>
   );

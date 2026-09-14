@@ -20,14 +20,18 @@ export function proxy(request: NextRequest) {
     }
 
     if (!canAccessPath(session.role, pathname)) {
-      return NextResponse.redirect(new URL(homeForRole(session.role), request.url));
+      return NextResponse.redirect(
+        new URL(homeForRole(session.role), request.url),
+      );
     }
 
     return NextResponse.next();
   }
 
   if ((pathname === "/login" || pathname === "/registration") && session) {
-    return NextResponse.redirect(new URL(homeForRole(session.role), request.url));
+    return NextResponse.redirect(
+      new URL(homeForRole(session.role), request.url),
+    );
   }
 
   return NextResponse.next();

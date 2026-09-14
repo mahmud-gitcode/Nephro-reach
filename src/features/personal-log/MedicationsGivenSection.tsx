@@ -86,16 +86,48 @@ const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
   { value: "mg", descEn: "milligrams", descEs: "miligramos" },
   { value: "mcg", descEn: "micrograms", descEs: "microgramos" },
   { value: "g", descEn: "grams", descEs: "gramos" },
-  { value: "Units", descEn: "medication units", descEs: "unidades de medicamento" },
+  {
+    value: "Units",
+    descEn: "medication units",
+    descEs: "unidades de medicamento",
+  },
   { value: "mL", descEn: "milliliters", descEs: "mililitros" },
-  { value: "mg/mL", descEn: "milligrams per milliliter", descEs: "miligramos por mililitro" },
-  { value: "mcg/mL", descEn: "micrograms per milliliter", descEs: "microgramos por mililitro" },
-  { value: "Units/mL", descEn: "units per milliliter", descEs: "unidades por mililitro" },
-  { value: "mg/kg", descEn: "milligrams per kilogram", descEs: "miligramos por kilogramo" },
-  { value: "mcg/kg", descEn: "micrograms per kilogram", descEs: "microgramos por kilogramo" },
-  { value: "Units/kg", descEn: "units per kilogram", descEs: "unidades por kilogramo" },
+  {
+    value: "mg/mL",
+    descEn: "milligrams per milliliter",
+    descEs: "miligramos por mililitro",
+  },
+  {
+    value: "mcg/mL",
+    descEn: "micrograms per milliliter",
+    descEs: "microgramos por mililitro",
+  },
+  {
+    value: "Units/mL",
+    descEn: "units per milliliter",
+    descEs: "unidades por mililitro",
+  },
+  {
+    value: "mg/kg",
+    descEn: "milligrams per kilogram",
+    descEs: "miligramos por kilogramo",
+  },
+  {
+    value: "mcg/kg",
+    descEn: "micrograms per kilogram",
+    descEs: "microgramos por kilogramo",
+  },
+  {
+    value: "Units/kg",
+    descEn: "units per kilogram",
+    descEs: "unidades por kilogramo",
+  },
   { value: "mEq", descEn: "milliequivalents", descEs: "miliequivalentes" },
-  { value: "mEq/L", descEn: "milliequivalents per liter", descEs: "miliequivalentes por litro" },
+  {
+    value: "mEq/L",
+    descEn: "milliequivalents per liter",
+    descEs: "miliequivalentes por litro",
+  },
   { value: "mmol", descEn: "millimoles", descEs: "milimoles" },
   { value: "tablet", descEn: "", descEs: "tableta" },
   { value: "capsule", descEn: "", descEs: "cápsula" },
@@ -108,7 +140,8 @@ const LOCAL_STORAGE_KEY = "nephroreach_dialysis_treatment_medications_v2";
 export default function MedicationsGivenSection() {
   const { language } = useLanguage();
 
-  const [medications, setMedications] = useState<TreatmentMedication[]>(INITIAL_MEDICATIONS);
+  const [medications, setMedications] =
+    useState<TreatmentMedication[]>(INITIAL_MEDICATIONS);
 
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -159,7 +192,7 @@ export default function MedicationsGivenSection() {
 
   const handleToggleGiven = (id: string) => {
     const updated = medications.map((m) =>
-      m.id === id ? { ...m, given: !m.given } : m
+      m.id === id ? { ...m, given: !m.given } : m,
     );
     saveMedications(updated);
   };
@@ -173,25 +206,31 @@ export default function MedicationsGivenSection() {
 
     if (!medicationName) {
       setFormMedError(
-        language === "ES" ? "Por favor seleccione un medicamento." : "Please select a medication."
+        language === "ES"
+          ? "Por favor seleccione un medicamento."
+          : "Please select a medication.",
       );
       return;
     }
     if (!formDose.trim()) {
       setFormMedError(
-        language === "ES" ? "Por favor ingrese la dosis." : "Please enter a dose."
+        language === "ES"
+          ? "Por favor ingrese la dosis."
+          : "Please enter a dose.",
       );
       return;
     }
 
     const doseUnit =
-      formDoseUnit === OTHER_DOSE_UNIT ? formDoseUnitOther.trim() : formDoseUnit;
+      formDoseUnit === OTHER_DOSE_UNIT
+        ? formDoseUnitOther.trim()
+        : formDoseUnit;
 
     if (!doseUnit) {
       setFormMedError(
         language === "ES"
           ? "Por favor seleccione la unidad de la dosis."
-          : "Please select a dose unit."
+          : "Please select a dose unit.",
       );
       return;
     }
@@ -215,14 +254,14 @@ export default function MedicationsGivenSection() {
   };
 
   return (
-    <section className="rounded-panel border border-line bg-surface p-6 shadow-control space-y-4 flex flex-col justify-between h-full">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line-subtle">
+    <section className="flex h-full flex-col justify-between space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle pb-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
+          <div className="flex h-8 w-8 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
             <Pill className="h-4 w-4 text-fg-brand" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-fg tracking-tight">
+            <h2 className="text-base font-bold tracking-tight text-fg">
               {language === "ES"
                 ? "Medicamentos Administrados Durante la Diálisis"
                 : "Medications Given During Dialysis"}
@@ -233,30 +272,45 @@ export default function MedicationsGivenSection() {
         <button
           type="button"
           onClick={handleOpenAddMedModal}
-          className="inline-flex items-center justify-center gap-1.5 rounded-control bg-primary-solid hover:bg-primary-solid-hover px-3.5 py-1.5 text-xs font-bold text-primary-on-solid shadow-control transition-all active:scale-95 cursor-pointer shrink-0"
+          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-control bg-primary-solid px-3.5 py-1.5 text-xs font-bold text-primary-on-solid shadow-control transition-all hover:bg-primary-solid-hover active:scale-95"
         >
           <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-          <span>{language === "ES" ? "Agregar Medicamento" : "Add Medication"}</span>
+          <span>
+            {language === "ES" ? "Agregar Medicamento" : "Add Medication"}
+          </span>
         </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-card border border-line flex-1">
-        <table className="w-full text-left border-collapse text-xs sm:text-sm">
+      <div className="flex-1 overflow-x-auto rounded-card border border-line">
+        <table className="w-full border-collapse text-left text-xs sm:text-sm">
           <thead>
-            <tr className="bg-surface-sunken text-xs font-bold uppercase tracking-wider text-fg-muted border-b border-line">
-              <th className="py-2.5 px-3.5">{language === "ES" ? "Fecha" : "Date"}</th>
-              <th className="py-2.5 px-3.5">{language === "ES" ? "Medicamento" : "Medication"}</th>
-              <th className="py-2.5 px-3.5">{language === "ES" ? "Dosis" : "Dose"}</th>
-              <th className="py-2.5 px-3.5">{language === "ES" ? "Razón" : "Reason"}</th>
-              <th className="py-2.5 px-3.5 text-center">{language === "ES" ? "Administrado" : "Given"}</th>
-              <th className="py-2.5 px-2 text-center w-8"></th>
+            <tr className="border-b border-line bg-surface-sunken text-xs font-bold tracking-wider text-fg-muted uppercase">
+              <th className="px-3.5 py-2.5">
+                {language === "ES" ? "Fecha" : "Date"}
+              </th>
+              <th className="px-3.5 py-2.5">
+                {language === "ES" ? "Medicamento" : "Medication"}
+              </th>
+              <th className="px-3.5 py-2.5">
+                {language === "ES" ? "Dosis" : "Dose"}
+              </th>
+              <th className="px-3.5 py-2.5">
+                {language === "ES" ? "Razón" : "Reason"}
+              </th>
+              <th className="px-3.5 py-2.5 text-center">
+                {language === "ES" ? "Administrado" : "Given"}
+              </th>
+              <th className="w-8 px-2 py-2.5 text-center"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
             {medications.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-fg-subtle">
+                <td
+                  colSpan={6}
+                  className="py-8 text-center text-xs text-fg-subtle"
+                >
                   {language === "ES"
                     ? "No hay medicamentos registrados para este tratamiento."
                     : "No medications recorded for this treatment."}
@@ -264,27 +318,30 @@ export default function MedicationsGivenSection() {
               </tr>
             ) : (
               medications.map((item) => (
-                <tr key={item.id} className="hover:bg-surface-sunken transition-colors">
-                  <td className="py-2.5 px-3.5 text-fg whitespace-nowrap font-semibold text-xs">
+                <tr
+                  key={item.id}
+                  className="transition-colors hover:bg-surface-sunken"
+                >
+                  <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg">
                     {item.date}
                   </td>
-                  <td className="py-2.5 px-3.5 text-fg font-bold whitespace-nowrap text-xs">
+                  <td className="px-3.5 py-2.5 text-xs font-bold whitespace-nowrap text-fg">
                     {item.medication}
                   </td>
-                  <td className="py-2.5 px-3.5 text-fg-secondary whitespace-nowrap font-semibold text-xs">
+                  <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg-secondary">
                     {item.dose}
                   </td>
-                  <td className="py-2.5 px-3.5 text-fg-muted whitespace-nowrap text-xs">
+                  <td className="px-3.5 py-2.5 text-xs whitespace-nowrap text-fg-muted">
                     {item.reason}
                   </td>
-                  <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                  <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => handleToggleGiven(item.id)}
-                      className={`inline-flex h-5 w-5 items-center justify-center rounded border transition-colors cursor-pointer select-none active:scale-95 ${
+                      className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded border transition-colors select-none active:scale-95 ${
                         item.given
-                          ? "bg-primary-solid border-primary-edge text-primary-on-solid shadow-control"
-                          : "bg-surface border-line-strong hover:border-line-strong text-transparent"
+                          ? "border-primary-edge bg-primary-solid text-primary-on-solid shadow-control"
+                          : "border-line-strong bg-surface text-transparent hover:border-line-strong"
                       }`}
                       title={
                         item.given
@@ -292,18 +349,20 @@ export default function MedicationsGivenSection() {
                             ? "Desmarcar medicamento"
                             : "Uncheck medication"
                           : language === "ES"
-                          ? "Marcar como administrado"
-                          : "Mark as given"
+                            ? "Marcar como administrado"
+                            : "Mark as given"
                       }
                     >
-                      {item.given && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                      {item.given && (
+                        <Check className="h-3.5 w-3.5 stroke-[3]" />
+                      )}
                     </button>
                   </td>
-                  <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                  <td className="px-2 py-2.5 text-center whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => handleDeleteMedication(item.id)}
-                      className="p-1 rounded-control-small text-fg-subtle hover:text-danger hover:bg-danger-surface transition-colors cursor-pointer"
+                      className="cursor-pointer rounded-control-small p-1 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
                       title={language === "ES" ? "Eliminar" : "Delete"}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -340,125 +399,124 @@ export default function MedicationsGivenSection() {
           </>
         }
       >
-            {formMedError && (
-              <Alert tone="danger" className="mb-stack-lg">
-                {formMedError}
-              </Alert>
-            )}
+        {formMedError && (
+          <Alert tone="danger" className="mb-stack-lg">
+            {formMedError}
+          </Alert>
+        )}
 
-            <form
-              id="add-medication-form"
-              onSubmit={handleAddMedicationSubmit}
-              className="space-y-stack-lg"
+        <form
+          id="add-medication-form"
+          onSubmit={handleAddMedicationSubmit}
+          className="space-y-stack-lg"
+        >
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Fecha" : "Date"}
+            </label>
+            <Input
+              type="text"
+              value={formDate}
+              onChange={(e) => setFormDate(e.target.value)}
+              placeholder="May 31, 2024"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Medicamento" : "Medication"}{" "}
+              <span className="text-danger">*</span>
+            </label>
+            <Select
+              value={formMedication}
+              onChange={(e) => setFormMedication(e.target.value)}
+              autoFocus
             >
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Fecha" : "Date"}
-                </label>
-                <Input
-                  type="text"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  placeholder="May 31, 2024"
-                />
-              </div>
+              <option value="">
+                {language === "ES"
+                  ? "Seleccione un medicamento"
+                  : "Select a medication"}
+              </option>
+              {MEDICATION_OPTIONS.map((med) => (
+                <option key={med} value={med}>
+                  {med}
+                </option>
+              ))}
+              <option value={OTHER_MEDICATION}>
+                {language === "ES" ? "Otro (escribir)" : "Other (type it in)"}
+              </option>
+            </Select>
 
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Medicamento" : "Medication"}{" "}
-                  <span className="text-danger">*</span>
-                </label>
-                <Select
-                    value={formMedication}
-                    onChange={(e) => setFormMedication(e.target.value)}
-                    autoFocus
-                  >
-                    <option value="">
-                      {language === "ES"
-                        ? "Seleccione un medicamento"
-                        : "Select a medication"}
-                    </option>
-                    {MEDICATION_OPTIONS.map((med) => (
-                      <option key={med} value={med}>
-                        {med}
-                      </option>
-                    ))}
-                    <option value={OTHER_MEDICATION}>
-                      {language === "ES" ? "Otro (escribir)" : "Other (type it in)"}
-                    </option>
-                </Select>
+            {formMedication === OTHER_MEDICATION && (
+              <Input
+                type="text"
+                value={formMedicationOther}
+                onChange={(e) => setFormMedicationOther(e.target.value)}
+                className="mt-stack-sm"
+                placeholder={
+                  language === "ES"
+                    ? "Nombre del medicamento"
+                    : "e.g. Epoetin Alfa (Epogen)"
+                }
+                autoFocus
+              />
+            )}
+          </div>
 
-                {formMedication === OTHER_MEDICATION && (
-                  <Input
-                    type="text"
-                    value={formMedicationOther}
-                    onChange={(e) => setFormMedicationOther(e.target.value)}
-                    className="mt-stack-sm"
-                    placeholder={
-                      language === "ES"
-                        ? "Nombre del medicamento"
-                        : "e.g. Epoetin Alfa (Epogen)"
-                    }
-                    autoFocus
-                  />
-                )}
-              </div>
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Dosis" : "Dose"}{" "}
+              <span className="text-danger">*</span>
+            </label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={formDose}
+              onChange={(e) => setFormDose(e.target.value)}
+              placeholder={language === "ES" ? "ej. 8,000" : "e.g. 8,000"}
+            />
 
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Dosis" : "Dose"}{" "}
-                  <span className="text-danger">*</span>
-                </label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={formDose}
-                  onChange={(e) => setFormDose(e.target.value)}
-                  placeholder={language === "ES" ? "ej. 8,000" : "e.g. 8,000"}
-                />
+            {/* Unit */}
+            <Select
+              value={formDoseUnit}
+              onChange={(e) => setFormDoseUnit(e.target.value)}
+              aria-label={language === "ES" ? "Unidad de dosis" : "Dose unit"}
+            >
+              {DOSE_UNITS.map((unit) => {
+                const desc = language === "ES" ? unit.descEs : unit.descEn;
+                return (
+                  <option key={unit.value} value={unit.value}>
+                    {desc ? `${unit.value} — ${desc}` : unit.value}
+                  </option>
+                );
+              })}
+              <option value={OTHER_DOSE_UNIT}>
+                {language === "ES" ? "Otra (escribir)" : "Other (type it in)"}
+              </option>
+            </Select>
 
-                {/* Unit */}
-                <Select
-                    value={formDoseUnit}
-                    onChange={(e) => setFormDoseUnit(e.target.value)}
-                    aria-label={language === "ES" ? "Unidad de dosis" : "Dose unit"}
-                  >
-                    {DOSE_UNITS.map((unit) => {
-                      const desc = language === "ES" ? unit.descEs : unit.descEn;
-                      return (
-                        <option key={unit.value} value={unit.value}>
-                          {desc ? `${unit.value} — ${desc}` : unit.value}
-                        </option>
-                      );
-                    })}
-                    <option value={OTHER_DOSE_UNIT}>
-                      {language === "ES" ? "Otra (escribir)" : "Other (type it in)"}
-                    </option>
-                </Select>
+            {formDoseUnit === OTHER_DOSE_UNIT && (
+              <Input
+                type="text"
+                value={formDoseUnitOther}
+                onChange={(e) => setFormDoseUnitOther(e.target.value)}
+                placeholder={language === "ES" ? "Unidad" : "Unit"}
+              />
+            )}
+          </div>
 
-                {formDoseUnit === OTHER_DOSE_UNIT && (
-                  <Input
-                    type="text"
-                    value={formDoseUnitOther}
-                    onChange={(e) => setFormDoseUnitOther(e.target.value)}
-                    placeholder={language === "ES" ? "Unidad" : "Unit"}
-                  />
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-overline mb-stack-xs block text-fg-muted">
-                  {language === "ES" ? "Razón / Indicación" : "Reason / Indication"}
-                </label>
-                <Input
-                  type="text"
-                  value={formReason}
-                  onChange={(e) => setFormReason(e.target.value)}
-                  placeholder="e.g. Anemia"
-                />
-              </div>
-
-            </form>
+          <div className="space-y-1.5">
+            <label className="mb-stack-xs block text-overline text-fg-muted">
+              {language === "ES" ? "Razón / Indicación" : "Reason / Indication"}
+            </label>
+            <Input
+              type="text"
+              value={formReason}
+              onChange={(e) => setFormReason(e.target.value)}
+              placeholder="e.g. Anemia"
+            />
+          </div>
+        </form>
       </Modal>
     </section>
   );

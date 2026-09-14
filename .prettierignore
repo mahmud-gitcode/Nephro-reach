@@ -1,0 +1,12 @@
+.next/
+node_modules/
+out/
+build/
+next-env.d.ts
+
+# Parked code, deliberately excluded from tsconfig too.
+trash/
+
+# Generated or vendored
+package-lock.json
+public/

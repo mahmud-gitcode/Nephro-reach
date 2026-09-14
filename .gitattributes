@@ -1,0 +1,15 @@
+# One line ending everywhere. Without this, Windows checkouts convert LF to
+# CRLF on the way in, Prettier writes LF on the way out, and every file looks
+# modified for no reason.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg text eol=lf
+*.woff binary
+*.woff2 binary
+*.mp4 binary

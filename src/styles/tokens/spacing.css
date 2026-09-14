@@ -104,16 +104,22 @@
      shadow sits in the same hue family as everything it falls on.
      ====================================================================== */
   /* Level 1 · Low / Card elevation — resting objects, cards, lists */
-  --shadow-sm: 0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
-  --shadow-card: 0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
+  --shadow-sm:
+    0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
+  --shadow-card:
+    0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
 
   /* Level 2 · Medium / Raised elevation — dropdowns, popovers, hover elevation */
-  --shadow-md: 0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04);
-  --shadow-raised: 0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04);
+  --shadow-md:
+    0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04);
+  --shadow-raised:
+    0 4px 12px -2px rgb(16 20 28 / 0.08), 0 2px 6px -1px rgb(16 20 28 / 0.04);
 
   /* Level 3 · High / Overlay elevation — modals, dialogs, drawers */
-  --shadow-lg: 0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06);
-  --shadow-overlay: 0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06);
+  --shadow-lg:
+    0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06);
+  --shadow-overlay:
+    0 16px 36px -8px rgb(16 20 28 / 0.14), 0 6px 16px -4px rgb(16 20 28 / 0.06);
 
   /* Micro control shadow — subtle button / input boundary */
   --shadow-control: 0 1px 2px 0 rgb(16 20 28 / 0.05);

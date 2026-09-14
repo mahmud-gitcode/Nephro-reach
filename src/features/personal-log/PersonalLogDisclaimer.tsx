@@ -27,14 +27,15 @@ export default function PersonalLogDisclaimer() {
         <p className="measure text-body-sm text-fg-secondary">
           {isEs ? (
             <>
-              NephroReach es una herramienta educativa de registro y comunicación.{" "}
+              NephroReach es una herramienta educativa de registro y
+              comunicación.{" "}
               <strong className="font-semibold text-fg">
                 No es un dispositivo de diagnóstico autorizado por la FDA y no
                 transmite datos automáticamente a los servicios de emergencia.
               </strong>{" "}
-              Los pacientes son responsables de la exactitud de sus registros. Si
-              está sufriendo una emergencia médica o síntomas graves, llame al 911
-              o comuníquese directamente con su nefrólogo.
+              Los pacientes son responsables de la exactitud de sus registros.
+              Si está sufriendo una emergencia médica o síntomas graves, llame
+              al 911 o comuníquese directamente con su nefrólogo.
             </>
           ) : (
             <>
@@ -44,8 +45,8 @@ export default function PersonalLogDisclaimer() {
                 automatically transmit data to emergency services.
               </strong>{" "}
               Patients are responsible for the accuracy of their entries. If you
-              are experiencing a medical emergency or severe symptoms, contact 911
-              or your nephrologist directly.
+              are experiencing a medical emergency or severe symptoms, contact
+              911 or your nephrologist directly.
             </>
           )}
         </p>

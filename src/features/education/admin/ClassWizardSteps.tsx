@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useRef } from "react";
+import { BookOpen, CheckCircle2, PlayCircle, Upload } from "lucide-react";
 import {
-  BookOpen,
-  CheckCircle2,
-  PlayCircle,
-  Upload,
-} from "lucide-react";
-import { CourseClass, CourseClassKind } from "@/features/education/courseLibrary";
+  CourseClass,
+  CourseClassKind,
+} from "@/features/education/courseLibrary";
 import { formatClock } from "@/features/education/vtt";
 
 export const FIELD_CLASS =
@@ -24,7 +22,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-bold uppercase tracking-wide text-fg-muted">
+      <span className="block text-xs font-bold tracking-wide text-fg-muted uppercase">
         {label}
       </span>
       {hint && (
@@ -134,7 +132,7 @@ export function TypeStep({
                 })
               }
               aria-pressed={selected}
-              className={`flex flex-col items-center gap-2 rounded-card border-2 p-5 text-center transition-colors cursor-pointer ${
+              className={`flex cursor-pointer flex-col items-center gap-2 rounded-card border-2 p-5 text-center transition-colors ${
                 selected
                   ? "border-primary-edge bg-primary-soft"
                   : "border-line bg-surface hover:border-line-strong hover:bg-surface-sunken"
@@ -148,7 +146,7 @@ export function TypeStep({
               >
                 {option.label}
               </span>
-              <span className="text-[11px] font-medium leading-snug text-fg-muted">
+              <span className="text-[11px] leading-snug font-medium text-fg-muted">
                 {option.detail}
               </span>
             </button>
@@ -228,7 +226,7 @@ export function MediaUpload({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft cursor-pointer"
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft"
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
         <span className="text-sm font-bold text-fg-secondary">

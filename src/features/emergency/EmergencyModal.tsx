@@ -37,7 +37,9 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
       open={open}
       onClose={onClose}
       title={em?.title || "This may be a medical emergency."}
-      description={em?.subtitle || "NephroReach does NOT provide emergency care."}
+      description={
+        em?.subtitle || "NephroReach does NOT provide emergency care."
+      }
       footer={
         <Button
           variant="neutral"
@@ -56,7 +58,10 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
         />
 
         <div className="flex flex-col gap-stack-md">
-          <a href="tel:911" className={buttonStyles({ variant: "danger", fullWidth: true })}>
+          <a
+            href="tel:911"
+            className={buttonStyles({ variant: "danger", fullWidth: true })}
+          >
             <Phone aria-hidden="true" />
             {em?.call911 || "CALL 911"}
           </a>

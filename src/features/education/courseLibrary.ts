@@ -364,7 +364,10 @@ export function useCourseLibrary() {
         (total, course) => total + courseClassCount(course),
         0,
       ),
-      minutes: courses.reduce((total, course) => total + courseMinutes(course), 0),
+      minutes: courses.reduce(
+        (total, course) => total + courseMinutes(course),
+        0,
+      ),
     }),
     [courses],
   );

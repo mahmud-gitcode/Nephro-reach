@@ -6,11 +6,7 @@
  * toggle without refetching anything.
  */
 
-export type JourneyPhaseKey =
-  | "foundation"
-  | "routine"
-  | "nutrition"
-  | "living";
+export type JourneyPhaseKey = "foundation" | "routine" | "nutrition" | "living";
 
 /** How a day is delivered. Drives the badge under each title in the day list. */
 export type JourneyMediaKind = "video" | "audio" | "reading";

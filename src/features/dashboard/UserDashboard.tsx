@@ -154,7 +154,8 @@ export default function UserDashboard() {
 
       <section>
         <h2 className="mb-stack-md text-heading-5 text-fg-secondary">
-          {dh?.quickActionTitle || (language === "ES" ? "Acción Rápida" : "Quick Action")}
+          {dh?.quickActionTitle ||
+            (language === "ES" ? "Acción Rápida" : "Quick Action")}
         </h2>
         <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
           {quickActions.map((action) => {
@@ -226,7 +227,12 @@ export default function UserDashboard() {
 
         <div className="grid grid-cols-1 gap-inset-lg sm:grid-cols-2">
           {stats.map((stat) => (
-            <Card as="article" key={stat.label} padding="none" className="p-inset-md">
+            <Card
+              as="article"
+              key={stat.label}
+              padding="none"
+              className="p-inset-md"
+            >
               <div className="flex items-center justify-between gap-inline-md">
                 <p className="text-body-md text-fg-secondary">
                   {getStatLabel(stat.label, stat.label)}
@@ -279,7 +285,10 @@ export default function UserDashboard() {
             href="/dashboard/reviews"
             className="inline-flex items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand transition-colors duration-150 ease-standard hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Star aria-hidden="true" className="h-4 w-4 fill-warning-500 text-warning-500" />
+            <Star
+              aria-hidden="true"
+              className="h-4 w-4 fill-warning-500 text-warning-500"
+            />
             {language === "ES" ? "Dejar una Reseña" : "Leave a Review"}
           </Link>
         </div>

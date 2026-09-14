@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { JOURNEY_DAYS, TOTAL_JOURNEY_DAYS } from "@/features/education/dialysisJourneyData";
+import {
+  JOURNEY_DAYS,
+  TOTAL_JOURNEY_DAYS,
+} from "@/features/education/dialysisJourneyData";
 
 export type JourneyDayStatus = "not-started" | "in-progress" | "completed";
 
@@ -51,7 +54,8 @@ function persistProgress(next: JourneyProgressMap) {
  * pass the pieces down — the day list and the player both read from one copy.
  */
 export function useJourneyProgress() {
-  const [progress, setProgress] = useState<JourneyProgressMap>(readStoredProgress);
+  const [progress, setProgress] =
+    useState<JourneyProgressMap>(readStoredProgress);
 
   const update = useCallback(
     (slug: string, patch: Partial<JourneyDayProgress>) => {
@@ -77,58 +81,52 @@ export function useJourneyProgress() {
     [progress],
   );
 
-  const unlockDay = useCallback(
-    (slug: string) => {
-      setProgress((current) => {
-        const existing = current[slug] ?? EMPTY_PROGRESS;
-        if (existing.status !== "not-started") return current;
-        const next: JourneyProgressMap = {
-          ...current,
-          [slug]: {
-            ...existing,
+  const unlockDay = useCallback((slug: string) => {
+    setProgress((current) => {
+      const existing = current[slug] ?? EMPTY_PROGRESS;
+      if (existing.status !== "not-started") return current;
+      const next: JourneyProgressMap = {
+        ...current,
+        [slug]: {
+          ...existing,
+          status: "in-progress",
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      persistProgress(next);
+      return next;
+    });
+  }, []);
+
+  const markComplete = useCallback((slug: string) => {
+    setProgress((current) => {
+      const existing = current[slug] ?? EMPTY_PROGRESS;
+      const next: JourneyProgressMap = {
+        ...current,
+        [slug]: {
+          ...existing,
+          status: "completed",
+          percent: 100,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      // Automatically unlock the next day so the learner can proceed
+      const idx = JOURNEY_DAYS.findIndex((d) => d.slug === slug);
+      if (idx >= 0 && idx < JOURNEY_DAYS.length - 1) {
+        const nextSlug = JOURNEY_DAYS[idx + 1].slug;
+        const nextExisting = current[nextSlug] ?? EMPTY_PROGRESS;
+        if (nextExisting.status === "not-started") {
+          next[nextSlug] = {
+            ...nextExisting,
             status: "in-progress",
             updatedAt: new Date().toISOString(),
-          },
-        };
-        persistProgress(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const markComplete = useCallback(
-    (slug: string) => {
-      setProgress((current) => {
-        const existing = current[slug] ?? EMPTY_PROGRESS;
-        const next: JourneyProgressMap = {
-          ...current,
-          [slug]: {
-            ...existing,
-            status: "completed",
-            percent: 100,
-            updatedAt: new Date().toISOString(),
-          },
-        };
-        // Automatically unlock the next day so the learner can proceed
-        const idx = JOURNEY_DAYS.findIndex((d) => d.slug === slug);
-        if (idx >= 0 && idx < JOURNEY_DAYS.length - 1) {
-          const nextSlug = JOURNEY_DAYS[idx + 1].slug;
-          const nextExisting = current[nextSlug] ?? EMPTY_PROGRESS;
-          if (nextExisting.status === "not-started") {
-            next[nextSlug] = {
-              ...nextExisting,
-              status: "in-progress",
-              updatedAt: new Date().toISOString(),
-            };
-          }
+          };
         }
-        persistProgress(next);
-        return next;
-      });
-    },
-    [],
-  );
+      }
+      persistProgress(next);
+      return next;
+    });
+  }, []);
 
   const markIncomplete = useCallback(
     (slug: string) => update(slug, { status: "in-progress", percent: 0 }),
@@ -136,28 +134,25 @@ export function useJourneyProgress() {
   );
 
   /** Raises the watched percentage; never walks it backwards on a rewatch. */
-  const recordWatched = useCallback(
-    (slug: string, percent: number) => {
-      const capped = Math.max(0, Math.min(100, Math.round(percent)));
-      setProgress((current) => {
-        const existing = current[slug] ?? EMPTY_PROGRESS;
-        if (existing.status === "completed" || capped <= existing.percent) {
-          return current;
-        }
-        const next: JourneyProgressMap = {
-          ...current,
-          [slug]: {
-            status: capped >= 95 ? "completed" : "in-progress",
-            percent: capped,
-            updatedAt: new Date().toISOString(),
-          },
-        };
-        persistProgress(next);
-        return next;
-      });
-    },
-    [],
-  );
+  const recordWatched = useCallback((slug: string, percent: number) => {
+    const capped = Math.max(0, Math.min(100, Math.round(percent)));
+    setProgress((current) => {
+      const existing = current[slug] ?? EMPTY_PROGRESS;
+      if (existing.status === "completed" || capped <= existing.percent) {
+        return current;
+      }
+      const next: JourneyProgressMap = {
+        ...current,
+        [slug]: {
+          status: capped >= 95 ? "completed" : "in-progress",
+          percent: capped,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      persistProgress(next);
+      return next;
+    });
+  }, []);
 
   const completedCount = useMemo(
     () =>

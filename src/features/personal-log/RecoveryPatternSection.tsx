@@ -104,8 +104,8 @@ export default function RecoveryPatternSection({
         ? DEFAULT_WEEKLY_POINTS_8W
         : DEFAULT_WEEKLY_POINTS_4W
       : treatmentId
-      ? DEFAULT_DAYS_BY_TREATMENT[treatmentId]
-      : null) ||
+        ? DEFAULT_DAYS_BY_TREATMENT[treatmentId]
+        : null) ||
     (isWeekly ? DEFAULT_WEEKLY_POINTS_4W : DEFAULT_POINTS);
 
   const formatLabel = (val: string) => {
@@ -170,14 +170,15 @@ export default function RecoveryPatternSection({
     return path;
   };
 
-  const hoveredPoint = hoveredIndex !== null ? recoveryPoints[hoveredIndex] : null;
+  const hoveredPoint =
+    hoveredIndex !== null ? recoveryPoints[hoveredIndex] : null;
 
   return (
-    <section className="rounded-panel border border-line bg-surface p-6 sm:p-8 shadow-control space-y-6 animate-in fade-in duration-200">
+    <section className="animate-in fade-in space-y-6 rounded-panel border border-line bg-surface p-6 shadow-control duration-200 sm:p-8">
       {/* Header matching reference mockup */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-semibold text-fg tracking-tight">
+          <h2 className="text-xl font-semibold tracking-tight text-fg">
             {isWeekly
               ? language === "ES"
                 ? "Tendencia Semanal de Recuperación"
@@ -185,7 +186,7 @@ export default function RecoveryPatternSection({
               : dt?.recoveryPattern?.title || "Recovery Pattern Tracking"}
           </h2>
           {isWeekly && (
-            <p className="text-xs text-fg-muted font-medium mt-1">
+            <p className="mt-1 text-xs font-medium text-fg-muted">
               {language === "ES"
                 ? "Progreso de recuperación post-diálisis organizado por semanas"
                 : "Post-dialysis recovery progress aggregated week-by-week"}
@@ -193,14 +194,14 @@ export default function RecoveryPatternSection({
           )}
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-4">
           {/* Time range selector in weekly mode */}
           {isWeekly && (
-            <div className="flex items-center rounded-control bg-surface-sunken p-1 border border-line text-xs font-semibold text-fg-muted">
+            <div className="flex items-center rounded-control border border-line bg-surface-sunken p-1 text-xs font-semibold text-fg-muted">
               <button
                 type="button"
                 onClick={() => setWeeklyRange("4w")}
-                className={`px-3 py-1 rounded-control transition-all cursor-pointer ${
+                className={`cursor-pointer rounded-control px-3 py-1 transition-all ${
                   weeklyRange === "4w"
                     ? "bg-surface text-fg shadow-control"
                     : "text-fg-muted hover:text-fg-secondary"
@@ -211,7 +212,7 @@ export default function RecoveryPatternSection({
               <button
                 type="button"
                 onClick={() => setWeeklyRange("8w")}
-                className={`px-3 py-1 rounded-control transition-all cursor-pointer ${
+                className={`cursor-pointer rounded-control px-3 py-1 transition-all ${
                   weeklyRange === "8w"
                     ? "bg-surface text-fg shadow-control"
                     : "text-fg-muted hover:text-fg-secondary"
@@ -223,18 +224,27 @@ export default function RecoveryPatternSection({
           )}
 
           {/* Clean Inline Legend exactly as in reference */}
-          <div className="flex items-center gap-5 sm:gap-6 text-sm font-medium text-fg-secondary">
+          <div className="flex items-center gap-5 text-sm font-medium text-fg-secondary sm:gap-6">
             <span className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-pill bg-primary-solid" />
-              <span>{dt?.recoveryPattern?.good || (language === "ES" ? "Bueno" : "Good")}</span>
+              <span>
+                {dt?.recoveryPattern?.good ||
+                  (language === "ES" ? "Bueno" : "Good")}
+              </span>
             </span>
             <span className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-pill bg-warning-600" />
-              <span>{dt?.recoveryPattern?.okay || (language === "ES" ? "Regular" : "Okay")}</span>
+              <span>
+                {dt?.recoveryPattern?.okay ||
+                  (language === "ES" ? "Regular" : "Okay")}
+              </span>
             </span>
             <span className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-pill bg-danger-solid" />
-              <span>{dt?.recoveryPattern?.bad || (language === "ES" ? "Malo" : "Bad")}</span>
+              <span>
+                {dt?.recoveryPattern?.bad ||
+                  (language === "ES" ? "Malo" : "Bad")}
+              </span>
             </span>
           </div>
         </div>
@@ -244,8 +254,8 @@ export default function RecoveryPatternSection({
       <div className="relative w-full overflow-x-auto pt-2 pb-1">
         {/* Floating Tooltip when hovering over a day */}
         {hoveredPoint && (
-          <div className="absolute top-0 right-4 rounded-control border border-line bg-surface/95 backdrop-blur-md px-3.5 py-2 shadow-raised text-xs pointer-events-none animate-in fade-in duration-150 z-10">
-            <span className="font-bold text-fg block mb-1">
+          <div className="animate-in fade-in pointer-events-none absolute top-0 right-4 z-10 rounded-control border border-line bg-surface/95 px-3.5 py-2 text-xs shadow-raised backdrop-blur-md duration-150">
+            <span className="mb-1 block font-bold text-fg">
               {formatLabel(hoveredPoint.day)}
             </span>
             <div className="flex items-center gap-3 font-semibold">
@@ -267,18 +277,36 @@ export default function RecoveryPatternSection({
 
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto min-w-[500px] overflow-visible"
+          className="h-auto w-full min-w-[500px] overflow-visible"
         >
           <defs>
             {/* Soft Drop Glow Filters matching reference mockup */}
             <filter id="glow-good" x="-10%" y="-20%" width="120%" height="180%">
-              <feDropShadow dx="0" dy="7" stdDeviation="5.5" floodColor="var(--color-primary-solid)" floodOpacity="0.26" />
+              <feDropShadow
+                dx="0"
+                dy="7"
+                stdDeviation="5.5"
+                floodColor="var(--color-primary-solid)"
+                floodOpacity="0.26"
+              />
             </filter>
             <filter id="glow-okay" x="-10%" y="-20%" width="120%" height="180%">
-              <feDropShadow dx="0" dy="7" stdDeviation="5.5" floodColor="var(--color-warning-600)" floodOpacity="0.24" />
+              <feDropShadow
+                dx="0"
+                dy="7"
+                stdDeviation="5.5"
+                floodColor="var(--color-warning-600)"
+                floodOpacity="0.24"
+              />
             </filter>
             <filter id="glow-bad" x="-10%" y="-20%" width="120%" height="180%">
-              <feDropShadow dx="0" dy="7" stdDeviation="5.5" floodColor="var(--color-danger-solid)" floodOpacity="0.24" />
+              <feDropShadow
+                dx="0"
+                dy="7"
+                stdDeviation="5.5"
+                floodColor="var(--color-danger-solid)"
+                floodOpacity="0.24"
+              />
             </filter>
           </defs>
 
@@ -338,7 +366,9 @@ export default function RecoveryPatternSection({
                   x2={cx}
                   y1={paddingTop}
                   y2={paddingTop + chartH}
-                  stroke={isHovered ? "var(--color-fg-subtle)" : "var(--color-line)"}
+                  stroke={
+                    isHovered ? "var(--color-fg-subtle)" : "var(--color-line)"
+                  }
                   strokeDasharray="4 4"
                   strokeWidth={isHovered ? "1.5" : "1.2"}
                   className="transition-colors duration-150"
@@ -349,8 +379,10 @@ export default function RecoveryPatternSection({
                   y={paddingTop + chartH + 22}
                   textAnchor="middle"
                   fontSize="12"
-                  className={`select-none transition-colors ${
-                    isHovered ? "fill-slate-800 font-medium" : "fill-slate-500 font-normal"
+                  className={`transition-colors select-none ${
+                    isHovered
+                      ? "fill-slate-800 font-medium"
+                      : "fill-slate-500 font-normal"
                   }`}
                   style={{ fontSize: "12px" }}
                 >
@@ -476,51 +508,55 @@ export default function RecoveryPatternSection({
       </div>
 
       {/* Summary KPI Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        <div className="rounded-card border border-line bg-surface-sunken p-4 shadow-control flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary-soft border border-primary-soft-line">
+      <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-card border border-line bg-surface-sunken p-4 shadow-control">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
             <Clock className="h-5 w-5 text-fg-brand" />
           </div>
           <div>
             <p className="text-xs font-medium text-fg-muted">
-              {language === "ES" ? "Tiempo Promedio de Recuperación" : "Average Recovery Time"}
+              {language === "ES"
+                ? "Tiempo Promedio de Recuperación"
+                : "Average Recovery Time"}
             </p>
-            <p className="text-lg font-bold text-fg mt-0.5">
+            <p className="mt-0.5 text-lg font-bold text-fg">
               {isWeekly ? "2.7 hrs" : "3.2 hrs"}
             </p>
           </div>
         </div>
 
-        <div className="rounded-card border border-line bg-surface-sunken p-4 shadow-control flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-success-surface border border-success-line">
+        <div className="flex items-center gap-3 rounded-card border border-line bg-surface-sunken p-4 shadow-control">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-success-line bg-success-surface">
             <Smile className="h-5 w-5 text-success" />
           </div>
           <div>
             <p className="text-xs font-medium text-fg-muted">
-              {language === "ES" ? "Sesiones con Buena Recuperación" : "Good Recovery Rate"}
+              {language === "ES"
+                ? "Sesiones con Buena Recuperación"
+                : "Good Recovery Rate"}
             </p>
-            <p className="text-lg font-bold text-fg mt-0.5">
+            <p className="mt-0.5 text-lg font-bold text-fg">
               {isWeekly ? "76%" : "68%"}
             </p>
           </div>
         </div>
 
-        <div className="rounded-card border border-line bg-surface-sunken p-4 shadow-control flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent-soft border border-accent-soft-line">
+        <div className="flex items-center gap-3 rounded-card border border-line bg-surface-sunken p-4 shadow-control">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-accent-soft-line bg-accent-soft">
             <TrendingUp className="h-5 w-5 text-accent-fg" />
           </div>
           <div>
             <p className="text-xs font-medium text-fg-muted">
               {language === "ES" ? "Tendencia General" : "Overall Trend"}
             </p>
-            <p className="text-lg font-bold text-fg mt-0.5">
+            <p className="mt-0.5 text-lg font-bold text-fg">
               {isWeekly
                 ? language === "ES"
                   ? "Mejorando (+18%)"
                   : "Improving (+18%)"
                 : language === "ES"
-                ? "Mejorando"
-                : "Improving"}
+                  ? "Mejorando"
+                  : "Improving"}
             </p>
           </div>
         </div>

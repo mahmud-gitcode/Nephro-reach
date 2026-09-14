@@ -3,8 +3,18 @@
 import React, { useState } from "react";
 import { Building2, Pencil, Phone } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { toTelHref, useDialysisClinic } from "@/features/travel/useDialysisClinic";
-import { Button, buttonStyles, Card, FormField, Input, Modal } from "@/components/ui";
+import {
+  toTelHref,
+  useDialysisClinic,
+} from "@/features/travel/useDialysisClinic";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  FormField,
+  Input,
+  Modal,
+} from "@/components/ui";
 
 function ClinicModal({
   name,

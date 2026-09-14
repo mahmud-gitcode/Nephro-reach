@@ -129,15 +129,13 @@ const CHIP_BASE =
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-bold tracking-tight text-fg">
-      {children}
-    </h3>
+    <h3 className="text-sm font-bold tracking-tight text-fg">{children}</h3>
   );
 }
 
 function PanelTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-bold uppercase tracking-wider text-fg-muted">
+    <h3 className="text-xs font-bold tracking-wider text-fg-muted uppercase">
       {children}
     </h3>
   );
@@ -220,7 +218,7 @@ function CounterField({
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
-          className="flex size-7 items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand cursor-pointer"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Minus className="size-3.5" />
         </button>
@@ -230,7 +228,7 @@ function CounterField({
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="flex size-7 items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand cursor-pointer"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Plus className="size-3.5" />
         </button>
@@ -302,7 +300,7 @@ function VitalCard({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-lg font-bold text-fg outline-none transition-colors placeholder:font-semibold placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-lg font-bold text-fg transition-colors outline-none placeholder:font-semibold placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
       <p className="truncate text-xs font-medium text-fg-muted">{unit}</p>
     </div>
@@ -358,7 +356,7 @@ function MoodPicker({
             key={m.level}
             type="button"
             onClick={() => onChange(m.level)}
-            className={`group flex flex-col items-center justify-center gap-2 rounded-control border p-3 transition-colors cursor-pointer ${
+            className={`group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-control border p-3 transition-colors ${
               active
                 ? "border-primary-edge bg-primary-soft ring-1 ring-ring"
                 : "border-line bg-surface hover:border-line-strong hover:bg-surface-sunken"
@@ -401,7 +399,11 @@ interface Props {
   isModal?: boolean;
 }
 
-export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = false }: Props) {
+export default function DialysisDaySymptomLogForm({
+  onClose,
+  onSave,
+  isModal = false,
+}: Props) {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<number>(1);
@@ -426,17 +428,31 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
   const [rescheduled, setRescheduled] = useState<"Yes" | "No">("No");
 
   // Specific 5-level severity symptoms
-  const [crampingSeverity, setCrampingSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("Yes");
-  const [lowBpSeverity, setLowBpSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
-  const [highBpSeverity, setHighBpSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
-  const [fatigueSeverity, setFatigueSeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("No");
-  const [recoverySeverity, setRecoverySeverity] = useState<"Yes" | "No" | "Mild" | "Moderate" | "Severe">("Yes");
+  const [crampingSeverity, setCrampingSeverity] = useState<
+    "Yes" | "No" | "Mild" | "Moderate" | "Severe"
+  >("Yes");
+  const [lowBpSeverity, setLowBpSeverity] = useState<
+    "Yes" | "No" | "Mild" | "Moderate" | "Severe"
+  >("No");
+  const [highBpSeverity, setHighBpSeverity] = useState<
+    "Yes" | "No" | "Mild" | "Moderate" | "Severe"
+  >("No");
+  const [fatigueSeverity, setFatigueSeverity] = useState<
+    "Yes" | "No" | "Mild" | "Moderate" | "Severe"
+  >("No");
+  const [recoverySeverity, setRecoverySeverity] = useState<
+    "Yes" | "No" | "Mild" | "Moderate" | "Severe"
+  >("Yes");
 
   // Sequential for extra fluid removal
-  const [sequentialFluidRemoval, setSequentialFluidRemoval] = useState<"Yes" | "No">("No");
+  const [sequentialFluidRemoval, setSequentialFluidRemoval] = useState<
+    "Yes" | "No"
+  >("No");
 
   // Medication compliance
-  const [medsTakenPrescribed, setMedsTakenPrescribed] = useState<"Yes" | "No">("Yes");
+  const [medsTakenPrescribed, setMedsTakenPrescribed] = useState<"Yes" | "No">(
+    "Yes",
+  );
 
   // Pre-treatment
   const [preFeel, setPreFeel] = useState(3);
@@ -470,7 +486,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
     Overall: 6,
   });
   const [intraNotes, setIntraNotes] = useState(
-    "Felt cramps in legs at 9:30 AM, BP dropped a little but got better after fluid was given."
+    "Felt cramps in legs at 9:30 AM, BP dropped a little but got better after fluid was given.",
   );
 
   // Post-treatment
@@ -494,9 +510,15 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
   const [bpPost, setBpPost] = useState("");
   const [pulsePost, setPulsePost] = useState("");
   const [medNotes, setMedNotes] = useState("Took all meds after session.");
-  const [generalNotes, setGeneralNotes] = useState("Feeling better after treatment. Plan to rest and drink fluids.");
+  const [generalNotes, setGeneralNotes] = useState(
+    "Feeling better after treatment. Plan to rest and drink fluids.",
+  );
 
-  const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
+  const toggleItem = (
+    list: string[],
+    setList: (l: string[]) => void,
+    item: string,
+  ) => {
     if (list.includes(item)) {
       setList(list.filter((x) => x !== item));
     } else {
@@ -639,7 +661,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                     (e.currentTarget as any).showPicker?.();
                   } catch {}
                 }}
-                className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-xs font-bold text-fg-secondary outline-none transition-colors hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-xs font-bold text-fg-secondary transition-colors outline-none hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"
               />
             </div>
 
@@ -674,7 +696,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex size-9 items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand cursor-pointer"
+                className="flex size-9 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand"
                 title="Print"
               >
                 <Printer className="size-4" />
@@ -684,7 +706,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex size-9 items-center justify-center rounded-control border border-line bg-surface text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-secondary cursor-pointer"
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-secondary"
                 >
                   <X className="size-4" />
                 </button>
@@ -696,7 +718,10 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
         {/* Clinical Information Bar */}
         <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-control border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
           {summaryItems.map((item) => (
-            <div key={item.label} className="min-w-0 bg-surface-sunken px-3.5 py-3">
+            <div
+              key={item.label}
+              className="min-w-0 bg-surface-sunken px-3.5 py-3"
+            >
               <p className="truncate text-[11px] font-medium text-fg-muted">
                 {item.label}
               </p>
@@ -722,15 +747,15 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   <button
                     type="button"
                     onClick={() => setActiveTab(step.id)}
-                    className="group flex shrink-0 flex-col items-center gap-2 cursor-pointer sm:flex-row"
+                    className="group flex shrink-0 cursor-pointer flex-col items-center gap-2 sm:flex-row"
                   >
                     <span
                       className={`flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-bold transition-colors ${
                         isCurrent
                           ? "bg-primary-solid text-primary-on-solid ring-4 ring-ring"
                           : isCompleted
-                          ? "bg-surface-inverse text-fg-inverse"
-                          : "border border-line-strong bg-surface text-fg-subtle group-hover:border-line-strong"
+                            ? "bg-surface-inverse text-fg-inverse"
+                            : "border border-line-strong bg-surface text-fg-subtle group-hover:border-line-strong"
                       }`}
                     >
                       {isCompleted ? (
@@ -746,8 +771,8 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                         isCurrent
                           ? "text-fg-brand"
                           : isCompleted
-                          ? "text-fg"
-                          : "text-fg-subtle group-hover:text-fg-muted"
+                            ? "text-fg"
+                            : "text-fg-subtle group-hover:text-fg-muted"
                       }`}
                     >
                       {step.label}
@@ -813,7 +838,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   <SymptomChips
                     options={preOptions}
                     selected={preSymptoms}
-                    onToggle={(sym) => toggleItem(preSymptoms, setPreSymptoms, sym)}
+                    onToggle={(sym) =>
+                      toggleItem(preSymptoms, setPreSymptoms, sym)
+                    }
                   />
                 </div>
 
@@ -826,7 +853,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                         key={key}
                         label={key}
                         value={preSeverity[key]}
-                        onChange={(v) => setPreSeverity({ ...preSeverity, [key]: v })}
+                        onChange={(v) =>
+                          setPreSeverity({ ...preSeverity, [key]: v })
+                        }
                       />
                     ))}
                   </div>
@@ -883,7 +912,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                 <SymptomChips
                   options={intraOptions}
                   selected={intraSymptoms}
-                  onToggle={(sym) => toggleItem(intraSymptoms, setIntraSymptoms, sym)}
+                  onToggle={(sym) =>
+                    toggleItem(intraSymptoms, setIntraSymptoms, sym)
+                  }
                 />
               </div>
 
@@ -895,7 +926,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   value={intraNotes}
                   onChange={(e) => setIntraNotes(e.target.value)}
                   placeholder="Session details, interventions, or notes..."
-                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary outline-none transition-colors focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -917,7 +948,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   <SymptomChips
                     options={postOptions}
                     selected={postSymptoms}
-                    onToggle={(sym) => toggleItem(postSymptoms, setPostSymptoms, sym)}
+                    onToggle={(sym) =>
+                      toggleItem(postSymptoms, setPostSymptoms, sym)
+                    }
                   />
                 </div>
 
@@ -930,7 +963,9 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                         key={key}
                         label={key}
                         value={postSeverity[key]}
-                        onChange={(v) => setPostSeverity({ ...postSeverity, [key]: v })}
+                        onChange={(v) =>
+                          setPostSeverity({ ...postSeverity, [key]: v })
+                        }
                       />
                     ))}
                   </div>
@@ -1028,7 +1063,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
                   value={generalNotes}
                   onChange={(e) => setGeneralNotes(e.target.value)}
                   placeholder="Post-dialysis notes or recovery observations..."
-                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary outline-none transition-colors focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -1041,7 +1076,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={() => setActiveTab(activeTab - 1)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken cursor-pointer"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <ArrowLeft className="size-3.5" />
               <span>Previous Page</span>
@@ -1050,7 +1085,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg cursor-pointer"
+              className="inline-flex h-10 cursor-pointer items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
               Cancel
             </button>
@@ -1067,7 +1102,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={() => setActiveTab(activeTab + 1)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-control bg-primary-solid px-5 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-5 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
               <span>Next Page</span>
               <ArrowRight className="size-3.5" />
@@ -1076,7 +1111,7 @@ export default function DialysisDaySymptomLogForm({ onClose, onSave, isModal = f
             <button
               type="button"
               onClick={handleSave}
-              className="inline-flex h-10 items-center gap-1.5 rounded-control bg-primary-solid px-6 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-6 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
               <Check className="size-4" />
               <span>Save Log</span>

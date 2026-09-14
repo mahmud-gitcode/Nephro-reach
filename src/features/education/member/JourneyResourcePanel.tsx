@@ -20,13 +20,12 @@ import {
   JourneyDay,
   JourneyDocumentKind,
 } from "@/features/education/dialysisJourneyData";
-import { downloadNoteAsText, NoteSaveState } from "@/features/education/useJourneyNotes";
+import {
+  downloadNoteAsText,
+  NoteSaveState,
+} from "@/features/education/useJourneyNotes";
 
-export type JourneyPanelTab =
-  | "transcript"
-  | "overview"
-  | "documents"
-  | "notes";
+export type JourneyPanelTab = "transcript" | "overview" | "documents" | "notes";
 
 const KIND_ICON: Record<JourneyDocumentKind, React.ElementType> = {
   pdf: FileText,
@@ -106,7 +105,7 @@ function TranscriptTab({
           onChange={(event) =>
             onTranscriptLanguageChange(event.target.value as LanguageCode)
           }
-          className="ml-auto rounded-control border border-line bg-surface px-2 py-1.5 text-xs font-bold text-fg-secondary outline-none transition-colors hover:bg-surface-sunken focus:border-primary-edge focus:ring-1 focus:ring-ring cursor-pointer"
+          className="ml-auto cursor-pointer rounded-control border border-line bg-surface px-2 py-1.5 text-xs font-bold text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-1 focus:ring-ring"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -186,7 +185,7 @@ export function JourneyPanelRail({
             onClick={() => onSelect(tab)}
             aria-pressed={isActive}
             title={label}
-            className={`flex w-[58px] flex-col items-center gap-1 rounded-control px-1 py-2.5 text-[10px] font-semibold leading-tight transition-colors cursor-pointer ${
+            className={`flex w-[58px] cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2.5 text-[10px] leading-tight font-semibold transition-colors ${
               isActive
                 ? "bg-primary-soft text-fg-brand"
                 : "text-fg-muted hover:bg-surface-sunken hover:text-fg-secondary"
@@ -213,7 +212,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
         {isEs ? day.summaryEs : day.summaryEn}
       </p>
 
-      <h4 className="mt-5 text-xs font-bold uppercase tracking-wide text-fg-muted">
+      <h4 className="mt-5 text-xs font-bold tracking-wide text-fg-muted uppercase">
         {j?.keyPoints || "What you will learn"}
       </h4>
       <ul className="mt-2 space-y-2">
@@ -227,7 +226,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
 
       <dl className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
             {j?.duration || "Length"}
           </dt>
           <dd className="mt-1 text-sm font-bold text-fg">
@@ -235,7 +234,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
           </dd>
         </div>
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
             {j?.moduleLabel || "Module"}
           </dt>
           <dd className="mt-1 text-sm font-bold text-fg">
@@ -268,7 +267,7 @@ function DocumentsTab({
             <button
               type="button"
               tabIndex={interactive ? 0 : -1}
-              className="flex w-full items-center gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-line-strong hover:bg-surface-sunken cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-line-strong hover:bg-surface-sunken"
             >
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${KIND_CLASS[doc.kind]}`}
@@ -329,7 +328,7 @@ function NotesTab({
           j?.notesPlaceholder ||
           "Write anything you want to remember from this lesson, or a question for your care team."
         }
-        className="min-h-[260px] w-full flex-1 resize-none rounded-control border border-line bg-surface p-3 text-sm leading-relaxed text-fg-secondary outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+        className="min-h-[260px] w-full flex-1 resize-none rounded-control border border-line bg-surface p-3 text-sm leading-relaxed text-fg-secondary transition-colors outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
 
       <div className="mt-3 flex items-center justify-between gap-2">
@@ -344,7 +343,7 @@ function NotesTab({
               `${isEs ? day.titleEs : day.titleEn}\n\n${note}`,
             )
           }
-          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-3.5 w-3.5" />
           {j?.downloadNotes || "Download .txt"}
@@ -405,7 +404,7 @@ export function JourneyPanelContent({
           tabIndex={interactive ? 0 : -1}
           onClick={onClose}
           aria-label={j?.closePanel || "Close panel"}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
+          className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
         >
           <X className="h-4.5 w-4.5" />
         </button>

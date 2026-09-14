@@ -66,11 +66,11 @@ function CollapsedRail({
           onClick={onExpand}
           title={j?.expandSidebar || "Expand day list"}
           aria-label={j?.expandSidebar || "Expand day list"}
-          className="flex h-9 w-9 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
         >
           <PanelLeftOpen className="h-5 w-5" />
         </button>
-        <span className="text-[11px] font-bold tabular-nums text-fg-muted">
+        <span className="text-[11px] font-bold text-fg-muted tabular-nums">
           {completedCount}/{totalDays}
         </span>
       </div>
@@ -170,7 +170,7 @@ export default function JourneyDayList({
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 border-b border-line px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-xs font-bold uppercase tracking-wide text-fg-muted">
+          <h2 className="truncate text-xs font-bold tracking-wide text-fg-muted uppercase">
             {j?.yourProgress || "Your progress"}
           </h2>
 
@@ -180,7 +180,7 @@ export default function JourneyDayList({
               onClick={onToggleCollapse}
               title={j?.collapseSidebar || "Minimise day list"}
               aria-label={j?.collapseSidebar || "Minimise day list"}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
             >
               <PanelLeftClose className="h-4.5 w-4.5" />
             </button>
@@ -222,7 +222,7 @@ export default function JourneyDayList({
                   onClick={() => toggleWeek(phaseKey)}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
-                  className="flex w-full items-center gap-2 border-b border-line-subtle px-4 py-2.5 text-left transition-colors hover:bg-surface-sunken cursor-pointer"
+                  className="flex w-full cursor-pointer items-center gap-2 border-b border-line-subtle px-4 py-2.5 text-left transition-colors hover:bg-surface-sunken"
                 >
                   {isOpen ? (
                     <ChevronDown className="h-4 w-4 shrink-0 text-fg-subtle" />
@@ -231,10 +231,10 @@ export default function JourneyDayList({
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-fg-brand">
+                    <span className="block text-[11px] font-bold tracking-wider text-fg-brand uppercase">
                       {isEs ? phase.moduleEs : phase.moduleEn}
                     </span>
-                    <span className="block truncate text-base font-semibold leading-6 text-fg">
+                    <span className="block truncate text-base leading-6 font-semibold text-fg">
                       {isEs ? phase.titleEs : phase.titleEn}
                     </span>
                   </span>
@@ -279,7 +279,7 @@ export default function JourneyDayList({
 
                           <span className="min-w-0 flex-1">
                             <span
-                              className={`block text-sm font-semibold leading-5 ${
+                              className={`block text-sm leading-5 font-semibold ${
                                 isActive ? "text-fg-brand" : "text-fg-secondary"
                               }`}
                             >

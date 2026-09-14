@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { Phone, Pencil, Car } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Button, buttonStyles, Card, FormField, Input, Modal } from "@/components/ui";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  FormField,
+  Input,
+  Modal,
+} from "@/components/ui";
 
 export default function WheresMyRideModal({
   isOpen,
@@ -86,9 +93,15 @@ export default function WheresMyRideModal({
     >
       <div className="space-y-stack-lg">
         {/* Card 1: My Ride */}
-        <Card tone="flat" padding="small" className="space-y-stack-md border-primary-soft-line bg-primary-soft">
+        <Card
+          tone="flat"
+          padding="small"
+          className="space-y-stack-md border-primary-soft-line bg-primary-soft"
+        >
           <div className="flex items-center justify-between gap-inline-md">
-            <h3 className="text-heading-5 text-fg">{t("myRides.sectionTitle")}</h3>
+            <h3 className="text-heading-5 text-fg">
+              {t("myRides.sectionTitle")}
+            </h3>
             {/* title= is a tooltip; the button needs a real name. */}
             <Button
               variant="neutral"
@@ -118,7 +131,9 @@ export default function WheresMyRideModal({
 
         {/* Card 2: Ride share Apps */}
         <Card tone="sunken" padding="small" className="space-y-stack-md">
-          <h3 className="text-heading-5 text-fg">{t("myRides.rideshareTitle")}</h3>
+          <h3 className="text-heading-5 text-fg">
+            {t("myRides.rideshareTitle")}
+          </h3>
 
           <a
             href="https://m.uber.com"
@@ -145,9 +160,14 @@ export default function WheresMyRideModal({
         </Card>
 
         {/* Third-Party Transportation Disclaimer */}
-        <Card tone="sunken" padding="small" className="text-caption text-fg-muted">
+        <Card
+          tone="sunken"
+          padding="small"
+          className="text-caption text-fg-muted"
+        >
           <span className="text-label-sm text-fg-secondary">
-            {t("myRides.disclaimerTitle") || "Third-Party Transportation Disclaimer:"}{" "}
+            {t("myRides.disclaimerTitle") ||
+              "Third-Party Transportation Disclaimer:"}{" "}
           </span>
           <span>
             {t("myRides.disclaimerText") ||

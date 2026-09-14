@@ -46,7 +46,8 @@ export default function ClassTranscriptUpload({
 
   const cues = draft.transcript;
   const lastCueAt = cues.length > 0 ? cues[cues.length - 1].at : 0;
-  const durationMismatch = mediaSeconds !== null && lastCueAt > mediaSeconds + 1;
+  const durationMismatch =
+    mediaSeconds !== null && lastCueAt > mediaSeconds + 1;
 
   const loaded = (["EN", "ES"] as CaptionLanguage[])
     .map((code) => ({
@@ -144,7 +145,7 @@ export default function ClassTranscriptUpload({
           onChange={(event) =>
             setLanguage(event.target.value as CaptionLanguage)
           }
-          className="rounded-control border border-line bg-surface px-2.5 py-2 text-xs font-bold text-fg-secondary outline-none hover:bg-surface-sunken focus:border-primary-edge cursor-pointer"
+          className="cursor-pointer rounded-control border border-line bg-surface px-2.5 py-2 text-xs font-bold text-fg-secondary outline-none hover:bg-surface-sunken focus:border-primary-edge"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -153,7 +154,7 @@ export default function ClassTranscriptUpload({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover cursor-pointer"
+          className="flex cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <Upload className="h-3.5 w-3.5" />
           Upload transcript
@@ -161,14 +162,14 @@ export default function ClassTranscriptUpload({
       </div>
 
       {error && (
-        <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-[11px] font-medium leading-relaxed text-warning">
+        <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-[11px] leading-relaxed font-medium text-warning">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {error}
         </p>
       )}
 
       {durationMismatch && (
-        <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-[11px] font-medium leading-relaxed text-danger">
+        <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-[11px] leading-relaxed font-medium text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           This transcript ends at {formatClock(lastCueAt)} but the media is only{" "}
           {formatClock(mediaSeconds ?? 0)} long. The two may not belong
@@ -203,7 +204,7 @@ export default function ClassTranscriptUpload({
                 type="button"
                 onClick={() => exportLanguage(entry.code)}
                 aria-label={`Download ${LANGUAGE_NAME[entry.code]} transcript`}
-                className="flex h-8 w-8 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary cursor-pointer"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
               >
                 <Download className="h-4 w-4" />
               </button>
@@ -211,7 +212,7 @@ export default function ClassTranscriptUpload({
                 type="button"
                 onClick={() => removeLanguage(entry.code)}
                 aria-label={`Remove ${LANGUAGE_NAME[entry.code]} transcript`}
-                className="flex h-8 w-8 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

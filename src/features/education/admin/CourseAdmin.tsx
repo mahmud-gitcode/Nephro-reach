@@ -86,7 +86,12 @@ export function CourseModal({
   onSave: (values: CourseFormValues) => void;
 }) {
   const [values, setValues] = useState<CourseFormValues>(
-    initial ?? { titleEn: "", titleEs: "", descriptionEn: "", descriptionEs: "" },
+    initial ?? {
+      titleEn: "",
+      titleEs: "",
+      descriptionEn: "",
+      descriptionEs: "",
+    },
   );
 
   const set = (patch: Partial<CourseFormValues>) =>
@@ -110,7 +115,10 @@ export function CourseModal({
         />
       </Field>
 
-      <Field label="Course name (Spanish)" hint="Falls back to English if empty">
+      <Field
+        label="Course name (Spanish)"
+        hint="Falls back to English if empty"
+      >
         <input
           className={FIELD_CLASS}
           value={values.titleEs}
@@ -173,18 +181,27 @@ export function ModuleModal({
           className={FIELD_CLASS}
           value={values.titleEn}
           onChange={(event) =>
-            setValues((current) => ({ ...current, titleEn: event.target.value }))
+            setValues((current) => ({
+              ...current,
+              titleEn: event.target.value,
+            }))
           }
           placeholder="e.g. Understanding Dialysis"
         />
       </Field>
 
-      <Field label="Module name (Spanish)" hint="Falls back to English if empty">
+      <Field
+        label="Module name (Spanish)"
+        hint="Falls back to English if empty"
+      >
         <input
           className={FIELD_CLASS}
           value={values.titleEs}
           onChange={(event) =>
-            setValues((current) => ({ ...current, titleEs: event.target.value }))
+            setValues((current) => ({
+              ...current,
+              titleEs: event.target.value,
+            }))
           }
         />
       </Field>
@@ -240,10 +257,12 @@ function DocumentsStep({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft cursor-pointer"
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft"
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
-        <span className="text-sm font-bold text-fg-secondary">Upload handouts</span>
+        <span className="text-sm font-bold text-fg-secondary">
+          Upload handouts
+        </span>
       </button>
 
       {documents.length === 0 ? (
@@ -263,7 +282,7 @@ function DocumentsStep({
 
               <span className="min-w-0 flex-1">
                 <input
-                  className="w-full rounded-control border border-transparent px-2 py-1 text-sm font-semibold text-fg outline-none transition-colors hover:border-line focus:border-primary-edge"
+                  className="w-full rounded-control border border-transparent px-2 py-1 text-sm font-semibold text-fg transition-colors outline-none hover:border-line focus:border-primary-edge"
                   value={doc.titleEn}
                   onChange={(event) =>
                     onChange(
@@ -290,7 +309,7 @@ function DocumentsStep({
                   onChange(documents.filter((entry) => entry.id !== doc.id))
                 }
                 aria-label={`Remove ${doc.titleEn}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger cursor-pointer"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -443,7 +462,10 @@ export function ClassEditorPanel({
             const done = index < stepIndex;
             const active = index === stepIndex;
             return (
-              <li key={entry.key} className="flex shrink-0 items-center gap-1.5">
+              <li
+                key={entry.key}
+                className="flex shrink-0 items-center gap-1.5"
+              >
                 <button
                   type="button"
                   onClick={() => setStepIndex(index)}
@@ -482,9 +504,7 @@ export function ClassEditorPanel({
         </ol>
 
         <div className="min-h-0 flex-1 space-y-stack-lg">
-          {step === "overview" && (
-            <OverviewStep draft={draft} onChange={set} />
-          )}
+          {step === "overview" && <OverviewStep draft={draft} onChange={set} />}
 
           {step === "type" && <TypeStep draft={draft} onChange={set} />}
 
@@ -503,7 +523,7 @@ export function ClassEditorPanel({
               />
 
               <div className="space-y-4 border-t border-line pt-4">
-                <h3 className="text-xs font-bold uppercase tracking-wide text-fg-muted">
+                <h3 className="text-xs font-bold tracking-wide text-fg-muted uppercase">
                   Transcript
                 </h3>
                 <ClassTranscriptUpload
@@ -522,7 +542,6 @@ export function ClassEditorPanel({
             />
           )}
         </div>
-
       </div>
     </Modal>
   );

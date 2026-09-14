@@ -1,4 +1,5 @@
-export type NextStepLevel = "call911" | "urgentMedical" | "callDialysis" | "monitor";
+export type NextStepLevel =
+  "call911" | "urgentMedical" | "callDialysis" | "monitor";
 
 export interface NextStepConfig {
   level: NextStepLevel;
@@ -115,8 +116,10 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
       "Mareos o sensación de desmayo",
       "Malestar en el pecho nuevo o que empeora rápidamente",
     ],
-    actionNoteEn: "New/severe chest pain or heart-attack-type symptoms → Call 911.",
-    actionNoteEs: "Dolor de pecho nuevo o grave o síntomas de tipo infarto → Llame al 911.",
+    actionNoteEn:
+      "New/severe chest pain or heart-attack-type symptoms → Call 911.",
+    actionNoteEs:
+      "Dolor de pecho nuevo o grave o síntomas de tipo infarto → Llame al 911.",
     importantInEn: [
       "Dialysis patients with high cardiovascular risk",
       "Patients with kidney failure and fluid shifts",
@@ -336,7 +339,7 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
     ],
   },
 
-  "seizures": {
+  seizures: {
     slug: "seizures",
     key: "seizures",
     titleEn: "Seizures",
@@ -406,8 +409,10 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
       "Fiebre o escalofríos después de una sesión de diálisis",
       "Sangrado profuso, continuo o en chorro desde cualquier sitio de acceso",
     ],
-    actionNoteEn: "Heavy or spurting bleeding from dialysis access → Call 911 immediately.",
-    actionNoteEs: "Sangrado profuso o en chorro del acceso de diálisis → Llame al 911 de inmediato.",
+    actionNoteEn:
+      "Heavy or spurting bleeding from dialysis access → Call 911 immediately.",
+    actionNoteEs:
+      "Sangrado profuso o en chorro del acceso de diálisis → Llame al 911 de inmediato.",
     importantInEn: [
       "Hemodialysis patients with arteriovenous (AV) fistula or graft",
       "Patients with tunneled or temporary central venous dialysis catheters",
@@ -597,16 +602,18 @@ export const BEFORE_THE_ER_TOPICS: Record<string, BeforeTheErTopicInfo> = {
 
 export const SLUG_LIST = Object.keys(BEFORE_THE_ER_TOPICS);
 
-export function getBeforeTheErTopic(slugOrKey: string): BeforeTheErTopicInfo | undefined {
+export function getBeforeTheErTopic(
+  slugOrKey: string,
+): BeforeTheErTopicInfo | undefined {
   if (!slugOrKey) return undefined;
   const normalized = slugOrKey.toLowerCase().replace(/%20/g, "-");
-  
+
   if (BEFORE_THE_ER_TOPICS[normalized]) {
     return BEFORE_THE_ER_TOPICS[normalized];
   }
-  
+
   const found = Object.values(BEFORE_THE_ER_TOPICS).find(
-    (item) => item.key.toLowerCase() === slugOrKey.toLowerCase()
+    (item) => item.key.toLowerCase() === slugOrKey.toLowerCase(),
   );
   return found;
 }

@@ -58,7 +58,9 @@ export function serializeSession(user: AuthUser) {
   return encodeURIComponent(JSON.stringify(user));
 }
 
-export function parseSession(value: string | undefined | null): AuthUser | null {
+export function parseSession(
+  value: string | undefined | null,
+): AuthUser | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(decodeURIComponent(value)) as AuthUser;
@@ -118,8 +120,7 @@ function writeRegisteredUsers(users: StoredAccount[]) {
 export function authenticate(email: string, password: string): AuthUser | null {
   const normalized = email.trim().toLowerCase();
   const demo = DEMO_ACCOUNTS.find(
-    (account) =>
-      account.email === normalized && account.password === password,
+    (account) => account.email === normalized && account.password === password,
   );
   if (demo) {
     return { email: demo.email, name: demo.name, role: demo.role };
