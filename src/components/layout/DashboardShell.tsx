@@ -303,7 +303,7 @@ function Sidebar({
 
 
       <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-        <div className="border-t border-white/80 pt-5">
+        <div className="pt-2">
           <p className="mb-2 px-4 text-xs font-medium text-white/80">
             {language === "ES" ? "Menú" : "Menu"}
           </p>
@@ -674,7 +674,7 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900">
+    <div className="min-h-screen bg-canvas font-sans text-slate-900">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         <Sidebar onOpenRideModal={() => setRideModalOpen(true)} />
       </div>
