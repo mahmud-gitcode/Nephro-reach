@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Plus, Check, Pill, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useIsMounted } from "@/lib/utils/useIsMounted";
 import { Alert, Button, Input, Modal, Select } from "@/components/ui";
 
 export interface TreatmentMedication {
@@ -137,11 +138,29 @@ const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
 
 const LOCAL_STORAGE_KEY = "nephroreach_dialysis_treatment_medications_v2";
 
+function readStoredMedications(): TreatmentMedication[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return INITIAL_MEDICATIONS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? (parsed as TreatmentMedication[])
+      : INITIAL_MEDICATIONS;
+  } catch {
+    return INITIAL_MEDICATIONS;
+  }
+}
+
 export default function MedicationsGivenSection() {
   const { language } = useLanguage();
 
-  const [medications, setMedications] =
-    useState<TreatmentMedication[]>(INITIAL_MEDICATIONS);
+  /* Stored medications cannot be read on the server, and reading them in an
+     effect costs a second render pass. `edited` holds this session's writes;
+     until the member changes something we read straight from storage. */
+  const mounted = useIsMounted();
+  const [edited, setEdited] = useState<TreatmentMedication[] | null>(null);
+  const medications =
+    edited ?? (mounted ? readStoredMedications() : INITIAL_MEDICATIONS);
 
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -154,23 +173,8 @@ export default function MedicationsGivenSection() {
   const [formDate, setFormDate] = useState("May 31, 2024");
   const [formMedError, setFormMedError] = useState("");
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMedications(parsed);
-        }
-      }
-    } catch {
-      // fallback
-    }
-  }, []);
-
   const saveMedications = (updated: TreatmentMedication[]) => {
-    setMedications(updated);
+    setEdited(updated);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
     } catch {

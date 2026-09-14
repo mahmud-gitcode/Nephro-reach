@@ -1,0 +1,6 @@
+# Commits that only moved whitespace. `git blame` skips them when configured:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub reads this file automatically.)
+
+# style: format the repo with Prettier
+eb2cf6ae48ec61310e970fb4d6a4f3acc1cd9f1a

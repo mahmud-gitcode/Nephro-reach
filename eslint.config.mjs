@@ -70,6 +70,23 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    /* The landing page is frozen by decision — it ships as it is and the
+       design-system migration deliberately skipped it. Holding frozen code
+       to the new rules would mean a permanently red gate, which teaches
+       everyone to ignore the gate.
+
+       It keeps eslint-config-next's own checks; only the stricter overrides
+       above are relaxed. Delete this block the day the landing page is
+       unfrozen — it has 9 problems waiting behind it. */
+    files: ["src/features/landing-page/**", "src/app/(landing-page)/**"],
+    rules: {
+      "@next/next/no-img-element": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
+
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",

@@ -4,10 +4,10 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
+import { useIsMounted } from "@/lib/utils/useIsMounted";
 import {
   authenticate,
   AuthUser,
@@ -33,17 +33,18 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setUser(readSessionFromDocument());
-    setReady(true);
-  }, []);
+  /* The session lives in a cookie, which the server render cannot read, so
+     `user` stays null until React hydrates. `session` holds what login and
+     logout set during this page's life; before either happens we fall back
+     to whatever the cookie already says. `ready` is just "have we looked
+     yet" — consumers use it to avoid flashing a signed-out UI. */
+  const [session, setSession] = useState<AuthUser | null>(null);
+  const ready = useIsMounted();
+  const user = ready ? (session ?? readSessionFromDocument()) : null;
 
   const loginAs = useCallback((next: AuthUser) => {
     writeSessionCookie(next);
-    setUser(next);
+    setSession(next);
   }, []);
 
   const login = useCallback(
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearSessionCookie();
-    setUser(null);
+    setSession(null);
   }, []);
 
   const value = useMemo(

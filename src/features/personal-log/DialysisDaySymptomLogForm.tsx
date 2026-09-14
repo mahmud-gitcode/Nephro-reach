@@ -411,14 +411,17 @@ export default function DialysisDaySymptomLogForm({
   // Date state
   const [selectedDate, setSelectedDate] = useState("2026-05-04");
 
+  /* These thirteen read-only values still go through useState so that
+     wiring the form later is a one-word change. Nothing sets them yet:
+     this form renders but does not submit. See the functional audit. */
   // Session & Metadata state
   const [isDialysisDay, setIsDialysisDay] = useState(true);
-  const [treatmentType, setTreatmentType] = useState("Hemodialysis");
-  const [startTime, setStartTime] = useState("7:30 AM");
-  const [endTime, setEndTime] = useState("11:45 AM");
-  const [location, setLocation] = useState("ABC Dialysis Center");
-  const [careTeam, setCareTeam] = useState("Jane Smith, RN");
-  const [postWeightSummary, setPostWeightSummary] = useState("72.4 kg");
+  const [treatmentType] = useState("Hemodialysis");
+  const [startTime] = useState("7:30 AM");
+  const [endTime] = useState("11:45 AM");
+  const [location] = useState("ABC Dialysis Center");
+  const [careTeam] = useState("Jane Smith, RN");
+  const [postWeightSummary] = useState("72.4 kg");
 
   // Options from user reference image
   const [attended, setAttended] = useState<"Yes" | "No">("Yes");
@@ -461,7 +464,7 @@ export default function DialysisDaySymptomLogForm({
     "Swelling",
     "Headache",
   ]);
-  const [preOther, setPreOther] = useState("");
+  const [preOther] = useState("");
   const [preSeverity, setPreSeverity] = useState<Record<string, number>>({
     Fatigue: 6,
     Nausea: 2,
@@ -471,14 +474,14 @@ export default function DialysisDaySymptomLogForm({
   });
 
   // Intra-treatment
-  const [hadIntraSymptoms, setHadIntraSymptoms] = useState(true);
+  const [hadIntraSymptoms] = useState(true);
   const [intraSymptoms, setIntraSymptoms] = useState<string[]>([
     "Low Blood Pressure",
     "Cramps",
     "Dizziness",
   ]);
-  const [intraOther, setIntraOther] = useState("");
-  const [intraSeverity, setIntraSeverity] = useState<Record<string, number>>({
+  const [intraOther] = useState("");
+  const [intraSeverity] = useState<Record<string, number>>({
     Fatigue: 6,
     Nausea: 2,
     Cramps: 7,
@@ -495,7 +498,7 @@ export default function DialysisDaySymptomLogForm({
     "Fatigue",
     "Muscle Cramps",
   ]);
-  const [postOther, setPostOther] = useState("");
+  const [postOther] = useState("");
   const [postSeverity, setPostSeverity] = useState<Record<string, number>>({
     Fatigue: 4,
     Nausea: 1,
@@ -505,11 +508,11 @@ export default function DialysisDaySymptomLogForm({
 
   // Vitals & Meds
   const [fluidRemoved, setFluidRemoved] = useState("");
-  const [preWeight, setPreWeight] = useState("74.7");
+  const [preWeight] = useState("74.7");
   const [postWeight, setPostWeight] = useState("");
   const [bpPost, setBpPost] = useState("");
   const [pulsePost, setPulsePost] = useState("");
-  const [medNotes, setMedNotes] = useState("Took all meds after session.");
+  const [medNotes] = useState("Took all meds after session.");
   const [generalNotes, setGeneralNotes] = useState(
     "Feeling better after treatment. Plan to rest and drink fluids.",
   );
@@ -658,7 +661,7 @@ export default function DialysisDaySymptomLogForm({
                 }}
                 onClick={(e) => {
                   try {
-                    (e.currentTarget as any).showPicker?.();
+                    e.currentTarget.showPicker?.();
                   } catch {}
                 }}
                 className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-xs font-bold text-fg-secondary transition-colors outline-none hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"

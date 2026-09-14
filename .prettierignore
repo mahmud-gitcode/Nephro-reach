@@ -10,3 +10,6 @@ trash/
 # Generated or vendored
 package-lock.json
 public/
+
+# Vendored reference material — a saved requirements document, not source.
+Clicnic and Ceargiver concept/
