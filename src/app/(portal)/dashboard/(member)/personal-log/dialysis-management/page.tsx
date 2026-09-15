@@ -11,14 +11,40 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Check,
-  AlertCircle,
   CalendarDays,
   Undo2,
   Redo2,
   Eraser,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  ALL_WEEKDAYS,
+  DEFAULT_DURATION_MINUTES,
+  DEFAULT_REMINDER,
+  WEEKDAY_ES,
+  formatDuration,
+  formatFullDate,
+  formatReminder,
+  fromDateKey,
+  appendSchedulePeriod,
+  buildSchedulePeriod,
+  makeIsTreatmentDay,
+  nextScheduledDate,
+  pad2,
+  scheduledOnOrBefore,
+  shiftScheduledDate,
+  startOfToday,
+  toDateKey,
+  treatmentNumberInMonth,
+  type ApplyScope,
+  type ExtraTreatment,
+  type SchedulePeriod,
+  type TreatmentStatus,
+} from "@/features/personal-log/dialysis/schedule";
+import {
+  EditWeekModal,
+  type EditWeekResult,
+} from "@/features/personal-log/dialysis/EditWeekModal";
 import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSection";
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
@@ -144,226 +170,6 @@ const INITIAL_RECORDS: IntervalRecord[] = [
   },
 ];
 
-const ALL_WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
-const WEEKDAY_ES: Record<string, string> = {
-  Sunday: "Domingo",
-  Monday: "Lunes",
-  Tuesday: "Martes",
-  Wednesday: "Miércoles",
-  Thursday: "Jueves",
-  Friday: "Viernes",
-  Saturday: "Sábado",
-};
-
-const MONTH_SHORT_EN = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-const MONTH_SHORT_ES = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
-
-type TreatmentStatus = "past" | "current" | "upcoming";
-
-/** Unscheduled extra session. Its card is derived from the weekly schedule. */
-interface ExtraTreatment {
-  id: string;
-  dateKey: string; // yyyy-mm-dd
-  reason: string;
-  notes?: string;
-}
-
-function pad2(value: number) {
-  return `${value}`.padStart(2, "0");
-}
-
-function toDateKey(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function fromDateKey(key: string) {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(y, (m || 1) - 1, d || 1);
-}
-
-function addDays(d: Date, amount: number) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + amount);
-}
-
-function startOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-/** "Friday, Jun 19, 2026" — shape kept so parseDayAndDate keeps working. */
-function formatFullDate(d: Date, isEs: boolean) {
-  const weekday = ALL_WEEKDAYS[d.getDay()];
-  const dayLabel = isEs ? WEEKDAY_ES[weekday] : weekday;
-  const month = isEs
-    ? MONTH_SHORT_ES[d.getMonth()]
-    : MONTH_SHORT_EN[d.getMonth()];
-  return `${dayLabel}, ${month} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
-type IsTreatmentDay = (date: Date) => boolean;
-
-/** How far back a saved week setting reaches. */
-type ApplyScope = "today" | "currentTreatment" | "month";
-
-const SCOPE_OPTIONS: {
-  id: ApplyScope;
-  labelEn: string;
-  labelEs: string;
-  descEn: string;
-  descEs: string;
-}[] = [
-  {
-    id: "currentTreatment",
-    labelEn: "From Current Treatment",
-    labelEs: "Desde el Tratamiento Actual",
-    descEn: "Changes the treatment you are in now and all the ones after it.",
-    descEs: "Cambia el tratamiento en curso y todos los siguientes.",
-  },
-  {
-    id: "today",
-    labelEn: "From Today",
-    labelEs: "Desde Hoy",
-    descEn:
-      "Changes treatments from today onward. Today's treatment keeps its day.",
-    descEs: "Cambia los tratamientos desde hoy. El de hoy mantiene su día.",
-  },
-  {
-    id: "month",
-    labelEn: "Full Month",
-    labelEs: "Mes Completo",
-    descEn: "Changes every treatment in this month, starting from the 1st.",
-    descEs: "Cambia todos los tratamientos de este mes, desde el día 1.",
-  },
-];
-
-/**
- * A weekly schedule and the date it takes effect from. Saving the schedule
- * appends a new period instead of rewriting history, so treatments before the
- * effective date keep the schedule they were actually run on.
- */
-interface SchedulePeriod {
-  fromKey: string; // inclusive, yyyy-mm-dd
-  days: string[];
-  /** Reminder clock time per prescribed weekday, as "HH:MM" on a 24h clock. */
-  reminders: Record<string, string>;
-  /** Session length in minutes. One amount shared by every prescribed day. */
-  durationMinutes: number;
-}
-
-/** Reminder given to a day that was just added to the schedule. */
-const DEFAULT_REMINDER = "07:30";
-/** 4h, the usual in-centre hemodialysis run. */
-const DEFAULT_DURATION_MINUTES = 240;
-
-/** "07:30" -> "7:30 AM" in English; Spanish stays on the 24h clock. */
-function formatReminder(value: string, isEs: boolean) {
-  const [hour, minute] = value.split(":").map(Number);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value;
-  if (isEs) return `${pad2(hour)}:${pad2(minute)}`;
-  const suffix = hour >= 12 ? "PM" : "AM";
-  return `${hour % 12 === 0 ? 12 : hour % 12}:${pad2(minute)} ${suffix}`;
-}
-
-/** 240 -> "4h 00m" */
-function formatDuration(minutes: number) {
-  return `${Math.floor(minutes / 60)}h ${pad2(minutes % 60)}m`;
-}
-
-/** The prescribed days in force on a given date. */
-function daysForDate(periods: SchedulePeriod[], date: Date) {
-  const key = toDateKey(date);
-  let active = periods[0]?.days ?? [];
-  for (const period of periods) {
-    if (period.fromKey > key) break;
-    active = period.days;
-  }
-  return active;
-}
-
-function makeIsTreatmentDay(periods: SchedulePeriod[]): IsTreatmentDay {
-  return (date: Date) =>
-    daysForDate(periods, date).includes(ALL_WEEKDAYS[date.getDay()]);
-}
-
-/** First prescribed treatment day strictly after `from`. */
-function nextScheduledDate(from: Date, isTreatmentDay: IsTreatmentDay) {
-  for (let i = 1; i <= 62; i++) {
-    const candidate = addDays(from, i);
-    if (isTreatmentDay(candidate)) return candidate;
-  }
-  return addDays(from, 7);
-}
-
-/** Most recent prescribed treatment day on or before `from`. */
-function scheduledOnOrBefore(from: Date, isTreatmentDay: IsTreatmentDay) {
-  for (let i = 0; i <= 62; i++) {
-    const candidate = addDays(from, -i);
-    if (isTreatmentDay(candidate)) return candidate;
-  }
-  return from;
-}
-
-/** Walks `offset` prescribed treatment days from `base`. */
-function shiftScheduledDate(
-  base: Date,
-  offset: number,
-  isTreatmentDay: IsTreatmentDay,
-) {
-  let cursor = base;
-  for (let step = 0; step < Math.abs(offset); step++) {
-    cursor =
-      offset > 0
-        ? nextScheduledDate(cursor, isTreatmentDay)
-        : scheduledOnOrBefore(addDays(cursor, -1), isTreatmentDay);
-  }
-  return cursor;
-}
-
-/** Position of a treatment date within its own month (1-based). */
-function treatmentNumberInMonth(d: Date, isTreatmentDay: IsTreatmentDay) {
-  let count = 0;
-  for (let day = 1; day <= d.getDate(); day++) {
-    const candidate = new Date(d.getFullYear(), d.getMonth(), day);
-    if (isTreatmentDay(candidate)) count++;
-  }
-  return count || 1;
-}
-
 function DialysisManagementDashboard() {
   const { language } = useLanguage();
   const isEs = language === "ES";
@@ -401,7 +207,6 @@ function DialysisManagementDashboard() {
     ? ALL_WEEKDAYS.filter((day) => selectedDays.includes(day))
     : ALL_WEEKDAYS;
   // How a saved week setting should be applied
-  const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
   // 0 is the treatment period around today; the arrows step either way.
   const [treatmentOffset, setTreatmentOffset] = useState(0);
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
@@ -424,19 +229,6 @@ function DialysisManagementDashboard() {
   ]);
 
   // Temp state for editing week
-  const [tempDays, setTempDays] = useState<string[]>([
-    "Tuesday",
-    "Thursday",
-    "Saturday",
-  ]);
-  const [tempReminders, setTempReminders] = useState<Record<string, string>>({
-    Tuesday: DEFAULT_REMINDER,
-    Thursday: DEFAULT_REMINDER,
-    Saturday: DEFAULT_REMINDER,
-  });
-  const [tempDurationHours, setTempDurationHours] = useState("4");
-  const [tempDurationMins, setTempDurationMins] = useState("00");
-  const [tempHideBlankDays, setTempHideBlankDays] = useState(false);
 
   // Section 2: Quick Note State with Undo / Redo / Clean
   const [weeklyNote, setWeeklyNote] = useState<string>("");
@@ -663,30 +455,7 @@ function DialysisManagementDashboard() {
     setExtraTxDate(formatFullDate(new Date(calYear, calMonth, day), isEs));
   };
 
-  const handleOpenEditWeek = () => {
-    setTempDays([...selectedDays]);
-    setTempReminders({ ...currentSchedule.reminders });
-    setTempDurationHours(
-      String(Math.floor(currentSchedule.durationMinutes / 60)),
-    );
-    setTempDurationMins(pad2(currentSchedule.durationMinutes % 60));
-    setTempHideBlankDays(hideBlankDays);
-    setApplyScope("currentTreatment");
-    setIsEditWeekModalOpen(true);
-  };
-
-  const toggleDaySelection = (day: string) => {
-    if (tempDays.includes(day)) {
-      if (tempDays.length > 1) {
-        setTempDays(tempDays.filter((d) => d !== day));
-      }
-    } else {
-      setTempDays([...tempDays, day]);
-      setTempReminders((prev) =>
-        prev[day] ? prev : { ...prev, [day]: DEFAULT_REMINDER },
-      );
-    }
-  };
+  const handleOpenEditWeek = () => setIsEditWeekModalOpen(true);
 
   // Date the new schedule starts applying from, per the chosen scope
   const scopeEffectiveDate = (scope: ApplyScope) => {
@@ -696,33 +465,15 @@ function DialysisManagementDashboard() {
     return today;
   };
 
-  const handleSaveWeekSetting = (e: React.FormEvent) => {
-    e.preventDefault();
-    const sorted = [...tempDays].sort(
-      (a, b) => ALL_WEEKDAYS.indexOf(a) - ALL_WEEKDAYS.indexOf(b),
-    );
-    const fromKey = toDateKey(scopeEffectiveDate(applyScope));
-
-    // A reminder for every prescribed day, and one session length for all of them.
-    const reminders: Record<string, string> = {};
-    sorted.forEach((day) => {
-      reminders[day] = tempReminders[day] || DEFAULT_REMINDER;
-    });
-    const hours = Math.min(12, Math.max(0, Number(tempDurationHours) || 0));
-    const durationMinutes = Math.max(
-      15,
-      hours * 60 + (Number(tempDurationMins) || 0),
-    );
-
-    setSchedulePeriods((prev) => {
-      // Drop any period starting on or after the new effective date, then append.
-      // Everything before it keeps the schedule it was actually run on.
-      const kept = prev.filter((period) => period.fromKey < fromKey);
-      const base = kept.length > 0 ? kept : [prev[0]];
-      return [...base, { fromKey, days: sorted, reminders, durationMinutes }];
-    });
-
-    setHideBlankDays(tempHideBlankDays);
+  const handleSaveWeekSetting = ({
+    draft,
+    scope,
+    hideBlankDays: nextHideBlankDays,
+  }: EditWeekResult) => {
+    const fromKey = toDateKey(scopeEffectiveDate(scope));
+    const period = buildSchedulePeriod(draft, fromKey);
+    setSchedulePeriods((prev) => appendSchedulePeriod(prev, period));
+    setHideBlankDays(nextHideBlankDays);
     setIsEditWeekModalOpen(false);
   };
 
@@ -1669,242 +1420,20 @@ function DialysisManagementDashboard() {
       {/* ========================================================================= */}
       {/* MODAL 1: EDIT WEEK SETTING                                                */}
       {/* ========================================================================= */}
-      <Modal
+      <EditWeekModal
+        /* Keyed on open: a reopened form starts from the saved schedule
+           again, with no effect syncing the draft. */
+        key={isEditWeekModalOpen ? "open" : "closed"}
         open={isEditWeekModalOpen}
         onClose={() => setIsEditWeekModalOpen(false)}
-        size="wide"
-        title={isEs ? "Editar Horario Semanal" : "Edit Weekly Schedule"}
-        description={
-          isEs
-            ? "Selecciona los días en que tienes diálisis"
-            : "Select which days of the week you receive dialysis"
-        }
-        footer={
-          <>
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => setIsEditWeekModalOpen(false)}
-            >
-              {isEs ? "Cancelar" : "Cancel"}
-            </Button>
-            <Button type="submit" form="week-schedule-form">
-              {isEs ? "Guardar Horario" : "Save Schedule"}
-            </Button>
-          </>
-        }
-      >
-        <form
-          id="week-schedule-form"
-          onSubmit={handleSaveWeekSetting}
-          className="space-y-stack-lg"
-        >
-          <div>
-            <label className="mb-2 block font-semibold text-fg-secondary">
-              {isEs ? "Días de Diálisis" : "Prescribed Dialysis Days"}
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {ALL_WEEKDAYS.map((day) => {
-                const isSelected = tempDays.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDaySelection(day)}
-                    className={`flex cursor-pointer items-center justify-between rounded-xl border p-2.5 text-left font-bold transition-all ${
-                      isSelected
-                        ? "border-[var(--color-brand-600)] bg-primary-soft text-fg-brand"
-                        : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span>{isEs ? WEEKDAY_ES[day] : day}</span>
-                    {isSelected && (
-                      <Check className="h-[18px] w-[18px] stroke-[3]" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Blank-day display option for the Dialysis Schedule card */}
-          <button
-            type="button"
-            onClick={() => setTempHideBlankDays((prev) => !prev)}
-            aria-pressed={tempHideBlankDays}
-            className="flex w-full cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:bg-surface-sunken"
-          >
-            <span
-              className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                tempHideBlankDays
-                  ? "border-[var(--color-brand-600)] bg-action"
-                  : "border-line-strong"
-              }`}
-            >
-              {tempHideBlankDays && (
-                <Check className="h-3 w-3 stroke-[3.5] text-white" />
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold text-fg-secondary">
-                {isEs ? "Ocultar días en blanco" : "Remove blank days"}
-              </span>
-              <span className="mt-0.5 block text-xs leading-relaxed font-medium text-fg-muted">
-                {isEs
-                  ? "La semana muestra solo tus días de tratamiento, sin los espacios vacíos."
-                  : "The week shows only your treatment days, with no empty placeholders."}
-              </span>
-            </span>
-          </button>
-
-          {/* A reminder time per prescribed day */}
-          <div>
-            <label className="mb-2 block font-semibold text-fg-secondary">
-              {isEs ? "Hora del Recordatorio" : "Reminder Time"}
-            </label>
-            <div className="space-y-2">
-              {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map(
-                (day) => (
-                  <div
-                    key={day}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2"
-                  >
-                    <span className="inline-flex items-center gap-2 font-bold text-fg-secondary">
-                      <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-subtle" />
-                      {isEs ? WEEKDAY_ES[day] : day}
-                    </span>
-                    <input
-                      type="time"
-                      value={tempReminders[day] ?? DEFAULT_REMINDER}
-                      onChange={(e) =>
-                        setTempReminders((prev) => ({
-                          ...prev,
-                          [day]: e.target.value,
-                        }))
-                      }
-                      className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-                    />
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-
-          {/* Session length: one amount shared by every prescribed day */}
-          <div>
-            <label className="mb-2 block font-semibold text-fg-secondary">
-              {isEs ? "Duración de la Sesión" : "Session Duration"}
-            </label>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={0}
-                  max={12}
-                  value={tempDurationHours}
-                  onChange={(e) => setTempDurationHours(e.target.value)}
-                  className="w-16 rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-                />
-                <span className="font-bold text-fg-muted">
-                  {isEs ? "h" : "hr"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <select
-                  value={tempDurationMins}
-                  onChange={(e) => setTempDurationMins(e.target.value)}
-                  className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-                >
-                  {["00", "15", "30", "45"].map((minute) => (
-                    <option key={minute} value={minute}>
-                      {minute}
-                    </option>
-                  ))}
-                </select>
-                <span className="font-bold text-fg-muted">min</span>
-              </div>
-              <span className="ml-auto text-xs font-semibold text-fg-subtle">
-                {isEs ? "Se aplica a todos los días" : "Applies to every day"}
-              </span>
-            </div>
-          </div>
-
-          {/* Apply scope: how far back this schedule reaches */}
-          <div className="space-y-2">
-            <label className="block font-semibold text-fg-secondary">
-              {isEs ? "Aplicar Este Horario A" : "Apply This Schedule To"}
-            </label>
-
-            <div className="space-y-2">
-              {SCOPE_OPTIONS.map((option) => {
-                const isSelected = applyScope === option.id;
-                const effective = scopeEffectiveDate(option.id);
-
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setApplyScope(option.id)}
-                    aria-pressed={isSelected}
-                    className={`flex w-full cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
-                      isSelected
-                        ? "border-[var(--color-brand-600)] bg-primary-soft"
-                        : "border-line bg-surface hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span
-                      className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
-                        isSelected
-                          ? "border-[var(--color-brand-600)]"
-                          : "border-line-strong"
-                      }`}
-                    >
-                      {isSelected && (
-                        <span className="h-2.5 w-2.5 rounded-full bg-action" />
-                      )}
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      {/* Title on the left, effective date right-aligned beside it */}
-                      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                        <span
-                          className={`font-bold ${
-                            isSelected ? "text-fg-brand" : "text-fg-secondary"
-                          }`}
-                        >
-                          {isEs ? option.labelEs : option.labelEn}
-                        </span>
-                        <span className="ml-auto text-right text-xs font-bold text-fg">
-                          {isEs ? "Desde" : "Starts"}{" "}
-                          {formatFullDate(effective, isEs)}
-                        </span>
-                      </span>
-                      <span className="mt-1 block text-xs leading-relaxed font-medium text-fg-muted">
-                        {isEs ? option.descEs : option.descEn}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Full month rebuilds treatments that already happened */}
-            {applyScope === "month" && (
-              <div className="flex items-start gap-2 rounded-xl border border-warning-line bg-warning-surface p-3">
-                <AlertCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-warning" />
-                <p className="text-xs leading-relaxed font-medium text-warning-900">
-                  <strong className="font-bold">
-                    {isEs ? "Aviso:" : "Heads up:"}
-                  </strong>{" "}
-                  {isEs
-                    ? `Esto reconstruye todo ${monthNamesEs[viewMonth]} ${viewYear} desde el día 1, incluidos los tratamientos ya pasados. Puede generar una gran cantidad de tarjetas y los registros guardados con el horario anterior podrían dejar de coincidir.`
-                    : `This rebuilds all of ${monthNames[viewMonth]} ${viewYear} from the 1st, including treatments that already happened. It can create a large number of cards, and records logged against the old schedule may no longer line up.`}
-                </p>
-              </div>
-            )}
-          </div>
-        </form>
-      </Modal>
+        initialDays={selectedDays}
+        initialReminders={currentSchedule.reminders}
+        initialDurationMinutes={currentSchedule.durationMinutes}
+        initialHideBlankDays={hideBlankDays}
+        effectiveDateFor={scopeEffectiveDate}
+        monthLabel={`${(isEs ? monthNamesEs : monthNames)[viewMonth]} ${viewYear}`}
+        onSave={handleSaveWeekSetting}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL 2: TAKE EXTRA TREATMENT (WITH INTERACTIVE CALENDAR & AUTO SESSION) */}
