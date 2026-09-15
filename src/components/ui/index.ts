@@ -96,3 +96,6 @@ export type { ErrorStateProps } from "./ErrorState";
 
 export { AsyncSection } from "./AsyncSection";
 export type { AsyncSectionProps } from "./AsyncSection";
+
+export { MonthCalendar } from "./MonthCalendar";
+export type { MonthCalendarProps } from "./MonthCalendar";

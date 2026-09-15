@@ -49,7 +49,7 @@ import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSecti
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { Button, buttonStyles, Modal } from "@/components/ui";
+import { Button, buttonStyles, Modal, MonthCalendar } from "@/components/ui";
 
 interface TreatmentInterval {
   id: string;
@@ -428,27 +428,6 @@ function DialysisManagementDashboard() {
   ];
   const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const daysOfWeekEs = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
-
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const firstDayIndex = new Date(calYear, calMonth, 1).getDay();
-
-  const handlePrevMonth = () => {
-    if (calMonth === 0) {
-      setCalMonth(11);
-      setCalYear(calYear - 1);
-    } else {
-      setCalMonth(calMonth - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (calMonth === 11) {
-      setCalMonth(0);
-      setCalYear(calYear + 1);
-    } else {
-      setCalMonth(calMonth + 1);
-    }
-  };
 
   const handleSelectDay = (day: number) => {
     setSelectedDay(day);
@@ -1477,69 +1456,26 @@ function DialysisManagementDashboard() {
             </label>
 
             <div className="space-y-4 rounded-card border border-line bg-surface-sunken p-4 sm:p-5">
-              {/* Month & Year Navigation */}
-              <div className="flex items-center justify-between px-2">
-                <button
-                  type="button"
-                  onClick={handlePrevMonth}
-                  className="cursor-pointer rounded-xl border border-line bg-surface p-2 text-fg-secondary shadow-control transition-colors hover:bg-surface-sunken"
-                  aria-label="Previous Month"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-
-                <h3 className="text-heading-5 text-fg">
-                  {isEs ? monthNamesEs[calMonth] : monthNames[calMonth]}{" "}
-                  {calYear}
-                </h3>
-
-                <button
-                  type="button"
-                  onClick={handleNextMonth}
-                  className="cursor-pointer rounded-xl border border-line bg-surface p-2 text-fg-secondary shadow-control transition-colors hover:bg-surface-sunken"
-                  aria-label="Next Month"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Day-of-Week Headers */}
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold tracking-wider text-fg-subtle uppercase">
-                {(isEs ? daysOfWeekEs : daysOfWeek).map((d) => (
-                  <div key={d} className="py-1">
-                    {d}
-                  </div>
-                ))}
-              </div>
-
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                {/* Blank slots before day 1 */}
-                {Array.from({ length: firstDayIndex }).map((_, idx) => (
-                  <div key={`empty-${idx}`} className="h-9 sm:h-11" />
-                ))}
-
-                {/* Active Month Days */}
-                {Array.from({ length: daysInMonth }).map((_, idx) => {
-                  const dayNum = idx + 1;
-                  const isSelected = dayNum === selectedDay;
-
-                  return (
-                    <button
-                      key={dayNum}
-                      type="button"
-                      onClick={() => handleSelectDay(dayNum)}
-                      className={`flex h-9 cursor-pointer items-center justify-center rounded-xl text-sm font-bold transition-all select-none sm:h-11 sm:text-base ${
-                        isSelected
-                          ? "scale-105 bg-action text-white shadow-card"
-                          : "border border-line/70 bg-surface text-fg-secondary hover:border-primary-soft-line hover:bg-primary-soft"
-                      }`}
-                    >
-                      {dayNum}
-                    </button>
-                  );
-                })}
-              </div>
+              <MonthCalendar
+                year={calYear}
+                month={calMonth}
+                selectedDay={selectedDay}
+                onSelectDay={handleSelectDay}
+                onMonthChange={(nextYear, nextMonth) => {
+                  setCalYear(nextYear);
+                  setCalMonth(nextMonth);
+                }}
+                monthLabel={`${
+                  (isEs ? monthNamesEs : monthNames)[calMonth]
+                } ${calYear}`}
+                weekdayLabels={isEs ? daysOfWeekEs : daysOfWeek}
+                formatDayLabel={(date) => formatFullDate(date, isEs)}
+                /* A dot on prescribed days, so an extra session can be
+                   placed relative to the run schedule at a glance. */
+                isMarked={isTreatmentDay}
+                previousMonthLabel={isEs ? "Mes anterior" : "Previous month"}
+                nextMonthLabel={isEs ? "Mes siguiente" : "Next month"}
+              />
 
               {/* Selected Date Confirmation */}
               <div className="flex items-center gap-2 border-t border-line/80 pt-2 text-xs font-semibold text-fg-secondary sm:text-sm">
