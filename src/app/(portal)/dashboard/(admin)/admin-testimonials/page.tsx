@@ -225,8 +225,12 @@ export default function AdminTestimonialsPage() {
                       <button
                         type="button"
                         onClick={() => setPreviewTestimonial(item)}
-                        className="group relative h-28 w-full shrink-0 cursor-pointer overflow-hidden rounded-panel bg-slate-900 shadow-xs sm:w-44"
+                        className="group relative h-28 w-full shrink-0 cursor-pointer overflow-hidden rounded-panel bg-surface-inverse shadow-xs sm:w-44"
                       >
+                        {/* next/image needs every remote host declared up front, and a
+                            testimonial thumbnail URL is whatever the member
+                            submitted. See components/icons/LocalSvg for the
+                            same trade in the other direction. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={

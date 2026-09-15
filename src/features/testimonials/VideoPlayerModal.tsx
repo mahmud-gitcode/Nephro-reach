@@ -61,7 +61,7 @@ export default function VideoPlayerModal({
               className="h-full w-full border-0"
             />
           ) : (
-            <div className="relative flex h-full w-full flex-col items-center justify-center bg-slate-900 p-6 text-center text-white">
+            <div className="relative flex h-full w-full flex-col items-center justify-center bg-surface-inverse p-6 text-center text-white">
               <video
                 src={testimonial.videoUrl}
                 controls

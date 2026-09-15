@@ -11,11 +11,12 @@
     "lint:fix": "node scripts/lint.mjs --fix",
     "format": "node scripts/format.mjs",
     "format:check": "node scripts/format.mjs --check",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build && npm run budget",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "audit:controls": "python scripts/dead-controls.py"
+    "audit:controls": "python scripts/dead-controls.py",
+    "budget": "node scripts/budget.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",

@@ -409,7 +409,10 @@ export default function UserDashboard() {
                 onClick={() => setSelectedVideo(item)}
               >
                 {/* Thumbnail Container */}
-                <div className="relative aspect-video w-full overflow-hidden rounded-card bg-slate-900">
+                <div className="relative aspect-video w-full overflow-hidden rounded-card bg-surface-inverse">
+                  {/* next/image needs every remote host declared up front, and a
+                      testimonial thumbnail URL is whatever the member
+                      submitted. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={

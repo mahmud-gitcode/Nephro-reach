@@ -49,3 +49,12 @@ jobs:
       - name: Build
         if: always()
         run: npm run build
+
+      # Needs the build above, so this one does not run when that failed.
+      - name: Bundle budget
+        run: npm run budget
+
+      # Fails on any control that renders, looks pressable, and does nothing.
+      - name: Dead controls
+        if: always()
+        run: python scripts/dead-controls.py
