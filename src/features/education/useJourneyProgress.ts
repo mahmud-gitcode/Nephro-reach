@@ -1,194 +1,98 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import {
-  JOURNEY_DAYS,
-  TOTAL_JOURNEY_DAYS,
-} from "@/features/education/dialysisJourneyData";
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProgress, saveProgress } from "./journey.repository";
+import * as rules from "./journey.rules";
+import type { JourneyProgressMap } from "./journey.types";
 
-export type JourneyDayStatus = "not-started" | "in-progress" | "completed";
+export type {
+  JourneyDayProgress,
+  JourneyDayStatus,
+  JourneyProgressMap,
+} from "./journey.types";
 
-export interface JourneyDayProgress {
-  status: JourneyDayStatus;
-  /** 0-100. How far through the lesson video the learner reached. */
-  percent: number;
-  updatedAt: string;
-}
-
-export type JourneyProgressMap = Record<string, JourneyDayProgress>;
-
-const STORAGE_KEY = "nephroreach_journey_progress";
-
-const EMPTY_PROGRESS: JourneyDayProgress = {
-  status: "not-started",
-  percent: 0,
-  updatedAt: "",
-};
-
-function readStoredProgress(): JourneyProgressMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return {};
-    return parsed as JourneyProgressMap;
-  } catch {
-    return {};
-  }
-}
-
-function persistProgress(next: JourneyProgressMap) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Storage can be unavailable (private window, blocked site data). Progress
-    // still works for the current session rather than breaking the page.
-  }
-}
+export const journeyProgressKey = ["education", "journey-progress"] as const;
 
 /**
- * Tracks which of the 21 journey days a member has watched or completed.
+ * Which of the 21 journey days a member has watched or completed.
  *
- * Backed by localStorage so it survives a refresh. Mount it once per page and
- * pass the pieces down — the day list and the player both read from one copy.
+ * This hook used to hold its own `useState`, which meant two components
+ * mounting it held two copies that drifted apart — the day list and the
+ * player each had their own idea of what was finished. One cache, one
+ * answer, however many components ask.
+ *
+ * The rules live in journey.rules.ts as pure functions; this file only moves
+ * data between them, storage and the screen.
  */
 export function useJourneyProgress() {
-  const [progress, setProgress] =
-    useState<JourneyProgressMap>(readStoredProgress);
+  const queryClient = useQueryClient();
 
-  const update = useCallback(
-    (slug: string, patch: Partial<JourneyDayProgress>) => {
-      setProgress((current) => {
-        const existing = current[slug] ?? EMPTY_PROGRESS;
-        const next: JourneyProgressMap = {
-          ...current,
-          [slug]: {
-            ...existing,
-            ...patch,
-            updatedAt: new Date().toISOString(),
-          },
-        };
-        persistProgress(next);
-        return next;
-      });
-    },
-    [],
+  const query = useQuery({
+    queryKey: journeyProgressKey,
+    queryFn: getProgress,
+  });
+
+  /* Each change is read-modify-write against storage rather than against the
+     cache, so it applies to what is actually saved. With a real API this
+     becomes the request body, and the conflict it implies becomes the
+     server's to resolve. */
+  const write = useMutation({
+    mutationFn: async (
+      transform: (current: JourneyProgressMap) => JourneyProgressMap,
+    ) => saveProgress(transform(await getProgress())),
+    onSuccess: (progress) =>
+      queryClient.setQueryData(journeyProgressKey, progress),
+  });
+
+  const { mutate } = write;
+  /* `?? {}` on its own would hand out a new empty object every render, and
+     everything derived from it would recompute with it. */
+  const progress = useMemo(() => query.data ?? {}, [query.data]);
+
+  const unlockDay = useCallback(
+    (slug: string) => mutate((current) => rules.unlockDay(current, slug)),
+    [mutate],
   );
 
-  const getProgress = useCallback(
-    (slug: string): JourneyDayProgress => progress[slug] ?? EMPTY_PROGRESS,
-    [progress],
+  const markComplete = useCallback(
+    (slug: string) => mutate((current) => rules.markComplete(current, slug)),
+    [mutate],
   );
-
-  const unlockDay = useCallback((slug: string) => {
-    setProgress((current) => {
-      const existing = current[slug] ?? EMPTY_PROGRESS;
-      if (existing.status !== "not-started") return current;
-      const next: JourneyProgressMap = {
-        ...current,
-        [slug]: {
-          ...existing,
-          status: "in-progress",
-          updatedAt: new Date().toISOString(),
-        },
-      };
-      persistProgress(next);
-      return next;
-    });
-  }, []);
-
-  const markComplete = useCallback((slug: string) => {
-    setProgress((current) => {
-      const existing = current[slug] ?? EMPTY_PROGRESS;
-      const next: JourneyProgressMap = {
-        ...current,
-        [slug]: {
-          ...existing,
-          status: "completed",
-          percent: 100,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-      // Automatically unlock the next day so the learner can proceed
-      const idx = JOURNEY_DAYS.findIndex((d) => d.slug === slug);
-      if (idx >= 0 && idx < JOURNEY_DAYS.length - 1) {
-        const nextSlug = JOURNEY_DAYS[idx + 1].slug;
-        const nextExisting = current[nextSlug] ?? EMPTY_PROGRESS;
-        if (nextExisting.status === "not-started") {
-          next[nextSlug] = {
-            ...nextExisting,
-            status: "in-progress",
-            updatedAt: new Date().toISOString(),
-          };
-        }
-      }
-      persistProgress(next);
-      return next;
-    });
-  }, []);
 
   const markIncomplete = useCallback(
-    (slug: string) => update(slug, { status: "in-progress", percent: 0 }),
-    [update],
+    (slug: string) => mutate((current) => rules.markIncomplete(current, slug)),
+    [mutate],
   );
 
-  /** Raises the watched percentage; never walks it backwards on a rewatch. */
-  const recordWatched = useCallback((slug: string, percent: number) => {
-    const capped = Math.max(0, Math.min(100, Math.round(percent)));
-    setProgress((current) => {
-      const existing = current[slug] ?? EMPTY_PROGRESS;
-      if (existing.status === "completed" || capped <= existing.percent) {
-        return current;
-      }
-      const next: JourneyProgressMap = {
-        ...current,
-        [slug]: {
-          status: capped >= 95 ? "completed" : "in-progress",
-          percent: capped,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-      persistProgress(next);
-      return next;
-    });
-  }, []);
-
-  const completedCount = useMemo(
-    () =>
-      JOURNEY_DAYS.filter((day) => progress[day.slug]?.status === "completed")
-        .length,
-    [progress],
+  const recordWatched = useCallback(
+    (slug: string, percent: number) =>
+      mutate((current) => rules.recordWatched(current, slug, percent)),
+    [mutate],
   );
 
-  const overallPercent = useMemo(
-    () => Math.round((completedCount / TOTAL_JOURNEY_DAYS) * 100),
-    [completedCount],
-  );
-
-  /** The first day not yet finished — what the "continue" button points at. */
-  const nextDay = useMemo(
-    () =>
-      JOURNEY_DAYS.find((day) => progress[day.slug]?.status !== "completed") ??
-      JOURNEY_DAYS[JOURNEY_DAYS.length - 1],
-    [progress],
-  );
-
-  const hasStarted = useMemo(
-    () => JOURNEY_DAYS.some((day) => progress[day.slug]?.status),
+  const getDayProgress = useCallback(
+    (slug: string) => rules.dayProgress(progress, slug),
     [progress],
   );
 
   return {
     progress,
-    getProgress,
+    getProgress: getDayProgress,
     unlockDay,
     markComplete,
     markIncomplete,
     recordWatched,
-    completedCount,
-    overallPercent,
-    nextDay,
-    hasStarted,
+    completedCount: rules.completedCount(progress),
+    overallPercent: rules.overallPercent(progress),
+    nextDay: rules.nextDay(progress),
+    hasStarted: rules.hasStarted(progress),
+
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    /* A failed write is worth surfacing: a member who finished a lesson and
+       was not recorded will come back to find it unfinished. */
+    saveError: write.error,
   };
 }

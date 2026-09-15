@@ -26,7 +26,13 @@ import {
   JourneyDayProgress,
   useJourneyProgress,
 } from "@/features/education/useJourneyProgress";
-import { Badge, buttonStyles, Card } from "@/components/ui";
+import {
+  AsyncSection,
+  Badge,
+  buttonStyles,
+  Card,
+  Skeleton,
+} from "@/components/ui";
 import { Progress } from "@/components/ui";
 
 export const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
@@ -254,17 +260,42 @@ export function DayCard({
 }
 
 export default function EducationCenterPage() {
-  const { completedCount, overallPercent, nextDay, hasStarted } =
-    useJourneyProgress();
+  const {
+    completedCount,
+    overallPercent,
+    nextDay,
+    hasStarted,
+    isPending,
+    error,
+    refetch,
+  } = useJourneyProgress();
 
   return (
     <div className="space-y-stack-xl">
-      <JourneyHero
-        completedCount={completedCount}
-        overallPercent={overallPercent}
-        nextDay={nextDay}
-        hasStarted={hasStarted}
-      />
+      {/* Until the read lands, every figure here would be zero — and "0 of 21
+          complete" to someone who finished ten days is worse than a
+          skeleton. */}
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle="Your journey progress did not load"
+        skeleton={
+          <Card className="flex flex-col gap-stack-lg">
+            <Skeleton variant="text" width="45%" height={28} />
+            <Skeleton variant="text" width="70%" />
+            <Skeleton height={12} />
+            <Skeleton height={44} width={200} />
+          </Card>
+        }
+      >
+        <JourneyHero
+          completedCount={completedCount}
+          overallPercent={overallPercent}
+          nextDay={nextDay}
+          hasStarted={hasStarted}
+        />
+      </AsyncSection>
     </div>
   );
 }

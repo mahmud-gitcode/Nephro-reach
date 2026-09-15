@@ -6,26 +6,34 @@ import { useLanguage } from "@/context/LanguageContext";
 import {
   toTelHref,
   useDialysisClinic,
+  type DialysisClinic,
 } from "@/features/travel/useDialysisClinic";
 import {
+  Alert,
+  AsyncSection,
   Button,
   buttonStyles,
   Card,
   FormField,
   Input,
   Modal,
+  Skeleton,
 } from "@/components/ui";
 
 function ClinicModal({
   name,
   phone,
+  saving,
+  error,
   onClose,
   onSave,
 }: {
   name: string;
   phone: string;
+  saving: boolean;
+  error: unknown;
   onClose: () => void;
-  onSave: (next: { name: string; phone: string }) => void;
+  onSave: (next: DialysisClinic) => void;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
@@ -42,10 +50,16 @@ function ClinicModal({
       title={isEs ? "Mi Centro de Diálisis" : "My Dialysis Center"}
       footer={
         <>
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onClose}
+            disabled={saving}
+          >
             {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
+            loading={saving}
             onClick={() =>
               onSave({ name: draftName.trim(), phone: draftPhone.trim() })
             }
@@ -56,6 +70,16 @@ function ClinicModal({
       }
     >
       <div className="space-y-stack-lg">
+        {error ? (
+          <Alert tone="danger" title={isEs ? "No se guardó" : "Not saved"}>
+            {error instanceof Error
+              ? error.message
+              : isEs
+                ? "Inténtelo de nuevo."
+                : "Please try again."}
+          </Alert>
+        ) : null}
+
         <FormField label={isEs ? "Nombre del centro" : "Center name"}>
           {(props) => (
             <Input
@@ -92,7 +116,8 @@ function ClinicModal({
 export default function DialysisClinicCard() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { clinic, setClinic } = useDialysisClinic();
+  const { clinic, isPending, error, refetch, save, isSaving, saveError } =
+    useDialysisClinic();
   const [editing, setEditing] = useState(false);
 
   return (
@@ -109,52 +134,74 @@ export default function DialysisClinicCard() {
           <Building2 className="h-5 w-5" />
         </span>
 
-        <div className="min-w-0 flex-1">
-          <p className="text-overline text-fg-muted">
-            {isEs ? "Mi Centro de Diálisis" : "My Dialysis Center"}
-          </p>
-          <p className="truncate text-label-lg text-fg">
-            {clinic.name || (isEs ? "Sin nombre" : "Not set")}
-          </p>
-        </div>
-
-        {clinic.phone ? (
-          <a href={toTelHref(clinic.phone)} className={buttonStyles()}>
-            <Phone aria-hidden="true" className="shrink-0" />
-            <span>{clinic.phone}</span>
-          </a>
-        ) : (
-          <Button
-            variant="neutral"
-            appearance="stroke"
-            onClick={() => setEditing(true)}
-            className="border-dashed"
-          >
-            <Phone aria-hidden="true" className="shrink-0" />
-            {isEs ? "Agregar número" : "Add phone number"}
-          </Button>
-        )}
-
-        <Button
-          variant="neutral"
-          appearance="stroke"
-          className="shrink-0 px-inset-xs"
-          onClick={() => setEditing(true)}
-          aria-label={isEs ? "Editar centro" : "Edit center"}
+        {/* The card is the error surface itself — a number a member calls in
+            an emergency must not quietly render blank. */}
+        <AsyncSection
+          pending={isPending}
+          error={error}
+          onRetry={refetch}
+          errorTitle={
+            isEs
+              ? "No se pudo cargar su centro"
+              : "Your center details did not load"
+          }
+          skeleton={
+            <div className="flex min-w-0 flex-1 flex-col gap-stack-xs">
+              <Skeleton variant="text" width="35%" />
+              <Skeleton variant="text" width="60%" />
+            </div>
+          }
         >
-          <Pencil aria-hidden="true" />
-        </Button>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-inline-lg">
+            <div className="min-w-0 flex-1">
+              <p className="text-overline text-fg-muted">
+                {isEs ? "Mi Centro de Diálisis" : "My Dialysis Center"}
+              </p>
+              <p className="truncate text-label-lg text-fg">
+                {clinic?.name || (isEs ? "Sin nombre" : "Not set")}
+              </p>
+            </div>
+
+            {clinic?.phone ? (
+              <a href={toTelHref(clinic.phone)} className={buttonStyles()}>
+                <Phone aria-hidden="true" className="shrink-0" />
+                <span>{clinic.phone}</span>
+              </a>
+            ) : (
+              <Button
+                variant="neutral"
+                appearance="stroke"
+                onClick={() => setEditing(true)}
+                className="border-dashed"
+              >
+                <Phone aria-hidden="true" className="shrink-0" />
+                {isEs ? "Agregar número" : "Add phone number"}
+              </Button>
+            )}
+
+            <Button
+              variant="neutral"
+              appearance="stroke"
+              className="shrink-0 px-inset-xs"
+              onClick={() => setEditing(true)}
+              aria-label={isEs ? "Editar centro" : "Edit center"}
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          </div>
+        </AsyncSection>
       </Card>
 
-      {editing && (
+      {editing && clinic && (
         <ClinicModal
           name={clinic.name}
           phone={clinic.phone}
+          saving={isSaving}
+          error={saveError}
           onClose={() => setEditing(false)}
-          onSave={(next) => {
-            setClinic(next);
-            setEditing(false);
-          }}
+          onSave={(next) =>
+            save.mutate(next, { onSuccess: () => setEditing(false) })
+          }
         />
       )}
     </>

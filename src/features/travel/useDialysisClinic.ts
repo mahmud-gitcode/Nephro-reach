@@ -1,54 +1,40 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getClinic, saveClinic } from "./clinic.repository";
+import type { DialysisClinic } from "./clinic.types";
 
-export interface DialysisClinic {
-  name: string;
-  phone: string;
-}
+export { toTelHref } from "./clinic.repository";
+export type { DialysisClinic } from "./clinic.types";
 
-const STORAGE_KEY = "nephroreach_dialysis_clinic";
+export const clinicKey = ["travel", "dialysis-clinic"] as const;
 
-const DEFAULT_CLINIC: DialysisClinic = {
-  name: "ABC Dialysis Center",
-  phone: "(305) 555-0142",
-};
-
-function readStoredClinic(): DialysisClinic {
-  if (typeof window === "undefined") return DEFAULT_CLINIC;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_CLINIC;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return DEFAULT_CLINIC;
-    return {
-      name: typeof parsed.name === "string" ? parsed.name : DEFAULT_CLINIC.name,
-      phone:
-        typeof parsed.phone === "string" ? parsed.phone : DEFAULT_CLINIC.phone,
-    };
-  } catch {
-    return DEFAULT_CLINIC;
-  }
-}
-
-/** The member's own dialysis center — the number they call when something is wrong. */
+/**
+ * One record rather than a list, so there is no empty state — but the
+ * loading and error states are the same three lines, and the card that uses
+ * this shows a phone number a member calls in an emergency. Showing a stale
+ * or blank number silently is the failure worth avoiding here.
+ */
 export function useDialysisClinic() {
-  const [clinic, setClinicState] = useState<DialysisClinic>(readStoredClinic);
+  const queryClient = useQueryClient();
 
-  const setClinic = useCallback((next: DialysisClinic) => {
-    setClinicState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Storage can be unavailable (private window, blocked site data). The
-      // details still apply for this session rather than breaking the page.
-    }
-  }, []);
+  const query = useQuery({
+    queryKey: clinicKey,
+    queryFn: getClinic,
+  });
 
-  return { clinic, setClinic };
-}
+  const save = useMutation({
+    mutationFn: (clinic: DialysisClinic) => saveClinic(clinic),
+    onSuccess: (clinic) => queryClient.setQueryData(clinicKey, clinic),
+  });
 
-/** Strips formatting so the number works in a tel: link. */
-export function toTelHref(phone: string): string {
-  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+  return {
+    clinic: query.data,
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    save,
+    isSaving: save.isPending,
+    saveError: save.error,
+  };
 }

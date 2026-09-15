@@ -1,77 +1,98 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getNotes, saveNotes } from "./journey.repository";
+import type { JourneyNotesMap } from "./journey.types";
 
-export type JourneyNotesMap = Record<string, string>;
-
-export type NoteSaveState = "idle" | "saving" | "saved";
-
-const STORAGE_KEY = "nephroreach_journey_notes";
-const AUTOSAVE_DELAY_MS = 600;
-
-function readStoredNotes(): JourneyNotesMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return {};
-    return parsed as JourneyNotesMap;
-  } catch {
-    return {};
-  }
-}
-
-function persistNotes(next: JourneyNotesMap) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Storage can be unavailable (private window, blocked site data). Notes
-    // still work for the current session rather than breaking the page.
-  }
-}
+export type { JourneyNotesMap } from "./journey.types";
 
 /**
- * Free-text notes, one note per journey day, autosaved to localStorage.
+ * What the little line under the textarea says. `error` is the one that
+ * matters: "Notes save automatically" while the save is failing is the
+ * app telling a member something untrue about their own writing.
+ */
+export type NoteSaveState = "idle" | "saving" | "saved" | "error";
+
+const AUTOSAVE_DELAY_MS = 600;
+
+export const journeyNotesKey = ["education", "journey-notes"] as const;
+
+/**
+ * Free-text notes, one per journey day, autosaved.
  *
- * The latest map is mirrored in a ref so the debounced write persists what the
- * member actually typed without reading state inside a setState updater.
+ * Typing does not go through the mutation — a keystroke is not a request.
+ * The typed map is held in a ref and the write is debounced; the mutation
+ * only carries what is actually being saved. `flushNote` skips the wait,
+ * for blur and for leaving the page.
  */
 export function useJourneyNotes() {
-  const [notes, setNotes] = useState<JourneyNotesMap>(readStoredNotes);
+  const queryClient = useQueryClient();
   const [saveState, setSaveState] = useState<NoteSaveState>("idle");
-  const latestRef = useRef<JourneyNotesMap>(notes);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* The map as typed, which runs ahead of both the cache and storage. It is
+     state as well as a ref: state so each keystroke re-renders the textarea,
+     a ref so the debounced write sees the newest map without being
+     re-created on every character. */
+  const [draft, setDraft] = useState<JourneyNotesMap | null>(null);
+  const latestRef = useRef<JourneyNotesMap | null>(null);
 
-  const getNote = useCallback(
-    (slug: string): string => notes[slug] ?? "",
-    [notes],
+  const query = useQuery({
+    queryKey: journeyNotesKey,
+    queryFn: getNotes,
+  });
+
+  const write = useMutation({
+    mutationFn: (notes: JourneyNotesMap) => saveNotes(notes),
+    onSuccess: (notes) => {
+      queryClient.setQueryData(journeyNotesKey, notes);
+      setSaveState("saved");
+    },
+    onError: () => setSaveState("error"),
+  });
+
+  const { mutate } = write;
+  const notes = useMemo(() => draft ?? query.data ?? {}, [draft, query.data]);
+
+  const getNote = useCallback((slug: string) => notes[slug] ?? "", [notes]);
+
+  const setNote = useCallback(
+    (slug: string, value: string) => {
+      const next = {
+        ...(latestRef.current ?? query.data ?? {}),
+        [slug]: value,
+      };
+      latestRef.current = next;
+      setDraft(next);
+      setSaveState("saving");
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        mutate(next);
+      }, AUTOSAVE_DELAY_MS);
+    },
+    [mutate, query.data],
   );
 
-  const setNote = useCallback((slug: string, value: string) => {
-    const next: JourneyNotesMap = { ...latestRef.current, [slug]: value };
-    latestRef.current = next;
-    setNotes(next);
-    setSaveState("saving");
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      persistNotes(next);
-      setSaveState("saved");
-    }, AUTOSAVE_DELAY_MS);
-  }, []);
-
-  /** Writes immediately instead of waiting out the debounce. */
+  /** Writes now instead of waiting out the debounce. */
   const flushNote = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    persistNotes(latestRef.current);
-    setSaveState("saved");
-  }, []);
+    if (latestRef.current) mutate(latestRef.current);
+  }, [mutate]);
 
-  return { getNote, setNote, flushNote, saveState };
+  return {
+    getNote,
+    setNote,
+    flushNote,
+    saveState,
+    isPending: query.isPending,
+    error: query.error,
+    saveError: write.error,
+  };
 }
 
 /** Hands the member their note for a day as a plain .txt download. */

@@ -312,8 +312,14 @@ function NotesTab({
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
 
-  const saveLabel =
-    saveState === "saving"
+  /* "Notes save automatically" while the save is failing would be the app
+     telling a member something untrue about their own writing. */
+  const failed = saveState === "error";
+  const saveLabel = failed
+    ? isEs
+      ? "No se pudo guardar esta nota en este dispositivo."
+      : "This note could not be saved on this device."
+    : saveState === "saving"
       ? j?.notesSaving || "Saving..."
       : saveState === "saved"
         ? j?.notesSaved || "Saved"
@@ -334,7 +340,12 @@ function NotesTab({
       />
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-fg-muted">{saveLabel}</span>
+        <span
+          role={failed ? "alert" : undefined}
+          className={`text-xs font-medium ${failed ? "text-danger" : "text-fg-muted"}`}
+        >
+          {saveLabel}
+        </span>
         <button
           type="button"
           tabIndex={interactive ? 0 : -1}
