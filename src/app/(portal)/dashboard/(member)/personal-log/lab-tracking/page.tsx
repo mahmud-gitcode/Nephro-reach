@@ -24,25 +24,9 @@ import {
 } from "lucide-react";
 import { Kidneys } from "@/components/icons/Kidneys";
 
+import { Alert, Button } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
-import { useClientValue } from "@/lib/storage/useClientValue";
-
-type CustomLabResult = {
-  date?: string;
-  values?: { [key: string]: string };
-  notes?: string;
-} | null;
-
-const CUSTOM_LAB_KEY = "nr_custom_lab_results";
-
-function readCustomLabResults(): CustomLabResult {
-  try {
-    const saved = localStorage.getItem(CUSTOM_LAB_KEY);
-    return saved ? (JSON.parse(saved) as CustomLabResult) : null;
-  } catch {
-    return null;
-  }
-}
+import { useCustomLabResult } from "@/features/labs/useCustomLabResult";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -561,10 +545,12 @@ export default function MyLabsPage() {
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [compareDateId, setCompareDateId] = useState<string>("2024-04-30");
-  const [customData] = useClientValue(
-    readCustomLabResults,
-    null as CustomLabResult,
-  );
+  const {
+    result: customData,
+    isPending: labsPending,
+    error: labsError,
+    refetch: refetchLabs,
+  } = useCustomLabResult();
   const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(
     0,
   );
@@ -705,8 +691,37 @@ export default function MyLabsPage() {
       : ["Feb 4", "Mar 1", "Apr 10", "May 15", "Jun 12"];
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6" aria-busy={labsPending || undefined}>
       <PersonalLogDisclaimer />
+
+      {/* Most of this page is reference data, which renders either way. Only
+          the member's own entered draw comes from storage — so a failed read
+          is a notice, not an error page. Saying nothing would leave the
+          reference numbers looking like the member's complete record. */}
+      {labsError ? (
+        <Alert
+          tone="warning"
+          title={
+            language === "ES"
+              ? "No se pudieron cargar sus resultados"
+              : "Your own entered results did not load"
+          }
+          action={
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              size="small"
+              onClick={refetchLabs}
+            >
+              {language === "ES" ? "Reintentar" : "Try again"}
+            </Button>
+          }
+        >
+          {language === "ES"
+            ? "Lo que se muestra abajo no incluye la extracción que usted ingresó."
+            : "What is shown below does not include the draw you entered."}
+        </Alert>
+      ) : null}
 
       {/* 1. Top KPI Summary Cards */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

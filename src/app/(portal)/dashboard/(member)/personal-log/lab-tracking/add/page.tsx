@@ -16,6 +16,7 @@ import {
 import { Kidneys } from "@/components/icons/Kidneys";
 
 import { useLanguage } from "@/context/LanguageContext";
+import { useSaveCustomLabResult } from "@/features/labs/useCustomLabResult";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Alert,
@@ -243,6 +244,7 @@ export default function AddLabTrackingPage() {
   );
 
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const saveResult = useSaveCustomLabResult();
 
   const getCategoryName = (catId: string, fallback: string) => {
     if (catId === "kidney-function")
@@ -298,24 +300,25 @@ export default function AddLabTrackingPage() {
     setActiveCategoryIds((prev) => prev.filter((id) => id !== catId));
   };
 
+  /* The old version announced "Lab Results Saved Successfully!" and then
+     tried to save, swallowing the failure. A member would be redirected to a
+     page that did not have their results on it, having been told twice that
+     it did. Success is now claimed only once the write has returned. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
+    if (saveResult.isPending) return;
 
-    const payload = {
-      date: labDate,
-      values: testValues,
-      notes,
-    };
-    try {
-      localStorage.setItem("nr_custom_lab_results", JSON.stringify(payload));
-    } catch {
-      // ignore
-    }
-
-    setTimeout(() => {
-      router.push("/dashboard/personal-log/lab-tracking");
-    }, 1000);
+    saveResult.mutate(
+      { date: labDate, values: testValues, notes },
+      {
+        onSuccess: () => {
+          setSavedSuccess(true);
+          setTimeout(() => {
+            router.push("/dashboard/personal-log/lab-tracking");
+          }, 1000);
+        },
+      },
+    );
   };
 
   const availableCategoriesToAdd = designCategories.filter(
@@ -325,6 +328,14 @@ export default function AddLabTrackingPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-stack-xl">
       <PersonalLogDisclaimer />
+
+      {saveResult.error ? (
+        <Alert tone="danger" title="These results could not be saved">
+          {saveResult.error instanceof Error
+            ? saveResult.error.message
+            : "Please try again."}
+        </Alert>
+      ) : null}
 
       {savedSuccess && (
         <Alert
@@ -506,7 +517,11 @@ export default function AddLabTrackingPage() {
           >
             {l?.addModal?.cancel || "Cancel"}
           </Link>
-          <Button type="submit" leadingIcon={<Plus />}>
+          <Button
+            type="submit"
+            leadingIcon={<Plus />}
+            loading={saveResult.isPending}
+          >
             {l?.addModal?.saveEntry || "Save Entry"}
           </Button>
         </div>

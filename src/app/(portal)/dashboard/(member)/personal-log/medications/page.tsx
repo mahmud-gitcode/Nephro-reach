@@ -15,9 +15,15 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useClientValue } from "@/lib/storage/useClientValue";
+import {
+  reminderFor,
+  useReminders,
+  type MedicationReminder,
+} from "@/features/medications/useReminders";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
+  Alert,
+  AsyncSection,
   Badge,
   BarChart,
   ChartLegend,
@@ -30,6 +36,7 @@ import {
   Modal,
   RadioCard,
   RadioGroup,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -40,16 +47,6 @@ import {
 } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
-
-export interface MedicationReminder {
-  id: string;
-  medicationName: string;
-  time: string;
-  frequency: string;
-  channels: ("in_app" | "sms")[];
-  enabled: boolean;
-  notes?: string;
-}
 
 const medicationsData = [
   {
@@ -129,45 +126,6 @@ const medicationsData = [
     endDate: "16/08/2013",
     pharmacy: "HealthPlus",
     status: "Stopped",
-  },
-];
-
-const INITIAL_REMINDERS: MedicationReminder[] = [
-  {
-    id: "r1",
-    medicationName: "Potassium",
-    time: "08:00 AM",
-    frequency: "Daily",
-    channels: ["in_app"],
-    enabled: true,
-    notes: "Take with breakfast",
-  },
-  {
-    id: "r2",
-    medicationName: "Norvasc",
-    time: "08:00 AM",
-    frequency: "Daily",
-    channels: ["in_app"],
-    enabled: true,
-    notes: "Hold morning dose on dialysis days until after run",
-  },
-  {
-    id: "r3",
-    medicationName: "Sevelamer",
-    time: "12:30 PM",
-    frequency: "With meals",
-    channels: ["in_app"],
-    enabled: true,
-    notes: "Chew thoroughly with first bite of lunch",
-  },
-  {
-    id: "r4",
-    medicationName: "Calcitriol",
-    time: "07:00 PM",
-    frequency: "Mon/Wed/Fri",
-    channels: ["in_app"],
-    enabled: true,
-    notes: "Take with evening meal",
   },
 ];
 
@@ -1056,30 +1014,58 @@ function SimpleTimeReminderModal({
   onClose: () => void;
   medicationName: string;
   currentTime?: string;
-  onSaveTime: (medicationName: string, newTime: string) => void;
-  onDeleteReminder?: (medicationName: string) => void;
+  /* Both return a promise now: "Saved successfully!" is only true once the
+     write has landed, and a reminder for a medication is exactly the kind
+     of thing a member must not be told was saved when it was not. */
+  onSaveTime: (medicationName: string, newTime: string) => Promise<unknown>;
+  onDeleteReminder?: (medicationName: string) => Promise<unknown>;
 }) {
   const { language } = useLanguage();
+  const isEs = language === "ES";
   const [timeValue, setTimeValue] = useState(
     currentTime ? formatTo24Hour(currentTime) : "08:00",
   );
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const failureText = (error: unknown) =>
+    error instanceof Error
+      ? error.message
+      : isEs
+        ? "Inténtelo de nuevo."
+        : "Please try again.";
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formatted = formatTo12Hour(timeValue);
-    onSaveTime(medicationName, formatted);
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-      onClose();
-    }, 450);
+    if (busy) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      await onSaveTime(medicationName, formatTo12Hour(timeValue));
+      setSavedSuccess(true);
+      setTimeout(() => {
+        setSavedSuccess(false);
+        onClose();
+      }, 450);
+    } catch (error) {
+      setFailure(failureText(error));
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleDelete = () => {
-    if (onDeleteReminder) {
-      onDeleteReminder(medicationName);
+  const handleDelete = async () => {
+    if (!onDeleteReminder || busy) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      await onDeleteReminder(medicationName);
       onClose();
+    } catch (error) {
+      setFailure(failureText(error));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -1097,17 +1083,23 @@ function SimpleTimeReminderModal({
               variant="danger"
               appearance="stroke"
               onClick={handleDelete}
+              disabled={busy}
               className="mr-auto"
             >
-              {language === "ES" ? "Eliminar alerta" : "Remove alert"}
+              {isEs ? "Eliminar alerta" : "Remove alert"}
             </Button>
           ) : null}
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            {language === "ES" ? "Cancelar" : "Cancel"}
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onClose}
+            disabled={busy}
+          >
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
-          <Button type="submit" form="reminder-time-form">
+          <Button type="submit" form="reminder-time-form" loading={busy}>
             <Check aria-hidden="true" />
-            {language === "ES" ? "Guardar" : "Save"}
+            {isEs ? "Guardar" : "Save"}
           </Button>
         </>
       }
@@ -1128,6 +1120,12 @@ function SimpleTimeReminderModal({
           />
         </div>
 
+        {failure ? (
+          <Alert tone="danger" title={isEs ? "No se guardó" : "Not saved"}>
+            {failure}
+          </Alert>
+        ) : null}
+
         {/* role="status" so the confirmation is announced, not just shown. */}
         {savedSuccess && (
           <p
@@ -1147,44 +1145,16 @@ function SimpleTimeReminderModal({
   );
 }
 
-function readStoredReminders(): MedicationReminder[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_REMINDERS_KEY);
-    if (!raw) return INITIAL_REMINDERS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0
-      ? (parsed as MedicationReminder[])
-      : INITIAL_REMINDERS;
-  } catch {
-    return INITIAL_REMINDERS;
-  }
-}
-
-const LOCAL_STORAGE_REMINDERS_KEY = "nephroreach_medication_reminders_v1";
-
 export default function MedicationLogPage() {
   const { t } = useLanguage();
 
-  const [reminders, setReminders] = useClientValue(
-    readStoredReminders,
-    INITIAL_REMINDERS,
-  );
+  const { reminders, isPending, error, refetch, setTime, remove } =
+    useReminders();
+
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [selectedMedForReminder, setSelectedMedForReminder] = useState<
     string | undefined
   >(undefined);
-
-  const saveReminders = (updated: MedicationReminder[]) => {
-    setReminders(updated);
-    try {
-      localStorage.setItem(
-        LOCAL_STORAGE_REMINDERS_KEY,
-        JSON.stringify(updated),
-      );
-    } catch {
-      // fallback
-    }
-  };
 
   const handleOpenReminderModal = (medName?: string) => {
     setSelectedMedForReminder(
@@ -1193,45 +1163,8 @@ export default function MedicationLogPage() {
     setIsReminderModalOpen(true);
   };
 
-  const handleSaveReminderTime = (medicationName: string, time: string) => {
-    const existingIndex = reminders.findIndex(
-      (r) => r.medicationName.toLowerCase() === medicationName.toLowerCase(),
-    );
-    let updated: MedicationReminder[];
-    if (existingIndex >= 0) {
-      updated = [...reminders];
-      updated[existingIndex] = {
-        ...updated[existingIndex],
-        time,
-        enabled: true,
-      };
-    } else {
-      const newReminder: MedicationReminder = {
-        id: Date.now().toString(),
-        medicationName,
-        time,
-        frequency: "Daily",
-        channels: ["in_app"],
-        enabled: true,
-      };
-      updated = [newReminder, ...reminders];
-    }
-    saveReminders(updated);
-  };
-
-  const handleDeleteReminder = (medicationName: string) => {
-    const updated = reminders.filter(
-      (r) => r.medicationName.toLowerCase() !== medicationName.toLowerCase(),
-    );
-    saveReminders(updated);
-  };
-
   const activeExistingReminder = selectedMedForReminder
-    ? reminders.find(
-        (r) =>
-          r.medicationName.toLowerCase() ===
-          selectedMedForReminder.toLowerCase(),
-      )
+    ? reminderFor(reminders, selectedMedForReminder)
     : null;
 
   return (
@@ -1245,16 +1178,35 @@ export default function MedicationLogPage() {
         </p>
       </header>
 
-      <MedicationMasterList
-        reminders={reminders}
-        onOpenReminderModal={handleOpenReminderModal}
-      />
-      <DoseSchedule reminders={reminders} />
-      <AdherenceChart />
-      <AlertsAndMood
-        reminders={reminders}
-        onOpenReminderModal={handleOpenReminderModal}
-      />
+      {/* One read feeds four sections, so the four states are decided once
+          here rather than four times below. A reminder list that renders
+          empty because the read failed reads as "no medications to take". */}
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle={t("medicationsLog.title")}
+        errorMessage="Your reminders could not be read from this device. Nothing has been changed."
+        skeleton={
+          <div className="space-y-6">
+            <Skeleton height={220} />
+            <Skeleton height={260} />
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <MedicationMasterList
+            reminders={reminders}
+            onOpenReminderModal={handleOpenReminderModal}
+          />
+          <DoseSchedule reminders={reminders} />
+          <AdherenceChart />
+          <AlertsAndMood
+            reminders={reminders}
+            onOpenReminderModal={handleOpenReminderModal}
+          />
+        </div>
+      </AsyncSection>
       <ExportReporting />
       {/* Keyed on the medication, so opening it for another one starts from
           that medication's stored time without an effect syncing it. */}
@@ -1268,8 +1220,8 @@ export default function MedicationLogPage() {
         onClose={() => setIsReminderModalOpen(false)}
         medicationName={selectedMedForReminder || ""}
         currentTime={activeExistingReminder?.time}
-        onSaveTime={handleSaveReminderTime}
-        onDeleteReminder={handleDeleteReminder}
+        onSaveTime={setTime}
+        onDeleteReminder={remove}
       />
     </div>
   );

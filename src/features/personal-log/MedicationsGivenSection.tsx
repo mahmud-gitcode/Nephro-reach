@@ -3,60 +3,19 @@
 import React, { useState } from "react";
 import { Plus, Check, Pill, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useIsMounted } from "@/lib/utils/useIsMounted";
-import { Alert, Button, Input, Modal, Select } from "@/components/ui";
-
-export interface TreatmentMedication {
-  id: string;
-  date: string;
-  medication: string;
-  dose: string;
-  reason: string;
-  given: boolean;
-}
-
-const INITIAL_MEDICATIONS: TreatmentMedication[] = [
-  {
-    id: "1",
-    date: "May 31, 2024",
-    medication: "Epoetin Alfa (Epogen)",
-    dose: "8,000 units",
-    reason: "Anemia",
-    given: true,
-  },
-  {
-    id: "2",
-    date: "May 31, 2024",
-    medication: "Iron Sucrose (Venofer)",
-    dose: "100 mg",
-    reason: "Iron Deficiency",
-    given: true,
-  },
-  {
-    id: "3",
-    date: "May 31, 2024",
-    medication: "Doxercalciferol (Hectorol)",
-    dose: "2 mcg",
-    reason: "Secondary Hyperparathyroidism",
-    given: true,
-  },
-  {
-    id: "4",
-    date: "May 29, 2024",
-    medication: "Epoetin Alfa (Epogen)",
-    dose: "8,000 units",
-    reason: "Anemia",
-    given: true,
-  },
-  {
-    id: "5",
-    date: "May 29, 2024",
-    medication: "Iron Sucrose (Venofer)",
-    dose: "100 mg",
-    reason: "Iron Deficiency",
-    given: true,
-  },
-];
+import {
+  Alert,
+  AsyncSection,
+  Button,
+  Input,
+  Modal,
+  Select,
+  Skeleton,
+} from "@/components/ui";
+import {
+  useTreatmentMedications,
+  type TreatmentMedication,
+} from "@/features/personal-log/useTreatmentMedications";
 
 const OTHER_MEDICATION = "__other__";
 
@@ -136,31 +95,20 @@ const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
   { value: "dose", descEn: "", descEs: "dosis" },
 ];
 
-const LOCAL_STORAGE_KEY = "nephroreach_dialysis_treatment_medications_v2";
-
-function readStoredMedications(): TreatmentMedication[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return INITIAL_MEDICATIONS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0
-      ? (parsed as TreatmentMedication[])
-      : INITIAL_MEDICATIONS;
-  } catch {
-    return INITIAL_MEDICATIONS;
-  }
-}
-
 export default function MedicationsGivenSection() {
   const { language } = useLanguage();
 
-  /* Stored medications cannot be read on the server, and reading them in an
-     effect costs a second render pass. `edited` holds this session's writes;
-     until the member changes something we read straight from storage. */
-  const mounted = useIsMounted();
-  const [edited, setEdited] = useState<TreatmentMedication[] | null>(null);
-  const medications =
-    edited ?? (mounted ? readStoredMedications() : INITIAL_MEDICATIONS);
+  const {
+    medications,
+    isPending,
+    error,
+    refetch,
+    add,
+    toggleGiven,
+    remove,
+    saveError,
+    dismissSaveError,
+  } = useTreatmentMedications();
 
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -172,15 +120,6 @@ export default function MedicationsGivenSection() {
   const [formReason, setFormReason] = useState("");
   const [formDate, setFormDate] = useState("May 31, 2024");
   const [formMedError, setFormMedError] = useState("");
-
-  const saveMedications = (updated: TreatmentMedication[]) => {
-    setEdited(updated);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-    } catch {
-      // fallback
-    }
-  };
 
   const handleOpenAddMedModal = () => {
     setFormMedication("");
@@ -194,11 +133,10 @@ export default function MedicationsGivenSection() {
     setIsMedModalOpen(true);
   };
 
+  /* A write that fails is reported by the Alert below rather than thrown at
+     the console: whether a dose was recorded as given is not a detail. */
   const handleToggleGiven = (id: string) => {
-    const updated = medications.map((m) =>
-      m.id === id ? { ...m, given: !m.given } : m,
-    );
-    saveMedications(updated);
+    void toggleGiven(id).catch(() => {});
   };
 
   const handleAddMedicationSubmit = (e: React.FormEvent) => {
@@ -248,13 +186,22 @@ export default function MedicationsGivenSection() {
       given: true,
     };
 
-    saveMedications([newEntry, ...medications]);
-    setIsMedModalOpen(false);
+    /* The modal stays open until the entry is actually stored. */
+    add(newEntry)
+      .then(() => setIsMedModalOpen(false))
+      .catch((cause: unknown) =>
+        setFormMedError(
+          cause instanceof Error
+            ? cause.message
+            : language === "ES"
+              ? "No se pudo guardar."
+              : "That could not be saved.",
+        ),
+      );
   };
 
   const handleDeleteMedication = (id: string) => {
-    const updated = medications.filter((m) => m.id !== id);
-    saveMedications(updated);
+    void remove(id).catch(() => {});
   };
 
   return (
@@ -285,99 +232,127 @@ export default function MedicationsGivenSection() {
         </button>
       </div>
 
+      {saveError ? (
+        <Alert
+          tone="danger"
+          title={
+            language === "ES" ? "No se guardó el cambio" : "Change not saved"
+          }
+          onDismiss={dismissSaveError}
+        >
+          {saveError instanceof Error
+            ? saveError.message
+            : language === "ES"
+              ? "Inténtelo de nuevo."
+              : "Please try again."}
+        </Alert>
+      ) : null}
+
       {/* Table */}
-      <div className="flex-1 overflow-x-auto rounded-card border border-line">
-        <table className="w-full border-collapse text-left text-xs sm:text-sm">
-          <thead>
-            <tr className="border-b border-line bg-surface-sunken text-xs font-bold tracking-wider text-fg-muted uppercase">
-              <th className="px-3.5 py-2.5">
-                {language === "ES" ? "Fecha" : "Date"}
-              </th>
-              <th className="px-3.5 py-2.5">
-                {language === "ES" ? "Medicamento" : "Medication"}
-              </th>
-              <th className="px-3.5 py-2.5">
-                {language === "ES" ? "Dosis" : "Dose"}
-              </th>
-              <th className="px-3.5 py-2.5">
-                {language === "ES" ? "Razón" : "Reason"}
-              </th>
-              <th className="px-3.5 py-2.5 text-center">
-                {language === "ES" ? "Administrado" : "Given"}
-              </th>
-              <th className="w-8 px-2 py-2.5 text-center"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
-            {medications.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-8 text-center text-xs text-fg-subtle"
-                >
-                  {language === "ES"
-                    ? "No hay medicamentos registrados para este tratamiento."
-                    : "No medications recorded for this treatment."}
-                </td>
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle={
+          language === "ES"
+            ? "No se pudo cargar el registro"
+            : "This record did not load"
+        }
+        skeleton={<Skeleton height={220} />}
+      >
+        <div className="flex-1 overflow-x-auto rounded-card border border-line">
+          <table className="w-full border-collapse text-left text-xs sm:text-sm">
+            <thead>
+              <tr className="border-b border-line bg-surface-sunken text-xs font-bold tracking-wider text-fg-muted uppercase">
+                <th className="px-3.5 py-2.5">
+                  {language === "ES" ? "Fecha" : "Date"}
+                </th>
+                <th className="px-3.5 py-2.5">
+                  {language === "ES" ? "Medicamento" : "Medication"}
+                </th>
+                <th className="px-3.5 py-2.5">
+                  {language === "ES" ? "Dosis" : "Dose"}
+                </th>
+                <th className="px-3.5 py-2.5">
+                  {language === "ES" ? "Razón" : "Reason"}
+                </th>
+                <th className="px-3.5 py-2.5 text-center">
+                  {language === "ES" ? "Administrado" : "Given"}
+                </th>
+                <th className="w-8 px-2 py-2.5 text-center"></th>
               </tr>
-            ) : (
-              medications.map((item) => (
-                <tr
-                  key={item.id}
-                  className="transition-colors hover:bg-surface-sunken"
-                >
-                  <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg">
-                    {item.date}
-                  </td>
-                  <td className="px-3.5 py-2.5 text-xs font-bold whitespace-nowrap text-fg">
-                    {item.medication}
-                  </td>
-                  <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg-secondary">
-                    {item.dose}
-                  </td>
-                  <td className="px-3.5 py-2.5 text-xs whitespace-nowrap text-fg-muted">
-                    {item.reason}
-                  </td>
-                  <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleGiven(item.id)}
-                      className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded border transition-colors select-none active:scale-95 ${
-                        item.given
-                          ? "border-primary-edge bg-primary-solid text-primary-on-solid shadow-control"
-                          : "border-line-strong bg-surface text-transparent hover:border-line-strong"
-                      }`}
-                      title={
-                        item.given
-                          ? language === "ES"
-                            ? "Desmarcar medicamento"
-                            : "Uncheck medication"
-                          : language === "ES"
-                            ? "Marcar como administrado"
-                            : "Mark as given"
-                      }
-                    >
-                      {item.given && (
-                        <Check className="h-3.5 w-3.5 stroke-[3]" />
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-2 py-2.5 text-center whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMedication(item.id)}
-                      className="cursor-pointer rounded-control-small p-1 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
-                      title={language === "ES" ? "Eliminar" : "Delete"}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+            </thead>
+            <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
+              {medications.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="py-8 text-center text-xs text-fg-subtle"
+                  >
+                    {language === "ES"
+                      ? "No hay medicamentos registrados para este tratamiento."
+                      : "No medications recorded for this treatment."}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                medications.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="transition-colors hover:bg-surface-sunken"
+                  >
+                    <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg">
+                      {item.date}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-xs font-bold whitespace-nowrap text-fg">
+                      {item.medication}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg-secondary">
+                      {item.dose}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-xs whitespace-nowrap text-fg-muted">
+                      {item.reason}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleGiven(item.id)}
+                        className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded border transition-colors select-none active:scale-95 ${
+                          item.given
+                            ? "border-primary-edge bg-primary-solid text-primary-on-solid shadow-control"
+                            : "border-line-strong bg-surface text-transparent hover:border-line-strong"
+                        }`}
+                        title={
+                          item.given
+                            ? language === "ES"
+                              ? "Desmarcar medicamento"
+                              : "Uncheck medication"
+                            : language === "ES"
+                              ? "Marcar como administrado"
+                              : "Mark as given"
+                        }
+                      >
+                        {item.given && (
+                          <Check className="h-3.5 w-3.5 stroke-[3]" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2.5 text-center whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMedication(item.id)}
+                        className="cursor-pointer rounded-control-small p-1 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
+                        title={language === "ES" ? "Eliminar" : "Delete"}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </AsyncSection>
 
       {/* ADD MEDICATION MODAL */}
       <Modal
