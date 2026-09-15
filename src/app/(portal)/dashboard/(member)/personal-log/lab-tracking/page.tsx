@@ -1684,11 +1684,10 @@ export default function MyLabsPage() {
                 "Learn what your lab numbers mean and how they affect your health."}
             </p>
             <Link
-              href="/dashboard/education-center"
+              href="/dashboard/my-library"
               className="block w-full rounded-lg border border-primary-soft-line bg-surface py-2 text-center text-xs font-semibold text-fg-brand transition-colors hover:bg-primary-soft"
             >
-              {l?.sidebar?.understanding?.visitCenter ||
-                "Visit Education Center"}
+              {l?.sidebar?.understanding?.visitCenter || "Visit My Library"}
             </Link>
           </div>
         </div>

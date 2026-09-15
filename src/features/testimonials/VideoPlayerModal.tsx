@@ -3,7 +3,7 @@
 import React from "react";
 import { Clock, ShieldCheck } from "lucide-react";
 import { Modal, Badge, Button } from "@/components/ui";
-import { Testimonial } from "./testimonials";
+import { Testimonial } from "./testimonials.types";
 
 interface VideoPlayerModalProps {
   testimonial: Testimonial | null;

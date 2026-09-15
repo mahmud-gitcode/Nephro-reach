@@ -289,8 +289,8 @@
     "suggestedTopics": "Síntomas / Temas Sugeridos:",
     "close": "Cerrar",
     "findSchedule": "Ver Mi Horario de Diálisis",
-    "learnMoreEducation": "Aprender Más en el Centro de Educación",
-    "urgentEducation": "Educación sobre Síntomas Urgentes",
+    "learnMoreEducation": "Aprender Más en Mi Biblioteca",
+    "urgentEducation": "Síntomas Urgentes en Mi Biblioteca",
     "callClinic": {
       "title": "Llamar Primero a la Clínica de Diálisis",
       "purpose": "Pautas educativas que alientan a los miembros a comunicarse con su equipo de diálisis ante inquietudes que no pongan en peligro la vida y que puedan resolverse en la clínica.",
@@ -1157,7 +1157,7 @@
       "understanding": {
         "title": "ENTENDIENDO SUS ANÁLISIS",
         "desc": "Aprenda qué significan los números de sus análisis y cómo afectan su salud.",
-        "visitCenter": "Visitar Centro Educativo"
+        "visitCenter": "Visitar Mi Biblioteca"
       }
     },
     "addModal": {
@@ -1324,7 +1324,7 @@
     ]
   },
   "educationCenter": {
-    "pageTitle": "Centro Educativo",
+    "pageTitle": "Mi Salón de Clases",
     "searchPlaceholder": "Buscar...",
     "categoriesLabel": "Categorías",
     "categories": [
@@ -1353,7 +1353,7 @@
     "continueCta": "Continuar",
     "viewDetails": "Ver detalles",
     "programDetails": "Detalles del programa",
-    "backToEducationCenter": "Volver al Centro Educativo",
+    "backToClassroom": "Volver a Mi Salón de Clases",
     "allClassesTab": "Todas las clases",
     "dayLabel": "Día",
     "minutesShort": "min",
@@ -1650,7 +1650,7 @@
       "teamQuestions": "Preguntas al Equipo",
       "member": "Miembros",
       "classManagement": "Gestión de Clases",
-      "educationCenter": "Centro Educativo",
+      "educationCenter": "Mi Salón de Clases",
       "liveClass": "Clases en Vivo",
       "community": "Comunidad",
       "smsAnalytics": "Análisis de Notificaciones",
@@ -1667,7 +1667,7 @@
     "quickActionTitle": "Acción Rápida",
     "quickActions": {
       "wheresMyRide": "¿Dónde está mi conductor?",
-      "educationCenter": "Centro Educativo",
+      "educationCenter": "Mi Salón de Clases",
       "community": "Comunidad",
       "beforeTheEr": "Antes de Urgencias™"
     },

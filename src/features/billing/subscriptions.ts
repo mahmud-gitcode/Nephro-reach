@@ -115,28 +115,31 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
 ];
 
-const STORAGE_KEY = "nephroreach_subscription_plans_v4";
+/* ==========================================================================
+   The synchronous reader
+   --------------------------------------------------------------------------
+   The admin screen reads and writes plans through usePlans(), which is async
+   and goes through subscriptions.repository like every other feature.
+
+   This stays for the marketing site's pricing table: that page is outside
+   the portal, has no QueryClient above it, and is not ours to change. It
+   gets a read, and nothing else.
+
+   Nothing inside the portal should import this.
+   ========================================================================== */
+import { PLANS_KEY } from "./subscriptions.repository";
 
 export function getStoredSubscriptionPlans(): SubscriptionPlan[] {
   if (typeof window === "undefined") return DEFAULT_SUBSCRIPTION_PLANS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(PLANS_KEY);
     if (!raw) return DEFAULT_SUBSCRIPTION_PLANS;
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      return parsed as SubscriptionPlan[];
     }
-  } catch {
-    // Fallback on error
+  } catch (cause) {
+    console.error("Could not read subscription plans.", cause);
   }
   return DEFAULT_SUBSCRIPTION_PLANS;
-}
-
-export function saveStoredSubscriptionPlans(plans: SubscriptionPlan[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-  } catch {
-    // Ignore storage write error
-  }
 }

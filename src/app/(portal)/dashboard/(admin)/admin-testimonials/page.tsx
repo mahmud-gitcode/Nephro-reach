@@ -1,22 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
+  Alert,
+  AsyncSection,
   Button,
   EmptyState,
+  Modal,
+  Skeleton,
   Tabs,
   Textarea,
   Badge,
   Card,
 } from "@/components/ui";
 import {
-  Testimonial,
-  getTestimonials,
-  updateTestimonialStatus,
-  deleteTestimonial,
-  TESTIMONIALS_EVENT,
-} from "@/features/testimonials/testimonials";
+  useTestimonials,
+  type Testimonial,
+} from "@/features/testimonials/useTestimonials";
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
 import {
   Video,
@@ -28,18 +29,23 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { useClientValue } from "@/lib/storage/useClientValue";
-
-const NO_TESTIMONIALS: Testimonial[] = [];
-
 export default function AdminTestimonialsPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const [testimonials, , refresh] = useClientValue(
-    getTestimonials,
-    NO_TESTIMONIALS,
-  );
+  const {
+    testimonials,
+    isPending,
+    error,
+    refetch,
+    setStatus,
+    remove,
+    isSaving,
+    saveError,
+    dismissSaveError,
+  } = useTestimonials();
+
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "approved" | "declined"
   >("all");
@@ -48,17 +54,10 @@ export default function AdminTestimonialsPage() {
   const [previewTestimonial, setPreviewTestimonial] =
     useState<Testimonial | null>(null);
 
-  useEffect(() => {
-    window.addEventListener(TESTIMONIALS_EVENT, refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener(TESTIMONIALS_EVENT, refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, [refresh]);
-
+  /* Approving publishes someone's video. A failure that only reached the
+     console would leave a moderator sure they had published it. */
   const handleApprove = (id: string) => {
-    updateTestimonialStatus(id, "approved");
+    void setStatus(id, "approved").catch(() => {});
   };
 
   const handleStartDecline = (id: string) => {
@@ -67,21 +66,19 @@ export default function AdminTestimonialsPage() {
   };
 
   const handleConfirmDecline = (id: string) => {
-    updateTestimonialStatus(id, "declined", declineFeedback);
-    setDeclineId(null);
-    setDeclineFeedback("");
+    void setStatus(id, "declined", declineFeedback)
+      .then(() => {
+        setDeclineId(null);
+        setDeclineFeedback("");
+      })
+      .catch(() => {});
   };
 
-  const handleDelete = (id: string) => {
-    if (
-      confirm(
-        isEs
-          ? "¿Eliminar este testimonio en video?"
-          : "Delete this video testimonial?",
-      )
-    ) {
-      deleteTestimonial(id);
-    }
+  const handleDelete = () => {
+    if (!pendingDeleteId) return;
+    void remove(pendingDeleteId)
+      .then(() => setPendingDeleteId(null))
+      .catch(() => {});
   };
 
   const filtered = testimonials.filter((t) => {
@@ -163,237 +160,301 @@ export default function AdminTestimonialsPage() {
         ]}
       />
 
+      {saveError ? (
+        <Alert
+          tone="danger"
+          title={isEs ? "El cambio no se guardó" : "That change was not saved"}
+          onDismiss={dismissSaveError}
+        >
+          {saveError instanceof Error
+            ? saveError.message
+            : isEs
+              ? "Inténtelo de nuevo."
+              : "Please try again."}
+        </Alert>
+      ) : null}
+
       {/* List of Testimonials */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={<Video className="size-8 text-fg-muted" />}
-          title={isEs ? "No hay testimonios" : "No testimonials found"}
-          description={
-            activeTab === "pending"
-              ? isEs
-                ? "No hay testimonios en video pendientes de aprobación."
-                : "All submitted video testimonials have been reviewed."
-              : isEs
-                ? "No hay testimonios en este estado."
-                : "No testimonials in this category."
-          }
-        />
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((item) => {
-            const isPending = item.status === "pending";
-            const isApproved = item.status === "approved";
-            const isDeclined = item.status === "declined";
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle={
+          isEs
+            ? "Los testimonios no se cargaron"
+            : "The testimonials did not load"
+        }
+        skeleton={
+          <div className="space-y-4">
+            <Skeleton height={180} />
+            <Skeleton height={180} />
+          </div>
+        }
+      >
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Video className="size-8 text-fg-muted" />}
+            title={isEs ? "No hay testimonios" : "No testimonials found"}
+            description={
+              activeTab === "pending"
+                ? isEs
+                  ? "No hay testimonios en video pendientes de aprobación."
+                  : "All submitted video testimonials have been reviewed."
+                : isEs
+                  ? "No hay testimonios en este estado."
+                  : "No testimonials in this category."
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((item) => {
+              const isPending = item.status === "pending";
+              const isApproved = item.status === "approved";
+              const isDeclined = item.status === "declined";
 
-            return (
-              <Card
-                key={item.id}
-                padding="big"
-                className="hover:border-line-hover transition-all"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  {/* Left: Video thumbnail preview & Info */}
-                  <div className="flex flex-1 flex-col gap-4 sm:flex-row">
-                    {/* Thumbnail preview button */}
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTestimonial(item)}
-                      className="group relative h-28 w-full shrink-0 cursor-pointer overflow-hidden rounded-panel bg-slate-900 shadow-xs sm:w-44"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={
-                          item.thumbnailUrl ||
-                          "/images/user-dashboard/testimonial.jpg"
-                        }
-                        alt=""
-                        className="h-full w-full object-cover opacity-90 transition-transform duration-200 group-hover:scale-105"
-                      />
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/25">
-                        <span className="flex size-10 items-center justify-center rounded-pill bg-white/90 text-brand-700 shadow-md">
-                          <Play className="ml-0.5 size-5 fill-current" />
+              return (
+                <Card
+                  key={item.id}
+                  padding="big"
+                  className="hover:border-line-hover transition-all"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    {/* Left: Video thumbnail preview & Info */}
+                    <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+                      {/* Thumbnail preview button */}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTestimonial(item)}
+                        className="group relative h-28 w-full shrink-0 cursor-pointer overflow-hidden rounded-panel bg-slate-900 shadow-xs sm:w-44"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={
+                            item.thumbnailUrl ||
+                            "/images/user-dashboard/testimonial.jpg"
+                          }
+                          alt=""
+                          className="h-full w-full object-cover opacity-90 transition-transform duration-200 group-hover:scale-105"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/25">
+                          <span className="flex size-10 items-center justify-center rounded-pill bg-white/90 text-brand-700 shadow-md">
+                            <Play className="ml-0.5 size-5 fill-current" />
+                          </span>
                         </span>
-                      </span>
-                      {item.duration && (
-                        <span className="absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                          {item.duration}
-                        </span>
-                      )}
-                    </button>
-
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-bold text-fg sm:text-lg">
-                          {item.title}
-                        </h3>
-                        {isPending && (
-                          <Badge
-                            tone="warning"
-                            variant="soft"
-                            className="gap-1"
-                          >
-                            <Clock className="size-3" />
-                            {isEs ? "Pendiente" : "Pending Approval"}
-                          </Badge>
+                        {item.duration && (
+                          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                            {item.duration}
+                          </span>
                         )}
-                        {isApproved && (
-                          <Badge
-                            tone="success"
-                            variant="soft"
-                            className="gap-1"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            {isEs ? "Publicado" : "Approved & Live"}
-                          </Badge>
-                        )}
-                        {isDeclined && (
-                          <Badge tone="danger" variant="soft" className="gap-1">
-                            <XCircle className="size-3" />
-                            {isEs ? "Rechazado" : "Declined"}
-                          </Badge>
-                        )}
-                      </div>
+                      </button>
 
-                      <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
-                        <span className="font-semibold text-fg-secondary">
-                          {item.memberName}
-                        </span>
-                        <span>•</span>
-                        <span>{item.role}</span>
-                        <span>•</span>
-                        <span>{item.memberEmail}</span>
-                        <span>•</span>
-                        <span>
-                          {new Date(item.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      <p className="line-clamp-3 text-body-sm text-fg-secondary italic">
-                        &ldquo;{item.summary}&rdquo;
-                      </p>
-
-                      {item.adminFeedback && isDeclined && (
-                        <div className="rounded-control bg-danger-soft p-2 text-xs text-danger-fg">
-                          <strong>Admin Feedback:</strong> {item.adminFeedback}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold text-fg sm:text-lg">
+                            {item.title}
+                          </h3>
+                          {isPending && (
+                            <Badge
+                              tone="warning"
+                              variant="soft"
+                              className="gap-1"
+                            >
+                              <Clock className="size-3" />
+                              {isEs ? "Pendiente" : "Pending Approval"}
+                            </Badge>
+                          )}
+                          {isApproved && (
+                            <Badge
+                              tone="success"
+                              variant="soft"
+                              className="gap-1"
+                            >
+                              <CheckCircle2 className="size-3" />
+                              {isEs ? "Publicado" : "Approved & Live"}
+                            </Badge>
+                          )}
+                          {isDeclined && (
+                            <Badge
+                              tone="danger"
+                              variant="soft"
+                              className="gap-1"
+                            >
+                              <XCircle className="size-3" />
+                              {isEs ? "Rechazado" : "Declined"}
+                            </Badge>
+                          )}
                         </div>
-                      )}
+
+                        <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
+                          <span className="font-semibold text-fg-secondary">
+                            {item.memberName}
+                          </span>
+                          <span>•</span>
+                          <span>{item.role}</span>
+                          <span>•</span>
+                          <span>{item.memberEmail}</span>
+                          <span>•</span>
+                          <span>
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <p className="line-clamp-3 text-body-sm text-fg-secondary italic">
+                          &ldquo;{item.summary}&rdquo;
+                        </p>
+
+                        {item.adminFeedback && isDeclined && (
+                          <div className="rounded-control bg-danger-soft p-2 text-xs text-danger-fg">
+                            <strong>Admin Feedback:</strong>{" "}
+                            {item.adminFeedback}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      leadingIcon={<Play className="size-3.5" />}
-                      onClick={() => setPreviewTestimonial(item)}
-                    >
-                      {isEs ? "Ver Video" : "Watch Video"}
-                    </Button>
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        leadingIcon={<Play className="size-3.5" />}
+                        onClick={() => setPreviewTestimonial(item)}
+                      >
+                        {isEs ? "Ver Video" : "Watch Video"}
+                      </Button>
 
-                    {isPending && (
-                      <>
+                      {isPending && (
+                        <>
+                          <Button
+                            size="small"
+                            variant="primary"
+                            leadingIcon={<Check className="size-3.5" />}
+                            onClick={() => handleApprove(item.id)}
+                          >
+                            {isEs ? "Aprobar y Publicar" : "Approve & Publish"}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="danger"
+                            appearance="fill-stroke"
+                            leadingIcon={<X className="size-3.5" />}
+                            onClick={() => handleStartDecline(item.id)}
+                          >
+                            {isEs ? "Rechazar" : "Decline"}
+                          </Button>
+                        </>
+                      )}
+
+                      {isApproved && (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="stroke"
+                          onClick={() => void setStatus(item.id, "pending")}
+                        >
+                          {isEs ? "Retirar a Pendiente" : "Unpublish"}
+                        </Button>
+                      )}
+
+                      {isDeclined && (
                         <Button
                           size="small"
                           variant="primary"
-                          leadingIcon={<Check className="size-3.5" />}
+                          appearance="fill-stroke"
                           onClick={() => handleApprove(item.id)}
                         >
-                          {isEs ? "Aprobar y Publicar" : "Approve & Publish"}
+                          {isEs ? "Reconsiderar y Aprobar" : "Re-approve"}
+                        </Button>
+                      )}
+
+                      <Button
+                        size="small"
+                        variant="danger"
+                        appearance="stroke"
+                        iconOnly
+                        onClick={() => setPendingDeleteId(item.id)}
+                        title={isEs ? "Eliminar" : "Delete"}
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Decline modal / box */}
+                  {declineId === item.id && (
+                    <div className="mt-4 space-y-3 rounded-panel border border-danger-line bg-surface-sunken p-4">
+                      <p className="text-sm font-semibold text-fg">
+                        {isEs
+                          ? "Proporcione retroalimentación para el rechazo (opcional):"
+                          : "Reason for declining (optional private feedback for member):"}
+                      </p>
+                      <Textarea
+                        rows={2}
+                        value={declineFeedback}
+                        onChange={(e) => setDeclineFeedback(e.target.value)}
+                        placeholder={
+                          isEs
+                            ? "Ej: El video no tiene audio claro..."
+                            : "E.g. The video audio was difficult to hear..."
+                        }
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          onClick={() => setDeclineId(null)}
+                        >
+                          {isEs ? "Cancelar" : "Cancel"}
                         </Button>
                         <Button
                           size="small"
                           variant="danger"
-                          appearance="fill-stroke"
-                          leadingIcon={<X className="size-3.5" />}
-                          onClick={() => handleStartDecline(item.id)}
+                          onClick={() => handleConfirmDecline(item.id)}
                         >
-                          {isEs ? "Rechazar" : "Decline"}
+                          {isEs ? "Confirmar Rechazo" : "Confirm Decline"}
                         </Button>
-                      </>
-                    )}
-
-                    {isApproved && (
-                      <Button
-                        size="small"
-                        variant="neutral"
-                        appearance="stroke"
-                        onClick={() =>
-                          updateTestimonialStatus(item.id, "pending")
-                        }
-                      >
-                        {isEs ? "Retirar a Pendiente" : "Unpublish"}
-                      </Button>
-                    )}
-
-                    {isDeclined && (
-                      <Button
-                        size="small"
-                        variant="primary"
-                        appearance="fill-stroke"
-                        onClick={() => handleApprove(item.id)}
-                      >
-                        {isEs ? "Reconsiderar y Aprobar" : "Re-approve"}
-                      </Button>
-                    )}
-
-                    <Button
-                      size="small"
-                      variant="danger"
-                      appearance="stroke"
-                      iconOnly
-                      onClick={() => handleDelete(item.id)}
-                      title={isEs ? "Eliminar" : "Delete"}
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Decline modal / box */}
-                {declineId === item.id && (
-                  <div className="mt-4 space-y-3 rounded-panel border border-danger-line bg-surface-sunken p-4">
-                    <p className="text-sm font-semibold text-fg">
-                      {isEs
-                        ? "Proporcione retroalimentación para el rechazo (opcional):"
-                        : "Reason for declining (optional private feedback for member):"}
-                    </p>
-                    <Textarea
-                      rows={2}
-                      value={declineFeedback}
-                      onChange={(e) => setDeclineFeedback(e.target.value)}
-                      placeholder={
-                        isEs
-                          ? "Ej: El video no tiene audio claro..."
-                          : "E.g. The video audio was difficult to hear..."
-                      }
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="small"
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        onClick={() => setDeclineId(null)}
-                      >
-                        {isEs ? "Cancelar" : "Cancel"}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="danger"
-                        onClick={() => handleConfirmDecline(item.id)}
-                      >
-                        {isEs ? "Confirmar Rechazo" : "Confirm Decline"}
-                      </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </AsyncSection>
+
+      {/* window.confirm blocks the page and leaves a failed delete nowhere
+          to report itself. */}
+      <Modal
+        open={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        size="small"
+        title={isEs ? "Eliminar testimonio" : "Delete testimonial"}
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setPendingDeleteId(null)}
+              disabled={isSaving}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button variant="danger" onClick={handleDelete} loading={isSaving}>
+              {isEs ? "Eliminar" : "Delete"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-md text-fg-secondary">
+          {isEs
+            ? "Este testimonio en video se eliminará de forma permanente."
+            : "This video testimonial will be permanently removed."}
+        </p>
+      </Modal>
 
       {/* Video Preview Modal */}
       <VideoPlayerModal

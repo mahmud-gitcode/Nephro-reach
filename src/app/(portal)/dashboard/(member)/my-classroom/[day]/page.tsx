@@ -351,7 +351,7 @@ export default function JourneyDayPage() {
           "Pick a day from the 21-Day Dialysis Journey to get started."
         }
         action={
-          <Link href="/dashboard/education-center" className={buttonStyles()}>
+          <Link href="/dashboard/my-classroom" className={buttonStyles()}>
             <ArrowLeft aria-hidden="true" />
             {j?.backToJourney || "Back to the journey"}
           </Link>
@@ -428,7 +428,7 @@ export default function JourneyDayPage() {
             <nav className="mt-4 flex items-center justify-between gap-3">
               {previousDay ? (
                 <Link
-                  href={`/dashboard/education-center/${previousDay.slug}`}
+                  href={`/dashboard/my-classroom/${previousDay.slug}`}
                   className={buttonStyles({
                     variant: "neutral",
                     appearance: "fill-stroke",
@@ -446,7 +446,7 @@ export default function JourneyDayPage() {
 
               {nextDay && (
                 <Link
-                  href={`/dashboard/education-center/${nextDay.slug}`}
+                  href={`/dashboard/my-classroom/${nextDay.slug}`}
                   onClick={() => {
                     markComplete(day.slug);
                   }}

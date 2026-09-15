@@ -22,6 +22,7 @@ import {
   Hospital,
   LayoutDashboard,
   Layers,
+  Library,
   LogOut,
   Menu,
   Notebook,
@@ -96,9 +97,15 @@ const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
-    label: "Education Center",
-    href: "/dashboard/education-center",
+    label: "My Classroom",
+    href: "/dashboard/my-classroom",
     icon: BookOpen,
+    roles: ["user"],
+  },
+  {
+    label: "My Library",
+    href: "/dashboard/my-library",
+    icon: Library,
     roles: ["user"],
   },
   {
@@ -248,9 +255,14 @@ function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Miembros" : "Member";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Class Management";
-  if (pathname.startsWith("/dashboard/education-center/details"))
+  if (pathname.startsWith("/dashboard/my-library/")) {
+    return language === "ES" ? "Recurso" : "Resource";
+  }
+  if (pathname.startsWith("/dashboard/my-library"))
+    return language === "ES" ? "Mi Biblioteca" : "My Library";
+  if (pathname.startsWith("/dashboard/my-classroom/details"))
     return language === "ES" ? "Detalles del Programa" : "Program Details";
-  if (pathname.startsWith("/dashboard/education-center/")) {
+  if (pathname.startsWith("/dashboard/my-classroom/")) {
     const journeyDay = getJourneyDayBySlug(pathname.split("/").pop() || "");
     if (journeyDay) {
       return language === "ES"
@@ -258,8 +270,8 @@ function getBreadcrumb(pathname: string, language?: string) {
         : `Day ${journeyDay.day} · ${journeyDay.titleEn}`;
     }
   }
-  if (pathname.startsWith("/dashboard/education-center"))
-    return language === "ES" ? "Centro Educativo" : "Education Center";
+  if (pathname.startsWith("/dashboard/my-classroom"))
+    return language === "ES" ? "Mi Salón de Clases" : "My Classroom";
   if (pathname.startsWith("/dashboard/live-class"))
     return language === "ES" ? "Clases en Vivo" : "Live Class";
   if (pathname.startsWith("/dashboard/community"))
@@ -301,7 +313,8 @@ function getNavLabel(
     "/dashboard/team-questions": "Preguntas al Equipo",
     "/dashboard/members": "Miembros",
     "/dashboard/manage-curriculum": "Gestión de Clases",
-    "/dashboard/education-center": "Centro Educativo",
+    "/dashboard/my-classroom": "Mi Salón de Clases",
+    "/dashboard/my-library": "Mi Biblioteca",
     "/dashboard/live-class": "Clases en Vivo",
     "/dashboard/community": "Comunidad",
     "/dashboard/sms-analytics": "Análisis de Notificaciones",
@@ -323,8 +336,9 @@ function getBreadcrumbTrail(pathname: string, language?: string) {
     language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
   const personalLogLabel =
     language === "ES" ? "Registro Personal" : "Personal Log";
-  const educationCenterLabel =
-    language === "ES" ? "Centro Educativo" : "Education Center";
+  const classroomLabel =
+    language === "ES" ? "Mi Salón de Clases" : "My Classroom";
+  const libraryLabel = language === "ES" ? "Mi Biblioteca" : "My Library";
 
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
     return [dashboardLabel];
@@ -338,8 +352,11 @@ function getBreadcrumbTrail(pathname: string, language?: string) {
   ) {
     return [dashboardLabel, personalLogLabel, current];
   }
-  if (pathname.startsWith("/dashboard/education-center/details")) {
-    return [dashboardLabel, educationCenterLabel, current];
+  if (pathname.startsWith("/dashboard/my-classroom/details")) {
+    return [dashboardLabel, classroomLabel, current];
+  }
+  if (pathname.startsWith("/dashboard/my-library/")) {
+    return [dashboardLabel, libraryLabel, current];
   }
   return [dashboardLabel, current];
 }
@@ -589,15 +606,15 @@ function ClassroomHeader() {
 
         {/* Leaving a lesson drops back into the course, not the main dashboard. */}
         <Link
-          href="/dashboard/education-center"
+          href="/dashboard/my-classroom"
           className={buttonStyles({ size: "small" })}
         >
           <ArrowLeft className="size-4 shrink-0" />
           <span className="hidden min-[420px]:inline">
-            {isEs ? "Volver al Centro Educativo" : "Back to Education Center"}
+            {isEs ? "Volver a Mi Salón de Clases" : "Back to My Classroom"}
           </span>
           <span className="min-[420px]:hidden">
-            {isEs ? "Centro" : "Education"}
+            {isEs ? "Salón" : "Classroom"}
           </span>
         </Link>
       </div>
@@ -658,10 +675,12 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   )
                     href = "/dashboard/personal-log";
                   else if (
-                    item === "Education Center" ||
-                    item === "Centro Educativo"
+                    item === "My Classroom" ||
+                    item === "Mi Salón de Clases"
                   )
-                    href = "/dashboard/education-center";
+                    href = "/dashboard/my-classroom";
+                  else if (item === "My Library" || item === "Mi Biblioteca")
+                    href = "/dashboard/my-library";
 
                   return (
                     <span
@@ -796,11 +815,11 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   );
 }
 
-/** A single journey lesson, e.g. /dashboard/education-center/day-03. */
+/** A single journey lesson, e.g. /dashboard/my-classroom/day-03. */
 function isClassroomRoute(pathname: string) {
   const slug = pathname.split("/").pop() || "";
   return (
-    /^\/dashboard\/education-center\/[^/]+$/.test(pathname) &&
+    /^\/dashboard\/my-classroom\/[^/]+$/.test(pathname) &&
     Boolean(getJourneyDayBySlug(slug))
   );
 }

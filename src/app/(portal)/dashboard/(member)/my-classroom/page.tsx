@@ -134,7 +134,7 @@ function JourneyHero({
       {/* Buttons: Continue / Start Day 1 & View Details side-by-side */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <Link
-          href={`/dashboard/education-center/${nextDay.slug}`}
+          href={`/dashboard/my-classroom/${nextDay.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className={buttonStyles()}
@@ -146,7 +146,7 @@ function JourneyHero({
         </Link>
 
         <Link
-          href="/dashboard/education-center/details"
+          href="/dashboard/my-classroom/details"
           className={buttonStyles({
             variant: "neutral",
             appearance: "fill-stroke",
@@ -183,7 +183,7 @@ export function DayCard({
 
   return (
     <Link
-      href={`/dashboard/education-center/${day.slug}`}
+      href={`/dashboard/my-classroom/${day.slug}`}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex flex-col rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -259,7 +259,7 @@ export function DayCard({
   );
 }
 
-export default function EducationCenterPage() {
+export default function MyClassroomPage() {
   const {
     completedCount,
     overallPercent,

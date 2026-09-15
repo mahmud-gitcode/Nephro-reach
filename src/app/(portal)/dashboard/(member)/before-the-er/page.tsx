@@ -31,7 +31,7 @@ const ACTION_CONFIGS: ActionConfig[] = [
     colorTheme: "orange",
     callActionHref: "tel:5550199",
     isCallLink: true,
-    secondaryActionHref: "/dashboard/education-center",
+    secondaryActionHref: "/dashboard/my-library",
     secondaryActionKey: "urgentEducation",
   },
   {
@@ -39,7 +39,7 @@ const ACTION_CONFIGS: ActionConfig[] = [
     colorTheme: "yellow",
     callActionHref: "/dashboard/personal-log/dialysis-journal",
     isCallLink: false,
-    secondaryActionHref: "/dashboard/education-center",
+    secondaryActionHref: "/dashboard/my-library",
     secondaryActionKey: "learnMoreEducation",
   },
   {

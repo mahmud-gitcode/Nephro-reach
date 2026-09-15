@@ -33,6 +33,7 @@ import {
   CourseModal,
   ModuleModal,
 } from "@/features/education/admin/CourseAdmin";
+import { Alert, ErrorState, Skeleton } from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -262,6 +263,11 @@ export default function ManageCoursePage() {
     createClass,
     updateClass,
     deleteClass,
+    isPending,
+    error,
+    refetch,
+    saveError,
+    dismissSaveError,
   } = useCourseLibrary();
 
   const course = getCourse(courseId);
@@ -272,6 +278,29 @@ export default function ManageCoursePage() {
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | CourseClassKind>("all");
+
+  /* Before this guard: while the catalogue was still being read, `courses`
+     was empty and every valid course id rendered "Course not found". Both
+     of the states below have to be ruled out before that sentence is
+     true. */
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        <Skeleton height={140} />
+        <Skeleton height={320} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="The course catalogue did not load"
+        error={error}
+        onRetry={refetch}
+      />
+    );
+  }
 
   if (!course) {
     return (
@@ -290,6 +319,18 @@ export default function ManageCoursePage() {
       </div>
     );
   }
+
+  const saveFailure = saveError ? (
+    <Alert
+      tone="danger"
+      title="That change was not saved"
+      onDismiss={dismissSaveError}
+    >
+      {saveError instanceof Error
+        ? saveError.message
+        : "The catalogue on this device is unchanged. Please try again."}
+    </Alert>
+  ) : null;
 
   const editingModule = course.modules.find(
     (entry) => entry.id === editingModuleId,
@@ -311,6 +352,8 @@ export default function ManageCoursePage() {
         <ArrowLeft className="h-4 w-4" />
         All courses
       </Link>
+
+      {saveFailure ? <div className="mt-4">{saveFailure}</div> : null}
 
       <section className="mt-4 rounded-[14px] border border-line bg-surface p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

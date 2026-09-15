@@ -24,7 +24,7 @@ import type { TabItem } from "@/components/ui";
 type StatusFilter = "all" | "in-progress" | "completed" | "not-started";
 type ModuleTab = "all" | JourneyPhaseKey;
 
-function EducationCenterDetailsContent() {
+function MyClassroomDetailsContent() {
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
@@ -86,15 +86,13 @@ function EducationCenterDetailsContent() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link
-            href="/dashboard/education-center"
+            href="/dashboard/my-classroom"
             className="inline-flex items-center gap-inline-md rounded-control-small text-label-md text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <ArrowLeft aria-hidden="true" className="h-4 w-4" />
             <span>
-              {j?.backToEducationCenter ||
-                (isEs
-                  ? "Volver al Centro Educativo"
-                  : "Back to Education Center")}
+              {j?.backToClassroom ||
+                (isEs ? "Volver a Mi Salón de Clases" : "Back to My Classroom")}
             </span>
           </Link>
           <h1 className="mt-stack-sm text-heading-2 text-fg">
@@ -193,7 +191,7 @@ function EducationCenterDetailsContent() {
   );
 }
 
-export default function EducationCenterDetailsPage() {
+export default function MyClassroomDetailsPage() {
   return (
     <Suspense
       fallback={
@@ -202,7 +200,7 @@ export default function EducationCenterDetailsPage() {
         </div>
       }
     >
-      <EducationCenterDetailsContent />
+      <MyClassroomDetailsContent />
     </Suspense>
   );
 }

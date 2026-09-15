@@ -12,7 +12,7 @@ import {
   Chip,
   ChipGroup,
 } from "@/components/ui";
-import { submitTestimonial } from "./testimonials";
+import { useTestimonials } from "./useTestimonials";
 
 interface SubmitTestimonialModalProps {
   open: boolean;
@@ -47,6 +47,7 @@ export default function SubmitTestimonialModal({
   const [videoUrl, setVideoUrl] = useState(SAMPLE_VIDEOS[0].url);
   const [summary, setSummary] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const { submit, isSaving, saveError } = useTestimonials();
 
   const roles = [
     { key: "Dialysis Member", label: "Dialysis Member" },
@@ -55,11 +56,14 @@ export default function SubmitTestimonialModal({
     { key: "Transplant Warrior", label: "Transplant Warrior" },
   ];
 
+  /* "Thank You for Sharing!" is shown only once the submission is stored.
+     The old order showed it first and then tried to save, so a member could
+     be thanked for a video nobody would ever receive. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoUrl.trim() || !summary.trim()) return;
+    if (!videoUrl.trim() || !summary.trim() || isSaving) return;
 
-    submitTestimonial({
+    void submit({
       memberName: memberName.trim() || "Member",
       memberEmail: user?.email || "user@nephroreach.com",
       title: title.trim() || "From Fear to Hope: My Dialysis Journey",
@@ -67,16 +71,17 @@ export default function SubmitTestimonialModal({
       videoUrl: videoUrl.trim(),
       summary: summary.trim(),
       duration: "3:30",
-    });
-
-    setSubmitted(true);
-    onSubmitted?.();
-
-    setTimeout(() => {
-      setSubmitted(false);
-      setSummary("");
-      onClose();
-    }, 2200);
+    })
+      .then(() => {
+        setSubmitted(true);
+        onSubmitted?.();
+        setTimeout(() => {
+          setSubmitted(false);
+          setSummary("");
+          onClose();
+        }, 2200);
+      })
+      .catch(() => {});
   };
 
   return (
@@ -93,13 +98,20 @@ export default function SubmitTestimonialModal({
           <Button
             onClick={handleSubmit}
             disabled={!videoUrl.trim() || !summary.trim() || submitted}
+            loading={isSaving}
             leadingIcon={<Video className="size-4" />}
           >
-            {submitted ? "Submitting..." : "Submit for Admin Review"}
+            {submitted ? "Submitted" : "Submit for Admin Review"}
           </Button>
         </>
       }
     >
+      {saveError ? (
+        <Alert tone="danger" title="Your testimonial was not sent">
+          {saveError instanceof Error ? saveError.message : "Please try again."}
+        </Alert>
+      ) : null}
+
       {submitted ? (
         <div className="space-y-3 py-8 text-center">
           <div className="bg-success-soft text-success-fg mx-auto flex size-14 items-center justify-center rounded-full">

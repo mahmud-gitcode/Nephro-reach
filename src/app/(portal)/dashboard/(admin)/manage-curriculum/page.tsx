@@ -22,6 +22,7 @@ import {
   useCourseLibrary,
 } from "@/features/education/courseLibrary";
 import { CourseModal } from "@/features/education/admin/CourseAdmin";
+import { Alert, AsyncSection, Skeleton } from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -145,7 +146,17 @@ function CourseCard({
 }
 
 export default function ManageCurriculumPage() {
-  const { courses, totals, createCourse, deleteCourse } = useCourseLibrary();
+  const {
+    courses,
+    totals,
+    createCourse,
+    deleteCourse,
+    isPending,
+    error,
+    refetch,
+    saveError,
+    dismissSaveError,
+  } = useCourseLibrary();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -179,7 +190,7 @@ export default function ManageCurriculumPage() {
         <SummaryCard
           label="Courses"
           value={totals.courses}
-          detail="Published to the Education Center"
+          detail="Published to the My Classroom"
           icon={GraduationCap}
           tone="bg-brand-100"
           iconTone="text-fg-brand"
@@ -243,21 +254,48 @@ export default function ManageCurriculumPage() {
         </div>
       </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-        {visibleCourses.map((course) => (
-          <CourseCard
-            key={course.id}
-            course={course}
-            onDelete={() => deleteCourse(course.id)}
-          />
-        ))}
-      </div>
+      {saveError ? (
+        <Alert
+          tone="danger"
+          title="That change was not saved"
+          className="mt-6"
+          onDismiss={dismissSaveError}
+        >
+          {saveError instanceof Error
+            ? saveError.message
+            : "The catalogue on this device is unchanged. Please try again."}
+        </Alert>
+      ) : null}
 
-      {visibleCourses.length === 0 && (
-        <p className="mt-6 rounded-[14px] border border-line bg-surface p-8 text-center text-sm font-medium text-fg-muted">
-          No courses match that search.
-        </p>
-      )}
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle="The course catalogue did not load"
+        skeleton={
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <Skeleton height={240} />
+            <Skeleton height={240} />
+            <Skeleton height={240} />
+          </div>
+        }
+      >
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+          {visibleCourses.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              onDelete={() => deleteCourse(course.id)}
+            />
+          ))}
+        </div>
+
+        {visibleCourses.length === 0 && (
+          <p className="mt-6 rounded-[14px] border border-line bg-surface p-8 text-center text-sm font-medium text-fg-muted">
+            No courses match that search.
+          </p>
+        )}
+      </AsyncSection>
 
       {creating && (
         <CourseModal

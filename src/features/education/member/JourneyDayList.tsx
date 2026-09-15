@@ -88,7 +88,7 @@ function CollapsedRail({
           return (
             <li key={day.slug}>
               <Link
-                href={`/dashboard/education-center/${day.slug}`}
+                href={`/dashboard/my-classroom/${day.slug}`}
                 title={title}
                 aria-label={title}
                 aria-current={isActive ? "page" : undefined}
@@ -257,7 +257,7 @@ export default function JourneyDayList({
                     return (
                       <li key={day.slug}>
                         <Link
-                          href={`/dashboard/education-center/${day.slug}`}
+                          href={`/dashboard/my-classroom/${day.slug}`}
                           onClick={onNavigate}
                           aria-current={isActive ? "page" : undefined}
                           className={`group flex items-start gap-3 rounded-control border px-3 py-2.5 transition-colors ${

@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import {
-  Review,
-  getUserReviews,
-  submitReview,
-  REVIEWS_EVENT,
-} from "@/features/reviews/reviews";
+import { useReviews } from "@/features/reviews/useReviews";
+import { reviewsByAuthor } from "@/features/reviews/reviews.rules";
 import {
   Star,
   CheckCircle2,
@@ -19,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   Card,
@@ -26,13 +23,9 @@ import {
   ChipGroup,
   EmptyState,
   FormField,
+  Skeleton,
   Textarea,
 } from "@/components/ui";
-import { useClientValue } from "@/lib/storage/useClientValue";
-
-/* See the note in the admin page: a stable reference for the pre-hydration
-   value, so it does not change identity on every render. */
-const NO_REVIEWS: Review[] = [];
 
 export default function UserReviewsPage() {
   const { user } = useAuth();
@@ -46,13 +39,12 @@ export default function UserReviewsPage() {
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
   const userEmail = user?.email || "user@nephroreach.com";
-
-  const readMyReviews = useCallback(
-    () => getUserReviews(userEmail),
-    [userEmail],
-  );
-  const [myReviews, , refresh] = useClientValue(readMyReviews, NO_REVIEWS);
   const userName = user?.name || "Charles Xavier";
+
+  const { reviews, isPending, error, refetch, submit, isSaving, saveError } =
+    useReviews();
+  /* One cache holds every review; this page shows only the member's own. */
+  const myReviews = reviewsByAuthor(reviews, userEmail);
 
   const roleOptions = [
     {
@@ -66,38 +58,24 @@ export default function UserReviewsPage() {
     { key: "CKD Learner", label: isEs ? "Estudiante de ERC" : "CKD Learner" },
   ];
 
-  /* The effect now only subscribes; the first read happens during render. */
-  useEffect(() => {
-    window.addEventListener(REVIEWS_EVENT, refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener(REVIEWS_EVENT, refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, [refresh]);
-
+  /* The thank-you appears after the review is stored, and the box is only
+     cleared then — losing what someone wrote because the save failed is the
+     one outcome this form must not have. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || isSaving) return;
 
-    submitReview({
-      userName,
-      userEmail,
-      rating,
-      role,
-      comment: comment.trim(),
-    });
-
-    setComment("");
-    setSubmittedMessage(
-      isEs
-        ? "¡Gracias! Su reseña ha sido enviada para moderación."
-        : "Thank you! Your review has been submitted for moderation.",
-    );
-
-    setTimeout(() => {
-      setSubmittedMessage(null);
-    }, 5000);
+    void submit({ userName, userEmail, rating, role, comment: comment.trim() })
+      .then(() => {
+        setComment("");
+        setSubmittedMessage(
+          isEs
+            ? "¡Gracias! Su reseña ha sido enviada para moderación."
+            : "Thank you! Your review has been submitted for moderation.",
+        );
+        setTimeout(() => setSubmittedMessage(null), 5000);
+      })
+      .catch(() => {});
   };
 
   return (
@@ -112,6 +90,19 @@ export default function UserReviewsPage() {
             : "Share your experience with NephroReach."}
         </p>
       </header>
+
+      {saveError ? (
+        <Alert
+          tone="danger"
+          title={isEs ? "No se envió" : "Your review was not sent"}
+        >
+          {saveError instanceof Error
+            ? saveError.message
+            : isEs
+              ? "Inténtelo de nuevo."
+              : "Please try again."}
+        </Alert>
+      ) : null}
 
       {submittedMessage ? (
         <Alert tone="success">{submittedMessage}</Alert>
@@ -193,7 +184,7 @@ export default function UserReviewsPage() {
           </FormField>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={!comment.trim()}>
+            <Button type="submit" disabled={!comment.trim()} loading={isSaving}>
               {isEs ? "Enviar Reseña" : "Submit Review"}
             </Button>
           </div>
@@ -205,85 +196,102 @@ export default function UserReviewsPage() {
           {isEs ? "Mis Reseñas" : "My Reviews"}
         </h2>
 
-        {myReviews.length === 0 ? (
-          <EmptyState
-            icon={<MessageSquare />}
-            title={
-              isEs
-                ? "Aún no ha enviado ninguna reseña."
-                : "You have not submitted any reviews yet."
-            }
-            description={
-              isEs
-                ? "Sus reseñas aparecerán aquí después de enviarlas."
-                : "Reviews you submit will appear here."
-            }
-          />
-        ) : (
-          <div className="space-y-stack-md">
-            {myReviews.map((rev) => (
-              <Card key={rev.id} as="article">
-                <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-inline-lg">
-                    <div className="flex items-center">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          aria-hidden="true"
-                          className={`h-4 w-4 ${
-                            rev.rating >= s
-                              ? "fill-warning-400 text-warning-400"
-                              : "fill-surface-sunken text-line"
-                          }`}
-                        />
-                      ))}
+        <AsyncSection
+          pending={isPending}
+          error={error}
+          onRetry={refetch}
+          errorTitle={
+            isEs ? "Sus reseñas no se cargaron" : "Your reviews did not load"
+          }
+          skeleton={
+            <div className="space-y-stack-md">
+              <Skeleton height={120} />
+              <Skeleton height={120} />
+            </div>
+          }
+        >
+          {myReviews.length === 0 ? (
+            <EmptyState
+              icon={<MessageSquare />}
+              title={
+                isEs
+                  ? "Aún no ha enviado ninguna reseña."
+                  : "You have not submitted any reviews yet."
+              }
+              description={
+                isEs
+                  ? "Sus reseñas aparecerán aquí después de enviarlas."
+                  : "Reviews you submit will appear here."
+              }
+            />
+          ) : (
+            <div className="space-y-stack-md">
+              {myReviews.map((rev) => (
+                <Card key={rev.id} as="article">
+                  <div className="flex flex-col gap-stack-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-inline-lg">
+                      <div className="flex items-center">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            aria-hidden="true"
+                            className={`h-4 w-4 ${
+                              rev.rating >= s
+                                ? "fill-warning-400 text-warning-400"
+                                : "fill-surface-sunken text-line"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <Badge tone="neutral">{rev.role}</Badge>
                     </div>
-                    <Badge tone="neutral">{rev.role}</Badge>
+
+                    {rev.status === "approved" ? (
+                      <Badge tone="success" icon={<CheckCircle2 />}>
+                        {isEs ? "Aprobada y Publicada" : "Approved & Live"}
+                      </Badge>
+                    ) : rev.status === "pending" ? (
+                      <Badge tone="warning" icon={<Clock />}>
+                        {isEs ? "En Revisión" : "Pending Review"}
+                      </Badge>
+                    ) : (
+                      <Badge tone="danger" icon={<XCircle />}>
+                        {isEs ? "Rechazada" : "Declined"}
+                      </Badge>
+                    )}
                   </div>
 
-                  {rev.status === "approved" ? (
-                    <Badge tone="success" icon={<CheckCircle2 />}>
-                      {isEs ? "Aprobada y Publicada" : "Approved & Live"}
-                    </Badge>
-                  ) : rev.status === "pending" ? (
-                    <Badge tone="warning" icon={<Clock />}>
-                      {isEs ? "En Revisión" : "Pending Review"}
-                    </Badge>
-                  ) : (
-                    <Badge tone="danger" icon={<XCircle />}>
-                      {isEs ? "Rechazada" : "Declined"}
-                    </Badge>
-                  )}
-                </div>
+                  <p className="mt-stack-md text-body-md text-fg-secondary">
+                    {rev.comment}
+                  </p>
 
-                <p className="mt-stack-md text-body-md text-fg-secondary">
-                  {rev.comment}
-                </p>
+                  <p className="mt-stack-md text-caption text-fg-muted">
+                    {new Date(rev.createdAt).toLocaleDateString(
+                      isEs ? "es-ES" : "en-US",
+                      { month: "short", day: "numeric", year: "numeric" },
+                    )}
+                  </p>
 
-                <p className="mt-stack-md text-caption text-fg-muted">
-                  {new Date(rev.createdAt).toLocaleDateString(
-                    isEs ? "es-ES" : "en-US",
-                    { month: "short", day: "numeric", year: "numeric" },
-                  )}
-                </p>
-
-                {rev.status === "declined" && rev.adminFeedback ? (
-                  <Alert
-                    tone="danger"
-                    live={false}
-                    icon={<AlertCircle />}
-                    title={
-                      isEs ? "Comentario del Administrador:" : "Admin Feedback:"
-                    }
-                    className="mt-stack-md"
-                  >
-                    {rev.adminFeedback}
-                  </Alert>
-                ) : null}
-              </Card>
-            ))}
-          </div>
-        )}
+                  {rev.status === "declined" && rev.adminFeedback ? (
+                    <Alert
+                      tone="danger"
+                      live={false}
+                      icon={<AlertCircle />}
+                      title={
+                        isEs
+                          ? "Comentario del Administrador:"
+                          : "Admin Feedback:"
+                      }
+                      className="mt-stack-md"
+                    >
+                      {rev.adminFeedback}
+                    </Alert>
+                  ) : null}
+                </Card>
+              ))}
+            </div>
+          )}
+        </AsyncSection>
       </section>
     </div>
   );

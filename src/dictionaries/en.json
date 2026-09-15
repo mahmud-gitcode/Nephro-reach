@@ -305,8 +305,8 @@
     "suggestedTopics": "Suggested Symptoms / Topics:",
     "close": "Close",
     "findSchedule": "Find My Dialysis Schedule",
-    "learnMoreEducation": "Learn More Education",
-    "urgentEducation": "Urgent Symptoms Education",
+    "learnMoreEducation": "Learn More in My Library",
+    "urgentEducation": "Urgent Symptoms in My Library",
     "callClinic": {
       "title": "Call Dialysis Clinic First",
       "purpose": "Educational prompts encouraging members to contact their dialysis team for non-life-threatening dialysis-related concerns that may potentially be addressed by the clinic.",
@@ -1173,7 +1173,7 @@
       "understanding": {
         "title": "UNDERSTANDING YOUR LABS",
         "desc": "Learn what your lab numbers mean and how they affect your health.",
-        "visitCenter": "Visit Education Center"
+        "visitCenter": "Visit My Library"
       }
     },
     "addModal": {
@@ -1340,7 +1340,7 @@
     ]
   },
   "educationCenter": {
-    "pageTitle": "Education Center",
+    "pageTitle": "My Classroom",
     "searchPlaceholder": "Search...",
     "categoriesLabel": "Categories",
     "categories": [
@@ -1369,7 +1369,7 @@
     "continueCta": "Continue",
     "viewDetails": "View Details",
     "programDetails": "Program Details",
-    "backToEducationCenter": "Back to Education Center",
+    "backToClassroom": "Back to My Classroom",
     "allClassesTab": "All Classes",
     "dayLabel": "Day",
     "minutesShort": "min",
@@ -1666,7 +1666,7 @@
       "teamQuestions": "Care Team Questions",
       "member": "Member",
       "classManagement": "Class Management",
-      "educationCenter": "Education Center",
+      "educationCenter": "My Classroom",
       "liveClass": "Live Class",
       "community": "Community",
       "smsAnalytics": "Notification Analytics",
@@ -1683,7 +1683,7 @@
     "quickActionTitle": "Quick Action",
     "quickActions": {
       "wheresMyRide": "Where's My Ride",
-      "educationCenter": "Education Center",
+      "educationCenter": "My Classroom",
       "community": "Community",
       "beforeTheEr": "Before the ER™"
     },

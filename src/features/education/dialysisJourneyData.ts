@@ -1,5 +1,5 @@
 /**
- * Content for the 21-Day Dialysis Journey shown in the Education Center.
+ * Content for the 21-Day Dialysis Journey shown in the My Classroom.
  *
  * Every learner-facing string ships in both languages (`*En` / `*Es`) so the
  * player, the transcript and the resource panel can switch with the language

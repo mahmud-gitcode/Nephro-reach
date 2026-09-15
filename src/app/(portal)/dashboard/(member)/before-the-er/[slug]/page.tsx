@@ -418,7 +418,7 @@ function SymptomDetailContent() {
             {t("beforeTheEr.detail.relatedEducation")}
           </h2>
           <Link
-            href="/dashboard/education-center"
+            href="/dashboard/my-library"
             className="flex items-center gap-1 text-xs font-bold text-fg-brand hover:underline"
           >
             <span>{isEs ? "Ver Todos los Videos" : "View All Videos"}</span>
@@ -429,7 +429,7 @@ function SymptomDetailContent() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Video Item */}
           <Link
-            href="/dashboard/education-center"
+            href="/dashboard/my-library"
             className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >
             <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
@@ -455,7 +455,7 @@ function SymptomDetailContent() {
 
           {/* Article Item */}
           <Link
-            href="/dashboard/education-center"
+            href="/dashboard/my-library"
             className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >
             <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">

@@ -4,22 +4,18 @@ import React, { useState } from "react";
 import { Check, CreditCard, Plus, X, Edit3, ShieldAlert } from "lucide-react";
 import {
   Alert,
+  AsyncSection,
   Button,
   Card,
   FormField,
   Input,
   Modal,
   Select,
+  Skeleton,
   SwitchRow,
   Textarea,
 } from "@/components/ui";
-import {
-  SubscriptionPlan,
-  DEFAULT_SUBSCRIPTION_PLANS,
-  getStoredSubscriptionPlans,
-  saveStoredSubscriptionPlans,
-} from "@/features/billing/subscriptions";
-import { useClientValue } from "@/lib/storage/useClientValue";
+import { usePlans, type SubscriptionPlan } from "@/features/billing/usePlans";
 
 function FeatureIcon({ included }: { included: boolean }) {
   return (
@@ -126,10 +122,12 @@ function PricingCard({
 
 function EditPlanModal({
   plan,
+  saving,
   onSave,
   onClose,
 }: {
   plan: SubscriptionPlan | "new";
+  saving: boolean;
   onSave: (updatedPlan: SubscriptionPlan) => void;
   onClose: () => void;
 }) {
@@ -221,10 +219,15 @@ function EditPlanModal({
       description="Edit pricing, billing cycle, access periods, and feature permissions dynamically."
       footer={
         <>
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancel
           </Button>
-          <Button type="submit" form="subscription-plan-form">
+          <Button type="submit" form="subscription-plan-form" loading={saving}>
             Save Changes
           </Button>
         </>
@@ -446,30 +449,39 @@ function EditPlanModal({
 }
 
 export default function SubscriptionsPage() {
-  const [plans, setPlans] = useClientValue(
-    getStoredSubscriptionPlans,
-    DEFAULT_SUBSCRIPTION_PLANS,
-  );
+  const {
+    plans,
+    isPending,
+    error,
+    refetch,
+    save,
+    isSaving,
+    saveError,
+    dismissSaveError,
+  } = usePlans();
+
   const [editingPlan, setEditingPlan] = useState<
     SubscriptionPlan | "new" | null
   >(null);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
+  /* These prices are what the marketing site charges. The old version told
+     the admin "Changes saved successfully. Both the Admin Dashboard and the
+     Landing Page pricing have been updated." without waiting to find out —
+     and the write was in a function that swallowed its own failure. */
   const handleSavePlan = (updatedPlan: SubscriptionPlan) => {
-    let newPlans: SubscriptionPlan[];
-    const exists = plans.some((p) => p.id === updatedPlan.id);
+    const exists = plans.some((plan) => plan.id === updatedPlan.id);
+    const next = exists
+      ? plans.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
+      : [...plans, updatedPlan];
 
-    if (exists) {
-      newPlans = plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p));
-    } else {
-      newPlans = [...plans, updatedPlan];
-    }
-
-    setPlans(newPlans);
-    saveStoredSubscriptionPlans(newPlans);
-    setEditingPlan(null);
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 3000);
+    void save(next)
+      .then(() => {
+        setEditingPlan(null);
+        setShowSavedToast(true);
+        setTimeout(() => setShowSavedToast(false), 3000);
+      })
+      .catch(() => {});
   };
 
   return (
@@ -489,6 +501,19 @@ export default function SubscriptionsPage() {
           Add New Plan
         </Button>
       </div>
+
+      {saveError ? (
+        <Alert
+          tone="danger"
+          title="Your plan changes were not saved"
+          className="mb-stack-xl"
+          onDismiss={dismissSaveError}
+        >
+          {saveError instanceof Error
+            ? saveError.message
+            : "Nothing has changed on the pricing page. Please try again."}
+        </Alert>
+      ) : null}
 
       {showSavedToast && (
         <Alert tone="success" className="mb-stack-xl">
@@ -523,15 +548,31 @@ export default function SubscriptionsPage() {
       </Alert>
 
       {/* 4 Plans Grid */}
-      <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {plans.map((plan) => (
-          <PricingCard
-            key={plan.id || plan.name}
-            plan={plan}
-            onEdit={setEditingPlan}
-          />
-        ))}
-      </section>
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle="The plans did not load"
+        errorMessage="Nothing is shown below, so nothing here can be edited yet."
+        skeleton={
+          <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <Skeleton height={420} />
+            <Skeleton height={420} />
+            <Skeleton height={420} />
+            <Skeleton height={420} />
+          </section>
+        }
+      >
+        <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {plans.map((plan) => (
+            <PricingCard
+              key={plan.id || plan.name}
+              plan={plan}
+              onEdit={setEditingPlan}
+            />
+          ))}
+        </section>
+      </AsyncSection>
 
       {/* Overview Analytics Bar */}
       <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -556,6 +597,7 @@ export default function SubscriptionsPage() {
       {editingPlan && (
         <EditPlanModal
           plan={editingPlan}
+          saving={isSaving}
           onSave={handleSavePlan}
           onClose={() => setEditingPlan(null)}
         />

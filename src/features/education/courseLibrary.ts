@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import {
   JOURNEY_DAYS,
   JOURNEY_PHASES,
@@ -14,7 +16,7 @@ import {
  *
  * The 21-Day Dialysis Journey is imported from `dialysisJourneyData` the first
  * time the library is opened, so the admin starts from the real course rather
- * than an empty screen. Everything after that is stored in localStorage.
+ * than an empty screen.
  */
 
 export type CourseClassKind = JourneyMediaKind;
@@ -75,7 +77,7 @@ export interface Course {
   modules: CourseModule[];
 }
 
-const STORAGE_KEY = "nephroreach_course_library";
+const STORAGE_KEY = storageKey("course-library");
 
 export function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
@@ -128,28 +130,19 @@ function buildSeedCourse(): Course {
   };
 }
 
-function readStoredCourses(): Course[] {
-  if (typeof window === "undefined") return [buildSeedCourse()];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [buildSeedCourse()];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return [buildSeedCourse()];
-    }
-    return parsed as Course[];
-  } catch {
-    return [buildSeedCourse()];
-  }
+/* STORAGE — the whole of it. */
+
+async function listCourses(): Promise<Course[]> {
+  const stored = await readJson<Course[] | null>(STORAGE_KEY, null);
+  /* An empty catalogue is not a state anyone meant to create — the seeded
+     course cannot be deleted — so an empty array falls back to the seed. */
+  return Array.isArray(stored) && stored.length > 0
+    ? stored
+    : [buildSeedCourse()];
 }
 
-function persistCourses(courses: Course[]) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
-  } catch {
-    // Storage can be unavailable (private window, blocked site data). Edits
-    // still apply for this session rather than breaking the page.
-  }
+async function saveCourses(courses: Course[]): Promise<Course[]> {
+  return writeJson(STORAGE_KEY, courses);
 }
 
 export function courseClassCount(course: Course): number {
@@ -209,13 +202,30 @@ export function emptyClass(): CourseClass {
   };
 }
 
-export function useCourseLibrary() {
-  const [courses, setCourses] = useState<Course[]>(readStoredCourses);
+export const courseLibraryKey = ["education", "course-library"] as const;
 
-  const commit = useCallback((next: Course[]) => {
-    persistCourses(next);
-    setCourses(next);
-  }, []);
+export function useCourseLibrary() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: courseLibraryKey,
+    queryFn: listCourses,
+  });
+
+  const write = useMutation({
+    mutationFn: (courses: Course[]) => saveCourses(courses),
+    onSuccess: (courses) => queryClient.setQueryData(courseLibraryKey, courses),
+  });
+
+  /* `?? []` on its own would be a new array every render, and every
+     useCallback below depends on this. */
+  const courses = useMemo(() => query.data ?? [], [query.data]);
+
+  const { mutate } = write;
+  /* Each editor call still returns synchronously — the admin screens build
+     a new catalogue and hand it over. The write is what is asynchronous,
+     and its failure surfaces through saveError rather than a catch {}. */
+  const commit = useCallback((next: Course[]) => mutate(next), [mutate]);
 
   const getCourse = useCallback(
     (courseId: string) => courses.find((course) => course.id === courseId),
@@ -375,6 +385,12 @@ export function useCourseLibrary() {
   return {
     courses,
     totals,
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    isSaving: write.isPending,
+    saveError: write.error,
+    dismissSaveError: () => write.reset(),
     getCourse,
     createCourse,
     updateCourse,
