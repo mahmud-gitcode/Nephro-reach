@@ -1,5 +1,6 @@
 import type React from "react";
 import {
+  Armchair,
   BookOpen,
   Car,
   CreditCard,
@@ -10,10 +11,12 @@ import {
   LayoutDashboard,
   Layers,
   Library,
+  Mic,
   Notebook,
   MessageCircle,
   MessagesSquare,
   Palette,
+  Plane,
   Settings,
   Star,
   Users,
@@ -81,6 +84,18 @@ export const sidebarItems: NavItem[] = [
     roles: ["user"],
   },
   {
+    label: "Beyond the Chair",
+    href: "/dashboard/beyond-the-chair",
+    icon: Armchair,
+    roles: ["user"],
+  },
+  {
+    label: "Dialysis Management",
+    href: "/dashboard/personal-log/dialysis-management",
+    icon: Hospital,
+    roles: ["user"],
+  },
+  {
     label: "Member",
     href: "/dashboard/members",
     icon: Users,
@@ -99,6 +114,18 @@ export const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
+    label: "Table Talk Management",
+    href: "/dashboard/manage-table-talk",
+    icon: Mic,
+    roles: ["admin"],
+  },
+  {
+    label: "Travel Requests",
+    href: "/dashboard/manage-travel",
+    icon: Plane,
+    roles: ["admin"],
+  },
+  {
     label: "My Classroom",
     href: "/dashboard/my-classroom",
     icon: BookOpen,
@@ -108,6 +135,12 @@ export const sidebarItems: NavItem[] = [
     label: "My Library",
     href: "/dashboard/my-library",
     icon: Library,
+    roles: ["user"],
+  },
+  {
+    label: "Dialysis Table Talk",
+    href: "/dashboard/table-talk",
+    icon: Mic,
     roles: ["user"],
   },
   {
@@ -259,6 +292,19 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Gestión de Biblioteca" : "Library Management";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Class Management";
+  if (pathname.startsWith("/dashboard/beyond-the-chair"))
+    return language === "ES" ? "Más Allá del Sillón" : "Beyond the Chair";
+  if (pathname.startsWith("/dashboard/manage-travel"))
+    return language === "ES" ? "Solicitudes de Viaje" : "Travel Requests";
+  if (pathname.startsWith("/dashboard/manage-table-talk"))
+    return language === "ES"
+      ? "Gestión de Table Talk"
+      : "Table Talk Management";
+  if (pathname.startsWith("/dashboard/table-talk/")) {
+    return language === "ES" ? "Episodio" : "Episode";
+  }
+  if (pathname.startsWith("/dashboard/table-talk"))
+    return "Dialysis Table Talk";
   if (pathname.startsWith("/dashboard/my-library/")) {
     return language === "ES" ? "Recurso" : "Resource";
   }
@@ -320,6 +366,11 @@ export function getNavLabel(
     "/dashboard/manage-library": "Gestión de Biblioteca",
     "/dashboard/my-classroom": "Mi Salón de Clases",
     "/dashboard/my-library": "Mi Biblioteca",
+    "/dashboard/table-talk": "Dialysis Table Talk",
+    "/dashboard/manage-table-talk": "Gestión de Table Talk",
+    "/dashboard/manage-travel": "Solicitudes de Viaje",
+    "/dashboard/beyond-the-chair": "Más Allá del Sillón",
+    "/dashboard/personal-log/dialysis-management": "Gestión de Diálisis",
     "/dashboard/live-class": "Clases en Vivo",
     "/dashboard/community": "Comunidad",
     "/dashboard/sms-analytics": "Análisis de Notificaciones",
@@ -363,8 +414,21 @@ export function getBreadcrumbTrail(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/my-library/")) {
     return [dashboardLabel, libraryLabel, current];
   }
+  if (pathname.startsWith("/dashboard/table-talk/")) {
+    return [dashboardLabel, "Dialysis Table Talk", current];
+  }
   return [dashboardLabel, current];
 }
+
+/**
+ * Routes that live under /dashboard/personal-log but have their own sidebar
+ * item. Personal Log must not also light up for these, or two items in the
+ * sidebar claim to be the page the member is looking at.
+ */
+const OWN_TAB_UNDER_PERSONAL_LOG = [
+  "/dashboard/personal-log/dialysis-journal",
+  "/dashboard/personal-log/dialysis-management",
+];
 
 export function isActiveRoute(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -372,7 +436,7 @@ export function isActiveRoute(href: string, pathname: string) {
     return (
       pathname === "/dashboard/personal-log" ||
       (pathname.startsWith("/dashboard/personal-log/") &&
-        !pathname.startsWith("/dashboard/personal-log/dialysis-journal"))
+        !OWN_TAB_UNDER_PERSONAL_LOG.some((route) => pathname.startsWith(route)))
     );
   }
   return href !== "#" && pathname.startsWith(href);

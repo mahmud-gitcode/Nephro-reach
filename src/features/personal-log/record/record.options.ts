@@ -13,8 +13,10 @@ export const LOCALIZED_SPANISH_DAYS: Record<string, string> = {
 
 export const COMMON_SYMPTOM_OPTIONS = [
   "Fatigue",
+  "Weakness",
   "Mild dizziness",
   "Muscle cramps",
+  "Shortness of breath",
   "Mild ankle swelling",
   "Itching",
   "Restless legs",
@@ -28,7 +30,9 @@ export const COMMON_SYMPTOM_OPTIONS = [
 
 export const LOCALIZED_SYMPTOMS: Record<string, string> = {
   Fatigue: "Fatiga",
+  Weakness: "Debilidad",
   "Mild dizziness": "Mareo leve",
+  "Shortness of breath": "Falta de aire",
   "Muscle cramps": "Calambres musculares",
   "Mild ankle swelling": "Hinchazón leve de tobillo",
   Itching: "Picazón",

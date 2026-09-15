@@ -1,16 +1,12 @@
 "use client";
 
 import React, { useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Phone,
   MapPin,
-  PlayCircle,
-  FileText,
-  ChevronRight,
   ChevronDown,
   Activity,
 } from "lucide-react";
@@ -20,6 +16,7 @@ import {
   ExternalLink,
   ExternalLinkProvider,
 } from "@/components/common/ExternalLinkDisclaimer";
+import RelatedLibrary from "@/features/library/member/RelatedLibrary";
 import {
   BEFORE_THE_ER_TOPICS,
   getBeforeTheErTopic,
@@ -411,76 +408,11 @@ function SymptomDetailContent() {
         </div>
       </section>
 
-      {/* RELATED EDUCATION CARD */}
-      <section className="space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-fg">
-            {t("beforeTheEr.detail.relatedEducation")}
-          </h2>
-          <Link
-            href="/dashboard/my-library"
-            className="flex items-center gap-1 text-xs font-bold text-fg-brand hover:underline"
-          >
-            <span>{isEs ? "Ver Todos los Videos" : "View All Videos"}</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {/* Video Item */}
-          <Link
-            href="/dashboard/my-library"
-            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
-          >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
-              <Image
-                src="/images/logo.svg"
-                alt="NephroReach"
-                width={48}
-                height={32}
-                style={{ width: "auto", height: "auto" }}
-                className="object-contain p-1"
-              />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-fg">
-                {t("beforeTheEr.detail.videoTitle")}
-              </h3>
-              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-fg-muted">
-                <PlayCircle className="h-3.5 w-3.5 text-fg-brand" />
-                {t("beforeTheEr.detail.video")} • 8:30
-              </p>
-            </div>
-          </Link>
-
-          {/* Article Item */}
-          <Link
-            href="/dashboard/my-library"
-            className="flex items-center gap-4 rounded-card border border-line-subtle bg-surface-sunken p-4 transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
-          >
-            <div className="relative flex h-12 w-16 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">
-              <Image
-                src="/images/logo.svg"
-                alt="NephroReach"
-                width={48}
-                height={32}
-                style={{ width: "auto", height: "auto" }}
-                className="object-contain p-1"
-              />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-fg">
-                {t("beforeTheEr.detail.articleTitle")}
-              </h3>
-              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-fg-muted">
-                <FileText className="h-3.5 w-3.5 text-fg-brand" />
-                {t("beforeTheEr.detail.article")} •{" "}
-                {t("beforeTheEr.detail.readTime")}
-              </p>
-            </div>
-          </Link>
-        </div>
-      </section>
+      {/* Real posts off the Library shelf, not two fixed placeholders. */}
+      <RelatedLibrary
+        category="emergencies"
+        title={t("beforeTheEr.detail.relatedEducation")}
+      />
     </div>
   );
 }

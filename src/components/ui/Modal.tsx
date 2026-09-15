@@ -46,10 +46,21 @@ const subscribeNoop = () => () => {};
 
 export type ModalSize = "small" | "big" | "wide";
 
+/* 700px is the ceiling for every dialog. Wider than that and a form's
+   two-column rows stretch into fields nobody can scan across; narrower than
+   these, and those same rows squeeze into columns too tight to type in.
+
+   Tailwind's `sm:` breakpoints inside a modal measure the viewport, not the
+   dialog, so a two-column form laid out at `sm:grid-cols-2` gets its columns
+   on any desktop — which is why a narrow dialog holding one is cramped
+   rather than stacked. */
 const sizes: Record<ModalSize, string> = {
-  small: "max-w-sm",
-  big: "max-w-md",
-  wide: "max-w-2xl",
+  /** Confirmations and one-field prompts. */
+  small: "max-w-[420px]",
+  /** Ordinary forms — a handful of single-column fields. */
+  big: "max-w-[560px]",
+  /** Anything with two-column rows or a media preview. */
+  wide: "max-w-[700px]",
 };
 
 export type ModalProps = {

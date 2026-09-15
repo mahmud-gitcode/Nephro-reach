@@ -74,3 +74,33 @@ export function applyTestimonialStatus(
 
 export const withoutTestimonial = (testimonials: Testimonial[], id: string) =>
   testimonials.filter((testimonial) => testimonial.id !== id);
+
+/**
+ * A member revising their own submission while it waits on review.
+ *
+ * Only the words and the video change: the id, the author and the submitted
+ * date stay, and so does the status. An edit is not a resubmission, and
+ * silently resetting an admin's decision would hide a rejection.
+ */
+export function reviseTestimonial(
+  testimonials: Testimonial[],
+  id: string,
+  draft: Pick<TestimonialDraft, "title" | "role" | "videoUrl" | "summary">,
+): Testimonial[] {
+  return testimonials.map((testimonial) =>
+    testimonial.id === id
+      ? {
+          ...testimonial,
+          title: draft.title.trim() || testimonial.title,
+          role: draft.role || testimonial.role,
+          videoUrl: draft.videoUrl.trim() || testimonial.videoUrl,
+          summary: draft.summary.trim() || testimonial.summary,
+        }
+      : testimonial,
+  );
+}
+
+/** A member may change their own story until an admin has ruled on it. */
+export function isRevisable(testimonial: Testimonial): boolean {
+  return testimonial.status === "pending";
+}

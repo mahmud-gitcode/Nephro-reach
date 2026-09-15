@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Video, Info, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Video, Upload, CheckCircle2 } from "lucide-react";
 import {
   Modal,
   Button,
@@ -13,6 +13,7 @@ import {
   ChipGroup,
 } from "@/components/ui";
 import { useTestimonials } from "./useTestimonials";
+import type { Testimonial } from "./testimonials.types";
 
 interface SubmitTestimonialModalProps {
   open: boolean;
@@ -22,32 +23,83 @@ interface SubmitTestimonialModalProps {
     email?: string;
   } | null;
   onSubmitted?: () => void;
+  /** An existing submission being revised. Omit to take a new one. */
+  editing?: Testimonial | null;
 }
-
-const SAMPLE_VIDEOS = [
-  {
-    label: "Demo Dialysis Journey (YouTube)",
-    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  },
-  {
-    label: "Sample Reflection Video (MP4)",
-    url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-  },
-];
 
 export default function SubmitTestimonialModal({
   open,
   onClose,
   user,
   onSubmitted,
+  editing,
 }: SubmitTestimonialModalProps) {
-  const [memberName, setMemberName] = useState(user?.name || "Charles Xavier");
-  const [role, setRole] = useState("Dialysis Member");
-  const [title, setTitle] = useState("From Fear to Hope: My Dialysis Journey");
-  const [videoUrl, setVideoUrl] = useState(SAMPLE_VIDEOS[0].url);
-  const [summary, setSummary] = useState("");
+  const [memberName, setMemberName] = useState(
+    editing?.memberName || user?.name || "Charles Xavier",
+  );
+  const [role, setRole] = useState(editing?.role || "Dialysis Member");
+  const [title, setTitle] = useState(
+    editing?.title || "From Fear to Hope: My Dialysis Journey",
+  );
+  const [videoUrl, setVideoUrl] = useState(editing?.videoUrl || "");
+  /* The file the member chose this sitting, previewed from an object URL.
+     An edit opens with the filename it was saved under and no preview,
+     because the bytes are not in the browser any more. */
+  const [videoName, setVideoName] = useState<string | null>(
+    () => editing?.videoUrl?.split("/").pop() ?? null,
+  );
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const objectUrls = useRef<string[]>([]);
+
+  /* Object URLs live until revoked; re-picking a few files in one sitting
+     would otherwise leak every one. */
+  useEffect(() => {
+    const urls = objectUrls.current;
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  /** Big enough to be a real recording, small enough to be a phone clip. */
+  const MAX_MB = 200;
+
+  const pickVideo = (file: File) => {
+    if (!file.type.startsWith("video/")) {
+      setVideoError("That is not a video file. Choose an MP4 or MOV.");
+      return;
+    }
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setVideoError(
+        `That file is ${Math.round(file.size / 1024 / 1024)} MB. The limit is ${MAX_MB} MB.`,
+      );
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    objectUrls.current.push(url);
+    setVideoError(null);
+    setVideoPreview(url);
+    setVideoName(file.name);
+    setVideoUrl(`/videos/testimonials/${file.name}`);
+
+    /* Reading the real length means the runtime shown on the card is the
+       file's, not a fixed "3:30". */
+    const probe = document.createElement("video");
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      const seconds = probe.duration;
+      if (Number.isFinite(seconds) && seconds > 0) {
+        const minutes = Math.floor(seconds / 60);
+        const rest = Math.round(seconds % 60);
+        setDuration(`${minutes}:${String(rest).padStart(2, "0")}`);
+      }
+    };
+    probe.src = url;
+  };
+  const [summary, setSummary] = useState(editing?.summary || "");
+  const [duration, setDuration] = useState(editing?.duration || "");
   const [submitted, setSubmitted] = useState(false);
-  const { submit, isSaving, saveError } = useTestimonials();
+  const { submit, revise, isSaving, saveError } = useTestimonials();
 
   const roles = [
     { key: "Dialysis Member", label: "Dialysis Member" },
@@ -63,6 +115,21 @@ export default function SubmitTestimonialModal({
     e.preventDefault();
     if (!videoUrl.trim() || !summary.trim() || isSaving) return;
 
+    if (editing) {
+      void revise(editing.id, {
+        title: title.trim(),
+        role,
+        videoUrl: videoUrl.trim(),
+        summary: summary.trim(),
+      })
+        .then(() => {
+          onSubmitted?.();
+          onClose();
+        })
+        .catch(() => {});
+      return;
+    }
+
     void submit({
       memberName: memberName.trim() || "Member",
       memberEmail: user?.email || "user@nephroreach.com",
@@ -70,7 +137,7 @@ export default function SubmitTestimonialModal({
       role,
       videoUrl: videoUrl.trim(),
       summary: summary.trim(),
-      duration: "3:30",
+      duration: duration || undefined,
     })
       .then(() => {
         setSubmitted(true);
@@ -88,8 +155,15 @@ export default function SubmitTestimonialModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Submit 'From Fear to Hope' Testimonial"
-      description="Share your video journey to inspire others. Admin will review and approve your submission before publishing."
+      size="wide"
+      title={
+        editing ? "Edit your story" : "Submit 'From Fear to Hope' Testimonial"
+      }
+      description={
+        editing
+          ? "Your story is still waiting on review, so you can change it. It stays in the queue."
+          : "Share your video journey to inspire others. Admin will review and approve your submission before publishing."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
@@ -101,7 +175,11 @@ export default function SubmitTestimonialModal({
             loading={isSaving}
             leadingIcon={<Video className="size-4" />}
           >
-            {submitted ? "Submitted" : "Submit for Admin Review"}
+            {submitted
+              ? "Submitted"
+              : editing
+                ? "Save changes"
+                : "Submit for Admin Review"}
           </Button>
         </>
       }
@@ -126,15 +204,11 @@ export default function SubmitTestimonialModal({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Alert draws its own icon; the second one inside it was a
+              duplicate. */}
           <Alert tone="info" className="text-body-sm">
-            <div className="flex items-start gap-2">
-              <Info className="mt-0.5 size-4 shrink-0 text-brand-600" />
-              <span>
-                <strong>Admin Approval Process:</strong> Video testimonials are
-                reviewed by our team (such as Joni) before being published to
-                protect community privacy and ensure content quality.
-              </span>
-            </div>
+            Video testimonials are reviewed by the NephroReach team before they
+            are published, to protect community privacy and keep the quality up.
           </Alert>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -180,29 +254,67 @@ export default function SubmitTestimonialModal({
             </ChipGroup>
           </div>
 
-          <FormField label="Video Link (YouTube, Vimeo, or Video URL)">
-            {(props) => (
+          <FormField
+            label="Your video"
+            required
+            hint="An MP4 or MOV from your phone or computer, up to 200 MB."
+            error={videoError ?? undefined}
+          >
+            {() => (
               <div className="space-y-2">
-                <Input
-                  {...props}
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  required
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) pickVideo(file);
+                    /* Cleared so picking the same file twice still fires. */
+                    event.target.value = "";
+                  }}
                 />
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-caption text-fg-muted">
-                  <span>Quick demo presets:</span>
-                  {SAMPLE_VIDEOS.map((sample, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setVideoUrl(sample.url)}
-                      className="underline transition-colors hover:text-brand-600"
-                    >
-                      {sample.label}
-                    </button>
-                  ))}
-                </div>
+
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-inset-md py-inset-lg text-center transition-colors duration-150 ease-standard hover:border-primary-edge hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Upload
+                    aria-hidden="true"
+                    className="size-6 text-fg-subtle"
+                  />
+                  <span className="text-label-md text-fg-secondary">
+                    {videoName
+                      ? "Choose a different video"
+                      : "Upload your video"}
+                  </span>
+                  <span className="text-body-sm text-fg-muted">
+                    We read the length from the file
+                  </span>
+                </button>
+
+                {videoName ? (
+                  <p className="flex items-center gap-2 rounded-control bg-success-surface px-3 py-2 text-body-sm text-success">
+                    <CheckCircle2
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{videoName}</span>
+                    {duration ? (
+                      <span className="shrink-0 tabular-nums">{duration}</span>
+                    ) : null}
+                  </p>
+                ) : null}
+
+                {videoPreview ? (
+                  <video
+                    src={videoPreview}
+                    controls
+                    preload="metadata"
+                    className="aspect-video w-full rounded-control bg-surface-inverse"
+                  />
+                ) : null}
               </div>
             )}
           </FormField>

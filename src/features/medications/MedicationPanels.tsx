@@ -6,15 +6,15 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Download,
-  FileText,
   Plus,
+  Printer,
+  Save,
   Share2,
   Smile,
-  UserPlus,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
+  Alert,
   Badge,
   BarChart,
   Button,
@@ -24,6 +24,7 @@ import {
   FormField,
   RadioCard,
   RadioGroup,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -33,7 +34,9 @@ import {
   Textarea,
   buttonStyles,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import * as rules from "./medicationLog.rules";
+import type { DoseStatus } from "./medicationLog.types";
+import type { MedicationLog } from "./useMedicationLog";
 import type { MedicationReminder } from "@/features/medications/useReminders";
 import {
   alertsData,
@@ -73,11 +76,14 @@ export function StatusBadge({ status }: { status: string }) {
 export function MedicationMasterList({
   reminders,
   onOpenReminderModal,
+  log,
 }: {
   reminders: MedicationReminder[];
   onOpenReminderModal: (medName?: string) => void;
+  log: MedicationLog;
 }) {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <Card as="section" padding="small">
@@ -122,6 +128,9 @@ export function MedicationMasterList({
               </TableHeaderCell>
               <TableHeaderCell>
                 {t("medicationsLog.tableHeaders.pharmacy")}
+              </TableHeaderCell>
+              <TableHeaderCell className="text-center">
+                {isEs ? "¿Necesita Resurtido?" : "Need Refill?"}
               </TableHeaderCell>
               <TableHeaderCell>
                 {t("medicationsLog.tableHeaders.status")}
@@ -180,6 +189,34 @@ export function MedicationMasterList({
                   <TableCell>{medication.startDate}</TableCell>
                   <TableCell>{medication.endDate}</TableCell>
                   <TableCell>{medication.pharmacy}</TableCell>
+                  {/* Yes or no, per medication. Nothing here notifies the
+                      clinic on its own, which the alert below the table
+                      says out loud rather than leaving a member to assume. */}
+                  <TableCell className="text-center">
+                    <Select
+                      selectSize="small"
+                      value={log.needsRefill(medication.name) ? "yes" : "no"}
+                      aria-label={
+                        isEs
+                          ? `¿${medication.name} necesita resurtido?`
+                          : `Does ${medication.name} need a refill?`
+                      }
+                      onChange={(event) =>
+                        log.setRefill(
+                          medication.name,
+                          event.target.value === "yes",
+                        )
+                      }
+                      className={
+                        log.needsRefill(medication.name)
+                          ? "text-warning"
+                          : undefined
+                      }
+                    >
+                      <option value="no">{isEs ? "No" : "No"}</option>
+                      <option value="yes">{isEs ? "Sí" : "Yes"}</option>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={medication.status} />
                   </TableCell>
@@ -189,35 +226,73 @@ export function MedicationMasterList({
           </TableBody>
         </Table>
       </div>
+
+      {log.refillCount > 0 ? (
+        <Alert tone="warning" className="mt-stack-md">
+          {isEs
+            ? `Marcaste ${log.refillCount} medicamento(s) como bajos. Avisa a tu farmacia o a tu equipo: esta página no los notifica.`
+            : `You flagged ${log.refillCount} medication(s) as low. Tell your pharmacy or care team — this page does not notify them for you.`}
+        </Alert>
+      ) : null}
     </Card>
   );
 }
 
 export function DoseSchedule({
   reminders,
+  log,
 }: {
   reminders: MedicationReminder[];
+  log: MedicationLog;
 }) {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
+
+  /* The day being looked at. The arrows used to be dead controls with a
+     printed "May 20" between them; they move a real date now, and every
+     status below belongs to that date. */
+  const [date, setDate] = useState(() => rules.todayIso());
+  const onToday = rules.isToday(date);
+
+  const statusOptions: { value: DoseStatus; label: string }[] = [
+    { value: "pending", label: isEs ? "Pendiente" : "Not set" },
+    { value: "taken", label: isEs ? "Tomado" : "Taken" },
+    { value: "late", label: isEs ? "Tarde" : "Late" },
+    { value: "missed", label: isEs ? "Perdido" : "Missed" },
+  ];
 
   return (
     <Card as="section" padding="small">
       <div className="flex flex-col gap-inline-md lg:flex-row lg:items-center lg:justify-between">
         <SectionTitle number="2" title={t("medicationsLog.section2")} />
-        <div className="flex flex-wrap gap-inline-md">
+        <div className="flex flex-wrap items-center gap-inline-md">
           <Button
-            {...notBuiltYet("Changing the day")}
             variant="neutral"
             appearance="fill-stroke"
+            onClick={() => setDate((current) => rules.shiftDay(current, -1))}
+            aria-label={isEs ? "Día anterior" : "Previous day"}
           >
             <ChevronLeft aria-hidden="true" />
-            {language === "ES" ? "Mayo 20" : "May 20"}
+          </Button>
+          <span className="min-w-[96px] text-center text-label-md text-fg">
+            {rules.formatDayLabel(date, isEs)}
+          </span>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            /* No forward past today: a dose cannot be recorded before it is
+               due, and an empty tomorrow reads as a day of missed doses. */
+            disabled={onToday}
+            onClick={() => setDate((current) => rules.shiftDay(current, 1))}
+            aria-label={isEs ? "Día siguiente" : "Next day"}
+          >
             <ChevronRight aria-hidden="true" />
           </Button>
           <Button
-            {...notBuiltYet("Jumping to today")}
             variant="neutral"
             appearance="fill-stroke"
+            disabled={onToday}
+            onClick={() => setDate(rules.todayIso())}
           >
             {t("medicationsLog.today")}
           </Button>
@@ -225,7 +300,7 @@ export function DoseSchedule({
       </div>
 
       <div className="mt-stack-md overflow-hidden rounded-control border border-line">
-        <Table minWidth={900}>
+        <Table minWidth={980}>
           <TableHead className="bg-surface-sunken">
             <TableRow>
               <TableHeaderCell>
@@ -256,6 +331,12 @@ export function DoseSchedule({
                     dose.medication.toLowerCase() && r.enabled,
               );
 
+              const status = log.statusOf(date, dose.medication, dose.time);
+              const stamp = rules.formatStamp(
+                log.stampOf(date, dose.medication, dose.time),
+                isEs,
+              );
+
               return (
                 <TableRow key={`${dose.time}-${idx}`}>
                   <TableCell>
@@ -265,7 +346,7 @@ export function DoseSchedule({
                         <Bell
                           className="h-3 w-3 shrink-0 text-fg-brand"
                           aria-label={
-                            language === "ES"
+                            isEs
                               ? `Recordatorio a las ${rem.time}`
                               : `Reminder set for ${rem.time}`
                           }
@@ -282,31 +363,69 @@ export function DoseSchedule({
                     </span>
                   </TableCell>
                   <TableCell>
-                    {language === "ES"
-                      ? dose.instructionsEs
-                      : dose.instructionsEn}
+                    {isEs ? dose.instructionsEs : dose.instructionsEn}
                   </TableCell>
+
+                  {/* The control this whole section was missing. It writes
+                      the status and the stamp together, and the adherence
+                      tracker at the bottom reads the same records back. */}
                   <TableCell>
-                    <StatusBadge status={dose.status} />
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`block text-label-md ${
-                        dose.status === "Late"
-                          ? "text-warning"
-                          : "text-fg-secondary"
-                      }`}
+                    <Select
+                      selectSize="small"
+                      value={status}
+                      aria-label={
+                        isEs
+                          ? `Estado de ${dose.medication} a las ${dose.time}`
+                          : `Status for ${dose.medication} at ${dose.time}`
+                      }
+                      onChange={(event) =>
+                        log.setDoseStatus(
+                          date,
+                          dose.medication,
+                          dose.time,
+                          event.target.value as DoseStatus,
+                        )
+                      }
+                      className={
+                        status === "taken"
+                          ? "text-success"
+                          : status === "late"
+                            ? "text-warning"
+                            : status === "missed"
+                              ? "text-danger"
+                              : undefined
+                      }
                     >
-                      {dose.stamp}
-                    </span>
-                    <span className="block text-caption text-fg-muted">
-                      {t("medicationsLog.today")}
-                    </span>
+                      {statusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </TableCell>
+
+                  <TableCell>
+                    {stamp ? (
+                      <>
+                        <span
+                          className={`block text-label-md ${
+                            status === "late"
+                              ? "text-warning"
+                              : "text-fg-secondary"
+                          }`}
+                        >
+                          {stamp}
+                        </span>
+                        <span className="block text-caption text-fg-muted">
+                          {rules.formatDayLabel(date, isEs)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-body-sm text-fg-muted">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    {language === "ES"
-                      ? dose.sideEffectsEs
-                      : dose.sideEffectsEn}
+                    {isEs ? dose.sideEffectsEs : dose.sideEffectsEn}
                   </TableCell>
                 </TableRow>
               );
@@ -318,270 +437,198 @@ export function DoseSchedule({
   );
 }
 
-export function AdherenceChart() {
+export function AdherenceChart({ log }: { log: MedicationLog }) {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
 
-  const dayLabels =
-    language === "ES"
-      ? ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
-      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  /* Everything below reads the dose statuses tapped in section 2. It used
+     to be a fixed 86% next to a fixed 50/30/20 ring and a hand-drawn line,
+     which is what Joni meant by the tracker tracking nothing. */
+  const dosesPerDay = doseScheduleData.length;
+  const week = rules.adherenceByDay(log.doses, dosesPerDay, 7);
+  const overall = rules.summariseAdherence(
+    log.doses.filter((dose) => week.some((day) => day.date === dose.date)),
+    dosesPerDay * 7,
+  );
 
-  const missedDoses = [
-    { day: dayLabels[0], value: 2 },
-    { day: dayLabels[1], value: 1.4 },
-    { day: dayLabels[2], value: 0.1 },
-    { day: dayLabels[3], value: 2 },
-    { day: dayLabels[4], value: 0.1 },
-    { day: dayLabels[5], value: 2 },
-    { day: dayLabels[6], value: 1.4 },
-  ];
+  const decided = overall.taken + overall.late + overall.missed;
+  const share = (count: number) =>
+    decided === 0 ? 0 : Math.round((count / decided) * 100);
 
-  const bpPoints = [
-    { day: dayLabels[0], bp: 148, adherence: 78 },
-    { day: dayLabels[1], bp: 110, adherence: 22 },
-    { day: dayLabels[2], bp: 94, adherence: 25 },
-    { day: dayLabels[3], bp: 103, adherence: 78 },
-    { day: dayLabels[4], bp: 148, adherence: 76 },
-    { day: dayLabels[5], bp: 153, adherence: 96 },
-    { day: dayLabels[6], bp: 130, adherence: 95 },
-  ];
+  const bandTone = (band: rules.AdherenceBandValue | null) =>
+    band === "good"
+      ? "bg-success-surface border-success-line text-success"
+      : band === "fair"
+        ? "bg-warning-surface border-warning-line text-warning"
+        : band === "poor"
+          ? "bg-danger-surface border-danger-line text-danger"
+          : "bg-canvas border-dashed border-line-strong text-fg-subtle";
 
-  const chartWidth = 252;
-  const chartHeight = 152;
-  const xFor = (index: number) => 18 + index * 36;
-  const bpY = (value: number) => 8 + ((160 - value) / 80) * 136;
-  const adherenceY = (value: number) => 8 + ((100 - value) / 100) * 136;
-  const bpLine = bpPoints
-    .map((point, index) => `${xFor(index)},${bpY(point.bp)}`)
-    .join(" ");
-  const adherenceLine = bpPoints
-    .map((point, index) => `${xFor(index)},${adherenceY(point.adherence)}`)
-    .join(" ");
+  const bandLabel = (band: rules.AdherenceBandValue | null) =>
+    band === "good"
+      ? isEs
+        ? "Bien"
+        : "On track"
+      : band === "fair"
+        ? isEs
+          ? "Irregular"
+          : "Slipping"
+        : band === "poor"
+          ? isEs
+            ? "Bajo"
+            : "Off track"
+          : isEs
+            ? "Sin registro"
+            : "Not logged";
 
   return (
     <Card as="section" padding="small">
       <SectionTitle number="3" title={t("medicationsLog.section3")} />
 
-      <div className="mt-stack-md grid grid-cols-1 gap-inset-md xl:grid-cols-3">
-        <Card as="article" tone="flat" padding="small">
-          <div>
-            <h3 className="text-heading-5 text-fg">
-              {t("medicationsLog.adherence.overallTitle")}
-            </h3>
-            <p className="mt-stack-sm text-caption text-fg-muted">
-              {t("medicationsLog.adherence.totalDoses")}
-            </p>
-          </div>
-
-          <div className="mt-stack-xl flex flex-col items-center justify-center gap-inset-lg sm:flex-row">
-            {/* Taken / late / missed are the three outcomes a dose can have,
-                so the ring uses the status tones rather than three new hues. */}
-            <DonutChart
-              segments={[
-                {
-                  label: t("medicationsLog.adherence.taken"),
-                  value: 50,
-                  tone: "success",
-                },
-                {
-                  label: t("medicationsLog.adherence.late"),
-                  value: 30,
-                  tone: "warning",
-                },
-                {
-                  label: t("medicationsLog.adherence.missed"),
-                  value: 20,
-                  tone: "danger",
-                },
-              ]}
-              label={t("medicationsLog.adherence.overallTitle")}
-              size={182}
-              thickness={26}
-              centerValue="86%"
-              centerLabel={t("medicationsLog.adherence.overall")}
-            />
-
-            <ChartLegend
-              className="w-[140px]"
-              items={[
-                {
-                  label: t("medicationsLog.adherence.taken"),
-                  tone: "success",
-                  value: "50%",
-                },
-                {
-                  label: t("medicationsLog.adherence.late"),
-                  tone: "warning",
-                  value: "30%",
-                },
-                {
-                  label: t("medicationsLog.adherence.missed"),
-                  tone: "danger",
-                  value: "20%",
-                },
-              ]}
-            />
-          </div>
-        </Card>
-
-        <Card as="article" tone="flat" padding="small">
-          <h3 className="text-heading-5 text-fg">
-            {t("medicationsLog.adherence.missedTitle")}
-          </h3>
-          <p className="mt-stack-sm text-body-sm text-fg-muted">
-            {t("medicationsLog.adherence.totalMissed")}{" "}
-            <span className="text-label-md text-danger">8</span>
+      {/* Nothing logged is said once, rather than as a 0% ring that reads
+          like a member who missed every dose. */}
+      {overall.percent === null ? (
+        <Card tone="flat" padding="small" className="mt-stack-md">
+          <p className="text-body-md text-fg">
+            {isEs
+              ? "Aún no hay dosis registradas esta semana."
+              : "No doses recorded this week yet."}
           </p>
-
-          <BarChart
-            bars={missedDoses.map((dose) => ({
-              label: dose.day,
-              value: dose.value,
-            }))}
-            label={t("medicationsLog.adherence.missedTitle")}
-            yMax={10}
-            yTicks={6}
-            height={137}
-            className="mt-stack-xl"
-          />
+          <p className="mt-stack-xs measure text-body-sm text-fg-muted">
+            {isEs
+              ? "Marca cada dosis arriba como Tomado, Tarde o Perdido. Este seguimiento se llena solo a partir de eso."
+              : "Mark each dose above as Taken, Late or Missed. This tracker fills itself in from those."}
+          </p>
         </Card>
+      ) : (
+        <div className="mt-stack-md grid grid-cols-1 gap-inset-md xl:grid-cols-3">
+          <Card as="article" tone="flat" padding="small">
+            <div>
+              <h3 className="text-heading-5 text-fg">
+                {t("medicationsLog.adherence.overallTitle")}
+              </h3>
+              <p className="mt-stack-sm text-caption text-fg-muted">
+                {isEs
+                  ? `${decided} dosis registradas en 7 días`
+                  : `${decided} doses recorded over 7 days`}
+              </p>
+            </div>
 
-        <Card as="article" tone="flat" padding="small">
-          <h3 className="text-heading-5 text-fg">
-            {t("medicationsLog.adherence.bpVsAdherence")}
-          </h3>
-          {/* Two series, two axes — <LineChart> draws one axis, so this one
-              stays hand-drawn. The tones are still the chart tones. */}
-          <div className="mt-stack-sm flex items-center gap-inline-lg text-caption text-fg-muted">
-            <span className="inline-flex items-center gap-inline-sm">
-              <span
-                aria-hidden="true"
-                className="h-2.5 w-2.5 rounded-full bg-accent-600"
+            <div className="mt-stack-xl flex flex-col items-center justify-center gap-inset-lg sm:flex-row">
+              {/* Taken / late / missed are the three outcomes a dose can
+                  have, so the ring uses the status tones. */}
+              <DonutChart
+                segments={[
+                  {
+                    label: t("medicationsLog.adherence.taken"),
+                    value: overall.taken,
+                    tone: "success",
+                  },
+                  {
+                    label: t("medicationsLog.adherence.late"),
+                    value: overall.late,
+                    tone: "warning",
+                  },
+                  {
+                    label: t("medicationsLog.adherence.missed"),
+                    value: overall.missed,
+                    tone: "danger",
+                  },
+                ]}
+                label={t("medicationsLog.adherence.overallTitle")}
+                size={182}
+                thickness={26}
+                centerValue={`${overall.percent}%`}
+                centerLabel={t("medicationsLog.adherence.overall")}
               />
-              {t("medicationsLog.adherence.bp")}
-            </span>
-            <span className="inline-flex items-center gap-inline-sm">
-              <span
-                aria-hidden="true"
-                className="h-2.5 w-2.5 rounded-full bg-brand-600"
-              />
-              {t("medicationsLog.adherence.adherencePercent")}
-            </span>
-          </div>
 
-          <div
-            className="mt-stack-lg"
-            role="img"
-            aria-label={t("medicationsLog.adherence.bpVsAdherence")}
-            aria-describedby="bp-adherence-table"
-          >
-            <div className="grid h-[166px] grid-cols-[32px_minmax(0,1fr)_40px] gap-2">
-              <div className="flex flex-col justify-between text-right text-caption text-fg-muted">
-                {[160, 140, 120, 100, 80].map((label) => (
-                  <span key={label}>{label}</span>
-                ))}
-              </div>
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 flex flex-col justify-between py-1.5">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <span
-                      key={index}
-                      className="border-t border-dashed border-line"
-                    />
-                  ))}
-                </div>
-                <div className="absolute inset-0 flex justify-between px-px">
-                  {Array.from({ length: 7 }).map((_, index) => (
-                    <span
-                      key={index}
-                      className="border-l border-dashed border-line"
-                    />
-                  ))}
-                </div>
-                <svg
-                  className="absolute inset-0 h-full w-full"
-                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
+              <ChartLegend
+                className="w-[140px]"
+                items={[
+                  {
+                    label: t("medicationsLog.adherence.taken"),
+                    tone: "success",
+                    value: `${share(overall.taken)}%`,
+                  },
+                  {
+                    label: t("medicationsLog.adherence.late"),
+                    tone: "warning",
+                    value: `${share(overall.late)}%`,
+                  },
+                  {
+                    label: t("medicationsLog.adherence.missed"),
+                    tone: "danger",
+                    value: `${share(overall.missed)}%`,
+                  },
+                ]}
+              />
+            </div>
+          </Card>
+
+          <Card as="article" tone="flat" padding="small">
+            <h3 className="text-heading-5 text-fg">
+              {t("medicationsLog.adherence.missedTitle")}
+            </h3>
+            <p className="mt-stack-sm text-body-sm text-fg-muted">
+              {t("medicationsLog.adherence.totalMissed")}{" "}
+              <span className="text-label-md text-danger">
+                {overall.missed}
+              </span>
+            </p>
+
+            <BarChart
+              bars={week.map((day) => ({
+                label: rules.formatDayLabel(day.date, isEs),
+                value: day.summary.missed,
+              }))}
+              label={t("medicationsLog.adherence.missedTitle")}
+              yMax={Math.max(2, dosesPerDay)}
+              yTicks={4}
+              height={137}
+              className="mt-stack-xl"
+            />
+          </Card>
+
+          {/* The red / yellow / green Joni described. One square a day, and
+              a day nobody logged stays blank instead of counting as a
+              failure. */}
+          <Card as="article" tone="flat" padding="small">
+            <h3 className="text-heading-5 text-fg">
+              {isEs ? "Últimos 7 días" : "Last 7 days"}
+            </h3>
+            <p className="mt-stack-sm text-body-sm text-fg-muted">
+              {isEs
+                ? "Verde 90% o más, amarillo 70-89%, rojo por debajo."
+                : "Green is 90% or more, yellow 70-89%, red below that."}
+            </p>
+
+            <ul className="mt-stack-lg space-y-stack-xs">
+              {week.map((day) => (
+                <li
+                  key={day.date}
+                  className="flex items-center gap-inline-md text-body-sm"
                 >
-                  <polyline
-                    points={bpLine}
-                    fill="none"
-                    stroke="var(--color-accent-600)"
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <polyline
-                    points={adherenceLine}
-                    fill="none"
-                    stroke="var(--color-brand-600)"
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  {bpPoints.map((point, index) => (
-                    <React.Fragment key={point.day}>
-                      <circle
-                        cx={xFor(index)}
-                        cy={bpY(point.bp)}
-                        r="4"
-                        fill="var(--color-surface)"
-                        stroke="var(--color-accent-600)"
-                        strokeWidth="2"
-                      />
-                      <circle
-                        cx={xFor(index)}
-                        cy={adherenceY(point.adherence)}
-                        r="4"
-                        fill="var(--color-surface)"
-                        stroke="var(--color-brand-600)"
-                        strokeWidth="2"
-                      />
-                    </React.Fragment>
-                  ))}
-                </svg>
-              </div>
-              <div className="flex flex-col justify-between text-caption text-fg-muted">
-                {["100%", "75%", "50%", "25%", "0%"].map((label) => (
-                  <span key={label}>{label}</span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-stack-sm grid grid-cols-[32px_minmax(0,1fr)_40px] gap-inline-md">
-              <span />
-              <div className="flex justify-between text-caption text-fg-secondary">
-                {bpPoints.map((point) => (
-                  <span key={point.day} className="w-[30px] text-center">
-                    {point.day}
+                  <span className="w-16 shrink-0 text-fg-muted">
+                    {rules.formatDayLabel(day.date, isEs)}
                   </span>
-                ))}
-              </div>
-              <span />
-            </div>
-          </div>
-
-          <table id="bp-adherence-table" className="sr-only">
-            <caption>{t("medicationsLog.adherence.bpVsAdherence")}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{language === "ES" ? "Día" : "Day"}</th>
-                <th scope="col">{t("medicationsLog.adherence.bp")}</th>
-                <th scope="col">
-                  {t("medicationsLog.adherence.adherencePercent")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {bpPoints.map((point) => (
-                <tr key={point.day}>
-                  <th scope="row">{point.day}</th>
-                  <td>{point.bp} mmHg</td>
-                  <td>{point.adherence}%</td>
-                </tr>
+                  <span
+                    className={`inline-flex h-7 min-w-[64px] items-center justify-center rounded-control-small border px-inset-xs text-label-sm ${bandTone(
+                      day.summary.band,
+                    )}`}
+                  >
+                    {day.summary.percent === null
+                      ? "—"
+                      : `${day.summary.percent}%`}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-fg-muted">
+                    {bandLabel(day.summary.band)}
+                  </span>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </Card>
-      </div>
+            </ul>
+          </Card>
+        </div>
+      )}
     </Card>
   );
 }
@@ -589,13 +636,27 @@ export function AdherenceChart() {
 export function AlertsAndMood({
   reminders,
   onOpenReminderModal,
+  log,
 }: {
   reminders: MedicationReminder[];
   onOpenReminderModal: (medName?: string) => void;
+  log: MedicationLog;
 }) {
   const { language, t } = useLanguage();
-  const [selectedMood, setSelectedMood] = useState(1);
-  const [notes, setNotes] = useState("");
+  const isEs = language === "ES";
+
+  /* Today's entry, if there is one. The form used to hold its own state and
+     a Save button wired to nothing, so a member could write how they felt,
+     press Save, and lose it on the next render. */
+  const today = rules.todayIso();
+  const saved = log.moodOn(today);
+
+  const [selectedMood, setSelectedMood] = useState(saved?.mood ?? 1);
+  const [notes, setNotes] = useState(saved?.notes ?? "");
+  const [justSaved, setJustSaved] = useState(false);
+
+  const dirty =
+    selectedMood !== (saved?.mood ?? 1) || notes !== (saved?.notes ?? "");
 
   const moods = [
     { label: t("medicationsLog.mood.veryGood") },
@@ -709,88 +770,140 @@ export function AlertsAndMood({
           </div>
 
           <Button
-            {...notBuiltYet("Saving the mood log")}
             className="mt-stack-md w-full"
+            disabled={log.isSavingMood || (!dirty && justSaved)}
+            onClick={() => {
+              log.saveMoodEntry({
+                date: today,
+                mood: selectedMood,
+                notes,
+                savedAt: new Date().toISOString(),
+              });
+              setJustSaved(true);
+            }}
           >
-            {t("medicationsLog.mood.saveLog")}
+            {log.isSavingMood
+              ? isEs
+                ? "Guardando…"
+                : "Saving…"
+              : t("medicationsLog.mood.saveLog")}
           </Button>
+
+          {/* Confirmed rather than assumed: this is a form a member fills in
+              and walks away from. */}
+          {justSaved && !dirty ? (
+            <p className="mt-stack-sm text-center text-body-sm text-success">
+              {isEs ? "Guardado para hoy." : "Saved for today."}
+            </p>
+          ) : null}
         </Card>
       </Card>
     </section>
   );
 }
 
-export function ExportReporting() {
-  const { t } = useLanguage();
+export function ExportReporting({ log }: { log: MedicationLog }) {
+  const { language, t } = useLanguage();
+  const isEs = language === "ES";
 
-  const reports = [
+  const [recipient, setRecipient] = useState("nurse");
+  const [sent, setSent] = useState(false);
+
+  /* Three controls, as asked for on the call: Save, Export with a choice of
+     recipient, and Download / Print. The three product cards that had grown
+     here — PDF, Excel, Share, all wired to nothing — said more about export
+     formats than about what a member wanted to do. */
+  const recipients = [
     {
-      title: t("medicationsLog.export.pdfTitle"),
-      desc: t("medicationsLog.export.pdfDesc"),
-      action: t("medicationsLog.export.downloadPdf"),
-      isShare: false,
+      value: "nurse",
+      labelEn: "Dialysis nurse",
+      labelEs: "Enfermera de diálisis",
     },
-    {
-      title: t("medicationsLog.export.excelTitle"),
-      desc: t("medicationsLog.export.excelDesc"),
-      action: t("medicationsLog.export.downloadExcel"),
-      isShare: false,
-    },
-    {
-      title: t("medicationsLog.export.shareTitle"),
-      desc: t("medicationsLog.export.shareDesc"),
-      action: t("medicationsLog.export.shareReport"),
-      isShare: true,
-    },
+    { value: "nephrologist", labelEn: "Nephrologist", labelEs: "Nefrólogo" },
+    { value: "dietitian", labelEn: "Dietitian", labelEs: "Dietista" },
+    { value: "pharmacy", labelEn: "Pharmacy", labelEs: "Farmacia" },
+    { value: "caregiver", labelEn: "Caregiver", labelEs: "Cuidador" },
   ];
+
+  const recipientLabel =
+    recipients.find((entry) => entry.value === recipient) ?? recipients[0];
 
   return (
     <Card as="section" padding="small">
       <SectionTitle number="6" title={t("medicationsLog.section6")} />
 
-      <div className="mt-stack-md grid grid-cols-1 gap-inset-md lg:grid-cols-3">
-        {reports.map((report) => (
-          <Card
-            key={report.title}
-            as="article"
-            tone="flat"
-            padding="small"
-            className="flex flex-col justify-between"
+      <p className="mt-stack-sm measure text-body-sm text-fg-muted">
+        {isEs
+          ? "Tu registro ya se guarda en este dispositivo cada vez que marcas una dosis."
+          : "Your log already saves to this device each time you mark a dose."}
+      </p>
+
+      <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-end">
+        {/* 1. Save */}
+        <Button
+          variant="neutral"
+          appearance="fill-stroke"
+          onClick={() => log.refetch()}
+        >
+          <Save aria-hidden="true" />
+          {isEs ? "Guardar" : "Save"}
+        </Button>
+
+        {/* 2. Export, with the recipient chosen alongside it rather than
+               hidden behind a second screen. */}
+        <div className="flex flex-1 flex-col gap-inline-md sm:flex-row sm:items-end">
+          <FormField
+            label={isEs ? "Enviar a" : "Send to"}
+            className="flex-1 sm:max-w-[260px]"
           >
-            <div>
-              <div className="flex items-center gap-inline-lg">
-                <span
-                  aria-hidden="true"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand"
-                >
-                  {report.isShare ? (
-                    <UserPlus className="h-icon-big w-icon-big" />
-                  ) : (
-                    <FileText className="h-icon-big w-icon-big" />
-                  )}
-                </span>
-                <h3 className="text-heading-5 text-fg">{report.title}</h3>
-              </div>
-              <div className="mt-stack-lg border-t border-line pt-inset-xs">
-                <p className="text-body-sm text-fg-muted">{report.desc}</p>
-              </div>
-            </div>
-            <Button
-              {...notBuiltYet("Exporting a report")}
-              variant="neutral"
-              appearance="fill-stroke"
-              className="mt-stack-lg w-full"
-            >
-              {report.isShare ? (
-                <Share2 aria-hidden="true" />
-              ) : (
-                <Download aria-hidden="true" />
-              )}
-              {report.action}
-            </Button>
-          </Card>
-        ))}
+            {(props) => (
+              <Select
+                {...props}
+                value={recipient}
+                onChange={(event) => {
+                  setRecipient(event.target.value);
+                  setSent(false);
+                }}
+              >
+                {recipients.map((entry) => (
+                  <option key={entry.value} value={entry.value}>
+                    {isEs ? entry.labelEs : entry.labelEn}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+
+          <Button onClick={() => setSent(true)}>
+            <Share2 aria-hidden="true" />
+            {isEs ? "Exportar" : "Export"}
+          </Button>
+        </div>
+
+        {/* 3. Download / Print — the browser's own print dialog, which is
+               also how a member saves this as a PDF. */}
+        <Button
+          variant="neutral"
+          appearance="fill-stroke"
+          onClick={() => window.print()}
+        >
+          <Printer aria-hidden="true" />
+          {isEs ? "Descargar / Imprimir" : "Download / Print"}
+        </Button>
       </div>
+
+      {/* Said plainly rather than letting a member believe it was sent. */}
+      {sent ? (
+        <Alert
+          tone="info"
+          className="mt-stack-md"
+          onDismiss={() => setSent(false)}
+        >
+          {isEs
+            ? `El envío a ${recipientLabel.labelEs} se conectará cuando el portal del equipo esté activo. Por ahora usa Descargar / Imprimir para compartirlo.`
+            : `Sending to your ${recipientLabel.labelEn.toLowerCase()} connects once the care team portal is live. For now, use Download / Print to share it.`}
+        </Alert>
+      ) : null}
     </Card>
   );
 }

@@ -151,7 +151,7 @@ function categoryLabel(category: string, isEs: boolean): string {
 
 function LibraryGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 6 }).map((_, index) => (
         <Card key={index} className="flex flex-col gap-stack-sm">
           <Skeleton height={160} />
@@ -203,7 +203,7 @@ export default function MyLibraryPage() {
         <h1 className="text-heading-2 text-fg">
           {isEs ? "Mi Biblioteca" : "My Library"}
         </h1>
-        <div className="mt-stack-lg flex flex-col gap-inline-md sm:flex-row sm:items-center">
+        <div className="mt-stack-lg flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
           <Input
             type="search"
             value={filter.search}
@@ -287,7 +287,7 @@ export default function MyLibraryPage() {
           />
         }
       >
-        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((resource) => (
             <ResourceCard
               key={resource.id}

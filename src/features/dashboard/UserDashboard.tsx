@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Calendar, Users, Video, Play, Clock } from "lucide-react";
+import { Calendar, Users, Video, Play, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
@@ -11,6 +11,7 @@ import {
   Badge,
   Button,
   Card,
+  Modal,
   Progress,
   Skeleton,
 } from "@/components/ui";
@@ -22,10 +23,36 @@ import {
   useTestimonials,
   type Testimonial,
 } from "@/features/testimonials/useTestimonials";
+import { isRevisable } from "@/features/testimonials/testimonials.rules";
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
 import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
 
 const asset = (name: string) => `/images/user-dashboard/${name}`;
+
+/** Every section on this page announces itself the same way. */
+function SectionHeading({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h2 className="text-heading-4 text-fg">{title}</h2>
+        {subtitle ? (
+          <p className="mt-stack-xs measure text-body-sm text-fg-muted">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
 
 function Icon({ src, className }: { src: string; className?: string }) {
   return (
@@ -122,6 +149,7 @@ export default function UserDashboard() {
     isPending: testimonialsPending,
     error: testimonialsError,
     refetch: refetchTestimonials,
+    remove: removeTestimonial,
   } = useTestimonials();
 
   const approvedTestimonials = useMemo(
@@ -132,9 +160,11 @@ export default function UserDashboard() {
     () => testimonialsByAuthor(testimonials, user?.email || ""),
     [testimonials, user?.email],
   );
-  const pendingCount = userSubmissions.filter(
-    (t) => t.status === "pending",
-  ).length;
+  /* The submission being revised, or null when the modal is taking a new
+     one. Keyed on the modal below so reopening starts from that story. */
+  const [editingStory, setEditingStory] = useState<Testimonial | null>(null);
+  const [pendingDeleteStory, setPendingDeleteStory] =
+    useState<Testimonial | null>(null);
 
   const getQuickActionLabel = (action: (typeof quickActions)[0]) => {
     switch (action.href) {
@@ -168,16 +198,18 @@ export default function UserDashboard() {
   };
 
   return (
-    <div className="space-y-stack-lg">
+    <div className="space-y-stack-2xl">
       <h1 className="text-heading-1 text-fg">
         {greeting}, {firstName}
       </h1>
 
-      <section>
-        <h2 className="mb-stack-md text-heading-5 text-fg-secondary">
-          {dh?.quickActionTitle ||
-            (language === "ES" ? "Acción Rápida" : "Quick Action")}
-        </h2>
+      <section className="space-y-stack-md">
+        <SectionHeading
+          title={
+            dh?.quickActionTitle ||
+            (language === "ES" ? "Acción Rápida" : "Quick Action")
+          }
+        />
         <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
           {quickActions.map((action) => {
             const label = getQuickActionLabel(action);
@@ -201,7 +233,7 @@ export default function UserDashboard() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-inset-lg xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
         <Card as="article" padding="small">
           <div className="flex items-center gap-inline-md py-inset-xs">
             <p className="flex-1 text-body-md text-fg">
@@ -241,7 +273,7 @@ export default function UserDashboard() {
           </Card>
         </Card>
 
-        <div className="grid grid-cols-1 gap-inset-lg sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
           {stats.map((stat) => (
             <Card
               as="article"
@@ -269,7 +301,7 @@ export default function UserDashboard() {
       <Card
         as="section"
         padding="none"
-        className="relative overflow-hidden p-inset-lg transition-all duration-150 hover:shadow-raised sm:p-inset-xl"
+        className="relative overflow-hidden p-inset-lg transition-shadow duration-150 ease-standard hover:shadow-raised"
       >
         {/* Subtle accent indicator bar on the left edge */}
         <div
@@ -283,7 +315,7 @@ export default function UserDashboard() {
           className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-brand-50/70 blur-3xl"
         />
 
-        <div className="relative flex flex-col gap-inset-lg sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-inset-md sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-inline-lg sm:items-center">
             {/* Visual Icon Container */}
             <span
@@ -295,8 +327,8 @@ export default function UserDashboard() {
 
             {/* Content Details */}
             <div className="min-w-0 flex-1 space-y-stack-xs">
-              <div className="flex items-center gap-2">
-                <Badge tone="danger" variant="soft" className="gap-2">
+              <div className="flex items-center gap-inline-md">
+                <Badge tone="danger" variant="soft" className="gap-inline-sm">
                   <span className="relative flex size-2 items-center justify-center">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger-500 opacity-75" />
                     <span className="relative inline-flex size-2 rounded-full bg-danger-600 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
@@ -309,13 +341,13 @@ export default function UserDashboard() {
                 {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
               </h3>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 text-body-sm text-fg-muted">
-                <span className="flex items-center gap-1.5 font-medium text-fg-secondary">
+              <div className="flex flex-wrap items-center gap-inline-lg text-body-sm text-fg-muted">
+                <span className="flex items-center gap-inline-sm text-fg-secondary">
                   <Calendar className="size-4 shrink-0 text-brand-600" />
                   {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
                 </span>
                 <span className="hidden text-line sm:inline">•</span>
-                <span className="flex items-center gap-1.5 text-fg-muted">
+                <span className="flex items-center gap-inline-sm text-fg-muted">
                   <Users className="size-4 shrink-0 text-fg-muted" />
                   {language === "ES"
                     ? "Sesión interactiva en vivo"
@@ -326,7 +358,7 @@ export default function UserDashboard() {
           </div>
 
           {/* Action Button */}
-          <div className="shrink-0 pt-2 sm:pt-0">
+          <div className="shrink-0">
             <Button
               size="big"
               leadingIcon={<Video className="size-5" />}
@@ -340,34 +372,14 @@ export default function UserDashboard() {
       </Card>
 
       {/* From Fear to Hope Testimonials Section */}
-      <section className="space-y-stack-lg">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-heading-4 text-fg">
-                {language === "ES"
-                  ? "Testimonios: Del Miedo a la Esperanza"
-                  : "From Fear to Hope Testimonials"}
-              </h2>
-              <Badge tone="accent" variant="soft">
-                {language === "ES" ? "Historias en Video" : "Video Stories"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-body-sm text-fg-muted">
-              {language === "ES"
-                ? "No estás solo — Testimonios reales en video de miembros que navegan su viaje de diálisis."
-                : "You're Not Alone — Real video journeys and personal stories from fellow kidney warriors."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {pendingCount > 0 && (
-              <span className="bg-warning-soft text-warning-fg hidden items-center gap-1 rounded-control border border-warning-line px-2.5 py-1 text-xs font-medium sm:inline-flex">
-                <Clock className="size-3" />
-                {pendingCount}{" "}
-                {language === "ES" ? "en revisión" : "under admin review"}
-              </span>
-            )}
+      <section className="space-y-stack-md">
+        <SectionHeading
+          title={
+            language === "ES"
+              ? "Testimonios: Del Miedo a la Esperanza"
+              : "From Fear to Hope Testimonials"
+          }
+          action={
             <Button
               variant="primary"
               appearance="fill-stroke"
@@ -378,8 +390,97 @@ export default function UserDashboard() {
                 ? "Compartir Mi Historia"
                 : "Share Your Video Story"}
             </Button>
-          </div>
-        </div>
+          }
+        />
+
+        {/* A member's own submissions, so they can see where each one got
+            to and change anything still waiting on review. Nothing here is
+            public until an admin approves it. */}
+        {userSubmissions.length > 0 ? (
+          <Card padding="small" className="space-y-stack-sm">
+            <h3 className="text-heading-5 text-fg">
+              {language === "ES" ? "Tus historias" : "Your stories"}
+            </h3>
+            <ul className="space-y-stack-xs">
+              {userSubmissions.map((story) => (
+                <li
+                  key={story.id}
+                  className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-line bg-surface p-inset-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="text-label-md text-fg">{story.title}</p>
+                    {story.adminFeedback ? (
+                      <p className="mt-stack-xs text-body-sm text-fg-muted">
+                        {story.adminFeedback}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-inline-md">
+                    <Badge
+                      tone={
+                        story.status === "approved"
+                          ? "success"
+                          : story.status === "declined"
+                            ? "danger"
+                            : "warning"
+                      }
+                    >
+                      {story.status === "approved"
+                        ? language === "ES"
+                          ? "Publicada"
+                          : "Published"
+                        : story.status === "declined"
+                          ? language === "ES"
+                            ? "No aprobada"
+                            : "Not approved"
+                          : language === "ES"
+                            ? "En revisión"
+                            : "Under review"}
+                    </Badge>
+
+                    {/* Editable only while it waits: changing a published
+                        story would republish it without review. */}
+                    {isRevisable(story) ? (
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() => {
+                          setEditingStory(story);
+                          setIsSubmitModalOpen(true);
+                        }}
+                      >
+                        <Pencil
+                          aria-hidden="true"
+                          className="size-4 shrink-0"
+                        />
+                        {language === "ES" ? "Editar" : "Edit"}
+                      </Button>
+                    ) : null}
+
+                    {/* A member can withdraw their own story at any point,
+                        including after it is published — it is their face on
+                        a public page. */}
+                    <Button
+                      size="small"
+                      variant="danger"
+                      appearance="stroke"
+                      onClick={() => setPendingDeleteStory(story)}
+                      aria-label={
+                        language === "ES"
+                          ? `Eliminar ${story.title}`
+                          : `Delete ${story.title}`
+                      }
+                    >
+                      <Trash2 aria-hidden="true" className="size-4 shrink-0" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         {/* Video Cards Grid */}
         <AsyncSection
@@ -392,14 +493,14 @@ export default function UserDashboard() {
               : "The testimonials did not load"
           }
           skeleton={
-            <div className="grid grid-cols-1 gap-inset-lg md:grid-cols-3">
-              <Skeleton height={200} />
-              <Skeleton height={200} />
-              <Skeleton height={200} />
+            <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} height={200} />
+              ))}
             </div>
           }
         >
-          <div className="grid grid-cols-1 gap-inset-lg md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {approvedTestimonials.map((item) => (
               <Card
                 as="article"
@@ -436,8 +537,8 @@ export default function UserDashboard() {
                   )}
                 </div>
 
-                <div className="space-y-1 p-inset-sm">
-                  <div className="flex items-center justify-between pt-1 text-caption text-fg-muted">
+                <div className="space-y-stack-xs p-inset-sm">
+                  <div className="flex items-center justify-between text-caption text-fg-muted">
                     <span className="font-semibold text-fg">
                       {item.memberName}
                     </span>
@@ -465,11 +566,56 @@ export default function UserDashboard() {
         onClose={() => setSelectedVideo(null)}
       />
 
+      {/* Withdrawing a story cannot be undone, so it asks. */}
+      {pendingDeleteStory ? (
+        <Modal
+          open
+          size="small"
+          closeOnBackdrop={false}
+          onClose={() => setPendingDeleteStory(null)}
+          title={
+            language === "ES" ? "¿Eliminar tu historia?" : "Delete your story?"
+          }
+          description={
+            language === "ES"
+              ? `"${pendingDeleteStory.title}" se eliminará. Si ya estaba publicada, dejará de aparecer para los demás.`
+              : `"${pendingDeleteStory.title}" will be removed. If it was published, it stops showing for everyone else.`
+          }
+          footer={
+            <>
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setPendingDeleteStory(null)}
+              >
+                {language === "ES" ? "Conservar" : "Keep it"}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  void removeTestimonial(pendingDeleteStory.id);
+                  setPendingDeleteStory(null);
+                }}
+              >
+                {language === "ES" ? "Eliminar" : "Delete"}
+              </Button>
+            </>
+          }
+        />
+      ) : null}
+
       {/* Submit Testimonial Modal */}
       <SubmitTestimonialModal
+        /* Keyed on the story: opening it for another one starts from that
+           story's text without an effect syncing the fields. */
+        key={editingStory ? `story-${editingStory.id}` : "story-new"}
         open={isSubmitModalOpen}
-        onClose={() => setIsSubmitModalOpen(false)}
+        onClose={() => {
+          setIsSubmitModalOpen(false);
+          setEditingStory(null);
+        }}
         user={user}
+        editing={editingStory}
         onSubmitted={refetchTestimonials}
       />
 

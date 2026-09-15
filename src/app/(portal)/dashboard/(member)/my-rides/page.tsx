@@ -6,7 +6,6 @@ import {
   Alert,
   AsyncSection,
   Button,
-  buttonStyles,
   Card,
   EmptyState,
   FormField,
@@ -55,6 +54,23 @@ const EMPTY_FORM: FormState = {
   note: "",
   isPrimary: false,
 };
+
+/* Uber and Lyft are the only two controls in the app that carry someone
+   else's brand colour, and a member scanning for them looks for the colour
+   before the word.
+
+   buttonStyles() deliberately offers only primary / neutral / danger /
+   accent, and there is no tailwind-merge here to resolve a caller's
+   `bg-black` against a variant's `bg-neutral-solid` — so these two are
+   composed from the same geometry plus their own fill, the way the
+   Before-the-ER urgency rungs are. */
+const RIDE_APP_SHAPE =
+  "inline-flex w-full items-center justify-center gap-inline-md " +
+  "h-control-big px-control-x-big rounded-control text-button-lg " +
+  "whitespace-nowrap cursor-pointer select-none shadow-control " +
+  "transition-colors duration-150 ease-standard " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
+  "[&_svg]:h-icon-small [&_svg]:w-icon-small";
 
 export default function MyRidesPage() {
   const { t } = useLanguage();
@@ -222,11 +238,7 @@ export default function MyRidesPage() {
                 href="https://m.uber.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonStyles({
-                  variant: "neutral",
-                  appearance: "fill-stroke",
-                  fullWidth: true,
-                })}
+                className={`${RIDE_APP_SHAPE} bg-black text-white hover:bg-neutral-800`}
               >
                 <Car />
                 <span>{t("myRides.openUber")}</span>
@@ -236,11 +248,7 @@ export default function MyRidesPage() {
                 href="https://www.lyft.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonStyles({
-                  variant: "neutral",
-                  appearance: "fill-stroke",
-                  fullWidth: true,
-                })}
+                className={`${RIDE_APP_SHAPE} bg-[#EA0B8C] text-white hover:bg-[#c50a77]`}
               >
                 <Car />
                 <span>{t("myRides.openLyft")}</span>

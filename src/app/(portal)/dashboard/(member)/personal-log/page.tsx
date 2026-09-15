@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Activity,
+  CalendarCheck,
   Apple,
   FileText,
   HeartPulse,
@@ -89,6 +90,13 @@ const tileConfigs: LogTileConfig[] = [
     iconClass: "text-brand-700",
     iconBg: "bg-brand-100",
     href: "/dashboard/personal-log/dialysis-treatment",
+  },
+  {
+    key: "betweenTreatment",
+    icon: CalendarCheck,
+    iconClass: "text-accent-700",
+    iconBg: "bg-accent-100",
+    href: "/dashboard/beyond-the-chair",
   },
   {
     key: "dialysisJournal",

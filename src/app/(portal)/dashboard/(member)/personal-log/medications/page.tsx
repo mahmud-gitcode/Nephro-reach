@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { reminderFor, useReminders } from "@/features/medications/useReminders";
+import { useMedicationLog } from "@/features/medications/useMedicationLog";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { AsyncSection, Skeleton } from "@/components/ui";
+import { Alert, AsyncSection, Skeleton } from "@/components/ui";
 import {
   AdherenceChart,
   AlertsAndMood,
@@ -20,6 +21,11 @@ export default function MedicationLogPage() {
 
   const { reminders, isPending, error, refetch, setTime, remove } =
     useReminders();
+
+  /* One log for the whole page. The dose statuses tapped in section 2 are
+     what section 3 counts, so they have to come from one cache or the
+     adherence figure lags the taps that produced it. */
+  const log = useMedicationLog();
 
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [selectedMedForReminder, setSelectedMedForReminder] = useState<
@@ -51,10 +57,22 @@ export default function MedicationLogPage() {
       {/* One read feeds four sections, so the four states are decided once
           here rather than four times below. A reminder list that renders
           empty because the read failed reads as "no medications to take". */}
+      {/* A dose the member marked and that did not save is worth saying
+          out loud — they believe they have recorded taking it. */}
+      {log.saveError ? (
+        <Alert tone="danger">
+          {t("medicationsLog.saveFailed") ||
+            "That change did not save. Your log is unchanged — please try again."}
+        </Alert>
+      ) : null}
+
       <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
+        pending={isPending || log.isPending}
+        error={error ?? log.error}
+        onRetry={() => {
+          refetch();
+          log.refetch();
+        }}
         errorTitle={t("medicationsLog.title")}
         errorMessage="Your reminders could not be read from this device. Nothing has been changed."
         skeleton={
@@ -68,16 +86,18 @@ export default function MedicationLogPage() {
           <MedicationMasterList
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
+            log={log}
           />
-          <DoseSchedule reminders={reminders} />
-          <AdherenceChart />
+          <DoseSchedule reminders={reminders} log={log} />
+          <AdherenceChart log={log} />
           <AlertsAndMood
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
+            log={log}
           />
         </div>
       </AsyncSection>
-      <ExportReporting />
+      <ExportReporting log={log} />
       {/* Keyed on the medication, so opening it for another one starts from
           that medication's stored time without an effect syncing it. */}
       <SimpleTimeReminderModal

@@ -148,7 +148,7 @@ function PostBody({ resource }: { resource: LibraryResource }) {
   return (
     <>
       {body.map((paragraph, index) => (
-        <p key={index} className="measure text-body-md text-fg-secondary">
+        <p key={index} className="text-body-md text-fg-secondary">
           {paragraph}
         </p>
       ))}
@@ -219,7 +219,10 @@ export default function LibraryResourcePage() {
     : [];
 
   return (
-    <div className="space-y-stack-xl">
+    /* A reading column, centred. Full bleed suits a dashboard of tiles, but
+       a post is prose, and prose past ~800px is hard to track from the end
+       of one line to the start of the next. */
+    <div className="mx-auto w-full max-w-[800px] space-y-stack-xl">
       <Link
         href="/dashboard/my-library"
         className={buttonStyles({
@@ -308,7 +311,7 @@ export default function LibraryResourcePage() {
                 </Button>
               </div>
 
-              <p className="measure text-body-md text-fg-muted">
+              <p className="text-body-md text-fg-muted">
                 {isEs ? resource.summaryEs : resource.summaryEn}
               </p>
 

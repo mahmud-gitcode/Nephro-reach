@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTestimonials, saveTestimonials } from "./testimonials.repository";
 import {
   applyTestimonialStatus,
+  reviseTestimonial,
   buildTestimonial,
   withoutTestimonial,
   type TestimonialDraft,
@@ -53,6 +54,10 @@ export function useTestimonials() {
       write.mutateAsync((current) =>
         applyTestimonialStatus(current, id, status, adminFeedback),
       ),
+    revise: (
+      id: string,
+      draft: Pick<TestimonialDraft, "title" | "role" | "videoUrl" | "summary">,
+    ) => write.mutateAsync((current) => reviseTestimonial(current, id, draft)),
     remove: (id: string) =>
       write.mutateAsync((current) => withoutTestimonial(current, id)),
 
