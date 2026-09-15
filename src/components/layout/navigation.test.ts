@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getBreadcrumbTrail, isActiveRoute, sidebarItems } from "./navigation";
+import {
+  getBreadcrumbTrail,
+  isActiveRoute,
+  sidebarItems,
+  supportItems,
+} from "./navigation";
+import { canAccessPath } from "@/features/auth/auth";
 
 /* Which nav item is lit is how a member knows where they are. It had never
  * been tested, and it has three special cases, which is exactly the number
@@ -109,5 +115,38 @@ describe("getBreadcrumbTrail", () => {
 
   it("gives a top-level page a two-step trail", () => {
     expect(getBreadcrumbTrail("/dashboard/my-rides")).toHaveLength(2);
+  });
+});
+
+describe("every nav destination is reachable by the role it is shown to", () => {
+  /* The sidebar and the route guard keep two separate lists of what is an
+   * admin page: `sidebarItems` here, and ADMIN_PREFIXES in auth.ts. Adding a
+   * page to one and not the other links an admin to a page the guard then
+   * refuses — which is how Library Management shipped invisible. This walks
+   * both lists against each other so the next one fails here instead. */
+  const linkable = [...sidebarItems, ...supportItems].filter(
+    (item) => item.href !== "#",
+  );
+
+  it.each(linkable.filter((item) => item.roles.includes("admin")))(
+    "an admin can open $label",
+    (item) => {
+      expect(canAccessPath("admin", item.href)).toBe(true);
+    },
+  );
+
+  it.each(linkable.filter((item) => item.roles.includes("user")))(
+    "a member can open $label",
+    (item) => {
+      expect(canAccessPath("user", item.href)).toBe(true);
+    },
+  );
+
+  it.each(
+    linkable.filter(
+      (item) => item.roles.includes("admin") && !item.roles.includes("user"),
+    ),
+  )("a member cannot open $label", (item) => {
+    expect(canAccessPath("user", item.href)).toBe(false);
   });
 });

@@ -93,6 +93,12 @@ export const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
+    label: "Library Management",
+    href: "/dashboard/manage-library",
+    icon: Library,
+    roles: ["admin"],
+  },
+  {
     label: "My Classroom",
     href: "/dashboard/my-classroom",
     icon: BookOpen,
@@ -249,6 +255,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Registro Personal" : "Personal Log";
   if (pathname.startsWith("/dashboard/members"))
     return language === "ES" ? "Miembros" : "Member";
+  if (pathname.startsWith("/dashboard/manage-library"))
+    return language === "ES" ? "Gestión de Biblioteca" : "Library Management";
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Class Management";
   if (pathname.startsWith("/dashboard/my-library/")) {
@@ -309,6 +317,7 @@ export function getNavLabel(
     "/dashboard/team-questions": "Preguntas al Equipo",
     "/dashboard/members": "Miembros",
     "/dashboard/manage-curriculum": "Gestión de Clases",
+    "/dashboard/manage-library": "Gestión de Biblioteca",
     "/dashboard/my-classroom": "Mi Salón de Clases",
     "/dashboard/my-library": "Mi Biblioteca",
     "/dashboard/live-class": "Clases en Vivo",

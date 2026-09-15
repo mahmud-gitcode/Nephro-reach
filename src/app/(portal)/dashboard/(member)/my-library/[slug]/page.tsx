@@ -113,10 +113,6 @@ function DocumentStage({ resource }: { resource: LibraryResource }) {
 }
 
 function ArticleStage({ resource }: { resource: LibraryResource }) {
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-  const body = (isEs ? resource.bodyEs : resource.bodyEn) ?? [];
-
   return (
     <Card as="article" className="space-y-stack-md">
       <div className="relative aspect-[1024/320] w-full overflow-hidden rounded-card bg-surface-sunken">
@@ -128,12 +124,35 @@ function ArticleStage({ resource }: { resource: LibraryResource }) {
           sizes="(min-width: 1024px) 66vw, 100vw"
         />
       </div>
+      <PostBody resource={resource} />
+    </Card>
+  );
+}
+
+/**
+ * The rest of what was written, under whatever was attached.
+ *
+ * These are posts: someone writing three paragraphs above a video expects
+ * all three to appear. Rendering the body only for written posts would drop
+ * everything past the first paragraph of every video and handout.
+ */
+function PostBody({ resource }: { resource: LibraryResource }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  /* Falls back to English: a post without a Spanish version should still be
+     readable, not blank. */
+  const body =
+    (isEs ? resource.bodyEs : resource.bodyEn) ?? resource.bodyEn ?? [];
+  if (body.length === 0) return null;
+
+  return (
+    <>
       {body.map((paragraph, index) => (
         <p key={index} className="measure text-body-md text-fg-secondary">
           {paragraph}
         </p>
       ))}
-    </Card>
+    </>
   );
 }
 
@@ -303,9 +322,19 @@ export default function LibraryResourcePage() {
             </header>
 
             {resource.kind === "video" ? (
-              <VideoStage resource={resource} />
+              <>
+                <VideoStage resource={resource} />
+                <div className="space-y-stack-md">
+                  <PostBody resource={resource} />
+                </div>
+              </>
             ) : resource.kind === "document" ? (
-              <DocumentStage resource={resource} />
+              <>
+                <DocumentStage resource={resource} />
+                <div className="space-y-stack-md">
+                  <PostBody resource={resource} />
+                </div>
+              </>
             ) : (
               <ArticleStage resource={resource} />
             )}

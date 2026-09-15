@@ -16,6 +16,7 @@ export type LibraryKind = "video" | "document" | "article";
 
 /** Topic buckets the filter row is built from. */
 export type LibraryCategory =
+  | "general"
   | "dialysis-basics"
   | "nutrition"
   | "labs"
@@ -52,6 +53,12 @@ export interface LibraryResource {
   readMinutes?: number;
   /** ISO date the resource was published. Newest sorts first. */
   publishedAt: string;
+  /**
+   * Draft resources are visible to admins only. An admin uploading a video
+   * on Monday for a Friday announcement should not have it appear on every
+   * member shelf the moment the file finishes reading.
+   */
+  published: boolean;
 }
 
 /** Slugs the member has saved, newest first. */

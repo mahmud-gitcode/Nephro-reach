@@ -203,13 +203,7 @@ export default function MyLibraryPage() {
         <h1 className="text-heading-2 text-fg">
           {isEs ? "Mi Biblioteca" : "My Library"}
         </h1>
-        <p className="mt-stack-sm measure text-body-md text-fg-muted">
-          {isEs
-            ? "Videos cortos, hojas para imprimir y artículos breves que puedes consultar cuando surja una duda. Para el curso completo de 21 días, ve a Mi Salón de Clases."
-            : "Short videos, printable handouts and quick reads to look up whenever a question comes up. For the full 21-day course, head to My Classroom."}
-        </p>
-
-        <div className="mt-stack-lg flex flex-col gap-stack-md">
+        <div className="mt-stack-lg flex flex-col gap-inline-md sm:flex-row sm:items-center">
           <Input
             type="search"
             value={filter.search}
@@ -224,9 +218,11 @@ export default function MyLibraryPage() {
             }
             aria-label={isEs ? "Buscar en la biblioteca" : "Search the library"}
             leadingIcon={<Search aria-hidden="true" className="h-4 w-4" />}
-            className="max-w-md"
+            className="sm:w-[280px]"
           />
 
+          {/* Beside the search rather than under it: one row of controls, and
+              on a phone they stack without either one shrinking. */}
           <ChipGroup
             label={isEs ? "Tipo de recurso" : "Resource type"}
             selection="single"
@@ -254,28 +250,6 @@ export default function MyLibraryPage() {
             >
               {isEs ? "Guardados" : "Saved"}
             </Chip>
-          </ChipGroup>
-
-          <ChipGroup label={isEs ? "Tema" : "Topic"} selection="single">
-            <Chip
-              selected={filter.category === "all"}
-              onClick={() =>
-                setFilter((current) => ({ ...current, category: "all" }))
-              }
-            >
-              {isEs ? "Todos los temas" : "All topics"}
-            </Chip>
-            {LIBRARY_CATEGORIES.map((entry) => (
-              <Chip
-                key={entry.key}
-                selected={filter.category === entry.key}
-                onClick={() =>
-                  setFilter((current) => ({ ...current, category: entry.key }))
-                }
-              >
-                {isEs ? entry.labelEs : entry.labelEn}
-              </Chip>
-            ))}
           </ChipGroup>
         </div>
       </Card>
@@ -307,8 +281,8 @@ export default function MyLibraryPage() {
             }
             description={
               isEs
-                ? "Prueba con otro tema o borra los filtros para ver toda la biblioteca."
-                : "Try another topic, or clear the filters to see the whole library."
+                ? "Prueba con otra palabra o borra los filtros para ver toda la biblioteca."
+                : "Try another word, or clear the filters to see the whole library."
             }
           />
         }

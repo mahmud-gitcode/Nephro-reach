@@ -190,7 +190,7 @@ export default function ManageCurriculumPage() {
         <SummaryCard
           label="Courses"
           value={totals.courses}
-          detail="Published to the My Classroom"
+          detail="Published to My Classroom"
           icon={GraduationCap}
           tone="bg-brand-100"
           iconTone="text-fg-brand"

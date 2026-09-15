@@ -15,6 +15,7 @@ export const USER_HOME = "/dashboard";
 const ADMIN_PREFIXES = [
   "/dashboard/members",
   "/dashboard/manage-curriculum",
+  "/dashboard/manage-library",
   "/dashboard/live-class",
   "/dashboard/sms-analytics",
   "/dashboard/subscriptions",

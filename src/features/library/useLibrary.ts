@@ -43,8 +43,11 @@ export function useLibrary() {
 
   /* `?? []` inline would hand out a new array every render and re-run every
      filter that depends on it. */
+  /* Drafts are filtered out here rather than at each call site: this hook is
+     the member's view of the shelf, and an unpublished resource reaching a
+     member screen is the one mistake this feature can actually make. */
   const resources = useMemo(
-    () => resourcesQuery.data ?? [],
+    () => rules.publishedOnly(resourcesQuery.data ?? []),
     [resourcesQuery.data],
   );
   const saved = useMemo(() => savedQuery.data ?? [], [savedQuery.data]);

@@ -17,6 +17,7 @@ export const LIBRARY_CATEGORIES: {
   labelEn: string;
   labelEs: string;
 }[] = [
+  { key: "general", labelEn: "General", labelEs: "General" },
   {
     key: "dialysis-basics",
     labelEn: "Dialysis Basics",
@@ -49,6 +50,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     poster: POSTER,
     videoSrc: "/videos/library-treatment-walkthrough.mp4",
     durationSeconds: 95,
+    published: true,
     publishedAt: "2026-08-04",
   },
   {
@@ -65,6 +67,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     poster: POSTER,
     videoSrc: "/videos/library-dry-weight.mp4",
     durationSeconds: 128,
+    published: true,
     publishedAt: "2026-07-22",
   },
   {
@@ -81,6 +84,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     poster: POSTER,
     videoSrc: "/videos/library-potassium.mp4",
     durationSeconds: 112,
+    published: true,
     publishedAt: "2026-07-09",
   },
   {
@@ -98,6 +102,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     fileSrc: "/documents/low-potassium-grocery-list.pdf",
     fileMetaEn: "PDF · 1 page",
     fileMetaEs: "PDF · 1 página",
+    published: true,
     publishedAt: "2026-06-30",
   },
   {
@@ -115,6 +120,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     fileSrc: "/documents/fluid-tracking-worksheet.pdf",
     fileMetaEn: "PDF · 2 pages",
     fileMetaEs: "PDF · 2 páginas",
+    published: true,
     publishedAt: "2026-06-18",
   },
   {
@@ -144,6 +150,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
       "La albúmina es la señal de nutrición y el Kt/V es la de limpieza. Ninguna cambia rápido, así que conviene leerlas como una tendencia de varios meses y no como un veredicto de un solo mes.",
       "Lleva los números que no entiendas a tu equipo de atención y escribe la pregunta antes de la cita: la página de Preguntas al Equipo existe justo para eso.",
     ],
+    published: true,
     publishedAt: "2026-06-02",
   },
   {
@@ -160,6 +167,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     poster: POSTER,
     videoSrc: "/videos/library-fistula-care.mp4",
     durationSeconds: 104,
+    published: true,
     publishedAt: "2026-05-27",
   },
   {
@@ -177,6 +185,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     fileSrc: "/documents/catheter-site-care.pdf",
     fileMetaEn: "PDF · 2 pages",
     fileMetaEs: "PDF · 2 páginas",
+    published: true,
     publishedAt: "2026-05-12",
   },
   {
@@ -204,6 +213,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
       "Los bocadillos cuentan. Un horario pensado solo para tres comidas pasa por alto la merienda de la noche, que muchas veces lleva tanto fósforo como la cena.",
       "Si olvidas la dosis porque no la tienes cerca a la hora de comer, es un problema logístico con una solución logística: un segundo frasco donde comes. Registra los olvidos en tu registro de medicamentos para que tu equipo vea el patrón.",
     ],
+    published: true,
     publishedAt: "2026-04-28",
   },
   {
@@ -220,6 +230,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     poster: POSTER,
     videoSrc: "/videos/library-warning-signs.mp4",
     durationSeconds: 138,
+    published: true,
     publishedAt: "2026-04-15",
   },
   {
@@ -237,6 +248,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
     fileSrc: "/documents/emergency-contact-card.pdf",
     fileMetaEn: "PDF · 1 page",
     fileMetaEs: "PDF · 1 página",
+    published: true,
     publishedAt: "2026-03-30",
   },
   {
@@ -264,6 +276,7 @@ export const SEED_LIBRARY_RESOURCES: LibraryResource[] = [
       "La hidratación, la comida y el descanso en las horas siguientes ayudan más que forzar el cuerpo. Si el cansancio sigue dos días después, o llega con calambres o mareos, es un cambio que vale la pena registrar y reportar.",
       "Tu registro entre tratamientos es el lugar para anotarlo. Un patrón de varias semanas le dice mucho más a tu equipo que un solo martes malo.",
     ],
+    published: true,
     publishedAt: "2026-03-11",
   },
 ];
