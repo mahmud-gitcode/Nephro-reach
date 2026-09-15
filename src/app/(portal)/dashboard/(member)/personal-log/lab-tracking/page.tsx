@@ -24,517 +24,13 @@ import {
 } from "lucide-react";
 import { Kidneys } from "@/components/icons/Kidneys";
 
-import { Alert, Button } from "@/components/ui";
+import { Alert, Button, Sparkline } from "@/components/ui";
+import { StatusBadge, sparklineTone } from "@/features/labs/StatusBadge";
+import { TrendLineCard } from "@/features/labs/TrendLineCard";
+import { LAB_CATEGORIES } from "@/features/labs/labs.panels.seed";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCustomLabResult } from "@/features/labs/useCustomLabResult";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-
-type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
-type TestResult = {
-  id: string;
-  name: string;
-  latestResult: string;
-  previousResult: string;
-  change: string;
-  changeDirection: "up" | "down";
-  changeColor: "red" | "green" | "orange";
-  refRange: string;
-  status: "In Range" | "High" | "Low";
-  sparkline: number[];
-};
-
-type CategoryGroup = {
-  id: string;
-  name: string;
-  icon: IconType;
-  tests: TestResult[];
-};
-
-const categoriesData: CategoryGroup[] = [
-  {
-    id: "kidney-function",
-    name: "KIDNEY FUNCTION",
-    icon: Kidneys,
-    tests: [
-      {
-        id: "bun",
-        name: "BUN",
-        latestResult: "48 mg/dL",
-        previousResult: "46 mg/dL",
-        change: "2",
-        changeDirection: "up",
-        changeColor: "red",
-        refRange: "7 – 20 mg/dL",
-        status: "High",
-        sparkline: [35, 38, 42, 46, 48],
-      },
-      {
-        id: "creatinine",
-        name: "Creatinine",
-        latestResult: "6.48 mg/dL",
-        previousResult: "6.12 mg/dL",
-        change: "0.36",
-        changeDirection: "up",
-        changeColor: "red",
-        refRange: "0.6 – 1.3 mg/dL",
-        status: "High",
-        sparkline: [5.2, 5.5, 5.8, 6.12, 6.48],
-      },
-      {
-        id: "egfr",
-        name: "eGFR (CKD-EPI)",
-        latestResult: "9 mL/min/1.73m²",
-        previousResult: "10 mL/min/1.73m²",
-        change: "1",
-        changeDirection: "down",
-        changeColor: "red",
-        refRange: "> 90 mL/min/1.73m²",
-        status: "Low",
-        sparkline: [12, 11, 11, 10, 9],
-      },
-    ],
-  },
-  {
-    id: "electrolytes",
-    name: "ELECTROLYTES",
-    icon: FlaskConical,
-    tests: [
-      {
-        id: "sodium",
-        name: "Sodium",
-        latestResult: "138 mEq/L",
-        previousResult: "137 mEq/L",
-        change: "1",
-        changeDirection: "up",
-        changeColor: "green",
-        refRange: "135 – 145 mEq/L",
-        status: "In Range",
-        sparkline: [136, 136, 137, 137, 138],
-      },
-      {
-        id: "potassium",
-        name: "Potassium",
-        latestResult: "5.2 mEq/L",
-        previousResult: "5.0 mEq/L",
-        change: "0.2",
-        changeDirection: "up",
-        changeColor: "orange",
-        refRange: "3.5 – 5.0 mEq/L",
-        status: "High",
-        sparkline: [4.6, 4.8, 4.9, 5.0, 5.2],
-      },
-      {
-        id: "chloride",
-        name: "Chloride",
-        latestResult: "99 mEq/L",
-        previousResult: "101 mEq/L",
-        change: "2",
-        changeDirection: "down",
-        changeColor: "green",
-        refRange: "98 – 107 mEq/L",
-        status: "In Range",
-        sparkline: [102, 101, 100, 101, 99],
-      },
-      {
-        id: "co2",
-        name: "CO2 (Bicarbonate)",
-        latestResult: "22 mEq/L",
-        previousResult: "23 mEq/L",
-        change: "1",
-        changeDirection: "down",
-        changeColor: "green",
-        refRange: "22 – 29 mEq/L",
-        status: "In Range",
-        sparkline: [24, 23, 23, 23, 22],
-      },
-    ],
-  },
-  {
-    id: "mineral-bone",
-    name: "MINERAL & BONE",
-    icon: Bone,
-    tests: [
-      {
-        id: "calcium",
-        name: "Calcium",
-        latestResult: "9.1 mg/dL",
-        previousResult: "9.3 mg/dL",
-        change: "0.2",
-        changeDirection: "down",
-        changeColor: "green",
-        refRange: "8.5 – 10.5 mg/dL",
-        status: "In Range",
-        sparkline: [9.4, 9.3, 9.2, 9.3, 9.1],
-      },
-      {
-        id: "phosphorus",
-        name: "Phosphorus",
-        latestResult: "5.6 mg/dL",
-        previousResult: "5.3 mg/dL",
-        change: "0.3",
-        changeDirection: "up",
-        changeColor: "red",
-        refRange: "2.5 – 4.5 mg/dL",
-        status: "High",
-        sparkline: [4.8, 5.0, 5.1, 5.3, 5.6],
-      },
-      {
-        id: "pth",
-        name: "PTH (Intact)",
-        latestResult: "412 pg/mL",
-        previousResult: "386 pg/mL",
-        change: "26",
-        changeDirection: "up",
-        changeColor: "red",
-        refRange: "15 – 65 pg/mL",
-        status: "High",
-        sparkline: [340, 360, 375, 386, 412],
-      },
-      {
-        id: "vitamind",
-        name: "Vitamin D 25-OH",
-        latestResult: "28 ng/mL",
-        previousResult: "27 ng/mL",
-        change: "1",
-        changeDirection: "up",
-        changeColor: "orange",
-        refRange: "30 – 100 ng/mL",
-        status: "Low",
-        sparkline: [24, 25, 26, 27, 28],
-      },
-    ],
-  },
-  {
-    id: "blood-counts",
-    name: "BLOOD COUNTS",
-    icon: Droplet,
-    tests: [
-      {
-        id: "hemoglobin",
-        name: "Hemoglobin",
-        latestResult: "10.2 g/dL",
-        previousResult: "10.0 g/dL",
-        change: "0.2",
-        changeDirection: "up",
-        changeColor: "orange",
-        refRange: "11.0 – 16.0 g/dL",
-        status: "Low",
-        sparkline: [9.5, 9.7, 9.8, 10.0, 10.2],
-      },
-      {
-        id: "hematocrit",
-        name: "Hematocrit",
-        latestResult: "31 %",
-        previousResult: "30 %",
-        change: "1",
-        changeDirection: "up",
-        changeColor: "orange",
-        refRange: "33 – 47 %",
-        status: "Low",
-        sparkline: [28, 29, 29, 30, 31],
-      },
-      {
-        id: "ferritin",
-        name: "Ferritin",
-        latestResult: "456 ng/mL",
-        previousResult: "438 ng/mL",
-        change: "18",
-        changeDirection: "up",
-        changeColor: "red",
-        refRange: "30 – 400 ng/mL",
-        status: "High",
-        sparkline: [410, 420, 430, 438, 456],
-      },
-      {
-        id: "tsat",
-        name: "Iron Saturation (TSAT)",
-        latestResult: "28 %",
-        previousResult: "26 %",
-        change: "2",
-        changeDirection: "up",
-        changeColor: "green",
-        refRange: "20 – 50 %",
-        status: "In Range",
-        sparkline: [23, 24, 25, 26, 28],
-      },
-    ],
-  },
-  {
-    id: "nutrition",
-    name: "NUTRITION",
-    icon: Apple,
-    tests: [
-      {
-        id: "albumin",
-        name: "Albumin",
-        latestResult: "3.8 g/dL",
-        previousResult: "3.7 g/dL",
-        change: "0.1",
-        changeDirection: "up",
-        changeColor: "green",
-        refRange: "3.5 – 5.0 g/dL",
-        status: "In Range",
-        sparkline: [3.5, 3.6, 3.6, 3.7, 3.8],
-      },
-      {
-        id: "bicarbonate",
-        name: "Bicarbonate",
-        latestResult: "22 mEq/L",
-        previousResult: "23 mEq/L",
-        change: "1",
-        changeDirection: "down",
-        changeColor: "green",
-        refRange: "22 – 29 mEq/L",
-        status: "In Range",
-        sparkline: [24, 23, 23, 23, 22],
-      },
-    ],
-  },
-  {
-    id: "dialysis-adequacy",
-    name: "DIALYSIS ADEQUACY",
-    icon: HeartPulse,
-    tests: [
-      {
-        id: "ktv",
-        name: "Kt/V",
-        latestResult: "1.35",
-        previousResult: "1.30",
-        change: "0.05",
-        changeDirection: "up",
-        changeColor: "green",
-        refRange: "≥ 1.20",
-        status: "In Range",
-        sparkline: [1.22, 1.25, 1.28, 1.3, 1.35],
-      },
-    ],
-  },
-];
-
-function Sparkline({
-  data,
-  status,
-}: {
-  data: number[];
-  status: "In Range" | "High" | "Low";
-}) {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const strokeColor =
-    status === "In Range"
-      ? "var(--color-success-600)"
-      : status === "High"
-        ? "var(--color-danger-600)"
-        : "var(--color-warning-600)";
-
-  const points = data
-    .map((val, idx) => {
-      const x = (idx / (data.length - 1)) * 64 + 4;
-      const y = 20 - ((val - min) / range) * 14;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  const lastIndex = data.length - 1;
-  const lastX = 68;
-  const lastY = 20 - ((data[lastIndex] - min) / range) * 14;
-
-  return (
-    <svg className="h-6 w-20 shrink-0 overflow-visible">
-      <polyline
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points}
-      />
-      <circle cx={lastX} cy={lastY} r="3" fill={strokeColor} />
-    </svg>
-  );
-}
-
-function StatusBadge({
-  status,
-  label,
-}: {
-  status: "In Range" | "High" | "Low";
-  label?: string;
-}) {
-  if (status === "In Range") {
-    return (
-      <span className="inline-flex items-center rounded-md bg-success-100 px-2.5 py-1 text-xs font-semibold text-success">
-        {label || "In Range"}
-      </span>
-    );
-  }
-  if (status === "High") {
-    return (
-      <span className="inline-flex items-center rounded-md bg-danger-100 px-2.5 py-1 text-xs font-semibold text-danger">
-        {label || "High"}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-md bg-warning-100 px-2.5 py-1 text-xs font-semibold text-warning-800">
-      {label || "Low"}
-    </span>
-  );
-}
-
-function TrendLineCard({
-  testName,
-  unit,
-  data,
-  dates,
-  colorTheme = "purple",
-  refRangeLabel,
-  latestLabel,
-}: {
-  testName: string;
-  unit: string;
-  data: number[];
-  dates: string[];
-  colorTheme?: "purple" | "green" | "orange" | "blue" | "rose" | "teal";
-  refRangeLabel?: string;
-  latestLabel?: string;
-}) {
-  /* One lab panel, six series — these say "different test", not "good" or
-     "bad", so they come off the categorical ramp. They used to sit on the
-     status ramps, which put green and teal on success-600 and success-400:
-     two lines a member could barely tell apart, both reading as "healthy". */
-  const themeMap = {
-    purple: { stroke: "var(--color-cat-7)" },
-    green: { stroke: "var(--color-cat-4)" },
-    orange: { stroke: "var(--color-cat-2)" },
-    blue: { stroke: "var(--color-cat-6)" },
-    rose: { stroke: "var(--color-cat-1)" },
-    teal: { stroke: "var(--color-cat-5)" },
-  };
-
-  const theme = themeMap[colorTheme] || themeMap.purple;
-
-  const width = 300;
-  const height = 150;
-  const paddingLeft = 24;
-  const paddingRight = 12;
-  const paddingTop = 14;
-  const paddingBottom = 22;
-
-  const chartW = width - paddingLeft - paddingRight;
-  const chartH = height - paddingTop - paddingBottom;
-
-  const maxValRaw = Math.max(...data);
-  let yMax = 8;
-  if (maxValRaw > 300) yMax = 500;
-  else if (maxValRaw > 100) yMax = 160;
-  else if (maxValRaw > 50) yMax = 60;
-  else if (maxValRaw > 20) yMax = 35;
-  else if (maxValRaw > 8) yMax = 15;
-  else if (maxValRaw <= 2) yMax = 2;
-
-  const yMin = 0;
-  const yRange = yMax - yMin || 1;
-
-  const getX = (idx: number) =>
-    paddingLeft + (idx / (data.length - 1)) * chartW;
-  const getY = (val: number) =>
-    paddingTop + chartH - ((val - yMin) / yRange) * chartH;
-
-  const pointsStr = data
-    .map((val, idx) => `${getX(idx)},${getY(val)}`)
-    .join(" ");
-
-  const latestVal = data[data.length - 1];
-  const lastX = getX(data.length - 1);
-  const lastY = getY(latestVal);
-
-  return (
-    <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-bold text-fg">{testName}</h4>
-          <p className="text-xs text-fg-muted">
-            {refRangeLabel || "Ref Range"}: {unit ? `(${unit})` : ""}
-          </p>
-        </div>
-        <div className="text-right">
-          <span className="text-base font-bold text-fg">
-            {latestVal} {unit}
-          </span>
-          <span className="block text-[11px] font-medium text-fg-subtle">
-            {latestLabel || "Latest"}
-          </span>
-        </div>
-      </div>
-
-      <div className="w-full">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="h-28 w-full overflow-visible"
-        >
-          {[0, 0.5, 1].map((ratio, i) => {
-            const y = paddingTop + chartH * ratio;
-            return (
-              <line
-                key={i}
-                x1={paddingLeft}
-                y1={y}
-                x2={width - paddingRight}
-                y2={y}
-                stroke="var(--color-gray-100)"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-            );
-          })}
-
-          <polyline
-            fill="none"
-            stroke={theme.stroke}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={pointsStr}
-          />
-
-          {data.map((val, idx) => (
-            <circle
-              key={idx}
-              cx={getX(idx)}
-              cy={getY(val)}
-              r="3"
-              fill="white"
-              stroke={theme.stroke}
-              strokeWidth="2"
-            />
-          ))}
-
-          <circle cx={lastX} cy={lastY} r="4.5" fill={theme.stroke} />
-
-          <text
-            x={paddingLeft}
-            y={height - 3}
-            textAnchor="start"
-            className="fill-gray-400 text-xs font-medium"
-          >
-            {dates[0]}
-          </text>
-          <text
-            x={width - paddingRight}
-            y={height - 3}
-            textAnchor="end"
-            className="fill-gray-400 text-xs font-medium"
-          >
-            {dates[dates.length - 1]}
-          </text>
-        </svg>
-      </div>
-    </div>
-  );
-}
 
 export default function MyLabsPage() {
   const { language, dictionary } = useLanguage();
@@ -656,7 +152,7 @@ export default function MyLabsPage() {
     return l?.overview?.statuses?.low || "Low";
   };
 
-  const mergedCategories = categoriesData.map((cat) => ({
+  const mergedCategories = LAB_CATEGORIES.map((cat) => ({
     ...cat,
     displayName: getCategoryName(cat.id, cat.name),
     tests: cat.tests.map((test) => {
@@ -1041,9 +537,20 @@ export default function MyLabsPage() {
                               />
                             </td>
                             <td className="px-4 py-3">
+                              {/* The shared Sparkline, not the local copy
+                                  this file used to carry: that one was a
+                                  bare <svg> a screen reader could not see,
+                                  and it divided by data.length - 1, so a
+                                  single reading produced NaN. */}
                               <Sparkline
-                                data={test.sparkline}
-                                status={test.status}
+                                points={test.sparkline}
+                                tone={sparklineTone(test.status)}
+                                label={`${getTestDisplayName(
+                                  test.id,
+                                  test.name,
+                                )} trend`}
+                                width={80}
+                                height={24}
                               />
                             </td>
                           </tr>
@@ -1139,32 +646,31 @@ export default function MyLabsPage() {
                     detailedTests:
                       customData?.values &&
                       Object.keys(customData.values).length > 0
-                        ? categoriesData
-                            .map((cat) => {
-                              const recordedForCat = cat.tests.filter(
-                                (t) => customData.values?.[t.name],
-                              );
-                              if (recordedForCat.length === 0) return null;
-                              return {
-                                category: getCategoryName(cat.id, cat.name),
-                                tests: recordedForCat.map((t) => {
-                                  const userVal =
-                                    customData.values?.[t.name] || "";
-                                  const unitParts = t.latestResult.split(" ");
-                                  const unit = unitParts.slice(1).join(" ");
-                                  const formattedVal =
-                                    userVal.includes(" ") || !unit
-                                      ? userVal
-                                      : `${userVal} ${unit}`;
-                                  return {
-                                    name: getTestDisplayName(t.id, t.name),
-                                    val: formattedVal,
-                                    ref: t.refRange,
-                                    status: t.status,
-                                  };
-                                }),
-                              };
-                            })
+                        ? LAB_CATEGORIES.map((cat) => {
+                            const recordedForCat = cat.tests.filter(
+                              (t) => customData.values?.[t.name],
+                            );
+                            if (recordedForCat.length === 0) return null;
+                            return {
+                              category: getCategoryName(cat.id, cat.name),
+                              tests: recordedForCat.map((t) => {
+                                const userVal =
+                                  customData.values?.[t.name] || "";
+                                const unitParts = t.latestResult.split(" ");
+                                const unit = unitParts.slice(1).join(" ");
+                                const formattedVal =
+                                  userVal.includes(" ") || !unit
+                                    ? userVal
+                                    : `${userVal} ${unit}`;
+                                return {
+                                  name: getTestDisplayName(t.id, t.name),
+                                  val: formattedVal,
+                                  ref: t.refRange,
+                                  status: t.status,
+                                };
+                              }),
+                            };
+                          })
                             // NonNullable<typeof g> keeps the mapped shape
                             // instead of restating it and drifting from it.
                             .filter(
