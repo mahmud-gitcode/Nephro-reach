@@ -1,17 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { Plus, Car, ShieldAlert } from "lucide-react";
 import {
-  Phone,
-  Pencil,
-  Plus,
-  Trash2,
-  Car,
-  Star,
-  ShieldAlert,
-} from "lucide-react";
-import {
-  Badge,
+  Alert,
+  AsyncSection,
   Button,
   buttonStyles,
   Card,
@@ -19,158 +12,136 @@ import {
   FormField,
   Input,
   Modal,
+  Skeleton,
 } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
-import { useClientValue } from "@/lib/storage/useClientValue";
+import { useRides } from "@/features/travel/useRides";
+import { RideContactCard } from "@/features/travel/RideContactCard";
+import type { RideContact } from "@/features/travel/rides.types";
 
-export interface RideContact {
-  id: string;
+/* This screen is the first one moved onto the data layer, and it is the
+   pattern for the rest: no storage calls in the component, the list comes
+   from a hook, and the four states of a read — loading, failed, empty,
+   loaded — are handed to AsyncSection in that order. */
+
+/** Sized to the cards it stands in for, so the grid does not jump. */
+function RidesSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {[0, 1].map((index) => (
+        <Card key={index} className="flex flex-col gap-stack-lg">
+          <div className="flex items-center gap-3">
+            <Skeleton variant="circle" className="h-11 w-11" />
+            <Skeleton variant="text" width="55%" />
+          </div>
+          <Skeleton variant="text" width="40%" />
+          <Skeleton height={44} />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+type FormState = {
   name: string;
   phone: string;
-  note?: string;
-  isPrimary?: boolean;
-}
+  note: string;
+  isPrimary: boolean;
+};
 
-const RIDES_KEY = "nephroreach_my_rides";
-
-function readStoredRides(): RideContact[] {
-  try {
-    const raw = localStorage.getItem(RIDES_KEY);
-    if (!raw) return DEFAULT_RIDES;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_RIDES;
-    // Older saves put the word "primary" in the note as well as the flag.
-    return parsed.map((r: RideContact) =>
-      r.isPrimary && r.note && /primary/i.test(r.note)
-        ? { ...r, note: undefined }
-        : r,
-    );
-  } catch {
-    return DEFAULT_RIDES;
-  }
-}
-
-const DEFAULT_RIDES: RideContact[] = [
-  {
-    id: "1",
-    name: "Bobo boy",
-    phone: "(684) 555-0102",
-    isPrimary: true,
-  },
-];
+const EMPTY_FORM: FormState = {
+  name: "",
+  phone: "",
+  note: "",
+  isPrimary: false,
+};
 
 export default function MyRidesPage() {
   const { t } = useLanguage();
+  const {
+    rides,
+    isPending,
+    error,
+    refetch,
+    create,
+    update,
+    remove,
+    isSaving,
+    saveError,
+    deleteError,
+  } = useRides();
 
-  const [rides, setRides] = useClientValue(readStoredRides, DEFAULT_RIDES);
-
-  // Modal / Form state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  const [formName, setFormName] = useState("");
-  const [formPhone, setFormPhone] = useState("");
-  const [formNote, setFormNote] = useState("");
-  const [formIsPrimary, setFormIsPrimary] = useState(false);
+  const [isFormOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<RideContact | null>(null);
 
-  const saveRides = (newRides: RideContact[]) => {
-    setRides(newRides);
-    try {
-      localStorage.setItem(RIDES_KEY, JSON.stringify(newRides));
-    } catch {
-      // ignore
-    }
-  };
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((current) => ({ ...current, [key]: value }));
 
-  const handleOpenAdd = () => {
-    setModalMode("add");
+  const openAdd = () => {
     setEditingId(null);
-    setFormName("");
-    setFormPhone("");
-    setFormNote("");
-    setFormIsPrimary(rides.length === 0);
+    setForm({ ...EMPTY_FORM, isPrimary: rides.length === 0 });
     setFormError("");
-    setIsModalOpen(true);
+    setFormOpen(true);
   };
 
-  const handleOpenEdit = (ride: RideContact) => {
-    setModalMode("edit");
+  const openEdit = (ride: RideContact) => {
     setEditingId(ride.id);
-    setFormName(ride.name);
-    setFormPhone(ride.phone);
-    setFormNote(ride.note || "");
-    setFormIsPrimary(Boolean(ride.isPrimary));
+    setForm({
+      name: ride.name,
+      phone: ride.phone,
+      note: ride.note ?? "",
+      isPrimary: Boolean(ride.isPrimary),
+    });
     setFormError("");
-    setIsModalOpen(true);
+    setFormOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const closeForm = () => {
+    setFormOpen(false);
     setEditingId(null);
     setFormError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim()) {
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) {
       setFormError(t("myRides.errorName"));
       return;
     }
-    if (!formPhone.trim()) {
+    if (!form.phone.trim()) {
       setFormError(t("myRides.errorPhone"));
       return;
     }
+    setFormError("");
 
-    if (modalMode === "add") {
-      const newRide: RideContact = {
-        id: Date.now().toString(),
-        name: formName.trim(),
-        phone: formPhone.trim(),
-        note: formNote.trim() || undefined,
-        isPrimary: formIsPrimary || rides.length === 0,
-      };
+    const draft = {
+      name: form.name,
+      phone: form.phone,
+      note: form.note,
+      isPrimary: form.isPrimary,
+    };
 
-      let updated = [...rides];
-      if (newRide.isPrimary) {
-        updated = updated.map((r) => ({ ...r, isPrimary: false }));
-      }
-      updated.push(newRide);
-      saveRides(updated);
-    } else if (modalMode === "edit" && editingId) {
-      const updated = rides.map((r) => {
-        if (r.id === editingId) {
-          return {
-            ...r,
-            name: formName.trim(),
-            phone: formPhone.trim(),
-            note: formNote.trim() || undefined,
-            isPrimary: formIsPrimary,
-          };
-        }
-        return formIsPrimary ? { ...r, isPrimary: false } : r;
-      });
-      saveRides(updated);
+    /* The modal closes only once the write has landed. Closing on click
+       would tell the member it saved before we know that it did. */
+    if (editingId) {
+      update.mutate({ id: editingId, draft }, { onSuccess: closeForm });
+    } else {
+      create.mutate(draft, { onSuccess: closeForm });
     }
-
-    handleCloseModal();
   };
 
-  const handleDeleteRide = (id: string, name: string) => {
-    const confirmMsg = t("myRides.confirmDelete").replace("{name}", name);
-    if (confirm(confirmMsg)) {
-      const remaining = rides.filter((r) => r.id !== id);
-      if (remaining.length > 0 && !remaining.some((r) => r.isPrimary)) {
-        remaining[0].isPrimary = true;
-      }
-      saveRides(remaining);
-    }
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    remove.mutate(pendingDelete.id, {
+      onSuccess: () => setPendingDelete(null),
+    });
   };
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 pb-10">
-      {/* Header Section */}
       <div className="flex flex-col gap-inline-lg border-b border-line pb-inset-lg sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-inline-lg">
           <span
@@ -184,127 +155,60 @@ export default function MyRidesPage() {
           </h1>
         </div>
 
-        <Button onClick={handleOpenAdd} leadingIcon={<Plus />}>
+        <Button onClick={openAdd} leadingIcon={<Plus />} disabled={isPending}>
           {t("myRides.addRide")}
         </Button>
       </div>
 
-      {/* Main 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        {/* SECTION 1: Saved Drivers & Personal Transport */}
         <section className="space-y-4 lg:col-span-7 xl:col-span-7">
-          {rides.length === 0 ? (
-            <EmptyState
-              icon={<Car />}
-              title={t("myRides.noRides")}
-              description="Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling."
-              action={
-                <Button onClick={handleOpenAdd} leadingIcon={<Plus />}>
-                  {t("myRides.addFirstRide")}
-                </Button>
-              }
-            />
-          ) : (
+          {deleteError ? (
+            <Alert
+              tone="danger"
+              title="That contact was not removed"
+              onDismiss={() => remove.reset()}
+            >
+              {deleteError instanceof Error
+                ? deleteError.message
+                : "Please try again."}
+            </Alert>
+          ) : null}
+
+          <AsyncSection
+            pending={isPending}
+            error={error}
+            isEmpty={rides.length === 0}
+            onRetry={refetch}
+            errorTitle="Your saved rides did not load"
+            skeleton={<RidesSkeleton />}
+            empty={
+              <EmptyState
+                icon={<Car />}
+                title={t("myRides.noRides")}
+                description="Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling."
+                action={
+                  <Button onClick={openAdd} leadingIcon={<Plus />}>
+                    {t("myRides.addFirstRide")}
+                  </Button>
+                }
+              />
+            }
+          >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {rides.map((ride) => (
-                <Card
+                <RideContactCard
                   key={ride.id}
-                  as="article"
-                  className={`flex flex-col justify-between gap-inline-lg ${
-                    ride.isPrimary
-                      ? "border-primary-soft-line bg-primary-soft"
-                      : ""
-                  }`}
-                >
-                  {/* Card Top: Driver Info & Action buttons */}
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span
-                          aria-hidden="true"
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-heading-5 ${
-                            ride.isPrimary
-                              ? "bg-primary-solid text-primary-on-solid"
-                              : "bg-surface-sunken text-fg-secondary"
-                          }`}
-                        >
-                          {ride.name.charAt(0).toUpperCase()}
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="truncate text-heading-5 text-fg">
-                            {ride.name}
-                          </h3>
-                          <div className="mt-stack-xs flex flex-wrap items-center gap-inline-xs">
-                            {ride.isPrimary && (
-                              <Badge tone="info" icon={<Star />}>
-                                {t("myRides.primaryBadge")}
-                              </Badge>
-                            )}
-                            {ride.note &&
-                              (!ride.isPrimary ||
-                                !/primary/i.test(ride.note)) && (
-                                <Badge tone="neutral">{ride.note}</Badge>
-                              )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="neutral"
-                          appearance="fill-stroke"
-                          size="small"
-                          iconOnly
-                          onClick={() => handleOpenEdit(ride)}
-                          title={t("myRides.editDetails")}
-                          aria-label={`Edit ${ride.name}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {rides.length > 1 && (
-                          <Button
-                            variant="danger"
-                            appearance="fill-stroke"
-                            size="small"
-                            iconOnly
-                            onClick={() => handleDeleteRide(ride.id, ride.name)}
-                            title={t("myRides.removeRide")}
-                            aria-label={`Remove ${ride.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-stack-lg border-t border-line-subtle pt-inset-sm">
-                      <p className="text-overline text-fg-muted">
-                        {t("myRides.phoneLabel") || "Phone Number"}
-                      </p>
-                      <p className="mt-stack-xs text-metric-sm text-fg">
-                        {ride.phone}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Call CTA button */}
-                  <a
-                    href={`tel:${ride.phone.replace(/[^0-9+]/g, "")}`}
-                    className={buttonStyles({ fullWidth: true })}
-                  >
-                    <Phone />
-                    <span>
-                      {t("myRides.call")} {ride.name}
-                    </span>
-                  </a>
-                </Card>
+                  ride={ride}
+                  onEdit={() => openEdit(ride)}
+                  onDelete={
+                    rides.length > 1 ? () => setPendingDelete(ride) : undefined
+                  }
+                />
               ))}
             </div>
-          )}
+          </AsyncSection>
         </section>
 
-        {/* SECTION 2: SEPARATE RIDESHARE APPS SECTION */}
         <section className="space-y-4 lg:col-span-5 xl:col-span-5">
           <Card className="space-y-stack-xl">
             <div className="border-b border-line-subtle pb-inset-sm">
@@ -364,26 +268,23 @@ export default function MyRidesPage() {
       </div>
 
       <Modal
-        open={isModalOpen}
-        onClose={handleCloseModal}
+        open={isFormOpen}
+        onClose={closeForm}
         title={
-          modalMode === "add"
-            ? t("myRides.addNewRideModal")
-            : t("myRides.editRideModal")
+          editingId ? t("myRides.editRideModal") : t("myRides.addNewRideModal")
         }
         footer={
           <>
             <Button
               variant="neutral"
               appearance="fill-stroke"
-              onClick={handleCloseModal}
+              onClick={closeForm}
+              disabled={isSaving}
             >
               {t("myRides.cancel")}
             </Button>
-            <Button type="submit" form="ride-form">
-              {modalMode === "add"
-                ? t("myRides.saveRide")
-                : t("myRides.updateInfo")}
+            <Button type="submit" form="ride-form" loading={isSaving}>
+              {editingId ? t("myRides.updateInfo") : t("myRides.saveRide")}
             </Button>
           </>
         }
@@ -393,6 +294,14 @@ export default function MyRidesPage() {
           onSubmit={handleSubmit}
           className="space-y-stack-lg"
         >
+          {saveError ? (
+            <Alert tone="danger" title="Not saved">
+              {saveError instanceof Error
+                ? saveError.message
+                : "Please try again."}
+            </Alert>
+          ) : null}
+
           <FormField
             label={t("myRides.driverNameLabel")}
             required
@@ -402,8 +311,8 @@ export default function MyRidesPage() {
               <Input
                 {...props}
                 type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+                value={form.name}
+                onChange={(e) => setField("name", e.target.value)}
                 placeholder={t("myRides.driverNamePlaceholder")}
                 autoFocus
               />
@@ -415,8 +324,8 @@ export default function MyRidesPage() {
               <Input
                 {...props}
                 type="tel"
-                value={formPhone}
-                onChange={(e) => setFormPhone(e.target.value)}
+                value={form.phone}
+                onChange={(e) => setField("phone", e.target.value)}
                 placeholder={t("myRides.phonePlaceholder")}
               />
             )}
@@ -430,8 +339,8 @@ export default function MyRidesPage() {
               <Input
                 {...props}
                 type="text"
-                value={formNote}
-                onChange={(e) => setFormNote(e.target.value)}
+                value={form.note}
+                onChange={(e) => setField("note", e.target.value)}
                 placeholder={t("myRides.relationshipPlaceholder")}
               />
             )}
@@ -440,8 +349,8 @@ export default function MyRidesPage() {
           <label className="flex cursor-pointer items-center gap-inline-md select-none">
             <input
               type="checkbox"
-              checked={formIsPrimary}
-              onChange={(e) => setFormIsPrimary(e.target.checked)}
+              checked={form.isPrimary}
+              onChange={(e) => setField("isPrimary", e.target.checked)}
               className="h-4 w-4 rounded-chip border-field text-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
             <span className="text-label-lg text-fg-secondary">
@@ -449,6 +358,41 @@ export default function MyRidesPage() {
             </span>
           </label>
         </form>
+      </Modal>
+
+      {/* window.confirm blocks the page, cannot be styled, and gives a failed
+          delete nowhere to report itself. */}
+      <Modal
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        title={t("myRides.removeRide")}
+        size="small"
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setPendingDelete(null)}
+              disabled={remove.isPending}
+            >
+              {t("myRides.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmDelete}
+              loading={remove.isPending}
+            >
+              {t("myRides.removeRide")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-md text-fg-secondary">
+          {t("myRides.confirmDelete").replace(
+            "{name}",
+            pendingDelete?.name ?? "",
+          )}
+        </p>
       </Modal>
     </div>
   );

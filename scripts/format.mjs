@@ -7,6 +7,7 @@
  *   npm run format:check  report and fail
  */
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import * as prettier from "prettier";
 import { collectFiles, FORMAT_EXTENSIONS } from "./source-files.mjs";
 
@@ -23,7 +24,15 @@ for (const file of files) {
   if (info.ignored || !info.inferredParser) continue;
 
   const source = await readFile(file, "utf8");
-  const options = { ...(await prettier.resolveConfig(file)), filepath: file };
+  /* Absolute, because prettier-plugin-tailwindcss resolves the stylesheet
+     named in .prettierrc relative to the file it is formatting. Given a
+     relative path it silently finds nothing and falls back to a different
+     class order than `npx prettier` produces — two answers for the same
+     file, which is how a formatting gate stops meaning anything. */
+  const options = {
+    ...(await prettier.resolveConfig(file)),
+    filepath: resolve(file),
+  };
 
   if (check) {
     if (!(await prettier.check(source, options))) offenders.push(file);
