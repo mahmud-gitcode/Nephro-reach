@@ -99,3 +99,9 @@ export type { AsyncSectionProps } from "./AsyncSection";
 
 export { MonthCalendar } from "./MonthCalendar";
 export type { MonthCalendarProps } from "./MonthCalendar";
+
+export { SegmentedChoice } from "./SegmentedChoice";
+export type {
+  SegmentedChoiceProps,
+  SegmentedChoiceOption,
+} from "./SegmentedChoice";

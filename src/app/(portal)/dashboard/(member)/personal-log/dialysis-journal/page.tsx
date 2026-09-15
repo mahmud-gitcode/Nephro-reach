@@ -6,7 +6,7 @@ import { AlertTriangle, BookOpen, ChevronDown, Lock, Plus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { checkFlaggedMedicalContent } from "@/app/(portal)/dashboard/(member)/community/page";
+import { checkFlaggedMedicalContent } from "@/features/community/moderation";
 import {
   Badge,
   Button,
