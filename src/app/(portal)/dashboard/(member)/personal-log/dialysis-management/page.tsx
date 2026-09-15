@@ -4,7 +4,6 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import {
   Bell,
-  Calendar,
   Clock,
   Plus,
   Settings,
@@ -45,55 +44,20 @@ import {
   EditWeekModal,
   type EditWeekResult,
 } from "@/features/personal-log/dialysis/EditWeekModal";
-import RecoveryPatternSection from "@/features/personal-log/RecoveryPatternSection";
+import { TreatmentDetailsModal } from "@/features/personal-log/dialysis/TreatmentDetailsModal";
+import { TreatmentAnalyticsTab } from "@/features/personal-log/dialysis/TreatmentAnalyticsTab";
+import {
+  ExtraTreatmentModal,
+  type ExtraTreatmentDraft,
+} from "@/features/personal-log/dialysis/ExtraTreatmentModal";
+import type {
+  IntervalRecord,
+  TreatmentCardItem,
+  TreatmentInterval,
+} from "@/features/personal-log/dialysis/treatment.types";
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { Button, buttonStyles, Modal, MonthCalendar } from "@/components/ui";
-
-interface TreatmentInterval {
-  id: string;
-  name: string; // e.g. "Between Treatment 2"
-  label: string; // e.g. "Treatment 2 ➔ Treatment 3"
-  startDate: string;
-  endDate: string;
-  previousTxPostWeight: number;
-  previousTxPostBp: string;
-  targetDryWeight: number;
-}
-
-interface IntervalRecord {
-  id: string;
-  intervalId: string;
-  date: string;
-  dayLabel: string;
-  morningWeight?: number;
-  fluidGainedKg?: number;
-  homeBp?: string;
-  pulse?: number;
-  fluidOz?: number;
-  symptoms?: string[];
-  notes?: string;
-  isExtraTreatment?: boolean;
-  extraTreatmentNumber?: string; // e.g. "2.1"
-  extraReason?: string;
-}
-
-interface TreatmentCardItem {
-  id: string;
-  intervalId: string;
-  orderKey: number;
-  title: string;
-  subtitle: string;
-  startDate: string;
-  endDate: string;
-  startKey: string; // yyyy-mm-dd
-  endKey: string;
-  status: TreatmentStatus;
-  isExtra?: boolean;
-  extraReason?: string;
-  notes?: string;
-}
 
 const DEFAULT_INTERVALS: TreatmentInterval[] = [
   {
@@ -276,20 +240,10 @@ function DialysisManagementDashboard() {
 
   // Take Extra Treatment Modal State
   const [isExtraTxModalOpen, setIsExtraTxModalOpen] = useState(false);
-  const [extraTxDate, setExtraTxDate] = useState(() =>
-    formatFullDate(startOfToday(), language === "ES"),
-  );
-  const [extraTxReason, setExtraTxReason] = useState("Fluid Overload");
-  const [extraTxNotes, setExtraTxNotes] = useState("");
   // Details / History Modal State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // Interactive Calendar State (Month & Year) — opens on today
-  const [calYear, setCalYear] = useState(() => startOfToday().getFullYear());
-  const [calMonth, setCalMonth] = useState(() => startOfToday().getMonth());
-  const [selectedDay, setSelectedDay] = useState(() =>
-    startOfToday().getDate(),
-  );
 
   // ---------------------------------------------------------------------------
   // SCHEDULE ENGINE
@@ -378,24 +332,31 @@ function DialysisManagementDashboard() {
     };
   };
 
-  // Detected interval for the currently clicked date:
-  const activeDetectedInterval = detectIntervalForDate(
-    calYear,
-    calMonth,
-    selectedDay,
-  );
+  /* Which interval a date falls in, and how many extra sessions are already
+     inside it. A function rather than three derived values, because the
+     date it depends on now lives in the form that asks. */
+  const extraSessionFor = (date: Date) => {
+    const interval = detectIntervalForDate(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    );
+    const alreadyInInterval = extraTreatments.filter(
+      (extra) =>
+        toDateKey(
+          scheduledOnOrBefore(fromDateKey(extra.dateKey), isTreatmentDay),
+        ) === interval.startKey,
+    ).length;
 
-  // Count existing extra treatments in this detected interval
-  const existingExtraCount = extraTreatments.filter(
-    (extra) =>
-      toDateKey(
-        scheduledOnOrBefore(fromDateKey(extra.dateKey), isTreatmentDay),
-      ) === activeDetectedInterval.startKey,
-  ).length;
-
-  // Auto-calculated session number based on clicked date:
-  // e.g. first extra inside Treatment 2's interval -> 2.1, the next -> 2.2
-  const autoSessionNumber = `${activeDetectedInterval.baseNumber}.${existingExtraCount + 1}`;
+    return {
+      intervalId: interval.intervalId,
+      intervalName: interval.intervalName,
+      intervalLabel: interval.intervalLabel,
+      extraIndex: alreadyInInterval + 1,
+      // e.g. first extra inside Treatment 2's interval -> 2.1, the next -> 2.2
+      sessionNumber: `${interval.baseNumber}.${alreadyInInterval + 1}`,
+    };
+  };
 
   // Month and Weekday labels for Calendar
   const monthNames = [
@@ -429,11 +390,6 @@ function DialysisManagementDashboard() {
   const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const daysOfWeekEs = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
 
-  const handleSelectDay = (day: number) => {
-    setSelectedDay(day);
-    setExtraTxDate(formatFullDate(new Date(calYear, calMonth, day), isEs));
-  };
-
   const handleOpenEditWeek = () => setIsEditWeekModalOpen(true);
 
   // Date the new schedule starts applying from, per the chosen scope
@@ -456,44 +412,43 @@ function DialysisManagementDashboard() {
     setIsEditWeekModalOpen(false);
   };
 
-  // Extra treatment submission
-  const handleSaveExtraTreatment = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const pickedDate = new Date(calYear, calMonth, selectedDay);
-    const dateKey = toDateKey(pickedDate);
+  const handleSaveExtraTreatment = ({
+    date,
+    reason,
+    notes,
+  }: ExtraTreatmentDraft) => {
+    const dateKey = toDateKey(date);
+    const session = extraSessionFor(date);
+    const dateLabel = formatFullDate(date, isEs);
 
     const newRecord: IntervalRecord = {
       id: `extra-rec-${Date.now()}`,
-      intervalId: activeDetectedInterval.intervalId,
-      date: extraTxDate,
-      dayLabel: extraTxDate.split(",")[0],
+      intervalId: session.intervalId,
+      date: dateLabel,
+      dayLabel: dateLabel.split(",")[0],
       isExtraTreatment: true,
-      extraTreatmentNumber: autoSessionNumber, // Auto assigned e.g. 1.1, 2.1, 2.2
-      extraReason: extraTxReason,
-      notes: extraTxNotes.trim(),
+      extraTreatmentNumber: session.sessionNumber,
+      extraReason: reason,
+      notes: notes.trim(),
       morningWeight: 74.2,
       fluidGainedKg: 1.8,
       homeBp: "128/84 mmHg",
     };
 
-    setRecords([newRecord, ...records]);
+    setRecords((prev) => [newRecord, ...prev]);
     setExtraTreatments((prev) => [
       ...prev,
       {
         id: `tx-extra-${dateKey}-${Date.now()}`,
         dateKey,
-        reason: extraTxReason,
-        notes: extraTxNotes.trim(),
+        reason,
+        notes: notes.trim(),
       },
     ]);
 
     // Jump the cards list to the month the extra session belongs to
-    setViewMonthKey(
-      `${pickedDate.getFullYear()}-${pad2(pickedDate.getMonth() + 1)}`,
-    );
+    setViewMonthKey(`${date.getFullYear()}-${pad2(date.getMonth() + 1)}`);
     setIsExtraTxModalOpen(false);
-    setExtraTxNotes("");
   };
 
   // Helper to format card dates: omit current year (e.g. 2026), but preserve past years (e.g. 2025, 2024)
@@ -1213,181 +1168,7 @@ function DialysisManagementDashboard() {
       )}
 
       {/* Tab 2: Analytics (Week-by-week aggregated analytics) */}
-      {activeTab === "analytics" && (
-        <section className="animate-in fade-in space-y-6 duration-200">
-          <RecoveryPatternSection mode="weekly" />
-
-          {/* Weekly Performance Breakdown */}
-          <div className="space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control sm:p-7">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-fg">
-                  {isEs
-                    ? "Desglose de Desempeño Semanal"
-                    : "Weekly Performance Breakdown"}
-                </h3>
-                <p className="mt-0.5 text-xs font-medium text-fg-muted">
-                  {isEs
-                    ? "Historial de tratamientos y recuperación organizado por semanas"
-                    : "Treatment completion and recovery outcomes aggregated week-by-week"}
-                </p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-card border border-line/80">
-              <table className="w-full border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-surface-sunken/90 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                    <th className="w-32 px-4 py-3">
-                      {isEs ? "Semana" : "Week"}
-                    </th>
-                    <th className="w-44 px-4 py-3">
-                      {isEs ? "Período" : "Period"}
-                    </th>
-                    <th className="px-4 py-3">
-                      {isEs ? "Tratamientos" : "Treatments Completed"}
-                    </th>
-                    <th className="px-4 py-3">
-                      {isEs ? "Tiempo Promedio" : "Avg Recovery Time"}
-                    </th>
-                    <th className="px-4 py-3">
-                      {isEs ? "Tasa de Recuperación" : "Good Recovery Rate"}
-                    </th>
-                    <th className="px-4 py-3 text-center">
-                      {isEs ? "Estado" : "Status"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
-                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
-                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
-                      {isEs ? "Semana 4 (Actual)" : "Week 4 (Current)"}
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
-                      Jun 22, 2026 - Jun 28, 2026
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      2.4 hrs
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
-                          <div
-                            className="h-2 rounded-pill bg-action"
-                            style={{ width: "85%" }}
-                          />
-                        </div>
-                        <span className="text-label-md text-fg">85%</span>
-                      </div>
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-lg border border-success-line bg-success-surface px-2.5 py-1 text-xs font-bold text-success">
-                        {isEs ? "En Objetivo" : "On Target"}
-                      </span>
-                    </td>
-                  </tr>
-
-                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
-                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
-                      {isEs ? "Semana 3" : "Week 3"}
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
-                      Jun 15, 2026 - Jun 21, 2026
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      2.9 hrs
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
-                          <div
-                            className="h-2 rounded-pill bg-action"
-                            style={{ width: "74%" }}
-                          />
-                        </div>
-                        <span className="text-label-md text-fg">74%</span>
-                      </div>
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-lg border border-primary-soft-line bg-primary-soft px-2.5 py-1 text-xs font-bold text-fg-brand">
-                        {isEs ? "Estable" : "Stable"}
-                      </span>
-                    </td>
-                  </tr>
-
-                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
-                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
-                      {isEs ? "Semana 2" : "Week 2"}
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
-                      Jun 08, 2026 - Jun 14, 2026
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3.2 hrs
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
-                          <div
-                            className="h-2 rounded-pill bg-action"
-                            style={{ width: "64%" }}
-                          />
-                        </div>
-                        <span className="text-label-md text-fg">64%</span>
-                      </div>
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-lg border border-accent-soft-line bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-fg">
-                        {isEs ? "Mejorando" : "Improving"}
-                      </span>
-                    </td>
-                  </tr>
-
-                  <tr className="transition-colors duration-150 ease-standard hover:bg-surface-sunken">
-                    <td className="px-inset-md py-inset-sm text-label-md whitespace-nowrap text-fg">
-                      {isEs ? "Semana 1" : "Week 1"}
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-body-sm whitespace-nowrap text-fg-secondary">
-                      Jun 01, 2026 - Jun 07, 2026
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3 / 3 {isEs ? "sesiones" : "sessions"} (100%)
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-overline text-fg-muted">
-                      3.8 hrs
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunken">
-                          <div
-                            className="h-2 rounded-pill bg-action"
-                            style={{ width: "52%" }}
-                          />
-                        </div>
-                        <span className="text-label-md text-fg">52%</span>
-                      </div>
-                    </td>
-                    <td className="px-inset-md py-inset-sm text-center whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-lg border border-warning-line bg-warning-surface px-2.5 py-1 text-xs font-bold text-warning">
-                        {isEs ? "Monitoreado" : "Monitored"}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
+      {activeTab === "analytics" && <TreatmentAnalyticsTab />}
 
       {/* Tab 3: Care Team Questions (title hidden on main page) */}
       {activeTab === "questions" && (
@@ -1417,273 +1198,31 @@ function DialysisManagementDashboard() {
       {/* ========================================================================= */}
       {/* MODAL 2: TAKE EXTRA TREATMENT (WITH INTERACTIVE CALENDAR & AUTO SESSION) */}
       {/* ========================================================================= */}
-      <Modal
+      <ExtraTreatmentModal
+        /* Keyed on open: reopening starts from today again, with no effect
+           resetting the calendar. */
+        key={isExtraTxModalOpen ? "open" : "closed"}
         open={isExtraTxModalOpen}
         onClose={() => setIsExtraTxModalOpen(false)}
-        size="wide"
-        title={isEs ? "Tomar Tratamiento Extra" : "Take Extra Treatment"}
-        description={
-          isEs
-            ? "Selecciona la fecha en el calendario para agendar la sesión extra"
-            : "Select a date on the calendar to schedule an extra treatment session"
-        }
-        footer={
-          <>
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => setIsExtraTxModalOpen(false)}
-            >
-              {isEs ? "Cancelar" : "Cancel"}
-            </Button>
-            <Button type="submit" form="extra-tx-form">
-              {isEs ? "Crear Sesión Extra" : "Create Extra Treatment"}
-            </Button>
-          </>
-        }
-      >
-        <form
-          id="extra-tx-form"
-          onSubmit={handleSaveExtraTreatment}
-          className="space-y-stack-xl"
-        >
-          {/* 1. Interactive Calendar Date Selection */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold tracking-wider text-fg-secondary uppercase sm:text-sm">
-              {isEs
-                ? "Seleccionar Fecha en el Calendario"
-                : "Select Date on Calendar"}
-            </label>
-
-            <div className="space-y-4 rounded-card border border-line bg-surface-sunken p-4 sm:p-5">
-              <MonthCalendar
-                year={calYear}
-                month={calMonth}
-                selectedDay={selectedDay}
-                onSelectDay={handleSelectDay}
-                onMonthChange={(nextYear, nextMonth) => {
-                  setCalYear(nextYear);
-                  setCalMonth(nextMonth);
-                }}
-                monthLabel={`${
-                  (isEs ? monthNamesEs : monthNames)[calMonth]
-                } ${calYear}`}
-                weekdayLabels={isEs ? daysOfWeekEs : daysOfWeek}
-                formatDayLabel={(date) => formatFullDate(date, isEs)}
-                /* A dot on prescribed days, so an extra session can be
-                   placed relative to the run schedule at a glance. */
-                isMarked={isTreatmentDay}
-                previousMonthLabel={isEs ? "Mes anterior" : "Previous month"}
-                nextMonthLabel={isEs ? "Mes siguiente" : "Next month"}
-              />
-
-              {/* Selected Date Confirmation */}
-              <div className="flex items-center gap-2 border-t border-line/80 pt-2 text-xs font-semibold text-fg-secondary sm:text-sm">
-                <Calendar className="h-4 w-4 text-fg-brand" />
-                <span>{isEs ? "Fecha Seleccionada:" : "Selected Date:"}</span>
-                <strong className="font-bold text-fg">{extraTxDate}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Auto-Calculated Session Number */}
-          <div className="flex flex-col justify-between gap-3 rounded-card border border-accent-soft-line bg-accent-soft/50 p-4 sm:flex-row sm:items-center sm:p-5">
-            <div className="space-y-0.5">
-              <label className="text-xs font-bold tracking-wider text-accent-fg uppercase">
-                {isEs
-                  ? "Número de Sesión (Automático)"
-                  : "Session Number (Auto-Assigned)"}
-              </label>
-              <p className="text-xl font-extrabold tracking-tight text-accent-900 sm:text-2xl">
-                Treatment {autoSessionNumber}
-              </p>
-              <p className="text-xs font-medium text-accent-fg">
-                {isEs
-                  ? `Calculado automáticamente para ${activeDetectedInterval.intervalName} (${activeDetectedInterval.intervalLabel})`
-                  : `Auto-calculated for ${activeDetectedInterval.intervalName} (${activeDetectedInterval.intervalLabel})`}
-              </p>
-            </div>
-
-            <span className="self-start rounded-xl border border-accent-300 bg-accent-200/80 px-3 py-1.5 text-xs font-bold text-accent-900 sm:self-center">
-              Extra #{existingExtraCount + 1}
-            </span>
-          </div>
-
-          {/* 3. Clinical Reason */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
-              {isEs ? "Motivo Clínico" : "Clinical Reason"}
-            </label>
-            <select
-              value={extraTxReason}
-              onChange={(e) => setExtraTxReason(e.target.value)}
-              className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-base"
-            >
-              <option value="Fluid Overload">
-                Fluid Overload (Extra Ultrafiltration needed)
-              </option>
-              <option value="High Potassium">
-                High Potassium Alert / Lab Result
-              </option>
-              <option value="Doctor Order">
-                Nephrologist / Doctor Direct Prescription
-              </option>
-              <option value="Missed Session">
-                Make-up for a Missed Regular Session
-              </option>
-            </select>
-          </div>
-
-          {/* 4. Additional Notes */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
-              {isEs ? "Notas Adicionales" : "Additional Notes / Symptoms"}
-            </label>
-            <textarea
-              rows={3}
-              value={extraTxNotes}
-              onChange={(e) => setExtraTxNotes(e.target.value)}
-              placeholder={
-                isEs
-                  ? "Describe los síntomas o indicaciones médicas para esta sesión..."
-                  : "Symptoms, fluid overload indicators, or instructions for this extra session..."
-              }
-              className="w-full resize-none rounded-xl border border-line bg-surface p-3.5 text-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-base"
-            />
-          </div>
-        </form>
-      </Modal>
+        initialDate={today}
+        sessionFor={extraSessionFor}
+        formatDayLabel={(date) => formatFullDate(date, isEs)}
+        monthNames={isEs ? monthNamesEs : monthNames}
+        weekdayLabels={isEs ? daysOfWeekEs : daysOfWeek}
+        isMarked={isTreatmentDay}
+        onSave={handleSaveExtraTreatment}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL 3: VIEW DETAILS / HISTORY                                           */}
       {/* ========================================================================= */}
-      <Modal
+      <TreatmentDetailsModal
         open={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
-        size="wide"
-        title={selectedInterval.name}
-        description={`${selectedInterval.startDate} – ${selectedInterval.endDate}`}
-        footer={
-          <>
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => setIsDetailsModalOpen(false)}
-            >
-              {isEs ? "Cerrar" : "Close"}
-            </Button>
-            <Link
-              href={`/dashboard/personal-log/dialysis-management/view?treatment=${selectedCard}`}
-              className={buttonStyles()}
-            >
-              {isEs ? "Ver Detalles Completos" : "View Full Details"}
-            </Link>
-          </>
-        }
-      >
-        {/* Baseline Metrics Grid */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-1 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-            <span className="block text-[11px] font-semibold tracking-wider text-fg-subtle uppercase">
-              {isEs ? "Peso Post-Tx Previo" : "Previous Post-Weight"}
-            </span>
-            <h3 className="text-heading-5 text-fg">
-              {selectedInterval.previousTxPostWeight} kg
-            </h3>
-          </div>
-          <div className="space-y-1 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-            <span className="block text-[11px] font-semibold tracking-wider text-fg-subtle uppercase">
-              {isEs ? "PA Post-Tx Previa" : "Previous Post-BP"}
-            </span>
-            <h3 className="text-heading-5 text-fg">
-              {selectedInterval.previousTxPostBp}
-            </h3>
-          </div>
-          <div className="space-y-1 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-            <span className="block text-[11px] font-semibold tracking-wider text-fg-subtle uppercase">
-              {isEs ? "Peso Seco Objetivo" : "Target Dry Weight"}
-            </span>
-            <h3 className="text-heading-5 text-fg-brand">
-              {selectedInterval.targetDryWeight.toFixed(1)} kg
-            </h3>
-          </div>
-        </div>
-
-        {/* Logged Interdialytic Records for this interval */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-fg">
-            {isEs
-              ? "Registros Registrados en este Intervalo"
-              : "Logged Records in this Interval"}
-          </h4>
-
-          {records.filter((r) => r.intervalId === selectedInterval.id).length >
-          0 ? (
-            <div className="space-y-2.5">
-              {records
-                .filter((r) => r.intervalId === selectedInterval.id)
-                .map((rec) => (
-                  <div
-                    key={rec.id}
-                    className="space-y-2 rounded-xl border border-line bg-surface-sunken/40 p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-fg">
-                        {rec.date}
-                      </span>
-                      {rec.isExtraTreatment && (
-                        <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs font-bold text-accent-800">
-                          Extra Tx {rec.extraTreatmentNumber}
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                      <div>
-                        <span className="block text-fg-subtle">
-                          Morning Weight
-                        </span>
-                        <span className="font-bold text-fg-secondary">
-                          {rec.morningWeight || "--"} kg
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-fg-subtle">Fluid Gain</span>
-                        <span className="font-bold text-fg-secondary">
-                          +{rec.fluidGainedKg || "--"} kg
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-fg-subtle">Home BP</span>
-                        <span className="font-bold text-fg-secondary">
-                          {rec.homeBp || "--"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-fg-subtle">
-                          Fluid Intake
-                        </span>
-                        <span className="font-bold text-fg-secondary">
-                          {rec.fluidOz || "--"} oz
-                        </span>
-                      </div>
-                    </div>
-                    {rec.notes && (
-                      <p className="rounded-lg border border-line-subtle bg-surface p-2 text-xs text-fg-muted">
-                        {rec.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-line p-6 text-center text-xs text-fg-subtle sm:text-sm">
-              {isEs
-                ? "Aún no hay registros para este intervalo de tratamiento."
-                : "No records logged for this treatment interval yet."}
-            </div>
-          )}
-        </div>
-      </Modal>
+        interval={selectedInterval}
+        records={records}
+        viewHref={`/dashboard/personal-log/dialysis-management/view?treatment=${selectedCard}`}
+      />
     </div>
   );
 }
