@@ -84,6 +84,21 @@ export interface TravelDocumentFile {
   attachedAt: string;
 }
 
+/**
+ * Where they are going, in the parts a receiving unit needs.
+ *
+ * A single free-text line was enough to name a trip and useless for
+ * arranging one: a coordinator ringing round for a chair needs a street and
+ * a zip, not "Orlando".
+ */
+export interface TripAddress {
+  street: string;
+  city: string;
+  /** Two-letter state code, as written on an address. */
+  state: string;
+  zip: string;
+}
+
 export interface EmergencyContact {
   name: string;
   phone: string;
@@ -161,7 +176,7 @@ export interface TripRequest {
   id: string;
 
   /* ---- what the member asks for ---------------------------------------- */
-  destination: string;
+  destination: TripAddress;
   /** ISO `yyyy-mm-dd`. */
   departDate: string;
   returnDate: string;

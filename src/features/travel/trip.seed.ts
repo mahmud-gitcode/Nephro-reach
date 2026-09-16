@@ -50,7 +50,12 @@ export function sampleTrip(now = new Date()): TripRequest {
   return {
     id: `${SAMPLE_PREFIX}orlando`,
 
-    destination: "Orlando, FL",
+    destination: {
+      street: "820 Sunbridge Parkway, Apt 4B",
+      city: "Orlando",
+      state: "FL",
+      zip: "32801",
+    },
     departDate: dayFrom(12, now),
     returnDate: dayFrom(19, now),
     treatmentsNeeded: 3,
@@ -65,18 +70,7 @@ export function sampleTrip(now = new Date()): TripRequest {
     insurance: { plan: "Medicare Part B", memberId: "1EG4-TE5-MK72" },
     documentsReady: ["treatment-orders", "recent-labs", "insurance"],
     prepDone: ["transportation"],
-    /* One attached, so the panel shows both states side by side. Names
-       only — the bytes are never stored. */
-    documentFiles: [
-      {
-        id: `${SAMPLE_PREFIX}file-labs`,
-        key: "recent-labs",
-        fileName: "labs-september.pdf",
-        sizeBytes: 184_320,
-        contentType: "application/pdf",
-        attachedAt: timeFrom(-4, 10, 30, now),
-      },
-    ],
+    documentFiles: [],
     notes:
       "Left-arm fistula. I need a chair before 11am — the family is driving me each day.",
 
@@ -110,13 +104,17 @@ export function samplePastTrips(now = new Date()): TripRequest[] {
 
   const past = (
     key: string,
-    destination: string,
+    destination: { city: string; state: string },
     from: number,
     to: number,
   ): TripRequest => ({
     ...base,
     id: `${SAMPLE_PREFIX}${key}`,
-    destination,
+    destination: {
+      ...base.destination,
+      city: destination.city,
+      state: destination.state,
+    },
     departDate: dayFrom(from, now),
     returnDate: dayFrom(to, now),
     status: "closed",
@@ -132,9 +130,9 @@ export function samplePastTrips(now = new Date()): TripRequest[] {
   });
 
   return [
-    past("atlanta", "Atlanta, GA", -180, -175),
-    past("miami", "Miami, FL", -250, -245),
-    past("charleston", "Charleston, SC", -320, -315),
+    past("atlanta", { city: "Atlanta", state: "GA" }, -180, -175),
+    past("miami", { city: "Miami", state: "FL" }, -250, -245),
+    past("charleston", { city: "Charleston", state: "SC" }, -320, -315),
   ];
 }
 

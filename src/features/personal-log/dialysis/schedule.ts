@@ -150,14 +150,70 @@ export const SCOPE_OPTIONS: {
 export interface SchedulePeriod {
   fromKey: string; // inclusive, yyyy-mm-dd
   days: string[];
-  /** Reminder clock time per prescribed weekday, as "HH:MM" on a 24h clock. */
-  reminders: Record<string, string>;
+  /**
+   * The assigned chair time per prescribed weekday, "HH:MM" on a 24h clock.
+   *
+   * Every member is given one by their unit — "Monday, Wednesday, Friday at
+   * 5:30" — and it is the fact the whole day is built around. The schedule
+   * used to hold only a reminder time, which is a different thing: it
+   * answered "when do you want to be nudged" and never recorded when the
+   * member is actually due in the chair.
+   */
+  chairTimes: Record<string, string>;
+  /**
+   * How long before chair time to remind, in minutes.
+   *
+   * The reminder is derived rather than stored, so a chair time that moves
+   * takes its reminder with it. Storing both independently is how somebody
+   * ends up being reminded for a slot they no longer have.
+   */
+  reminderLeadMinutes: number;
   /** Session length in minutes. One amount shared by every prescribed day. */
   durationMinutes: number;
 }
 
-/** Reminder given to a day that was just added to the schedule. */
-export const DEFAULT_REMINDER = "07:30";
+/** Chair time given to a day that was just added to the schedule. */
+export const DEFAULT_CHAIR_TIME = "07:30";
+/** An hour's notice, which is travel time for most people. */
+export const DEFAULT_REMINDER_LEAD_MINUTES = 60;
+
+/** Kept for stored records written before chair time existed. */
+export const DEFAULT_REMINDER = DEFAULT_CHAIR_TIME;
+
+/** Clock arithmetic on "HH:MM", wrapping backwards past midnight. */
+export function shiftClock(value: string, minutes: number): string {
+  const [hour, minute] = value.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value;
+
+  const total = (hour * 60 + minute - minutes + 24 * 60) % (24 * 60);
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+}
+
+/** When to nudge for a given day: chair time, less the lead. */
+export function reminderTimeFor(period: SchedulePeriod, day: string): string {
+  const chair = period.chairTimes[day] ?? DEFAULT_CHAIR_TIME;
+  return shiftClock(chair, period.reminderLeadMinutes);
+}
+
+/**
+ * Fill in a period stored before chair time existed.
+ *
+ * The old `reminders` map is read as the chair time with no lead, because
+ * that is what members were typing into it — the time they had to be there.
+ * Nothing shifts until they edit it, which is the only honest migration
+ * when one field was doing two jobs.
+ */
+export function normaliseSchedulePeriod(
+  period: SchedulePeriod & { reminders?: Record<string, string> },
+): SchedulePeriod {
+  return {
+    fromKey: period.fromKey,
+    days: period.days ?? [],
+    chairTimes: period.chairTimes ?? period.reminders ?? {},
+    reminderLeadMinutes: period.reminderLeadMinutes ?? 0,
+    durationMinutes: period.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+  };
+}
 /** 4h, the usual in-centre hemodialysis run. */
 export const DEFAULT_DURATION_MINUTES = 240;
 
@@ -244,7 +300,8 @@ export function treatmentNumberInMonth(
 /** The draft a member fills in on the Edit Weekly Schedule form. */
 export interface ScheduleDraft {
   days: string[];
-  reminders: Record<string, string>;
+  chairTimes: Record<string, string>;
+  reminderLeadMinutes: number;
   durationHours: string;
   durationMinutes: string;
 }
@@ -264,10 +321,10 @@ export function buildSchedulePeriod(
     (a, b) => ALL_WEEKDAYS.indexOf(a) - ALL_WEEKDAYS.indexOf(b),
   );
 
-  // A reminder for every prescribed day, and one session length for all of them.
-  const reminders: Record<string, string> = {};
+  // A chair time for every prescribed day, and one session length for all.
+  const chairTimes: Record<string, string> = {};
   for (const day of days) {
-    reminders[day] = draft.reminders[day] || DEFAULT_REMINDER;
+    chairTimes[day] = draft.chairTimes[day] || DEFAULT_CHAIR_TIME;
   }
 
   const hours = Math.min(12, Math.max(0, Number(draft.durationHours) || 0));
@@ -276,7 +333,16 @@ export function buildSchedulePeriod(
     hours * 60 + (Number(draft.durationMinutes) || 0),
   );
 
-  return { fromKey, days, reminders, durationMinutes };
+  return {
+    fromKey,
+    days,
+    chairTimes,
+    reminderLeadMinutes: Math.max(
+      0,
+      Math.min(24 * 60, draft.reminderLeadMinutes),
+    ),
+    durationMinutes,
+  };
 }
 
 /**

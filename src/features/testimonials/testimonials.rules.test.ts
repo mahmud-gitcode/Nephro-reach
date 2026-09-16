@@ -9,6 +9,11 @@ import {
   withoutTestimonial,
 } from "./testimonials.rules";
 import type { Testimonial } from "./testimonials.types";
+import {
+  MAX_TESTIMONIAL_SECONDS,
+  formatClock,
+  videoLengthError,
+} from "./testimonials.rules";
 
 /* A testimonial is a member's face and story on a public page. The rules that
  * matter are the ones deciding when it becomes visible and who may change it
@@ -144,5 +149,37 @@ describe("the admin decision", () => {
 
   it("removes a story outright", () => {
     expect(withoutTestimonial([story({ id: "a" })], "a")).toHaveLength(0);
+  });
+});
+
+describe("how long a testimonial may run", () => {
+  it("accepts a clip inside the limit", () => {
+    expect(videoLengthError(60)).toBeNull();
+    expect(videoLengthError(MAX_TESTIMONIAL_SECONDS)).toBeNull();
+  });
+
+  it("rejects one past it, and says both numbers", () => {
+    const message = videoLengthError(MAX_TESTIMONIAL_SECONDS + 1);
+    expect(message).toContain("3:01");
+    expect(message).toContain("3:00");
+  });
+
+  it("lets a length it cannot read through rather than blocking", () => {
+    // Some MOV files report no duration until fully decoded. Refusing a
+    // member's only recording because the browser could not measure it is
+    // worse than letting the admin see it and decide.
+    expect(videoLengthError(null)).toBeNull();
+    expect(videoLengthError(NaN)).toBeNull();
+    expect(videoLengthError(Infinity)).toBeNull();
+    expect(videoLengthError(0)).toBeNull();
+    expect(videoLengthError(-5)).toBeNull();
+  });
+
+  it("says a time the way somebody about to record would read it", () => {
+    expect(formatClock(0)).toBe("0:00");
+    expect(formatClock(9)).toBe("0:09");
+    expect(formatClock(75)).toBe("1:15");
+    expect(formatClock(180)).toBe("3:00");
+    expect(formatClock(605)).toBe("10:05");
   });
 });

@@ -7,7 +7,6 @@ import { ArrowLeft, Clock, Plane, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import TravelChecklist from "@/features/travel/TravelChecklist";
 import TimeChangeRequestModal from "@/features/travel/TimeChangeRequestModal";
-import TravelDocumentsPanel from "@/features/travel/TravelDocumentsPanel";
 import TravelTreatmentLog from "@/features/travel/TravelTreatmentLog";
 import {
   ConfirmedTreatmentPanel,
@@ -16,6 +15,7 @@ import {
 } from "@/features/travel/TravelPanels";
 import {
   canRequestTimeChange,
+  destinationLabel,
   formatEventTime,
   formatTripDates,
   hasOpenTimeChange,
@@ -55,8 +55,6 @@ export default function TripDetailPage() {
     trips,
     setDocuments,
     setPrep,
-    attachFile,
-    removeFile,
     requestTimeChange,
     withdrawTimeChange,
     isPending,
@@ -132,7 +130,7 @@ export default function TripDetailPage() {
               <div className="flex flex-wrap items-start justify-between gap-inline-md">
                 <div className="min-w-0">
                   <h1 className="text-heading-4 text-fg">
-                    {trip.destination ||
+                    {destinationLabel(trip) ||
                       (isEs ? "Sin destino" : "No destination")}
                   </h1>
                   <p className="mt-stack-xs text-body-sm text-fg-muted">
@@ -260,11 +258,6 @@ export default function TripDetailPage() {
               </div>
 
               <div className="flex flex-col gap-inset-lg">
-                <TravelDocumentsPanel
-                  trip={trip}
-                  onAttach={(file) => attachFile(trip.id, file)}
-                  onRemoveFile={(fileId) => removeFile(trip.id, fileId)}
-                />
                 <ConfirmedTreatmentPanel trip={trip} />
               </div>
             </div>

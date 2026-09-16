@@ -6,6 +6,7 @@ import { ChevronRight, Pencil, Plane, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   defaultTripFilter,
+  destinationLabel,
   filterTrips,
   formatTripDates,
   isEditable,
@@ -70,7 +71,8 @@ function TripTile({
       >
         <span className="flex items-start justify-between gap-inline-md">
           <span className="min-w-0 truncate text-label-md text-fg">
-            {trip.destination || (isEs ? "Sin destino" : "No destination")}
+            {destinationLabel(trip) ||
+              (isEs ? "Sin destino" : "No destination")}
           </span>
           <ChevronRight
             aria-hidden="true"

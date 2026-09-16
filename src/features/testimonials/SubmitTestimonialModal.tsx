@@ -12,6 +12,12 @@ import {
   Chip,
   ChipGroup,
 } from "@/components/ui";
+import {
+  MAX_TESTIMONIAL_MB,
+  MAX_TESTIMONIAL_SECONDS,
+  formatClock,
+  videoLengthError,
+} from "./testimonials.rules";
 import { useTestimonials } from "./useTestimonials";
 import type { Testimonial } from "./testimonials.types";
 
@@ -60,17 +66,23 @@ export default function SubmitTestimonialModal({
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, []);
 
-  /** Big enough to be a real recording, small enough to be a phone clip. */
-  const MAX_MB = 200;
+  /** Drops a picked video, so a rejected one cannot be submitted. */
+  const clearVideo = (message: string) => {
+    setVideoError(message);
+    setVideoPreview(null);
+    setVideoName(null);
+    setVideoUrl("");
+    setDuration("");
+  };
 
   const pickVideo = (file: File) => {
     if (!file.type.startsWith("video/")) {
-      setVideoError("That is not a video file. Choose an MP4 or MOV.");
+      clearVideo("That is not a video file. Choose an MP4 or MOV.");
       return;
     }
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setVideoError(
-        `That file is ${Math.round(file.size / 1024 / 1024)} MB. The limit is ${MAX_MB} MB.`,
+    if (file.size > MAX_TESTIMONIAL_MB * 1024 * 1024) {
+      clearVideo(
+        `That file is ${Math.round(file.size / 1024 / 1024)} MB. The limit is ${MAX_TESTIMONIAL_MB} MB.`,
       );
       return;
     }
@@ -83,15 +95,23 @@ export default function SubmitTestimonialModal({
     setVideoUrl(`/videos/testimonials/${file.name}`);
 
     /* Reading the real length means the runtime shown on the card is the
-       file's, not a fixed "3:30". */
+       file's, not a fixed "3:30" — and it is the only way to enforce the
+       time limit, since megabytes do not tell you how long a clip runs. */
     const probe = document.createElement("video");
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
       const seconds = probe.duration;
+      const tooLong = videoLengthError(seconds);
+
+      /* The check lands after the file is already showing, because reading
+         metadata is asynchronous. Clearing it here is what stops a member
+         submitting a clip they were briefly told was accepted. */
+      if (tooLong) {
+        clearVideo(tooLong);
+        return;
+      }
       if (Number.isFinite(seconds) && seconds > 0) {
-        const minutes = Math.floor(seconds / 60);
-        const rest = Math.round(seconds % 60);
-        setDuration(`${minutes}:${String(rest).padStart(2, "0")}`);
+        setDuration(formatClock(seconds));
       }
     };
     probe.src = url;
@@ -257,7 +277,9 @@ export default function SubmitTestimonialModal({
           <FormField
             label="Your video"
             required
-            hint="An MP4 or MOV from your phone or computer, up to 200 MB."
+            hint={`An MP4 or MOV from your phone or computer. Up to ${formatClock(
+              MAX_TESTIMONIAL_SECONDS,
+            )} long and ${MAX_TESTIMONIAL_MB} MB.`}
             error={videoError ?? undefined}
           >
             {() => (
@@ -289,8 +311,11 @@ export default function SubmitTestimonialModal({
                       ? "Choose a different video"
                       : "Upload your video"}
                   </span>
+                  {/* Said before recording, not after. A member who learns
+                    the limit from an error has already made a video they
+                    now have to make again. */}
                   <span className="text-body-sm text-fg-muted">
-                    We read the length from the file
+                    {`Up to ${formatClock(MAX_TESTIMONIAL_SECONDS)} — we read the length from the file`}
                   </span>
                 </button>
 

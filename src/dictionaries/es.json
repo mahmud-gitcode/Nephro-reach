@@ -1407,12 +1407,30 @@
   "community": {
     "pageTitle": "Comunidad",
     "tabs": [
-      { "id": "all", "label": "Todas las Publicaciones" },
-      { "id": "general", "label": "Riñón en General" },
-      { "id": "dialysis", "label": "Diálisis" },
-      { "id": "transplant", "label": "Trasplante de Riñón" },
-      { "id": "caregiver", "label": "Apoyo al Cuidador" },
-      { "id": "nutrition", "label": "Nutrición y Bienestar" }
+      {
+        "id": "all",
+        "label": "Todas las Publicaciones"
+      },
+      {
+        "id": "general",
+        "label": "Riñón en General"
+      },
+      {
+        "id": "dialysis",
+        "label": "Diálisis"
+      },
+      {
+        "id": "transplant",
+        "label": "Trasplante de Riñón"
+      },
+      {
+        "id": "caregiver",
+        "label": "Apoyo al Cuidador"
+      },
+      {
+        "id": "nutrition",
+        "label": "Nutrición y Bienestar"
+      }
     ],
     "postOptionsAria": "Opciones de publicación",
     "hidePost": "Ocultar publicación",
@@ -1715,7 +1733,8 @@
     ],
     "advisory": "Si siente que algo anda gravemente mal, no espere. Llame al 911 o vaya a la sala de emergencias más cercana de inmediato.",
     "disclaimer": "NephroReach es solo una plataforma de educación y apoyo. No proporcionamos asesoramiento médico, diagnóstico ni servicios de emergencia.",
-    "closeButton": "Cerrar"
+    "closeButton": "Cerrar",
+    "addEmergencyContact": "Agregar un contacto de emergencia"
   },
   "trash": {
     "pageTitle": "Papelera (Archivos de Respaldo)",

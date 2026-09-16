@@ -11,6 +11,7 @@ import {
   emptyPlacement,
   formatDays,
   formatTripDates,
+  destinationLabel,
   formatEventTime,
   hasOpenTimeChange,
   pastTrips,
@@ -137,7 +138,7 @@ function RequestCard({
 
       <div className="flex flex-wrap items-start justify-between gap-inline-md">
         <div className="min-w-0">
-          <p className="text-label-md text-fg">{trip.destination}</p>
+          <p className="text-label-md text-fg">{destinationLabel(trip)}</p>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
             {formatTripDates(trip, false)} · {tripLengthDays(trip)} days ·{" "}
             {trip.treatmentsNeeded} treatment(s) needed
@@ -151,7 +152,7 @@ function RequestCard({
           <Select
             selectSize="small"
             value={trip.status}
-            aria-label={`Status for the trip to ${trip.destination}`}
+            aria-label={`Status for the trip to ${destinationLabel(trip)}`}
             onChange={(event) => onStatus(event.target.value as TripStatus)}
             className="w-[190px]"
           >
@@ -285,7 +286,7 @@ function PlacementModal({
       open
       size="wide"
       onClose={onClose}
-      title={`Placement for ${trip.destination}`}
+      title={`Placement for ${destinationLabel(trip)}`}
       description="What you arranged at the other end. The patient sees this as their confirmation."
       footer={
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
@@ -526,7 +527,7 @@ export default function ManageTravelPage() {
                   <div className="flex flex-wrap items-center justify-between gap-inline-md">
                     <div className="min-w-0">
                       <p className="text-label-md text-fg">
-                        {trip.destination}
+                        {destinationLabel(trip)}
                       </p>
                       <p className="mt-stack-xs text-body-sm text-fg-muted">
                         {formatTripDates(trip, false)} ·{" "}

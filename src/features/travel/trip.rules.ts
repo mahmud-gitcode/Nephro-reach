@@ -1,6 +1,7 @@
 import type {
   TimePreference,
   TimeChangeRequest,
+  TripAddress,
   TravelDocumentFile,
   TravelDocumentKey,
   TravelPrepKey,
@@ -41,7 +42,7 @@ export const TRIP_STATUSES: {
     value: "records-sent",
     labelEn: "Records Sent",
     labelEs: "Registros Enviados",
-    detailEn: "Your records have gone to the centre where you are going.",
+    detailEn: "Your records have gone to the center where you are going.",
     detailEs: "Tus registros se enviaron al centro de destino.",
   },
   {
@@ -102,7 +103,7 @@ export function todayIso(now = new Date()): string {
 export function emptyTrip(now = new Date()): TripRequest {
   return {
     id: `trip-${Date.now().toString(36)}`,
-    destination: "",
+    destination: { street: "", city: "", state: "", zip: "" },
     departDate: todayIso(now),
     returnDate: todayIso(now),
     treatmentsNeeded: 3,
@@ -131,7 +132,13 @@ export function emptyTrip(now = new Date()): TripRequest {
  * is a day lost on something the form could have caught.
  */
 export function tripError(trip: TripRequest): string | null {
-  if (trip.destination.trim().length === 0) return "destination";
+  if (!trip.destination.city.trim() || !trip.destination.state.trim())
+    return "destination";
+  /* The clinic rings the receiving unit; a name with no street is a trip
+     nobody can arrange. */
+  if (!trip.destination.street.trim()) return "street";
+  if (!trip.emergencyContact.name.trim()) return "emergency-name";
+  if (!trip.emergencyContact.phone.trim()) return "emergency-phone";
   if (!trip.departDate || !trip.returnDate) return "dates";
   if (trip.returnDate < trip.departDate) return "order";
   if (trip.treatmentsNeeded < 1) return "treatments";
@@ -188,6 +195,22 @@ export function updateTripStatus(
 }
 
 /** "Jun 3 – Jun 12, 2026" from two ISO dates. */
+/** "Orlando, FL" — how a trip is named in a list. */
+export function destinationLabel(trip: TripRequest): string {
+  const { city, state } = trip.destination;
+  return [city.trim(), state.trim()].filter(Boolean).join(", ");
+}
+
+/** The whole address, as a coordinator would read it out. */
+export function formatAddress(address: TripAddress): string {
+  const town = [address.city.trim(), address.state.trim()]
+    .filter(Boolean)
+    .join(", ");
+  return [address.street.trim(), town, address.zip.trim()]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function formatTripDates(trip: TripRequest, isEs: boolean): string {
   const locale = isEs ? "es-ES" : "en-US";
   const parse = (iso: string) => {
@@ -614,86 +637,124 @@ export interface ChecklistItem {
 }
 
 /**
- * The paperwork rows, in checklist wording.
+ * The rows the clinic owns, and where each one's answer already lives.
  *
- * Every document key is here, including `other`. An earlier version listed
- * five of the six and left a second panel to tick the rest — which read the
- * same `documentsReady` array, so five rows existed twice on one screen with
- * different wording and ticking either moved both.
+ * The member does not send records. Orders and labs go from their home unit
+ * straight to the receiving one, and the member never touches them — so a
+ * checkbox here would be asking them to confirm somebody else's work, and an
+ * unticked box would read as their fault.
  *
- * Hints are not repeated here: they are read from `TRAVEL_DOCUMENTS` by key,
- * so what a document is gets described in exactly one place.
+ * Each of these is read off the request's own progress instead. When the
+ * clinic moves the status, the row ticks itself.
  */
-const CHECKLIST_DOCUMENTS: {
-  key: TravelDocumentKey;
+const CLINIC_ROWS: {
+  id: string;
   labelEn: string;
   labelEs: string;
+  hintEn: string;
+  hintEs: string;
+  done: (trip: TripRequest) => boolean;
 }[] = [
   {
-    key: "treatment-orders",
-    labelEn: "Dialysis orders/records sent",
-    labelEs: "Órdenes y expediente enviados",
+    id: "facility",
+    labelEn: "Temporary dialysis facility arranged",
+    labelEs: "Centro de diálisis temporal organizado",
+    hintEn: "Your clinic books the chair at the other end.",
+    hintEs: "Tu clínica reserva el lugar allá.",
+    done: (trip) => Boolean(trip.placement?.treatments.length),
   },
   {
-    key: "recent-labs",
+    id: "treatment-orders",
+    labelEn: "Dialysis orders and records sent",
+    labelEs: "Órdenes y expediente enviados",
+    hintEn: "Sent unit to unit. Nothing for you to upload.",
+    hintEs: "Se envían de centro a centro. No tienes que subir nada.",
+    done: (trip) => statusIndex(trip.status) >= statusIndex("records-sent"),
+  },
+  {
+    id: "recent-labs",
     labelEn: "Recent labs sent (Hep B, PPD/TB, HIV)",
     labelEs: "Laboratorios recientes enviados (Hep B, PPD/TB, VIH)",
+    hintEn: "Sent with your records by your home unit.",
+    hintEs: "Se envían con tu expediente desde tu unidad.",
+    done: (trip) => statusIndex(trip.status) >= statusIndex("records-sent"),
   },
   {
-    key: "medication-list",
-    labelEn: "Medication list packed",
-    labelEs: "Lista de medicamentos empacada",
-  },
-  {
-    key: "insurance",
-    labelEn: "Insurance/authorization confirmed",
+    id: "insurance",
+    labelEn: "Insurance and authorization confirmed",
     labelEs: "Seguro y autorización confirmados",
-  },
-  {
-    key: "emergency-contact",
-    labelEn: "Emergency contact saved",
-    labelEs: "Contacto de emergencia guardado",
-  },
-  {
-    key: "other",
-    labelEn: "Anything else your unit asked for",
-    labelEs: "Cualquier otra cosa que pidió tu unidad",
+    hintEn: "Checked by the two units between them.",
+    hintEs: "Lo revisan las dos unidades entre ellas.",
+    done: (trip) => statusIndex(trip.status) >= statusIndex("confirmed"),
   },
 ];
 
-const documentHint = (key: TravelDocumentKey) =>
-  TRAVEL_DOCUMENTS.find((entry) => entry.key === key);
+/** The rows that are genuinely the member's to do before they leave. */
+const MEMBER_ROWS: {
+  key: TravelDocumentKey | TravelPrepKey;
+  kind: ChecklistItemKind;
+  labelEn: string;
+  labelEs: string;
+  hintEn: string;
+  hintEs: string;
+}[] = [
+  {
+    key: "medication-list",
+    kind: "document",
+    labelEn: "Medication list packed",
+    labelEs: "Lista de medicamentos empacada",
+    hintEn: "Names and doses. Keep a copy in your hand luggage.",
+    hintEs: "Nombres y dosis. Lleva una copia en el equipaje de mano.",
+  },
+  {
+    key: "other",
+    kind: "document",
+    labelEn: "Anything else your unit asked you to bring",
+    labelEs: "Cualquier otra cosa que pidió tu unidad",
+    hintEn: "Photo ID, referral letter, travel insurance.",
+    hintEs: "Identificación, carta de referencia, seguro de viaje.",
+  },
+  {
+    key: "transportation",
+    kind: "prep",
+    labelEn: "Transportation arranged",
+    labelEs: "Transporte organizado",
+    hintEn: "How you will get to the unit at the other end, each day.",
+    hintEs: "Cómo llegarás a la unidad allá, cada día.",
+  },
+  {
+    key: "personal-items",
+    kind: "prep",
+    labelEn: "Personal items packed",
+    labelEs: "Artículos personales empacados",
+    hintEn: "ID, insurance card, medications, supplies.",
+    hintEs: "Identificación, tarjeta del seguro, medicamentos, suministros.",
+  },
+];
 
 export function travelChecklist(trip: TripRequest): ChecklistItem[] {
   return [
-    {
-      id: "facility",
-      kind: "facility",
-      labelEn: "Temporary dialysis facility arranged",
-      labelEs: "Centro de diálisis temporal organizado",
-      /* Read straight off the placement: this is done when the facility has
-         actually booked a chair, and at no earlier moment. */
-      done: Boolean(trip.placement?.treatments.length),
+    ...CLINIC_ROWS.map((row) => ({
+      id: row.id,
+      kind: "facility" as const,
+      labelEn: row.labelEn,
+      labelEs: row.labelEs,
+      hintEn: row.hintEn,
+      hintEs: row.hintEs,
+      done: row.done(trip),
       memberControlled: false,
-    },
-    ...CHECKLIST_DOCUMENTS.map((entry) => ({
-      id: entry.key,
-      kind: "document" as const,
-      labelEn: entry.labelEn,
-      labelEs: entry.labelEs,
-      hintEn: documentHint(entry.key)?.hintEn,
-      hintEs: documentHint(entry.key)?.hintEs,
-      done: trip.documentsReady.includes(entry.key),
-      memberControlled: true,
     })),
-    ...TRAVEL_PREP.map((entry) => ({
-      id: entry.key,
-      kind: "prep" as const,
-      labelEn: entry.labelEn,
-      labelEs: entry.labelEs,
-      hintEn: entry.hintEn,
-      hintEs: entry.hintEs,
-      done: trip.prepDone.includes(entry.key),
+    ...MEMBER_ROWS.map((row) => ({
+      id: row.key,
+      kind: row.kind,
+      labelEn: row.labelEn,
+      labelEs: row.labelEs,
+      hintEn: row.hintEn,
+      hintEs: row.hintEs,
+      done:
+        row.kind === "document"
+          ? trip.documentsReady.includes(row.key as TravelDocumentKey)
+          : trip.prepDone.includes(row.key as TravelPrepKey),
       memberControlled: true,
     })),
   ];
@@ -865,6 +926,18 @@ export function normaliseTrip(trip: Partial<TripRequest>): TripRequest {
     /* Spreading is not enough for these: an older record carries the key as
        `undefined`, which overwrites the default rather than falling back to
        it. */
+    /* Older records kept the destination as one line, usually "City, ST".
+       Split it rather than dropping it: the street and zip are genuinely
+       unknown and stay blank, which the form then asks for. */
+    destination:
+      typeof trip.destination === "string"
+        ? (() => {
+            const [city = "", state = ""] = (trip.destination as string)
+              .split(",")
+              .map((part) => part.trim());
+            return { street: "", city, state, zip: "" };
+          })()
+        : (trip.destination ?? { street: "", city: "", state: "", zip: "" }),
     preferredDays: trip.preferredDays ?? [],
     preferredTime: trip.preferredTime ?? "any",
     documentsReady: trip.documentsReady ?? [],

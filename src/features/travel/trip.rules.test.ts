@@ -15,7 +15,6 @@ import {
   tripLengthDays,
   updateTripStatus,
   TRAVEL_DOCUMENTS,
-  TRAVEL_PREP,
   addConfirmedTreatment,
   canRequestTimeChange,
   canSubmitTimeChange,
@@ -76,11 +75,21 @@ const NOW = new Date(2026, 8, 15, 10, 0, 0);
 function trip(patch: Partial<TripRequest> = {}): TripRequest {
   return {
     ...emptyTrip(NOW),
-    destination: "Tampa, FL",
+    destination: {
+      street: "1 Main St",
+      city: "Tampa",
+      state: "FL",
+      zip: "00000",
+    },
     departDate: "2026-10-03",
     returnDate: "2026-10-12",
     treatmentsNeeded: 4,
     contactPhone: "555-0100",
+    emergencyContact: {
+      name: "Denise Park",
+      phone: "555-0199",
+      relationship: "Daughter",
+    },
     ...patch,
   };
 }
@@ -135,7 +144,13 @@ describe("the status ladder", () => {
 
 describe("what the form will not send", () => {
   it("needs somewhere to go", () => {
-    expect(tripError(trip({ destination: "   " }))).toBe("destination");
+    expect(
+      tripError(
+        trip({
+          destination: { street: "1 Main St", city: "  ", state: "", zip: "" },
+        }),
+      ),
+    ).toBe("destination");
   });
 
   it("refuses a return before the departure", () => {
@@ -149,6 +164,37 @@ describe("what the form will not send", () => {
   it("needs at least one treatment and a contact number", () => {
     expect(tripError(trip({ treatmentsNeeded: 0 }))).toBe("treatments");
     expect(tripError(trip({ contactPhone: "" }))).toBe("phone");
+  });
+
+  it("needs a street, not just a city", () => {
+    // The clinic rings the receiving unit to arrange a chair; a town name
+    // with no address is a trip nobody can actually place.
+    expect(
+      tripError(
+        trip({
+          destination: { street: "", city: "Tampa", state: "FL", zip: "33602" },
+        }),
+      ),
+    ).toBe("street");
+  });
+
+  it("needs an emergency contact, name and number both", () => {
+    // No longer optional: this is the person a unit three states away rings
+    // if something happens in the chair.
+    expect(
+      tripError(
+        trip({
+          emergencyContact: { name: "", phone: "555", relationship: "" },
+        }),
+      ),
+    ).toBe("emergency-name");
+    expect(
+      tripError(
+        trip({
+          emergencyContact: { name: "Denise", phone: "", relationship: "" },
+        }),
+      ),
+    ).toBe("emergency-phone");
   });
 
   it("accepts a complete request", () => {
@@ -364,7 +410,12 @@ describe("trips written by an older version of the app", () => {
    * the whole Dialysis Management page with it. */
   const legacy = {
     id: "legacy-1",
-    destination: "Tampa, FL",
+    destination: {
+      street: "1 Main St",
+      city: "Tampa",
+      state: "FL",
+      zip: "00000",
+    },
     departDate: "2026-10-03",
     returnDate: "2026-10-12",
     treatmentsNeeded: 4,
@@ -402,7 +453,8 @@ describe("trips written by an older version of the app", () => {
   it("keeps everything the old record did have", () => {
     const fixed = normaliseTrip(legacy);
     expect(fixed.id).toBe("legacy-1");
-    expect(fixed.destination).toBe("Tampa, FL");
+    expect(fixed.destination.city).toBe("Tampa");
+    expect(fixed.destination.state).toBe("FL");
     expect(fixed.treatmentsNeeded).toBe(4);
     expect(fixed.submittedAt).toBe("2026-09-15T10:00:00.000Z");
   });
@@ -511,43 +563,57 @@ describe("the travel checklist", () => {
   const base = emptyTrip();
 
   it("lists every row exactly once", () => {
-    // Nine: the facility, six documents, two preparations. An earlier
-    // version listed five documents here and the other one in a second
-    // panel reading the same array, so five rows existed twice on one
-    // screen and ticking either moved both.
     const items = travelChecklist(base);
-    expect(items).toHaveLength(9);
-    expect(new Set(items.map((item) => item.id)).size).toBe(9);
-    expect(checklistProgress(base)).toMatchObject({ done: 0, total: 9 });
+    expect(items).toHaveLength(8);
+    expect(new Set(items.map((item) => item.id)).size).toBe(8);
   });
 
-  it("covers every document key, none left to another panel", () => {
-    const listed = travelChecklist(base)
-      .filter((item) => item.kind === "document")
+  it("gives the member only the rows that are theirs to do", () => {
+    // They do not send records. Orders and labs go unit to unit, so a
+    // checkbox would ask them to confirm somebody else's work and an
+    // unticked box would read as their fault.
+    const mine = travelChecklist(base)
+      .filter((item) => item.memberControlled)
       .map((item) => item.id);
-    expect(listed.sort()).toEqual(
-      TRAVEL_DOCUMENTS.map((entry) => entry.key).sort(),
-    );
+
+    expect(mine.sort()).toEqual([
+      "medication-list",
+      "other",
+      "personal-items",
+      "transportation",
+    ]);
   });
 
-  it("describes what each document is, from one place", () => {
-    // The hints live in TRAVEL_DOCUMENTS; the checklist reads them by key
-    // rather than keeping a second copy that can drift.
-    const orders = travelChecklist(base).find(
-      (item) => item.id === "treatment-orders",
-    );
-    expect(orders?.hintEn).toBe(
-      TRAVEL_DOCUMENTS.find((entry) => entry.key === "treatment-orders")
-        ?.hintEn,
-    );
+  it("leaves the paperwork rows to the clinic", () => {
+    const theirs = travelChecklist(base)
+      .filter((item) => !item.memberControlled)
+      .map((item) => item.id);
+
+    expect(theirs.sort()).toEqual([
+      "facility",
+      "insurance",
+      "recent-labs",
+      "treatment-orders",
+    ]);
   });
 
-  it("will not let a member tick their own placement", () => {
-    // A checkbox here would tell someone they have a bed nobody booked.
-    const facility = travelChecklist(base).find(
-      (item) => item.id === "facility",
+  it("ticks the records rows when the clinic says records are sent", () => {
+    const sent = { ...base, status: "records-sent" as const };
+    const byId = Object.fromEntries(
+      travelChecklist(sent).map((item) => [item.id, item.done]),
     );
-    expect(facility?.memberControlled).toBe(false);
+    expect(byId["treatment-orders"]).toBe(true);
+    expect(byId["recent-labs"]).toBe(true);
+    // Insurance is only settled once the whole thing is confirmed.
+    expect(byId["insurance"]).toBe(false);
+  });
+
+  it("ticks insurance once the trip is confirmed", () => {
+    const confirmed = { ...base, status: "confirmed" as const };
+    const insurance = travelChecklist(confirmed).find(
+      (item) => item.id === "insurance",
+    );
+    expect(insurance?.done).toBe(true);
   });
 
   it("ticks the facility row only once a chair is actually booked", () => {
@@ -568,23 +634,10 @@ describe("the travel checklist", () => {
     ).toBe(true);
   });
 
-  it("reads documents from the request rather than a second copy", () => {
-    const trip = { ...base, documentsReady: ["recent-labs" as const] };
-    expect(checklistProgress(trip).done).toBe(1);
-    expect(
-      travelChecklist(trip).find((item) => item.id === "recent-labs")?.done,
-    ).toBe(true);
-  });
-
-  it("keeps transportation and packing out of the document list", () => {
-    // Those are things a member does, not records a unit needs sent.
-    expect(TRAVEL_DOCUMENTS.map((entry) => entry.key)).not.toContain(
-      "transportation",
+  it("describes every row, so none of them is a bare instruction", () => {
+    expect(travelChecklist(base).every((item) => Boolean(item.hintEn))).toBe(
+      true,
     );
-    expect(TRAVEL_PREP.map((entry) => entry.key)).toEqual([
-      "transportation",
-      "personal-items",
-    ]);
   });
 
   it("counts prep steps toward the total", () => {
@@ -595,21 +648,18 @@ describe("the travel checklist", () => {
   it("is complete only when every row is", () => {
     const trip = {
       ...base,
+      status: "confirmed" as const,
       placement: {
         ...emptyPlacement(),
         treatments: [{ id: "t1", date: "2026-06-16", time: "10:00" }],
       },
       documentsReady: [
-        "treatment-orders",
-        "recent-labs",
         "medication-list",
-        "insurance",
-        "emergency-contact",
         "other",
       ] satisfies TravelDocumentKey[],
       prepDone: ["transportation", "personal-items"] satisfies TravelPrepKey[],
     };
-    expect(checklistProgress(trip).complete).toBe(true);
+    expect(checklistProgress(trip)).toMatchObject({ done: 8, complete: true });
   });
 
   it("toggles a prep flag on and back off", () => {
@@ -618,7 +668,7 @@ describe("the travel checklist", () => {
   });
 
   it("gives an older stored trip an empty prep list rather than undefined", () => {
-    expect(normaliseTrip({ destination: "Miami" }).prepDone).toEqual([]);
+    expect(normaliseTrip({}).prepDone).toEqual([]);
   });
 });
 
@@ -741,7 +791,7 @@ describe("filtering the trip list", () => {
   const trip = (id: string, depart: string, ret: string, patch = {}) => ({
     ...emptyTrip(),
     id,
-    destination: id,
+    destination: { street: "1 Main St", city: id, state: "FL", zip: "00000" },
     departDate: depart,
     returnDate: ret,
     ...patch,
@@ -1003,8 +1053,21 @@ describe("attaching a document", () => {
     expect(removeDocumentFile([base], base.id, "nope", NOW)[0]).toEqual(base);
   });
 
+  it("splits an older stored trip's one-line destination", () => {
+    // Records written before the address had parts kept "City, ST".
+    const migrated = normaliseTrip({
+      destination: "Tampa, FL",
+    } as unknown as Partial<TripRequest>);
+    expect(migrated.destination).toEqual({
+      street: "",
+      city: "Tampa",
+      state: "FL",
+      zip: "",
+    });
+  });
+
   it("gives an older stored trip an empty file list rather than undefined", () => {
-    expect(normaliseTrip({ destination: "Miami" }).documentFiles).toEqual([]);
+    expect(normaliseTrip({}).documentFiles).toEqual([]);
   });
 
   it("shows a size a member can judge", () => {

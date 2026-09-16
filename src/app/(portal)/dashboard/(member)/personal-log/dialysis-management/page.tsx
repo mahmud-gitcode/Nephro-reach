@@ -14,7 +14,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import {
   ALL_WEEKDAYS,
   DEFAULT_DURATION_MINUTES,
-  DEFAULT_REMINDER,
+  DEFAULT_CHAIR_TIME,
+  DEFAULT_REMINDER_LEAD_MINUTES,
+  reminderTimeFor,
   WEEKDAY_ES,
   formatDuration,
   formatFullDate,
@@ -57,11 +59,12 @@ function DialysisManagementDashboard() {
     {
       fromKey: "0000-01-01",
       days: ["Tuesday", "Thursday", "Saturday"],
-      reminders: {
-        Tuesday: DEFAULT_REMINDER,
-        Thursday: DEFAULT_REMINDER,
-        Saturday: DEFAULT_REMINDER,
+      chairTimes: {
+        Tuesday: DEFAULT_CHAIR_TIME,
+        Thursday: DEFAULT_CHAIR_TIME,
+        Saturday: DEFAULT_CHAIR_TIME,
       },
+      reminderLeadMinutes: DEFAULT_REMINDER_LEAD_MINUTES,
       durationMinutes: DEFAULT_DURATION_MINUTES,
     },
   ]);
@@ -361,12 +364,27 @@ function DialysisManagementDashboard() {
                       </span>
 
                       {isSelected ? (
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-fg select-none sm:text-xs">
-                          <Bell className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
-                          {formatReminder(
-                            currentSchedule.reminders[day] ?? DEFAULT_REMINDER,
-                            isEs,
-                          )}
+                        /* The chair time leads, because that is the
+                           appointment. The bell is when they get nudged,
+                           and it only earns a line when it differs. */
+                        <span className="inline-flex shrink-0 flex-col items-end gap-0.5 select-none">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-fg sm:text-xs">
+                            <Clock className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
+                            {formatReminder(
+                              currentSchedule.chairTimes[day] ??
+                                DEFAULT_CHAIR_TIME,
+                              isEs,
+                            )}
+                          </span>
+                          {currentSchedule.reminderLeadMinutes > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold whitespace-nowrap text-fg-muted">
+                              <Bell className="h-3 w-3 shrink-0 stroke-[2.4]" />
+                              {formatReminder(
+                                reminderTimeFor(currentSchedule, day),
+                                isEs,
+                              )}
+                            </span>
+                          ) : null}
                         </span>
                       ) : (
                         <span className="shrink-0 text-xs font-bold text-fg-subtle select-none">
@@ -457,7 +475,8 @@ function DialysisManagementDashboard() {
         open={isEditWeekModalOpen}
         onClose={() => setIsEditWeekModalOpen(false)}
         initialDays={selectedDays}
-        initialReminders={currentSchedule.reminders}
+        initialChairTimes={currentSchedule.chairTimes}
+        initialReminderLead={currentSchedule.reminderLeadMinutes}
         initialDurationMinutes={currentSchedule.durationMinutes}
         initialHideBlankDays={hideBlankDays}
         effectiveDateFor={scopeEffectiveDate}

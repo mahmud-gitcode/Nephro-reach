@@ -1,24 +1,17 @@
 "use client";
 
 import React from "react";
-import {
-  ClipboardList,
-  FileText,
-  History,
-  MapPin,
-  NotebookPen,
-  Plane,
-} from "lucide-react";
+import { ClipboardList, FileText, NotebookPen, Plane } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { PlacementCard } from "./TravelDialysisSection";
 import TripStatusTimeline from "./TripStatusTimeline";
-import { formatTripDates, isConfirmed } from "./trip.rules";
+import { isConfirmed } from "./trip.rules";
 import type { TripRequest } from "./trip.types";
 import { reflectionRemaining } from "./travelTreatment.rules";
 import { REFLECTION_MAX } from "./travelTreatment.types";
 import { useTravelTreatments } from "./useTravelTreatments";
-import { Badge, Card, EmptyState, Textarea } from "@/components/ui";
+import { Badge, Card, Textarea } from "@/components/ui";
 
 /* ==========================================================================
    Travel panels
@@ -176,63 +169,6 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
 
 /* ========================================================================== */
 
-/** Where they have been, as a list rather than a stack of full trip cards. */
-export function PastTravelPanel({ trips }: { trips: TripRequest[] }) {
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-
-  return (
-    <Card as="section" aria-labelledby="past-travel">
-      <PanelHead
-        id="past-travel"
-        icon={<History className="h-5 w-5" />}
-        title={isEs ? "Viajes Anteriores" : "Past Travel Treatments"}
-        hint={
-          isEs
-            ? "Consulta tu historial de diálisis en viaje."
-            : "View your previous travel dialysis history."
-        }
-      />
-
-      {trips.length === 0 ? (
-        <div className="mt-stack-md">
-          <EmptyState
-            icon={<History aria-hidden="true" />}
-            title={isEs ? "Aún no hay historial" : "No past trips yet"}
-            description={
-              isEs
-                ? "Cuando vuelvas de un viaje, aparecerá aquí."
-                : "Once you are home from a trip, it appears here."
-            }
-          />
-        </div>
-      ) : (
-        <ul className="mt-stack-md divide-y divide-line">
-          {trips.map((trip) => (
-            <li
-              key={trip.id}
-              className="flex items-center gap-inline-md py-stack-sm"
-            >
-              <MapPin
-                aria-hidden="true"
-                className="size-4 shrink-0 text-fg-subtle"
-              />
-              <span className="min-w-0 flex-1 truncate text-body-sm text-fg">
-                {trip.destination || (isEs ? "Sin destino" : "No destination")}
-              </span>
-              <span className="shrink-0 text-body-sm text-fg-muted">
-                {formatTripDates(trip, isEs)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-/* ========================================================================== */
-
 /** The one-line invitation above the grid, with the help link beside it. */
 export function TravelIntroBar() {
   const { language } = useLanguage();
@@ -247,13 +183,14 @@ export function TravelIntroBar() {
           : "Plan ahead, stay connected, and receive the same quality care wherever you go."}
       </p>
 
-      {/* Points at the library rather than inventing a page that is not
-        built: a button that goes nowhere is worse than no button. */}
+      {/* Goes to the care team, not the library. A member who needs travel
+        help needs the people arranging it, and reading an article is not
+        what "help" means when your chair is in another state. */}
       <Link
-        href="/dashboard/my-library"
+        href="/dashboard/team-questions"
         className="shrink-0 rounded-control-small text-label-sm text-fg-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        {isEs ? "Ayuda de viaje" : "Travel Help"}
+        {isEs ? "Preguntar a tu clínica" : "Ask your clinic"}
       </Link>
     </div>
   );

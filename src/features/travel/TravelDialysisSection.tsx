@@ -9,6 +9,7 @@ import {
   TRIP_STATUSES,
   WEEKDAYS,
   canSubmit,
+  destinationLabel,
   documentsProgress,
   emptyTrip,
   formatDateLabel,
@@ -93,7 +94,7 @@ export function PlacementCard({ trip }: { trip: TripRequest }) {
     <div className="rounded-card border border-success-line bg-success-surface p-inset-sm">
       <p className="flex items-center gap-inline-sm text-label-md text-success">
         <Building2 aria-hidden="true" className="h-4 w-4 shrink-0" />
-        {isEs ? "Tu centro durante el viaje" : "Your centre while away"}
+        {isEs ? "Tu centro durante el viaje" : "Your center while away"}
       </p>
 
       <p className="mt-stack-xs text-body-md text-fg">
@@ -356,7 +357,7 @@ export function TravelDialysisSection() {
                 : "Your clinic sees the changes. This is still not confirmed."
               : isEs
                 ? "Tu clínica recibe esto y coordina el centro de destino."
-                : "Your clinic receives this and arranges the centre at the other end."
+                : "Your clinic receives this and arranges the center at the other end."
           }
           footer={
             <div className="flex flex-wrap items-center justify-end gap-inline-md">
@@ -390,28 +391,105 @@ export function TravelDialysisSection() {
                 {isEs ? "El viaje" : "The trip"}
               </h3>
 
+              {/* The address in its parts. One free-text line was enough to
+                name a trip and useless for arranging one — the coordinator
+                rings round for a chair and needs a street and a zip. */}
               <FormField
-                label={isEs ? "¿A dónde vas?" : "Where are you going?"}
+                label={isEs ? "Dirección" : "Street address"}
                 required
                 error={
-                  submitted && invalid === "destination"
+                  submitted && invalid === "street"
                     ? isEs
-                      ? "Dinos la ciudad o el lugar."
-                      : "Tell us the city or place."
+                      ? "Dinos la calle donde te quedarás."
+                      : "Tell us the street where you are staying."
                     : undefined
                 }
               >
                 {(props) => (
                   <Input
                     {...props}
-                    value={draft.destination}
+                    value={draft.destination.street}
                     onChange={(event) =>
-                      set({ destination: event.target.value })
+                      set({
+                        destination: {
+                          ...draft.destination,
+                          street: event.target.value,
+                        },
+                      })
                     }
-                    placeholder={isEs ? "Ciudad, estado" : "City, state"}
+                    placeholder="1234 Health Way"
                   />
                 )}
               </FormField>
+
+              <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-[1fr_120px_140px]">
+                <FormField
+                  label={isEs ? "Ciudad" : "City"}
+                  required
+                  error={
+                    submitted && invalid === "destination"
+                      ? isEs
+                        ? "Falta la ciudad o el estado."
+                        : "City and state are both needed."
+                      : undefined
+                  }
+                >
+                  {(props) => (
+                    <Input
+                      {...props}
+                      value={draft.destination.city}
+                      onChange={(event) =>
+                        set({
+                          destination: {
+                            ...draft.destination,
+                            city: event.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Orlando"
+                    />
+                  )}
+                </FormField>
+
+                <FormField label={isEs ? "Estado" : "State"} required>
+                  {(props) => (
+                    <Input
+                      {...props}
+                      value={draft.destination.state}
+                      onChange={(event) =>
+                        set({
+                          destination: {
+                            ...draft.destination,
+                            /* Uppercased as typed: a state code is written
+                               one way on an address. */
+                            state: event.target.value.toUpperCase().slice(0, 2),
+                          },
+                        })
+                      }
+                      placeholder="FL"
+                    />
+                  )}
+                </FormField>
+
+                <FormField label={isEs ? "Código postal" : "ZIP code"}>
+                  {(props) => (
+                    <Input
+                      {...props}
+                      inputMode="numeric"
+                      value={draft.destination.zip}
+                      onChange={(event) =>
+                        set({
+                          destination: {
+                            ...draft.destination,
+                            zip: event.target.value,
+                          },
+                        })
+                      }
+                      placeholder="32801"
+                    />
+                  )}
+                </FormField>
+              </div>
 
               <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
                 <FormField label={isEs ? "Salida" : "Leaving"} required>
@@ -575,8 +653,19 @@ export function TravelDialysisSection() {
                 </FormField>
 
                 <FormField
-                  label={isEs ? "Contacto de emergencia" : "Emergency contact"}
-                  optionalLabel={isEs ? "opcional" : "optional"}
+                  label={
+                    isEs
+                      ? "Nombre del contacto de emergencia"
+                      : "Emergency contact name"
+                  }
+                  required
+                  error={
+                    submitted && invalid === "emergency-name"
+                      ? isEs
+                        ? "¿A quién llamamos si algo pasa?"
+                        : "Who should be called if something happens?"
+                      : undefined
+                  }
                 >
                   {(props) => (
                     <Input
@@ -595,9 +684,22 @@ export function TravelDialysisSection() {
                   )}
                 </FormField>
 
+                {/* "Their phone" sat under a name and read as if it might
+                  be the member's own. It says whose it is. */}
                 <FormField
-                  label={isEs ? "Su teléfono" : "Their phone"}
-                  optionalLabel={isEs ? "opcional" : "optional"}
+                  label={
+                    isEs
+                      ? "Teléfono del contacto de emergencia"
+                      : "Emergency contact phone"
+                  }
+                  required
+                  error={
+                    submitted && invalid === "emergency-phone"
+                      ? isEs
+                        ? "Necesitamos un número al que llamar."
+                        : "We need a number to call."
+                      : undefined
+                  }
                 >
                   {(props) => (
                     <Input
@@ -737,8 +839,8 @@ export function TravelDialysisSection() {
           title={isEs ? "¿Cancelar esta solicitud?" : "Cancel this request?"}
           description={
             isEs
-              ? `Tu solicitud para ${pendingCancel.destination} se eliminará. Si tu clínica ya está trabajando en ella, avísales.`
-              : `Your request for ${pendingCancel.destination} will be removed. If your clinic is already working on it, let them know.`
+              ? `Tu solicitud para ${destinationLabel(pendingCancel)} se eliminará. Si tu clínica ya está trabajando en ella, avísales.`
+              : `Your request for ${destinationLabel(pendingCancel)} will be removed. If your clinic is already working on it, let them know.`
           }
           footer={
             <div className="flex flex-wrap items-center justify-end gap-inline-md">

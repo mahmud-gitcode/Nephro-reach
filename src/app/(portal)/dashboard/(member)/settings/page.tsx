@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bell, KeyRound, UserCircle } from "lucide-react";
+import { Bell, KeyRound, Phone, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import EmergencyContactSection from "@/features/profile/EmergencyContactSection";
 import {
   Alert,
   Button,
@@ -387,7 +388,7 @@ function ChangePassword({
 }
 
 export default function SettingsPage() {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const st = dictionary?.settings;
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
@@ -421,7 +422,24 @@ export default function SettingsPage() {
       />
       <div className="flex-1 space-y-stack-lg">
         <TabPanel id="profile" value={activeTab}>
-          <ProfileInformation profileData={st?.profile} />
+          <div className="space-y-stack-lg">
+            <ProfileInformation profileData={st?.profile} />
+
+            {/* Under the profile rather than a tab of its own: it is one more
+              fact about the member, and burying it behind its own heading is
+              how it stays empty until the day it is needed. */}
+            <SettingsSection
+              id="emergency-contact"
+              icon={Phone}
+              title={
+                language === "ES"
+                  ? "Contacto de Emergencia"
+                  : "Emergency Contact"
+              }
+            >
+              <EmergencyContactSection />
+            </SettingsSection>
+          </div>
         </TabPanel>
         <TabPanel id="notification" value={activeTab}>
           <NotificationPreferences notificationData={st?.notifications} />

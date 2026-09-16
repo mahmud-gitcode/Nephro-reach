@@ -13,7 +13,6 @@ import {
   saveQuestions,
 } from "./tableTalk.repository";
 import * as rules from "./tableTalk.rules";
-import { SAMPLE_PREFIX } from "./tableTalk.seed";
 import type { TableTalkEpisode, TableTalkQuestion } from "./tableTalk.types";
 
 export const episodesKey = ["table-talk", "episodes"] as const;
@@ -238,23 +237,6 @@ export function useTableTalkAdmin() {
           rules.archiveCategory(current, id, archived),
         ),
       [mutateCategories],
-    ),
-
-    /* The seeded examples, and a way to be rid of them. Shipping with demo
-       episodes still on the shelf is the sort of thing nobody notices until
-       a member asks who Dr. Amara Osei is. */
-    sampleCount: useMemo(
-      () =>
-        episodes.filter((episode) => episode.id.startsWith(SAMPLE_PREFIX))
-          .length,
-      [episodes],
-    ),
-    clearSamples: useCallback(
-      () =>
-        mutateEpisodes((current) =>
-          current.filter((episode) => !episode.id.startsWith(SAMPLE_PREFIX)),
-        ),
-      [mutateEpisodes],
     ),
 
     setQuestionStatus: useCallback(

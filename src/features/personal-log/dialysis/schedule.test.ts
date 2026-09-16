@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   appendSchedulePeriod,
+  DEFAULT_CHAIR_TIME,
   buildSchedulePeriod,
+  normaliseSchedulePeriod,
+  reminderTimeFor,
+  shiftClock,
   daysForDate,
   formatDuration,
   formatFullDate,
@@ -26,14 +30,16 @@ import {
 const MWF: SchedulePeriod = {
   fromKey: "2026-01-01",
   days: ["Monday", "Wednesday", "Friday"],
-  reminders: {},
+  chairTimes: {},
+  reminderLeadMinutes: 0,
   durationMinutes: 240,
 };
 
 const TTS: SchedulePeriod = {
   fromKey: "2026-06-15",
   days: ["Tuesday", "Thursday", "Saturday"],
-  reminders: {},
+  chairTimes: {},
+  reminderLeadMinutes: 0,
   durationMinutes: 240,
 };
 
@@ -131,7 +137,13 @@ describe("walking the schedule", () => {
   it("gives up after two months rather than looping forever", () => {
     // Nobody is prescribed nothing, but an empty schedule must not hang.
     const never = makeIsTreatmentDay([
-      { fromKey: "2026-01-01", days: [], reminders: {}, durationMinutes: 240 },
+      {
+        fromKey: "2026-01-01",
+        days: [],
+        chairTimes: {},
+        reminderLeadMinutes: 0,
+        durationMinutes: 240,
+      },
     ]);
     expect(toDateKey(nextScheduledDate(june(1), never))).toBe("2026-06-08");
     expect(toDateKey(scheduledOnOrBefore(june(1), never))).toBe("2026-06-01");
@@ -190,7 +202,8 @@ describe("formatting", () => {
 describe("building a schedule period from the form", () => {
   const draft = {
     days: ["Friday", "Monday"],
-    reminders: { Monday: "06:00" },
+    chairTimes: { Monday: "06:00" },
+    reminderLeadMinutes: 0,
     durationHours: "4",
     durationMinutes: "00",
   };
@@ -204,15 +217,15 @@ describe("building a schedule period from the form", () => {
 
   it("gives every prescribed day a reminder, defaulting the new ones", () => {
     const period = buildSchedulePeriod(draft, "2026-06-15");
-    expect(period.reminders).toEqual({ Monday: "06:00", Friday: "07:30" });
+    expect(period.chairTimes).toEqual({ Monday: "06:00", Friday: "07:30" });
   });
 
   it("drops reminders for days no longer prescribed", () => {
     const period = buildSchedulePeriod(
-      { ...draft, reminders: { ...draft.reminders, Sunday: "09:00" } },
+      { ...draft, chairTimes: { ...draft.chairTimes, Sunday: "09:00" } },
       "2026-06-15",
     );
-    expect(period.reminders.Sunday).toBeUndefined();
+    expect(period.chairTimes.Sunday).toBeUndefined();
   });
 
   it("turns the typed duration into minutes", () => {
@@ -242,7 +255,8 @@ describe("appending a schedule period", () => {
   const later: SchedulePeriod = {
     fromKey: "2026-06-15",
     days: ["Tuesday"],
-    reminders: {},
+    chairTimes: {},
+    reminderLeadMinutes: 0,
     durationMinutes: 240,
   };
 
@@ -264,5 +278,71 @@ describe("appending a schedule period", () => {
     const next = appendSchedulePeriod([MWF], fromTheStart);
     expect(next).toHaveLength(2);
     expect(next[0]).toBe(MWF);
+  });
+});
+
+describe("chair time and the reminder that follows it", () => {
+  const period = {
+    fromKey: "2026-01-01",
+    days: ["Monday"],
+    chairTimes: { Monday: "05:30" },
+    reminderLeadMinutes: 60,
+    durationMinutes: 240,
+  };
+
+  it("reminds an hour before the chair time, not at a time of its own", () => {
+    // A chair time that moves has to take its reminder with it; storing
+    // both independently is how somebody is reminded for a slot they no
+    // longer have.
+    expect(reminderTimeFor(period, "Monday")).toBe("04:30");
+  });
+
+  it("reminds at the chair time when no lead is set", () => {
+    expect(
+      reminderTimeFor({ ...period, reminderLeadMinutes: 0 }, "Monday"),
+    ).toBe("05:30");
+  });
+
+  it("wraps back past midnight rather than going negative", () => {
+    // An early chair time with a long lead lands on the previous evening.
+    expect(shiftClock("00:30", 60)).toBe("23:30");
+    expect(shiftClock("05:30", 120)).toBe("03:30");
+  });
+
+  it("leaves a time it cannot read alone", () => {
+    expect(shiftClock("not-a-time", 60)).toBe("not-a-time");
+  });
+
+  it("reads a record written before chair time existed", () => {
+    // The old `reminders` map held the time members had to be there, so it
+    // becomes the chair time with no lead. Nothing shifts until they edit.
+    const old = {
+      fromKey: "2026-01-01",
+      days: ["Monday"],
+      reminders: { Monday: "05:30" },
+      durationMinutes: 240,
+    } as unknown as SchedulePeriod & { reminders: Record<string, string> };
+
+    const fixed = normaliseSchedulePeriod(old);
+    expect(fixed.chairTimes).toEqual({ Monday: "05:30" });
+    expect(fixed.reminderLeadMinutes).toBe(0);
+    expect(reminderTimeFor(fixed, "Monday")).toBe("05:30");
+  });
+
+  it("keeps a chair time for every day the member adds", () => {
+    const built = buildSchedulePeriod(
+      {
+        days: ["Monday", "Friday"],
+        chairTimes: { Monday: "05:30" },
+        reminderLeadMinutes: 60,
+        durationHours: "4",
+        durationMinutes: "0",
+      },
+      "2026-02-01",
+    );
+    expect(built.chairTimes).toEqual({
+      Monday: "05:30",
+      Friday: DEFAULT_CHAIR_TIME,
+    });
   });
 });

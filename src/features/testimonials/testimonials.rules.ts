@@ -5,6 +5,52 @@ import type { Testimonial } from "./testimonials.types";
    one workflow — a member submits, an admin publishes — and they should not
    drift apart. */
 
+/* ==========================================================================
+   How long a testimonial may run
+   --------------------------------------------------------------------------
+   Three minutes.
+
+   These are personal stories on a shelf people browse, and a ten-minute
+   upload costs three people something: the member who records it and is
+   asked to do it again, the admin who has to watch all of it to approve it,
+   and the next member, who scrolls past anything that looks like homework.
+
+   The size cap that was already here does not do this job. A three-minute
+   clip from an older phone and a twenty-minute one from a newer phone can
+   land on the same number of megabytes.
+   ========================================================================== */
+
+export const MAX_TESTIMONIAL_SECONDS = 3 * 60;
+
+/** Big enough to be a real recording, small enough to be a phone clip. */
+export const MAX_TESTIMONIAL_MB = 200;
+
+/** "3:00" — the way a limit is said to somebody about to record. */
+export function formatClock(seconds: number): string {
+  const whole = Math.max(0, Math.round(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Whether a file's length is acceptable.
+ *
+ * A length that cannot be read is allowed through rather than blocked: some
+ * MOV files report no duration until they are fully decoded, and refusing a
+ * member's only recording because the browser could not measure it would be
+ * worse than letting the admin see it and decide.
+ */
+export function videoLengthError(seconds: number | null): string | null {
+  if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  if (seconds > MAX_TESTIMONIAL_SECONDS) {
+    return `That video is ${formatClock(seconds)}. Testimonials can be up to ${formatClock(
+      MAX_TESTIMONIAL_SECONDS,
+    )} — try trimming it before you upload.`;
+  }
+  return null;
+}
+
 const normalize = (email: string) => email.trim().toLowerCase();
 
 export const approvedTestimonials = (testimonials: Testimonial[]) =>

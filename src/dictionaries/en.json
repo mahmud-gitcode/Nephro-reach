@@ -1423,12 +1423,30 @@
   "community": {
     "pageTitle": "Community",
     "tabs": [
-      { "id": "all", "label": "All Posts" },
-      { "id": "general", "label": "General Kidney" },
-      { "id": "dialysis", "label": "Dialysis" },
-      { "id": "transplant", "label": "Kidney Transplant" },
-      { "id": "caregiver", "label": "Caregiver Support" },
-      { "id": "nutrition", "label": "Nutrition & Wellness" }
+      {
+        "id": "all",
+        "label": "All Posts"
+      },
+      {
+        "id": "general",
+        "label": "General Kidney"
+      },
+      {
+        "id": "dialysis",
+        "label": "Dialysis"
+      },
+      {
+        "id": "transplant",
+        "label": "Kidney Transplant"
+      },
+      {
+        "id": "caregiver",
+        "label": "Caregiver Support"
+      },
+      {
+        "id": "nutrition",
+        "label": "Nutrition & Wellness"
+      }
     ],
     "postOptionsAria": "Post options",
     "hidePost": "Hide post",
@@ -1731,7 +1749,8 @@
     ],
     "advisory": "If you feel something is seriously wrong, do not wait. Call 911 or go to the nearest emergency room immediately.",
     "disclaimer": "NephroReach is an education and support platform only. We do not provide medical advice, diagnosis, or emergency services.",
-    "closeButton": "Close"
+    "closeButton": "Close",
+    "addEmergencyContact": "Add an emergency contact"
   },
   "trash": {
     "pageTitle": "Trash (Backup Archives)",

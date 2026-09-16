@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Button, Modal } from "@/components/ui";
 import {
   ALL_WEEKDAYS,
-  DEFAULT_REMINDER,
+  DEFAULT_CHAIR_TIME,
   SCOPE_OPTIONS,
   WEEKDAY_ES,
   formatFullDate,
@@ -43,7 +43,8 @@ export function EditWeekModal({
   open,
   onClose,
   initialDays,
-  initialReminders,
+  initialChairTimes,
+  initialReminderLead,
   initialDurationMinutes,
   initialHideBlankDays,
   effectiveDateFor,
@@ -53,7 +54,8 @@ export function EditWeekModal({
   open: boolean;
   onClose: () => void;
   initialDays: string[];
-  initialReminders: Record<string, string>;
+  initialChairTimes: Record<string, string>;
+  initialReminderLead: number;
   initialDurationMinutes: number;
   initialHideBlankDays: boolean;
   /** Where the chosen scope starts, decided by the page's calendar. */
@@ -66,8 +68,9 @@ export function EditWeekModal({
   const isEs = language === "ES";
 
   const [tempDays, setTempDays] = useState<string[]>(initialDays);
-  const [tempReminders, setTempReminders] =
-    useState<Record<string, string>>(initialReminders);
+  const [tempChairTimes, setTempChairTimes] =
+    useState<Record<string, string>>(initialChairTimes);
+  const [tempLead, setTempLead] = useState<number>(initialReminderLead);
   const [tempDurationHours, setTempDurationHours] = useState(
     String(Math.floor(initialDurationMinutes / 60)),
   );
@@ -88,8 +91,8 @@ export function EditWeekModal({
       return;
     }
     setTempDays([...tempDays, day]);
-    setTempReminders((prev) =>
-      prev[day] ? prev : { ...prev, [day]: DEFAULT_REMINDER },
+    setTempChairTimes((prev: Record<string, string>) =>
+      prev[day] ? prev : { ...prev, [day]: DEFAULT_CHAIR_TIME },
     );
   };
 
@@ -98,7 +101,8 @@ export function EditWeekModal({
     onSave({
       draft: {
         days: tempDays,
-        reminders: tempReminders,
+        chairTimes: tempChairTimes,
+        reminderLeadMinutes: tempLead,
         durationHours: tempDurationHours,
         durationMinutes: tempDurationMins,
       },
@@ -192,10 +196,10 @@ export function EditWeekModal({
           </span>
         </button>
 
-        {/* A reminder time per prescribed day */}
+        {/* The chair time the unit assigned, per prescribed day. */}
         <div>
           <label className="mb-2 block font-semibold text-fg-secondary">
-            {isEs ? "Hora del Recordatorio" : "Reminder Time"}
+            {isEs ? "Hora del Sillón" : "Chair Time"}
           </label>
           <div className="space-y-2">
             {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => (
@@ -209,9 +213,12 @@ export function EditWeekModal({
                 </span>
                 <input
                   type="time"
-                  value={tempReminders[day] ?? DEFAULT_REMINDER}
+                  aria-label={`${isEs ? "Hora del sillón" : "Chair time"} — ${
+                    isEs ? WEEKDAY_ES[day] : day
+                  }`}
+                  value={tempChairTimes[day] ?? DEFAULT_CHAIR_TIME}
                   onChange={(e) =>
-                    setTempReminders((prev) => ({
+                    setTempChairTimes((prev) => ({
                       ...prev,
                       [day]: e.target.value,
                     }))
@@ -221,6 +228,35 @@ export function EditWeekModal({
               </div>
             ))}
           </div>
+        </div>
+
+        {/* The reminder is expressed against the chair time, not as its own
+          clock time, so moving a chair time moves the reminder with it. */}
+        <div>
+          <label
+            htmlFor="reminder-lead"
+            className="mb-2 block font-semibold text-fg-secondary"
+          >
+            {isEs ? "Recordarme" : "Remind me"}
+          </label>
+          <select
+            id="reminder-lead"
+            value={tempLead}
+            onChange={(e) => setTempLead(Number(e.target.value))}
+            className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:ring-2 focus:ring-ring"
+          >
+            {[0, 30, 60, 90, 120, 180].map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {minutes === 0
+                  ? isEs
+                    ? "A la hora del sillón"
+                    : "At my chair time"
+                  : isEs
+                    ? `${minutes} minutos antes`
+                    : `${minutes} minutes before`}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Session length: one amount shared by every prescribed day */}

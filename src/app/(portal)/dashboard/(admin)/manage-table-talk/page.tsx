@@ -309,8 +309,6 @@ export default function ManageTableTalkPage() {
     saveError,
     dismissSaveError,
     isSaving,
-    sampleCount,
-    clearSamples,
   } = useTableTalkAdmin();
 
   const [editing, setEditing] = useState<TableTalkEpisode | null>(null);
@@ -391,30 +389,6 @@ export default function ManageTableTalkPage() {
           iconTone="text-warning"
         />
       </section>
-
-      {/* Example content is fine while the feature is being shown; it is not
-          fine at launch, so it says so rather than blending in. */}
-      {sampleCount > 0 ? (
-        <Alert
-          tone="info"
-          title={`${sampleCount} example episodes are on the shelf`}
-          className="mt-stack-lg"
-          action={
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={clearSamples}
-            >
-              Remove all examples
-            </Button>
-          }
-        >
-          They are here so the page can be seen before real recordings exist.
-          Their video files are not in the app, so they open on the poster and
-          play nothing. Replace or remove them before launch.
-        </Alert>
-      ) : null}
 
       {saveError ? (
         <Alert

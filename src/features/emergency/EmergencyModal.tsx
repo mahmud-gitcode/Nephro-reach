@@ -1,8 +1,15 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { MapPin, Phone, TriangleAlert } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  canCall,
+  describeContact,
+  dialable,
+} from "@/features/profile/emergencyContact";
+import { useEmergencyContact } from "@/features/profile/useEmergencyContact";
 import { Button, buttonStyles, Card, Modal } from "@/components/ui";
 
 const defaultSymptoms = [
@@ -23,6 +30,7 @@ type EmergencyModalProps = {
 export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
   const { dictionary } = useLanguage();
   const em = dictionary?.emergencyModal;
+  const { contact } = useEmergencyContact();
 
   const symptoms =
     em?.symptoms && Array.isArray(em.symptoms) && em.symptoms.length > 0
@@ -80,18 +88,41 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
             {em?.findEr || "Find Nearest Emergency Room"}
           </a>
 
-          {/* NOTE: this button has never had a handler. It needs the member's
-              stored emergency contact, which has no backend yet, so it is
-              disabled rather than pretending to work. */}
-          <Button
-            variant="neutral"
-            appearance="fill-stroke"
-            disabled
-            className="w-full"
-          >
-            <Phone aria-hidden="true" />
-            {em?.emergencyContact || "Emergency contact"}
-          </Button>
+          {/* Dials the contact on the member's profile. It used to be a
+            permanently disabled button with nowhere to read a number from,
+            which on this screen is the cruellest control in the app: the
+            one thing that would help, doing nothing. */}
+          {canCall(contact) ? (
+            <a
+              href={`tel:${dialable(contact.phone)}`}
+              className={buttonStyles({
+                variant: "neutral",
+                appearance: "fill-stroke",
+                fullWidth: true,
+              })}
+            >
+              <Phone aria-hidden="true" />
+              <span className="min-w-0 truncate">
+                {describeContact(contact) ||
+                  em?.emergencyContact ||
+                  "Emergency contact"}
+              </span>
+            </a>
+          ) : (
+            /* Nothing stored yet: offer the place to store it rather than a
+               dead button. Not disabled — there is something to do. */
+            <Link
+              href="/dashboard/settings"
+              className={buttonStyles({
+                variant: "neutral",
+                appearance: "fill-stroke",
+                fullWidth: true,
+              })}
+            >
+              <Phone aria-hidden="true" />
+              {em?.addEmergencyContact || "Add an emergency contact"}
+            </Link>
+          )}
         </div>
 
         <Card
