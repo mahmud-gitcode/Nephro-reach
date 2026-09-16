@@ -189,6 +189,36 @@ export function shiftClock(value: string, minutes: number): string {
   return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
 }
 
+/**
+ * The chair time a newly added day should take.
+ *
+ * Most people run the same slot every treatment day — "Monday, Wednesday,
+ * Friday at 5:30" is one time, not three — so a day added to the schedule
+ * inherits whatever the others are already on. Falling back to a generic
+ * default meant setting the same time over and over.
+ *
+ * The most common existing time wins, so a member with an odd day out does
+ * not have their exception spread to every new day.
+ */
+export function prevailingChairTime(
+  chairTimes: Record<string, string>,
+): string {
+  const counts = new Map<string, number>();
+  for (const time of Object.values(chairTimes)) {
+    if (time) counts.set(time, (counts.get(time) ?? 0) + 1);
+  }
+
+  let best = DEFAULT_CHAIR_TIME;
+  let bestCount = 0;
+  for (const [time, count] of counts) {
+    if (count > bestCount) {
+      best = time;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
 /** When to nudge for a given day: chair time, less the lead. */
 export function reminderTimeFor(period: SchedulePeriod, day: string): string {
   const chair = period.chairTimes[day] ?? DEFAULT_CHAIR_TIME;

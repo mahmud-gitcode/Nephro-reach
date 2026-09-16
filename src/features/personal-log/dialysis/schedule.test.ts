@@ -5,6 +5,7 @@ import {
   DEFAULT_CHAIR_TIME,
   buildSchedulePeriod,
   normaliseSchedulePeriod,
+  prevailingChairTime,
   reminderTimeFor,
   shiftClock,
   daysForDate,
@@ -344,5 +345,36 @@ describe("chair time and the reminder that follows it", () => {
       Monday: "05:30",
       Friday: DEFAULT_CHAIR_TIME,
     });
+  });
+});
+
+describe("the slot a new day joins", () => {
+  it("takes the time the other days already run", () => {
+    // "Monday, Wednesday, Friday at 5:30" is one chair time, not three.
+    expect(prevailingChairTime({ Monday: "05:30", Wednesday: "05:30" })).toBe(
+      "05:30",
+    );
+  });
+
+  it("falls back to the default when nothing is set yet", () => {
+    expect(prevailingChairTime({})).toBe(DEFAULT_CHAIR_TIME);
+  });
+
+  it("does not let one odd day out spread to the rest", () => {
+    // A member who runs late on Fridays should not have every new day
+    // inherit the exception.
+    expect(
+      prevailingChairTime({
+        Monday: "05:30",
+        Wednesday: "05:30",
+        Friday: "13:00",
+      }),
+    ).toBe("05:30");
+  });
+
+  it("ignores blank entries left by an older record", () => {
+    expect(prevailingChairTime({ Monday: "", Wednesday: "06:00" })).toBe(
+      "06:00",
+    );
   });
 });

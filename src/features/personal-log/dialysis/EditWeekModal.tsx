@@ -7,6 +7,7 @@ import { Button, Modal } from "@/components/ui";
 import {
   ALL_WEEKDAYS,
   DEFAULT_CHAIR_TIME,
+  prevailingChairTime,
   SCOPE_OPTIONS,
   WEEKDAY_ES,
   formatFullDate,
@@ -91,8 +92,10 @@ export function EditWeekModal({
       return;
     }
     setTempDays([...tempDays, day]);
+    /* A new day joins the slot the others are already on, because that is
+       what a prescription looks like: one chair time across the week. */
     setTempChairTimes((prev: Record<string, string>) =>
-      prev[day] ? prev : { ...prev, [day]: DEFAULT_CHAIR_TIME },
+      prev[day] ? prev : { ...prev, [day]: prevailingChairTime(prev) },
     );
   };
 
