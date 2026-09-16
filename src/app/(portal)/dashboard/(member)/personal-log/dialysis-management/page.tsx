@@ -16,7 +16,7 @@ import {
   DEFAULT_DURATION_MINUTES,
   DEFAULT_CHAIR_TIME,
   DEFAULT_REMINDER_LEAD_MINUTES,
-  reminderTimeFor,
+  durationFor,
   WEEKDAY_ES,
   formatDuration,
   formatFullDate,
@@ -65,7 +65,11 @@ function DialysisManagementDashboard() {
         Saturday: DEFAULT_CHAIR_TIME,
       },
       reminderLeadMinutes: DEFAULT_REMINDER_LEAD_MINUTES,
-      durationMinutes: DEFAULT_DURATION_MINUTES,
+      durations: {
+        Tuesday: DEFAULT_DURATION_MINUTES,
+        Thursday: DEFAULT_DURATION_MINUTES,
+        Saturday: DEFAULT_DURATION_MINUTES,
+      },
     },
   ]);
   const currentSchedule = schedulePeriods[schedulePeriods.length - 1];
@@ -324,17 +328,21 @@ function DialysisManagementDashboard() {
           <div className="mt-5 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(236px,0.72fr)]">
             {/* Session duration on top, then one row per day */}
             <div className="space-y-3 rounded-xl border border-line-subtle bg-surface-sunken p-3.5 sm:p-4">
-              {/* One amount shared by every prescribed day */}
+              {/* The reminder, said once. It is the same offset for every
+                day, unlike the chair time and the length, which are not. */}
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-line bg-surface px-3.5 py-2.5">
                 <span className="inline-flex items-center gap-2 text-xs font-bold text-fg-secondary sm:text-sm">
-                  <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-muted" />
-                  {isEs ? "Duración de la sesión" : "Session duration"}
+                  <Bell className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-muted" />
+                  {isEs ? "Recordatorio" : "Reminder"}
                 </span>
                 <span className="text-sm font-bold text-fg-brand sm:text-base">
-                  {formatDuration(currentSchedule.durationMinutes)}
-                  <span className="ml-1.5 text-[11px] font-semibold text-fg-subtle">
-                    {isEs ? "(todos los días)" : "(all days)"}
-                  </span>
+                  {currentSchedule.reminderLeadMinutes === 0
+                    ? isEs
+                      ? "A la hora del sillón"
+                      : "At chair time"
+                    : isEs
+                      ? `${currentSchedule.reminderLeadMinutes} min antes`
+                      : `${currentSchedule.reminderLeadMinutes} min before`}
                 </span>
               </div>
 
@@ -364,27 +372,21 @@ function DialysisManagementDashboard() {
                       </span>
 
                       {isSelected ? (
-                        /* The chair time leads, because that is the
-                           appointment. The bell is when they get nudged,
-                           and it only earns a line when it differs. */
-                        <span className="inline-flex shrink-0 flex-col items-end gap-0.5 select-none">
-                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-fg sm:text-xs">
-                            <Clock className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
-                            {formatReminder(
-                              currentSchedule.chairTimes[day] ??
-                                DEFAULT_CHAIR_TIME,
-                              isEs,
-                            )}
+                        /* Chair time, then how long they are in it. Two
+                           clock times stacked here read as two appointments,
+                           which is why the reminder is stated once above
+                           rather than repeated on every day. */
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-fg select-none sm:text-xs">
+                          <Clock className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
+                          {formatReminder(
+                            currentSchedule.chairTimes[day] ??
+                              DEFAULT_CHAIR_TIME,
+                            isEs,
+                          )}
+                          <span className="font-semibold text-fg-muted">
+                            ·{" "}
+                            {formatDuration(durationFor(currentSchedule, day))}
                           </span>
-                          {currentSchedule.reminderLeadMinutes > 0 ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold whitespace-nowrap text-fg-muted">
-                              <Bell className="h-3 w-3 shrink-0 stroke-[2.4]" />
-                              {formatReminder(
-                                reminderTimeFor(currentSchedule, day),
-                                isEs,
-                              )}
-                            </span>
-                          ) : null}
                         </span>
                       ) : (
                         <span className="shrink-0 text-xs font-bold text-fg-subtle select-none">
@@ -477,7 +479,7 @@ function DialysisManagementDashboard() {
         initialDays={selectedDays}
         initialChairTimes={currentSchedule.chairTimes}
         initialReminderLead={currentSchedule.reminderLeadMinutes}
-        initialDurationMinutes={currentSchedule.durationMinutes}
+        initialDurations={currentSchedule.durations}
         initialHideBlankDays={hideBlankDays}
         effectiveDateFor={scopeEffectiveDate}
         monthLabel={`${(isEs ? monthNamesEs : monthNames)[viewMonth]} ${viewYear}`}

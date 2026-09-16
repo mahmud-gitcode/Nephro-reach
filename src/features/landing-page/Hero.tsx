@@ -5,8 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
-import nephroReachImg from "@public/images/home/NephroReach-clean.jpg";
-
 export default function Hero() {
   const { t } = useLanguage();
   const line1 = t("hero.titleLine1");
@@ -66,7 +64,7 @@ export default function Hero() {
   return (
     <section className="relative flex min-h-[calc(100vh-101px)] w-full items-center justify-center overflow-hidden lg:h-[calc(100vh-101px)]">
       <Image
-        src={nephroReachImg}
+        src="/images/home/NephroReach-clean.jpg"
         alt={`NephroReach - ${line1} ${line2}`}
         fill
         priority

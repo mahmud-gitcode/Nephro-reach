@@ -3,9 +3,12 @@ import {
   addDays,
   appendSchedulePeriod,
   DEFAULT_CHAIR_TIME,
+  DEFAULT_DURATION_MINUTES,
   buildSchedulePeriod,
   normaliseSchedulePeriod,
+  durationFor,
   prevailingChairTime,
+  prevailingDuration,
   reminderTimeFor,
   shiftClock,
   daysForDate,
@@ -33,7 +36,7 @@ const MWF: SchedulePeriod = {
   days: ["Monday", "Wednesday", "Friday"],
   chairTimes: {},
   reminderLeadMinutes: 0,
-  durationMinutes: 240,
+  durations: { Monday: 240 },
 };
 
 const TTS: SchedulePeriod = {
@@ -41,7 +44,7 @@ const TTS: SchedulePeriod = {
   days: ["Tuesday", "Thursday", "Saturday"],
   chairTimes: {},
   reminderLeadMinutes: 0,
-  durationMinutes: 240,
+  durations: { Monday: 240 },
 };
 
 // June 2026: the 1st is a Monday.
@@ -143,7 +146,7 @@ describe("walking the schedule", () => {
         days: [],
         chairTimes: {},
         reminderLeadMinutes: 0,
-        durationMinutes: 240,
+        durations: { Monday: 240 },
       },
     ]);
     expect(toDateKey(nextScheduledDate(june(1), never))).toBe("2026-06-08");
@@ -205,8 +208,7 @@ describe("building a schedule period from the form", () => {
     days: ["Friday", "Monday"],
     chairTimes: { Monday: "06:00" },
     reminderLeadMinutes: 0,
-    durationHours: "4",
-    durationMinutes: "00",
+    durations: { Monday: 240 },
   };
 
   it("puts the days back in week order, however they were tapped", () => {
@@ -229,26 +231,41 @@ describe("building a schedule period from the form", () => {
     expect(period.chairTimes.Sunday).toBeUndefined();
   });
 
-  it("turns the typed duration into minutes", () => {
-    expect(
-      buildSchedulePeriod(
-        { ...draft, durationHours: "3", durationMinutes: "35" },
-        "2026-06-15",
-      ).durationMinutes,
-    ).toBe(215);
+  it("keeps a length per day, not one for the week", () => {
+    // A prescription can run four hours on Monday and three and a half on
+    // Friday; one shared number reported the wrong length for every day
+    // that differed.
+    const period = buildSchedulePeriod(
+      {
+        ...draft,
+        days: ["Monday", "Friday"],
+        durations: { Monday: 240, Friday: 210 },
+      },
+      "2026-06-15",
+    );
+    expect(period.durations).toEqual({ Monday: 240, Friday: 210 });
+    expect(durationFor(period, "Monday")).toBe(240);
+    expect(durationFor(period, "Friday")).toBe(210);
   });
 
-  it("clamps a duration nobody could be prescribed", () => {
-    const at = (h: string, m: string) =>
+  it("clamps a length nobody could be prescribed", () => {
+    const at = (minutes: number) =>
       buildSchedulePeriod(
-        { ...draft, durationHours: h, durationMinutes: m },
+        { ...draft, days: ["Monday"], durations: { Monday: minutes } },
         "2026-06-15",
-      ).durationMinutes;
+      ).durations.Monday;
 
-    // The inputs are text: "abc" and "" have to become something real.
-    expect(at("abc", "xyz")).toBe(15);
-    expect(at("0", "0")).toBe(15);
-    expect(at("99", "00")).toBe(12 * 60);
+    expect(at(0)).toBe(15);
+    expect(at(99 * 60)).toBe(12 * 60);
+    expect(at(NaN)).toBe(DEFAULT_DURATION_MINUTES);
+  });
+
+  it("gives a day with no length the usual run", () => {
+    const period = buildSchedulePeriod(
+      { ...draft, days: ["Monday", "Friday"], durations: { Monday: 210 } },
+      "2026-06-15",
+    );
+    expect(period.durations.Friday).toBe(DEFAULT_DURATION_MINUTES);
   });
 });
 
@@ -258,7 +275,7 @@ describe("appending a schedule period", () => {
     days: ["Tuesday"],
     chairTimes: {},
     reminderLeadMinutes: 0,
-    durationMinutes: 240,
+    durations: { Monday: 240 },
   };
 
   it("keeps the periods that came before it", () => {
@@ -288,7 +305,7 @@ describe("chair time and the reminder that follows it", () => {
     days: ["Monday"],
     chairTimes: { Monday: "05:30" },
     reminderLeadMinutes: 60,
-    durationMinutes: 240,
+    durations: { Monday: 240 },
   };
 
   it("reminds an hour before the chair time, not at a time of its own", () => {
@@ -321,7 +338,7 @@ describe("chair time and the reminder that follows it", () => {
       fromKey: "2026-01-01",
       days: ["Monday"],
       reminders: { Monday: "05:30" },
-      durationMinutes: 240,
+      durations: { Monday: 240 },
     } as unknown as SchedulePeriod & { reminders: Record<string, string> };
 
     const fixed = normaliseSchedulePeriod(old);
@@ -336,8 +353,7 @@ describe("chair time and the reminder that follows it", () => {
         days: ["Monday", "Friday"],
         chairTimes: { Monday: "05:30" },
         reminderLeadMinutes: 60,
-        durationHours: "4",
-        durationMinutes: "0",
+        durations: { Monday: 240 },
       },
       "2026-02-01",
     );
@@ -376,5 +392,27 @@ describe("the slot a new day joins", () => {
     expect(prevailingChairTime({ Monday: "", Wednesday: "06:00" })).toBe(
       "06:00",
     );
+  });
+});
+
+describe("reading a schedule written before per-day lengths", () => {
+  it("spreads one shared length across every prescribed day", () => {
+    const old = {
+      fromKey: "2026-01-01",
+      days: ["Monday", "Friday"],
+      chairTimes: { Monday: "05:30", Friday: "05:30" },
+      reminderLeadMinutes: 0,
+      durationMinutes: 240,
+    } as unknown as SchedulePeriod & { durationMinutes: number };
+
+    expect(normaliseSchedulePeriod(old).durations).toEqual({
+      Monday: 240,
+      Friday: 240,
+    });
+  });
+
+  it("gives a new day the length the others already run", () => {
+    expect(prevailingDuration({ Monday: 210, Wednesday: 210 })).toBe(210);
+    expect(prevailingDuration({})).toBe(DEFAULT_DURATION_MINUTES);
   });
 });

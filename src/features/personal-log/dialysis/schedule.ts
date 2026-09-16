@@ -168,8 +168,14 @@ export interface SchedulePeriod {
    * ends up being reminded for a slot they no longer have.
    */
   reminderLeadMinutes: number;
-  /** Session length in minutes. One amount shared by every prescribed day. */
-  durationMinutes: number;
+  /**
+   * Session length in minutes, per prescribed weekday.
+   *
+   * Per day rather than one shared amount: a prescription can run four
+   * hours on Monday and three and a half on Friday, and a single number
+   * quietly reported the wrong length for every day that differed.
+   */
+  durations: Record<string, number>;
 }
 
 /** Chair time given to a day that was just added to the schedule. */
@@ -234,15 +240,49 @@ export function reminderTimeFor(period: SchedulePeriod, day: string): string {
  * when one field was doing two jobs.
  */
 export function normaliseSchedulePeriod(
-  period: SchedulePeriod & { reminders?: Record<string, string> },
+  period: SchedulePeriod & {
+    reminders?: Record<string, string>;
+    durationMinutes?: number;
+  },
 ): SchedulePeriod {
   return {
     fromKey: period.fromKey,
     days: period.days ?? [],
     chairTimes: period.chairTimes ?? period.reminders ?? {},
     reminderLeadMinutes: period.reminderLeadMinutes ?? 0,
-    durationMinutes: period.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+    /* One shared length becomes that length on every day. */
+    durations:
+      period.durations ??
+      Object.fromEntries(
+        (period.days ?? []).map((day) => [
+          day,
+          period.durationMinutes ?? DEFAULT_DURATION_MINUTES,
+        ]),
+      ),
   };
+}
+
+/** Session length for a day, falling back to the usual run. */
+export function durationFor(period: SchedulePeriod, day: string): number {
+  return period.durations[day] ?? DEFAULT_DURATION_MINUTES;
+}
+
+/** The length a newly added day should take, for the reason above. */
+export function prevailingDuration(durations: Record<string, number>): number {
+  const counts = new Map<number, number>();
+  for (const minutes of Object.values(durations)) {
+    if (minutes > 0) counts.set(minutes, (counts.get(minutes) ?? 0) + 1);
+  }
+
+  let best = DEFAULT_DURATION_MINUTES;
+  let bestCount = 0;
+  for (const [minutes, count] of counts) {
+    if (count > bestCount) {
+      best = minutes;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 /** 4h, the usual in-centre hemodialysis run. */
 export const DEFAULT_DURATION_MINUTES = 240;
@@ -332,8 +372,8 @@ export interface ScheduleDraft {
   days: string[];
   chairTimes: Record<string, string>;
   reminderLeadMinutes: number;
-  durationHours: string;
-  durationMinutes: string;
+  /** Minutes per prescribed day, as typed. */
+  durations: Record<string, number>;
 }
 
 /**
@@ -357,11 +397,17 @@ export function buildSchedulePeriod(
     chairTimes[day] = draft.chairTimes[day] || DEFAULT_CHAIR_TIME;
   }
 
-  const hours = Math.min(12, Math.max(0, Number(draft.durationHours) || 0));
-  const durationMinutes = Math.max(
-    15,
-    hours * 60 + (Number(draft.durationMinutes) || 0),
-  );
+  /* Clamping is the point: these come from text inputs, so "abc", "99" and
+     "" all have to become a session length somebody could be prescribed.
+     15 minutes is the floor and 12 hours the ceiling. */
+  const durations: Record<string, number> = {};
+  for (const day of days) {
+    const raw = draft.durations[day] ?? DEFAULT_DURATION_MINUTES;
+    durations[day] = Math.min(
+      12 * 60,
+      Math.max(15, Number.isFinite(raw) ? raw : DEFAULT_DURATION_MINUTES),
+    );
+  }
 
   return {
     fromKey,
@@ -371,7 +417,7 @@ export function buildSchedulePeriod(
       0,
       Math.min(24 * 60, draft.reminderLeadMinutes),
     ),
-    durationMinutes,
+    durations,
   };
 }
 

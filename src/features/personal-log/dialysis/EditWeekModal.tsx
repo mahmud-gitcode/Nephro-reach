@@ -7,11 +7,12 @@ import { Button, Modal } from "@/components/ui";
 import {
   ALL_WEEKDAYS,
   DEFAULT_CHAIR_TIME,
+  DEFAULT_DURATION_MINUTES,
   prevailingChairTime,
+  prevailingDuration,
   SCOPE_OPTIONS,
   WEEKDAY_ES,
   formatFullDate,
-  pad2,
   type ApplyScope,
   type ScheduleDraft,
 } from "./schedule";
@@ -46,7 +47,7 @@ export function EditWeekModal({
   initialDays,
   initialChairTimes,
   initialReminderLead,
-  initialDurationMinutes,
+  initialDurations,
   initialHideBlankDays,
   effectiveDateFor,
   monthLabel,
@@ -57,7 +58,7 @@ export function EditWeekModal({
   initialDays: string[];
   initialChairTimes: Record<string, string>;
   initialReminderLead: number;
-  initialDurationMinutes: number;
+  initialDurations: Record<string, number>;
   initialHideBlankDays: boolean;
   /** Where the chosen scope starts, decided by the page's calendar. */
   effectiveDateFor: (scope: ApplyScope) => Date;
@@ -72,12 +73,8 @@ export function EditWeekModal({
   const [tempChairTimes, setTempChairTimes] =
     useState<Record<string, string>>(initialChairTimes);
   const [tempLead, setTempLead] = useState<number>(initialReminderLead);
-  const [tempDurationHours, setTempDurationHours] = useState(
-    String(Math.floor(initialDurationMinutes / 60)),
-  );
-  const [tempDurationMins, setTempDurationMins] = useState(
-    pad2(initialDurationMinutes % 60),
-  );
+  const [tempDurations, setTempDurations] =
+    useState<Record<string, number>>(initialDurations);
   const [tempHideBlankDays, setTempHideBlankDays] =
     useState(initialHideBlankDays);
   const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
@@ -97,6 +94,9 @@ export function EditWeekModal({
     setTempChairTimes((prev: Record<string, string>) =>
       prev[day] ? prev : { ...prev, [day]: prevailingChairTime(prev) },
     );
+    setTempDurations((prev: Record<string, number>) =>
+      prev[day] ? prev : { ...prev, [day]: prevailingDuration(prev) },
+    );
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -106,8 +106,7 @@ export function EditWeekModal({
         days: tempDays,
         chairTimes: tempChairTimes,
         reminderLeadMinutes: tempLead,
-        durationHours: tempDurationHours,
-        durationMinutes: tempDurationMins,
+        durations: tempDurations,
       },
       scope: applyScope,
       hideBlankDays: tempHideBlankDays,
@@ -199,37 +198,95 @@ export function EditWeekModal({
           </span>
         </button>
 
-        {/* The chair time the unit assigned, per prescribed day. */}
+        {/* Chair time and session length together, per prescribed day.
+
+          They belong on the same row because they are one fact — "Monday at
+          5:30 for four hours" — and splitting the length into a separate
+          panel made it look like one number shared by the week, which it is
+          not. */}
         <div>
           <label className="mb-2 block font-semibold text-fg-secondary">
-            {isEs ? "Hora del Sillón" : "Chair Time"}
+            {isEs ? "Hora del Sillón y Duración" : "Chair Time & Duration"}
           </label>
           <div className="space-y-2">
-            {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => (
-              <div
-                key={day}
-                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2"
-              >
-                <span className="inline-flex items-center gap-2 font-bold text-fg-secondary">
-                  <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-subtle" />
-                  {isEs ? WEEKDAY_ES[day] : day}
-                </span>
-                <input
-                  type="time"
-                  aria-label={`${isEs ? "Hora del sillón" : "Chair time"} — ${
-                    isEs ? WEEKDAY_ES[day] : day
-                  }`}
-                  value={tempChairTimes[day] ?? DEFAULT_CHAIR_TIME}
-                  onChange={(e) =>
-                    setTempChairTimes((prev) => ({
-                      ...prev,
-                      [day]: e.target.value,
-                    }))
-                  }
-                  className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-                />
-              </div>
-            ))}
+            {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => {
+              const minutes = tempDurations[day] ?? DEFAULT_DURATION_MINUTES;
+              const dayName = isEs ? WEEKDAY_ES[day] : day;
+
+              return (
+                <div
+                  key={day}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2"
+                >
+                  <span className="inline-flex items-center gap-2 font-bold text-fg-secondary">
+                    <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-subtle" />
+                    {dayName}
+                  </span>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="time"
+                      aria-label={`${isEs ? "Hora del sillón" : "Chair time"} — ${dayName}`}
+                      value={tempChairTimes[day] ?? DEFAULT_CHAIR_TIME}
+                      onChange={(e) =>
+                        setTempChairTimes((prev: Record<string, string>) => ({
+                          ...prev,
+                          [day]: e.target.value,
+                        }))
+                      }
+                      className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                    />
+
+                    <span className="font-bold text-fg-muted">
+                      {isEs ? "por" : "for"}
+                    </span>
+
+                    {/* Hours and minutes as two boxes, because a session is
+                      spoken as "four hours" or "three and a half", never as
+                      210. */}
+                    <input
+                      type="number"
+                      min={0}
+                      max={12}
+                      aria-label={`${isEs ? "Horas" : "Hours"} — ${dayName}`}
+                      value={Math.floor(minutes / 60)}
+                      onChange={(e) =>
+                        setTempDurations((prev: Record<string, number>) => ({
+                          ...prev,
+                          [day]:
+                            (Number(e.target.value) || 0) * 60 + (minutes % 60),
+                        }))
+                      }
+                      className="w-14 rounded-lg border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-xs font-bold text-fg-muted">
+                      {isEs ? "h" : "h"}
+                    </span>
+
+                    <input
+                      type="number"
+                      min={0}
+                      max={59}
+                      step={5}
+                      aria-label={`${isEs ? "Minutos" : "Minutes"} — ${dayName}`}
+                      value={minutes % 60}
+                      onChange={(e) =>
+                        setTempDurations((prev: Record<string, number>) => ({
+                          ...prev,
+                          [day]:
+                            Math.floor(minutes / 60) * 60 +
+                            (Number(e.target.value) || 0),
+                        }))
+                      }
+                      className="w-14 rounded-lg border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-xs font-bold text-fg-muted">
+                      {isEs ? "m" : "m"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -260,45 +317,6 @@ export function EditWeekModal({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Session length: one amount shared by every prescribed day */}
-        <div>
-          <label className="mb-2 block font-semibold text-fg-secondary">
-            {isEs ? "Duración de la Sesión" : "Session Duration"}
-          </label>
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={0}
-                max={12}
-                value={tempDurationHours}
-                onChange={(e) => setTempDurationHours(e.target.value)}
-                className="w-16 rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-              />
-              <span className="font-bold text-fg-muted">
-                {isEs ? "h" : "hr"}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <select
-                value={tempDurationMins}
-                onChange={(e) => setTempDurationMins(e.target.value)}
-                className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
-              >
-                {["00", "15", "30", "45"].map((minute) => (
-                  <option key={minute} value={minute}>
-                    {minute}
-                  </option>
-                ))}
-              </select>
-              <span className="font-bold text-fg-muted">min</span>
-            </div>
-            <span className="ml-auto text-xs font-semibold text-fg-subtle">
-              {isEs ? "Se aplica a todos los días" : "Applies to every day"}
-            </span>
-          </div>
         </div>
 
         {/* Apply scope: how far back this schedule reaches */}
