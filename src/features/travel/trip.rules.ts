@@ -1,6 +1,7 @@
 import type {
   TimePreference,
   TimeChangeRequest,
+  TravelDocumentFile,
   TravelDocumentKey,
   TravelPrepKey,
   TripPlacement,
@@ -112,6 +113,7 @@ export function emptyTrip(now = new Date()): TripRequest {
     insurance: { plan: "", memberId: "" },
     documentsReady: [],
     prepDone: [],
+    documentFiles: [],
     notes: "",
     status: "submitted",
     submittedAt: now.toISOString(),
@@ -489,6 +491,100 @@ export function formatEventTime(iso: string, isEs: boolean): string {
 }
 
 /* ==========================================================================
+   Files attached to a document
+   --------------------------------------------------------------------------
+   Attaching a file is how a member says "I have this one", so it ticks the
+   matching checklist row rather than leaving two things to keep in step.
+   Removing the last file for a document unticks it again, for the same
+   reason: a row that stayed ticked with nothing behind it would be the app
+   remembering something the member had just taken back.
+   ========================================================================== */
+
+/**
+ * Describe a picked file as a record, without its bytes.
+ *
+ * Lives here rather than in the panel because `Date.now()` inside a
+ * component body is flagged as impure — and because what a stored file
+ * record contains is a rule, not a detail of one screen.
+ */
+export function describeDocumentFile(
+  key: TravelDocumentKey,
+  file: { name: string; size: number; type: string },
+  now = new Date(),
+): TravelDocumentFile {
+  return {
+    id: `file-${now.getTime().toString(36)}-${file.size.toString(36)}`,
+    key,
+    fileName: file.name,
+    sizeBytes: file.size,
+    contentType: file.type,
+    attachedAt: now.toISOString(),
+  };
+}
+
+export function filesForDocument(
+  trip: TripRequest,
+  key: TravelDocumentKey,
+): TravelDocumentFile[] {
+  return trip.documentFiles.filter((file) => file.key === key);
+}
+
+export function attachDocumentFile(
+  trips: TripRequest[],
+  id: string,
+  file: TravelDocumentFile,
+  now = new Date(),
+): TripRequest[] {
+  return trips.map((trip) =>
+    trip.id === id
+      ? {
+          ...trip,
+          documentFiles: [...trip.documentFiles, file],
+          documentsReady: trip.documentsReady.includes(file.key)
+            ? trip.documentsReady
+            : [...trip.documentsReady, file.key],
+          updatedAt: now.toISOString(),
+        }
+      : trip,
+  );
+}
+
+export function removeDocumentFile(
+  trips: TripRequest[],
+  id: string,
+  fileId: string,
+  now = new Date(),
+): TripRequest[] {
+  return trips.map((trip) => {
+    if (trip.id !== id) return trip;
+
+    const gone = trip.documentFiles.find((file) => file.id === fileId);
+    if (!gone) return trip;
+
+    const documentFiles = trip.documentFiles.filter(
+      (file) => file.id !== fileId,
+    );
+    const stillHasOne = documentFiles.some((file) => file.key === gone.key);
+
+    return {
+      ...trip,
+      documentFiles,
+      documentsReady: stillHasOne
+        ? trip.documentsReady
+        : trip.documentsReady.filter((key) => key !== gone.key),
+      updatedAt: now.toISOString(),
+    };
+  });
+}
+
+/** "1.4 MB" — a size a member can judge, not a byte count. */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/* ==========================================================================
    The travel checklist
    --------------------------------------------------------------------------
    One list of everything that has to be true before a member gets on a
@@ -773,6 +869,7 @@ export function normaliseTrip(trip: Partial<TripRequest>): TripRequest {
     preferredTime: trip.preferredTime ?? "any",
     documentsReady: trip.documentsReady ?? [],
     prepDone: trip.prepDone ?? [],
+    documentFiles: trip.documentFiles ?? [],
     emergencyContact: trip.emergencyContact ?? {
       name: "",
       phone: "",

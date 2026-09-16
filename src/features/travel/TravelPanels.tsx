@@ -11,10 +11,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
-import { DocumentChecklist, PlacementCard } from "./TravelDialysisSection";
+import { PlacementCard } from "./TravelDialysisSection";
 import TripStatusTimeline from "./TripStatusTimeline";
-import { formatTripDates, isConfirmed, toggleDocument } from "./trip.rules";
-import type { TravelDocumentKey, TripRequest } from "./trip.types";
+import { formatTripDates, isConfirmed } from "./trip.rules";
+import type { TripRequest } from "./trip.types";
 import { reflectionRemaining } from "./travelTreatment.rules";
 import { REFLECTION_MAX } from "./travelTreatment.types";
 import { useTravelTreatments } from "./useTravelTreatments";
@@ -69,40 +69,6 @@ function PanelHead({
       </div>
       {action}
     </div>
-  );
-}
-
-/* ========================================================================== */
-
-export function TravelDocumentsPanel({
-  trip,
-  onChange,
-}: {
-  trip: TripRequest;
-  onChange: (next: TravelDocumentKey[]) => void;
-}) {
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-
-  return (
-    <Card as="section" aria-labelledby="travel-documents">
-      <PanelHead
-        id="travel-documents"
-        icon={<FileText className="h-5 w-5" />}
-        title={isEs ? "Mis Documentos de Viaje" : "My Travel Documents"}
-        hint={
-          isEs
-            ? "Ten toda la información importante en un solo lugar."
-            : "Keep important information in one place."
-        }
-      />
-      <div className="mt-stack-md">
-        <DocumentChecklist
-          trip={trip}
-          onToggle={(key) => onChange(toggleDocument(trip.documentsReady, key))}
-        />
-      </div>
-    </Card>
   );
 }
 

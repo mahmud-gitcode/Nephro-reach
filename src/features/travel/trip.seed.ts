@@ -65,6 +65,18 @@ export function sampleTrip(now = new Date()): TripRequest {
     insurance: { plan: "Medicare Part B", memberId: "1EG4-TE5-MK72" },
     documentsReady: ["treatment-orders", "recent-labs", "insurance"],
     prepDone: ["transportation"],
+    /* One attached, so the panel shows both states side by side. Names
+       only — the bytes are never stored. */
+    documentFiles: [
+      {
+        id: `${SAMPLE_PREFIX}file-labs`,
+        key: "recent-labs",
+        fileName: "labs-september.pdf",
+        sizeBytes: 184_320,
+        contentType: "application/pdf",
+        attachedAt: timeFrom(-4, 10, 30, now),
+      },
+    ],
     notes:
       "Left-arm fistula. I need a chair before 11am — the family is driving me each day.",
 

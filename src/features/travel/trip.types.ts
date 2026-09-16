@@ -59,6 +59,31 @@ export type TravelDocumentKey =
  */
 export type TravelPrepKey = "transportation" | "personal-items";
 
+/**
+ * A file the member attached to one of their travel documents.
+ *
+ * The bytes are NOT kept. Only the name, size and type are stored, and the
+ * file itself lives as an object URL for as long as the tab is open — the
+ * same shape the class media uploader already uses.
+ *
+ * Two reasons, and both survive the arrival of a backend. `localStorage`
+ * holds about 5MB in total, so one photo of an insurance card would evict
+ * somebody's treatment log. And a lab report sitting in browser storage is
+ * a medical record at rest with nothing guarding it. When there is an API
+ * to put files behind, `url` becomes the link it returns and nothing else
+ * here changes.
+ */
+export interface TravelDocumentFile {
+  id: string;
+  /** Which checklist document this file belongs to. */
+  key: TravelDocumentKey;
+  fileName: string;
+  sizeBytes: number;
+  /** MIME type as the browser reported it. */
+  contentType: string;
+  attachedAt: string;
+}
+
 export interface EmergencyContact {
   name: string;
   phone: string;
@@ -153,6 +178,8 @@ export interface TripRequest {
   documentsReady: TravelDocumentKey[];
   /** Which non-paperwork preparations the member has done. */
   prepDone: TravelPrepKey[];
+  /** Files attached against those documents. Names only — see the type. */
+  documentFiles: TravelDocumentFile[];
   /** Anything the coordinator should know — access type, mobility, timing. */
   notes: string;
 

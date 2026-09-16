@@ -19,8 +19,13 @@ import {
   addConfirmedTreatment,
   canRequestTimeChange,
   canSubmitTimeChange,
+  attachDocumentFile,
   checklistProgress,
   defaultTripFilter,
+  describeDocumentFile,
+  filesForDocument,
+  formatFileSize,
+  removeDocumentFile,
   emptyTimeChange,
   hasOpenTimeChange,
   requestTimeChange,
@@ -505,9 +510,36 @@ describe("the progress strip", () => {
 describe("the travel checklist", () => {
   const base = emptyTrip();
 
-  it("lists the eight things that have to be true before a flight", () => {
-    expect(travelChecklist(base)).toHaveLength(8);
-    expect(checklistProgress(base)).toMatchObject({ done: 0, total: 8 });
+  it("lists every row exactly once", () => {
+    // Nine: the facility, six documents, two preparations. An earlier
+    // version listed five documents here and the other one in a second
+    // panel reading the same array, so five rows existed twice on one
+    // screen and ticking either moved both.
+    const items = travelChecklist(base);
+    expect(items).toHaveLength(9);
+    expect(new Set(items.map((item) => item.id)).size).toBe(9);
+    expect(checklistProgress(base)).toMatchObject({ done: 0, total: 9 });
+  });
+
+  it("covers every document key, none left to another panel", () => {
+    const listed = travelChecklist(base)
+      .filter((item) => item.kind === "document")
+      .map((item) => item.id);
+    expect(listed.sort()).toEqual(
+      TRAVEL_DOCUMENTS.map((entry) => entry.key).sort(),
+    );
+  });
+
+  it("describes what each document is, from one place", () => {
+    // The hints live in TRAVEL_DOCUMENTS; the checklist reads them by key
+    // rather than keeping a second copy that can drift.
+    const orders = travelChecklist(base).find(
+      (item) => item.id === "treatment-orders",
+    );
+    expect(orders?.hintEn).toBe(
+      TRAVEL_DOCUMENTS.find((entry) => entry.key === "treatment-orders")
+        ?.hintEn,
+    );
   });
 
   it("will not let a member tick their own placement", () => {
@@ -573,6 +605,7 @@ describe("the travel checklist", () => {
         "medication-list",
         "insurance",
         "emergency-contact",
+        "other",
       ] satisfies TravelDocumentKey[],
       prepDone: ["transportation", "personal-items"] satisfies TravelPrepKey[],
     };
@@ -877,5 +910,106 @@ describe("asking to move the booked times", () => {
     const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
     const next = requestTimeChange([booked(), other], "trip-1", draft, NOW);
     expect(next[1].timeChange).toBeUndefined();
+  });
+});
+
+describe("attaching a document", () => {
+  const NOW = new Date(2026, 8, 16, 9, 0, 0);
+  const picked = { name: "labs.pdf", size: 184_320, type: "application/pdf" };
+
+  const described = () => describeDocumentFile("recent-labs", picked, NOW);
+
+  it("keeps the name, size and type but never the bytes", () => {
+    const record = described();
+    expect(record).toMatchObject({
+      key: "recent-labs",
+      fileName: "labs.pdf",
+      sizeBytes: 184_320,
+      contentType: "application/pdf",
+    });
+    // Nothing on the record can hold file contents.
+    expect(Object.keys(record).sort()).toEqual([
+      "attachedAt",
+      "contentType",
+      "fileName",
+      "id",
+      "key",
+      "sizeBytes",
+    ]);
+  });
+
+  it("ticks the checklist row it belongs to", () => {
+    // Attaching a file IS the member saying they have that one, so leaving
+    // the tick to a second action would let the two disagree.
+    const [trip] = attachDocumentFile(
+      [emptyTrip(NOW)],
+      emptyTrip(NOW).id,
+      described(),
+      NOW,
+    );
+    expect(trip.documentsReady).toContain("recent-labs");
+    expect(filesForDocument(trip, "recent-labs")).toHaveLength(1);
+  });
+
+  it("does not tick the same row twice for a second file", () => {
+    const base = emptyTrip(NOW);
+    const once = attachDocumentFile([base], base.id, described(), NOW);
+    const twice = attachDocumentFile(
+      once,
+      base.id,
+      {
+        ...described(),
+        id: "file-2",
+      },
+      NOW,
+    );
+
+    expect(
+      twice[0].documentsReady.filter((k) => k === "recent-labs"),
+    ).toHaveLength(1);
+    expect(filesForDocument(twice[0], "recent-labs")).toHaveLength(2);
+  });
+
+  it("unticks the row when the last file for it goes", () => {
+    // A row left ticked with nothing behind it is the app remembering
+    // something the member just took back.
+    const base = emptyTrip(NOW);
+    const record = described();
+    const attached = attachDocumentFile([base], base.id, record, NOW);
+    const [trip] = removeDocumentFile(attached, base.id, record.id, NOW);
+
+    expect(trip.documentFiles).toEqual([]);
+    expect(trip.documentsReady).not.toContain("recent-labs");
+  });
+
+  it("keeps the row ticked while another file for it remains", () => {
+    const base = emptyTrip(NOW);
+    const first = described();
+    const second = { ...described(), id: "file-2" };
+    const attached = attachDocumentFile(
+      attachDocumentFile([base], base.id, first, NOW),
+      base.id,
+      second,
+      NOW,
+    );
+    const [trip] = removeDocumentFile(attached, base.id, first.id, NOW);
+
+    expect(trip.documentsReady).toContain("recent-labs");
+    expect(filesForDocument(trip, "recent-labs")).toHaveLength(1);
+  });
+
+  it("ignores a file id that is not there", () => {
+    const base = emptyTrip(NOW);
+    expect(removeDocumentFile([base], base.id, "nope", NOW)[0]).toEqual(base);
+  });
+
+  it("gives an older stored trip an empty file list rather than undefined", () => {
+    expect(normaliseTrip({ destination: "Miami" }).documentFiles).toEqual([]);
+  });
+
+  it("shows a size a member can judge", () => {
+    expect(formatFileSize(512)).toBe("512 B");
+    expect(formatFileSize(184_320)).toBe("180 KB");
+    expect(formatFileSize(2_411_724)).toBe("2.3 MB");
   });
 });

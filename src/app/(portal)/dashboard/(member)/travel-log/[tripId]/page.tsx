@@ -7,11 +7,11 @@ import { ArrowLeft, Clock, Plane, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import TravelChecklist from "@/features/travel/TravelChecklist";
 import TimeChangeRequestModal from "@/features/travel/TimeChangeRequestModal";
+import TravelDocumentsPanel from "@/features/travel/TravelDocumentsPanel";
 import TravelTreatmentLog from "@/features/travel/TravelTreatmentLog";
 import {
   ConfirmedTreatmentPanel,
   RequestStatusPanel,
-  TravelDocumentsPanel,
   TravelReflectionsPanel,
 } from "@/features/travel/TravelPanels";
 import {
@@ -55,6 +55,8 @@ export default function TripDetailPage() {
     trips,
     setDocuments,
     setPrep,
+    attachFile,
+    removeFile,
     requestTimeChange,
     withdrawTimeChange,
     isPending,
@@ -260,7 +262,8 @@ export default function TripDetailPage() {
               <div className="flex flex-col gap-inset-lg">
                 <TravelDocumentsPanel
                   trip={trip}
-                  onChange={(next) => setDocuments(trip.id, next)}
+                  onAttach={(file) => attachFile(trip.id, file)}
+                  onRemoveFile={(fileId) => removeFile(trip.id, fileId)}
                 />
                 <ConfirmedTreatmentPanel trip={trip} />
               </div>

@@ -74,9 +74,12 @@ export function TravelChecklist({
         </Badge>
       </div>
 
-      <ul className="mt-stack-md grid grid-cols-1 gap-x-inset-lg gap-y-stack-xs sm:grid-cols-2">
+      {/* One column: each row is now two lines, and a two-column grid of
+        wrapped rows is harder to scan than a single list. */}
+      <ul className="mt-stack-md space-y-stack-xs">
         {items.map((item) => {
           const label = isEs ? item.labelEs : item.labelEn;
+          const hint = isEs ? item.hintEs : item.hintEn;
 
           /* Not a disabled checkbox: a greyed-out box still reads as "you
              forgot this one". A padlock says who it belongs to. */
@@ -134,14 +137,23 @@ export function TravelChecklist({
                   }
                   className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--color-primary-solid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 />
-                <span
-                  className={`min-w-0 text-body-sm ${
-                    item.done
-                      ? "text-fg-muted line-through"
-                      : "text-fg-secondary"
-                  }`}
-                >
-                  {label}
+                <span className="min-w-0">
+                  <span
+                    className={`block text-body-sm ${
+                      item.done
+                        ? "text-fg-muted line-through"
+                        : "text-fg-secondary"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                  {/* What it is and who usually sends it. A member has no way
+                    to know that their unit posts the orders for them. */}
+                  {hint ? (
+                    <span className="block text-caption text-fg-muted">
+                      {hint}
+                    </span>
+                  ) : null}
                 </span>
               </label>
             </li>

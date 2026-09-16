@@ -6,6 +6,7 @@ import { listTrips, saveTrips } from "./trip.repository";
 import * as rules from "./trip.rules";
 import type {
   TimeChangeRequest,
+  TravelDocumentFile,
   TravelDocumentKey,
   TravelPrepKey,
   TripPlacement,
@@ -97,6 +98,18 @@ export function useTrips() {
     [mutate],
   );
 
+  const attachFile = useCallback(
+    (id: string, file: TravelDocumentFile) =>
+      mutate((current) => rules.attachDocumentFile(current, id, file)),
+    [mutate],
+  );
+
+  const removeFile = useCallback(
+    (id: string, fileId: string) =>
+      mutate((current) => rules.removeDocumentFile(current, id, fileId)),
+    [mutate],
+  );
+
   const setPrep = useCallback(
     (id: string, prepDone: TravelPrepKey[]) =>
       mutate((current) =>
@@ -143,6 +156,8 @@ export function useTrips() {
     cancel,
     setDocuments,
     setPrep,
+    attachFile,
+    removeFile,
 
     requestTimeChange,
     withdrawTimeChange,
