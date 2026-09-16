@@ -11,6 +11,8 @@ import {
   emptyPlacement,
   formatDays,
   formatTripDates,
+  formatEventTime,
+  hasOpenTimeChange,
   pastTrips,
   placementShortfall,
   removeConfirmedTreatment,
@@ -70,13 +72,16 @@ function RequestCard({
   onStatus,
   onOpenPlacement,
   onNote,
+  onResolveTimeChange,
 }: {
   trip: TripRequest;
   onStatus: (status: TripStatus) => void;
   onOpenPlacement: () => void;
   onNote: (note: string) => void;
+  onResolveTimeChange: (reply: string) => void;
 }) {
   const [note, setNote] = useState(trip.facilityNote);
+  const [timeReply, setTimeReply] = useState("");
   const shortfall = placementShortfall(trip);
   const blocked = confirmationError(trip);
 
@@ -86,6 +91,50 @@ function RequestCard({
 
   return (
     <Card as="article" tone="flat" padding="small" className="space-y-stack-md">
+      {/* An open time-change request leads the card. It is the one thing on
+        here with a member waiting on the other end of it, and burying it
+        under the placement controls is how it sits unanswered for a week. */}
+      {hasOpenTimeChange(trip) && trip.timeChange ? (
+        <Alert
+          tone="warning"
+          title={`Time change requested — ${trip.timeChange.preferredTime}`}
+        >
+          <div className="space-y-stack-sm">
+            <p className="text-body-sm text-fg-secondary">
+              {trip.timeChange.note}
+            </p>
+            <p className="text-body-sm text-fg-muted">
+              Asked {formatEventTime(trip.timeChange.requestedAt, false)}
+              {trip.timeChange.preferredDays.length > 0
+                ? ` · ${formatDays(trip.timeChange.preferredDays, false)}`
+                : null}
+            </p>
+
+            <div className="flex flex-wrap items-end gap-inline-md">
+              <Input
+                value={timeReply}
+                onChange={(event) => setTimeReply(event.target.value)}
+                placeholder="What you did about it"
+                aria-label="Reply about the time change"
+                className="sm:w-[320px]"
+              />
+              <Button
+                size="small"
+                onClick={() => {
+                  onResolveTimeChange(timeReply.trim());
+                  setTimeReply("");
+                }}
+                /* A reply is required: closing it silently leaves the member
+                   watching a request that simply disappeared. */
+                disabled={!timeReply.trim()}
+              >
+                Answer
+              </Button>
+            </div>
+          </div>
+        </Alert>
+      ) : null}
+
       <div className="flex flex-wrap items-start justify-between gap-inline-md">
         <div className="min-w-0">
           <p className="text-label-md text-fg">{trip.destination}</p>
@@ -374,6 +423,7 @@ export default function ManageTravelPage() {
     setStatus,
     setPlacement,
     setFacilityNote,
+    resolveTimeChange,
     isPending,
     error,
     refetch,
@@ -460,6 +510,9 @@ export default function ManageTravelPage() {
                   onStatus={(status) => setStatus(trip.id, status)}
                   onOpenPlacement={() => setPlacing(trip)}
                   onNote={(note) => setFacilityNote(trip.id, note)}
+                  onResolveTimeChange={(reply) =>
+                    resolveTimeChange(trip.id, reply)
+                  }
                 />
               ))
             )}

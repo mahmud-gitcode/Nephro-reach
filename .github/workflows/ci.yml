@@ -36,6 +36,13 @@ jobs:
         if: always()
         run: npm run lint
 
+      # Colour tokens carry their contrast ratios in comments, and comments
+      # do not fail a build. This resolves every semantic token and asserts
+      # the pairs that reach a member's eye.
+      - name: Contrast
+        if: always()
+        run: npm run contrast
+
       # The pre-commit hook formats staged files; this catches anything that
       # reached the branch another way.
       - name: Format

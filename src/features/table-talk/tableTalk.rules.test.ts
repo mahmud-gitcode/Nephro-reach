@@ -10,6 +10,7 @@ import {
   liveEpisodes,
   looksUrgent,
   moveEpisode,
+  popularTopics,
   questionError,
   relatedTo,
   renameCategory,
@@ -356,5 +357,89 @@ describe("the example shelf that ships with the feature", () => {
     expect(
       SEED_EPISODES.every((episode) => episode.id.startsWith(SAMPLE_PREFIX)),
     ).toBe(true);
+  });
+});
+
+describe("popular topics", () => {
+  const cats: TableTalkCategory[] = [
+    {
+      id: "c1",
+      labelEn: "Life on Dialysis",
+      labelEs: "Vida",
+      order: 0,
+      archived: false,
+    },
+    {
+      id: "c2",
+      labelEn: "Nutrition",
+      labelEs: "Nutricion",
+      order: 1,
+      archived: false,
+    },
+    {
+      id: "c3",
+      labelEn: "Travel",
+      labelEs: "Viajes",
+      order: 2,
+      archived: false,
+    },
+    {
+      id: "c4",
+      labelEn: "Retired",
+      labelEs: "Retirado",
+      order: 3,
+      archived: true,
+    },
+  ];
+
+  const shelf = [
+    episode({ id: "a", slug: "a", categoryIds: ["c2"] }),
+    episode({ id: "b", slug: "b", categoryIds: ["c2", "c3"] }),
+    episode({ id: "c", slug: "c", categoryIds: ["c2"] }),
+    episode({ id: "d", slug: "d", categoryIds: ["c3"] }),
+    episode({ id: "e", slug: "e", categoryIds: ["c1"] }),
+  ];
+
+  it("ranks topics by how many episodes are actually in them", () => {
+    expect(
+      popularTopics(shelf, cats).map((entry) => entry.category.id),
+    ).toEqual(["c2", "c3", "c1"]);
+  });
+
+  it("counts an episode once per topic it belongs to", () => {
+    const counts = popularTopics(shelf, cats);
+    expect(counts.find((entry) => entry.category.id === "c2")?.count).toBe(3);
+    expect(counts.find((entry) => entry.category.id === "c3")?.count).toBe(2);
+  });
+
+  it("leaves out a topic with nothing published in it", () => {
+    // A sidebar link to an empty room is a dead end the member pays for.
+    const ids = popularTopics([], cats).map((entry) => entry.category.id);
+    expect(ids).toEqual([]);
+  });
+
+  it("leaves out archived topics even when episodes still reference them", () => {
+    const withRetired = [
+      ...shelf,
+      episode({ id: "f", slug: "f", categoryIds: ["c4"] }),
+    ];
+    expect(
+      popularTopics(withRetired, cats).map((entry) => entry.category.id),
+    ).not.toContain("c4");
+  });
+
+  it("breaks a tie on the admin's ordering, not the alphabet", () => {
+    const tied = [
+      episode({ id: "a", slug: "a", categoryIds: ["c3"] }),
+      episode({ id: "b", slug: "b", categoryIds: ["c1"] }),
+    ];
+    // c1 "Life on Dialysis" is ordered before c3 "Travel" despite the label.
+    expect(popularTopics(tied, cats).map((entry) => entry.category.id)).toEqual(
+      ["c1", "c3"],
+    );
+  });
+
+  it("caps the list so the sidebar cannot grow without bound", () => {
+    expect(popularTopics(shelf, cats, 2)).toHaveLength(2);
   });
 });

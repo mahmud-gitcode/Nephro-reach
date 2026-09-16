@@ -47,8 +47,13 @@ export const SEED_CATEGORIES: TableTalkCategory[] = [
 }));
 
 /* One image across every example. They are placeholders, and eight
-   different stock photos would imply eight real recordings. */
-const THUMBNAIL = "/images/Class.jpg";
+   different stock photos would imply eight real recordings.
+
+   It is the Table Talk still rather than the Classroom's, so an admin
+   opening the editor sees the shape of a real episode card — 16:9, the host
+   and guest at a table — instead of a lesson slide borrowed from another
+   feature. */
+const THUMBNAIL = "/images/table-talk/episode-thumbnail.jpg";
 
 const cat = (labelEn: string) =>
   SEED_CATEGORIES.find((entry) => entry.labelEn === labelEn)?.id ?? "";

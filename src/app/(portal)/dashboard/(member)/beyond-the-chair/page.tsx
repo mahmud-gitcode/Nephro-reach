@@ -1,10 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarCheck, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  CalendarCheck,
+  CircleAlert,
+  Clock,
+  Pencil,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import CheckInForm from "@/features/personal-log/check-in/CheckInForm";
 import { useCheckIns } from "@/features/personal-log/check-in/useCheckIns";
+import { useClinicNotices } from "@/features/personal-log/check-in/useClinicNotices";
+import { noticeStatus } from "@/features/personal-log/check-in/clinicNotice.rules";
+import type { ClinicNotice } from "@/features/personal-log/check-in/clinicNotice.types";
 import {
   relativeDayLabel,
   todayIso,
@@ -102,15 +113,21 @@ function DayStrip({
 
 function CheckInRow({
   entry,
+  notice,
   onEdit,
   onDelete,
 }: {
   entry: BetweenTreatmentCheckIn;
+  notice?: ClinicNotice;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
+
+  /* Whether the clinic has this day is the one thing a member checks the
+     list for after they send, so it sits on the row, not behind an edit. */
+  const status = notice ? noticeStatus(notice) : null;
 
   return (
     <li className="flex flex-col gap-inset-sm rounded-card border border-line bg-surface p-inset-md sm:flex-row sm:items-start">
@@ -125,6 +142,15 @@ function CheckInRow({
           {entry.missedTreatment ? (
             <Badge tone="danger" icon={<CircleAlert aria-hidden="true" />}>
               {isEs ? "Tratamiento perdido" : "Missed treatment"}
+            </Badge>
+          ) : null}
+          {status === "delivered" ? (
+            <Badge tone="success" icon={<Send aria-hidden="true" />}>
+              {isEs ? "Enviado a la clínica" : "Sent to clinic"}
+            </Badge>
+          ) : status ? (
+            <Badge tone="info" icon={<Clock aria-hidden="true" />}>
+              {isEs ? "En espera" : "Waiting to send"}
             </Badge>
           ) : null}
         </div>
@@ -192,6 +218,8 @@ export default function BetweenTreatmentPage() {
     isSaving,
   } = useCheckIns();
 
+  const notices = useClinicNotices();
+
   /* The date being written, or null when the form is closed. Holding a date
      rather than a boolean is what makes tapping any day in the strip open
      that day — new or already written. */
@@ -201,8 +229,12 @@ export default function BetweenTreatmentPage() {
   const [pendingDelete, setPendingDelete] =
     useState<BetweenTreatmentCheckIn | null>(null);
 
-  const handleSave = (entry: BetweenTreatmentCheckIn) => {
+  const handleSave = (
+    entry: BetweenTreatmentCheckIn,
+    notifyClinic: boolean,
+  ) => {
     saveCheckIn(entry);
+    notices.setNotify(entry, notifyClinic);
     setOpenDate(null);
   };
 
@@ -237,6 +269,22 @@ export default function BetweenTreatmentPage() {
           {isEs
             ? "Nada se perdió de la pantalla. Inténtalo de nuevo."
             : "Nothing was lost from the screen. Please try again."}
+        </Alert>
+      ) : null}
+
+      {notices.saveError ? (
+        <Alert
+          tone="danger"
+          title={
+            isEs
+              ? "No se envió el aviso a tu clínica"
+              : "Your clinic was not notified"
+          }
+          onDismiss={notices.dismissSaveError}
+        >
+          {isEs
+            ? "Tu registro se guardó, pero el aviso no salió. Abre el día y vuelve a intentarlo, o llama a tu clínica."
+            : "Your check-in saved, but the notice did not go out. Reopen the day to try again, or call your clinic."}
         </Alert>
       ) : null}
 
@@ -277,6 +325,17 @@ export default function BetweenTreatmentPage() {
                   : `${summary.missedTreatments} missed treatment(s) logged`}
               </p>
             ) : null}
+            {notices.pending.length > 0 ? (
+              /* Sunday is the only day this ever says anything, and it is
+                 the day a member is most likely to wonder whether their
+                 send went anywhere. */
+              <p className="flex items-center gap-inline-sm text-body-sm text-fg-muted">
+                <Clock aria-hidden="true" className="size-4 shrink-0" />
+                {isEs
+                  ? `${notices.pending.length} aviso(s) en espera hasta ${relativeDayLabel(notices.pending[0].deliverOn, true).toLowerCase()} — tu clínica cierra los domingos.`
+                  : `${notices.pending.length} notice(s) waiting until ${relativeDayLabel(notices.pending[0].deliverOn, false).toLowerCase()} — your clinic is closed Sundays.`}
+              </p>
+            ) : null}
             {summary.topSymptom ? (
               <p className="text-body-sm text-fg-muted">
                 {isEs ? "Más frecuente: " : "Most often: "}
@@ -309,6 +368,7 @@ export default function BetweenTreatmentPage() {
                 <CheckInRow
                   key={entry.date}
                   entry={entry}
+                  notice={notices.getByDate(entry.date)}
                   onEdit={() => setOpenDate(entry.date)}
                   onDelete={() => setPendingDelete(entry)}
                 />
@@ -328,9 +388,10 @@ export default function BetweenTreatmentPage() {
         <CheckInForm
           key={openDate}
           entry={openEntry ?? undefined}
+          notice={notices.getByDate(openDate)}
           onSave={handleSave}
           onCancel={() => setOpenDate(null)}
-          saving={isSaving}
+          saving={isSaving || notices.isSaving}
         />
       ) : null}
 
@@ -359,6 +420,7 @@ export default function BetweenTreatmentPage() {
                 variant="danger"
                 onClick={() => {
                   deleteCheckIn(pendingDelete.date);
+                  notices.dropNotice(pendingDelete.date);
                   setPendingDelete(null);
                 }}
               >

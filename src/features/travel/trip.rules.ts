@@ -1,6 +1,8 @@
 import type {
   TimePreference,
+  TimeChangeRequest,
   TravelDocumentKey,
+  TravelPrepKey,
   TripPlacement,
   TripRequest,
   TripStatus,
@@ -109,11 +111,13 @@ export function emptyTrip(now = new Date()): TripRequest {
     emergencyContact: { name: "", phone: "", relationship: "" },
     insurance: { plan: "", memberId: "" },
     documentsReady: [],
+    prepDone: [],
     notes: "",
     status: "submitted",
     submittedAt: now.toISOString(),
     updatedAt: now.toISOString(),
     facilityNote: "",
+    statusHistory: [{ status: "submitted", at: now.toISOString() }],
   };
 }
 
@@ -160,9 +164,25 @@ export function updateTripStatus(
   status: TripStatus,
   now = new Date(),
 ): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id ? { ...trip, status, updatedAt: now.toISOString() } : trip,
-  );
+  const at = now.toISOString();
+  return trips.map((trip) => {
+    if (trip.id !== id) return trip;
+
+    /* Re-saving the same status is not a new event: a coordinator opening
+       and closing a request would otherwise stamp it again and again. */
+    const alreadyThere = trip.statusHistory.some(
+      (event) => event.status === status,
+    );
+
+    return {
+      ...trip,
+      status,
+      updatedAt: at,
+      statusHistory: alreadyThere
+        ? trip.statusHistory
+        : [...trip.statusHistory, { status, at }],
+    };
+  });
 }
 
 /** "Jun 3 – Jun 12, 2026" from two ISO dates. */
@@ -286,6 +306,38 @@ export function toggleDocument(
     : [...ready, key];
 }
 
+export const TRAVEL_PREP: {
+  key: TravelPrepKey;
+  labelEn: string;
+  labelEs: string;
+  hintEn: string;
+  hintEs: string;
+}[] = [
+  {
+    key: "transportation",
+    labelEn: "Transportation arranged",
+    labelEs: "Transporte organizado",
+    hintEn: "How you will get to the unit at the other end, each day.",
+    hintEs: "Cómo llegarás a la unidad allá, cada día.",
+  },
+  {
+    key: "personal-items",
+    labelEn: "Personal items packed",
+    labelEs: "Artículos personales empacados",
+    hintEn: "ID, insurance card, medications, supplies.",
+    hintEs: "Identificación, tarjeta del seguro, medicamentos, suministros.",
+  },
+];
+
+export function togglePrep(
+  done: TravelPrepKey[],
+  key: TravelPrepKey,
+): TravelPrepKey[] {
+  return done.includes(key)
+    ? done.filter((entry) => entry !== key)
+    : [...done, key];
+}
+
 export function toggleDay(days: Weekday[], day: Weekday): Weekday[] {
   return days.includes(day)
     ? days.filter((entry) => entry !== day)
@@ -327,6 +379,238 @@ export function documentsProgress(trip: TripRequest): {
   const total = TRAVEL_DOCUMENTS.length;
   const ready = trip.documentsReady.length;
   return { ready, total, complete: ready === total };
+}
+
+/* ==========================================================================
+   The status timeline
+   --------------------------------------------------------------------------
+   The ladder has six rungs because a coordinator needs that much detail:
+   "records sent" and "placement pending" are different problems with
+   different people to chase.
+
+   A member does not have those people to chase. To them there are four
+   moments — they asked, somebody is working on it, it is booked, it is
+   over — and showing six makes the middle of the trip look like four
+   separate things going wrong instead of one thing taking a while.
+
+   So the timeline folds the three middle rungs into one. Nothing is hidden:
+   the detail line under "In Progress" still names the rung it is actually
+   on.
+   ========================================================================== */
+
+export type MilestoneState = "done" | "current" | "todo";
+
+export interface TripMilestone {
+  id: "submitted" | "in-progress" | "confirmation" | "completed";
+  labelEn: string;
+  labelEs: string;
+  detailEn: string;
+  detailEs: string;
+  state: MilestoneState;
+  /** When it happened, if we know. Absent rather than guessed. */
+  at?: string;
+}
+
+/** Which ladder rungs roll up into which milestone. */
+const MILESTONE_RUNGS: Record<TripMilestone["id"], TripStatus[]> = {
+  submitted: ["submitted"],
+  "in-progress": ["facility-reviewing", "records-sent", "placement-pending"],
+  confirmation: ["confirmed"],
+  completed: ["closed"],
+};
+
+const MILESTONE_COPY: Omit<TripMilestone, "state" | "at">[] = [
+  {
+    id: "submitted",
+    labelEn: "Request Submitted",
+    labelEs: "Solicitud Enviada",
+    detailEn: "Your travel request has been sent to your dialysis facility.",
+    detailEs: "Tu solicitud de viaje se envió a tu centro de diálisis.",
+  },
+  {
+    id: "in-progress",
+    labelEn: "In Progress",
+    labelEs: "En Proceso",
+    detailEn: "Your facility is coordinating your travel treatment.",
+    detailEs: "Tu centro está coordinando tu tratamiento de viaje.",
+  },
+  {
+    id: "confirmation",
+    labelEn: "Confirmation Sent",
+    labelEs: "Confirmación Enviada",
+    detailEn: "Your treatment details are confirmed.",
+    detailEs: "Los detalles de tu tratamiento están confirmados.",
+  },
+  {
+    id: "completed",
+    labelEn: "Completed",
+    labelEs: "Completado",
+    detailEn: "Your travel has been completed.",
+    detailEs: "Tu viaje se ha completado.",
+  },
+];
+
+export function tripMilestones(trip: TripRequest): TripMilestone[] {
+  const reached = statusIndex(trip.status);
+
+  return MILESTONE_COPY.map((copy) => {
+    const rungs = MILESTONE_RUNGS[copy.id];
+    const positions = rungs.map(statusIndex);
+    const first = Math.min(...positions);
+    const last = Math.max(...positions);
+
+    const state: MilestoneState =
+      reached > last ? "done" : reached >= first ? "current" : "todo";
+
+    /* The earliest event belonging to this milestone. For "In Progress"
+       that is when the facility first picked it up, which is the date a
+       member means when they ask how long it has been sitting. */
+    const at = trip.statusHistory
+      .filter((event) => rungs.includes(event.status))
+      .map((event) => event.at)
+      .sort()[0];
+
+    return { ...copy, state, ...(at ? { at } : {}) };
+  });
+}
+
+/** "Sep 12, 2026 · 10:24 AM" — a timeline needs the time, not just the day. */
+export function formatEventTime(iso: string, isEs: boolean): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+
+  return when.toLocaleString(isEs ? "es-ES" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/* ==========================================================================
+   The travel checklist
+   --------------------------------------------------------------------------
+   One list of everything that has to be true before a member gets on a
+   plane, drawn from the three places that already know the answer rather
+   than from a fourth copy of it.
+   ========================================================================== */
+
+export type ChecklistItemKind = "facility" | "document" | "prep";
+
+export interface ChecklistItem {
+  id: string;
+  kind: ChecklistItemKind;
+  labelEn: string;
+  labelEs: string;
+  /** What this actually is, and who usually does it. */
+  hintEn?: string;
+  hintEs?: string;
+  done: boolean;
+  /**
+   * Whether the member can tick it themselves.
+   *
+   * The facility row cannot be: a chair at the other end is arranged by the
+   * coordinating unit, and a checkbox that let a member mark their own
+   * placement done would be the app lying to them about having a bed.
+   */
+  memberControlled: boolean;
+}
+
+/**
+ * The paperwork rows, in checklist wording.
+ *
+ * Every document key is here, including `other`. An earlier version listed
+ * five of the six and left a second panel to tick the rest — which read the
+ * same `documentsReady` array, so five rows existed twice on one screen with
+ * different wording and ticking either moved both.
+ *
+ * Hints are not repeated here: they are read from `TRAVEL_DOCUMENTS` by key,
+ * so what a document is gets described in exactly one place.
+ */
+const CHECKLIST_DOCUMENTS: {
+  key: TravelDocumentKey;
+  labelEn: string;
+  labelEs: string;
+}[] = [
+  {
+    key: "treatment-orders",
+    labelEn: "Dialysis orders/records sent",
+    labelEs: "Órdenes y expediente enviados",
+  },
+  {
+    key: "recent-labs",
+    labelEn: "Recent labs sent (Hep B, PPD/TB, HIV)",
+    labelEs: "Laboratorios recientes enviados (Hep B, PPD/TB, VIH)",
+  },
+  {
+    key: "medication-list",
+    labelEn: "Medication list packed",
+    labelEs: "Lista de medicamentos empacada",
+  },
+  {
+    key: "insurance",
+    labelEn: "Insurance/authorization confirmed",
+    labelEs: "Seguro y autorización confirmados",
+  },
+  {
+    key: "emergency-contact",
+    labelEn: "Emergency contact saved",
+    labelEs: "Contacto de emergencia guardado",
+  },
+  {
+    key: "other",
+    labelEn: "Anything else your unit asked for",
+    labelEs: "Cualquier otra cosa que pidió tu unidad",
+  },
+];
+
+const documentHint = (key: TravelDocumentKey) =>
+  TRAVEL_DOCUMENTS.find((entry) => entry.key === key);
+
+export function travelChecklist(trip: TripRequest): ChecklistItem[] {
+  return [
+    {
+      id: "facility",
+      kind: "facility",
+      labelEn: "Temporary dialysis facility arranged",
+      labelEs: "Centro de diálisis temporal organizado",
+      /* Read straight off the placement: this is done when the facility has
+         actually booked a chair, and at no earlier moment. */
+      done: Boolean(trip.placement?.treatments.length),
+      memberControlled: false,
+    },
+    ...CHECKLIST_DOCUMENTS.map((entry) => ({
+      id: entry.key,
+      kind: "document" as const,
+      labelEn: entry.labelEn,
+      labelEs: entry.labelEs,
+      hintEn: documentHint(entry.key)?.hintEn,
+      hintEs: documentHint(entry.key)?.hintEs,
+      done: trip.documentsReady.includes(entry.key),
+      memberControlled: true,
+    })),
+    ...TRAVEL_PREP.map((entry) => ({
+      id: entry.key,
+      kind: "prep" as const,
+      labelEn: entry.labelEn,
+      labelEs: entry.labelEs,
+      hintEn: entry.hintEn,
+      hintEs: entry.hintEs,
+      done: trip.prepDone.includes(entry.key),
+      memberControlled: true,
+    })),
+  ];
+}
+
+export function checklistProgress(trip: TripRequest): {
+  done: number;
+  total: number;
+  complete: boolean;
+} {
+  const items = travelChecklist(trip);
+  const done = items.filter((item) => item.done).length;
+  return { done, total: items.length, complete: done === items.length };
 }
 
 /* ==========================================================================
@@ -488,6 +772,7 @@ export function normaliseTrip(trip: Partial<TripRequest>): TripRequest {
     preferredDays: trip.preferredDays ?? [],
     preferredTime: trip.preferredTime ?? "any",
     documentsReady: trip.documentsReady ?? [],
+    prepDone: trip.prepDone ?? [],
     emergencyContact: trip.emergencyContact ?? {
       name: "",
       phone: "",
@@ -495,6 +780,21 @@ export function normaliseTrip(trip: Partial<TripRequest>): TripRequest {
     },
     insurance: trip.insurance ?? { plan: "", memberId: "" },
     facilityNote: trip.facilityNote ?? "",
+    /* An older record has no history. Seed it from the two timestamps it
+       does have rather than leaving the timeline blank: `submittedAt` is
+       exactly when the first rung happened, and `updatedAt` is when the rung
+       it is on now happened. The rungs in between are genuinely unknown, and
+       the timeline shows them without a date rather than inventing one. */
+    statusHistory:
+      trip.statusHistory ??
+      (trip.submittedAt
+        ? [
+            { status: "submitted" as const, at: trip.submittedAt },
+            ...(trip.status && trip.status !== "submitted" && trip.updatedAt
+              ? [{ status: trip.status, at: trip.updatedAt }]
+              : []),
+          ]
+        : []),
     /* An older record may carry the flattened placement fields this replaced. */
     placement: trip.placement
       ? {
@@ -527,6 +827,184 @@ export function tripPhase(trip: TripRequest, today = todayIso()): TripPhase {
   if (trip.status === "closed" || today > trip.returnDate) return "home";
   if (today >= trip.departDate) return "away";
   return "planned";
+}
+
+/* ==========================================================================
+   Asking to move the booked times
+   --------------------------------------------------------------------------
+   `isEditable` closes the form the moment a placement is confirmed, and that
+   is right: the chair is held by a unit that has never heard of this app.
+   But "you cannot change this" is not the same as "you must live with it",
+   and the gap between those two was a phone call the member had to work out
+   for themselves.
+
+   A time-change request is the same shape as the original request — the
+   member asks, the facility answers — so it goes back down the same channel
+   rather than becoming a second kind of thing.
+   ========================================================================== */
+
+/**
+ * Whether asking makes sense yet.
+ *
+ * Only once there is something booked to move. Before that the request
+ * itself is still editable, and two ways to change the same unconfirmed
+ * times would be one too many.
+ */
+export function canRequestTimeChange(trip: TripRequest): boolean {
+  return (
+    Boolean(trip.placement?.treatments.length) &&
+    tripPhase(trip) !== "home" &&
+    trip.status !== "closed"
+  );
+}
+
+/** Raised and not yet answered. */
+export function hasOpenTimeChange(trip: TripRequest): boolean {
+  return Boolean(trip.timeChange && !trip.timeChange.resolvedAt);
+}
+
+export function emptyTimeChange(
+  trip: TripRequest,
+  now = new Date(),
+): TimeChangeRequest {
+  return {
+    requestedAt: now.toISOString(),
+    /* Seeded from what they asked for last time rather than blank: most
+       people want the same thing they wanted before, said again. */
+    preferredTime: trip.preferredTime,
+    preferredDays: trip.preferredDays,
+    note: "",
+  };
+}
+
+/**
+ * A note is required.
+ *
+ * A coordinator receiving "please move my times" with no reason has to ring
+ * the member to find out what they actually need, which is the phone call
+ * this whole feature exists to save.
+ */
+export function timeChangeError(request: TimeChangeRequest): string | null {
+  if (!request.note.trim()) return "note-required";
+  return null;
+}
+
+export function canSubmitTimeChange(request: TimeChangeRequest): boolean {
+  return timeChangeError(request) === null;
+}
+
+export function requestTimeChange(
+  trips: TripRequest[],
+  id: string,
+  request: TimeChangeRequest,
+  now = new Date(),
+): TripRequest[] {
+  return trips.map((trip) =>
+    trip.id === id
+      ? {
+          ...trip,
+          timeChange: { ...request, resolvedAt: undefined },
+          updatedAt: now.toISOString(),
+        }
+      : trip,
+  );
+}
+
+/** The member changing their mind before the facility has acted. */
+export function withdrawTimeChange(
+  trips: TripRequest[],
+  id: string,
+  now = new Date(),
+): TripRequest[] {
+  return trips.map((trip) => {
+    /* A request the facility has already answered stays on the record: it
+       explains why the booked times are what they are. */
+    if (trip.id !== id || !hasOpenTimeChange(trip)) return trip;
+    return { ...trip, timeChange: undefined, updatedAt: now.toISOString() };
+  });
+}
+
+/** Facility side: answering it, whether or not the times actually moved. */
+export function resolveTimeChange(
+  trips: TripRequest[],
+  id: string,
+  facilityReply: string,
+  now = new Date(),
+): TripRequest[] {
+  return trips.map((trip) =>
+    trip.id === id && trip.timeChange
+      ? {
+          ...trip,
+          timeChange: {
+            ...trip.timeChange,
+            resolvedAt: now.toISOString(),
+            facilityReply,
+          },
+          updatedAt: now.toISOString(),
+        }
+      : trip,
+  );
+}
+
+/* ==========================================================================
+   Filtering the trip list
+   --------------------------------------------------------------------------
+   The same three phases the cards already use, turned into tabs.
+
+   `all` exists because the other three can each be empty, and a tab strip
+   where every tab shows "nothing here" gives a member no way to tell an
+   empty filter from an empty log.
+   ========================================================================== */
+
+export type TripFilter = "all" | "in-progress" | "previous";
+
+/**
+ * Which trips each filter shows.
+ *
+ * Three, not the four phases the cards use. "Planned" and "away" are one
+ * thing to a member choosing from a list — a trip still going on — and
+ * splitting them made them pick between two words for the same answer.
+ */
+export function filterTrips(
+  trips: TripRequest[],
+  filter: TripFilter,
+  today = todayIso(),
+): TripRequest[] {
+  const sorted = sortTrips(trips);
+  if (filter === "all") return sorted;
+
+  return sorted.filter((trip) => {
+    const finished = tripPhase(trip, today) === "home";
+    return filter === "previous" ? finished : !finished;
+  });
+}
+
+/** How many sit behind each option, so the count can sit on the label. */
+export function tripFilterCounts(
+  trips: TripRequest[],
+  today = todayIso(),
+): Record<TripFilter, number> {
+  return {
+    all: trips.length,
+    "in-progress": filterTrips(trips, "in-progress", today).length,
+    previous: filterTrips(trips, "previous", today).length,
+  };
+}
+
+/**
+ * Which option to open on.
+ *
+ * A live trip is what somebody came here for. Falling back to "all" rather
+ * than an empty "in progress" matters: a member with three finished trips
+ * would otherwise open on a blank list and read it as data loss.
+ */
+export function defaultTripFilter(
+  trips: TripRequest[],
+  today = todayIso(),
+): TripFilter {
+  return tripFilterCounts(trips, today)["in-progress"] > 0
+    ? "in-progress"
+    : "all";
 }
 
 /**

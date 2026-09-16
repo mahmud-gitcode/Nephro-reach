@@ -316,7 +316,9 @@ export function emptyEpisode(order = 0): TableTalkEpisode {
     speakers: [],
     categoryIds: [],
     audience: "both",
-    thumbnail: "/images/Class.jpg",
+    /* A new episode starts on the Table Talk still, so a draft saved before
+       the admin uploads artwork still looks like an episode in the grid. */
+    thumbnail: "/images/table-talk/episode-thumbnail.jpg",
     captions: {},
     isShort: false,
     isLiveEvent: false,
@@ -498,6 +500,30 @@ export function episodeCountFor(
 ): number {
   return episodes.filter((episode) => episode.categoryIds.includes(categoryId))
     .length;
+}
+
+/**
+ * Topics worth putting in front of a member, busiest first.
+ *
+ * "Popular" is measured against the episodes actually passed in — the
+ * member-visible shelf — so a topic an admin created but never published
+ * into does not sit in the sidebar advertising an empty room. Ties fall back
+ * to the admin's own ordering rather than the alphabet, because that
+ * ordering is the one deliberate signal about which topics matter.
+ */
+export function popularTopics(
+  episodes: TableTalkEpisode[],
+  categories: TableTalkCategory[],
+  limit = 8,
+): { category: TableTalkCategory; count: number }[] {
+  return activeCategories(categories)
+    .map((category) => ({
+      category,
+      count: episodeCountFor(episodes, category.id),
+    }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.count - a.count || a.category.order - b.category.order)
+    .slice(0, limit);
 }
 
 /* ==========================================================================

@@ -5,7 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTrips, saveTrips } from "./trip.repository";
 import * as rules from "./trip.rules";
 import type {
+  TimeChangeRequest,
   TravelDocumentKey,
+  TravelPrepKey,
   TripPlacement,
   TripRequest,
 } from "./trip.types";
@@ -78,6 +80,31 @@ export function useTrips() {
     [mutate],
   );
 
+  const requestTimeChange = useCallback(
+    (id: string, request: TimeChangeRequest) =>
+      mutate((current) => rules.requestTimeChange(current, id, request)),
+    [mutate],
+  );
+
+  const withdrawTimeChange = useCallback(
+    (id: string) => mutate((current) => rules.withdrawTimeChange(current, id)),
+    [mutate],
+  );
+
+  const resolveTimeChange = useCallback(
+    (id: string, reply: string) =>
+      mutate((current) => rules.resolveTimeChange(current, id, reply)),
+    [mutate],
+  );
+
+  const setPrep = useCallback(
+    (id: string, prepDone: TravelPrepKey[]) =>
+      mutate((current) =>
+        current.map((trip) => (trip.id === id ? { ...trip, prepDone } : trip)),
+      ),
+    [mutate],
+  );
+
   const setDocuments = useCallback(
     (id: string, documentsReady: TravelDocumentKey[]) =>
       mutate((current) =>
@@ -115,6 +142,11 @@ export function useTrips() {
     update,
     cancel,
     setDocuments,
+    setPrep,
+
+    requestTimeChange,
+    withdrawTimeChange,
+    resolveTimeChange,
 
     setStatus,
     setPlacement,

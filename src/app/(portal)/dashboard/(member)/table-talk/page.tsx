@@ -15,6 +15,8 @@ import {
 } from "@/features/table-talk/tableTalk.rules";
 import { useTableTalk } from "@/features/table-talk/useTableTalk";
 import TableTalkDisclaimer from "@/features/table-talk/TableTalkDisclaimer";
+import AboutTableTalk from "@/features/table-talk/AboutTableTalk";
+import PopularTopics from "@/features/table-talk/PopularTopics";
 import SuggestQuestionModal from "@/features/table-talk/SuggestQuestionModal";
 import type {
   TableTalkCategory,
@@ -31,7 +33,6 @@ import {
   ChipGroup,
   EmptyState,
   Input,
-  Select,
   Skeleton,
 } from "@/components/ui";
 
@@ -346,30 +347,47 @@ export default function TableTalkPage() {
 
   return (
     <div className="space-y-stack-xl">
-      {/* Banner: the name and the tagline, nothing else competing with it. */}
+      {/* Banner: the series masthead, nothing else competing with it.
+
+        The artwork already carries the logo, the name and the tagline, so it
+        stands in for the heading rather than sitting above a second copy of
+        the same words — the `h1` wraps it and the alt text is the heading.
+
+        It is an English asset, though, and its tagline is baked into the
+        pixels. Spanish readers get that line back as text underneath rather
+        than a wordmark they cannot read. */}
       <Card
         as="section"
-        className="border-primary-soft-line bg-gradient-to-br from-primary-soft via-surface to-surface"
+        padding="none"
+        className="overflow-hidden border-primary-soft-line"
       >
-        <div className="flex flex-wrap items-start justify-between gap-inline-lg">
-          <div className="flex items-start gap-inline-lg">
-            <span
-              aria-hidden="true"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-surface text-fg-brand"
-            >
-              <Mic className="h-6 w-6" />
-            </span>
-            <div>
-              <h1 className="text-heading-1 text-fg">
-                {isEs ? "Dialysis Table Talk" : "Dialysis Table Talk"}
-              </h1>
-              <p className="mt-stack-xs text-body-lg text-fg-secondary">
-                {isEs
-                  ? "Conversaciones reales. Respuestas reales. Un mañana mejor."
-                  : "Real Conversations. Real Answers. A Brighter Tomorrow."}
-              </p>
-            </div>
-          </div>
+        <h1 className="m-0">
+          {/* Intrinsic width and height rather than `fill`: the artwork is a
+            fixed 1024x157 strip, so giving the real numbers lets the browser
+            reserve the exact space before the bytes arrive, and the image
+            does not depend on a parent resolving a height for it. */}
+          <Image
+            src="/images/table-talk/banner.jpg"
+            alt={
+              isEs
+                ? "Dialysis Table Talk de NephroReach. Conversaciones reales. Respuestas reales. Un mañana mejor."
+                : "NephroReach Dialysis Table Talk. Real Conversations. Real Answers. A Brighter Tomorrow."
+            }
+            width={1024}
+            height={157}
+            /* Top of the page and above the fold, so it is not lazy. */
+            priority
+            sizes="100vw"
+            className="block h-auto w-full"
+          />
+        </h1>
+
+        <div className="flex flex-wrap items-center justify-between gap-inline-lg p-inset-lg">
+          <p className="measure text-body-lg text-fg-secondary">
+            {isEs
+              ? "Conversaciones reales. Respuestas reales. Un mañana mejor."
+              : "Short conversations with a host and a guest about living on dialysis."}
+          </p>
 
           <Button
             variant="neutral"
@@ -393,46 +411,13 @@ export default function TableTalkPage() {
         </Alert>
       ) : null}
 
-      {/* Search, topic and filters on one row — the Library pattern. */}
+      {/* Audience filters lead the shelf; search and topic moved to the
+        sidebar, where a member browses rather than narrows. My Favorites is
+        kept apart from the rest — it answers "what did I save", which is a
+        different question from "what is this episode about". */}
       <Card as="section">
         <div className="flex flex-col gap-inline-md lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center">
-            <Input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={
-                isEs ? "Buscar en Table Talk" : "Search Dialysis Table Talk"
-              }
-              aria-label={
-                isEs ? "Buscar en Table Talk" : "Search Dialysis Table Talk"
-              }
-              leadingIcon={<Search aria-hidden="true" className="h-4 w-4" />}
-              className="sm:w-[280px]"
-            />
-
-            <Select
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              aria-label={isEs ? "Tema" : "Topic"}
-              className="sm:w-[220px]"
-            >
-              <option value="all">
-                {isEs ? "Todos los temas" : "All topics"}
-              </option>
-              {categories.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {isEs ? entry.labelEs : entry.labelEn}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <ChipGroup
-            label={isEs ? "Filtros" : "Filters"}
-            selection="single"
-            className="lg:justify-end"
-          >
+          <ChipGroup label={isEs ? "Filtros" : "Filters"} selection="single">
             {filters.map((entry) => (
               <Chip
                 key={entry.key}
@@ -442,89 +427,123 @@ export default function TableTalkPage() {
                 {entry.label}
               </Chip>
             ))}
-            <Chip
-              selected={filter === "favorites"}
-              icon={<Heart aria-hidden="true" />}
-              onClick={() =>
-                setFilter((current) =>
-                  current === "favorites" ? "all" : "favorites",
-                )
-              }
-            >
-              {isEs ? "Mis Favoritos" : "My Favorites"}
-            </Chip>
           </ChipGroup>
+
+          <Chip
+            selected={filter === "favorites"}
+            icon={<Heart aria-hidden="true" />}
+            onClick={() =>
+              setFilter((current) =>
+                current === "favorites" ? "all" : "favorites",
+              )
+            }
+          >
+            {isEs ? "Mis Favoritos" : "My Favorites"}
+          </Chip>
         </div>
       </Card>
 
-      <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
-        isEmpty={grid.length === 0 && !featured}
-        errorTitle={isEs ? "Table Talk no se cargó" : "Table Talk did not load"}
-        skeleton={<GridSkeleton />}
-        empty={
-          <EmptyState
-            icon={<Mic aria-hidden="true" />}
-            title={isEs ? "Aún no hay episodios" : "No episodes yet"}
-            description={
-              isEs
-                ? "Los episodios aparecerán aquí en cuanto NephroReach publique el primero."
-                : "Episodes appear here as soon as NephroReach publishes the first one."
-            }
-          />
-        }
-      >
-        <div className="space-y-stack-xl">
-          {untouched && featured ? (
-            <FeaturedEpisode
-              episode={featured}
-              categories={categories}
-              saved={isFavorite(featured.slug)}
-              onToggleSaved={() => toggleFavorite(featured.slug)}
+      {/* Two columns from `xl` up: the shelf, and a rail carrying what the
+        series is, what it is not, and the topics to browse by. Below `xl`
+        the rail falls under the shelf rather than squeezing both. */}
+      <div className="grid grid-cols-1 gap-inset-lg xl:grid-cols-[minmax(0,1fr)_320px]">
+        <AsyncSection
+          pending={isPending}
+          error={error}
+          onRetry={refetch}
+          isEmpty={grid.length === 0 && !featured}
+          errorTitle={
+            isEs ? "Table Talk no se cargó" : "Table Talk did not load"
+          }
+          skeleton={<GridSkeleton />}
+          empty={
+            <EmptyState
+              icon={<Mic aria-hidden="true" />}
+              title={isEs ? "Aún no hay episodios" : "No episodes yet"}
+              description={
+                isEs
+                  ? "Los episodios aparecerán aquí en cuanto NephroReach publique el primero."
+                  : "Episodes appear here as soon as NephroReach publishes the first one."
+              }
             />
-          ) : null}
-
-          <section className="space-y-stack-md">
-            <h2 className="text-heading-4 text-fg">
-              {untouched
-                ? isEs
-                  ? "Últimos episodios"
-                  : "Latest Episodes"
-                : isEs
-                  ? `${grid.length} episodio(s)`
-                  : `${grid.length} episode(s)`}
-            </h2>
-
-            {grid.length === 0 ? (
-              <EmptyState
-                icon={<Search aria-hidden="true" />}
-                title={isEs ? "Nada coincide con eso" : "Nothing matches that"}
-                description={
-                  isEs
-                    ? "Prueba con otra palabra o quita los filtros."
-                    : "Try another word, or clear the filters."
-                }
+          }
+        >
+          <div className="space-y-stack-xl">
+            {untouched && featured ? (
+              <FeaturedEpisode
+                episode={featured}
+                categories={categories}
+                saved={isFavorite(featured.slug)}
+                onToggleSaved={() => toggleFavorite(featured.slug)}
               />
-            ) : (
-              <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {grid.map((episode) => (
-                  <EpisodeCard
-                    key={episode.id}
-                    episode={episode}
-                    categories={categories}
-                    saved={isFavorite(episode.slug)}
-                    onToggleSaved={() => toggleFavorite(episode.slug)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </AsyncSection>
+            ) : null}
 
-      <TableTalkDisclaimer />
+            <section className="space-y-stack-md">
+              <h2 className="text-heading-4 text-fg">
+                {untouched
+                  ? isEs
+                    ? "Últimos episodios"
+                    : "Latest Episodes"
+                  : isEs
+                    ? `${grid.length} episodio(s)`
+                    : `${grid.length} episode(s)`}
+              </h2>
+
+              {grid.length === 0 ? (
+                <EmptyState
+                  icon={<Search aria-hidden="true" />}
+                  title={
+                    isEs ? "Nada coincide con eso" : "Nothing matches that"
+                  }
+                  description={
+                    isEs
+                      ? "Prueba con otra palabra o quita los filtros."
+                      : "Try another word, or clear the filters."
+                  }
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {grid.map((episode) => (
+                    <EpisodeCard
+                      key={episode.id}
+                      episode={episode}
+                      categories={categories}
+                      saved={isFavorite(episode.slug)}
+                      onToggleSaved={() => toggleFavorite(episode.slug)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </AsyncSection>
+
+        <aside className="space-y-stack-lg">
+          <AboutTableTalk />
+
+          <TableTalkDisclaimer />
+
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={
+              isEs ? "Buscar en Table Talk" : "Search Dialysis Table Talk"
+            }
+            aria-label={
+              isEs ? "Buscar en Table Talk" : "Search Dialysis Table Talk"
+            }
+            leadingIcon={<Search aria-hidden="true" className="h-4 w-4" />}
+          />
+
+          <PopularTopics
+            episodes={episodes}
+            categories={categories}
+            selectedId={categoryId}
+            onSelect={setCategoryId}
+          />
+        </aside>
+      </div>
 
       {asking ? (
         <SuggestQuestionModal

@@ -1,19 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Building2,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  ClipboardList,
-  MapPin,
-  Pencil,
-  Phone,
-  Plane,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Building2, Check, ClipboardList, MapPin, Phone } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   TIME_PREFERENCES,
@@ -21,27 +9,19 @@ import {
   TRIP_STATUSES,
   WEEKDAYS,
   canSubmit,
-  daysUntilDeparture,
   documentsProgress,
   emptyTrip,
   formatDateLabel,
   formatDays,
-  formatTripDates,
-  pastTrips,
-  isEditable,
-  needsChasing,
   statusDetail,
   statusIndex,
   statusLabel,
   timePreferenceLabel,
   toggleDay,
-  toggleDocument,
-  tripPhase,
   tripError,
-  tripLengthDays,
-  upcomingTrips,
 } from "./trip.rules";
 import { useTrips } from "./useTrips";
+import YourTrips from "./YourTrips";
 import type {
   TimePreference,
   TravelDocumentKey,
@@ -50,18 +30,13 @@ import type {
 } from "./trip.types";
 import {
   Alert,
-  AsyncSection,
-  Badge,
   Button,
-  Card,
   Chip,
   ChipGroup,
-  EmptyState,
   FormField,
   Input,
   Modal,
   Select,
-  Skeleton,
   Textarea,
 } from "@/components/ui";
 
@@ -74,7 +49,7 @@ import {
    ========================================================================== */
 
 /** Six steps as one strip, with only the current one spelled out. */
-function ProgressStrip({ trip }: { trip: TripRequest }) {
+export function ProgressStrip({ trip }: { trip: TripRequest }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const reached = statusIndex(trip.status);
@@ -107,7 +82,7 @@ function ProgressStrip({ trip }: { trip: TripRequest }) {
 }
 
 /** What the receiving unit has actually booked. Absent until they say so. */
-function PlacementCard({ trip }: { trip: TripRequest }) {
+export function PlacementCard({ trip }: { trip: TripRequest }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const placement = trip.placement;
@@ -164,7 +139,7 @@ function PlacementCard({ trip }: { trip: TripRequest }) {
 }
 
 /** The paperwork, ticked rather than uploaded. */
-function DocumentChecklist({
+export function DocumentChecklist({
   trip,
   onToggle,
   readOnly,
@@ -239,7 +214,7 @@ function DocumentChecklist({
 }
 
 /** What the member told the facility, so they can check it without editing. */
-function RequestSummary({ trip }: { trip: TripRequest }) {
+export function RequestSummary({ trip }: { trip: TripRequest }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
@@ -284,158 +259,6 @@ function RequestSummary({ trip }: { trip: TripRequest }) {
   );
 }
 
-function TripCard({
-  trip,
-  onEdit,
-  onCancel,
-  onToggleDocument,
-}: {
-  trip: TripRequest;
-  onEdit: () => void;
-  onCancel: () => void;
-  onToggleDocument: (key: TravelDocumentKey) => void;
-}) {
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-  const [open, setOpen] = useState(false);
-
-  const phase = tripPhase(trip);
-  const countdown = daysUntilDeparture(trip);
-  const editable = isEditable(trip);
-  const chase = needsChasing(trip);
-  const confirmed = trip.status === "confirmed";
-  const progress = documentsProgress(trip);
-
-  /* One line that answers "where is this up to" before anything else. */
-  const when =
-    phase === "away"
-      ? isEs
-        ? "De viaje ahora"
-        : "Away now"
-      : phase === "home"
-        ? isEs
-          ? "Terminado"
-          : "Finished"
-        : countdown === 0
-          ? isEs
-            ? "Sales hoy"
-            : "You leave today"
-          : isEs
-            ? `Sales en ${countdown} días`
-            : `You leave in ${countdown} days`;
-
-  return (
-    <Card as="article" tone="flat" padding="small" className="space-y-stack-md">
-      {/* ------------------------------------------------------- header */}
-      <div className="flex flex-wrap items-start justify-between gap-inline-md">
-        <div className="min-w-0">
-          <p className="text-heading-5 text-fg">{trip.destination}</p>
-          <p className="mt-stack-xs text-body-sm text-fg-muted">
-            {formatTripDates(trip, isEs)} ·{" "}
-            {isEs
-              ? `${tripLengthDays(trip)} días · ${trip.treatmentsNeeded} tratamiento(s)`
-              : `${tripLengthDays(trip)} days · ${trip.treatmentsNeeded} treatment(s)`}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-inline-md">
-          {phase !== "home" ? (
-            <Badge tone={phase === "away" ? "accent" : "neutral"}>{when}</Badge>
-          ) : null}
-          <Badge
-            tone={confirmed ? "success" : phase === "home" ? "neutral" : "info"}
-          >
-            {statusLabel(trip.status, isEs)}
-          </Badge>
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------ progress */}
-      {phase === "home" ? null : <ProgressStrip trip={trip} />}
-
-      {/* A member two weeks out with nothing confirmed should be chasing,
-          not waiting. Said once, and only while it is true. */}
-      {chase ? (
-        <Alert tone="warning">
-          {isEs
-            ? "Tu viaje es pronto y aún no está confirmado. Llama a tu clínica para preguntar cómo va."
-            : "Your trip is soon and it is not confirmed yet. Call your clinic to ask where it has got to."}
-        </Alert>
-      ) : null}
-
-      {/* The answer, once there is one. */}
-      <PlacementCard trip={trip} />
-
-      {/* Only shown once the facility has actually said something. */}
-      {trip.facilityNote.trim() ? (
-        <p className="rounded-control border border-line bg-surface p-inset-sm text-body-sm text-fg-secondary">
-          {trip.facilityNote}
-        </p>
-      ) : null}
-
-      {/* ------------------------------------------------------- actions */}
-      <div className="flex flex-wrap items-center justify-between gap-inline-md">
-        <Button
-          size="small"
-          variant="neutral"
-          appearance="stroke"
-          onClick={() => setOpen((current) => !current)}
-          aria-expanded={open}
-        >
-          {open ? (
-            <ChevronUp aria-hidden="true" className="size-4 shrink-0" />
-          ) : (
-            <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
-          )}
-          {isEs ? "Detalles" : "Details"}
-          {phase === "home" ? null : (
-            <span className="text-fg-muted tabular-nums">
-              {progress.ready}/{progress.total}
-            </span>
-          )}
-        </Button>
-
-        <div className="flex items-center gap-inline-md">
-          {editable ? (
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={onEdit}
-            >
-              <Pencil aria-hidden="true" className="size-4 shrink-0" />
-              {isEs ? "Editar" : "Edit"}
-            </Button>
-          ) : null}
-          {phase === "home" ? null : (
-            <Button
-              size="small"
-              variant="danger"
-              appearance="stroke"
-              onClick={onCancel}
-            >
-              <Trash2 aria-hidden="true" className="size-4 shrink-0" />
-              {isEs ? "Cancelar" : "Cancel"}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* --------------------------------------------------- the details */}
-      {open ? (
-        <div className="grid grid-cols-1 gap-inset-md border-t border-line pt-inset-sm lg:grid-cols-2">
-          <RequestSummary trip={trip} />
-          <DocumentChecklist
-            trip={trip}
-            onToggle={onToggleDocument}
-            readOnly={phase === "home"}
-          />
-        </div>
-      ) : null}
-    </Card>
-  );
-}
-
 export function TravelDialysisSection() {
   const { language } = useLanguage();
   const isEs = language === "ES";
@@ -444,10 +267,6 @@ export function TravelDialysisSection() {
     submit,
     update,
     cancel,
-    setDocuments,
-    isPending,
-    error,
-    refetch,
     saveError,
     dismissSaveError,
     isSaving,
@@ -464,19 +283,17 @@ export function TravelDialysisSection() {
     setDraft((current) => ({ ...current, ...patch }));
 
   const invalid = tripError(draft);
-  const upcoming = upcomingTrips(trips);
-  const past = pastTrips(trips);
-
-  const openForm = () => {
-    setDraft(emptyTrip());
-    setEditingId(null);
-    setSubmitted(false);
-    setOpen(true);
-  };
 
   const openEdit = (trip: TripRequest) => {
     setDraft(trip);
     setEditingId(trip.id);
+    setSubmitted(false);
+    setOpen(true);
+  };
+
+  const openForm = () => {
+    setDraft(emptyTrip());
+    setEditingId(null);
     setSubmitted(false);
     setOpen(true);
   };
@@ -490,118 +307,33 @@ export function TravelDialysisSection() {
   };
 
   return (
-    <Card as="section">
-      <div className="flex flex-wrap items-start justify-between gap-inline-md">
-        <div className="flex items-center gap-inline-md">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft text-fg-brand"
-          >
-            <Plane className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-heading-4 text-fg">
-              {isEs ? "Diálisis en Viaje" : "Travel Dialysis"}
-            </h2>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              {isEs
-                ? "Pide tus tratamientos fuera de casa. Tu clínica los coordina."
-                : "Ask for treatments away from home. Your clinic arranges them."}
-            </p>
-          </div>
-        </div>
+    /* Chrome only. Everything this used to draw — a heading, four filter
+       tabs and a list of trip cards — is gone, because every part of it was
+       a second copy of something already on the page: the panels above
+       describe the current trip, Past Travel Treatments lists the finished
+       ones, and Your trips chooses between them.
 
-        <Button onClick={openForm}>
-          <Plus aria-hidden="true" className="size-4 shrink-0" />
-          {isEs ? "Solicitar viaje" : "Request a trip"}
-        </Button>
-      </div>
-
+       What is left is the part that has no other home: the request form,
+       the cancel confirmation, and the error a member must see if a change
+       never reached their clinic. */
+    <section>
       {saveError ? (
-        <Alert
-          tone="danger"
-          className="mt-stack-md"
-          onDismiss={dismissSaveError}
-        >
+        <Alert tone="danger" onDismiss={dismissSaveError}>
           {isEs
             ? "No pudimos guardar ese cambio. Nada se envió a tu clínica."
             : "We could not save that change. Nothing went to your clinic."}
         </Alert>
       ) : null}
 
-      <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
-        isEmpty={trips.length === 0}
-        errorTitle={
-          isEs ? "Tus viajes no se cargaron" : "Your trips did not load"
-        }
-        skeleton={
-          <div className="mt-stack-md space-y-stack-sm">
-            <Skeleton height={140} />
-          </div>
-        }
-        empty={
-          <EmptyState
-            className="mt-stack-md"
-            icon={<Plane aria-hidden="true" />}
-            title={isEs ? "Sin viajes todavía" : "No trips yet"}
-            description={
-              isEs
-                ? "Cuando planees un viaje, pide aquí tus tratamientos. Avisa con al menos cuatro semanas si puedes."
-                : "When you plan a trip, request your treatments here. Give your clinic four weeks if you can."
-            }
-            action={
-              <Button onClick={openForm}>
-                <Plus aria-hidden="true" className="size-4 shrink-0" />
-                {isEs ? "Solicitar viaje" : "Request a trip"}
-              </Button>
-            }
-          />
-        }
-      >
-        <div className="mt-stack-md space-y-stack-lg">
-          {upcoming.length > 0 ? (
-            <section className="space-y-stack-sm">
-              <h3 className="text-heading-5 text-fg">
-                {isEs ? "Próximos viajes" : "Upcoming trips"}
-              </h3>
-              {upcoming.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onEdit={() => openEdit(trip)}
-                  onCancel={() => setPendingCancel(trip)}
-                  onToggleDocument={(key) =>
-                    setDocuments(
-                      trip.id,
-                      toggleDocument(trip.documentsReady, key),
-                    )
-                  }
-                />
-              ))}
-            </section>
-          ) : null}
-
-          {past.length > 0 ? (
-            <section className="space-y-stack-sm">
-              <h3 className="text-heading-5 text-fg">
-                {isEs ? "Viajes anteriores" : "Past trips"}
-              </h3>
-              {past.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onEdit={() => openEdit(trip)}
-                  onCancel={() => setPendingCancel(trip)}
-                  onToggleDocument={() => {}}
-                />
-              ))}
-            </section>
-          ) : null}
-        </div>
-      </AsyncSection>
+      {/* Rendered here rather than on the page because Edit and Cancel open
+        the two modals below. Keeping the trigger and the dialog in one
+        component means no state has to be lifted and synced back. */}
+      <YourTrips
+        trips={trips}
+        onRequest={openForm}
+        onEdit={openEdit}
+        onCancel={setPendingCancel}
+      />
 
       {open ? (
         <Modal
@@ -1030,7 +762,7 @@ export function TravelDialysisSection() {
           }
         />
       ) : null}
-    </Card>
+    </section>
   );
 }
 

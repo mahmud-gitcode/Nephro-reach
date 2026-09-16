@@ -44,7 +44,6 @@ import {
 import type {} from "@/features/personal-log/dialysis/treatment.types";
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
-import TravelDialysisSection from "@/features/travel/TravelDialysisSection";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 
@@ -442,9 +441,6 @@ function DialysisManagementDashboard() {
 
       {/* 2. Provider orders and instructions */}
       <ProviderOrdersSection />
-
-      {/* 3. Travel dialysis — request out, facility books, status comes back */}
-      <TravelDialysisSection />
 
       {/* 4. Questions for the care team */}
       <section className="animate-in fade-in space-y-4 duration-200">

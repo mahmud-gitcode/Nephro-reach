@@ -96,6 +96,12 @@ export const sidebarItems: NavItem[] = [
     roles: ["user"],
   },
   {
+    label: "Dialysis Travel Log",
+    href: "/dashboard/travel-log",
+    icon: Plane,
+    roles: ["user"],
+  },
+  {
     label: "Member",
     href: "/dashboard/members",
     icon: Users,
@@ -296,6 +302,13 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Más Allá del Sillón" : "Beyond the Chair";
   if (pathname.startsWith("/dashboard/manage-travel"))
     return language === "ES" ? "Solicitudes de Viaje" : "Travel Requests";
+  /* A trip's own page, before the section prefix below can swallow it. */
+  if (/^\/dashboard\/travel-log\/[^/]+$/.test(pathname))
+    return language === "ES" ? "Viaje" : "Trip";
+  if (pathname.startsWith("/dashboard/travel-log"))
+    return language === "ES"
+      ? "Registro de Diálisis en Viaje"
+      : "Dialysis Travel Log";
   if (pathname.startsWith("/dashboard/manage-table-talk"))
     return language === "ES"
       ? "Gestión de Table Talk"
@@ -369,6 +382,7 @@ export function getNavLabel(
     "/dashboard/table-talk": "Dialysis Table Talk",
     "/dashboard/manage-table-talk": "Gestión de Table Talk",
     "/dashboard/manage-travel": "Solicitudes de Viaje",
+    "/dashboard/travel-log": "Registro de Diálisis en Viaje",
     "/dashboard/beyond-the-chair": "Más Allá del Sillón",
     "/dashboard/personal-log/dialysis-management": "Gestión de Diálisis",
     "/dashboard/live-class": "Clases en Vivo",

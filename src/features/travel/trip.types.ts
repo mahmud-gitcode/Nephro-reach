@@ -49,6 +49,16 @@ export type TravelDocumentKey =
   | "emergency-contact"
   | "other";
 
+/**
+ * Getting-ready steps that are not paperwork.
+ *
+ * Kept apart from `TravelDocumentKey` because they are a different kind of
+ * thing: a document is something a unit needs sent, these are things the
+ * member does. Folding them into the document list would put "book a taxi"
+ * in a panel about medical records.
+ */
+export type TravelPrepKey = "transportation" | "personal-items";
+
 export interface EmergencyContact {
   name: string;
   phone: string;
@@ -82,6 +92,46 @@ export interface TripPlacement {
   treatments: ConfirmedTreatment[];
 }
 
+/**
+ * When the request reached each rung of the ladder.
+ *
+ * `updatedAt` alone only ever remembers the last touch, so a timeline built
+ * from it can date the step a request is on and nothing before it. A member
+ * watching a request move wants to know when it moved, and a facility
+ * answering "how long has this been sitting" needs the same record.
+ */
+export interface TripStatusEvent {
+  status: TripStatus;
+  /** Full ISO timestamp — the time of day matters here, not just the day. */
+  at: string;
+}
+
+/**
+ * Asking the facility to move the times they booked.
+ *
+ * Not an edit. Once a placement is confirmed the member cannot change it —
+ * a chair at the other end is held by a unit that has no idea this app
+ * exists, and letting someone rewrite their own times would desync what
+ * they believe is booked from what is actually held.
+ *
+ * So this is a message with a shape: what they want instead, why, and a
+ * record of when they asked. The facility answers it the same way it
+ * answers the original request.
+ */
+export interface TimeChangeRequest {
+  requestedAt: string;
+  /** The slot they would rather have. */
+  preferredTime: TimePreference;
+  /** Which days, if that is what needs to move. Empty means times only. */
+  preferredDays: Weekday[];
+  /** Why, in their own words. This is the part a coordinator reads first. */
+  note: string;
+  /** Set by the facility once they have acted. Absent while it is open. */
+  resolvedAt?: string;
+  /** What the facility said back. */
+  facilityReply?: string;
+}
+
 export interface TripRequest {
   id: string;
 
@@ -101,6 +151,8 @@ export interface TripRequest {
   insurance: InsuranceDetails;
   /** Which documents the member has ready. */
   documentsReady: TravelDocumentKey[];
+  /** Which non-paperwork preparations the member has done. */
+  prepDone: TravelPrepKey[];
   /** Anything the coordinator should know — access type, mobility, timing. */
   notes: string;
 
@@ -110,10 +162,14 @@ export interface TripRequest {
   submittedAt: string;
   /** Last time the facility touched it. */
   updatedAt: string;
+  /** Every rung it has reached, oldest first. */
+  statusHistory: TripStatusEvent[];
   /**
    * What the facility has told the member. Empty until they say something —
    * never pre-filled with a reassuring guess.
    */
   facilityNote: string;
   placement?: TripPlacement;
+  /** An open or answered request to move the booked times. */
+  timeChange?: TimeChangeRequest;
 }

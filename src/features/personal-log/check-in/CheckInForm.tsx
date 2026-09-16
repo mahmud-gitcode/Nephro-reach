@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarDays, CircleAlert, Frown, Meh, Smile } from "lucide-react";
+import {
+  CalendarDays,
+  CircleAlert,
+  Clock,
+  Frown,
+  Meh,
+  Send,
+  Smile,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   COMMON_SYMPTOM_OPTIONS,
@@ -21,6 +29,12 @@ import {
   todayIso,
   toggleSymptom,
 } from "./checkIn.rules";
+import {
+  isDelivered,
+  nextClinicOpenDay,
+  shouldSuggestNotice,
+} from "./clinicNotice.rules";
+import type { ClinicNotice } from "./clinicNotice.types";
 import type {
   ActivityLevel,
   Appetite,
@@ -125,13 +139,16 @@ function Section({
 
 export function CheckInForm({
   entry,
+  notice,
   onSave,
   onCancel,
   saving = false,
 }: {
   /** An existing day, reopened. Omit to check in for today. */
   entry?: BetweenTreatmentCheckIn;
-  onSave: (entry: BetweenTreatmentCheckIn) => void;
+  /** The notice already raised for this day, if there is one. */
+  notice?: ClinicNotice | null;
+  onSave: (entry: BetweenTreatmentCheckIn, notifyClinic: boolean) => void;
   onCancel: () => void;
   saving?: boolean;
 }) {
@@ -143,11 +160,31 @@ export function CheckInForm({
   );
   const [otherSymptom, setOtherSymptom] = useState("");
 
+  /* `null` means the member has not touched the send toggle, so it keeps
+     following the day they are describing — flipping "I missed a treatment"
+     arms it. Once they set it themselves that choice stands, because a
+     toggle that kept overriding them is one they would stop trusting. */
+  const [notifyChoice, setNotifyChoice] = useState<boolean | null>(
+    notice ? true : null,
+  );
+
   const set = (patch: Partial<BetweenTreatmentCheckIn>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
   const error = checkInError(draft);
   const hasSymptoms = draft.symptoms.length > 0;
+
+  /* Already at the clinic: the toggle shows what happened and cannot undo
+     it. Nothing this form does can unread a message somebody has read. */
+  const alreadySent = notice ? isDelivered(notice) : false;
+  const notifyClinic =
+    alreadySent || (notifyChoice ?? shouldSuggestNotice(draft));
+
+  /* Dialysis centres here close on Sundays, so a send raised today may not
+     land today. The member is told which day it lands before they send. */
+  const today = todayIso();
+  const deliversOn = nextClinicOpenDay(today);
+  const heldForSunday = deliversOn !== today;
 
   const addOther = () => {
     const value = otherSymptom.trim();
@@ -156,7 +193,8 @@ export function CheckInForm({
     setOtherSymptom("");
   };
 
-  const save = () => onSave({ ...draft, savedAt: new Date().toISOString() });
+  const save = () =>
+    onSave({ ...draft, savedAt: new Date().toISOString() }, notifyClinic);
 
   return (
     <Modal
@@ -616,11 +654,50 @@ export function CheckInForm({
             }
           />
 
-          {draft.missedTreatment ? (
+          {/* This banner used to read "this log does not notify them", which
+            left a member who had just missed a run to phone it in on their
+            own. Beyond the Chair is the only record of the days between
+            treatments, so it is the one log that has to be able to reach the
+            clinic — and the member decides, per day, whether it does. */}
+          <SwitchRow
+            checked={notifyClinic}
+            disabled={alreadySent}
+            onChange={setNotifyChoice}
+            title={
+              isEs
+                ? "Enviar este día a mi clínica"
+                : "Send this day to my clinic"
+            }
+            description={
+              alreadySent && notice
+                ? isEs
+                  ? `Enviado el ${relativeDayLabel(notice.deliverOn, true).toLowerCase()}. Esto ya no se puede retirar.`
+                  : `Sent ${relativeDayLabel(notice.deliverOn, false).toLowerCase()}. This can no longer be taken back.`
+                : isEs
+                  ? "Tu equipo verá los síntomas y las medidas que anotaste para este día."
+                  : "Your care team sees the symptoms and readings you logged for this day."
+            }
+          />
+
+          {alreadySent ? null : notifyClinic ? (
+            heldForSunday ? (
+              <Alert tone="info" icon={<Clock aria-hidden="true" />}>
+                {isEs
+                  ? `Tu clínica cierra los domingos. Esto les llegará el ${relativeDayLabel(deliversOn, true).toLowerCase()}.`
+                  : `Your clinic is closed on Sundays. This will reach them ${relativeDayLabel(deliversOn, false).toLowerCase()}.`}
+              </Alert>
+            ) : (
+              <Alert tone="success" icon={<Send aria-hidden="true" />}>
+                {isEs
+                  ? "Tu clínica recibirá este día cuando guardes."
+                  : "Your clinic gets this day when you save."}
+              </Alert>
+            )
+          ) : draft.missedTreatment ? (
             <Alert tone="warning" icon={<CircleAlert aria-hidden="true" />}>
               {isEs
-                ? "Avisa a tu clínica lo antes posible. Este registro no los notifica."
-                : "Tell your clinic as soon as you can. This log does not notify them."}
+                ? "Avisa a tu clínica lo antes posible: este registro no se enviará."
+                : "Tell your clinic as soon as you can — this check-in will not be sent."}
             </Alert>
           ) : null}
 

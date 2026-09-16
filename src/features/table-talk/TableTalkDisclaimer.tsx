@@ -21,26 +21,47 @@ export function TableTalkDisclaimer() {
 
   return (
     <>
+      {/* Danger, not warning. This is the notice that says the series is not
+        medical advice and is not watched for emergencies, and amber reads as
+        "heads up" next to the red used everywhere else in the app for the
+        things that actually hurt someone. */}
       <aside
         role="note"
-        className="rounded-card border border-warning-line bg-warning-surface p-inset-md"
+        aria-labelledby="table-talk-disclaimer"
+        className="rounded-card border border-danger-line bg-danger-surface p-inset-md"
       >
         <div className="flex items-start gap-inline-md">
           <AlertTriangle
             aria-hidden="true"
-            className="mt-0.5 h-5 w-5 shrink-0 text-warning"
+            className="mt-0.5 h-5 w-5 shrink-0 text-danger"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 space-y-stack-sm">
+            <h2
+              id="table-talk-disclaimer"
+              className="text-heading-5 text-danger"
+            >
+              {isEs
+                ? "Aviso de Comunidad y Contenido"
+                : "Community & Content Disclaimer"}
+            </h2>
+
             <p className="text-body-sm text-fg-secondary">
               {isEs
-                ? "Dialysis Table Talk es solo educativo. No reemplaza el consejo de tu equipo médico, y no se revisa por urgencias. Si crees que es una emergencia, llama al 911."
-                : "Dialysis Table Talk is educational only. It does not replace advice from your care team, and it is not monitored for urgent concerns. If you think you have an emergency, call 911."}
+                ? "Dialysis Table Talk es solo educativo e informativo. Lo que comparten presentadores, invitados y miembros de la comunidad no sustituye el consejo médico, el diagnóstico ni el tratamiento. Habla siempre con tu equipo de diálisis sobre tu salud."
+                : "Dialysis Table Talk is for educational and informational purposes only. The views and experiences shared by hosts, guests, and community members are not a substitute for professional medical advice, diagnosis, or treatment. Always talk with your dialysis care team about your specific health needs."}
             </p>
+
+            {/* The one line that must survive being skimmed. */}
+            <p className="text-label-md text-danger">
+              {isEs
+                ? "En caso de una emergencia médica, llama al 911 de inmediato."
+                : "In case of a medical emergency, call 911 immediately."}
+            </p>
+
             <Button
               size="small"
               variant="neutral"
               appearance="stroke"
-              className="mt-stack-sm"
               onClick={() => setOpen(true)}
             >
               {isEs ? "Leer el aviso completo" : "Read Full Disclaimer"}
