@@ -4,7 +4,10 @@ import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, Button, Chip, ChipGroup, Modal } from "@/components/ui";
 import { FileText, Send } from "lucide-react";
-import { checkFlaggedMedicalContent } from "./moderation";
+import {
+  canPublishToCommunity,
+  checkFlaggedMedicalContent,
+} from "./moderation";
 
 export const COMPOSE_CATEGORIES = [
   { id: "general", labelEn: "General Kidney", labelEs: "Salud Renal General" },
@@ -47,7 +50,8 @@ export function ComposeModal({
 
   const isFlagged = checkFlaggedMedicalContent(body);
 
-  const canPost = Boolean(body.trim()) && !isFlagged;
+  /* The same gate the reply box uses, so the two cannot drift. */
+  const canPost = canPublishToCommunity(body);
 
   const handleSubmit = () => {
     if (!canPost) return;

@@ -5,7 +5,10 @@ import Image from "next/image";
 import { Heart, MessageCircle, MoreVertical, Plus, Send } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { ComposeModal } from "@/features/community/ComposeModal";
-import { checkFlaggedMedicalContent } from "@/features/community/moderation";
+import {
+  canPublishToCommunity,
+  checkFlaggedMedicalContent,
+} from "@/features/community/moderation";
 import type {
   CommunityTab,
   PostItem,
@@ -191,7 +194,11 @@ export default function CommunityPage() {
 
   const handleAddReply = (postId: string) => {
     const text = replyDrafts[postId]?.trim();
-    if (!text) return;
+
+    /* Checked here and not only on the button: a disabled button is a
+       courtesy, not a gate, and this is the one place a flagged reply would
+       actually reach the board. */
+    if (!canPublishToCommunity(text ?? "")) return;
 
     const newReply: ReplyItem = {
       id: `reply-${Date.now()}`,
@@ -490,11 +497,23 @@ export default function CommunityPage() {
                         />
 
                         {/* Reply Auto-Flag Moderation Disclaimer */}
+                        {/* Says it cannot be posted, not just that something
+                          was noticed. The button beside it is disabled, and
+                          a warning that does not explain a dead control
+                          reads as the app being broken. */}
                         {isReplyFlagged && (
-                          <Alert tone="danger" className="mt-stack-sm">
+                          <Alert
+                            tone="danger"
+                            className="mt-stack-sm"
+                            title={
+                              isEs
+                                ? "Esta respuesta no se puede publicar"
+                                : "This reply cannot be posted"
+                            }
+                          >
                             {isEs
-                              ? "Su respuesta contiene síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no reemplaza a su equipo de diálisis."
-                              : "Your reply includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not replace your medical team."}
+                              ? "Menciona síntomas o inquietudes que pueden necesitar atención médica urgente. Habla con tu equipo de diálisis, o llama al 911 si es una emergencia. NephroReach solo brinda educación."
+                              : "It mentions symptoms or concerns that may need urgent medical attention. Talk to your dialysis team, or call 911 if this is an emergency. NephroReach provides education only."}
                           </Alert>
                         )}
 
@@ -514,7 +533,7 @@ export default function CommunityPage() {
                             <Button
                               size="small"
                               onClick={() => handleAddReply(post.id)}
-                              disabled={!draft.trim()}
+                              disabled={!canPublishToCommunity(draft)}
                             >
                               <Send aria-hidden="true" className="-rotate-12" />
                               {isEs ? "Responder" : "Reply"}

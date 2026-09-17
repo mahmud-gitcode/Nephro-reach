@@ -100,6 +100,21 @@ export const AUTO_FLAG_PHRASES: string[] = [
   "sell medication",
 ];
 
+/**
+ * Whether this text may be published to the board at all.
+ *
+ * One gate for every way something reaches the community — a new post and a
+ * reply to one. They used to disagree: the composer disabled its button on a
+ * flagged phrase while the reply box showed the same warning and posted
+ * anyway, so the strictest path in the feature was also the least used one.
+ *
+ * Empty text is not publishable either, so callers do not have to remember
+ * two separate checks.
+ */
+export function canPublishToCommunity(text: string): boolean {
+  return Boolean(text.trim()) && !checkFlaggedMedicalContent(text);
+}
+
 export function checkFlaggedMedicalContent(text: string): boolean {
   if (!text || !text.trim()) return false;
   const lower = text.toLowerCase();

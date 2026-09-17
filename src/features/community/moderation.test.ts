@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AUTO_FLAG_PHRASES, checkFlaggedMedicalContent } from "./moderation";
+import {
+  AUTO_FLAG_PHRASES,
+  canPublishToCommunity,
+  checkFlaggedMedicalContent,
+} from "./moderation";
 
 /* This decides whether a post on a dialysis peer-support board is published
  * or held for a human to read. It was written inside the community page,
@@ -51,5 +55,46 @@ describe("checkFlaggedMedicalContent", () => {
         true,
       );
     }
+  });
+});
+
+describe("what may reach the board", () => {
+  it("refuses a flagged phrase", () => {
+    expect(canPublishToCommunity("I have chest pain since dialysis")).toBe(
+      false,
+    );
+  });
+
+  it("refuses empty text, so callers need only one check", () => {
+    expect(canPublishToCommunity("")).toBe(false);
+    expect(canPublishToCommunity("   ")).toBe(false);
+  });
+
+  it("allows an ordinary message", () => {
+    expect(canPublishToCommunity("Congratulations on your transplant!")).toBe(
+      true,
+    );
+  });
+
+  it("gates a reply exactly as it gates a post", () => {
+    // These used to disagree: the composer disabled its button on a flagged
+    // phrase while the reply box warned and posted anyway, so the strictest
+    // path in the feature was also the least used one.
+    for (const text of [
+      "I want to die",
+      "should i skip dialysis",
+      "send money",
+      "my fistula is bleeding",
+    ]) {
+      expect(canPublishToCommunity(text)).toBe(
+        !checkFlaggedMedicalContent(text),
+      );
+      expect(canPublishToCommunity(text)).toBe(false);
+    }
+  });
+
+  it("still lets a word that merely contains a phrase through", () => {
+    // Word-boundary, not substring: "cashew" is not "cash app".
+    expect(canPublishToCommunity("I brought cashews to treatment")).toBe(true);
   });
 });
