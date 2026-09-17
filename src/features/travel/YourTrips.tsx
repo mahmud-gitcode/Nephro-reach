@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Pencil, Plane, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Pencil, Plane, Plus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   defaultTripFilter,
@@ -34,58 +34,33 @@ import { Badge, Button, Card, EmptyState, Select } from "@/components/ui";
    narrow for a destination and a date range to sit on their own lines.
    ========================================================================== */
 
-function TripTile({
-  trip,
-  onEdit,
-  onCancel,
-}: {
-  trip: TripRequest;
-  onEdit: () => void;
-  onCancel: () => void;
-}) {
+function TripTile({ trip, onEdit }: { trip: TripRequest; onEdit: () => void }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-
   const phase = tripPhase(trip);
 
-  /* Where the member is in this trip, which is a different question from
-     whether the clinic has booked it — that is what the badge answers. */
-  const where =
-    phase === "away"
-      ? isEs
-        ? "De viaje ahora"
-        : "Away now"
-      : phase === "home"
-        ? isEs
-          ? "Terminado"
-          : "Finished"
-        : isEs
-          ? "Próximo"
-          : "Coming up";
-
   return (
-    <div className="flex h-full flex-col rounded-card border border-line bg-surface transition-shadow duration-150 ease-standard focus-within:shadow-raised hover:shadow-raised">
+    <div className="flex h-full flex-col rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard focus-within:shadow-raised hover:shadow-raised">
       <Link
         href={`/dashboard/travel-log/${trip.id}`}
-        className="flex flex-1 flex-col gap-stack-xs rounded-card p-inset-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="flex flex-1 flex-col gap-stack-xs rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span className="flex items-start justify-between gap-inline-md">
-          <span className="min-w-0 truncate text-label-md text-fg">
+          <span className="min-w-0 text-heading-5 text-fg">
             {destinationLabel(trip) ||
               (isEs ? "Sin destino" : "No destination")}
           </span>
           <ChevronRight
             aria-hidden="true"
-            className="size-4 shrink-0 text-fg-subtle"
+            className="mt-1 size-4 shrink-0 text-fg-subtle"
           />
         </span>
 
         <span className="block text-body-sm text-fg-muted">
           {formatTripDates(trip, isEs)}
         </span>
-        <span className="block text-body-sm text-fg-muted">{where}</span>
 
-        <span className="mt-auto pt-stack-xs">
+        <span className="mt-auto pt-stack-sm">
           <Badge
             tone={
               trip.status === "confirmed"
@@ -100,33 +75,19 @@ function TripTile({
         </span>
       </Link>
 
-      {/* Kept out of the link so a press lands on the button it looks like,
-        and only offered while the answer is still a form rather than a
-        phone call. */}
-      {isEditable(trip) || phase !== "home" ? (
-        <div className="flex items-center justify-end gap-inline-sm border-t border-line px-inset-sm py-stack-xs">
-          {isEditable(trip) ? (
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={onEdit}
-            >
-              <Pencil aria-hidden="true" className="size-4 shrink-0" />
-              {isEs ? "Editar" : "Edit"}
-            </Button>
-          ) : null}
-          {phase === "home" ? null : (
-            <Button
-              size="small"
-              variant="danger"
-              appearance="stroke"
-              onClick={onCancel}
-              aria-label={isEs ? "Cancelar viaje" : "Cancel trip"}
-            >
-              <Trash2 aria-hidden="true" className="size-4 shrink-0" />
-            </Button>
-          )}
+      {/* Kept out of the link so a press lands on the button it looks like.
+        Cancelling lives on the trip's own page, behind a confirmation. */}
+      {isEditable(trip) ? (
+        <div className="mt-stack-sm">
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onEdit}
+          >
+            <Pencil aria-hidden="true" className="size-4 shrink-0" />
+            {isEs ? "Editar" : "Edit"}
+          </Button>
         </div>
       ) : null}
     </div>
@@ -137,12 +98,10 @@ export function YourTrips({
   trips,
   onRequest,
   onEdit,
-  onCancel,
 }: {
   trips: TripRequest[];
   onRequest: () => void;
   onEdit: (trip: TripRequest) => void;
-  onCancel: (trip: TripRequest) => void;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
@@ -162,9 +121,11 @@ export function YourTrips({
   ];
 
   return (
-    <Card as="section" aria-labelledby="your-trips">
-      <div className="flex flex-wrap items-start justify-between gap-inline-md">
-        <div className="flex items-start gap-inline-md">
+    /* The heading and its controls sit on the page; each trip is its own
+       card below them, like every other list of cards in the portal. */
+    <section aria-labelledby="your-trips" className="space-y-stack-md">
+      <div className="flex flex-wrap items-center justify-between gap-inline-md">
+        <div className="flex items-center gap-inline-md">
           <span
             aria-hidden="true"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
@@ -172,18 +133,16 @@ export function YourTrips({
             <Plane className="h-5 w-5" />
           </span>
           <div>
-            <h2 id="your-trips" className="text-heading-5 text-fg">
+            <h2 id="your-trips" className="text-heading-4 text-fg">
               {isEs ? "Tus viajes" : "Your trips"}
             </h2>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              {trips.length > 0
-                ? isEs
-                  ? "Abre un viaje para ver sus detalles."
-                  : "Open a trip to see its details."
-                : isEs
+            {trips.length === 0 ? (
+              <p className="mt-stack-xs text-body-sm text-fg-muted">
+                {isEs
                   ? "Pide tus tratamientos fuera de casa. Tu clínica los coordina."
                   : "Ask for treatments away from home. Your clinic arranges them."}
-            </p>
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -216,13 +175,15 @@ export function YourTrips({
         /* The explanation belongs here on an empty log, where it is the only
            thing to read, rather than in a panel of its own that stays on
            screen forever once it has been understood. */
-        <p className="mt-stack-md measure text-body-sm text-fg-secondary">
-          {isEs
-            ? "Cuando planees un viaje, envía una solicitud a tu centro de diálisis. Ellos coordinarán tu tratamiento en un centro local y te enviarán la confirmación. Avisa con cuatro semanas si puedes."
-            : "When you plan a trip, submit a request to your dialysis facility. They will coordinate your treatment at a local center and send you a confirmation. Give them four weeks if you can."}
-        </p>
+        <Card>
+          <p className="text-body-sm text-fg-secondary">
+            {isEs
+              ? "Cuando planees un viaje, envía una solicitud a tu centro de diálisis. Ellos coordinarán tu tratamiento en un centro local y te enviarán la confirmación. Avisa con cuatro semanas si puedes."
+              : "When you plan a trip, submit a request to your dialysis facility. They will coordinate your treatment at a local center and send you a confirmation. Give them four weeks if you can."}
+          </p>
+        </Card>
       ) : shown.length === 0 ? (
-        <div className="mt-stack-md">
+        <div>
           <EmptyState
             icon={<Plane aria-hidden="true" />}
             title={
@@ -242,18 +203,13 @@ export function YourTrips({
           />
         </div>
       ) : (
-        <div className="mt-stack-md grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((trip) => (
-            <TripTile
-              key={trip.id}
-              trip={trip}
-              onEdit={() => onEdit(trip)}
-              onCancel={() => onCancel(trip)}
-            />
+            <TripTile key={trip.id} trip={trip} onEdit={() => onEdit(trip)} />
           ))}
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 

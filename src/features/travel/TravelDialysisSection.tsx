@@ -9,7 +9,6 @@ import {
   TRIP_STATUSES,
   WEEKDAYS,
   canSubmit,
-  destinationLabel,
   documentsProgress,
   emptyTrip,
   formatDateLabel,
@@ -97,38 +96,56 @@ export function PlacementCard({ trip }: { trip: TripRequest }) {
         {isEs ? "Tu centro durante el viaje" : "Your center while away"}
       </p>
 
-      <p className="mt-stack-xs text-body-md text-fg">
+      <p className="mt-stack-xs text-label-lg font-semibold text-fg">
         {placement.facilityName}
       </p>
 
-      {placement.address ? (
-        <p className="mt-stack-xs flex items-start gap-inline-sm text-body-sm text-fg-secondary">
-          <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          {placement.address}
-        </p>
-      ) : null}
+      {placement.address || placement.phone ? (
+        <div className="mt-stack-sm flex flex-col gap-stack-xs rounded-control bg-surface p-inset-sm">
+          {placement.address ? (
+            /* Opens the address in the phone's or browser's map app. */
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                `${placement.facilityName}, ${placement.address}`,
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-start gap-inline-sm self-start rounded-control-small text-body-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {placement.address}
+                <span className="sr-only">
+                  {isEs ? " (abre el mapa)" : " (opens map)"}
+                </span>
+              </span>
+            </a>
+          ) : null}
 
-      {placement.phone ? (
-        <a
-          href={`tel:${placement.phone.replace(/\s/g, "")}`}
-          className="mt-stack-xs inline-flex items-center gap-inline-sm rounded-control-small text-body-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <Phone aria-hidden="true" className="h-4 w-4 shrink-0" />
-          {placement.phone}
-        </a>
+          {placement.phone ? (
+            <a
+              href={`tel:${placement.phone.replace(/\s/g, "")}`}
+              className="inline-flex items-center gap-inline-sm self-start rounded-control-small text-body-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <Phone aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {placement.phone}
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
       {placement.treatments.length > 0 ? (
-        <ul className="mt-stack-md space-y-stack-xs">
+        /* One booked chair per column: the date on top, its time under it. */
+        <ul className="mt-stack-md grid grid-cols-2 gap-inline-md sm:grid-cols-3 lg:grid-cols-4">
           {placement.treatments.map((treatment) => (
             <li
               key={treatment.id}
-              className="flex items-center justify-between gap-inline-md rounded-control bg-surface px-inset-sm py-inset-xs text-body-sm"
+              className="flex flex-col gap-stack-xs rounded-control bg-surface px-inset-sm py-inset-xs text-body-sm"
             >
               <span className="text-fg">
                 {formatDateLabel(treatment.date, isEs)}
               </span>
-              <span className="text-fg-secondary tabular-nums">
+              <span className="text-label-md text-fg-secondary tabular-nums">
                 {treatment.time}
               </span>
             </li>
@@ -263,22 +280,14 @@ export function RequestSummary({ trip }: { trip: TripRequest }) {
 export function TravelDialysisSection() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const {
-    trips,
-    submit,
-    update,
-    cancel,
-    saveError,
-    dismissSaveError,
-    isSaving,
-  } = useTrips();
+  const { trips, submit, update, saveError, dismissSaveError, isSaving } =
+    useTrips();
 
   const [open, setOpen] = useState(false);
   /* The trip being edited, or null when the form is creating a new one. */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TripRequest>(() => emptyTrip());
   const [submitted, setSubmitted] = useState(false);
-  const [pendingCancel, setPendingCancel] = useState<TripRequest | null>(null);
 
   const set = (patch: Partial<TripRequest>) =>
     setDraft((current) => ({ ...current, ...patch }));
@@ -326,15 +335,10 @@ export function TravelDialysisSection() {
         </Alert>
       ) : null}
 
-      {/* Rendered here rather than on the page because Edit and Cancel open
-        the two modals below. Keeping the trigger and the dialog in one
+      {/* Rendered here rather than on the page because Request and Edit
+        open the form below. Keeping the trigger and the dialog in one
         component means no state has to be lifted and synced back. */}
-      <YourTrips
-        trips={trips}
-        onRequest={openForm}
-        onEdit={openEdit}
-        onCancel={setPendingCancel}
-      />
+      <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
 
       {open ? (
         <Modal
@@ -826,43 +830,6 @@ export function TravelDialysisSection() {
             </section>
           </div>
         </Modal>
-      ) : null}
-
-      {/* Cancelling a request the clinic may already be working on is worth
-          one question, the same as every other undoable action here. */}
-      {pendingCancel ? (
-        <Modal
-          open
-          size="small"
-          closeOnBackdrop={false}
-          onClose={() => setPendingCancel(null)}
-          title={isEs ? "¿Cancelar esta solicitud?" : "Cancel this request?"}
-          description={
-            isEs
-              ? `Tu solicitud para ${destinationLabel(pendingCancel)} se eliminará. Si tu clínica ya está trabajando en ella, avísales.`
-              : `Your request for ${destinationLabel(pendingCancel)} will be removed. If your clinic is already working on it, let them know.`
-          }
-          footer={
-            <div className="flex flex-wrap items-center justify-end gap-inline-md">
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setPendingCancel(null)}
-              >
-                {isEs ? "Conservar" : "Keep it"}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  cancel(pendingCancel.id);
-                  setPendingCancel(null);
-                }}
-              >
-                {isEs ? "Cancelar solicitud" : "Cancel request"}
-              </Button>
-            </div>
-          }
-        />
       ) : null}
     </section>
   );

@@ -33,15 +33,15 @@ const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   article: BookOpen,
 };
 
-function kindLabel(kind: LibraryKind, isEs: boolean): string {
+export function kindLabel(kind: LibraryKind, isEs: boolean): string {
   if (kind === "document") return isEs ? "Documento" : "Document";
   if (kind === "article") return isEs ? "Artículo" : "Article";
   return "Video";
 }
 
-function metaLabel(resource: LibraryResource, isEs: boolean): string {
+export function metaLabel(resource: LibraryResource, isEs: boolean): string {
   if (resource.kind === "video" && resource.durationSeconds)
-    return formatDuration(resource.durationSeconds);
+    return `${formatDuration(resource.durationSeconds)} min`;
   if (resource.kind === "document")
     return (isEs ? resource.fileMetaEs : resource.fileMetaEn) || "PDF";
   if (resource.kind === "article" && resource.readMinutes)

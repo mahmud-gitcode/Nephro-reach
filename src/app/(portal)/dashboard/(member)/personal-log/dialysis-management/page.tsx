@@ -48,6 +48,7 @@ import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSect
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 
 function DialysisManagementDashboard() {
   const { language } = useLanguage();
@@ -509,9 +510,9 @@ function DialysisManagementDashboard() {
 
 export default function DialysisManagementPage() {
   return (
-    <>
-      <PersonalLogDisclaimer />
-
+    <NoticeRailLayout
+      notices={<PersonalLogDisclaimer spaced={false} stacked />}
+    >
       <Suspense
         fallback={
           <div className="p-8 text-center text-fg-muted">Loading...</div>
@@ -519,6 +520,6 @@ export default function DialysisManagementPage() {
       >
         <DialysisManagementDashboard />
       </Suspense>
-    </>
+    </NoticeRailLayout>
   );
 }

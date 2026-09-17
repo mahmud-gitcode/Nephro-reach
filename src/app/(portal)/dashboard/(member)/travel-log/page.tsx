@@ -24,10 +24,15 @@ export default function TravelLogPage() {
   return (
     <div className="space-y-stack-lg">
       <TravelBanner />
-      <TravelIntroBar />
 
-      {/* Your trips, and the forms it opens. */}
-      <TravelDialysisSection />
+      {/* Only the banner runs full width; the working part of the page
+          keeps to a 900px column like the rest of the portal. */}
+      <div className="mx-auto w-full max-w-[900px] space-y-stack-lg">
+        <TravelIntroBar />
+
+        {/* Your trips, and the forms it opens. */}
+        <TravelDialysisSection />
+      </div>
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowLeft, Clock, Plane, X } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Clock, Plane, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import TravelChecklist from "@/features/travel/TravelChecklist";
 import TimeChangeRequestModal from "@/features/travel/TimeChangeRequestModal";
@@ -23,6 +23,7 @@ import {
   tripPhase,
 } from "@/features/travel/trip.rules";
 import { useTrips } from "@/features/travel/useTrips";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
   Alert,
   AsyncSection,
@@ -30,6 +31,7 @@ import {
   Button,
   Card,
   EmptyState,
+  Modal,
   Skeleton,
   buttonStyles,
 } from "@/components/ui";
@@ -57,6 +59,7 @@ export default function TripDetailPage() {
     setPrep,
     requestTimeChange,
     withdrawTimeChange,
+    cancel,
     isPending,
     error,
     refetch,
@@ -64,7 +67,9 @@ export default function TripDetailPage() {
   } = useTrips();
   const trip = trips.find((entry) => entry.id === tripId);
 
+  const router = useRouter();
   const [askingTimeChange, setAskingTimeChange] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   return (
     <div className="space-y-stack-lg">
@@ -115,157 +120,167 @@ export default function TripDetailPage() {
       >
         {trip ? (
           <div className="space-y-stack-lg">
-            {/* Sticks under the dashboard top bar so the trip stays named
-              while the panels below scroll past.
+            {/* Where the request has got to sits in the right-hand column,
+              the same place other pages keep their notices. */}
+            <NoticeRailLayout notices={<RequestStatusPanel trip={trip} />}>
+              <div className="space-y-stack-lg">
+                <ConfirmedTreatmentPanel trip={trip} />
 
-              The offsets are that bar's own height: 28px avatar + 2x10px
-              padding + 1px border on mobile, 40px + 2x12px + 1px from `sm`
-              up (DashboardShell, TopBar). `z-20` keeps it above the page and
-              below that bar, which is `z-30`. */}
-            <Card
-              as="section"
-              padding="small"
-              className="sticky top-[49px] z-20 shadow-card sm:top-[65px]"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-inline-md">
-                <div className="min-w-0">
-                  <h1 className="text-heading-4 text-fg">
-                    {destinationLabel(trip) ||
-                      (isEs ? "Sin destino" : "No destination")}
-                  </h1>
-                  <p className="mt-stack-xs text-body-sm text-fg-muted">
-                    {formatTripDates(trip, isEs)}
-                    {" · "}
-                    {isEs
-                      ? `${trip.treatmentsNeeded} tratamiento(s)`
-                      : `${trip.treatmentsNeeded} treatment${trip.treatmentsNeeded === 1 ? "" : "s"}`}
-                  </p>
-                </div>
+                {/* The trip and what the clinic said about it. */}
+                <div className="grid grid-cols-1 gap-inset-lg lg:grid-cols-2">
+                  <Card as="section" padding="small" className="h-full">
+                    <div className="flex flex-col gap-stack-sm">
+                      <div className="min-w-0">
+                        {/* The status sits on the name's line, at the right. */}
+                        <div className="flex flex-wrap items-center justify-between gap-inline-md">
+                          <h1 className="text-heading-4 text-fg">
+                            {destinationLabel(trip) ||
+                              (isEs ? "Sin destino" : "No destination")}
+                          </h1>
+                          <Badge
+                            tone={
+                              trip.status === "confirmed"
+                                ? "success"
+                                : tripPhase(trip) === "home"
+                                  ? "neutral"
+                                  : "info"
+                            }
+                          >
+                            {statusLabel(trip.status, isEs)}
+                          </Badge>
+                        </div>
+                        <p className="mt-stack-xs text-body-sm text-fg-muted">
+                          {formatTripDates(trip, isEs)}
+                          {" · "}
+                          {isEs
+                            ? `${trip.treatmentsNeeded} tratamiento(s)`
+                            : `${trip.treatmentsNeeded} treatment${trip.treatmentsNeeded === 1 ? "" : "s"}`}
+                        </p>
+                      </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-inline-md">
-                  <Badge
-                    tone={
-                      trip.status === "confirmed"
-                        ? "success"
-                        : tripPhase(trip) === "home"
-                          ? "neutral"
-                          : "info"
-                    }
-                  >
-                    {statusLabel(trip.status, isEs)}
-                  </Badge>
+                      <div className="flex flex-wrap items-center gap-inline-md">
+                        {/* Offered only once there are booked times to move. Before
+                          that the request itself is still editable, and two ways to
+                          change the same unconfirmed times is one too many. */}
+                        {canRequestTimeChange(trip) &&
+                        !hasOpenTimeChange(trip) ? (
+                          <Button
+                            size="small"
+                            variant="neutral"
+                            appearance="fill-stroke"
+                            onClick={() => setAskingTimeChange(true)}
+                          >
+                            <Clock
+                              aria-hidden="true"
+                              className="size-4 shrink-0"
+                            />
+                            {isEs
+                              ? "Pedir otro horario"
+                              : "Request a time change"}
+                          </Button>
+                        ) : null}
 
-                  {/* Offered only once there are booked times to move. Before
-                    that the request itself is still editable, and two ways to
-                    change the same unconfirmed times is one too many. */}
-                  {canRequestTimeChange(trip) && !hasOpenTimeChange(trip) ? (
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => setAskingTimeChange(true)}
-                    >
-                      <Clock aria-hidden="true" className="size-4 shrink-0" />
-                      {isEs ? "Pedir otro horario" : "Request a time change"}
-                    </Button>
+                        {/* Cancelling lives here rather than on the trip card, where
+                          a stray tap on a list is too easy. */}
+                        {tripPhase(trip) === "home" ? null : (
+                          <Button
+                            size="small"
+                            variant="danger"
+                            appearance="stroke"
+                            onClick={() => setConfirmingCancel(true)}
+                          >
+                            <Trash2
+                              aria-hidden="true"
+                              className="size-4 shrink-0"
+                            />
+                            {isEs ? "Cancelar viaje" : "Cancel trip"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                  {trip.facilityNote.trim() ? (
+                    <Card as="section" padding="small" className="h-full">
+                      <p className="text-caption text-fg-muted">
+                        {isEs ? "De tu clínica" : "From your clinic"}
+                      </p>
+                      <p className="mt-stack-xs text-body-sm text-fg-secondary">
+                        {trip.facilityNote}
+                      </p>
+                    </Card>
                   ) : null}
                 </div>
-              </div>
-            </Card>
 
-            {/* An open request, said once and kept visible: a member who has
-              asked needs to know it is still only an ask, and that the times
-              they already have still stand. */}
-            {trip.timeChange && !trip.timeChange.resolvedAt ? (
-              <Alert
-                tone="info"
-                title={
-                  isEs
-                    ? "Pediste cambiar el horario"
-                    : "You asked to change the time"
-                }
-              >
-                <div className="space-y-stack-sm">
-                  <p className="text-body-sm text-fg-secondary">
-                    {trip.timeChange.note}
-                  </p>
-                  <p className="text-body-sm text-fg-muted">
-                    {isEs ? "Enviado el " : "Sent "}
-                    {formatEventTime(trip.timeChange.requestedAt, isEs)}
-                    {isEs
-                      ? ". Tus horarios actuales siguen en pie hasta que tu clínica responda."
-                      : ". Your current times stand until your clinic answers."}
-                  </p>
-                  <Button
-                    size="small"
-                    variant="neutral"
-                    appearance="stroke"
-                    onClick={() => withdrawTimeChange(trip.id)}
-                    disabled={isSaving}
+                {/* An open request, said once and kept visible: a member who has
+                  asked needs to know it is still only an ask, and that the times
+                  they already have still stand. */}
+                {trip.timeChange && !trip.timeChange.resolvedAt ? (
+                  <Alert
+                    tone="info"
+                    title={
+                      isEs
+                        ? "Pediste cambiar el horario"
+                        : "You asked to change the time"
+                    }
                   >
-                    <X aria-hidden="true" className="size-4 shrink-0" />
-                    {isEs ? "Retirar la solicitud" : "Withdraw the request"}
-                  </Button>
+                    <div className="space-y-stack-sm">
+                      <p className="text-body-sm text-fg-secondary">
+                        {trip.timeChange.note}
+                      </p>
+                      <p className="text-body-sm text-fg-muted">
+                        {isEs ? "Enviado el " : "Sent "}
+                        {formatEventTime(trip.timeChange.requestedAt, isEs)}
+                        {isEs
+                          ? ". Tus horarios actuales siguen en pie hasta que tu clínica responda."
+                          : ". Your current times stand until your clinic answers."}
+                      </p>
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="stroke"
+                        onClick={() => withdrawTimeChange(trip.id)}
+                        disabled={isSaving}
+                      >
+                        <X aria-hidden="true" className="size-4 shrink-0" />
+                        {isEs ? "Retirar la solicitud" : "Withdraw the request"}
+                      </Button>
+                    </div>
+                  </Alert>
+                ) : null}
+
+                {/* An answered one stays: it explains why the booked times are
+                  what they are. */}
+                {trip.timeChange?.resolvedAt ? (
+                  <Alert
+                    tone="success"
+                    title={
+                      isEs
+                        ? "Tu clínica respondió sobre el horario"
+                        : "Your clinic answered about the time"
+                    }
+                  >
+                    <p className="text-body-sm text-fg-secondary">
+                      {trip.timeChange.facilityReply ||
+                        (isEs
+                          ? "Revisa los horarios confirmados abajo."
+                          : "Check the confirmed times below.")}
+                    </p>
+                  </Alert>
+                ) : null}
+
+                <div className="grid grid-cols-1 items-start gap-inset-lg lg:grid-cols-2">
+                  <TravelChecklist
+                    trip={trip}
+                    onToggleDocument={(next) => setDocuments(trip.id, next)}
+                    onTogglePrep={(next) => setPrep(trip.id, next)}
+                  />
+                  <TravelReflectionsPanel trip={trip} />
                 </div>
-              </Alert>
-            ) : null}
-
-            {/* An answered one stays: it explains why the booked times are
-              what they are. */}
-            {trip.timeChange?.resolvedAt ? (
-              <Alert
-                tone="success"
-                title={
-                  isEs
-                    ? "Tu clínica respondió sobre el horario"
-                    : "Your clinic answered about the time"
-                }
-              >
-                <p className="text-body-sm text-fg-secondary">
-                  {trip.timeChange.facilityReply ||
-                    (isEs
-                      ? "Revisa los horarios confirmados abajo."
-                      : "Check the confirmed times below.")}
-                </p>
-              </Alert>
-            ) : null}
-
-            {/* Below the sticky bar, not inside it: a paragraph that grows
-              with what the clinic wrote would push the panels down the
-              screen on every scroll. Labelled, because an unattributed
-              paragraph reads as the app talking. */}
-            {trip.facilityNote.trim() ? (
-              <Card as="section" padding="small">
-                <p className="text-caption text-fg-muted">
-                  {isEs ? "De tu clínica" : "From your clinic"}
-                </p>
-                <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                  {trip.facilityNote}
-                </p>
-              </Card>
-            ) : null}
-
-            {/* Two independent columns: a grid locks the height of a row, so
-              a tall panel on one side opens dead space under a short one. */}
-            <div className="grid grid-cols-1 items-start gap-inset-lg lg:grid-cols-2">
-              <div className="flex flex-col gap-inset-lg">
-                <TravelChecklist
-                  trip={trip}
-                  onToggleDocument={(next) => setDocuments(trip.id, next)}
-                  onTogglePrep={(next) => setPrep(trip.id, next)}
-                />
-                <RequestStatusPanel trip={trip} />
               </div>
+            </NoticeRailLayout>
 
-              <div className="flex flex-col gap-inset-lg">
-                <ConfirmedTreatmentPanel trip={trip} />
-              </div>
-            </div>
-
-            {/* Full width: ten columns will not survive being halved. */}
+            {/* Across the whole page: ten columns need the room. */}
             <TravelTreatmentLog trip={trip} />
-
-            <TravelReflectionsPanel trip={trip} />
           </div>
         ) : null}
       </AsyncSection>
@@ -279,6 +294,42 @@ export default function TripDetailPage() {
             requestTimeChange(trip.id, request);
             setAskingTimeChange(false);
           }}
+        />
+      ) : null}
+
+      {confirmingCancel && trip ? (
+        <Modal
+          open
+          size="small"
+          closeOnBackdrop={false}
+          onClose={() => setConfirmingCancel(false)}
+          title={isEs ? "¿Cancelar este viaje?" : "Cancel this trip?"}
+          description={
+            isEs
+              ? `Tu solicitud para ${destinationLabel(trip)} se eliminará. Si tu clínica ya está trabajando en ella, avísales.`
+              : `Your request for ${destinationLabel(trip)} will be removed. If your clinic is already working on it, let them know.`
+          }
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-inline-md">
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setConfirmingCancel(false)}
+              >
+                {isEs ? "Conservar" : "Keep it"}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  cancel(trip.id);
+                  setConfirmingCancel(false);
+                  router.push("/dashboard/travel-log");
+                }}
+              >
+                {isEs ? "Cancelar viaje" : "Cancel trip"}
+              </Button>
+            </div>
+          }
         />
       ) : null}
     </div>

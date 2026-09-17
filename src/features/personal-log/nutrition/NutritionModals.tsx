@@ -75,14 +75,17 @@ export function NumberField({
 
 export function AddFoodModal({
   defaultMeal,
+  dayLabel,
   mealLabels,
   onClose,
   onSave,
 }: {
   defaultMeal: MealKey;
+  /** The day the food is filed under, as the member reads it. */
+  dayLabel: string;
   mealLabels: Record<MealKey, string>;
   onClose: () => void;
-  onSave: (food: Omit<FoodEntry, "id">) => void;
+  onSave: (food: Omit<FoodEntry, "id" | "date">) => void;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -136,8 +139,8 @@ export function AddFoodModal({
       title={n?.mealsTable?.addFood || "Add Food"}
       subtitle={
         isEs
-          ? "Agrega un alimento a una comida de hoy."
-          : "Add a food to one of today's meals."
+          ? `Agrega un alimento a una comida · ${dayLabel}.`
+          : `Add a food to a meal · ${dayLabel}.`
       }
       onClose={onClose}
     >
@@ -385,9 +388,12 @@ export function GoalsModal({
 const WATER_PRESETS = [120, 240, 330, 500];
 
 export function AddWaterModal({
+  dayLabel,
   onClose,
   onSave,
 }: {
+  /** The day the water is filed under, as the member reads it. */
+  dayLabel: string;
   onClose: () => void;
   onSave: (ml: number) => void;
 }) {
@@ -407,7 +413,9 @@ export function AddWaterModal({
     <ModalShell
       title={n?.fluidTracker?.addWater || "Add Water"}
       subtitle={
-        isEs ? "Registra lo que acabas de beber." : "Log what you just drank."
+        isEs
+          ? `Registra lo que bebiste · ${dayLabel}.`
+          : `Log what you drank · ${dayLabel}.`
       }
       onClose={onClose}
     >

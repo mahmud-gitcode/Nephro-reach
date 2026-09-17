@@ -81,7 +81,7 @@ function MyClassroomDetailsContent() {
   }));
 
   return (
-    <div className="space-y-stack-xl">
+    <div className="mx-auto w-full max-w-[900px] space-y-stack-xl">
       {/* Top Header & Back Navigation */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

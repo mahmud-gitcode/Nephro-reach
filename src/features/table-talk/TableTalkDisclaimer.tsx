@@ -30,10 +30,10 @@ export function TableTalkDisclaimer() {
         aria-labelledby="table-talk-disclaimer"
         className="rounded-card border border-danger-line bg-danger-surface p-inset-md"
       >
-        <div className="flex items-start gap-inline-md">
+        <div className="flex flex-col gap-inline-md">
           <AlertTriangle
             aria-hidden="true"
-            className="mt-0.5 h-5 w-5 shrink-0 text-danger"
+            className="h-5 w-5 shrink-0 text-danger"
           />
           <div className="min-w-0 space-y-stack-sm">
             <h2
@@ -45,7 +45,7 @@ export function TableTalkDisclaimer() {
                 : "Community & Content Disclaimer"}
             </h2>
 
-            <p className="text-body-sm text-fg-secondary">
+            <p className="text-justify text-body-sm text-fg-secondary">
               {isEs
                 ? "Dialysis Table Talk es solo educativo e informativo. Lo que comparten presentadores, invitados y miembros de la comunidad no sustituye el consejo médico, el diagnóstico ni el tratamiento. Habla siempre con tu equipo de diálisis sobre tu salud."
                 : "Dialysis Table Talk is for educational and informational purposes only. The views and experiences shared by hosts, guests, and community members are not a substitute for professional medical advice, diagnosis, or treatment. Always talk with your dialysis care team about your specific health needs."}

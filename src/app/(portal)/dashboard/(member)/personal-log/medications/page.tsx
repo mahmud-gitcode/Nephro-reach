@@ -49,9 +49,6 @@ export default function MedicationLogPage() {
 
       <header>
         <h1 className="text-heading-1 text-fg">{t("medicationsLog.title")}</h1>
-        <p className="mt-stack-xs text-body-lg text-fg-secondary">
-          {t("medicationsLog.subtitle")}
-        </p>
       </header>
 
       {/* One read feeds four sections, so the four states are decided once

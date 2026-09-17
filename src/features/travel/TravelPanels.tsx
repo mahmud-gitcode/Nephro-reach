@@ -43,8 +43,12 @@ function PanelHead({
   id?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-inline-md">
-      <div className="flex items-start gap-inline-md">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md">
+      {/* A title on its own sits level with its icon; one with a hint
+        underneath starts at the icon's top edge. */}
+      <div
+        className={`flex gap-inline-md ${hint ? "items-start" : "items-center"}`}
+      >
         <span
           aria-hidden="true"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
@@ -175,7 +179,7 @@ export function TravelIntroBar() {
   const isEs = language === "ES";
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-primary-soft-line bg-primary-soft px-inset-md py-inset-sm">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-line bg-surface px-inset-md py-inset-sm shadow-card">
       <p className="flex items-center gap-inline-md text-body-sm text-fg-brand">
         <Plane aria-hidden="true" className="size-4 shrink-0" />
         {isEs

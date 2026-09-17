@@ -76,7 +76,7 @@ function FavoriteButton({
   );
 }
 
-/** Speaker, runtime, date — the line under every title, said the same way. */
+/** Runtime and date — the line under every title, said the same way. */
 function EpisodeMeta({
   episode,
   isEs,
@@ -85,7 +85,6 @@ function EpisodeMeta({
   isEs: boolean;
 }) {
   const parts = [
-    episode.speakers[0]?.name,
     episode.durationSeconds ? formatDuration(episode.durationSeconds) : null,
     formatDate(episode.publishedAt, isEs),
   ].filter(Boolean);

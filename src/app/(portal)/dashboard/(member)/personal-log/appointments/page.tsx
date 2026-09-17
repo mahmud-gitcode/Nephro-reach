@@ -373,9 +373,6 @@ export default function AppointmentsPage() {
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
-          <p className="mt-stack-xs text-body-lg text-fg-secondary">
-            {t("appointments.subtitle")}
-          </p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} leadingIcon={<Plus />}>
           {t("appointments.addAppointment")}

@@ -271,7 +271,7 @@ export default function MyClassroomPage() {
   } = useJourneyProgress();
 
   return (
-    <div className="space-y-stack-xl">
+    <div className="mx-auto w-full max-w-[900px] space-y-stack-xl">
       {/* Until the read lands, every figure here would be zero — and "0 of 21
           complete" to someone who finished ten days is worse than a
           skeleton. */}

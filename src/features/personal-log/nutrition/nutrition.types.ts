@@ -20,6 +20,8 @@ export type NutrientKey =
 
 export interface FoodEntry {
   id: string;
+  /** The calendar day it was eaten, `yyyy-mm-dd` in the member's timezone. */
+  date: string;
   meal: MealKey;
   name: string;
   portion: string;
@@ -34,3 +36,6 @@ export interface FoodEntry {
 }
 
 export type Goals = Record<NutrientKey, number> & { fluid: number };
+
+/** Millilitres drunk, keyed by `yyyy-mm-dd`. A day with no key drank nothing. */
+export type FluidByDate = Record<string, number>;

@@ -104,9 +104,6 @@ export default function AddMedicationPage() {
             <h1 className="text-heading-4 text-fg">
               {t("medicationsLog.addNewMedication")}
             </h1>
-            <p className="mt-stack-xs text-body-md text-fg-secondary">
-              {t("medicationsLog.addNewSubtitle")}
-            </p>
           </div>
           <Link
             href="/dashboard/personal-log/medications"

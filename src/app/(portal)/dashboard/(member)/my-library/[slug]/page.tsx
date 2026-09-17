@@ -14,11 +14,9 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
-import {
-  formatDuration,
-  formatPublished,
-} from "@/features/library/library.rules";
+import { formatPublished } from "@/features/library/library.rules";
 import { useLibrary } from "@/features/library/useLibrary";
+import { kindLabel, metaLabel } from "@/features/library/member/RelatedLibrary";
 import type { LibraryResource } from "@/features/library/library.types";
 import {
   Alert,
@@ -163,24 +161,39 @@ function RelatedRow({ resources }: { resources: LibraryResource[] }) {
 
   return (
     <section className="space-y-stack-md">
+      {/* Same card as Table Talk's related episodes: picture, title, and
+          what kind of thing it is. */}
       <h2 className="text-heading-4 text-fg">
-        {isEs ? "Relacionado" : "Related"}
+        {isEs ? "Recursos relacionados" : "Related Resources"}
       </h2>
       <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-3">
-        {resources.map((resource) => (
-          <Link
-            key={resource.id}
-            href={`/dashboard/my-library/${resource.slug}`}
-            className="rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <p className="text-label-md text-fg">
-              {isEs ? resource.titleEs : resource.titleEn}
-            </p>
-            <p className="mt-stack-xs line-clamp-2 text-body-sm text-fg-muted">
-              {isEs ? resource.summaryEs : resource.summaryEn}
-            </p>
-          </Link>
-        ))}
+        {resources.map((resource) => {
+          const meta = metaLabel(resource, isEs);
+          return (
+            <Link
+              key={resource.id}
+              href={`/dashboard/my-library/${resource.slug}`}
+              className="group rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <div className="relative aspect-video overflow-hidden rounded-card bg-surface-sunken">
+                <Image
+                  src={resource.poster}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 640px) 33vw, 100vw"
+                />
+              </div>
+              <p className="mt-stack-sm text-label-md text-fg">
+                {isEs ? resource.titleEs || resource.titleEn : resource.titleEn}
+              </p>
+              <p className="mt-stack-xs text-body-sm text-fg-muted">
+                {kindLabel(resource.kind, isEs)}
+                {meta ? ` · ${meta}` : ""}
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -209,11 +222,10 @@ export default function LibraryResourcePage() {
   const meta = resource
     ? [
         categoryLabel(resource.category, isEs),
-        resource.kind === "video" && resource.durationSeconds
-          ? formatDuration(resource.durationSeconds)
-          : resource.kind === "article" && resource.readMinutes
-            ? `${resource.readMinutes} ${isEs ? "min de lectura" : "min read"}`
-            : (isEs ? resource.fileMetaEs : resource.fileMetaEn) || "",
+        /* The kind reads as part of the length, not as a tag of its own. */
+        [kindLabel(resource.kind, isEs), metaLabel(resource, isEs)]
+          .filter(Boolean)
+          .join(" · "),
         formatPublished(resource.publishedAt, isEs),
       ].filter(Boolean)
     : [];

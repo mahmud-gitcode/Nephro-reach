@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Activity,
@@ -17,6 +16,7 @@ import {
   User,
 } from "lucide-react";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
   Badge,
   Button,
@@ -205,55 +205,47 @@ function HealthcareTeam() {
 }
 
 export default function PersonalLogPage() {
-  const { user } = useAuth();
-  const { t } = useLanguage();
-  const firstName = user?.name ? user.name.split(" ")[0] : "Sarah";
-
-  const greetingPrefix = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t("personalLogHub.goodMorning");
-    if (hour < 17) return t("personalLogHub.goodAfternoon");
-    return t("personalLogHub.goodEvening");
-  }, [t]);
+  const { t, language } = useLanguage();
 
   return (
-    <div className="w-full space-y-stack-xl">
-      <PersonalLogDisclaimer />
+    <NoticeRailLayout
+      notices={<PersonalLogDisclaimer spaced={false} stacked />}
+    >
+      <div className="w-full space-y-stack-xl">
+        <header>
+          {/* The greeting belongs to the dashboard; here the page is named
+            for what it is. */}
+          <h1 className="text-heading-1 text-fg">
+            {language === "ES" ? "Registro Personal" : "Personal Log"}
+          </h1>
+        </header>
 
-      <header>
-        <h1 className="text-heading-1 text-fg">
-          {greetingPrefix}, {firstName}
-        </h1>
-        <p className="mt-stack-xs text-body-md text-fg-muted">
-          {t("personalLogHub.title")}
-        </p>
-      </header>
-
-      <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 lg:grid-cols-4">
-        {tileConfigs.map((tile) => (
-          <Link
-            key={tile.key}
-            href={tile.href}
-            className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg shadow-card transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <span
-              className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}
+        <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
+          {tileConfigs.map((tile) => (
+            <Link
+              key={tile.key}
+              href={tile.href}
+              className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg shadow-card transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              <tile.icon
-                className={`h-icon-big w-icon-big ${tile.iconClass}`}
-              />
-            </span>
-            <span className="text-center text-heading-5 text-fg">
-              {t(`personalLogHub.tiles.${tile.key}`)}
-            </span>
-          </Link>
-        ))}
-      </section>
+              <span
+                className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}
+              >
+                <tile.icon
+                  className={`h-icon-big w-icon-big ${tile.iconClass}`}
+                />
+              </span>
+              <span className="text-center text-heading-5 text-fg">
+                {t(`personalLogHub.tiles.${tile.key}`)}
+              </span>
+            </Link>
+          ))}
+        </section>
 
-      <div className="space-y-stack-xl">
-        <UpcomingAppointments />
-        <HealthcareTeam />
+        <div className="space-y-stack-xl">
+          <UpcomingAppointments />
+          <HealthcareTeam />
+        </div>
       </div>
-    </div>
+    </NoticeRailLayout>
   );
 }

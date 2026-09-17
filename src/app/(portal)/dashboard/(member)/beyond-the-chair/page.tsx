@@ -27,6 +27,7 @@ import type {
 } from "@/features/personal-log/check-in/checkIn.types";
 import RecoveryTrendsCard from "@/features/personal-log/check-in/RecoveryTrendsCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
   Alert,
   AsyncSection,
@@ -239,197 +240,197 @@ export default function BetweenTreatmentPage() {
   };
 
   return (
-    <div className="space-y-stack-lg">
-      <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-heading-1 text-fg">
-            {isEs ? "Más Allá del Sillón" : "Beyond the Chair"}
-          </h1>
-          <p className="mt-stack-xs measure text-body-md text-fg-muted">
-            {isEs
-              ? "Registra cómo te sientes, cómo te recuperas y cómo cuidas tu salud entre tratamientos de diálisis."
-              : "Track how you feel, recover, and manage your health between dialysis treatments."}
-          </p>
+    <NoticeRailLayout
+      notices={<PersonalLogDisclaimer spaced={false} stacked />}
+    >
+      <div className="space-y-stack-lg">
+        <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-heading-1 text-fg">
+              {isEs ? "Más Allá del Sillón" : "Beyond the Chair"}
+            </h1>
+          </div>
+
+          <Button onClick={() => setOpenDate(todayIso())}>
+            <Plus aria-hidden="true" className="size-4 shrink-0" />
+            {isEs ? "Registrar hoy" : "Check in for today"}
+          </Button>
         </div>
 
-        <Button onClick={() => setOpenDate(todayIso())}>
-          <Plus aria-hidden="true" className="size-4 shrink-0" />
-          {isEs ? "Registrar hoy" : "Check in for today"}
-        </Button>
-      </div>
+        {saveError ? (
+          <Alert
+            tone="danger"
+            title={
+              isEs ? "No se guardó tu registro" : "Your check-in did not save"
+            }
+            onDismiss={dismissSaveError}
+          >
+            {isEs
+              ? "Nada se perdió de la pantalla. Inténtalo de nuevo."
+              : "Nothing was lost from the screen. Please try again."}
+          </Alert>
+        ) : null}
 
-      {saveError ? (
-        <Alert
-          tone="danger"
-          title={
-            isEs ? "No se guardó tu registro" : "Your check-in did not save"
-          }
-          onDismiss={dismissSaveError}
-        >
-          {isEs
-            ? "Nada se perdió de la pantalla. Inténtalo de nuevo."
-            : "Nothing was lost from the screen. Please try again."}
-        </Alert>
-      ) : null}
+        {notices.saveError ? (
+          <Alert
+            tone="danger"
+            title={
+              isEs
+                ? "No se envió el aviso a tu clínica"
+                : "Your clinic was not notified"
+            }
+            onDismiss={notices.dismissSaveError}
+          >
+            {isEs
+              ? "Tu registro se guardó, pero el aviso no salió. Abre el día y vuelve a intentarlo, o llama a tu clínica."
+              : "Your check-in saved, but the notice did not go out. Reopen the day to try again, or call your clinic."}
+          </Alert>
+        ) : null}
 
-      {notices.saveError ? (
-        <Alert
-          tone="danger"
-          title={
+        <AsyncSection
+          pending={isPending}
+          error={error}
+          onRetry={refetch}
+          errorTitle={
             isEs
-              ? "No se envió el aviso a tu clínica"
-              : "Your clinic was not notified"
+              ? "Tus registros no se cargaron"
+              : "Your check-ins did not load"
           }
-          onDismiss={notices.dismissSaveError}
+          skeleton={
+            <Card className="flex flex-col gap-stack-md">
+              <Skeleton height={40} />
+              <Skeleton height={96} />
+              <Skeleton height={96} />
+            </Card>
+          }
         >
-          {isEs
-            ? "Tu registro se guardó, pero el aviso no salió. Abre el día y vuelve a intentarlo, o llama a tu clínica."
-            : "Your check-in saved, but the notice did not go out. Reopen the day to try again, or call your clinic."}
-        </Alert>
-      ) : null}
+          <div className="space-y-stack-lg">
+            <Card className="space-y-stack-md">
+              <div className="flex flex-wrap items-baseline justify-between gap-inline-md">
+                <h2 className="text-heading-5 text-fg">
+                  {isEs ? "Últimos 14 días" : "Last 14 days"}
+                </h2>
+                <p className="text-body-sm text-fg-muted">
+                  {isEs
+                    ? `${summary.logged} registrados · racha de ${summary.streak}`
+                    : `${summary.logged} logged · ${summary.streak}-day streak`}
+                </p>
+              </div>
 
-      <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
-        errorTitle={
-          isEs ? "Tus registros no se cargaron" : "Your check-ins did not load"
-        }
-        skeleton={
-          <Card className="flex flex-col gap-stack-md">
-            <Skeleton height={40} />
-            <Skeleton height={96} />
-            <Skeleton height={96} />
-          </Card>
-        }
-      >
-        <div className="space-y-stack-lg">
-          <Card className="space-y-stack-md">
-            <div className="flex flex-wrap items-baseline justify-between gap-inline-md">
-              <h2 className="text-heading-5 text-fg">
-                {isEs ? "Últimos 14 días" : "Last 14 days"}
-              </h2>
-              <p className="text-body-sm text-fg-muted">
-                {isEs
-                  ? `${summary.logged} registrados · racha de ${summary.streak}`
-                  : `${summary.logged} logged · ${summary.streak}-day streak`}
-              </p>
-            </div>
+              <DayStrip days={recentDays} onPick={setOpenDate} />
 
-            <DayStrip days={recentDays} onPick={setOpenDate} />
-
-            {summary.missedTreatments > 0 ? (
-              <p className="text-body-sm text-danger">
-                {isEs
-                  ? `${summary.missedTreatments} tratamiento(s) perdido(s) registrado(s)`
-                  : `${summary.missedTreatments} missed treatment(s) logged`}
-              </p>
-            ) : null}
-            {notices.pending.length > 0 ? (
-              /* Sunday is the only day this ever says anything, and it is
+              {summary.missedTreatments > 0 ? (
+                <p className="text-body-sm text-danger">
+                  {isEs
+                    ? `${summary.missedTreatments} tratamiento(s) perdido(s) registrado(s)`
+                    : `${summary.missedTreatments} missed treatment(s) logged`}
+                </p>
+              ) : null}
+              {notices.pending.length > 0 ? (
+                /* Sunday is the only day this ever says anything, and it is
                  the day a member is most likely to wonder whether their
                  send went anywhere. */
-              <p className="flex items-center gap-inline-sm text-body-sm text-fg-muted">
-                <Clock aria-hidden="true" className="size-4 shrink-0" />
-                {isEs
-                  ? `${notices.pending.length} aviso(s) en espera hasta ${relativeDayLabel(notices.pending[0].deliverOn, true).toLowerCase()} — tu clínica cierra los domingos.`
-                  : `${notices.pending.length} notice(s) waiting until ${relativeDayLabel(notices.pending[0].deliverOn, false).toLowerCase()} — your clinic is closed Sundays.`}
-              </p>
-            ) : null}
-            {summary.topSymptom ? (
-              <p className="text-body-sm text-fg-muted">
-                {isEs ? "Más frecuente: " : "Most often: "}
-                {isEs
-                  ? LOCALIZED_SYMPTOMS[summary.topSymptom] || summary.topSymptom
-                  : summary.topSymptom}
-              </p>
-            ) : null}
-          </Card>
+                <p className="flex items-center gap-inline-sm text-body-sm text-fg-muted">
+                  <Clock aria-hidden="true" className="size-4 shrink-0" />
+                  {isEs
+                    ? `${notices.pending.length} aviso(s) en espera hasta ${relativeDayLabel(notices.pending[0].deliverOn, true).toLowerCase()} — tu clínica cierra los domingos.`
+                    : `${notices.pending.length} notice(s) waiting until ${relativeDayLabel(notices.pending[0].deliverOn, false).toLowerCase()} — your clinic is closed Sundays.`}
+                </p>
+              ) : null}
+              {summary.topSymptom ? (
+                <p className="text-body-sm text-fg-muted">
+                  {isEs ? "Más frecuente: " : "Most often: "}
+                  {isEs
+                    ? LOCALIZED_SYMPTOMS[summary.topSymptom] ||
+                      summary.topSymptom
+                    : summary.topSymptom}
+                </p>
+              ) : null}
+            </Card>
 
-          {entries.length === 0 ? (
-            <EmptyState
-              icon={<CalendarCheck aria-hidden="true" />}
-              title={isEs ? "Aún no hay registros" : "No check-ins yet"}
-              description={
-                isEs
-                  ? "Registra cómo te sientes entre tratamientos. Con unos días, el patrón le dice mucho más a tu equipo que un solo mal día."
-                  : "Log how you feel between treatments. After a few days the pattern tells your team far more than one bad day does."
-              }
-              action={
-                <Button onClick={() => setOpenDate(todayIso())}>
-                  <Plus aria-hidden="true" className="size-4 shrink-0" />
-                  {isEs ? "Registrar hoy" : "Check in for today"}
-                </Button>
-              }
-            />
-          ) : (
-            <ul className="space-y-stack-sm">
-              {entries.map((entry) => (
-                <CheckInRow
-                  key={entry.date}
-                  entry={entry}
-                  notice={notices.getByDate(entry.date)}
-                  onEdit={() => setOpenDate(entry.date)}
-                  onDelete={() => setPendingDelete(entry)}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
-      </AsyncSection>
+            {entries.length === 0 ? (
+              <EmptyState
+                icon={<CalendarCheck aria-hidden="true" />}
+                title={isEs ? "Aún no hay registros" : "No check-ins yet"}
+                description={
+                  isEs
+                    ? "Registra cómo te sientes entre tratamientos. Con unos días, el patrón le dice mucho más a tu equipo que un solo mal día."
+                    : "Log how you feel between treatments. After a few days the pattern tells your team far more than one bad day does."
+                }
+                action={
+                  <Button onClick={() => setOpenDate(todayIso())}>
+                    <Plus aria-hidden="true" className="size-4 shrink-0" />
+                    {isEs ? "Registrar hoy" : "Check in for today"}
+                  </Button>
+                }
+              />
+            ) : (
+              <ul className="space-y-stack-sm">
+                {entries.map((entry) => (
+                  <CheckInRow
+                    key={entry.date}
+                    entry={entry}
+                    notice={notices.getByDate(entry.date)}
+                    onEdit={() => setOpenDate(entry.date)}
+                    onDelete={() => setPendingDelete(entry)}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </AsyncSection>
 
-      <RecoveryTrendsCard entries={entries} />
+        <RecoveryTrendsCard entries={entries} />
 
-      <PersonalLogDisclaimer />
-
-      {openDate ? (
-        /* `key` remounts the form when the day changes, so the fields hold
+        {openDate ? (
+          /* `key` remounts the form when the day changes, so the fields hold
            the day that was opened rather than the one before it. */
-        <CheckInForm
-          key={openDate}
-          entry={openEntry ?? undefined}
-          notice={notices.getByDate(openDate)}
-          onSave={handleSave}
-          onCancel={() => setOpenDate(null)}
-          saving={isSaving || notices.isSaving}
-        />
-      ) : null}
+          <CheckInForm
+            key={openDate}
+            entry={openEntry ?? undefined}
+            notice={notices.getByDate(openDate)}
+            onSave={handleSave}
+            onCancel={() => setOpenDate(null)}
+            saving={isSaving || notices.isSaving}
+          />
+        ) : null}
 
-      {pendingDelete ? (
-        <Modal
-          open
-          size="small"
-          closeOnBackdrop={false}
-          onClose={() => setPendingDelete(null)}
-          title={isEs ? "¿Eliminar este registro?" : "Delete this check-in?"}
-          description={
-            isEs
-              ? `Se eliminará lo que anotaste para ${relativeDayLabel(pendingDelete.date, true)}. No se puede deshacer.`
-              : `What you wrote for ${relativeDayLabel(pendingDelete.date, false)} will be removed. This cannot be undone.`
-          }
-          footer={
-            <div className="flex flex-wrap items-center justify-end gap-inline-md">
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setPendingDelete(null)}
-              >
-                {isEs ? "Cancelar" : "Cancel"}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  deleteCheckIn(pendingDelete.date);
-                  notices.dropNotice(pendingDelete.date);
-                  setPendingDelete(null);
-                }}
-              >
-                {isEs ? "Eliminar" : "Delete"}
-              </Button>
-            </div>
-          }
-        />
-      ) : null}
-    </div>
+        {pendingDelete ? (
+          <Modal
+            open
+            size="small"
+            closeOnBackdrop={false}
+            onClose={() => setPendingDelete(null)}
+            title={isEs ? "¿Eliminar este registro?" : "Delete this check-in?"}
+            description={
+              isEs
+                ? `Se eliminará lo que anotaste para ${relativeDayLabel(pendingDelete.date, true)}. No se puede deshacer.`
+                : `What you wrote for ${relativeDayLabel(pendingDelete.date, false)} will be removed. This cannot be undone.`
+            }
+            footer={
+              <div className="flex flex-wrap items-center justify-end gap-inline-md">
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => setPendingDelete(null)}
+                >
+                  {isEs ? "Cancelar" : "Cancel"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    deleteCheckIn(pendingDelete.date);
+                    notices.dropNotice(pendingDelete.date);
+                    setPendingDelete(null);
+                  }}
+                >
+                  {isEs ? "Eliminar" : "Delete"}
+                </Button>
+              </div>
+            }
+          />
+        ) : null}
+      </div>
+    </NoticeRailLayout>
   );
 }

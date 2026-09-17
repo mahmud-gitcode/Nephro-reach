@@ -16,6 +16,7 @@ import {
   ExternalLink,
   ExternalLinkProvider,
 } from "@/components/common/ExternalLinkDisclaimer";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import RelatedLibrary from "@/features/library/member/RelatedLibrary";
 import {
   BEFORE_THE_ER_TOPICS,
@@ -169,251 +170,274 @@ function SymptomDetailContent() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      {/* MULTIPLE SELECTED SYMPTOMS SWITCHER BAR (if patient selected > 1) */}
-      {selectedSlugList.length > 1 && (
-        <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary-fg uppercase">
-              <Activity className="h-4 w-4 text-fg-brand" />
-              <span>
-                {isEs
-                  ? `Síntomas Seleccionados para Orientación (${selectedSlugList.length})`
-                  : `Selected Symptoms for Guidance (${selectedSlugList.length})`}
-              </span>
-            </p>
-            <span className="text-[11px] font-medium text-fg-brand">
-              {isEs ? "Toca para ver cada guía" : "Tap any to view guide"}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedSlugList.map((slug) => {
-              const item = BEFORE_THE_ER_TOPICS[slug];
-              const itemTitle = isEs ? item.titleEs : item.titleEn;
-              const isActive = slug === currentTopic.slug;
-              return (
-                <button
-                  key={slug}
-                  type="button"
-                  onClick={() => handleSelectTopic(slug)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-control px-3.5 py-2 text-xs font-bold transition-all sm:text-sm ${
-                    isActive
-                      ? "bg-primary-solid text-primary-on-solid shadow-control"
-                      : "border border-primary-soft-line bg-surface text-fg-secondary hover:bg-primary-soft-hover"
-                  }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-success-600" />
-                  <span>{itemTitle}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* 1. EMERGENCY NOTICE CARD (Normal neutral bg & border) */}
-      <Card as="section" padding="none" className="space-y-stack-sm p-inset-lg">
-        <div>
-          <span className="text-xs font-black tracking-wider text-danger uppercase">
-            {isEs ? "AVISO DE EMERGENCIA" : "EMERGENCY NOTICE"}
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
-            {isEs
-              ? "Before-the-ER™ no diagnostica afecciones médicas. Si cree que está experimentando una emergencia potencialmente mortal, llame al 911 de inmediato."
-              : "Before-the-ER™ does not diagnose medical conditions. If you believe you are experiencing a life-threatening emergency, call 911 immediately."}
-          </p>
-
-          <a
-            href="tel:911"
-            className="shrink-0 text-sm font-bold whitespace-nowrap text-danger underline underline-offset-4 transition-colors hover:text-danger sm:text-base"
+    <NoticeRailLayout
+      notices={
+        <>
+          {/* 1. EMERGENCY NOTICE CARD (Normal neutral bg & border) */}
+          <Card
+            as="section"
+            padding="none"
+            className="space-y-stack-sm p-inset-lg"
           >
-            {isEs ? "Llamar al 911" : "Call 911"}
-          </a>
-        </div>
-      </Card>
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-control bg-danger-surface text-danger"
+            >
+              <AlertTriangle className="size-4" />
+            </span>
+            <div>
+              <span className="text-xs font-black tracking-wider text-danger uppercase">
+                {isEs ? "AVISO DE EMERGENCIA" : "EMERGENCY NOTICE"}
+              </span>
+            </div>
 
-      {/* 2. YOUR NEXT STEP ESCALATION CARD */}
-      <section
-        className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 shadow-control sm:p-6`}
-      >
-        <div className="space-y-1.5">
-          <span className="text-xs font-black tracking-wider text-fg-muted uppercase">
-            {isEs ? "SU SIGUIENTE PASO" : "YOUR NEXT STEP"}
-          </span>
-          <p className="text-sm leading-relaxed font-semibold text-fg sm:text-base">
-            {isEs ? nextStepConfig.descriptionEs : nextStepConfig.descriptionEn}
-          </p>
-        </div>
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-justify text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
+                {isEs
+                  ? "Before-the-ER™ no diagnostica afecciones médicas. Si cree que está experimentando una emergencia potencialmente mortal, llame al 911 de inmediato."
+                  : "Before-the-ER™ does not diagnose medical conditions. If you believe you are experiencing a life-threatening emergency, call 911 immediately."}
+              </p>
 
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          {nextStepLevel === "call911" && (
-            <>
-              <a href="tel:911" className={buttonStyles({ variant: "danger" })}>
-                <Phone aria-hidden="true" />
-                <span>{t("beforeTheEr.detail.call911")}</span>
-              </a>
-              <ExternalLink
-                href="https://www.google.com/maps/search/nearest+emergency+room"
-                className={buttonStyles({
-                  variant: "neutral",
-                  appearance: "fill-stroke",
-                })}
+              <a
+                href="tel:911"
+                className="shrink-0 text-sm font-bold whitespace-nowrap text-danger underline underline-offset-4 transition-colors hover:text-danger sm:text-base"
               >
-                <MapPin aria-hidden="true" />
-                <span>{t("beforeTheEr.detail.findNearestEr")}</span>
-              </ExternalLink>
-            </>
-          )}
-
-          {nextStepLevel === "callDialysis" && (
-            <>
-              <a href="tel:5550100" className={CTA_WARNING}>
-                <Phone aria-hidden="true" />
+                {isEs ? "Llamar al 911" : "Call 911"}
+              </a>
+            </div>
+          </Card>
+        </>
+      }
+    >
+      <div className="space-y-6">
+        {/* MULTIPLE SELECTED SYMPTOMS SWITCHER BAR (if patient selected > 1) */}
+        {selectedSlugList.length > 1 && (
+          <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary-fg uppercase">
+                <Activity className="h-4 w-4 text-fg-brand" />
                 <span>
                   {isEs
-                    ? "Llamar a la Clínica de Diálisis"
-                    : "Call Dialysis Clinic"}
+                    ? `Síntomas Seleccionados para Orientación (${selectedSlugList.length})`
+                    : `Selected Symptoms for Guidance (${selectedSlugList.length})`}
                 </span>
-              </a>
-              <a
-                href="tel:911"
-                className={buttonStyles({
-                  variant: "danger",
-                  appearance: "fill-stroke",
-                })}
-              >
-                <span>{isEs ? "Si empeora: 911" : "If Severe: Call 911"}</span>
-              </a>
-            </>
-          )}
-
-          {nextStepLevel === "urgentMedical" && (
-            <>
-              <ExternalLink
-                href="https://www.google.com/maps/search/nearest+emergency+room"
-                className={CTA_WARNING}
-              >
-                <MapPin aria-hidden="true" />
-                <span>
-                  {isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}
-                </span>
-              </ExternalLink>
-              <a
-                href="tel:911"
-                className={buttonStyles({
-                  variant: "danger",
-                  appearance: "fill-stroke",
-                })}
-              >
-                <Phone aria-hidden="true" />
-                <span>{isEs ? "Emergencia: 911" : "Emergency: 911"}</span>
-              </a>
-            </>
-          )}
-
-          {nextStepLevel === "monitor" && (
-            <Link
-              href="/dashboard/personal-log/dialysis-journal"
-              className={CTA_SUCCESS}
-            >
-              <span>
-                {isEs ? "Registrar en Diario" : "Log in Health Journal"}
+              </p>
+              <span className="text-[11px] font-medium text-fg-brand">
+                {isEs ? "Toca para ver cada guía" : "Tap any to view guide"}
               </span>
-            </Link>
-          )}
-        </div>
-      </section>
-
-      {/* MAIN SYMPTOM DETAILS CARD */}
-      <section className="space-y-6 rounded-panel border border-line bg-surface p-6 shadow-control">
-        <div className="border-b border-line-subtle pb-4">
-          <div className="group relative inline-flex items-center gap-2">
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-fg sm:text-3xl">
-              <span>{title}</span>
-              <ChevronDown className="pointer-events-none h-5 w-5 text-fg-subtle transition-colors group-hover:text-fg-secondary sm:h-6 sm:w-6" />
-            </h1>
-            <select
-              id="topic-selector"
-              value={currentTopic.slug}
-              onChange={(e) => handleSelectTopic(e.target.value)}
-              aria-label={isEs ? "Seleccionar Tema" : "Select Topic"}
-              className="absolute inset-0 h-full w-full cursor-pointer text-base opacity-0"
-            >
-              {SLUG_LIST.map((slug) => {
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedSlugList.map((slug) => {
                 const item = BEFORE_THE_ER_TOPICS[slug];
                 const itemTitle = isEs ? item.titleEs : item.titleEn;
+                const isActive = slug === currentTopic.slug;
                 return (
-                  <option
+                  <button
                     key={slug}
-                    value={slug}
-                    className="py-1 text-base font-semibold text-fg"
+                    type="button"
+                    onClick={() => handleSelectTopic(slug)}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-control px-3.5 py-2 text-xs font-bold transition-all sm:text-sm ${
+                      isActive
+                        ? "bg-primary-solid text-primary-on-solid shadow-control"
+                        : "border border-primary-soft-line bg-surface text-fg-secondary hover:bg-primary-soft-hover"
+                    }`}
                   >
-                    {itemTitle}
-                  </option>
+                    <span className="h-2 w-2 rounded-full bg-success-600" />
+                    <span>{itemTitle}</span>
+                  </button>
                 );
               })}
-            </select>
-          </div>
-        </div>
-
-        {/* What to Watch For Section */}
-        <div className="space-y-3">
-          <h2 className="text-base font-bold text-fg sm:text-lg">
-            {isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}
-          </h2>
-
-          <ul className="space-y-2.5">
-            {parsedWatchFor.bullets.map((bullet, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
-              >
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
-                <span>{renderFormattedText(formatBulletText(bullet))}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Emergency Directive & Source Citation Callout */}
-          {parsedWatchFor.directive && (
-            <div className="mt-2 inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs leading-relaxed font-medium text-danger sm:text-sm">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
-              <div className="leading-relaxed">
-                {renderFormattedText(parsedWatchFor.directive)}
-              </div>
             </div>
-          )}
-        </div>
+          </section>
+        )}
 
-        {/* Subsection 2: Especially Important In */}
-        <div className="space-y-3 border-t border-line-subtle pt-2">
-          <h2 className="text-base font-bold text-fg sm:text-lg">
-            {t("beforeTheEr.detail.importantIn")}
-          </h2>
+        {/* 2. YOUR NEXT STEP ESCALATION CARD */}
+        <section
+          className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 shadow-control sm:p-6`}
+        >
+          <div className="space-y-1.5">
+            <span className="text-xs font-black tracking-wider text-fg-muted uppercase">
+              {isEs ? "SU SIGUIENTE PASO" : "YOUR NEXT STEP"}
+            </span>
+            <p className="text-sm leading-relaxed font-semibold text-fg sm:text-base">
+              {isEs
+                ? nextStepConfig.descriptionEs
+                : nextStepConfig.descriptionEn}
+            </p>
+          </div>
 
-          <ul className="space-y-2.5">
-            {importantInList.map((item, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {nextStepLevel === "call911" && (
+              <>
+                <a
+                  href="tel:911"
+                  className={buttonStyles({ variant: "danger" })}
+                >
+                  <Phone aria-hidden="true" />
+                  <span>{t("beforeTheEr.detail.call911")}</span>
+                </a>
+                <ExternalLink
+                  href="https://www.google.com/maps/search/nearest+emergency+room"
+                  className={buttonStyles({
+                    variant: "neutral",
+                    appearance: "fill-stroke",
+                  })}
+                >
+                  <MapPin aria-hidden="true" />
+                  <span>{t("beforeTheEr.detail.findNearestEr")}</span>
+                </ExternalLink>
+              </>
+            )}
+
+            {nextStepLevel === "callDialysis" && (
+              <>
+                <a href="tel:5550100" className={CTA_WARNING}>
+                  <Phone aria-hidden="true" />
+                  <span>
+                    {isEs
+                      ? "Llamar a la Clínica de Diálisis"
+                      : "Call Dialysis Clinic"}
+                  </span>
+                </a>
+                <a
+                  href="tel:911"
+                  className={buttonStyles({
+                    variant: "danger",
+                    appearance: "fill-stroke",
+                  })}
+                >
+                  <span>
+                    {isEs ? "Si empeora: 911" : "If Severe: Call 911"}
+                  </span>
+                </a>
+              </>
+            )}
+
+            {nextStepLevel === "urgentMedical" && (
+              <>
+                <ExternalLink
+                  href="https://www.google.com/maps/search/nearest+emergency+room"
+                  className={CTA_WARNING}
+                >
+                  <MapPin aria-hidden="true" />
+                  <span>
+                    {isEs ? "Buscar Urgencias / ER" : "Seek Urgent Care / ER"}
+                  </span>
+                </ExternalLink>
+                <a
+                  href="tel:911"
+                  className={buttonStyles({
+                    variant: "danger",
+                    appearance: "fill-stroke",
+                  })}
+                >
+                  <Phone aria-hidden="true" />
+                  <span>{isEs ? "Emergencia: 911" : "Emergency: 911"}</span>
+                </a>
+              </>
+            )}
+
+            {nextStepLevel === "monitor" && (
+              <Link
+                href="/dashboard/personal-log/dialysis-journal"
+                className={CTA_SUCCESS}
               >
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+                <span>
+                  {isEs ? "Registrar en Diario" : "Log in Health Journal"}
+                </span>
+              </Link>
+            )}
+          </div>
+        </section>
 
-      {/* Real posts off the Library shelf, not two fixed placeholders. */}
-      <RelatedLibrary
-        category="emergencies"
-        title={t("beforeTheEr.detail.relatedEducation")}
-      />
-    </div>
+        {/* MAIN SYMPTOM DETAILS CARD */}
+        <section className="space-y-6 rounded-panel border border-line bg-surface p-6 shadow-control">
+          <div className="border-b border-line-subtle pb-4">
+            <div className="group relative inline-flex items-center gap-2">
+              <h1 className="flex items-center gap-2 text-2xl font-bold text-fg sm:text-3xl">
+                <span>{title}</span>
+                <ChevronDown className="pointer-events-none h-5 w-5 text-fg-subtle transition-colors group-hover:text-fg-secondary sm:h-6 sm:w-6" />
+              </h1>
+              <select
+                id="topic-selector"
+                value={currentTopic.slug}
+                onChange={(e) => handleSelectTopic(e.target.value)}
+                aria-label={isEs ? "Seleccionar Tema" : "Select Topic"}
+                className="absolute inset-0 h-full w-full cursor-pointer text-base opacity-0"
+              >
+                {SLUG_LIST.map((slug) => {
+                  const item = BEFORE_THE_ER_TOPICS[slug];
+                  const itemTitle = isEs ? item.titleEs : item.titleEn;
+                  return (
+                    <option
+                      key={slug}
+                      value={slug}
+                      className="py-1 text-base font-semibold text-fg"
+                    >
+                      {itemTitle}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* What to Watch For Section */}
+          <div className="space-y-3">
+            <h2 className="text-base font-bold text-fg sm:text-lg">
+              {isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}
+            </h2>
+
+            <ul className="space-y-2.5">
+              {parsedWatchFor.bullets.map((bullet, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
+                >
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
+                  <span>{renderFormattedText(formatBulletText(bullet))}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Emergency Directive & Source Citation Callout */}
+            {parsedWatchFor.directive && (
+              <div className="mt-2 inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs leading-relaxed font-medium text-danger sm:text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                <div className="leading-relaxed">
+                  {renderFormattedText(parsedWatchFor.directive)}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Subsection 2: Especially Important In */}
+          <div className="space-y-3 border-t border-line-subtle pt-2">
+            <h2 className="text-base font-bold text-fg sm:text-lg">
+              {t("beforeTheEr.detail.importantIn")}
+            </h2>
+
+            <ul className="space-y-2.5">
+              {importantInList.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
+                >
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Real posts off the Library shelf, not two fixed placeholders. */}
+        <RelatedLibrary
+          category="emergencies"
+          title={t("beforeTheEr.detail.relatedEducation")}
+        />
+      </div>
+    </NoticeRailLayout>
   );
 }
 

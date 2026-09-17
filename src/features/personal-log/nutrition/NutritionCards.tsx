@@ -133,7 +133,8 @@ export function NutrientOverview({
           const consumed = totals[key];
           const goal = goals[key];
           const percent = goal > 0 ? Math.round((consumed / goal) * 100) : 0;
-          const style = statusStyles[statusForPercent(percent)];
+          const status = statusForPercent(percent);
+          const style = statusStyles[status];
           const name =
             n?.nutrientOverview?.nutrients?.[key] || fallbackNames[key];
 
@@ -181,11 +182,16 @@ export function NutrientOverview({
 
 export function MealTable({
   foods,
+  dayLabel,
+  isToday = true,
   mealLabels,
   onAddFood,
   onRemoveFood,
 }: {
   foods: FoodEntry[];
+  /** "Yesterday", "Monday, Sep 14" — used when the day is not today. */
+  dayLabel?: string;
+  isToday?: boolean;
   mealLabels: Record<MealKey, string>;
   onAddFood: (meal?: MealKey) => void;
   onRemoveFood: (id: string) => void;
@@ -205,7 +211,11 @@ export function MealTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
-            {n?.mealsTable?.title || "Today's Meals"}
+            {isToday || !dayLabel
+              ? n?.mealsTable?.title || "Today's Meals"
+              : isEs
+                ? `Comidas · ${dayLabel}`
+                : `Meals · ${dayLabel}`}
           </h2>
           <p className="mt-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
             {n?.mealsTable?.subtitle ||
@@ -255,9 +265,13 @@ export function MealTable({
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center">
                     <p className="text-sm font-semibold text-fg-muted">
-                      {isEs
-                        ? "Aún no hay comidas registradas hoy."
-                        : "No meals logged yet today."}
+                      {isToday
+                        ? isEs
+                          ? "Aún no hay comidas registradas hoy."
+                          : "No meals logged yet today."
+                        : isEs
+                          ? "No hay comidas registradas este día."
+                          : "No meals logged on this day."}
                     </p>
                     <p className="mt-1 text-sm text-fg-subtle">
                       {isEs

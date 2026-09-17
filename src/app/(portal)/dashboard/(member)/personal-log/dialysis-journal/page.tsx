@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import { AlertTriangle, BookOpen, ChevronDown, Lock, Plus } from "lucide-react";
+import { AlertTriangle, BookOpen, Lock, Plus, UserRound } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/features/auth/AuthContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { checkFlaggedMedicalContent } from "@/features/community/moderation";
 import {
   Badge,
@@ -179,7 +178,8 @@ function JournalCard({
     details: string;
   };
 }) {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
+  const isEs = language === "ES";
   const dj = dictionary?.dialysisJournal;
   const [open, setOpen] = useState(false);
 
@@ -187,13 +187,13 @@ function JournalCard({
     <Card as="article">
       <div className="flex items-start justify-between gap-inline-md">
         <div className="flex min-w-0 items-center gap-inline-md">
-          <Image
-            src="/images/journal-avatar.png"
-            alt=""
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-pill object-cover"
-          />
+          {/* A neutral placeholder until members have profile photos. */}
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-surface-sunken text-fg-muted"
+          >
+            <UserRound className="h-5 w-5" />
+          </span>
           <div>
             <p className="text-label-lg text-fg">
               {dj?.pageTitle || "Dialysis Journal"}
@@ -201,21 +201,6 @@ function JournalCard({
             <p className="text-body-sm text-fg-muted">{entry.date}</p>
           </div>
         </div>
-        <Button
-          variant="primary"
-          appearance="stroke"
-          size="small"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          aria-controls={`entry-${entry.id}-details`}
-          trailingIcon={
-            <ChevronDown className={open ? "rotate-180" : undefined} />
-          }
-        >
-          {open
-            ? dj?.hideDetails || "Hide details"
-            : dj?.viewDetails || "View details"}
-        </Button>
       </div>
 
       <div className="mt-stack-md h-px bg-line" />
@@ -230,12 +215,26 @@ function JournalCard({
           {entry.details}
         </p>
       )}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls={`entry-${entry.id}-details`}
+        className="mt-stack-sm cursor-pointer text-label-md text-fg-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {open
+          ? isEs
+            ? "Ver menos"
+            : "See less"
+          : isEs
+            ? "Ver más"
+            : "See more"}
+      </button>
     </Card>
   );
 }
 
 export default function DialysisJournalPage() {
-  const { user } = useAuth();
   const { language, dictionary } = useLanguage();
   const dj = dictionary?.dialysisJournal;
   const [modalOpen, setModalOpen] = useState(false);
@@ -268,135 +267,132 @@ export default function DialysisJournalPage() {
     setAdded((prev) => [newEntry, ...prev]);
   };
 
-  const greeting = (() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return dj?.greetingMorning || "Good morning";
-    if (hour < 18) return dj?.greetingAfternoon || "Good afternoon";
-    return dj?.greetingEvening || "Good evening";
-  })();
-
-  const userName = user?.name ? `, ${user.name}` : ", Sarah";
-
   return (
-    <div className="space-y-stack-xl">
-      <PersonalLogDisclaimer />
+    <NoticeRailLayout
+      notices={
+        <>
+          <PersonalLogDisclaimer spaced={false} stacked />
 
-      {/* Standing Private Journal Notice per Jonlg09 Medical Safety Policy */}
-      <aside
-        role="note"
-        aria-label="Journal Privacy Notice"
-        className="rounded-card border border-primary-soft-line bg-surface p-inset-md shadow-xs"
-      >
-        <div className="flex items-start gap-inline-md">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary-fg">
-            <Lock className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="text-label-md font-semibold text-fg">
-                {language === "ES"
-                  ? "Su diario es privado"
-                  : "Your Journal is Private"}
-              </p>
-              <Badge tone="neutral" variant="soft">
-                {language === "ES" ? "No monitoreado" : "Unmonitored"}
-              </Badge>
-            </div>
-            <p className="text-body-sm text-fg-secondary">
-              {language === "ES" ? (
-                <>
-                  <strong className="font-semibold text-fg">
-                    Su diario es privado y no se monitorea para emergencias
-                    médicas.
-                  </strong>{" "}
-                  Si necesita ayuda inmediata,{" "}
-                  <strong className="font-semibold text-danger-fg">
-                    no use su diario para comunicarse con su equipo de atención
-                    médica
-                  </strong>
-                  ; llame al 911 o acuda a urgencias.
-                </>
-              ) : (
-                <>
-                  <strong className="font-semibold text-fg">
-                    Your journal is private and is not monitored for medical
-                    emergencies.
-                  </strong>{" "}
-                  If you need immediate help,{" "}
-                  <strong className="font-semibold text-danger-fg">
-                    do not use your journal to contact your care team
-                  </strong>
-                  . Please call 911 or contact your clinic or emergency care
-                  provider directly.
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-      </aside>
-
-      <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-heading-1 text-fg">
-            {greeting}
-            {userName}
-          </h1>
-          <p className="mt-stack-xs text-body-lg text-fg-secondary">
-            {dj?.subtitle || "Your personal journal for each dialysis day"}
-          </p>
-        </div>
-        <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
-          {dj?.newEntryBtn || "New Entry"}
-        </Button>
-      </header>
-
-      {/* Journal Purpose & Logging Guidance Card */}
-      <Card as="section" className="border-primary-soft-line bg-primary-soft">
-        <div className="flex items-start gap-inline-lg">
-          <span
-            aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-solid text-primary-on-solid"
+          {/* Standing Private Journal Notice per Jonlg09 Medical Safety Policy */}
+          <aside
+            role="note"
+            aria-label="Journal Privacy Notice"
+            className="rounded-card border border-primary-soft-line bg-surface p-inset-md shadow-xs"
           >
-            <BookOpen className="h-icon-small w-icon-small" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-heading-3 text-fg">
-              {dj?.introCard?.title || "My Dialysis Journal"}
-            </h2>
-            <p className="mt-stack-xs text-label-lg text-fg-brand">
-              {dj?.introCard?.subtitle ||
-                "A private space to reflect on your dialysis journey."}
-            </p>
-            <p className="mt-stack-md measure text-body-md text-fg-secondary">
-              {dj?.introCard?.body ||
-                "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
-            </p>
-            <Card padding="small" className="mt-stack-lg">
-              <p className="text-body-sm text-fg-secondary">
-                <span className="font-semibold text-fg">
-                  {dj?.introCard?.promptsPrefix || "You can write about:"}
-                </span>{" "}
-                <span>
-                  {dj?.introCard?.prompts ||
-                    "how you felt today • your energy level • your dialysis experience • changes in your routine • good or difficult days • personal goals • milestones and progress"}
-                </span>
-              </p>
-            </Card>
+            <div className="flex flex-col gap-inline-md">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary-fg">
+                <Lock className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-label-md font-semibold text-fg">
+                    {language === "ES"
+                      ? "Su diario es privado"
+                      : "Your Journal is Private"}
+                  </p>
+                  <Badge tone="neutral" variant="soft">
+                    {language === "ES" ? "No monitoreado" : "Unmonitored"}
+                  </Badge>
+                </div>
+                <p className="text-justify text-body-sm text-fg-secondary">
+                  {language === "ES" ? (
+                    <>
+                      <strong className="font-semibold text-fg">
+                        Su diario es privado y no se monitorea para emergencias
+                        médicas.
+                      </strong>{" "}
+                      Si necesita ayuda inmediata,{" "}
+                      <strong className="font-semibold text-danger-fg">
+                        no use su diario para comunicarse con su equipo de
+                        atención médica
+                      </strong>
+                      ; llame al 911 o acuda a urgencias.
+                    </>
+                  ) : (
+                    <>
+                      <strong className="font-semibold text-fg">
+                        Your journal is private and is not monitored for medical
+                        emergencies.
+                      </strong>{" "}
+                      If you need immediate help,{" "}
+                      <strong className="font-semibold text-danger-fg">
+                        do not use your journal to contact your care team
+                      </strong>
+                      . Please call 911 or contact your clinic or emergency care
+                      provider directly.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </aside>
+          <Card
+            as="section"
+            className="border-primary-soft-line bg-primary-soft"
+          >
+            <div className="flex flex-col gap-inline-md">
+              <span
+                aria-hidden="true"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-solid text-primary-on-solid"
+              >
+                <BookOpen className="h-icon-small w-icon-small" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-heading-4 text-fg">
+                  {dj?.introCard?.title || "My Dialysis Journal"}
+                </h2>
+                <p className="mt-stack-xs text-label-lg text-fg-brand">
+                  {dj?.introCard?.subtitle ||
+                    "A private space to reflect on your dialysis journey."}
+                </p>
+                <p className="mt-stack-md text-justify text-body-md text-fg-secondary">
+                  {dj?.introCard?.body ||
+                    "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
+                </p>
+                <Card padding="small" className="mt-stack-lg">
+                  <p className="text-justify text-body-sm text-fg-secondary">
+                    <span className="font-semibold text-fg">
+                      {dj?.introCard?.promptsPrefix || "You can write about:"}
+                    </span>{" "}
+                    <span>
+                      {dj?.introCard?.prompts ||
+                        "how you felt today • your energy level • your dialysis experience • changes in your routine • good or difficult days • personal goals • milestones and progress"}
+                    </span>
+                  </p>
+                </Card>
+              </div>
+            </div>
+          </Card>
+        </>
+      }
+    >
+      <div className="space-y-stack-xl">
+        <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {/* The greeting belongs to the dashboard; here the page is
+              named for what it is. */}
+            <h1 className="text-heading-1 text-fg">
+              {dj?.pageTitle || "Dialysis Journal"}
+            </h1>
           </div>
-        </div>
-      </Card>
+          <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
+            {dj?.newEntryBtn || "New Entry"}
+          </Button>
+        </header>
 
-      <section className="space-y-stack-lg">
-        {entries.map((entry) => (
-          <JournalCard key={entry.id} entry={entry} />
-        ))}
-      </section>
+        {/* Journal Purpose & Logging Guidance Card */}
+        <section className="space-y-stack-lg">
+          {entries.map((entry) => (
+            <JournalCard key={entry.id} entry={entry} />
+          ))}
+        </section>
 
-      <NewEntryModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleAddEntry}
-      />
-    </div>
+        <NewEntryModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSave={handleAddEntry}
+        />
+      </div>
+    </NoticeRailLayout>
   );
 }

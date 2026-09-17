@@ -3,6 +3,7 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * Standing notice shown at the top of every Personal Log page.
@@ -10,21 +11,40 @@ import { useLanguage } from "@/context/LanguageContext";
  * Rendered from app/dashboard/personal-log/layout.tsx so it appears once,
  * above the content, on every log and its add/view sub-pages.
  */
-export default function PersonalLogDisclaimer() {
+export default function PersonalLogDisclaimer({
+  spaced = true,
+  stacked = false,
+  className,
+}: {
+  /** Off when the notice sits in a grid that handles its own spacing. */
+  spaced?: boolean;
+  /** Icon above justified text, for a narrow side column. */
+  stacked?: boolean;
+  className?: string;
+} = {}) {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
   return (
     <aside
       role="note"
-      className="mb-stack-xl rounded-card border border-warning-line bg-warning-surface p-inset-md"
+      className={cn(
+        spaced && "mb-stack-xl",
+        "rounded-card border border-warning-line bg-warning-surface p-inset-md",
+        className,
+      )}
     >
-      <div className="flex gap-inline-md">
+      <div className={cn("flex gap-inline-md", stacked && "flex-col")}>
         <AlertTriangle
           aria-hidden="true"
-          className="mt-0.5 h-5 w-5 shrink-0 text-warning"
+          className={cn("h-5 w-5 shrink-0 text-warning", !stacked && "mt-0.5")}
         />
-        <p className="measure text-body-sm text-fg-secondary">
+        <p
+          className={cn(
+            "min-w-0 flex-1 text-body-sm text-fg-secondary",
+            stacked && "text-justify",
+          )}
+        >
           {isEs ? (
             <>
               NephroReach es una herramienta educativa de registro y

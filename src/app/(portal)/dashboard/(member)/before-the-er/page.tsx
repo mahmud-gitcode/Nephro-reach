@@ -179,7 +179,7 @@ export default function BeforeTheErPage() {
       : null;
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[900px] space-y-4">
       {/* Disclaimer Box */}
       {/* Kept as a section with a real <h1> rather than an <Alert>: this is
           the page heading, not a notice that appeared in response to
@@ -194,7 +194,7 @@ export default function BeforeTheErPage() {
             <h1 className="text-heading-5 text-fg">
               {t("beforeTheEr.disclaimerTitle")}
             </h1>
-            <p className="mt-stack-sm measure text-body-md text-fg-secondary">
+            <p className="mt-stack-sm text-body-md text-fg-secondary">
               {t("beforeTheEr.disclaimerText")}
             </p>
           </div>

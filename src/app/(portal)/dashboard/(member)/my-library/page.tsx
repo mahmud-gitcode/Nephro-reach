@@ -15,11 +15,11 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
 import {
   filterResources,
-  formatDuration,
   sortByNewest,
   type LibraryFilter,
 } from "@/features/library/library.rules";
 import { useLibrary } from "@/features/library/useLibrary";
+import { kindLabel, metaLabel } from "@/features/library/member/RelatedLibrary";
 import type {
   LibraryKind,
   LibraryResource,
@@ -50,23 +50,6 @@ export const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   article: BookOpen,
 };
 
-function kindLabel(kind: LibraryKind, isEs: boolean): string {
-  if (kind === "document") return isEs ? "Documento" : "Document";
-  if (kind === "article") return isEs ? "Artículo" : "Article";
-  return isEs ? "Video" : "Video";
-}
-
-/** Runtime for a video, page count for a document, read time for an article. */
-function metaLabel(resource: LibraryResource, isEs: boolean): string {
-  if (resource.kind === "video" && resource.durationSeconds)
-    return formatDuration(resource.durationSeconds);
-  if (resource.kind === "document")
-    return (isEs ? resource.fileMetaEs : resource.fileMetaEn) || "PDF";
-  if (resource.kind === "article" && resource.readMinutes)
-    return `${resource.readMinutes} ${isEs ? "min de lectura" : "min read"}`;
-  return "";
-}
-
 function ResourceCard({
   resource,
   saved,
@@ -90,11 +73,6 @@ function ResourceCard({
           className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         />
-        <span className="absolute top-2 left-2 inline-flex h-7 items-center gap-inline-xs rounded-control-small bg-surface-inverse px-inset-xs text-label-sm text-fg-inverse">
-          <KindIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-          {kindLabel(resource.kind, isEs)}
-        </span>
-
         {/* Outside the title link on purpose: saving is a second action on
             the card, and nesting it inside the link would swallow the tap. */}
         <button
@@ -137,7 +115,15 @@ function ResourceCard({
 
       <div className="mt-stack-lg flex flex-wrap items-center justify-between gap-inline-md text-label-sm text-fg-muted">
         <span>{categoryLabel(resource.category, isEs)}</span>
-        <span>{metaLabel(resource, isEs)}</span>
+        {/* What it is, then how long: "Video · 1:35 min". */}
+        <span className="inline-flex items-center gap-inline-xs">
+          <KindIcon
+            aria-hidden="true"
+            className="h-3.5 w-3.5 shrink-0 text-fg-brand"
+          />
+          {kindLabel(resource.kind, isEs)}
+          {metaLabel(resource, isEs) ? ` · ${metaLabel(resource, isEs)}` : ""}
+        </span>
       </div>
     </div>
   );

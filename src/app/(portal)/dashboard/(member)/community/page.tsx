@@ -236,7 +236,7 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-7rem)]">
+    <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
       {/* Category Tabs — six separate tab stops became one, with arrow
           keys moving between categories. */}
       <div className="mb-stack-lg overflow-x-auto">
@@ -320,7 +320,7 @@ export default function CommunityPage() {
                 </div>
               </div>
 
-              <div className="mt-stack-md measure text-body-sm text-fg">
+              <div className="mt-stack-md text-body-sm text-fg">
                 {post.paragraphs && post.paragraphs.length > 0 ? (
                   post.paragraphs.map((p: string, pIdx: number) => (
                     <p key={pIdx} className={pIdx > 0 ? "mt-stack-lg" : ""}>

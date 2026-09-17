@@ -228,10 +228,6 @@ export default function AddBloodResultsPage() {
           <h1 className="mt-stack-lg text-heading-1 text-fg">
             Add Blood Results
           </h1>
-          <p className="mt-stack-xs measure text-body-lg text-fg-secondary">
-            Enter your lab results to track your kidney health trends and
-            monitor treatment efficacy.
-          </p>
         </div>
         <div className="flex flex-wrap gap-inline-md">
           <Button

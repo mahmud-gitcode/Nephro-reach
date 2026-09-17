@@ -84,11 +84,6 @@ export default function UserReviewsPage() {
         <h1 className="text-heading-1 text-fg">
           {isEs ? "Dejar una Reseña" : "Leave a Review"}
         </h1>
-        <p className="mt-stack-xs text-body-md text-fg-muted">
-          {isEs
-            ? "Comparta su experiencia con NephroReach."
-            : "Share your experience with NephroReach."}
-        </p>
       </header>
 
       {saveError ? (

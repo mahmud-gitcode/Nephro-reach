@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Apple, Droplet, Plus, Target, Utensils } from "lucide-react";
+import React, { useState } from "react";
+import { Apple, Droplet, Dumbbell, Plus, Target, Utensils } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { Alert, AsyncSection, Skeleton, TabPanel, Tabs } from "@/components/ui";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   KeyMetricCard,
@@ -20,27 +21,56 @@ import {
   AddWaterModal,
   GoalsModal,
 } from "@/features/personal-log/nutrition/NutritionModals";
-import {
-  DEFAULT_GOALS,
-  INITIAL_FLUID_ML,
-  INITIAL_FOODS,
-  NUTRIENT_ORDER,
-} from "@/features/personal-log/nutrition/nutrition.constants";
+import { NutritionDayPicker } from "@/features/personal-log/nutrition/NutritionDayPicker";
+import { NUTRIENT_ORDER } from "@/features/personal-log/nutrition/nutrition.constants";
 import { formatNumber } from "@/features/personal-log/nutrition/nutrition.format";
-import type {
-  FoodEntry,
-  Goals,
-  MealKey,
-  NutrientKey,
-} from "@/features/personal-log/nutrition/nutrition.types";
+import type { MealKey } from "@/features/personal-log/nutrition/nutrition.types";
+import { useNutritionLog } from "@/features/personal-log/nutrition/useNutritionLog";
+import {
+  relativeDayLabel,
+  todayIso,
+} from "@/features/personal-log/check-in/checkIn.rules";
+import {
+  ExerciseCard,
+  ExerciseModal,
+} from "@/features/personal-log/exercise/ExerciseLog";
+import { useExerciseLog } from "@/features/personal-log/exercise/useExerciseLog";
+import type { ExerciseEntry } from "@/features/personal-log/exercise/exercise.types";
 export default function NutritionPage() {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
   const isEs = language === "ES";
 
-  const [foods, setFoods] = useState<FoodEntry[]>(INITIAL_FOODS);
-  const [goals, setGoals] = useState<Goals>(DEFAULT_GOALS);
-  const [fluidMl, setFluidMl] = useState(INITIAL_FLUID_ML);
+  /* The day every card below is showing. Starts on today; the picker moves
+     it back to fill in a day that was missed. */
+  const [date, setDate] = useState(todayIso);
+  const isToday = date === todayIso();
+  const dayLabel = relativeDayLabel(date, isEs);
+
+  const {
+    foods,
+    totals,
+    fluidMl,
+    goals,
+    addFood,
+    removeFood,
+    addWater,
+    saveGoals,
+    isPending,
+    error,
+    refetch,
+    saveError,
+    dismissSaveError,
+  } = useNutritionLog(date);
+  const exercise = useExerciseLog(date);
+
+  /* `undefined` is closed, `null` is a new note, an entry is an edit. */
+  const [exerciseOpen, setExerciseOpen] = useState<
+    ExerciseEntry | null | undefined
+  >(undefined);
+
+  type LogTab = "food" | "exercise";
+  const [tab, setTab] = useState<LogTab>("food");
 
   const [addFoodMeal, setAddFoodMeal] = useState<MealKey | null>(null);
   const [isGoalsOpen, setIsGoalsOpen] = useState(false);
@@ -52,35 +82,6 @@ export default function NutritionPage() {
     dinner: n?.mealsTable?.mealNames?.dinner || "Dinner",
     // Not in the dictionary yet, so translated inline
     snack: isEs ? "Merienda" : "Snack",
-  };
-
-  // Everything on the page is derived from the logged foods
-  const totals = useMemo(() => {
-    const empty: Record<NutrientKey, number> = {
-      sodium: 0,
-      potassium: 0,
-      phosphorus: 0,
-      protein: 0,
-      calories: 0,
-      carbs: 0,
-      fats: 0,
-      fiber: 0,
-    };
-    return foods.reduce((sum, food) => {
-      NUTRIENT_ORDER.forEach((key) => {
-        sum[key] += food[key];
-      });
-      return sum;
-    }, empty);
-  }, [foods]);
-
-  const handleAddFood = (food: Omit<FoodEntry, "id">) => {
-    setFoods((prev) => [...prev, { ...food, id: `food-${Date.now()}` }]);
-    setAddFoodMeal(null);
-  };
-
-  const handleRemoveFood = (id: string) => {
-    setFoods((prev) => prev.filter((food) => food.id !== id));
   };
 
   const mainMealsLogged = (
@@ -150,55 +151,145 @@ export default function NutritionPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[32px] leading-none font-medium text-fg">
-            {n?.header?.greeting || "Good morning, Sarah"}
+            {isEs ? "Nutrición" : "Nutrition"}
           </h1>
-          <p className="mt-1 text-lg leading-7 font-medium tracking-[0.09px] text-fg-secondary">
-            {n?.header?.subtitle ||
-              "Track your daily food and nutrients to support your kidney health."}
-          </p>
         </div>
+        {/* The main action follows the tab, so it always adds to what the
+            member is looking at. */}
         <button
           type="button"
-          onClick={() => setAddFoodMeal("breakfast")}
+          onClick={() =>
+            tab === "food" ? setAddFoodMeal("breakfast") : setExerciseOpen(null)
+          }
           className="flex h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover"
         >
           <Plus className="h-5 w-5" />
-          {n?.header?.logMeal || "Log Meal"}
+          {tab === "food"
+            ? n?.header?.logMeal || "Log Meal"
+            : isEs
+              ? "Registrar Actividad"
+              : "Log Activity"}
         </button>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {keyMetrics.map((metric) => (
-          <KeyMetricCard key={metric.title} metric={metric} />
-        ))}
-      </section>
+      <NutritionDayPicker date={date} onChange={setDate} />
 
-      <NutrientOverview totals={totals} goals={goals} />
-
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <MealTable
-          foods={foods}
-          mealLabels={mealLabels}
-          onAddFood={(meal) => setAddFoodMeal(meal ?? "breakfast")}
-          onRemoveFood={handleRemoveFood}
+      <div className="overflow-x-auto">
+        <Tabs<LogTab>
+          label={isEs ? "Secciones del registro" : "Log sections"}
+          value={tab}
+          onChange={setTab}
+          items={[
+            {
+              id: "food",
+              label: isEs ? "Alimentos y Nutrición" : "Food & Nutrition",
+              icon: <Utensils aria-hidden="true" />,
+            },
+            {
+              id: "exercise",
+              label: `${isEs ? "Ejercicio" : "Exercise"}${
+                exercise.entries.length > 0
+                  ? ` (${exercise.entries.length})`
+                  : ""
+              }`,
+              icon: <Dumbbell aria-hidden="true" />,
+            },
+          ]}
         />
-        <div className="space-y-6">
-          <FluidTracker
-            fluidMl={fluidMl}
-            goalMl={goals.fluid}
-            onAddWater={() => setIsWaterOpen(true)}
+      </div>
+
+      {saveError || exercise.saveError ? (
+        <Alert
+          tone="danger"
+          title={isEs ? "No se guardó tu cambio" : "Your change did not save"}
+          onDismiss={() => {
+            dismissSaveError();
+            exercise.dismissSaveError();
+          }}
+        >
+          {isEs
+            ? "Inténtalo de nuevo. Si sigue pasando, tu navegador puede estar bloqueando el almacenamiento."
+            : "Please try again. If it keeps happening, your browser may be blocking saved data."}
+        </Alert>
+      ) : null}
+
+      <AsyncSection
+        pending={isPending || exercise.isPending}
+        error={error ?? exercise.error}
+        onRetry={() => {
+          refetch();
+          exercise.refetch();
+        }}
+        errorTitle={
+          isEs
+            ? "Tu registro de nutrición no se cargó"
+            : "Your nutrition log did not load"
+        }
+        skeleton={
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} height={140} />
+              ))}
+            </div>
+            <Skeleton height={220} />
+            <Skeleton height={320} />
+          </div>
+        }
+      >
+        <TabPanel id="food" value={tab} className="space-y-6">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {keyMetrics.map((metric) => (
+              <KeyMetricCard key={metric.title} metric={metric} />
+            ))}
+          </section>
+
+          <NutrientOverview totals={totals} goals={goals} />
+
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="min-w-0">
+              <MealTable
+                foods={foods}
+                dayLabel={dayLabel}
+                isToday={isToday}
+                mealLabels={mealLabels}
+                onAddFood={(meal) => setAddFoodMeal(meal ?? "breakfast")}
+                onRemoveFood={removeFood}
+              />
+            </div>
+            <div className="space-y-6">
+              <FluidTracker
+                fluidMl={fluidMl}
+                goalMl={goals.fluid}
+                onAddWater={() => setIsWaterOpen(true)}
+              />
+              <ResourceCard />
+              <TipsCard />
+            </div>
+          </section>
+        </TabPanel>
+
+        <TabPanel id="exercise" value={tab}>
+          <ExerciseCard
+            entries={exercise.entries}
+            isToday={isToday}
+            onAdd={() => setExerciseOpen(null)}
+            onEdit={(entry) => setExerciseOpen(entry)}
+            onDelete={(entry) => exercise.deleteEntry(entry.id)}
           />
-          <ResourceCard />
-          <TipsCard />
-        </div>
-      </section>
+        </TabPanel>
+      </AsyncSection>
 
       {addFoodMeal ? (
         <AddFoodModal
           defaultMeal={addFoodMeal}
+          dayLabel={dayLabel}
           mealLabels={mealLabels}
           onClose={() => setAddFoodMeal(null)}
-          onSave={handleAddFood}
+          onSave={(food) => {
+            addFood(food);
+            setAddFoodMeal(null);
+          }}
         />
       ) : null}
 
@@ -207,7 +298,7 @@ export default function NutritionPage() {
           goals={goals}
           onClose={() => setIsGoalsOpen(false)}
           onSave={(next) => {
-            setGoals(next);
+            saveGoals(next);
             setIsGoalsOpen(false);
           }}
         />
@@ -215,10 +306,27 @@ export default function NutritionPage() {
 
       {isWaterOpen ? (
         <AddWaterModal
+          dayLabel={dayLabel}
           onClose={() => setIsWaterOpen(false)}
           onSave={(ml) => {
-            setFluidMl((prev) => prev + ml);
+            addWater(ml);
             setIsWaterOpen(false);
+          }}
+        />
+      ) : null}
+
+      {exerciseOpen !== undefined ? (
+        <ExerciseModal
+          key={exerciseOpen?.id ?? "new"}
+          entry={exerciseOpen ?? undefined}
+          date={date}
+          dayLabel={
+            exerciseOpen ? relativeDayLabel(exerciseOpen.date, isEs) : dayLabel
+          }
+          onClose={() => setExerciseOpen(undefined)}
+          onSave={(drafts) => {
+            exercise.saveEntries(drafts, exerciseOpen?.id);
+            setExerciseOpen(undefined);
           }}
         />
       ) : null}

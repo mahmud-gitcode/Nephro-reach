@@ -148,12 +148,11 @@ function RelatedRow({ episodes }: { episodes: TableTalkEpisode[] }) {
             <p className="mt-stack-sm text-label-md text-fg">
               {isEs ? episode.titleEs || episode.titleEn : episode.titleEn}
             </p>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              {episode.speakers[0]?.name}
-              {episode.durationSeconds
-                ? ` · ${formatDuration(episode.durationSeconds)}`
-                : ""}
-            </p>
+            {episode.durationSeconds ? (
+              <p className="mt-stack-xs text-body-sm text-fg-muted">
+                {formatDuration(episode.durationSeconds)}
+              </p>
+            ) : null}
           </Link>
         ))}
       </div>
@@ -182,9 +181,10 @@ export default function EpisodePage() {
   const saved = isFavorite(slug);
 
   return (
-    /* A reading column: an episode page is a video and prose, and prose past
-       ~900px is hard to track from one line to the next. */
-    <div className="mx-auto w-full max-w-[900px] space-y-stack-lg">
+    /* The video and title on the left; who is speaking, the transcript and
+       the disclaimer in a side column. On a phone the side column follows
+       the video, so the video is still the first thing on the page. */
+    <div className="mx-auto w-full max-w-[1240px] space-y-stack-lg">
       <Link
         href="/dashboard/table-talk"
         className={buttonStyles({
@@ -197,141 +197,155 @@ export default function EpisodePage() {
         {isEs ? "Volver a Table Talk" : "Back to Table Talk"}
       </Link>
 
-      <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
-        /* A slug that is not on the shelf is empty, not broken — the episode
+      <div className="grid grid-cols-1 items-start gap-stack-lg lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          <AsyncSection
+            pending={isPending}
+            error={error}
+            onRetry={refetch}
+            /* A slug that is not on the shelf is empty, not broken — the episode
            may simply have been unpublished. */
-        isEmpty={!episode}
-        errorTitle={
-          isEs ? "Este episodio no se cargó" : "This episode did not load"
-        }
-        skeleton={
-          <Card className="flex flex-col gap-stack-md">
-            <Skeleton height={320} />
-            <Skeleton variant="text" width="60%" height={28} />
-            <Skeleton variant="text" />
-          </Card>
-        }
-        empty={
-          <EmptyState
-            icon={<Mic aria-hidden="true" />}
-            title={
-              isEs
-                ? "No encontramos ese episodio"
-                : "We could not find that episode"
+            isEmpty={!episode}
+            errorTitle={
+              isEs ? "Este episodio no se cargó" : "This episode did not load"
             }
-            description={
-              isEs
-                ? "Puede que ya no esté publicado. Vuelve a Table Talk para ver los demás."
-                : "It may no longer be published. Head back to Table Talk to see the rest."
-            }
-            action={
-              <Link href="/dashboard/table-talk" className={buttonStyles()}>
-                {isEs ? "Ir a Table Talk" : "Go to Table Talk"}
-              </Link>
-            }
-          />
-        }
-      >
-        {episode ? (
-          <div className="space-y-stack-lg">
-            <Player episode={episode} />
-
-            <header className="space-y-stack-sm">
-              <div className="flex flex-wrap items-start justify-between gap-inline-lg">
-                <h1 className="text-heading-2 text-fg">
-                  {isEs ? episode.titleEs || episode.titleEn : episode.titleEn}
-                </h1>
-                <Button
-                  size="small"
-                  variant="neutral"
-                  appearance="fill-stroke"
-                  aria-pressed={saved}
-                  onClick={() => toggleFavorite(episode.slug)}
-                >
-                  <Heart
-                    aria-hidden="true"
-                    className={
-                      saved
-                        ? "size-4 shrink-0 fill-current text-fg-brand"
-                        : "size-4 shrink-0"
-                    }
-                  />
-                  {saved
-                    ? isEs
-                      ? "Guardado"
-                      : "Saved"
-                    : isEs
-                      ? "Guardar"
-                      : "Save"}
-                </Button>
-              </div>
-
-              <p className="text-body-md text-fg-muted">
-                {isEs
-                  ? episode.descriptionEs || episode.descriptionEn
-                  : episode.descriptionEn}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-inline-md">
-                {episode.categoryIds.map((id) => (
-                  <Badge key={id} tone="neutral">
-                    {categoryLabel(categories, id, isEs)}
-                  </Badge>
-                ))}
-                {episode.captions.en || episode.captions.es ? (
-                  <Badge tone="info">{isEs ? "Subtítulos" : "Captions"}</Badge>
-                ) : null}
-                {hasSpanish(episode) ? (
-                  <Badge tone="info">
-                    {isEs ? "En español" : "Spanish available"}
-                  </Badge>
-                ) : null}
-                {episode.isLiveEvent ? (
-                  <Badge tone="accent">
-                    {isEs ? "Evento en vivo" : "Live event"}
-                  </Badge>
-                ) : null}
-              </div>
-
-              <p className="text-body-sm text-fg-muted">
-                {[
-                  episode.durationSeconds
-                    ? formatDuration(episode.durationSeconds)
-                    : null,
-                  formatDate(episode.publishedAt, isEs),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </header>
-
-            {episode.speakers.length > 0 ? (
-              <Card as="section" className="space-y-stack-sm">
-                <h2 className="text-heading-5 text-fg">
-                  {isEs ? "En este episodio" : "In this episode"}
-                </h2>
-                <ul className="space-y-stack-xs">
-                  {episode.speakers.map((speaker) => (
-                    <li key={speaker.id} className="text-body-md text-fg">
-                      {speaker.name}
-                      <span className="text-fg-muted"> · {speaker.role}</span>
-                    </li>
-                  ))}
-                </ul>
+            skeleton={
+              <Card className="flex flex-col gap-stack-md">
+                <Skeleton height={320} />
+                <Skeleton variant="text" width="60%" height={28} />
+                <Skeleton variant="text" />
               </Card>
+            }
+            empty={
+              <EmptyState
+                icon={<Mic aria-hidden="true" />}
+                title={
+                  isEs
+                    ? "No encontramos ese episodio"
+                    : "We could not find that episode"
+                }
+                description={
+                  isEs
+                    ? "Puede que ya no esté publicado. Vuelve a Table Talk para ver los demás."
+                    : "It may no longer be published. Head back to Table Talk to see the rest."
+                }
+                action={
+                  <Link href="/dashboard/table-talk" className={buttonStyles()}>
+                    {isEs ? "Ir a Table Talk" : "Go to Table Talk"}
+                  </Link>
+                }
+              />
+            }
+          >
+            {episode ? (
+              <div className="space-y-stack-lg">
+                <Player episode={episode} />
+
+                <header className="space-y-stack-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-inline-lg">
+                    <h1 className="text-heading-2 text-fg">
+                      {isEs
+                        ? episode.titleEs || episode.titleEn
+                        : episode.titleEn}
+                    </h1>
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      aria-pressed={saved}
+                      onClick={() => toggleFavorite(episode.slug)}
+                    >
+                      <Heart
+                        aria-hidden="true"
+                        className={
+                          saved
+                            ? "size-4 shrink-0 fill-current text-fg-brand"
+                            : "size-4 shrink-0"
+                        }
+                      />
+                      {saved
+                        ? isEs
+                          ? "Guardado"
+                          : "Saved"
+                        : isEs
+                          ? "Guardar"
+                          : "Save"}
+                    </Button>
+                  </div>
+
+                  <p className="text-body-sm text-fg-muted">
+                    {[
+                      episode.durationSeconds
+                        ? formatDuration(episode.durationSeconds)
+                        : null,
+                      formatDate(episode.publishedAt, isEs),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-inline-md">
+                    {episode.categoryIds.map((id) => (
+                      <Badge key={id} tone="neutral">
+                        {categoryLabel(categories, id, isEs)}
+                      </Badge>
+                    ))}
+                    {episode.captions.en || episode.captions.es ? (
+                      <Badge tone="info">
+                        {isEs ? "Subtítulos" : "Captions"}
+                      </Badge>
+                    ) : null}
+                    {hasSpanish(episode) ? (
+                      <Badge tone="info">
+                        {isEs ? "En español" : "Spanish available"}
+                      </Badge>
+                    ) : null}
+                    {episode.isLiveEvent ? (
+                      <Badge tone="accent">
+                        {isEs ? "Evento en vivo" : "Live event"}
+                      </Badge>
+                    ) : null}
+                  </div>
+
+                  <p className="text-body-md text-fg-muted">
+                    {isEs
+                      ? episode.descriptionEs || episode.descriptionEn
+                      : episode.descriptionEn}
+                  </p>
+                </header>
+
+                <RelatedRow episodes={getRelated(episode)} />
+              </div>
             ) : null}
+          </AsyncSection>
+        </div>
 
-            <Transcript episode={episode} />
+        <aside className="space-y-stack-lg">
+          {episode ? (
+            <>
+              {episode.speakers.length > 0 ? (
+                <Card as="section" className="space-y-stack-sm">
+                  <h2 className="text-heading-5 text-fg">
+                    {isEs ? "En este episodio" : "In this episode"}
+                  </h2>
+                  <ul className="space-y-stack-xs">
+                    {episode.speakers.map((speaker) => (
+                      <li key={speaker.id} className="text-body-md text-fg">
+                        {speaker.name}
+                        <span className="text-fg-muted"> · {speaker.role}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
 
-            <RelatedRow episodes={getRelated(episode)} />
-          </div>
-        ) : null}
-      </AsyncSection>
+              <Transcript episode={episode} />
+            </>
+          ) : null}
 
-      <TableTalkDisclaimer />
+          <TableTalkDisclaimer />
+        </aside>
+      </div>
     </div>
   );
 }

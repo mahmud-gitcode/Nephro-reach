@@ -21,7 +21,7 @@ export function AboutTableTalk() {
 
   return (
     <Card as="section" aria-labelledby="about-table-talk">
-      <div className="flex items-start gap-inline-md">
+      <div className="flex flex-col gap-inline-md">
         <span
           aria-hidden="true"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
@@ -34,7 +34,7 @@ export function AboutTableTalk() {
             {isEs ? "Sobre Dialysis Table Talk" : "About Dialysis Table Talk"}
           </h2>
 
-          <p className="text-body-sm text-fg-secondary">
+          <p className="text-justify text-body-sm text-fg-secondary">
             {isEs
               ? "Conversaciones cortas, reales y honestas sobre la vida con enfermedad renal. Escucha a proveedores, dietistas, trabajadores sociales, pacientes y cuidadores hablar de los temas que más te importan."
               : "Short, real, and honest conversations about life with kidney disease. Hear from providers, dietitians, social workers, patients, and caregivers on the topics that matter most to you."}
