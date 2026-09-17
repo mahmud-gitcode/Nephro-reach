@@ -21,7 +21,7 @@ export function FluidIntakeTrend() {
       : ["May 1", "May 2", "May 3", "May 4", "May 5", "May 6"];
 
   return (
-    <section className="h-full rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-3.5">
+    <section className="h-full rounded-xl border border-line bg-[var(--color-gray-50)] p-3.5">
       <div className="flex items-center gap-inline-sm">
         <h2 className="text-heading-4 text-fg">
           {w?.fluidIntakeTrend?.title || "Fluid Intake Trend"}

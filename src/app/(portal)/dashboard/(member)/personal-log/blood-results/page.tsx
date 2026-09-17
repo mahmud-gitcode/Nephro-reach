@@ -133,7 +133,7 @@ function TestHistoryCard() {
     <Card as="section">
       <h2 className="text-heading-4 text-fg">Test History</h2>
 
-      <Card padding="none" className="mt-stack-md overflow-hidden">
+      <Card padding="none" className="mt-6 overflow-hidden">
         <Table minWidth={420}>
           <TableHead>
             <TableRow>

@@ -50,14 +50,14 @@ export function UrinaryOutput() {
   };
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-[var(--color-gray-200)] bg-surface p-[17px]">
+    <section className="flex h-full flex-col rounded-xl border border-line bg-surface p-[17px]">
       <h2 className="text-heading-4 text-fg">
         {w?.urinaryOutput?.title || "Urinary Output"}{" "}
         <span className="text-sm font-medium text-fg-muted">
           {w?.urinaryOutput?.subtitle || "(24 Hours)"}
         </span>
       </h2>
-      <div className="mt-3.5 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
+      <div className="mt-6 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
         <table className="w-full text-left text-sm">
           <thead className="bg-[var(--color-gray-50)]">
             <tr>

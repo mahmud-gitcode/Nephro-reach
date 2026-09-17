@@ -1,18 +1,26 @@
 "use client";
 
 import React, { useState, Suspense } from "react";
-import { Clock, Hourglass, Settings, Undo2, Redo2, Eraser } from "lucide-react";
+import {
+  Bell,
+  Clock,
+  Hourglass,
+  Settings,
+  Undo2,
+  Redo2,
+  Eraser,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   ALL_WEEKDAYS,
   DEFAULT_DURATION_MINUTES,
   DEFAULT_CHAIR_TIME,
-  DEFAULT_REMINDER_LEAD_MINUTES,
   durationFor,
   WEEKDAY_ES,
   formatDuration,
   formatFullDate,
   formatReminder,
+  reminderTimeFor,
   fromDateKey,
   appendSchedulePeriod,
   buildSchedulePeriod,
@@ -51,19 +59,21 @@ function DialysisManagementDashboard() {
   // Section 2 State: Dialysis Schedule
   // Dated schedule history. The last period is the one currently in force.
   const [schedulePeriods, setSchedulePeriods] = useState<SchedulePeriod[]>([
+    /* A typical week: Monday, Wednesday and Friday, a 4-hour run in the
+       chair at 5:30 AM, and a reminder at 4:00 AM (90 minutes before). */
     {
       fromKey: "0000-01-01",
-      days: ["Tuesday", "Thursday", "Saturday"],
+      days: ["Monday", "Wednesday", "Friday"],
       chairTimes: {
-        Tuesday: DEFAULT_CHAIR_TIME,
-        Thursday: DEFAULT_CHAIR_TIME,
-        Saturday: DEFAULT_CHAIR_TIME,
+        Monday: "05:30",
+        Wednesday: "05:30",
+        Friday: "05:30",
       },
-      reminderLeadMinutes: DEFAULT_REMINDER_LEAD_MINUTES,
+      reminderLeadMinutes: 90,
       durations: {
-        Tuesday: DEFAULT_DURATION_MINUTES,
-        Thursday: DEFAULT_DURATION_MINUTES,
-        Saturday: DEFAULT_DURATION_MINUTES,
+        Monday: DEFAULT_DURATION_MINUTES,
+        Wednesday: DEFAULT_DURATION_MINUTES,
+        Friday: DEFAULT_DURATION_MINUTES,
       },
     },
   ]);
@@ -292,6 +302,7 @@ function DialysisManagementDashboard() {
 
   return (
     <NoticeRailLayout
+      title={<PageTitle href="/dashboard/personal-log/dialysis-management" />}
       notices={
         <>
           <PersonalLogDisclaimer spaced={false} stacked />
@@ -299,7 +310,7 @@ function DialysisManagementDashboard() {
           {/* Freeform note, alongside the schedule */}
           <section
             aria-label={isEs ? "Notas del horario" : "Schedule notes"}
-            className="flex flex-col gap-2 rounded-card border border-line bg-surface p-inset-md shadow-card transition-all focus-within:border-primary-soft-line focus-within:ring-2 focus-within:ring-ring/60"
+            className="flex flex-col gap-2 rounded-card border border-line bg-surface p-6 transition-all focus-within:border-primary-soft-line focus-within:ring-2 focus-within:ring-ring/60"
           >
             {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
             <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
@@ -359,8 +370,6 @@ function DialysisManagementDashboard() {
       }
     >
       <div className="space-y-6 pb-12">
-        <PageTitle href="/dashboard/personal-log/dialysis-management" />
-
         <DialysisClinicCard />
 
         {/* ========================================================================= */}
@@ -369,7 +378,7 @@ function DialysisManagementDashboard() {
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
-          <section className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-control sm:p-6 xl:col-span-12">
+          <section className="flex flex-col rounded-card border border-line bg-surface p-6 sm:p-6 xl:col-span-12">
             {/* Card head: title on the left, Edit Week on the right */}
             <SectionTitle
               title={isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
@@ -385,7 +394,7 @@ function DialysisManagementDashboard() {
               }
             />
 
-            <div className="mt-5">
+            <div>
               {/* One card per treatment day, in an even grid: the day as the
                 card's title, then how long, then the chair time. Only
                 treatment days are listed. */}
@@ -406,7 +415,7 @@ function DialysisManagementDashboard() {
                             aria-hidden="true"
                             className="h-3.5 w-3.5 shrink-0"
                           />
-                          {isEs ? "Duración" : "Duration"}
+                          {isEs ? "Tiempo de sesión" : "Run time"}
                         </dt>
                         <dd className="font-semibold text-fg tabular-nums">
                           {formatDuration(durationFor(currentSchedule, day))}
@@ -418,12 +427,28 @@ function DialysisManagementDashboard() {
                             aria-hidden="true"
                             className="h-3.5 w-3.5 shrink-0"
                           />
-                          {isEs ? "Hora" : "Time"}
+                          {isEs ? "Hora del sillón" : "Chair time"}
                         </dt>
                         <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
                           {formatReminder(
                             currentSchedule.chairTimes[day] ??
                               DEFAULT_CHAIR_TIME,
+                            isEs,
+                          )}
+                        </dd>
+                      </div>
+                      {/* When the alarm goes off: the chair time less the lead. */}
+                      <div className="flex items-center justify-between gap-inline-md">
+                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                          <Bell
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 shrink-0"
+                          />
+                          {isEs ? "Recordatorio" : "Reminder"}
+                        </dt>
+                        <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                          {formatReminder(
+                            reminderTimeFor(currentSchedule, day),
                             isEs,
                           )}
                         </dd>
@@ -456,8 +481,6 @@ function DialysisManagementDashboard() {
           initialReminderLead={currentSchedule.reminderLeadMinutes}
           initialDurations={currentSchedule.durations}
           initialHideBlankDays={hideBlankDays}
-          effectiveDateFor={scopeEffectiveDate}
-          monthLabel={`${(isEs ? monthNamesEs : monthNames)[viewMonth]} ${viewYear}`}
           onSave={handleSaveWeekSetting}
         />
 

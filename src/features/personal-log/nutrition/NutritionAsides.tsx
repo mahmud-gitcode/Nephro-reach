@@ -20,7 +20,7 @@ export function ResourceCard() {
   const items = n?.resources?.items || defaultResources;
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-heading-4 text-fg">
           {n?.resources?.title || "Resources"}
@@ -32,7 +32,7 @@ export function ResourceCard() {
             {...notBuiltYet("Opening a resource")}
             key={resource}
             type="button"
-            className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3 text-left transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-fg-brand">
               <FileText className="h-5 w-5" />
@@ -64,7 +64,7 @@ export function TipsCard() {
   const items = n?.dietTips?.items || defaultTips;
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-heading-4 text-fg">
           {n?.dietTips?.title || "Diet Tips"}
@@ -74,7 +74,7 @@ export function TipsCard() {
         {items.map((tip: string) => (
           <div
             key={tip}
-            className="flex gap-2 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3"
+            className="flex gap-2 rounded-xl border border-line bg-surface p-3"
           >
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <p className="text-sm leading-5 font-medium text-fg-secondary">

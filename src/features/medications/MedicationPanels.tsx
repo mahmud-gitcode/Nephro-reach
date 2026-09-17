@@ -602,7 +602,7 @@ export function AdherenceChart({ log }: { log: MedicationLog }) {
                 : "Green is 90% or more, yellow 70-89%, red below that."}
             </p>
 
-            <ul className="mt-stack-lg space-y-stack-xs">
+            <ul className="mt-6 space-y-stack-xs">
               {week.map((day) => (
                 <li
                   key={day.date}

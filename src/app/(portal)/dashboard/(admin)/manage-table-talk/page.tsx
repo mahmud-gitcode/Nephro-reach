@@ -416,7 +416,7 @@ export default function ManageTableTalkPage() {
           isEmpty={episodes.length === 0}
           errorTitle="Table Talk did not load"
           skeleton={
-            <div className="mt-stack-lg space-y-stack-sm">
+            <div className="mt-6 space-y-stack-sm">
               {Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton key={index} height={104} />
               ))}

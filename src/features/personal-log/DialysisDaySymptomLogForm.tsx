@@ -280,7 +280,7 @@ export default function DialysisDaySymptomLogForm({
   return (
     <div className="w-full space-y-4 font-sans text-fg-secondary">
       {/* 1. CLINICAL SESSION INFORMATION CARD */}
-      <div className="w-full rounded-card border border-line bg-surface p-5 shadow-card sm:p-6">
+      <div className="w-full rounded-card border border-line bg-surface p-6 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <h1 className="text-xl font-bold tracking-tight text-fg">
             Dialysis Day Log
@@ -380,7 +380,7 @@ export default function DialysisDaySymptomLogForm({
       </div>
 
       {/* 2. FORM CARD — step wizard, content and actions on one surface */}
-      <div className="w-full overflow-hidden rounded-card border border-line bg-surface shadow-card">
+      <div className="w-full overflow-hidden rounded-card border border-line bg-surface">
         {/* Step progress */}
         <div className="border-b border-line bg-surface-sunken px-4 py-4 sm:px-6">
           <div className="flex w-full items-center justify-between">

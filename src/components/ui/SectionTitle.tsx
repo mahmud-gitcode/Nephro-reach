@@ -31,7 +31,8 @@ export function SectionTitle({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-inline-md",
+        /* 24px to whatever the section holds. */
+        "mb-6 flex flex-wrap items-center justify-between gap-inline-md",
         className,
       )}
     >

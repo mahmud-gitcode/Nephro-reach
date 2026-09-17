@@ -334,7 +334,7 @@ export default function CareTeamQuestionsSection({
             filteredQuestions.map((q) => (
               <div
                 key={q.id}
-                className="space-y-3 rounded-card border border-line bg-surface p-5 shadow-control transition-shadow hover:shadow-control sm:p-6"
+                className="space-y-3 rounded-card border border-line bg-surface p-6 transition-shadow sm:p-6"
               >
                 {/* Question Row with Status Tag, Edit Button, and Delete */}
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">

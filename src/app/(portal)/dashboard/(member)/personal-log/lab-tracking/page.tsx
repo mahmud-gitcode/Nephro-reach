@@ -222,7 +222,7 @@ export default function MyLabsPage() {
       {/* 1. Top KPI Summary Cards */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Card 1: Latest Lab Date */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-fg-brand">
             <CalendarDays className="h-5 w-5" />
           </div>
@@ -237,7 +237,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 2: Values In Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
             <CircleCheck className="h-5 w-5" />
           </div>
@@ -255,7 +255,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 3: Values Out of Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-surface text-warning">
             <TriangleAlert className="h-5 w-5" />
           </div>
@@ -273,7 +273,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 4: Trending Up */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
             <TrendingUp className="h-5 w-5" />
           </div>
@@ -286,7 +286,7 @@ export default function MyLabsPage() {
         </article>
 
         {/* Card 5: Trending Down */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-surface text-danger">
             <TrendingDown className="h-5 w-5" />
           </div>
@@ -401,7 +401,7 @@ export default function MyLabsPage() {
 
           {/* TAB 1: OVERVIEW & COMPARE VIEW */}
           {activeTab === "overview" && (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
+            <div className="overflow-hidden rounded-xl border border-line bg-surface">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-line bg-[var(--color-gray-50)] text-sm font-semibold text-fg-muted">
@@ -1047,7 +1047,7 @@ export default function MyLabsPage() {
         {/* Right Sidebar Column */}
         <div className="space-y-6">
           {/* Card 1: Latest Lab Summary */}
-          <div className="space-y-4 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
+          <div className="space-y-4 rounded-xl border border-line bg-surface p-4">
             <div className="flex items-center justify-between border-b border-line-subtle pb-3">
               <h2 className="flex items-center gap-1.5 text-heading-4 text-fg">
                 {l?.sidebar?.latestSummary?.title || "Latest lab summary"}
@@ -1098,7 +1098,7 @@ export default function MyLabsPage() {
           </div>
 
           {/* Card 2: Lab Categories */}
-          <div className="space-y-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
+          <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
             <h2 className="border-b border-line-subtle pb-2 text-heading-4 text-fg">
               {l?.sidebar?.categories?.title || "Lab categories"}
             </h2>

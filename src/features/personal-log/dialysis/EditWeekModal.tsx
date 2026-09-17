@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertCircle, Check, Clock } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button, Modal } from "@/components/ui";
 import {
@@ -10,9 +10,7 @@ import {
   DEFAULT_DURATION_MINUTES,
   prevailingChairTime,
   prevailingDuration,
-  SCOPE_OPTIONS,
   WEEKDAY_ES,
-  formatFullDate,
   type ApplyScope,
   type ScheduleDraft,
 } from "./schedule";
@@ -30,9 +28,8 @@ import {
    component is keyed on `open` by its caller, reopening it starts clean
    without an effect syncing anything.
 
-   What it deliberately does not know: which date the new schedule takes
-   effect from. That depends on the calendar the page is showing, so the page
-   passes `effectiveDateFor` and the form just asks it.
+   A saved week always takes effect from the current treatment; the page
+   works out the date.
    ========================================================================== */
 
 export type EditWeekResult = {
@@ -49,8 +46,6 @@ export function EditWeekModal({
   initialReminderLead,
   initialDurations,
   initialHideBlankDays,
-  effectiveDateFor,
-  monthLabel,
   onSave,
 }: {
   open: boolean;
@@ -60,10 +55,6 @@ export function EditWeekModal({
   initialReminderLead: number;
   initialDurations: Record<string, number>;
   initialHideBlankDays: boolean;
-  /** Where the chosen scope starts, decided by the page's calendar. */
-  effectiveDateFor: (scope: ApplyScope) => Date;
-  /** "June 2026", already in the member's language. */
-  monthLabel: string;
   onSave: (result: EditWeekResult) => void;
 }) {
   const { language } = useLanguage();
@@ -75,9 +66,9 @@ export function EditWeekModal({
   const [tempLead, setTempLead] = useState<number>(initialReminderLead);
   const [tempDurations, setTempDurations] =
     useState<Record<string, number>>(initialDurations);
-  const [tempHideBlankDays, setTempHideBlankDays] =
-    useState(initialHideBlankDays);
-  const [applyScope, setApplyScope] = useState<ApplyScope>("currentTreatment");
+  /* No choice offered for either: a new week starts from the current
+     treatment, and blank days are never shown. */
+  const applyScope: ApplyScope = "currentTreatment";
 
   /* A member must stay prescribed at least one day: removing the last one
      is not a schedule, it is a mistake. */
@@ -109,7 +100,7 @@ export function EditWeekModal({
         durations: tempDurations,
       },
       scope: applyScope,
-      hideBlankDays: tempHideBlankDays,
+      hideBlankDays: initialHideBlankDays,
     });
   };
 
@@ -167,36 +158,6 @@ export function EditWeekModal({
             })}
           </div>
         </div>
-
-        {/* Blank-day display option for the Dialysis Schedule card */}
-        <button
-          type="button"
-          onClick={() => setTempHideBlankDays((prev) => !prev)}
-          aria-pressed={tempHideBlankDays}
-          className="flex w-full cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:bg-surface-sunken"
-        >
-          <span
-            className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-              tempHideBlankDays
-                ? "border-[var(--color-brand-600)] bg-action"
-                : "border-line-strong"
-            }`}
-          >
-            {tempHideBlankDays && (
-              <Check className="h-3 w-3 stroke-[3.5] text-white" />
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-bold text-fg-secondary">
-              {isEs ? "Ocultar días en blanco" : "Remove blank days"}
-            </span>
-            <span className="mt-0.5 block text-xs leading-relaxed font-medium text-fg-muted">
-              {isEs
-                ? "La semana muestra solo tus días de tratamiento, sin los espacios vacíos."
-                : "The week shows only your treatment days, with no empty placeholders."}
-            </span>
-          </span>
-        </button>
 
         {/* Chair time and session length together, per prescribed day.
 
@@ -317,81 +278,6 @@ export function EditWeekModal({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Apply scope: how far back this schedule reaches */}
-        <div className="space-y-2">
-          <label className="block font-semibold text-fg-secondary">
-            {isEs ? "Aplicar Este Horario A" : "Apply This Schedule To"}
-          </label>
-
-          <div className="space-y-2">
-            {SCOPE_OPTIONS.map((option) => {
-              const isSelected = applyScope === option.id;
-              const effective = effectiveDateFor(option.id);
-
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setApplyScope(option.id)}
-                  aria-pressed={isSelected}
-                  className={`flex w-full cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
-                    isSelected
-                      ? "border-[var(--color-brand-600)] bg-primary-soft"
-                      : "border-line bg-surface hover:bg-surface-sunken"
-                  }`}
-                >
-                  <span
-                    className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
-                      isSelected
-                        ? "border-[var(--color-brand-600)]"
-                        : "border-line-strong"
-                    }`}
-                  >
-                    {isSelected && (
-                      <span className="h-2.5 w-2.5 rounded-full bg-action" />
-                    )}
-                  </span>
-
-                  <span className="min-w-0 flex-1">
-                    {/* Title on the left, effective date right-aligned beside it */}
-                    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                      <span
-                        className={`font-bold ${
-                          isSelected ? "text-fg-brand" : "text-fg-secondary"
-                        }`}
-                      >
-                        {isEs ? option.labelEs : option.labelEn}
-                      </span>
-                      <span className="ml-auto text-right text-xs font-bold text-fg">
-                        {isEs ? "Desde" : "Starts"}{" "}
-                        {formatFullDate(effective, isEs)}
-                      </span>
-                    </span>
-                    <span className="mt-1 block text-xs leading-relaxed font-medium text-fg-muted">
-                      {isEs ? option.descEs : option.descEn}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Full month rebuilds treatments that already happened */}
-          {applyScope === "month" && (
-            <div className="flex items-start gap-2 rounded-xl border border-warning-line bg-warning-surface p-3">
-              <AlertCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-warning" />
-              <p className="text-xs leading-relaxed font-medium text-warning-900">
-                <strong className="font-bold">
-                  {isEs ? "Aviso:" : "Heads up:"}
-                </strong>{" "}
-                {isEs
-                  ? `Esto reconstruye todo ${monthLabel} desde el día 1, incluidos los tratamientos ya pasados. Puede generar una gran cantidad de tarjetas y los registros guardados con el horario anterior podrían dejar de coincidir.`
-                  : `This rebuilds all of ${monthLabel} from the 1st, including treatments that already happened. It can create a large number of cards, and records logged against the old schedule may no longer line up.`}
-              </p>
-            </div>
-          )}
         </div>
       </form>
     </Modal>

@@ -55,7 +55,7 @@ export function AlertsInsights() {
       <h2 className="text-heading-4 text-fg">
         {w?.alerts?.title || "Alerts & Insights"}
       </h2>
-      <div className="mt-3 space-y-2">
+      <div className="mt-6 space-y-2">
         {alerts.map((alert) => (
           <article
             key={alert.title}

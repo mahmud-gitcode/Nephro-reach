@@ -114,7 +114,7 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
 
       <Textarea
         rows={5}
-        className="mt-stack-md flex-1 resize-none"
+        className="flex-1 resize-none"
         value={reflection}
         maxLength={REFLECTION_MAX}
         aria-label={isEs ? "Notas y reflexiones" : "Notes and reflections"}
@@ -143,7 +143,7 @@ export function TravelIntroBar() {
   const isEs = language === "ES";
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-line bg-surface px-inset-md py-inset-sm shadow-card">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-line bg-surface px-inset-md py-inset-sm">
       <p className="flex items-center gap-inline-md text-body-sm text-fg-brand">
         <Plane aria-hidden="true" className="size-4 shrink-0" />
         {isEs

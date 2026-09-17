@@ -29,7 +29,7 @@ export interface MetricItem {
 
 export function KeyMetricCard({ metric }: { metric: MetricItem }) {
   return (
-    <article className="rounded-[10px] border border-line bg-surface p-4 shadow-card">
+    <article className="rounded-[10px] border border-line bg-surface p-6">
       <div className="flex items-start justify-between gap-3">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${metric.iconBg}`}
@@ -113,7 +113,7 @@ export function NutrientOverview({
   };
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-heading-4 text-fg">
           {n?.nutrientOverview?.title || "Nutrient Overview"}
@@ -141,7 +141,7 @@ export function NutrientOverview({
           return (
             <article
               key={key}
-              className="rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5"
+              className="rounded-xl border border-line bg-surface p-3.5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -207,7 +207,7 @@ export function MealTable({
   })).filter((meal) => meal.foods.length > 0);
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-heading-4 text-fg">
@@ -232,7 +232,7 @@ export function MealTable({
         </button>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
+      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-surface-sunken text-xs font-semibold tracking-[0.06px] text-fg-muted">
@@ -375,11 +375,11 @@ export function FluidTracker({
   const filledDrops = Math.min(7, Math.round((percent / 100) * 7));
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <h2 className="text-heading-4 text-fg">
         {n?.fluidTracker?.title || "Fluid Tracker"}
       </h2>
-      <div className="mt-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">
+      <div className="mt-6 rounded-xl border border-line bg-surface p-3.5">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[32px] leading-none font-semibold text-fg">

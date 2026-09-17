@@ -80,7 +80,7 @@ export function RelatedLibrary({
   if (error || (!isPending && picks.length === 0)) return null;
 
   return (
-    <section className="space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
+    <section className="space-y-4 rounded-panel border border-line bg-surface p-6">
       <div className="flex items-center justify-between gap-inline-md">
         <h2 className="text-heading-4 text-fg">{title}</h2>
         <Link

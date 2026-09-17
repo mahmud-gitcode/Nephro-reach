@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -24,15 +30,34 @@ import JourneyResourceDrawer, {
   JourneyPanelTab,
 } from "@/features/education/member/JourneyResourcePanel";
 import {
-  getJourneyDayBySlug,
-  JOURNEY_DAYS,
-  JourneyDay,
-  JourneyMediaKind,
-  TOTAL_JOURNEY_DAYS,
-} from "@/features/education/dialysisJourneyData";
+  ClassroomLesson as JourneyDay,
+  courseWords,
+  useClassroom,
+} from "@/features/education/classroom";
+import type { CourseClassKind as JourneyMediaKind } from "@/features/education/courseLibrary";
 import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useJourneyNotes } from "@/features/education/useJourneyNotes";
-import { Button, buttonStyles, Card, EmptyState } from "@/components/ui";
+import { useLearnerRecord } from "@/features/education/useLearnerRecord";
+import {
+  activitiesDone,
+  classQuizKey,
+  dueVideoQuestion,
+  hasPassed,
+} from "@/features/education/questions.rules";
+import { QuizRunner } from "@/features/education/member/QuizRunner";
+import type { VideoQuestion } from "@/features/education/questions.types";
+import { toVtt, withResolvedEnds } from "@/features/education/vtt";
+import {
+  LessonActivities,
+  VideoQuestionDialog,
+} from "@/features/education/member/LessonActivities";
+import {
+  Button,
+  buttonStyles,
+  Card,
+  EmptyState,
+  Skeleton,
+} from "@/components/ui";
 
 function kindLabel(
   kind: JourneyMediaKind,
@@ -43,6 +68,22 @@ function kindLabel(
   return j?.typeVideo || "Video";
 }
 
+/** A caption track for one language, built from the lesson transcript. */
+function useCaptionTrack(day: JourneyDay, language: "EN" | "ES") {
+  return useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const cues = withResolvedEnds(
+      day.transcript.map((cue) => ({
+        at: cue.at,
+        text: (language === "ES" ? cue.textEs : cue.textEn).trim(),
+      })),
+      day.durationMinutes * 60,
+    ).filter((cue) => cue.text.length > 0);
+    if (cues.length === 0) return null;
+    return URL.createObjectURL(new Blob([toVtt(cues)], { type: "text/vtt" }));
+  }, [day, language]);
+}
+
 /**
  * Player and transcript for one day.
  *
@@ -51,7 +92,9 @@ function kindLabel(
  */
 function DayStage({
   day,
+  itemWord,
   isComplete,
+  canComplete,
   onToggleComplete,
   onOpenDayList,
   mediaRef,
@@ -60,7 +103,11 @@ function DayStage({
   onVideoError,
 }: {
   day: JourneyDay;
+  /** The course's word for a lesson: "Day", "Lesson"... */
+  itemWord: string;
   isComplete: boolean;
+  /** False while the lesson's questions still need answers. */
+  canComplete: boolean;
   onToggleComplete: () => void;
   onOpenDayList: () => void;
   /** Owned by the page so the transcript tab can seek this same element. */
@@ -72,6 +119,9 @@ function DayStage({
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
+  const enTrack = useCaptionTrack(day, "EN");
+  const esTrack = useCaptionTrack(day, "ES");
+  const readingBody = (isEs ? day.bodyEs : day.bodyEn).trim();
 
   return (
     <div className="space-y-stack-lg">
@@ -84,18 +134,24 @@ function DayStage({
           </p>
 
           <article className="mt-stack-lg space-y-stack-lg">
-            {day.transcript.map((cue) => (
-              <p
-                key={cue.at}
-                className="measure text-body-md text-fg-secondary"
-              >
-                {isEs ? cue.textEs : cue.textEn}
-              </p>
-            ))}
+            {readingBody
+              ? readingBody.split(/\n{2,}/).map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className="text-body-md whitespace-pre-line text-fg-secondary"
+                  >
+                    {paragraph}
+                  </p>
+                ))
+              : day.transcript.map((cue) => (
+                  <p key={cue.at} className="text-body-md text-fg-secondary">
+                    {isEs ? cue.textEs : cue.textEn}
+                  </p>
+                ))}
           </article>
         </Card>
       ) : (
-        <section className="overflow-hidden rounded-card border border-line bg-surface-inverse shadow-card">
+        <section className="overflow-hidden rounded-card border border-line bg-surface-inverse">
           {videoUnavailable ? (
             <div className="relative aspect-video w-full">
               <Image
@@ -175,7 +231,26 @@ function DayStage({
               onTimeUpdate={onTimeUpdate}
               onError={onVideoError}
               className="aspect-video w-full bg-surface-inverse"
-            />
+            >
+              {enTrack ? (
+                <track
+                  kind="captions"
+                  src={enTrack}
+                  srcLang="en"
+                  label="English"
+                  default={!isEs}
+                />
+              ) : null}
+              {esTrack ? (
+                <track
+                  kind="captions"
+                  src={esTrack}
+                  srcLang="es"
+                  label="Español"
+                  default={isEs}
+                />
+              ) : null}
+            </video>
           )}
         </section>
       )}
@@ -188,7 +263,7 @@ function DayStage({
             </h1>
             <p className="mt-stack-xs flex flex-wrap items-center gap-inline-sm text-label-sm text-fg-muted">
               <span>
-                {j?.dayLabel || "Day"} {day.day}
+                {itemWord} {day.day}
               </span>
               <span aria-hidden="true">·</span>
               <span>{kindLabel(day.kind, j)}</span>
@@ -217,6 +292,7 @@ function DayStage({
               variant={isComplete ? "neutral" : "primary"}
               appearance={isComplete ? "fill-stroke" : "fill"}
               onClick={onToggleComplete}
+              disabled={!isComplete && !canComplete}
               aria-pressed={isComplete}
               className={
                 isComplete
@@ -235,7 +311,19 @@ function DayStage({
             </Button>
           </div>
         </div>
+        {!isComplete && !canComplete ? (
+          <p className="mt-stack-sm text-body-sm text-fg-muted">
+            {isEs
+              ? "Responde las preguntas de abajo para terminar esta lección."
+              : "Answer the questions below to finish this lesson."}
+          </p>
+        ) : null}
       </Card>
+
+      <LessonActivities
+        activities={day.activities}
+        videoQuestions={day.videoQuestions}
+      />
     </div>
   );
 }
@@ -245,8 +333,14 @@ export default function JourneyDayPage() {
   const { language, dictionary } = useLanguage();
   const j = dictionary?.educationJourney;
 
-  const slug = (params?.day as string) || JOURNEY_DAYS[0].slug;
-  const day = getJourneyDayBySlug(slug);
+  const isEs = language === "ES";
+  const classroom = useClassroom();
+  const { lessons, groups, course } = classroom;
+  const words = courseWords(course, isEs);
+
+  const slug = (params?.day as string) || lessons[0]?.slug || "";
+  const day = classroom.getLesson(slug);
+  const group = day ? classroom.getGroup(day.groupId) : undefined;
 
   const {
     getProgress,
@@ -254,7 +348,28 @@ export default function JourneyDayPage() {
     markIncomplete,
     recordWatched,
     completedCount,
-  } = useJourneyProgress();
+  } = useJourneyProgress(lessons);
+
+  const { answers, attempts } = useLearnerRecord();
+  const isExam = day?.kind === "exam";
+  /* A lesson is done once its questions are answered; an exam once it is
+     passed. */
+  const canComplete = !day
+    ? true
+    : isExam
+      ? hasPassed(attempts, classQuizKey(day.slug))
+      : activitiesDone(day.activities, day.videoQuestions, answers);
+
+  // The pop-up question showing now, and the ones put off with "later".
+  const [openQuestion, setOpenQuestion] = useState<VideoQuestion | null>(null);
+  const [deferred, setDeferred] = useState<{ slug: string; ids: Set<string> }>({
+    slug: "",
+    ids: new Set(),
+  });
+  const deferredIds = useMemo(
+    () => (deferred.slug === slug ? deferred.ids : new Set<string>()),
+    [deferred, slug],
+  );
 
   const { getNote, setNote, flushNote, saveState } = useJourneyNotes();
 
@@ -296,9 +411,53 @@ export default function JourneyDayPage() {
     );
 
     if (video.duration > 0) {
-      recordWatched(slug, (video.currentTime / video.duration) * 100);
+      recordWatched(
+        slug,
+        (video.currentTime / video.duration) * 100,
+        canComplete,
+      );
     }
-  }, [slug, recordWatched]);
+
+    // Pause for a question once its moment has come.
+    if (day && !openQuestion) {
+      const due = dueVideoQuestion(
+        day.videoQuestions,
+        video.currentTime,
+        answers,
+        deferredIds,
+      );
+      if (due) {
+        video.pause();
+        setOpenQuestion(due);
+      }
+    }
+  }, [
+    slug,
+    recordWatched,
+    canComplete,
+    day,
+    openQuestion,
+    answers,
+    deferredIds,
+  ]);
+
+  const resumeVideo = useCallback(() => {
+    setOpenQuestion(null);
+    void mediaRef.current?.play().catch(() => {
+      // Autoplay can be blocked; the member can press play themselves.
+    });
+  }, []);
+
+  const deferQuestion = useCallback(() => {
+    if (openQuestion) {
+      const id = openQuestion.id;
+      setDeferred((current) => ({
+        slug,
+        ids: new Set([...(current.slug === slug ? current.ids : []), id]),
+      }));
+    }
+    resumeVideo();
+  }, [openQuestion, resumeVideo, slug]);
 
   const handleVideoError = useCallback(() => {
     setPlayback((current) => ({
@@ -342,6 +501,15 @@ export default function JourneyDayPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [dayListOpen]);
 
+  if (classroom.isPending) {
+    return (
+      <div className="space-y-stack-lg">
+        <Skeleton height={360} />
+        <Skeleton height={120} />
+      </div>
+    );
+  }
+
   if (!day) {
     return (
       <EmptyState
@@ -361,9 +529,11 @@ export default function JourneyDayPage() {
   }
 
   const isReading = day.kind === "reading";
-  const panelTabs: JourneyPanelTab[] = isReading
-    ? ["overview", "documents", "notes"]
-    : ["transcript", "overview", "documents", "notes"];
+  const panelTabs: JourneyPanelTab[] = isExam
+    ? ["overview", "notes"]
+    : isReading
+      ? ["overview", "documents", "notes"]
+      : ["transcript", "overview", "documents", "notes"];
   const activePanelTab = panelTabs.includes(panelTab) ? panelTab : "overview";
 
   const state = getProgress(day.slug);
@@ -377,14 +547,11 @@ export default function JourneyDayPage() {
     -1,
   );
 
-  const currentIndex = JOURNEY_DAYS.findIndex(
-    (entry) => entry.slug === day.slug,
-  );
-  const previousDay = currentIndex > 0 ? JOURNEY_DAYS[currentIndex - 1] : null;
+  const currentIndex = lessons.findIndex((entry) => entry.slug === day.slug);
+  const previousDay = currentIndex > 0 ? lessons[currentIndex - 1] : null;
   const nextDay =
-    currentIndex < JOURNEY_DAYS.length - 1
-      ? JOURNEY_DAYS[currentIndex + 1]
-      : null;
+    currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+  const groupLabel = group ? (isEs ? group.labelEs : group.labelEn) : "";
 
   return (
     <div className="space-y-stack-lg">
@@ -396,13 +563,15 @@ export default function JourneyDayPage() {
         }`}
       >
         <aside className="hidden xl:block">
-          <div className="sticky top-[72px] flex h-[calc(100vh-88px)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-card">
+          <div className="sticky top-[72px] flex h-[calc(100vh-88px)] flex-col overflow-hidden rounded-card border border-line bg-surface">
             <JourneyDayList
-              days={JOURNEY_DAYS}
+              days={lessons}
+              groups={groups}
+              itemWord={words.item}
               activeSlug={day.slug}
               getProgress={getProgress}
               completedCount={completedCount}
-              totalDays={TOTAL_JOURNEY_DAYS}
+              totalDays={lessons.length}
               collapsed={railCollapsed}
               onToggleCollapse={() => setRailCollapsed((value) => !value)}
             />
@@ -411,19 +580,37 @@ export default function JourneyDayPage() {
 
         <div className="flex min-w-0 gap-3 sm:gap-inset-md">
           <div className="min-w-0 flex-1">
-            <DayStage
-              key={day.slug}
-              day={day}
-              isComplete={isComplete}
-              onToggleComplete={() =>
-                isComplete ? markIncomplete(day.slug) : markComplete(day.slug)
-              }
-              onOpenDayList={() => setDayListOpen(true)}
-              mediaRef={mediaRef}
-              videoUnavailable={currentPlayback.unavailable}
-              onTimeUpdate={handleTimeUpdate}
-              onVideoError={handleVideoError}
-            />
+            {isExam && course ? (
+              <QuizRunner
+                key={day.slug}
+                course={course}
+                quizKey={classQuizKey(day.slug)}
+                title={isEs ? day.titleEs : day.titleEn}
+                questions={day.activities}
+                backHref="/dashboard/my-classroom"
+                backLabel={isEs ? "Volver a Mi Salón" : "Back to My Classroom"}
+                hideBack
+                onResult={(attempt) => {
+                  if (attempt.passed) markComplete(day.slug);
+                }}
+              />
+            ) : (
+              <DayStage
+                key={day.slug}
+                day={day}
+                itemWord={words.item}
+                isComplete={isComplete}
+                canComplete={canComplete}
+                onToggleComplete={() =>
+                  isComplete ? markIncomplete(day.slug) : markComplete(day.slug)
+                }
+                onOpenDayList={() => setDayListOpen(true)}
+                mediaRef={mediaRef}
+                videoUnavailable={currentPlayback.unavailable}
+                onTimeUpdate={handleTimeUpdate}
+                onVideoError={handleVideoError}
+              />
+            )}
 
             <nav className="mt-4 flex items-center justify-between gap-3">
               {previousDay ? (
@@ -436,7 +623,7 @@ export default function JourneyDayPage() {
                 >
                   <ChevronLeft aria-hidden="true" className="shrink-0" />
                   <span className="truncate">
-                    {j?.previousDay || "Previous"} · {j?.dayLabel || "Day"}{" "}
+                    {j?.previousDay || "Previous"} · {words.item}{" "}
                     {previousDay.day}
                   </span>
                 </Link>
@@ -448,7 +635,7 @@ export default function JourneyDayPage() {
                 <Link
                   href={`/dashboard/my-classroom/${nextDay.slug}`}
                   onClick={() => {
-                    markComplete(day.slug);
+                    if (canComplete) markComplete(day.slug);
                   }}
                   className={buttonStyles({
                     variant: "neutral",
@@ -456,8 +643,7 @@ export default function JourneyDayPage() {
                   })}
                 >
                   <span className="truncate">
-                    {j?.nextDay || "Next"} · {j?.dayLabel || "Day"}{" "}
-                    {nextDay.day}
+                    {j?.nextDay || "Next"} · {words.item} {nextDay.day}
                   </span>
                   <ChevronRight aria-hidden="true" className="shrink-0" />
                 </Link>
@@ -473,9 +659,10 @@ export default function JourneyDayPage() {
                 panelOpen ? "w-[340px] opacity-100" : "w-0 opacity-0"
               }`}
             >
-              <div className="flex h-full max-h-[calc(100vh-2rem)] w-[340px] flex-col rounded-card border border-line bg-surface shadow-card">
+              <div className="flex h-full max-h-[calc(100vh-2rem)] w-[340px] flex-col rounded-card border border-line bg-surface">
                 <JourneyPanelContent
                   day={day}
+                  groupLabel={groupLabel}
                   activeTab={activePanelTab}
                   onClose={closePanel}
                   note={note}
@@ -540,19 +727,31 @@ export default function JourneyDayPage() {
           </header>
           <div className="min-h-0 flex-1 overflow-hidden">
             <JourneyDayList
-              days={JOURNEY_DAYS}
+              days={lessons}
+              groups={groups}
+              itemWord={words.item}
               activeSlug={day.slug}
               getProgress={getProgress}
               completedCount={completedCount}
-              totalDays={TOTAL_JOURNEY_DAYS}
+              totalDays={lessons.length}
               onNavigate={() => setDayListOpen(false)}
             />
           </div>
         </div>
       </div>
 
+      {openQuestion ? (
+        <VideoQuestionDialog
+          key={openQuestion.id}
+          entry={openQuestion}
+          onContinue={resumeVideo}
+          onSkip={deferQuestion}
+        />
+      ) : null}
+
       <JourneyResourceDrawer
         day={day}
+        groupLabel={groupLabel}
         open={panelOpen}
         activeTab={activePanelTab}
         onClose={closePanel}

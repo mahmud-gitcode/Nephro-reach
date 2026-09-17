@@ -210,17 +210,16 @@ export default function PersonalLogPage() {
 
   return (
     <NoticeRailLayout
+      title={<PageTitle href="/dashboard/personal-log" />}
       notices={<PersonalLogDisclaimer spaced={false} stacked />}
     >
       <div className="w-full space-y-stack-xl">
-        <PageTitle href="/dashboard/personal-log" />
-
         <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
           {tileConfigs.map((tile) => (
             <Link
               key={tile.key}
               href={tile.href}
-              className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg shadow-card transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <span
                 className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}

@@ -41,7 +41,7 @@ function PricingCard({
 }) {
   const card = (
     <article
-      className={`flex h-full flex-col justify-between gap-inset-lg overflow-hidden rounded-panel border border-line p-inset-lg transition-shadow duration-300 hover:shadow-raised ${
+      className={`flex h-full flex-col justify-between gap-inset-lg overflow-hidden rounded-panel border border-line p-inset-lg transition-shadow duration-300 ${
         plan.popular
           ? "bg-gradient-to-b from-surface to-primary-soft"
           : "bg-surface-sunken"

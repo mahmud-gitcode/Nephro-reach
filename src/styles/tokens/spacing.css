@@ -63,11 +63,11 @@
      Use the HEIGHT token; do not set vertical padding on a control.
      44px is the accessible minimum and is the default (md).
      ====================================================================== */
-  --spacing-control-big: 3rem; /* 48px · DEFAULT — clears WCAG 2.5.5 (44px) */
+  --spacing-control-big: 2.75rem; /* 44px · DEFAULT — exactly WCAG 2.5.5 (44px) */
   --spacing-control-small: 2.25rem; /* 36px · dense rows; clears WCAG 2.5.8 (24px) */
 
   /* Horizontal inset, paired with the heights above. */
-  --spacing-control-x-big: 1.5rem; /* 24px */
+  --spacing-control-x-big: 1.25rem; /* 20px */
   --spacing-control-x-small: 0.75rem; /* 12px */
 
   /* Icon size inside a control. 24px needs a 48px box or it looks cramped;
@@ -106,8 +106,8 @@
   /* Level 1 · Low / Card elevation — resting objects, cards, lists */
   --shadow-sm:
     0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
-  --shadow-card:
-    0 1px 3px 0 rgb(16 20 28 / 0.08), 0 1px 2px -1px rgb(16 20 28 / 0.04);
+  /* Cards sit flat: border only, no shadow. */
+  --shadow-card: none;
 
   /* Level 2 · Medium / Raised elevation — dropdowns, popovers, hover elevation */
   --shadow-md:

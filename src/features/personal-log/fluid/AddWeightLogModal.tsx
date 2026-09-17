@@ -352,7 +352,7 @@ export function AddWeightLogModal({
         </div>
 
         {/* Fluid Status Check Section */}
-        <div className="space-y-3 rounded-card border border-line bg-surface p-3.5 shadow-control">
+        <div className="space-y-3 rounded-card border border-line bg-surface p-6">
           {/* Section Header */}
           <div>
             <div className="flex items-center gap-2">

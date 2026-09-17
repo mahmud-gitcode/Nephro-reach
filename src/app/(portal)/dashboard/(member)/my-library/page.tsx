@@ -65,7 +65,7 @@ function ResourceCard({
   const KindIcon = KIND_ICON[resource.kind];
 
   return (
-    <div className="group relative flex flex-col rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard focus-within:shadow-raised hover:shadow-raised">
+    <div className="group relative flex flex-col rounded-card border border-line bg-surface p-6 transition-shadow duration-150 ease-standard">
       <div className="relative aspect-[324/182] max-w-full overflow-hidden rounded-card bg-surface-sunken">
         <Image
           src={resource.poster}

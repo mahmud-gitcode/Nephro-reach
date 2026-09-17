@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BookOpen,
   Check,
+  ClipboardCheck,
   ChevronDown,
   ChevronRight,
   Headphones,
@@ -14,13 +15,11 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import {
-  JOURNEY_PHASES,
-  JourneyDay,
-  JourneyMediaKind,
-  JourneyPhaseKey,
-  PHASE_ORDER,
-} from "@/features/education/dialysisJourneyData";
+import type {
+  ClassroomGroup,
+  ClassroomLesson,
+} from "@/features/education/classroom";
+import type { CourseClassKind as JourneyMediaKind } from "@/features/education/courseLibrary";
 import type { JourneyDayProgress } from "@/features/education/useJourneyProgress";
 import { Progress } from "@/components/ui";
 
@@ -28,6 +27,7 @@ const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,
   audio: Headphones,
   reading: BookOpen,
+  exam: ClipboardCheck,
 };
 
 function kindLabel(
@@ -36,6 +36,7 @@ function kindLabel(
 ): string {
   if (kind === "audio") return j?.typeAudio || "Audio";
   if (kind === "reading") return j?.typeReading || "Reading";
+  if (kind === "exam") return j?.typeExam || "Exam";
   return j?.typeVideo || "Video";
 }
 
@@ -46,9 +47,11 @@ function CollapsedRail({
   getProgress,
   completedCount,
   totalDays,
+  itemWord,
   onExpand,
 }: {
-  days: JourneyDay[];
+  days: ClassroomLesson[];
+  itemWord: string;
   activeSlug: string;
   getProgress: (slug: string) => JourneyDayProgress;
   completedCount: number;
@@ -81,7 +84,7 @@ function CollapsedRail({
           const state = getProgress(day.slug);
           const isActive = day.slug === activeSlug;
           const isDone = state.status === "completed";
-          const title = `${j?.dayLabel || "Day"} ${day.day} · ${
+          const title = `${day.kind === "exam" ? kindLabel("exam", j) : `${itemWord} ${day.day}`} · ${
             isEs ? day.titleEs : day.titleEn
           }`;
 
@@ -100,7 +103,13 @@ function CollapsedRail({
                       : "bg-surface-sunken text-fg-muted hover:bg-line"
                 }`}
               >
-                {isDone ? <Check className="h-4 w-4" /> : day.day}
+                {isDone ? (
+                  <Check className="h-4 w-4" />
+                ) : day.kind === "exam" ? (
+                  <ClipboardCheck className="h-4 w-4" />
+                ) : (
+                  day.day
+                )}
               </Link>
             </li>
           );
@@ -119,6 +128,8 @@ function CollapsedRail({
  */
 export default function JourneyDayList({
   days,
+  groups,
+  itemWord,
   activeSlug,
   getProgress,
   completedCount,
@@ -127,7 +138,10 @@ export default function JourneyDayList({
   onToggleCollapse,
   onNavigate,
 }: {
-  days: JourneyDay[];
+  days: ClassroomLesson[];
+  groups: ClassroomGroup[];
+  /** The course's word for a lesson: "Day", "Lesson"... */
+  itemWord: string;
   activeSlug: string;
   getProgress: (slug: string) => JourneyDayProgress;
   completedCount: number;
@@ -142,9 +156,9 @@ export default function JourneyDayList({
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
 
-  const [closedWeeks, setClosedWeeks] = useState<JourneyPhaseKey[]>([]);
+  const [closedWeeks, setClosedWeeks] = useState<string[]>([]);
 
-  const toggleWeek = (phaseKey: JourneyPhaseKey) => {
+  const toggleWeek = (phaseKey: string) => {
     setClosedWeeks((current) =>
       current.includes(phaseKey)
         ? current.filter((key) => key !== phaseKey)
@@ -152,7 +166,8 @@ export default function JourneyDayList({
     );
   };
 
-  const overallPercent = Math.round((completedCount / totalDays) * 100);
+  const overallPercent =
+    totalDays === 0 ? 0 : Math.round((completedCount / totalDays) * 100);
 
   if (collapsed && onToggleCollapse) {
     return (
@@ -162,6 +177,7 @@ export default function JourneyDayList({
         getProgress={getProgress}
         completedCount={completedCount}
         totalDays={totalDays}
+        itemWord={itemWord}
         onExpand={onToggleCollapse}
       />
     );
@@ -189,11 +205,11 @@ export default function JourneyDayList({
         </div>
 
         <p className="mt-1 text-sm font-bold text-fg">
-          {completedCount}/{totalDays} {j?.daysLabel || "days"}
+          {completedCount}/{totalDays} {isEs ? "completados" : "complete"}
         </p>
         <Progress
           value={overallPercent}
-          label={`${completedCount} of ${totalDays} days complete`}
+          label={`${completedCount} of ${totalDays} complete`}
           tone="success"
           className="mt-stack-sm"
         />
@@ -203,9 +219,9 @@ export default function JourneyDayList({
         aria-label={j?.allDays || "All days"}
         className="min-h-0 flex-1 overflow-y-auto pb-3"
       >
-        {PHASE_ORDER.map((phaseKey) => {
-          const phase = JOURNEY_PHASES[phaseKey];
-          const phaseDays = days.filter((day) => day.phase === phaseKey);
+        {groups.map((phase) => {
+          const phaseKey = phase.id;
+          const phaseDays = days.filter((day) => day.groupId === phaseKey);
           if (phaseDays.length === 0) return null;
 
           const phaseComplete = phaseDays.filter(
@@ -233,7 +249,7 @@ export default function JourneyDayList({
 
                   <span className="min-w-0 flex-1">
                     <span className="block text-[11px] font-bold text-fg-brand">
-                      {isEs ? phase.moduleEs : phase.moduleEn}
+                      {isEs ? phase.labelEs : phase.labelEn}
                     </span>
                     <span className="block truncate text-base leading-6 font-semibold text-fg">
                       {isEs ? phase.titleEs : phase.titleEn}
@@ -275,7 +291,13 @@ export default function JourneyDayList({
                                   : "bg-surface-sunken text-fg-muted group-hover:bg-line"
                             }`}
                           >
-                            {isDone ? <Check className="h-4 w-4" /> : day.day}
+                            {isDone ? (
+                              <Check className="h-4 w-4" />
+                            ) : day.kind === "exam" ? (
+                              <ClipboardCheck className="h-4 w-4" />
+                            ) : (
+                              day.day
+                            )}
                           </span>
 
                           <span className="min-w-0 flex-1">

@@ -11,14 +11,18 @@ import {
   Edit3,
   FileText,
   Filter,
+  ClipboardCheck,
   Headphones,
   Layers,
+  MessageCircleQuestion,
   PlayCircle,
   Plus,
+  Settings,
   Trash2,
 } from "lucide-react";
 import { formatTotalDuration } from "@/features/education/dialysisJourneyData";
 import {
+  Course,
   CourseClass,
   CourseClassKind,
   CourseModule,
@@ -31,9 +35,19 @@ import {
 import {
   ClassEditorPanel,
   CourseModal,
+  CourseSettingsModal,
   ModuleModal,
 } from "@/features/education/admin/CourseAdmin";
-import { Alert, ErrorState, Skeleton } from "@/components/ui";
+import { QuestionListEditor } from "@/features/education/admin/QuestionEditor";
+import { LearnerProgressCard } from "@/features/education/admin/LearnerProgressCard";
+import {
+  Alert,
+  Badge,
+  Card,
+  ErrorState,
+  SectionTitle,
+  Skeleton,
+} from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -41,18 +55,21 @@ const KIND_ICON: Record<CourseClassKind, IconType> = {
   video: PlayCircle,
   audio: Headphones,
   reading: BookOpen,
+  exam: ClipboardCheck,
 };
 
 const KIND_LABEL: Record<CourseClassKind, string> = {
   video: "Video",
   audio: "Audio",
   reading: "Reading",
+  exam: "Exam",
 };
 
 const KIND_PILL: Record<CourseClassKind, string> = {
   video: "bg-primary-soft text-fg-brand",
   audio: "bg-accent-soft text-accent-fg",
   reading: "bg-warning-surface text-warning",
+  exam: "bg-success-surface text-success",
 };
 
 /** Which class the editor is open on, and where it belongs. */
@@ -64,19 +81,23 @@ type EditorTarget = {
 };
 
 function ModuleSection({
+  course,
   courseModule,
   visibleClasses,
   index,
+  onAddExam,
   onAddClass,
   onEditClass,
   onDeleteClass,
   onEditModule,
   onDeleteModule,
 }: {
+  course: Course;
   courseModule: CourseModule;
   /** Rows to show after the type filter is applied. */
   visibleClasses: CourseClass[];
   index: number;
+  onAddExam: () => void;
   onAddClass: () => void;
   onEditClass: (courseClass: CourseClass) => void;
   onDeleteClass: (classId: string) => void;
@@ -85,12 +106,17 @@ function ModuleSection({
 }) {
   const minutes = moduleMinutes(courseModule);
 
+  const examCount = courseModule.classes.filter(
+    (entry) => entry.kind === "exam",
+  ).length;
+  const lessonCount = courseModule.classes.length - examCount;
+
   return (
     <section className="rounded-[14px] border border-line bg-surface shadow-card">
       <header className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold text-fg-brand">
-            Module {index + 1}
+            {course.groupLabelEn} {index + 1}
           </p>
           <h2 className="truncate text-lg font-semibold text-fg">
             {courseModule.titleEn}
@@ -98,7 +124,13 @@ function ModuleSection({
         </div>
 
         <span className="flex items-center gap-3 text-xs font-semibold text-fg-muted">
-          <span>{courseModule.classes.length} classes</span>
+          <span>
+            {lessonCount} {course.itemLabelEn.toLowerCase()}
+            {lessonCount === 1 ? "" : "s"}
+            {examCount > 0
+              ? ` · ${examCount} exam${examCount === 1 ? "" : "s"}`
+              : ""}
+          </span>
           <span aria-hidden="true">·</span>
           <span>{formatTotalDuration(minutes)}</span>
         </span>
@@ -122,11 +154,19 @@ function ModuleSection({
           </button>
           <button
             type="button"
+            onClick={onAddExam}
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line"
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            Add Exam
+          </button>
+          <button
+            type="button"
             onClick={onAddClass}
             className="flex h-9 cursor-pointer items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line"
           >
             <Plus className="h-4 w-4" />
-            Add Class
+            Add {course.itemLabelEn}
           </button>
         </div>
       </header>
@@ -135,8 +175,8 @@ function ModuleSection({
         {visibleClasses.length === 0 ? (
           <p className="rounded-control border border-dashed border-line p-8 text-center text-sm font-medium text-fg-muted">
             {courseModule.classes.length === 0
-              ? "No classes in this module yet."
-              : "No classes of that type in this module."}
+              ? `No ${course.itemLabelEn.toLowerCase()}s in this ${course.groupLabelEn.toLowerCase()} yet.`
+              : `Nothing of that type in this ${course.groupLabelEn.toLowerCase()}.`}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-control border border-line">
@@ -144,10 +184,11 @@ function ModuleSection({
               <thead>
                 <tr className="bg-surface-sunken text-left">
                   {[
-                    "Class",
+                    course.itemLabelEn,
                     "Type",
                     "Duration",
                     "Transcript",
+                    "Questions",
                     "Documents",
                     "Actions",
                   ].map((header) => (
@@ -182,7 +223,9 @@ function ModuleSection({
                               {courseClass.titleEn}
                             </p>
                             <p className="truncate text-xs leading-[18px] text-fg-muted">
-                              {courseClass.mediaSrc || "No media path set"}
+                              {courseClass.kind === "exam"
+                                ? `${courseClass.activities.length} scored questions · ${course.passMark}% to pass`
+                                : courseClass.mediaSrc || "No media path set"}
                             </p>
                           </div>
                         </div>
@@ -208,6 +251,14 @@ function ModuleSection({
                         <span className="flex items-center gap-2">
                           <Captions className="h-4 w-4 text-fg-muted" />
                           {courseClass.transcript.length} lines
+                        </span>
+                      </td>
+
+                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
+                        <span className="flex items-center gap-2">
+                          <MessageCircleQuestion className="h-4 w-4 text-fg-muted" />
+                          {courseClass.activities.length +
+                            courseClass.videoQuestions.length}
                         </span>
                       </td>
 
@@ -273,6 +324,7 @@ export default function ManageCoursePage() {
   const course = getCourse(courseId);
 
   const [editingCourse, setEditingCourse] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
   const [addingModule, setAddingModule] = useState(false);
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null);
@@ -342,6 +394,11 @@ export default function ManageCoursePage() {
     course.modules.findIndex((entry) => entry.id === activeModuleId),
   );
   const selectedModule = course.modules[selectedIndex] ?? null;
+  const examTotal = course.modules.reduce(
+    (sum, entry) =>
+      sum + entry.classes.filter((item) => item.kind === "exam").length,
+    0,
+  );
 
   return (
     <>
@@ -371,14 +428,14 @@ export default function ManageCoursePage() {
                 <span className="font-bold text-fg">
                   {course.modules.length}
                 </span>
-                modules
+                {course.groupLabelEn.toLowerCase()}s
               </li>
               <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
                 <BookOpen className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
-                  {courseClassCount(course)}
+                  {courseClassCount(course) - examTotal}
                 </span>
-                classes
+                {course.itemLabelEn.toLowerCase()}s
               </li>
               <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
                 <Clock3 className="h-4 w-4 text-fg-brand" />
@@ -401,11 +458,19 @@ export default function ManageCoursePage() {
             </button>
             <button
               type="button"
+              onClick={() => setEditingSettings(true)}
+              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+            >
+              <Settings className="h-4 w-4 text-fg-muted" />
+              Settings
+            </button>
+            <button
+              type="button"
               onClick={() => setAddingModule(true)}
               className="flex cursor-pointer items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
-              Add Module
+              Add {course.groupLabelEn}
             </button>
           </div>
         </div>
@@ -415,7 +480,7 @@ export default function ManageCoursePage() {
         <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div
             role="tablist"
-            aria-label="Modules"
+            aria-label={`${course.groupLabelEn}s`}
             className="flex gap-2.5 overflow-x-auto pb-1"
           >
             {course.modules.map((courseModule, index) => (
@@ -431,7 +496,9 @@ export default function ManageCoursePage() {
                     : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
                 }`}
               >
-                <span>Module {index + 1}</span>
+                <span>
+                  {course.groupLabelEn} {index + 1}
+                </span>
                 <span
                   className={`rounded-pill px-1.5 py-0.5 text-[11px] font-bold ${
                     courseModule.id === selectedModule?.id
@@ -462,6 +529,7 @@ export default function ManageCoursePage() {
               <option value="video">Video</option>
               <option value="audio">Audio</option>
               <option value="reading">Reading</option>
+              <option value="exam">Exam</option>
             </select>
           </div>
         </div>
@@ -471,6 +539,21 @@ export default function ManageCoursePage() {
         {selectedModule ? (
           <ModuleSection
             key={selectedModule.id}
+            course={course}
+            onAddExam={() =>
+              setEditorTarget({
+                moduleId: selectedModule.id,
+                moduleName: selectedModule.titleEn,
+                courseClass: {
+                  ...emptyClass(),
+                  kind: "exam",
+                  titleEn: `${selectedModule.titleEn} exam`,
+                  titleEs: "",
+                  durationMinutes: 5,
+                },
+                isNew: true,
+              })
+            }
             courseModule={selectedModule}
             visibleClasses={selectedModule.classes.filter(
               (entry) => typeFilter === "all" || entry.kind === typeFilter,
@@ -500,10 +583,61 @@ export default function ManageCoursePage() {
           />
         ) : (
           <p className="rounded-[14px] border border-dashed border-line-strong bg-surface p-10 text-center text-sm font-medium text-fg-muted">
-            This course has no modules yet. Add one to start building classes.
+            This course has no {course.groupLabelEn.toLowerCase()}s yet. Add one
+            to start building {course.itemLabelEn.toLowerCase()}s.
           </p>
         )}
       </div>
+
+      <Card as="section" aria-labelledby="final-exam" className="mt-6">
+        <SectionTitle
+          id="final-exam"
+          title="Final exam"
+          subtitle={`Scored · ${course.passMark}% to pass · ${
+            course.maxAttempts === 0 ? "unlimited" : course.maxAttempts
+          } attempts${
+            course.certificateEnabled && course.requireExamPass
+              ? " · needed for the certificate"
+              : ""
+          }`}
+          action={
+            <Badge tone={course.finalExam.length > 0 ? "info" : "neutral"}>
+              {course.finalExam.length} questions
+            </Badge>
+          }
+        />
+        <QuestionListEditor
+          questions={course.finalExam}
+          scoredOnly
+          onChange={(finalExam) => updateCourse(course.id, { finalExam })}
+          emptyText="No final exam yet. Add questions to give members a scored exam."
+        />
+      </Card>
+
+      <div className="mt-6">
+        <LearnerProgressCard course={course} />
+      </div>
+
+      {editingSettings && (
+        <CourseSettingsModal
+          initial={{
+            groupLabelEn: course.groupLabelEn,
+            groupLabelEs: course.groupLabelEs,
+            itemLabelEn: course.itemLabelEn,
+            itemLabelEs: course.itemLabelEs,
+            passMark: course.passMark,
+            maxAttempts: course.maxAttempts,
+            showAnswers: course.showAnswers,
+            certificateEnabled: course.certificateEnabled,
+            requireExamPass: course.requireExamPass,
+          }}
+          onClose={() => setEditingSettings(false)}
+          onSave={(values) => {
+            updateCourse(course.id, values);
+            setEditingSettings(false);
+          }}
+        />
+      )}
 
       {editingCourse && (
         <CourseModal

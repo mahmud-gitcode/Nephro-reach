@@ -48,7 +48,7 @@ function TripTile({ trip, onEdit }: { trip: TripRequest; onEdit: () => void }) {
 
   return (
     /* Same gradient as the dialysis schedule's day slots. */
-    <div className="flex h-full min-h-[160px] flex-col rounded-card border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-lg shadow-card transition-all duration-150 ease-standard focus-within:shadow-raised hover:border-line-strong hover:shadow-raised">
+    <div className="flex h-full min-h-[160px] flex-col rounded-card border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-lg transition-all duration-150 ease-standard hover:border-line-strong">
       <Link
         href={`/dashboard/travel-log/${trip.id}`}
         className="flex flex-1 flex-col gap-stack-xs rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -204,7 +204,7 @@ export function YourTrips({
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-inset-md">
           {shown.map((trip) => (
             <TripTile key={trip.id} trip={trip} onEdit={() => onEdit(trip)} />
           ))}

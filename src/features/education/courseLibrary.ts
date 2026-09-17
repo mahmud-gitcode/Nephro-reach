@@ -10,16 +10,31 @@ import {
   JourneyMediaKind,
   PHASE_ORDER,
 } from "@/features/education/dialysisJourneyData";
+import {
+  SEED_ACTIVITIES,
+  SEED_EXAMS,
+  SEED_FINAL_EXAM,
+  SEED_VIDEO_QUESTIONS,
+} from "@/features/education/classroom.seed";
+import type {
+  Question,
+  VideoQuestion,
+} from "@/features/education/questions.types";
 
 /**
- * Admin-side model of the course catalogue: course -> modules -> classes.
+ * The course catalogue: course -> modules -> classes. Admins build it, and
+ * the member classroom reads the same catalogue.
  *
  * The 21-Day Dialysis Journey is imported from `dialysisJourneyData` the first
  * time the library is opened, so the admin starts from the real course rather
  * than an empty screen.
  */
 
-export type CourseClassKind = JourneyMediaKind;
+/**
+ * How a class is delivered. An "exam" class is a scored set of questions the
+ * admin can place anywhere in a module; its questions live in `activities`.
+ */
+export type CourseClassKind = JourneyMediaKind | "exam";
 export type CourseDocumentKind = JourneyDocumentKind;
 
 export interface CourseTranscriptCue {
@@ -57,6 +72,15 @@ export interface CourseClass {
   keyPointsEs: string[];
   transcript: CourseTranscriptCue[];
   documents: CourseDocument[];
+  /** Cover image for the class card and the video poster. */
+  poster: string;
+  /**
+   * Questions under the lesson, answered but not marked. For an exam class,
+   * the scored exam questions.
+   */
+  activities: Question[];
+  /** Questions that pause the video at a set time. */
+  videoQuestions: VideoQuestion[];
 }
 
 export interface CourseModule {
@@ -75,14 +99,87 @@ export interface Course {
   /** Seeded courses cannot be deleted, so the demo always has content. */
   seeded: boolean;
   modules: CourseModule[];
+
+  /* ---- settings ---- */
+  /** What a module is called in this course: "Module", "Day", "Week"... */
+  groupLabelEn: string;
+  groupLabelEs: string;
+  /** What a class is called: "Class", "Lesson", "Day"... */
+  itemLabelEn: string;
+  itemLabelEs: string;
+  /** Percent needed to pass a module check or the final exam. */
+  passMark: number;
+  /** Tries allowed per check or exam. 0 is unlimited. */
+  maxAttempts: number;
+  /** Show the right answers on the results screen. */
+  showAnswers: boolean;
+  /** Issue a certificate when the course is finished. */
+  certificateEnabled: boolean;
+  /** The final exam must be passed before the certificate. */
+  requireExamPass: boolean;
+  finalExam: Question[];
+  /** Bumped when the seeded course gains new sample content. */
+  seedVersion?: number;
 }
 
+export type CourseSettings = Pick<
+  Course,
+  | "groupLabelEn"
+  | "groupLabelEs"
+  | "itemLabelEn"
+  | "itemLabelEs"
+  | "passMark"
+  | "maxAttempts"
+  | "showAnswers"
+  | "certificateEnabled"
+  | "requireExamPass"
+>;
+
+export const DEFAULT_COURSE_SETTINGS: CourseSettings = {
+  groupLabelEn: "Module",
+  groupLabelEs: "Módulo",
+  itemLabelEn: "Class",
+  itemLabelEs: "Clase",
+  passMark: 70,
+  maxAttempts: 3,
+  showAnswers: true,
+  certificateEnabled: true,
+  requireExamPass: true,
+};
+
+/** The course the member classroom shows. */
+export const CLASSROOM_COURSE_ID = "course-dialysis-journey";
+
 const STORAGE_KEY = storageKey("course-library");
+
+/** Used for classes that have no cover image of their own. */
+export const DEFAULT_POSTER = JOURNEY_DAYS[0]?.poster ?? "";
 
 export function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
+}
+
+const SEED_VERSION = 2;
+
+/** An exam class for the seeded course, when one closes this module. */
+function seedExamClass(moduleId: string): CourseClass[] {
+  const exam = SEED_EXAMS[moduleId];
+  if (!exam) return [];
+  return [
+    {
+      ...emptyClass(),
+      id: exam.id,
+      kind: "exam",
+      titleEn: exam.titleEn,
+      titleEs: exam.titleEs,
+      summaryEn: "A short scored check on what this module covered.",
+      summaryEs: "Una breve evaluación de lo que cubrió este módulo.",
+      durationMinutes: 5,
+      activities: exam.questions,
+    },
+  ];
 }
 
 /** Turns the static 21-day journey into the editable catalogue shape. */
@@ -96,14 +193,19 @@ function buildSeedCourse(): Course {
     descriptionEs:
       "Una clase corta al día durante tres semanas, con transcripción y documentos que los miembros pueden llevar a su próxima cita.",
     seeded: true,
+    ...DEFAULT_COURSE_SETTINGS,
+    itemLabelEn: "Day",
+    itemLabelEs: "Día",
+    finalExam: SEED_FINAL_EXAM,
+    seedVersion: SEED_VERSION,
     modules: PHASE_ORDER.map((phaseKey) => {
       const phase = JOURNEY_PHASES[phaseKey];
       return {
         id: `module-${phaseKey}`,
         titleEn: phase.titleEn,
         titleEs: phase.titleEs,
-        classes: JOURNEY_DAYS.filter((day) => day.phase === phaseKey).map(
-          (day) => ({
+        classes: JOURNEY_DAYS.filter((day) => day.phase === phaseKey)
+          .map((day): CourseClass => ({
             id: day.slug,
             titleEn: day.titleEn,
             titleEs: day.titleEs,
@@ -123,10 +225,67 @@ function buildSeedCourse(): Course {
               textEs: cue.textEs,
             })),
             documents: day.documents.map((doc) => ({ ...doc })),
-          }),
-        ),
+            poster: day.poster,
+            activities: SEED_ACTIVITIES[day.slug] ?? [],
+            videoQuestions: SEED_VIDEO_QUESTIONS[day.slug] ?? [],
+          }))
+          .concat(seedExamClass(`module-${phaseKey}`)),
       };
     }),
+  };
+}
+
+/**
+ * Fills in fields added after a catalogue was first saved, so an older
+ * catalogue in someone's browser opens without errors. The seeded course
+ * also picks up its sample questions and posters the first time.
+ */
+function normalizeCourse(course: Partial<Course> & { id: string }): Course {
+  const seed = course.seeded ? buildSeedCourse() : null;
+  const seedClass = (classId: string) =>
+    seed?.modules
+      .flatMap((entry) => entry.classes)
+      .find((entry) => entry.id === classId);
+
+  return {
+    ...DEFAULT_COURSE_SETTINGS,
+    ...(seed
+      ? { itemLabelEn: seed.itemLabelEn, itemLabelEs: seed.itemLabelEs }
+      : {}),
+    titleEn: "",
+    titleEs: "",
+    descriptionEn: "",
+    descriptionEs: "",
+    seeded: false,
+    ...course,
+    finalExam: course.finalExam ?? seed?.finalExam ?? [],
+    seedVersion: seed ? SEED_VERSION : course.seedVersion,
+    modules: (course.modules ?? []).map((courseModule) => ({
+      id: courseModule.id,
+      titleEn: courseModule.titleEn,
+      titleEs: courseModule.titleEs,
+      classes: [
+        ...(courseModule.classes ?? []),
+        // Sample exams added after this catalogue was saved, once only.
+        ...(seed && (course.seedVersion ?? 1) < SEED_VERSION
+          ? seedExamClass(courseModule.id).filter(
+              (exam) =>
+                !(courseModule.classes ?? []).some(
+                  (entry) => entry.id === exam.id,
+                ),
+            )
+          : []),
+      ].map((courseClass) => {
+        const fromSeed = seedClass(courseClass.id);
+        return {
+          ...courseClass,
+          poster: courseClass.poster ?? fromSeed?.poster ?? DEFAULT_POSTER,
+          activities: courseClass.activities ?? fromSeed?.activities ?? [],
+          videoQuestions:
+            courseClass.videoQuestions ?? fromSeed?.videoQuestions ?? [],
+        };
+      }),
+    })),
   };
 }
 
@@ -137,7 +296,7 @@ async function listCourses(): Promise<Course[]> {
   /* An empty catalogue is not a state anyone meant to create — the seeded
      course cannot be deleted — so an empty array falls back to the seed. */
   return Array.isArray(stored) && stored.length > 0
-    ? stored
+    ? stored.map(normalizeCourse)
     : [buildSeedCourse()];
 }
 
@@ -199,6 +358,9 @@ export function emptyClass(): CourseClass {
     keyPointsEs: [],
     transcript: [],
     documents: [],
+    poster: DEFAULT_POSTER,
+    activities: [],
+    videoQuestions: [],
   };
 }
 
@@ -233,8 +395,16 @@ export function useCourseLibrary() {
   );
 
   const createCourse = useCallback(
-    (input: Omit<Course, "id" | "modules" | "seeded">) => {
+    (
+      input: Pick<
+        Course,
+        "titleEn" | "titleEs" | "descriptionEn" | "descriptionEs"
+      > &
+        Partial<CourseSettings>,
+    ) => {
       const course: Course = {
+        ...DEFAULT_COURSE_SETTINGS,
+        finalExam: [],
         ...input,
         id: createId("course"),
         seeded: false,
@@ -284,7 +454,12 @@ export function useCourseLibrary() {
     (courseId: string, titleEn: string, titleEs: string) => {
       mapModules(courseId, (modules) => [
         ...modules,
-        { id: createId("module"), titleEn, titleEs, classes: [] },
+        {
+          id: createId("module"),
+          titleEn,
+          titleEs,
+          classes: [],
+        },
       ]);
     },
     [mapModules],

@@ -270,6 +270,16 @@ export default function DialysisJournalPage() {
 
   return (
     <NoticeRailLayout
+      title={
+        <PageTitle
+          href="/dashboard/personal-log/dialysis-journal"
+          action={
+            <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
+              {dj?.newEntryBtn || "New Entry"}
+            </Button>
+          }
+        />
+      }
       notices={
         <>
           <PersonalLogDisclaimer spaced={false} stacked />
@@ -278,7 +288,7 @@ export default function DialysisJournalPage() {
           <aside
             role="note"
             aria-label="Journal Privacy Notice"
-            className="rounded-card border border-primary-soft-line bg-surface p-inset-md shadow-xs"
+            className="rounded-card border border-primary-soft-line bg-surface p-inset-md"
           >
             <div className="flex flex-col gap-inline-md">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary-fg">
@@ -346,7 +356,7 @@ export default function DialysisJournalPage() {
                   {dj?.introCard?.subtitle ||
                     "A private space to reflect on your dialysis journey."}
                 </p>
-                <p className="mt-stack-md text-justify text-body-md text-fg-secondary">
+                <p className="mt-6 text-justify text-body-md text-fg-secondary">
                   {dj?.introCard?.body ||
                     "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
                 </p>
@@ -368,15 +378,6 @@ export default function DialysisJournalPage() {
       }
     >
       <div className="space-y-stack-xl">
-        <PageTitle
-          href="/dashboard/personal-log/dialysis-journal"
-          action={
-            <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
-              {dj?.newEntryBtn || "New Entry"}
-            </Button>
-          }
-        />
-
         {/* Journal Purpose & Logging Guidance Card */}
         <section className="space-y-stack-lg">
           {entries.map((entry) => (

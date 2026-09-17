@@ -16,10 +16,9 @@ import {
 import { LanguageCode, useLanguage } from "@/context/LanguageContext";
 import {
   formatCueTime,
-  JOURNEY_PHASES,
-  JourneyDay,
   JourneyDocumentKind,
 } from "@/features/education/dialysisJourneyData";
+import type { ClassroomLesson as JourneyDay } from "@/features/education/classroom";
 import {
   downloadNoteAsText,
   NoteSaveState,
@@ -173,7 +172,7 @@ export function JourneyPanelRail({
   const j = dictionary?.educationJourney;
 
   return (
-    <div className="flex shrink-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-1.5 shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+    <div className="flex shrink-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-1.5">
       {tabs.map((tab) => {
         const Icon = TAB_ICON[tab];
         const label = tabLabel(tab, j);
@@ -201,7 +200,13 @@ export function JourneyPanelRail({
   );
 }
 
-function OverviewTab({ day }: { day: JourneyDay }) {
+function OverviewTab({
+  day,
+  groupLabel,
+}: {
+  day: JourneyDay;
+  groupLabel: string;
+}) {
   const { language, dictionary } = useLanguage();
   const isEs = language === "ES";
   const j = dictionary?.educationJourney;
@@ -238,11 +243,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
           <dt className="text-[11px] font-semibold text-fg-muted">
             {j?.moduleLabel || "Module"}
           </dt>
-          <dd className="mt-1 text-sm font-bold text-fg">
-            {isEs
-              ? JOURNEY_PHASES[day.phase].moduleEs
-              : JOURNEY_PHASES[day.phase].moduleEn}
-          </dd>
+          <dd className="mt-1 text-sm font-bold text-fg">{groupLabel}</dd>
         </div>
       </dl>
     </div>
@@ -372,6 +373,7 @@ function NotesTab({
  */
 export function JourneyPanelContent({
   day,
+  groupLabel,
   activeTab,
   onClose,
   note,
@@ -387,6 +389,8 @@ export function JourneyPanelContent({
   closeRef,
 }: {
   day: JourneyDay;
+  /** "Module 2" — where this lesson sits, in the course's own words. */
+  groupLabel: string;
   activeTab: JourneyPanelTab;
   onClose: () => void;
   note: string;
@@ -435,7 +439,9 @@ export function JourneyPanelContent({
             interactive={interactive}
           />
         )}
-        {activeTab === "overview" && <OverviewTab day={day} />}
+        {activeTab === "overview" && (
+          <OverviewTab day={day} groupLabel={groupLabel} />
+        )}
         {activeTab === "documents" && (
           <DocumentsTab day={day} interactive={interactive} />
         )}
@@ -459,6 +465,7 @@ export function JourneyPanelContent({
  */
 export default function JourneyResourceDrawer({
   day,
+  groupLabel,
   open,
   activeTab,
   onClose,
@@ -473,6 +480,7 @@ export default function JourneyResourceDrawer({
   seekDisabled,
 }: {
   day: JourneyDay;
+  groupLabel: string;
   open: boolean;
   activeTab: JourneyPanelTab;
   onClose: () => void;
@@ -534,6 +542,7 @@ export default function JourneyResourceDrawer({
       >
         <JourneyPanelContent
           day={day}
+          groupLabel={groupLabel}
           activeTab={activeTab}
           onClose={onClose}
           note={note}

@@ -186,7 +186,7 @@ export default function AdminReviewsPage() {
             filtered.map((rev) => (
               <div
                 key={rev.id}
-                className="rounded-card border border-line bg-surface p-5 shadow-control transition-all hover:border-line-strong sm:p-6"
+                className="rounded-card border border-line bg-surface p-6 transition-all hover:border-line-strong sm:p-6"
               >
                 {/* Top Row: User details & Status Badge */}
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">

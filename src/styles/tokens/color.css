@@ -245,9 +245,10 @@
   --fg-inverse: #ffffff;
 
   /* ---- lines ---- */
-  --line-subtle: var(--color-gray-100);
+  /* Every border in the portal is one soft grey, #eaeaea. */
+  --line-subtle: #eaeaea;
   /* internal dividers */
-  --line: var(--color-gray-200);
+  --line: #eaeaea;
   /* card and panel edges */
   --line-strong: var(--color-gray-300);
   /* emphasis, selected */

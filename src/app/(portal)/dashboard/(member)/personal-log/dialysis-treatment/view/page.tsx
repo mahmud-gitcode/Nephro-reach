@@ -136,7 +136,7 @@ function TreatmentDetailContent() {
       </div>
 
       {/* CARD 1: SESSION INFORMATION (MATCHING FORM CARD 1) */}
-      <div className="w-full space-y-stack-lg rounded-card border border-line bg-surface p-inset-lg shadow-card">
+      <div className="w-full space-y-stack-lg rounded-card border border-line bg-surface p-inset-lg">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-heading-3 text-fg">
@@ -160,7 +160,7 @@ function TreatmentDetailContent() {
         </div>
 
         {/* 6-Column Summary Bar */}
-        <div className="grid grid-cols-2 divide-y divide-line-subtle rounded-card border border-line bg-surface-sunken p-inset-sm text-caption shadow-control sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
+        <div className="grid grid-cols-2 divide-y divide-line-subtle rounded-card border border-line bg-surface-sunken p-6 text-caption sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
           <div className="min-w-0 px-3 py-1.5 sm:py-0">
             <p className="text-caption text-fg-muted">
               {dt?.detail?.summaryBar?.treatmentType || "Treatment Type"}
@@ -218,7 +218,7 @@ function TreatmentDetailContent() {
       </div>
 
       {/* CARD 2: LOGGED CLINICAL DATA (MATCHING FORM CARD 2 / STEPS) */}
-      <div className="w-full space-y-8 rounded-panel border border-line bg-surface p-6 shadow-card sm:p-8">
+      <div className="w-full space-y-8 rounded-panel border border-line bg-surface p-6 sm:p-8">
         {/* 1. ATTENDANCE & SCHEDULE */}
         <section className="space-y-3">
           <h2 className="text-heading-4 text-fg">
@@ -272,7 +272,7 @@ function TreatmentDetailContent() {
             <span className="text-body-md text-fg-secondary">
               {dt?.detail?.preTreatment?.overallFeel || "Overall Feel"}
             </span>
-            <div className="flex items-center gap-2.5 rounded-card border border-primary-edge bg-surface px-inset-md py-inset-xs shadow-control">
+            <div className="flex items-center gap-2.5 rounded-card border border-primary-edge bg-surface px-inset-md py-inset-xs">
               <div className="relative flex items-center justify-center">
                 <span className="absolute inset-0.5 rounded-full bg-surface shadow-control" />
                 <PreMoodIcon
@@ -431,7 +431,7 @@ function TreatmentDetailContent() {
             </h3>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed"}
@@ -448,7 +448,7 @@ function TreatmentDetailContent() {
                 </div>
               </div>
 
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.postWeight || "Post Weight"}
@@ -465,7 +465,7 @@ function TreatmentDetailContent() {
                 </div>
               </div>
 
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.bloodPressure ||
@@ -483,7 +483,7 @@ function TreatmentDetailContent() {
                 </div>
               </div>
 
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-inset-md shadow-card">
+              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
                   <span className="text-xs font-semibold">
                     {dt?.clinicalMeasurements?.heartRate || "Heart Rate"}

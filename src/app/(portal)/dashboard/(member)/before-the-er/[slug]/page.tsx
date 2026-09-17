@@ -253,7 +253,7 @@ function SymptomDetailContent() {
 
         {/* 2. YOUR NEXT STEP ESCALATION CARD */}
         <section
-          className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 shadow-control sm:p-6`}
+          className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 sm:p-6`}
         >
           <div className="space-y-1.5">
             <span className="text-xs font-black text-fg-muted">
@@ -351,7 +351,7 @@ function SymptomDetailContent() {
         </section>
 
         {/* MAIN SYMPTOM DETAILS CARD */}
-        <section className="space-y-6 rounded-panel border border-line bg-surface p-6 shadow-control">
+        <section className="space-y-6 rounded-panel border border-line bg-surface p-6">
           <div className="border-b border-line-subtle pb-4">
             <div className="group relative inline-flex items-center gap-2">
               <h1 className="flex items-center gap-2 text-2xl font-bold text-fg sm:text-3xl">

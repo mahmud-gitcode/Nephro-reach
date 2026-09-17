@@ -25,7 +25,10 @@ export const journeyProgressKey = ["education", "journey-progress"] as const;
  * The rules live in journey.rules.ts as pure functions; this file only moves
  * data between them, storage and the screen.
  */
-export function useJourneyProgress() {
+export function useJourneyProgress<T extends { slug: string }>(
+  /** The course's lessons, in order. Defaults to the 21-day journey. */
+  days?: readonly T[],
+) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -56,8 +59,9 @@ export function useJourneyProgress() {
   );
 
   const markComplete = useCallback(
-    (slug: string) => mutate((current) => rules.markComplete(current, slug)),
-    [mutate],
+    (slug: string) =>
+      mutate((current) => rules.markComplete(current, slug, new Date(), days)),
+    [mutate, days],
   );
 
   const markIncomplete = useCallback(
@@ -65,9 +69,13 @@ export function useJourneyProgress() {
     [mutate],
   );
 
+  /* `canComplete` is false while the lesson still has questions to
+     answer, so watching to the end does not finish it on its own. */
   const recordWatched = useCallback(
-    (slug: string, percent: number) =>
-      mutate((current) => rules.recordWatched(current, slug, percent)),
+    (slug: string, percent: number, canComplete = true) =>
+      mutate((current) =>
+        rules.recordWatched(current, slug, percent, new Date(), canComplete),
+      ),
     [mutate],
   );
 
@@ -83,10 +91,10 @@ export function useJourneyProgress() {
     markComplete,
     markIncomplete,
     recordWatched,
-    completedCount: rules.completedCount(progress),
-    overallPercent: rules.overallPercent(progress),
-    nextDay: rules.nextDay(progress),
-    hasStarted: rules.hasStarted(progress),
+    completedCount: rules.completedCount(progress, days),
+    overallPercent: rules.overallPercent(progress, days),
+    nextDay: days ? rules.nextDay(progress, days) : undefined,
+    hasStarted: rules.hasStarted(progress, days),
 
     isPending: query.isPending,
     error: query.error,

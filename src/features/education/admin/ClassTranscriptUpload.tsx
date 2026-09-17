@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Captions,
   Download,
+  FileText,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -26,6 +27,27 @@ const LANGUAGE_NAME: Record<CaptionLanguage, string> = {
 };
 
 /**
+ * Splits a plain script into lines and spaces them evenly across the
+ * recording. Good enough for captions until a timed file arrives.
+ */
+export function scriptToCues(
+  script: string,
+  seconds: number,
+): { start: number; end: number; text: string }[] {
+  const lines = script
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return [];
+  const step = Math.max(1, seconds / lines.length);
+  return lines.map((text, index) => ({
+    start: Math.round(index * step * 10) / 10,
+    end: Math.round((index + 1) * step * 10) / 10,
+    text,
+  }));
+}
+
+/**
  * Pick a language, upload its caption file, repeat for the next language.
  *
  * Timings come from the first file uploaded. A later language reuses them when
@@ -42,6 +64,8 @@ export default function ClassTranscriptUpload({
 }) {
   const [language, setLanguage] = useState<CaptionLanguage>("EN");
   const [error, setError] = useState<string | null>(null);
+  const [pasting, setPasting] = useState(false);
+  const [script, setScript] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cues = draft.transcript;
@@ -59,7 +83,20 @@ export default function ClassTranscriptUpload({
     .filter((entry) => entry.lines > 0);
 
   const importFile = async (file: File) => {
-    const parsed = parseCaptions(await file.text());
+    applyCues(parseCaptions(await file.text()));
+  };
+
+  /* A plain script has no timings, so its lines are spread evenly. */
+  const importScript = () => {
+    const seconds = mediaSeconds ?? draft.durationMinutes * 60;
+    applyCues(scriptToCues(script, seconds));
+    setScript("");
+    setPasting(false);
+  };
+
+  const applyCues = (
+    parsed: { start: number; end: number; text: string }[],
+  ) => {
     setError(null);
 
     if (parsed.length === 0) {
@@ -159,7 +196,56 @@ export default function ClassTranscriptUpload({
           <Upload className="h-3.5 w-3.5" />
           Upload transcript
         </button>
+
+        <button
+          type="button"
+          onClick={() => setPasting((value) => !value)}
+          aria-expanded={pasting}
+          className="flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Paste script
+        </button>
       </div>
+
+      {pasting && (
+        <div className="space-y-2 rounded-control border border-line bg-surface-sunken p-3">
+          <label
+            htmlFor="script-paste"
+            className="block text-xs font-bold text-fg-muted"
+          >
+            Script ({LANGUAGE_NAME[language]}) — one caption per line. Lines are
+            spaced evenly across the recording.
+          </label>
+          <textarea
+            id="script-paste"
+            rows={6}
+            value={script}
+            onChange={(event) => setScript(event.target.value)}
+            className="w-full resize-y rounded-control border border-line bg-surface px-3 py-2 text-sm text-fg outline-none focus:border-primary-edge"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setScript("");
+                setPasting(false);
+              }}
+              className="cursor-pointer rounded-control px-3 py-1.5 text-xs font-bold text-fg-muted hover:bg-surface"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={importScript}
+              disabled={!script.trim()}
+              className="cursor-pointer rounded-control bg-primary-solid px-3 py-1.5 text-xs font-bold text-primary-on-solid hover:bg-primary-solid-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add script
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-[11px] leading-relaxed font-medium text-warning">

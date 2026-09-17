@@ -22,7 +22,7 @@ export type CardPadding = "none" | "small" | "big";
 
 const tones: Record<CardTone, string> = {
   /* A real object on the page: Level 1 elevation */
-  default: "bg-surface border border-line shadow-sm",
+  default: "bg-surface border border-line",
   /* Grouping only — no elevation, no claim to be its own object. */
   flat: "bg-surface border border-line",
   /* A well: recessed area inside another surface. */
@@ -33,8 +33,9 @@ const tones: Record<CardTone, string> = {
 
 const paddings: Record<CardPadding, string> = {
   none: "",
-  small: "p-inset-sm",
-  big: "p-inset-md",
+  /* Every card breathes the same: 24px on all sides. */
+  small: "p-inset-lg",
+  big: "p-inset-lg",
 };
 
 export type CardProps = React.HTMLAttributes<HTMLElement> & {
@@ -67,7 +68,7 @@ export function Card({
         tones[tone],
         paddings[padding],
         interactive &&
-          "cursor-pointer transition-all duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-md",
+          "cursor-pointer transition-all duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong",
         className,
       )}
       {...rest}

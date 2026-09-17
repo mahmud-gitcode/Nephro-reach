@@ -242,9 +242,7 @@ export default function BetweenTreatmentPage() {
 
   return (
     <NoticeRailLayout
-      notices={<PersonalLogDisclaimer spaced={false} stacked />}
-    >
-      <div className="space-y-stack-lg">
+      title={
         <PageTitle
           href="/dashboard/beyond-the-chair"
           action={
@@ -254,7 +252,10 @@ export default function BetweenTreatmentPage() {
             </Button>
           }
         />
-
+      }
+      notices={<PersonalLogDisclaimer spaced={false} stacked />}
+    >
+      <div className="space-y-stack-lg">
         {saveError ? (
           <Alert
             tone="danger"

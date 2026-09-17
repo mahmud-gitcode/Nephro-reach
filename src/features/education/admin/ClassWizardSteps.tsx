@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useRef } from "react";
-import { BookOpen, CheckCircle2, PlayCircle, Upload } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle2,
+  ClipboardCheck,
+  PlayCircle,
+  Upload,
+} from "lucide-react";
 import {
   CourseClass,
   CourseClassKind,
@@ -86,7 +92,7 @@ export function OverviewStep({
  * Which of the two it ends up being is taken from the file that is uploaded.
  */
 const TYPE_OPTIONS: Array<{
-  key: "media" | "reading";
+  key: "media" | "reading" | "exam";
   label: string;
   detail: string;
   icon: React.ElementType;
@@ -103,6 +109,12 @@ const TYPE_OPTIONS: Array<{
     detail: "Written lesson, audio optional",
     icon: BookOpen,
   },
+  {
+    key: "exam",
+    label: "Exam",
+    detail: "Scored questions, placed anywhere",
+    icon: ClipboardCheck,
+  },
 ];
 
 export function TypeStep({
@@ -114,19 +126,19 @@ export function TypeStep({
 }) {
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         {TYPE_OPTIONS.map((option) => {
           const selected =
-            option.key === "reading"
-              ? draft.kind === "reading"
-              : draft.kind !== "reading";
+            option.key === "media"
+              ? draft.kind === "video" || draft.kind === "audio"
+              : draft.kind === option.key;
           return (
             <button
               key={option.key}
               type="button"
               onClick={() =>
                 onChange({
-                  kind: option.key === "reading" ? "reading" : "video",
+                  kind: option.key === "media" ? "video" : option.key,
                 })
               }
               aria-pressed={selected}

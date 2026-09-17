@@ -162,6 +162,20 @@ export default function MyRidesPage() {
     /* Ride-share links and their disclaimer sit in the right-hand column,
        the same place every other page keeps its notices. */
     <NoticeRailLayout
+      title={
+        <PageTitle
+          href="/dashboard/my-rides"
+          action={
+            <Button
+              onClick={openAdd}
+              leadingIcon={<Plus />}
+              disabled={isPending}
+            >
+              {t("myRides.addRide")}
+            </Button>
+          }
+        />
+      }
       notices={
         <Card className="space-y-stack-xl">
           <div className="border-b border-line-subtle pb-inset-sm">
@@ -212,19 +226,6 @@ export default function MyRidesPage() {
       }
     >
       <div className="space-y-8 pb-10">
-        <PageTitle
-          href="/dashboard/my-rides"
-          action={
-            <Button
-              onClick={openAdd}
-              leadingIcon={<Plus />}
-              disabled={isPending}
-            >
-              {t("myRides.addRide")}
-            </Button>
-          }
-        />
-
         <div>
           <section className="space-y-4">
             {deleteError ? (

@@ -176,7 +176,7 @@ function CalendarPicker({
   const displayMinute = String(value.getMinutes()).padStart(2, "0");
 
   return (
-    <div className="absolute top-[calc(100%+8px)] right-0 z-20 w-[342px] max-w-[calc(100vw-48px)] rounded-card border border-line bg-surface-raised p-inset-md shadow-raised">
+    <div className="absolute top-[calc(100%+8px)] right-0 z-20 w-[342px] max-w-[calc(100vw-48px)] rounded-card border border-line bg-surface-raised p-inset-md">
       <div className="mb-stack-lg flex h-9 items-center justify-between">
         <p className="text-heading-4 text-fg" aria-live="polite">
           {MONTH_NAMES[view.getMonth()]} {view.getFullYear()}
@@ -403,7 +403,7 @@ export default function SmsAnalyticsPage() {
 
   return (
     <>
-      <section className="rounded-card border border-line bg-surface px-3 py-4 shadow-card">
+      <section className="rounded-card border border-line bg-surface px-3 py-4">
         <div className="mb-[14px] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl leading-8 font-medium text-fg">
@@ -438,7 +438,7 @@ export default function SmsAnalyticsPage() {
         ].map(([label, value]) => (
           <article
             key={label}
-            className="rounded-card border border-line bg-surface p-5 shadow-card"
+            className="rounded-card border border-line bg-surface p-6"
           >
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand-100 text-fg-brand">
               <MessageCircle className="h-5 w-5" />

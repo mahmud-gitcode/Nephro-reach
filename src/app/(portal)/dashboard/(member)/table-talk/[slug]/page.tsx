@@ -134,7 +134,7 @@ function RelatedRow({ episodes }: { episodes: TableTalkEpisode[] }) {
           <Link
             key={episode.id}
             href={`/dashboard/table-talk/${episode.slug}`}
-            className="group rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="group rounded-card border border-line bg-surface p-6 transition-shadow duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <div className="relative aspect-video overflow-hidden rounded-card bg-surface-sunken">
               <Image

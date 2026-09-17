@@ -36,7 +36,7 @@ export function NutritionDayPicker({
   return (
     <section
       aria-label={isEs ? "Día mostrado" : "Day shown"}
-      className="flex flex-col gap-3 rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-3 rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-center gap-3">
         <button

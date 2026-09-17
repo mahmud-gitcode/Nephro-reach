@@ -50,7 +50,7 @@ export function ExerciseCard({
   const totals = dayTotals(entries, isEs);
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
+    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-heading-4 text-fg">
@@ -72,7 +72,7 @@ export function ExerciseCard({
         </button>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
+      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-surface">
         {entries.length === 0 ? (
           <div className="px-4 py-10 text-center">
             <p className="text-sm font-semibold text-fg-muted">

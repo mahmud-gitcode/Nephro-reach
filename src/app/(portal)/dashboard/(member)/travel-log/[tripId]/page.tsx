@@ -209,6 +209,7 @@ export default function TripDetailPage() {
 
             <Tabs<TripTab>
               variant="pill"
+              fullWidth
               label={isEs ? "Secciones del viaje" : "Trip sections"}
               value={tab}
               onChange={setTab}

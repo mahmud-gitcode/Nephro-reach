@@ -125,9 +125,9 @@ export function MetricCards({
       {/* Primary EDW Comparison Cards - Exactly matching the screenshot */}
       <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
         {/* Card 1: Estimated Dry Weight */}
-        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5">
+        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-6 transition-all hover:border-primary-soft-line">
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] shadow-control transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
@@ -156,9 +156,9 @@ export function MetricCards({
         </div>
 
         {/* Card 2: Today's Weight */}
-        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5">
+        <div className="group relative flex items-center justify-between rounded-card border border-line/90 bg-surface p-6 transition-all hover:border-primary-soft-line">
           <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] shadow-control transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-[var(--color-brand-50)] transition-transform group-hover:scale-105 sm:h-14 sm:w-14">
               <BathroomScaleIcon className="h-8 w-8 sm:h-9 sm:w-9" />
             </div>
             <div className="min-w-0">
@@ -187,7 +187,7 @@ export function MetricCards({
         </div>
 
         {/* Card 3: Difference Above / Below EDW */}
-        <div className="flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:shadow-md sm:p-5">
+        <div className="flex items-center gap-4 rounded-card border border-line/90 bg-surface p-6 transition-all">
           <div
             className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14 ${statusIconBg} shadow-control`}
           >
@@ -216,7 +216,7 @@ export function MetricCards({
         {secondaryCards.map((card) => (
           <article
             key={card.label}
-            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-4 shadow-control transition-all hover:border-primary-soft-line hover:shadow-md sm:p-5"
+            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-6 transition-all hover:border-primary-soft-line"
           >
             <div
               className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-card sm:h-14 sm:w-14 ${card.iconBg} shadow-control transition-transform group-hover:scale-105`}

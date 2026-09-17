@@ -301,7 +301,9 @@ export default function UserDashboard() {
       <Card
         as="section"
         padding="none"
-        className="relative overflow-hidden p-inset-lg transition-shadow duration-150 ease-standard hover:shadow-raised"
+        /* A clear blue-to-white wash across the whole card, so the live
+           class stands out from the tiles around it. */
+        className="relative overflow-hidden bg-gradient-to-r from-brand-100 via-brand-50 to-surface p-inset-lg"
       >
         {/* Subtle accent indicator bar on the left edge */}
         <div
@@ -309,18 +311,12 @@ export default function UserDashboard() {
           className="absolute top-0 left-0 h-full w-1.5 bg-brand-600"
         />
 
-        {/* Subtle ambient gradient highlight in corner */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-brand-50/70 blur-3xl"
-        />
-
         <div className="relative flex flex-col gap-inset-md sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-inline-lg sm:items-center">
             {/* Visual Icon Container */}
             <span
               aria-hidden="true"
-              className="flex size-14 shrink-0 items-center justify-center rounded-panel border border-primary-soft-line bg-primary-soft text-primary-fg shadow-xs"
+              className="flex size-14 shrink-0 items-center justify-center rounded-panel border border-primary-soft-line bg-primary-soft text-primary-fg"
             >
               <Video className="size-7" />
             </span>

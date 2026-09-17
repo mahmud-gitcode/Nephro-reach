@@ -101,8 +101,8 @@ describe("journey progress summaries", () => {
   });
 
   it("points 'continue' at the first unfinished day", () => {
-    expect(nextDay(none).slug).toBe(day1.slug);
-    expect(nextDay(markComplete(none, day1.slug, NOW)).slug).toBe(day2.slug);
+    expect(nextDay(none)?.slug).toBe(day1.slug);
+    expect(nextDay(markComplete(none, day1.slug, NOW))?.slug).toBe(day2.slug);
   });
 
   it("counts finished days against the whole journey", () => {
@@ -118,7 +118,7 @@ describe("journey progress summaries", () => {
       (progress, day) => markComplete(progress, day.slug, NOW),
       none,
     );
-    expect(nextDay(all).slug).toBe(JOURNEY_DAYS[JOURNEY_DAYS.length - 1].slug);
+    expect(nextDay(all)?.slug).toBe(JOURNEY_DAYS[JOURNEY_DAYS.length - 1].slug);
     expect(overallPercent(all)).toBe(100);
   });
 });

@@ -149,7 +149,7 @@ export default function AddBloodPressurePage() {
           <h2 className="text-heading-4 text-fg">
             {t("bloodPressure.add.howIFelt")}
           </h2>
-          <div className="mt-stack-md grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
             {vitals.map((v) => (
               <FormField key={v.label} label={v.label}>
                 {(props) => (
@@ -178,7 +178,7 @@ export default function AddBloodPressurePage() {
             label={t("bloodPressure.add.howIFeel")}
             value={selectedMood}
             onChange={setSelectedMood}
-            className="mt-stack-md"
+            className="mt-6"
           >
             {moods.map((mood) => (
               <RadioCard
@@ -196,7 +196,7 @@ export default function AddBloodPressurePage() {
           <h2 className="text-heading-4 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
-          <p className="mt-stack-md text-label-md text-fg">
+          <p className="mt-6 text-label-md text-fg">
             {t("bloodPressure.add.medicationQuestion")}
           </p>
 

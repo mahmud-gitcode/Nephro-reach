@@ -12,6 +12,7 @@ import {
 import {
   CourseClass,
   CourseDocument,
+  CourseSettings,
   createId,
 } from "@/features/education/courseLibrary";
 import {
@@ -23,6 +24,10 @@ import {
   TypeStep,
 } from "@/features/education/admin/ClassWizardSteps";
 import ClassTranscriptUpload from "@/features/education/admin/ClassTranscriptUpload";
+import {
+  QuestionListEditor,
+  VideoQuestionListEditor,
+} from "@/features/education/admin/QuestionEditor";
 import { Button, Modal } from "@/components/ui";
 
 /** Centred dialog used by the course and module forms. */
@@ -321,14 +326,24 @@ function DocumentsStep({
   );
 }
 
-const STEPS = [
+const LESSON_STEPS = [
   { key: "overview", label: "Overview" },
   { key: "type", label: "Type" },
   { key: "media", label: "Media" },
   { key: "documents", label: "Documents" },
+  { key: "activities", label: "Activities" },
+  { key: "video", label: "Video questions" },
 ] as const;
 
-type StepKey = (typeof STEPS)[number]["key"];
+/* An exam has no media: just what it is called and its questions. */
+const EXAM_STEPS = [
+  { key: "overview", label: "Overview" },
+  { key: "type", label: "Type" },
+  { key: "exam", label: "Exam questions" },
+] as const;
+
+type StepKey =
+  (typeof LESSON_STEPS)[number]["key"] | (typeof EXAM_STEPS)[number]["key"];
 
 /**
  * Stepped dialog for creating or editing a class: overview, then type, then
@@ -378,8 +393,11 @@ export function ClassEditorPanel({
 
   if (!open) return null;
 
-  const step = STEPS[stepIndex].key as StepKey;
-  const isLastStep = stepIndex === STEPS.length - 1;
+  const STEPS: ReadonlyArray<{ key: StepKey; label: string }> =
+    draft.kind === "exam" ? EXAM_STEPS : LESSON_STEPS;
+  const safeIndex = Math.min(stepIndex, STEPS.length - 1);
+  const step = STEPS[safeIndex].key;
+  const isLastStep = safeIndex === STEPS.length - 1;
   const canContinue = draft.titleEn.trim().length > 0;
 
   const set = (patch: Partial<CourseClass>) =>
@@ -427,7 +445,7 @@ export function ClassEditorPanel({
             variant="neutral"
             appearance="fill-stroke"
             onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
-            disabled={stepIndex === 0}
+            disabled={safeIndex === 0}
             className="mr-auto"
           >
             <ChevronLeft aria-hidden="true" />
@@ -459,8 +477,8 @@ export function ClassEditorPanel({
       <div className="flex min-h-0 flex-col">
         <ol className="-mx-inset-lg mb-stack-lg flex items-center gap-inline-sm overflow-x-auto border-b border-line px-inset-lg pb-inset-sm">
           {STEPS.map((entry, index) => {
-            const done = index < stepIndex;
-            const active = index === stepIndex;
+            const done = index < safeIndex;
+            const active = index === safeIndex;
             return (
               <li
                 key={entry.key}
@@ -539,8 +557,196 @@ export function ClassEditorPanel({
               onChange={(documents) => set({ documents })}
             />
           )}
+
+          {step === "exam" && (
+            <>
+              <p className="text-sm text-fg-muted">
+                A scored exam, taken in order like any other class. Members need
+                the course pass mark to finish it.
+              </p>
+              <QuestionListEditor
+                questions={draft.activities}
+                scoredOnly
+                onChange={(activities) => set({ activities })}
+                emptyText="No exam questions yet."
+              />
+            </>
+          )}
+
+          {step === "activities" && (
+            <>
+              <p className="text-sm text-fg-muted">
+                Questions shown under the lesson. Members answer them to finish
+                the class; they are not marked.
+              </p>
+              <QuestionListEditor
+                questions={draft.activities}
+                onChange={(activities) => set({ activities })}
+                emptyText="No activities yet. Add a question, reflection or fill-in."
+              />
+            </>
+          )}
+
+          {step === "video" &&
+            (draft.kind === "reading" ? (
+              <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+                Pop-up questions need a video or audio class.
+              </p>
+            ) : (
+              <VideoQuestionListEditor
+                items={draft.videoQuestions}
+                onChange={(videoQuestions) => set({ videoQuestions })}
+              />
+            ))}
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** Course-wide settings: what the levels are called, and how exams work. */
+export function CourseSettingsModal({
+  initial,
+  onClose,
+  onSave,
+}: {
+  initial: CourseSettings;
+  onClose: () => void;
+  onSave: (values: CourseSettings) => void;
+}) {
+  const [values, setValues] = useState<CourseSettings>(initial);
+  const set = (patch: Partial<CourseSettings>) =>
+    setValues((current) => ({ ...current, ...patch }));
+
+  const valid =
+    values.groupLabelEn.trim().length > 0 &&
+    values.itemLabelEn.trim().length > 0 &&
+    values.passMark >= 0 &&
+    values.passMark <= 100;
+
+  const toggle = (
+    key: "showAnswers" | "certificateEnabled" | "requireExamPass",
+    label: string,
+    hint: string,
+  ) => (
+    <label className="flex cursor-pointer items-start gap-3 rounded-card border border-line bg-surface-sunken p-inset-md">
+      <input
+        type="checkbox"
+        checked={values[key]}
+        onChange={(event) => set({ [key]: event.target.checked })}
+        className="mt-0.5 h-4 w-4 accent-[var(--color-brand-600)]"
+      />
+      <span>
+        <span className="block text-sm font-semibold text-fg">{label}</span>
+        <span className="mt-0.5 block text-xs text-fg-muted">{hint}</span>
+      </span>
+    </label>
+  );
+
+  return (
+    <AdminModal
+      title="Course settings"
+      open
+      onClose={onClose}
+      onSubmit={() => onSave(values)}
+      submitLabel="Save settings"
+      submitDisabled={!valid}
+    >
+      <div className="space-y-4">
+        <p className="text-xs font-bold text-fg-muted">Names</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            label="A group is called (English)"
+            hint="e.g. Module, Day, Week"
+          >
+            <input
+              className={FIELD_CLASS}
+              value={values.groupLabelEn}
+              onChange={(event) => set({ groupLabelEn: event.target.value })}
+            />
+          </Field>
+          <Field
+            label="A group is called (Spanish)"
+            hint="e.g. Módulo, Día, Semana"
+          >
+            <input
+              className={FIELD_CLASS}
+              value={values.groupLabelEs}
+              onChange={(event) => set({ groupLabelEs: event.target.value })}
+            />
+          </Field>
+          <Field
+            label="A lesson is called (English)"
+            hint="e.g. Class, Lesson, Day"
+          >
+            <input
+              className={FIELD_CLASS}
+              value={values.itemLabelEn}
+              onChange={(event) => set({ itemLabelEn: event.target.value })}
+            />
+          </Field>
+          <Field
+            label="A lesson is called (Spanish)"
+            hint="e.g. Clase, Lección, Día"
+          >
+            <input
+              className={FIELD_CLASS}
+              value={values.itemLabelEs}
+              onChange={(event) => set({ itemLabelEs: event.target.value })}
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <p className="text-xs font-bold text-fg-muted">Checks and final exam</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Pass mark (%)">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className={FIELD_CLASS}
+              value={values.passMark}
+              onChange={(event) =>
+                set({ passMark: Number(event.target.value) || 0 })
+              }
+            />
+          </Field>
+          <Field label="Attempts allowed" hint="0 means unlimited">
+            <input
+              type="number"
+              min={0}
+              className={FIELD_CLASS}
+              value={values.maxAttempts}
+              onChange={(event) =>
+                set({
+                  maxAttempts: Math.max(0, Number(event.target.value) || 0),
+                })
+              }
+            />
+          </Field>
+        </div>
+        {toggle(
+          "showAnswers",
+          "Show the right answers after an attempt",
+          "Members see which answers were correct on the results screen.",
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <p className="text-xs font-bold text-fg-muted">Certificate</p>
+        {toggle(
+          "certificateEnabled",
+          "Issue a certificate of completion",
+          "Unlocks once every lesson is finished.",
+        )}
+        {toggle(
+          "requireExamPass",
+          "Require a pass on the final exam",
+          "Only applies when the course has a final exam.",
+        )}
+      </div>
+    </AdminModal>
   );
 }

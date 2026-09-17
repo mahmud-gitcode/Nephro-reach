@@ -186,9 +186,7 @@ function ClassRegistrations() {
               key={column.title}
               className="min-h-[540px] border-b border-line p-inset-md last:border-b-0 lg:border-b-0 lg:border-l lg:first:border-l-0"
             >
-              <h2 className="mb-stack-lg text-heading-4 text-fg">
-                {column.title}
-              </h2>
+              <h2 className="mb-6 text-heading-4 text-fg">{column.title}</h2>
               <ClassCard item={column.class} />
             </section>
           ))}

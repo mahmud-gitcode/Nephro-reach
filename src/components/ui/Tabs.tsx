@@ -40,6 +40,8 @@ export type TabsProps<T extends string = string> = {
   variant?: TabsVariant;
   /** Names the tab list for screen readers. */
   label: string;
+  /** Stretch the strip to its container and share the width between tabs. */
+  fullWidth?: boolean;
   className?: string;
 };
 
@@ -94,6 +96,7 @@ export function Tabs<T extends string = string>({
   onChange,
   variant = "underline",
   label,
+  fullWidth = false,
   className,
 }: TabsProps<T>) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -154,7 +157,7 @@ export function Tabs<T extends string = string>({
       role="tablist"
       aria-label={label}
       aria-orientation={vertical ? "vertical" : "horizontal"}
-      className={cn(shells[variant], className)}
+      className={cn(shells[variant], fullWidth && "flex w-full", className)}
     >
       {items.map((item, index) => {
         const selected = item.id === value;
@@ -171,7 +174,10 @@ export function Tabs<T extends string = string>({
             disabled={item.disabled}
             onClick={() => onChange(item.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className={tabClass(variant, selected)}
+            className={cn(
+              tabClass(variant, selected),
+              fullWidth && "flex-1 justify-center",
+            )}
           >
             {item.icon}
             <span>{item.label}</span>

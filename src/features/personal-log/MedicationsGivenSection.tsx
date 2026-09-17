@@ -205,7 +205,7 @@ export default function MedicationsGivenSection() {
   };
 
   return (
-    <section className="flex h-full flex-col justify-between space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
+    <section className="flex h-full flex-col justify-between space-y-4 rounded-panel border border-line bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle pb-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft">

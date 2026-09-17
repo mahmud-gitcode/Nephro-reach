@@ -140,7 +140,7 @@ function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
           <p className="mt-0.5 text-body-md text-fg-muted">
             {appointment.doctor}
           </p>
-          <div className="mt-stack-sm space-y-stack-xs">
+          <div className="mt-6 space-y-stack-xs">
             <IconText icon={<Clock3 className="h-5 w-5" />}>
               {appointment.time}
             </IconText>
@@ -190,7 +190,7 @@ function UpcomingAppointments({ items }: { items: AppointmentItem[] }) {
       <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.upcomingTitle")}
       </h2>
-      <Card padding="none" className="mt-stack-md overflow-hidden">
+      <Card padding="none" className="mt-6 overflow-hidden">
         {items.map((appointment) => (
           <AppointmentRow key={appointment.id} appointment={appointment} />
         ))}
@@ -223,7 +223,7 @@ function NextAppointment() {
         {t("appointments.nextTitle")}
       </h2>
 
-      <Card padding="small" className="mt-stack-md">
+      <Card padding="small" className="mt-6">
         <div className="flex flex-col gap-inline-lg sm:flex-row sm:items-start">
           <div className="flex shrink-0 items-center gap-inline-md px-inset-md py-inset-md text-fg-secondary">
             <p className="text-metric-xl text-fg">12</p>

@@ -213,7 +213,7 @@ function EpisodeCard({
   const title = isEs ? episode.titleEs || episode.titleEn : episode.titleEn;
 
   return (
-    <div className="group relative flex flex-col rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard focus-within:shadow-raised hover:shadow-raised">
+    <div className="group relative flex flex-col rounded-card border border-line bg-surface p-6 transition-shadow duration-150 ease-standard">
       <div className="relative aspect-video overflow-hidden rounded-card bg-surface-sunken">
         <Image
           src={episode.thumbnail}
