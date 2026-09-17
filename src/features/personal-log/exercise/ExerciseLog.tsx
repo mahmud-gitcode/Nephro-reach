@@ -53,10 +53,10 @@ export function ExerciseCard({
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
+          <h2 className="text-heading-4 text-fg">
             {isEs ? "Ejercicio" : "Exercise"}
           </h2>
-          <p className="mt-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
+          <p className="mt-0.5 text-body-md text-fg-muted">
             {isEs
               ? "Anota qué hiciste y cuánto. Consulta a tu equipo antes de empezar un ejercicio nuevo."
               : "Note what you did and how much. Check with your care team before starting new exercise."}
@@ -306,7 +306,7 @@ export function ExerciseModal({
                 className="space-y-3 rounded-xl border border-line-subtle bg-surface-sunken p-3.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold tracking-wider text-fg-muted uppercase">
+                  <p className="text-xs font-bold text-fg-muted">
                     {isEs ? `Ejercicio ${index + 1}` : `Exercise ${index + 1}`}
                   </p>
                   {count > 1 ? (

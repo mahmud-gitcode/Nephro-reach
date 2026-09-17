@@ -64,10 +64,10 @@ export function RecoveryTrendsCard({
   if (!trends.hasAnything) {
     return (
       <Card>
-        <h2 className="text-heading-5 text-fg">
+        <h2 className="text-heading-4 text-fg">
           {isEs ? "Tendencias de recuperación" : "Recovery trends"}
         </h2>
-        <p className="mt-stack-xs measure text-body-sm text-fg-muted">
+        <p className="mt-0.5 text-body-md text-fg-muted">
           {isEs
             ? "Después de unos días de registros aparecerán aquí tus tendencias: cuánto tardas en recuperarte, qué síntomas se repiten y cómo cambian tu peso y tu presión."
             : "After a few days of check-ins your trends appear here: how long recovery takes, which symptoms keep coming back, and how your weight and blood pressure are moving."}
@@ -82,7 +82,7 @@ export function RecoveryTrendsCard({
 
   return (
     <Card className="space-y-stack-md">
-      <h2 className="text-heading-5 text-fg">
+      <h2 className="text-heading-4 text-fg">
         {isEs ? "Tendencias de recuperación" : "Recovery trends"}
       </h2>
 

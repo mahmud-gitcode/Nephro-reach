@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ClipboardCheck, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   checklistProgress,
@@ -14,7 +14,7 @@ import type {
   TravelPrepKey,
   TripRequest,
 } from "./trip.types";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Card, SectionTitle } from "@/components/ui";
 
 /* ==========================================================================
    Travel Checklist
@@ -47,32 +47,23 @@ export function TravelChecklist({
 
   return (
     <Card as="section" aria-labelledby="travel-checklist">
-      <div className="flex flex-wrap items-start justify-between gap-inline-md">
-        <div className="flex items-start gap-inline-md">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
-          >
-            <ClipboardCheck className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 id="travel-checklist" className="text-heading-5 text-fg">
-              {isEs ? "Lista de Viaje" : "Travel Checklist"}
-            </h3>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              {isEs
-                ? "Asegúrate de estar listo antes de salir."
-                : "Make sure you're ready before you go."}
-            </p>
-          </div>
-        </div>
-
-        <Badge tone={progress.complete ? "success" : "neutral"}>
-          {isEs
-            ? `${progress.done} de ${progress.total} completo`
-            : `${progress.done} of ${progress.total} Complete`}
-        </Badge>
-      </div>
+      <SectionTitle
+        as="h3"
+        id="travel-checklist"
+        title={isEs ? "Lista de Viaje" : "Travel Checklist"}
+        subtitle={
+          isEs
+            ? "Asegúrate de estar listo antes de salir."
+            : "Make sure you're ready before you go."
+        }
+        action={
+          <Badge tone={progress.complete ? "success" : "neutral"}>
+            {isEs
+              ? `${progress.done} de ${progress.total} completo`
+              : `${progress.done} of ${progress.total} Complete`}
+          </Badge>
+        }
+      />
 
       {/* One column: each row is now two lines, and a two-column grid of
         wrapped rows is harder to scan than a single list. */}

@@ -325,7 +325,7 @@ function LiveClassTable() {
 function ConfidencePanel() {
   return (
     <Card as="section" padding="small">
-      <h2 className="mb-stack-sm text-heading-5 text-fg">
+      <h2 className="mb-stack-sm text-heading-4 text-fg">
         Knowledge &amp; Confidence Improvement
       </h2>
       {/* Before / after is a comparison, not a status, so it takes two
@@ -400,7 +400,7 @@ function DonutPanel({
 
   return (
     <Card as="section" padding="small">
-      <h2 className="mb-stack-2xl text-heading-5 text-fg">{title}</h2>
+      <h2 className="mb-stack-2xl text-heading-4 text-fg">{title}</h2>
       <div className="grid items-center gap-inset-lg sm:grid-cols-[200px_minmax(0,1fr)]">
         <DonutChart
           segments={segments}
@@ -461,10 +461,8 @@ function RecentActivity() {
   return (
     <section className="rounded-card border border-line bg-surface shadow-card">
       <div className="px-4 py-4">
-        <h2 className="text-lg font-semibold text-fg">Recent Activity</h2>
-        <p className="mt-2 text-xs font-medium text-fg-secondary">
-          Recent Activity
-        </p>
+        <h2 className="text-heading-4 text-fg">Recent Activity</h2>
+        <p className="mt-0.5 text-body-md text-fg-muted">Recent Activity</p>
       </div>
       <div className="border-t border-line-subtle">
         {activityRows.map((row, index) => (
@@ -499,7 +497,7 @@ function EarningsOverview() {
   return (
     <Card as="section" padding="small">
       <div className="mb-stack-2xl flex items-center justify-between gap-inset-md">
-        <h2 className="text-heading-5 text-fg">Earnings Overview</h2>
+        <h2 className="text-heading-4 text-fg">Earnings Overview</h2>
         <button
           {...notBuiltYet("Changing the date range")}
           type="button"

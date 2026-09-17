@@ -52,7 +52,7 @@ export function AlertsInsights() {
 
   return (
     <section className="h-full rounded-xl border border-line bg-surface p-4">
-      <h2 className="text-sm font-medium text-fg">
+      <h2 className="text-heading-4 text-fg">
         {w?.alerts?.title || "Alerts & Insights"}
       </h2>
       <div className="mt-3 space-y-2">

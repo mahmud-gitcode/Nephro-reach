@@ -119,7 +119,7 @@ export function MonthCalendar({
       <div role="grid" aria-label={monthLabel}>
         <div
           role="row"
-          className="grid grid-cols-7 gap-1 text-center text-xs font-bold tracking-wider text-fg-subtle uppercase"
+          className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-fg-subtle"
         >
           {weekdayLabels.map((label) => (
             <div key={label} role="columnheader" className="py-1">

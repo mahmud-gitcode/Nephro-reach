@@ -38,7 +38,7 @@ export function GoalProgress() {
 
   return (
     <section className="flex h-full flex-col rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
-      <h2 className="text-body-md text-fg">
+      <h2 className="text-heading-4 text-fg">
         {w?.goalProgress?.title || "Goal & Progress"}
       </h2>
       <div className="mt-4 flex flex-1 flex-col items-center gap-4 sm:flex-row">

@@ -16,6 +16,7 @@ import {
   Modal,
   Textarea,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 const defaultJournalEntries = [
   {
@@ -341,7 +342,7 @@ export default function DialysisJournalPage() {
                 <h2 className="text-heading-4 text-fg">
                   {dj?.introCard?.title || "My Dialysis Journal"}
                 </h2>
-                <p className="mt-stack-xs text-label-lg text-fg-brand">
+                <p className="mt-0.5 text-body-md text-fg-muted">
                   {dj?.introCard?.subtitle ||
                     "A private space to reflect on your dialysis journey."}
                 </p>
@@ -367,18 +368,14 @@ export default function DialysisJournalPage() {
       }
     >
       <div className="space-y-stack-xl">
-        <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            {/* The greeting belongs to the dashboard; here the page is
-              named for what it is. */}
-            <h1 className="text-heading-1 text-fg">
-              {dj?.pageTitle || "Dialysis Journal"}
-            </h1>
-          </div>
-          <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
-            {dj?.newEntryBtn || "New Entry"}
-          </Button>
-        </header>
+        <PageTitle
+          href="/dashboard/personal-log/dialysis-journal"
+          action={
+            <Button onClick={() => setModalOpen(true)} leadingIcon={<Plus />}>
+              {dj?.newEntryBtn || "New Entry"}
+            </Button>
+          }
+        />
 
         {/* Journal Purpose & Logging Guidance Card */}
         <section className="space-y-stack-lg">

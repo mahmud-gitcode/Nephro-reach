@@ -166,7 +166,7 @@ function ClinicalMeasurementsCards() {
 
   return (
     <section className="space-y-stack-md">
-      <h2 className="flex items-center gap-inline-md text-heading-5 text-fg">
+      <h2 className="flex items-center gap-inline-md text-heading-4 text-fg">
         <Activity aria-hidden="true" className="h-4 w-4 text-fg-brand" />
         <span>
           {dt?.clinicalMeasurements?.title || "Clinical Measurements"}
@@ -225,7 +225,7 @@ function SymptomsDonut() {
       as="section"
       className="flex flex-col justify-between space-y-stack-lg"
     >
-      <h2 className="text-heading-5 text-fg">
+      <h2 className="text-heading-4 text-fg">
         {dt?.symptomsDonut?.title || "Symptoms During Treatment"}
       </h2>
 

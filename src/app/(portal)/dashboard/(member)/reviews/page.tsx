@@ -26,6 +26,7 @@ import {
   Skeleton,
   Textarea,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 export default function UserReviewsPage() {
   const { user } = useAuth();
@@ -80,11 +81,7 @@ export default function UserReviewsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-stack-xl">
-      <header>
-        <h1 className="text-heading-1 text-fg">
-          {isEs ? "Dejar una Reseña" : "Leave a Review"}
-        </h1>
-      </header>
+      <PageTitle href="/dashboard/reviews" />
 
       {saveError ? (
         <Alert

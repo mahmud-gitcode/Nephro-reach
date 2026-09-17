@@ -81,9 +81,7 @@ function SmsTemplateCard({
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg leading-7 font-medium text-fg">
-              {template.title}
-            </h2>
+            <h2 className="text-heading-4 text-fg">{template.title}</h2>
             <TemplateBadge className={template.typeClass}>
               {template.type}
             </TemplateBadge>

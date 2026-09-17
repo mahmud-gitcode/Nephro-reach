@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Bell, Check, Eye, Phone } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, Button, buttonStyles, Card, Modal } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 interface ActionConfig {
   key: "callClinic" | "seekMedical" | "monitorSymptoms" | "call911";
@@ -180,6 +181,8 @@ export default function BeforeTheErPage() {
 
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-4">
+      <PageTitle href="/dashboard/before-the-er" />
+
       {/* Disclaimer Box */}
       {/* Kept as a section with a real <h1> rather than an <Alert>: this is
           the page heading, not a notice that appeared in response to
@@ -191,9 +194,9 @@ export default function BeforeTheErPage() {
             className="mt-0.5 h-icon-big w-icon-big shrink-0 text-danger"
           />
           <div>
-            <h1 className="text-heading-5 text-fg">
+            <h2 className="text-heading-5 text-fg">
               {t("beforeTheEr.disclaimerTitle")}
-            </h1>
+            </h2>
             <p className="mt-stack-sm text-body-md text-fg-secondary">
               {t("beforeTheEr.disclaimerText")}
             </p>
@@ -202,22 +205,19 @@ export default function BeforeTheErPage() {
       </section>
 
       {/* Action Items Grid with Eye Icon Trigger */}
-      <Card as="section" padding="small">
-        <h2 className="mb-stack-md text-heading-3 text-fg">
+      <Card as="section" padding="none" className="p-6">
+        <h2 className="mb-6 text-heading-4 text-fg">
           {t("beforeTheEr.sectionTitle")}
         </h2>
 
-        <Card tone="sunken" padding="small">
-          <ul className="grid grid-cols-1 gap-inline-md md:grid-cols-2">
+        <div>
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {ACTION_CONFIGS.map((item) => {
               const itemTitle = t(`beforeTheEr.${item.key}.title`);
               return (
-                <Card
+                <li
                   key={item.key}
-                  as="li"
-                  tone="flat"
-                  padding="small"
-                  className="flex min-h-[60px] items-center justify-between gap-inline-md"
+                  className="flex min-h-[60px] items-center justify-between gap-inline-md rounded-card bg-surface-sunken p-inset-sm"
                 >
                   <span className="truncate text-body-md text-fg">
                     {itemTitle}
@@ -235,23 +235,20 @@ export default function BeforeTheErPage() {
                   >
                     <Eye aria-hidden="true" />
                   </Button>
-                </Card>
+                </li>
               );
             })}
           </ul>
-        </Card>
+        </div>
       </Card>
 
       {/* Symptoms Checkbox List */}
-      <Card as="section" padding="small">
-        <div className="mb-stack-md flex flex-col gap-inset-md md:flex-row md:items-center md:justify-between">
+      <Card as="section" padding="none" className="p-6">
+        <div className="mb-6 flex flex-col gap-inset-md md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-heading-3 text-fg">
+            <h2 className="text-heading-4 text-fg">
               {t("beforeTheEr.notFeelingBestTitle")}
             </h2>
-            <p className="mt-stack-sm measure text-body-md text-fg-secondary">
-              {t("beforeTheEr.notFeelingBestSubtitle")}
-            </p>
           </div>
           <Button
             disabled={selectedCount === 0}
@@ -262,13 +259,13 @@ export default function BeforeTheErPage() {
           </Button>
         </div>
 
-        <Card tone="sunken" padding="small">
+        <div>
           {/* These were plain buttons drawing a checkbox. A screen reader
               heard "button" and never whether the symptom was ticked. */}
           <div
             role="group"
             aria-label={t("beforeTheEr.notFeelingBestTitle")}
-            className="grid grid-cols-1 gap-inline-md md:grid-cols-2"
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
           >
             {SYMPTOMS.map((symptom) => {
               const checked = selectedSymptoms.includes(symptom.id);
@@ -281,10 +278,12 @@ export default function BeforeTheErPage() {
                   role="checkbox"
                   aria-checked={checked}
                   onClick={() => toggleSymptom(symptom.id)}
-                  className={`flex min-h-16 cursor-pointer items-center gap-inline-lg rounded-card bg-surface p-inset-md text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                  className={`flex min-h-16 cursor-pointer items-center gap-inline-lg rounded-card p-inset-md text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                    /* A tint, not a border: red for the ones that mean the
+                       ER, grey for the rest. */
                     symptom.urgent
-                      ? "border-2 border-danger-line hover:bg-danger-surface"
-                      : "border border-line hover:bg-primary-soft"
+                      ? "bg-danger-surface hover:bg-danger-100"
+                      : "bg-surface-sunken hover:bg-primary-soft"
                   } ${checked ? "ring-2 ring-ring" : ""}`}
                 >
                   <span
@@ -292,7 +291,7 @@ export default function BeforeTheErPage() {
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control-small border-2 ${
                       checked
                         ? "border-primary-solid bg-primary-solid text-primary-on-solid"
-                        : "border-line bg-surface"
+                        : "border-[var(--color-gray-400)] bg-surface"
                     }`}
                   >
                     {checked && <Check className="h-3.5 w-3.5" />}
@@ -302,7 +301,7 @@ export default function BeforeTheErPage() {
               );
             })}
           </div>
-        </Card>
+        </div>
       </Card>
 
       {/* EYE BUTTON DETAILS POPUP MODAL */}

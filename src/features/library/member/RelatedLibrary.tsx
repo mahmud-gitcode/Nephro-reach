@@ -82,7 +82,7 @@ export function RelatedLibrary({
   return (
     <section className="space-y-4 rounded-panel border border-line bg-surface p-6 shadow-control">
       <div className="flex items-center justify-between gap-inline-md">
-        <h2 className="text-lg font-bold text-fg">{title}</h2>
+        <h2 className="text-heading-4 text-fg">{title}</h2>
         <Link
           href="/dashboard/my-library"
           className="flex shrink-0 items-center gap-1 rounded-control-small text-xs font-bold text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

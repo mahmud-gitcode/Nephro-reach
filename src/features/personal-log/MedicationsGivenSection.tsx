@@ -212,7 +212,7 @@ export default function MedicationsGivenSection() {
             <Pill className="h-4 w-4 text-fg-brand" />
           </div>
           <div>
-            <h2 className="text-base font-bold tracking-tight text-fg">
+            <h2 className="text-heading-4 text-fg">
               {language === "ES"
                 ? "Medicamentos Administrados Durante la Diálisis"
                 : "Medications Given During Dialysis"}
@@ -263,7 +263,7 @@ export default function MedicationsGivenSection() {
         <div className="flex-1 overflow-x-auto rounded-card border border-line">
           <table className="w-full border-collapse text-left text-xs sm:text-sm">
             <thead>
-              <tr className="border-b border-line bg-surface-sunken text-xs font-bold tracking-wider text-fg-muted uppercase">
+              <tr className="border-b border-line bg-surface-sunken text-xs font-bold text-fg-muted">
                 <th className="px-3.5 py-2.5">
                   {language === "ES" ? "Fecha" : "Date"}
                 </th>

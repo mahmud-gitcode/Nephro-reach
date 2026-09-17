@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useState, Suspense } from "react";
-import {
-  Bell,
-  Clock,
-  Settings,
-  CalendarDays,
-  Undo2,
-  Redo2,
-  Eraser,
-} from "lucide-react";
+import { Clock, Hourglass, Settings, Undo2, Redo2, Eraser } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   ALL_WEEKDAYS,
@@ -49,6 +41,8 @@ import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
+import { SectionTitle } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 function DialysisManagementDashboard() {
   const { language } = useLanguage();
@@ -77,9 +71,10 @@ function DialysisManagementDashboard() {
   const selectedDays = currentSchedule.days;
   // Display option: drop the empty placeholder tiles for non-treatment days.
   const [hideBlankDays, setHideBlankDays] = useState(false);
-  const visibleWeekdays = hideBlankDays
-    ? ALL_WEEKDAYS.filter((day) => selectedDays.includes(day))
-    : ALL_WEEKDAYS;
+  /* Only treatment days are listed; a row of blank days says nothing. */
+  const visibleWeekdays = ALL_WEEKDAYS.filter((day) =>
+    selectedDays.includes(day),
+  );
   // How a saved week setting should be applied
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
 
@@ -296,230 +291,204 @@ function DialysisManagementDashboard() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 pb-12">
-      <DialysisClinicCard />
+    <NoticeRailLayout
+      notices={
+        <>
+          <PersonalLogDisclaimer spaced={false} stacked />
 
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* 2-COLUMN ROW: CURRENT TREATMENT (COL 1) & WEEK SETTING (COL 2)            */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
-        <section className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-control sm:p-6 xl:col-span-12">
-          {/* Card head: title on the left, Edit Week on the right */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <CalendarDays className="h-[22px] w-[22px] shrink-0 stroke-[2.2] text-fg-secondary sm:h-6 sm:w-6" />
-              <h2 className="text-[22px] font-bold tracking-tight text-fg-secondary sm:text-[26px]">
-                {isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
-              </h2>
+          {/* Freeform note, alongside the schedule */}
+          <section
+            aria-label={isEs ? "Notas del horario" : "Schedule notes"}
+            className="flex flex-col gap-2 rounded-card border border-line bg-surface p-inset-md shadow-card transition-all focus-within:border-primary-soft-line focus-within:ring-2 focus-within:ring-ring/60"
+          >
+            {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
+            <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
+              <span className="text-xs font-bold text-fg-secondary">
+                {isEs ? "Notas del horario" : "Schedule Notes"}
+              </span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleUndoNote}
+                  disabled={historyIndex <= 0}
+                  title={isEs ? "Deshacer (Undo)" : "Undo"}
+                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRedoNote}
+                  disabled={historyIndex >= noteHistory.length - 1}
+                  title={isEs ? "Rehacer (Redo)" : "Redo"}
+                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <Redo2 className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="mx-0.5 h-3.5 w-px bg-line" />
+
+                <button
+                  type="button"
+                  onClick={handleCleanNote}
+                  disabled={!weeklyNote}
+                  title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
+                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <Eraser className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenEditWeek}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-sm"
-            >
-              <Settings className="h-4 w-4 text-fg-muted" />
-              <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
-            </button>
-          </div>
+            {/* Note area */}
+            <textarea
+              value={weeklyNote}
+              onChange={handleNoteChange}
+              rows={2}
+              placeholder={
+                isEs
+                  ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
+                  : "Write any notes, symptoms, or reminders here..."
+              }
+              className="min-h-[160px] w-full flex-1 resize-none bg-transparent text-xs font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-sm"
+            />
+          </section>
+        </>
+      }
+    >
+      <div className="space-y-6 pb-12">
+        <PageTitle href="/dashboard/personal-log/dialysis-management" />
 
-          {/* Schedule down the left, notes down the right */}
-          <div className="mt-5 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(236px,0.72fr)]">
-            {/* Session duration on top, then one row per day */}
-            <div className="space-y-3 rounded-xl border border-line-subtle bg-surface-sunken p-3.5 sm:p-4">
-              {/* The reminder, said once. It is the same offset for every
-                day, unlike the chair time and the length, which are not. */}
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-line bg-surface px-3.5 py-2.5">
-                <span className="inline-flex items-center gap-2 text-xs font-bold text-fg-secondary sm:text-sm">
-                  <Bell className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-muted" />
-                  {isEs ? "Recordatorio" : "Reminder"}
-                </span>
-                <span className="text-sm font-bold text-fg-brand sm:text-base">
-                  {currentSchedule.reminderLeadMinutes === 0
-                    ? isEs
-                      ? "A la hora del sillón"
-                      : "At chair time"
-                    : isEs
-                      ? `${currentSchedule.reminderLeadMinutes} min antes`
-                      : `${currentSchedule.reminderLeadMinutes} min before`}
-                </span>
-              </div>
+        <DialysisClinicCard />
 
-              {/* Two columns read top-to-bottom: Sunday..Wednesday down the
-                  first, the rest down the second. Blank days drop out entirely
-                  when "Remove blank days" is on. */}
-              <div className="-mb-1.5 columns-1 gap-x-1.5 sm:columns-2">
-                {visibleWeekdays.map((day) => {
-                  const isSelected = selectedDays.includes(day);
-                  const fullDayName = isEs ? WEEKDAY_ES[day] : day;
+        {/* ========================================================================= */}
+        {/* ========================================================================= */}
+        {/* 2-COLUMN ROW: CURRENT TREATMENT (COL 1) & WEEK SETTING (COL 2)            */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
+          <section className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-control sm:p-6 xl:col-span-12">
+            {/* Card head: title on the left, Edit Week on the right */}
+            <SectionTitle
+              title={isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
+              action={
+                <button
+                  type="button"
+                  onClick={handleOpenEditWeek}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-sm"
+                >
+                  <Settings className="h-4 w-4 text-fg-muted" />
+                  <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
+                </button>
+              }
+            />
 
-                  return (
-                    <div
-                      key={day}
-                      className={`mb-1.5 flex min-w-0 break-inside-avoid items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-all ${
-                        isSelected
-                          ? "border border-line bg-gradient-to-r from-primary-soft via-surface to-surface shadow-card hover:border-line-strong hover:shadow-md"
-                          : "border border-dashed border-line/70 bg-surface/40"
-                      }`}
-                    >
-                      <span
-                        className={`min-w-0 truncate text-xs font-bold tracking-tight select-none sm:text-sm ${
-                          isSelected ? "text-fg-brand" : "text-fg-subtle"
-                        }`}
-                      >
-                        {fullDayName}
-                      </span>
+            <div className="mt-5">
+              {/* One card per treatment day, in an even grid: the day as the
+                card's title, then how long, then the chair time. Only
+                treatment days are listed. */}
+              <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2 lg:grid-cols-3">
+                {visibleWeekdays.map((day) => (
+                  <li
+                    key={day}
+                    className="flex min-w-0 flex-col gap-stack-sm rounded-xl border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-sm shadow-card transition-all hover:border-line-strong hover:shadow-md"
+                  >
+                    <span className="truncate text-label-md text-fg-brand select-none">
+                      {isEs ? WEEKDAY_ES[day] : day}
+                    </span>
 
-                      {isSelected ? (
-                        /* Chair time, then how long they are in it. Two
-                           clock times stacked here read as two appointments,
-                           which is why the reminder is stated once above
-                           rather than repeated on every day. */
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-[11px] font-bold whitespace-nowrap text-fg select-none sm:text-xs">
-                          <Clock className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted" />
+                    <dl className="flex flex-col gap-stack-xs text-body-sm">
+                      <div className="flex items-center justify-between gap-inline-md">
+                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                          <Hourglass
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 shrink-0"
+                          />
+                          {isEs ? "Duración" : "Duration"}
+                        </dt>
+                        <dd className="font-semibold text-fg tabular-nums">
+                          {formatDuration(durationFor(currentSchedule, day))}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-inline-md">
+                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                          <Clock
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 shrink-0"
+                          />
+                          {isEs ? "Hora" : "Time"}
+                        </dt>
+                        <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
                           {formatReminder(
                             currentSchedule.chairTimes[day] ??
                               DEFAULT_CHAIR_TIME,
                             isEs,
                           )}
-                          <span className="font-semibold text-fg-muted">
-                            ·{" "}
-                            {formatDuration(durationFor(currentSchedule, day))}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-xs font-bold text-fg-subtle select-none">
-                          —
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
             </div>
+          </section>
+        </div>
 
-            {/* Freeform note, alongside the schedule */}
-            <div className="flex h-full flex-col justify-between gap-2 rounded-card border border-line/80 bg-surface-sunken p-3 transition-all focus-within:border-primary-soft-line focus-within:bg-surface focus-within:ring-2 focus-within:ring-ring/60 sm:p-3.5">
-              {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
-              <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
-                <span className="text-xs font-bold text-fg-secondary">
-                  {isEs ? "Notas" : "Notes"}
-                </span>
+        {/* 2. Provider orders and instructions */}
+        <ProviderOrdersSection />
 
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={handleUndoNote}
-                    disabled={historyIndex <= 0}
-                    title={isEs ? "Deshacer (Undo)" : "Undo"}
-                    className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleRedoNote}
-                    disabled={historyIndex >= noteHistory.length - 1}
-                    title={isEs ? "Rehacer (Redo)" : "Redo"}
-                    className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <Redo2 className="h-3.5 w-3.5" />
-                  </button>
-
-                  <div className="mx-0.5 h-3.5 w-px bg-line" />
-
-                  <button
-                    type="button"
-                    onClick={handleCleanNote}
-                    disabled={!weeklyNote}
-                    title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                    className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <Eraser className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Note area */}
-              <textarea
-                value={weeklyNote}
-                onChange={handleNoteChange}
-                rows={2}
-                placeholder={
-                  isEs
-                    ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
-                    : "Write any notes, symptoms, or reminders here..."
-                }
-                className="min-h-[120px] w-full flex-1 resize-none bg-transparent text-xs font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-sm"
-              />
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* 2. Provider orders and instructions */}
-      <ProviderOrdersSection />
-
-      {/* 4. Questions for the care team */}
-      <section className="animate-in fade-in space-y-4 duration-200">
+        {/* 4. Questions for the care team */}
         <CareTeamQuestionsSection />
-      </section>
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: EDIT WEEK SETTING                                                */}
-      {/* ========================================================================= */}
-      <EditWeekModal
-        /* Keyed on open: a reopened form starts from the saved schedule
+        {/* ========================================================================= */}
+        {/* MODAL 1: EDIT WEEK SETTING                                                */}
+        {/* ========================================================================= */}
+        <EditWeekModal
+          /* Keyed on open: a reopened form starts from the saved schedule
            again, with no effect syncing the draft. */
-        key={`edit-week-${isEditWeekModalOpen ? "open" : "closed"}`}
-        open={isEditWeekModalOpen}
-        onClose={() => setIsEditWeekModalOpen(false)}
-        initialDays={selectedDays}
-        initialChairTimes={currentSchedule.chairTimes}
-        initialReminderLead={currentSchedule.reminderLeadMinutes}
-        initialDurations={currentSchedule.durations}
-        initialHideBlankDays={hideBlankDays}
-        effectiveDateFor={scopeEffectiveDate}
-        monthLabel={`${(isEs ? monthNamesEs : monthNames)[viewMonth]} ${viewYear}`}
-        onSave={handleSaveWeekSetting}
-      />
+          key={`edit-week-${isEditWeekModalOpen ? "open" : "closed"}`}
+          open={isEditWeekModalOpen}
+          onClose={() => setIsEditWeekModalOpen(false)}
+          initialDays={selectedDays}
+          initialChairTimes={currentSchedule.chairTimes}
+          initialReminderLead={currentSchedule.reminderLeadMinutes}
+          initialDurations={currentSchedule.durations}
+          initialHideBlankDays={hideBlankDays}
+          effectiveDateFor={scopeEffectiveDate}
+          monthLabel={`${(isEs ? monthNamesEs : monthNames)[viewMonth]} ${viewYear}`}
+          onSave={handleSaveWeekSetting}
+        />
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: TAKE EXTRA TREATMENT (WITH INTERACTIVE CALENDAR & AUTO SESSION) */}
-      {/* ========================================================================= */}
-      <ExtraTreatmentModal
-        /* Keyed on open: reopening starts from today again, with no effect
+        {/* ========================================================================= */}
+        {/* MODAL 2: TAKE EXTRA TREATMENT (WITH INTERACTIVE CALENDAR & AUTO SESSION) */}
+        {/* ========================================================================= */}
+        <ExtraTreatmentModal
+          /* Keyed on open: reopening starts from today again, with no effect
            resetting the calendar. */
-        key={`extra-tx-${isExtraTxModalOpen ? "open" : "closed"}`}
-        open={isExtraTxModalOpen}
-        onClose={() => setIsExtraTxModalOpen(false)}
-        initialDate={today}
-        sessionFor={extraSessionFor}
-        formatDayLabel={(date) => formatFullDate(date, isEs)}
-        monthNames={isEs ? monthNamesEs : monthNames}
-        weekdayLabels={isEs ? daysOfWeekEs : daysOfWeek}
-        isMarked={isTreatmentDay}
-        onSave={handleSaveExtraTreatment}
-      />
-    </div>
+          key={`extra-tx-${isExtraTxModalOpen ? "open" : "closed"}`}
+          open={isExtraTxModalOpen}
+          onClose={() => setIsExtraTxModalOpen(false)}
+          initialDate={today}
+          sessionFor={extraSessionFor}
+          formatDayLabel={(date) => formatFullDate(date, isEs)}
+          monthNames={isEs ? monthNamesEs : monthNames}
+          weekdayLabels={isEs ? daysOfWeekEs : daysOfWeek}
+          isMarked={isTreatmentDay}
+          onSave={handleSaveExtraTreatment}
+        />
+      </div>
+    </NoticeRailLayout>
   );
 }
 
 export default function DialysisManagementPage() {
   return (
-    <NoticeRailLayout
-      notices={<PersonalLogDisclaimer spaced={false} stacked />}
+    <Suspense
+      fallback={<div className="p-8 text-center text-fg-muted">Loading...</div>}
     >
-      <Suspense
-        fallback={
-          <div className="p-8 text-center text-fg-muted">Loading...</div>
-        }
-      >
-        <DialysisManagementDashboard />
-      </Suspense>
-    </NoticeRailLayout>
+      <DialysisManagementDashboard />
+    </Suspense>
   );
 }

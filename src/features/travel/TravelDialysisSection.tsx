@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building2, Check, ClipboardList, MapPin, Phone } from "lucide-react";
+import {
+  Building2,
+  Check,
+  ClipboardList,
+  Clock,
+  MapPin,
+  Phone,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   TIME_PREFERENCES,
@@ -89,69 +96,105 @@ export function PlacementCard({ trip }: { trip: TripRequest }) {
 
   if (!placement?.facilityName.trim()) return null;
 
-  return (
-    <div className="rounded-card border border-success-line bg-success-surface p-inset-sm">
-      <p className="flex items-center gap-inline-sm text-label-md text-success">
-        <Building2 aria-hidden="true" className="h-4 w-4 shrink-0" />
-        {isEs ? "Tu centro durante el viaje" : "Your center while away"}
-      </p>
+  const mapsHref = placement.address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        `${placement.facilityName}, ${placement.address}`,
+      )}`
+    : null;
 
-      <p className="mt-stack-xs text-label-lg font-semibold text-fg">
+  /* Two sub-cards side by side: who and where, then when. Titles are 16px,
+     4px up from the small labels they replace. */
+  const subCard =
+    "flex flex-col gap-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md";
+  const subTitle = "text-label-lg font-semibold text-fg";
+
+  const actionClass =
+    "flex min-w-0 items-start gap-inline-md rounded-control border border-line bg-surface p-inset-sm transition-colors duration-150 ease-standard hover:border-primary-soft-line hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  const actionIcon =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-primary-soft text-fg-brand";
+
+  return (
+    <div className="flex flex-col gap-stack-md">
+      {/* The center, named first and in green, on the card's white. */}
+      <p className="flex items-center gap-inline-sm text-heading-5 text-success">
+        <Building2 aria-hidden="true" className="h-5 w-5 shrink-0" />
         {placement.facilityName}
       </p>
 
-      {placement.address || placement.phone ? (
-        <div className="mt-stack-sm flex flex-col gap-stack-xs rounded-control bg-surface p-inset-sm">
-          {placement.address ? (
-            /* Opens the address in the phone's or browser's map app. */
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                `${placement.facilityName}, ${placement.address}`,
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-start gap-inline-sm self-start rounded-control-small text-body-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                {placement.address}
-                <span className="sr-only">
-                  {isEs ? " (abre el mapa)" : " (opens map)"}
+      {/* Two grey sub-cards whose tops line up: contact on the left, the
+        booked times on the right. */}
+      <div className="grid grid-cols-1 items-stretch gap-inset-md md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        {/* Contact info: how to get there and how to ring them */}
+        <section className={subCard} aria-labelledby="placement-contact">
+          <h3 id="placement-contact" className={subTitle}>
+            {isEs ? "Información de contacto" : "Contact info"}
+          </h3>
+
+          {/* Address and phone, each on its own white card. */}
+          <div className="flex flex-col gap-stack-sm">
+            {mapsHref ? (
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={actionClass}
+              >
+                <span aria-hidden="true" className={actionIcon}>
+                  <MapPin className="h-4 w-4" />
                 </span>
-              </span>
-            </a>
-          ) : null}
+                <span className="min-w-0 pt-1.5 text-body-sm text-fg-brand">
+                  {placement.address}
+                  <span className="sr-only">
+                    {isEs ? " (abre el mapa)" : " (opens map)"}
+                  </span>
+                </span>
+              </a>
+            ) : null}
 
-          {placement.phone ? (
-            <a
-              href={`tel:${placement.phone.replace(/\s/g, "")}`}
-              className="inline-flex items-center gap-inline-sm self-start rounded-control-small text-body-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Phone aria-hidden="true" className="h-4 w-4 shrink-0" />
-              {placement.phone}
-            </a>
-          ) : null}
-        </div>
-      ) : null}
+            {placement.phone ? (
+              <a
+                href={`tel:${placement.phone.replace(/\s/g, "")}`}
+                className={actionClass}
+              >
+                <span aria-hidden="true" className={actionIcon}>
+                  <Phone className="h-4 w-4" />
+                </span>
+                <span className="pt-1.5 text-body-sm text-fg-brand tabular-nums">
+                  {placement.phone}
+                </span>
+              </a>
+            ) : null}
+          </div>
+        </section>
 
-      {placement.treatments.length > 0 ? (
-        /* One booked chair per column: the date on top, its time under it. */
-        <ul className="mt-stack-md grid grid-cols-2 gap-inline-md sm:grid-cols-3 lg:grid-cols-4">
-          {placement.treatments.map((treatment) => (
-            <li
-              key={treatment.id}
-              className="flex flex-col gap-stack-xs rounded-control bg-surface px-inset-sm py-inset-xs text-body-sm"
-            >
-              <span className="text-fg">
-                {formatDateLabel(treatment.date, isEs)}
-              </span>
-              <span className="text-label-md text-fg-secondary tabular-nums">
-                {treatment.time}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+        {/* Booked treatments: the same slot as the dialysis schedule */}
+        {placement.treatments.length > 0 ? (
+          <section className={subCard} aria-labelledby="placement-booked">
+            <h3 id="placement-booked" className={subTitle}>
+              {isEs ? "Tratamientos reservados" : "Booked treatments"}
+            </h3>
+            <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
+              {placement.treatments.map((treatment) => (
+                <li
+                  key={treatment.id}
+                  className="flex min-w-0 items-center justify-between gap-inline-sm rounded-xl border border-line bg-gradient-to-r from-primary-soft via-surface to-surface py-2.5 pr-2 pl-3 shadow-card"
+                >
+                  <span className="min-w-0 text-label-sm whitespace-nowrap text-fg-brand">
+                    {formatDateLabel(treatment.date, isEs)}
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-bold whitespace-nowrap text-fg tabular-nums select-none">
+                    <Clock
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted"
+                    />
+                    {treatment.time}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

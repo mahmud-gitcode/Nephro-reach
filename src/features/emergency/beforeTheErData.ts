@@ -19,8 +19,8 @@ export interface NextStepConfig {
 export const NEXT_STEP_CONFIGS: Record<NextStepLevel, NextStepConfig> = {
   call911: {
     level: "call911",
-    badgeEn: "CALL 911 NOW",
-    badgeEs: "LLAME AL 911 AHORA",
+    badgeEn: "Call 911 now",
+    badgeEs: "Llame al 911 ahora",
     descriptionEn:
       "Your answers may indicate a medical emergency. Do not wait for your next dialysis treatment.",
     descriptionEs:

@@ -17,6 +17,7 @@ import type {
 import { useAuth } from "@/features/auth/AuthContext";
 import { Alert, Badge, Button, Card, Tabs, TabPanel } from "@/components/ui";
 import type { TabItem } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 const defaultTabs: CommunityTab[] = [
   { id: "all", label: "All Posts" },
@@ -237,6 +238,8 @@ export default function CommunityPage() {
 
   return (
     <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
+      <PageTitle href="/dashboard/community" className="mb-stack-lg" />
+
       {/* Category Tabs — six separate tab stops became one, with arrow
           keys moving between categories. */}
       <div className="mb-stack-lg overflow-x-auto">

@@ -34,6 +34,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { Progress } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 export const KIND_ICON: Record<JourneyMediaKind, React.ElementType> = {
   video: PlayCircle,
@@ -90,11 +91,11 @@ function JourneyHero({
 
   return (
     <Card as="section" padding="none" className="overflow-hidden p-inset-lg">
-      <h1 className="text-heading-2 text-fg">
+      <h2 className="text-heading-4 text-fg">
         {j?.title || "21-Day Dialysis Journey"}
-      </h1>
+      </h2>
 
-      <p className="mt-stack-sm measure text-body-md text-fg-muted">
+      <p className="mt-0.5 text-body-md text-fg-muted">
         {j?.subtitle ||
           "One short lesson a day for three weeks, with a transcript and handouts you can bring to your next appointment."}
       </p>
@@ -272,6 +273,8 @@ export default function MyClassroomPage() {
 
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-stack-xl">
+      <PageTitle href="/dashboard/my-classroom" />
+
       {/* Until the read lands, every figure here would be zero — and "0 of 21
           complete" to someone who finished ten days is worse than a
           skeleton. */}

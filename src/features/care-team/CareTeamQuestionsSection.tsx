@@ -7,8 +7,10 @@ import {
   Alert,
   AsyncSection,
   Button,
+  Card,
   Input,
   Modal,
+  SectionTitle,
   Select,
   Skeleton,
   Textarea,
@@ -188,14 +190,22 @@ export default function CareTeamQuestionsSection({
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Optional Section Title (if !hideTitle) */}
+    /* A card of its own, headed the same way as Provider Orders above it. */
+    <Card as="section" className="w-full space-y-6">
       {!hideTitle && (
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-primary-fg uppercase">
-            {language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"}
-          </h2>
-        </div>
+        <SectionTitle
+          title={
+            language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"
+          }
+          action={
+            <Button onClick={handleOpenAddModal} className="shrink-0">
+              <Plus aria-hidden="true" />
+              <span>
+                {language === "ES" ? "Hacer Pregunta" : "Add Question"}
+              </span>
+            </Button>
+          }
+        />
       )}
 
       {/* SINGLE UNIFIED ROW: Search (Small & First), Role Dropdown, Status Dropdown, and Add Question Button */}
@@ -269,12 +279,6 @@ export default function CareTeamQuestionsSection({
             </Select>
           </div>
         </div>
-
-        {/* 4. Add Question Button (Right aligned) */}
-        <Button onClick={handleOpenAddModal} className="ml-auto shrink-0">
-          <Plus aria-hidden="true" />
-          <span>{language === "ES" ? "Hacer Pregunta" : "Add Question"}</span>
-        </Button>
       </div>
 
       {saveError ? (
@@ -591,6 +595,6 @@ export default function CareTeamQuestionsSection({
           </div>
         </form>
       </Modal>
-    </div>
+    </Card>
   );
 }

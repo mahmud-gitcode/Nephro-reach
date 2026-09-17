@@ -341,7 +341,7 @@ function PlacementModal({
 
         <section className="space-y-stack-md border-t border-line pt-inset-md">
           <div className="flex flex-wrap items-baseline justify-between gap-inline-md">
-            <h3 className="text-heading-5 text-fg">Confirmed treatments</h3>
+            <h3 className="text-heading-4 text-fg">Confirmed treatments</h3>
             <p
               className={`text-body-sm ${shortfall > 0 ? "text-warning" : "text-success"}`}
             >

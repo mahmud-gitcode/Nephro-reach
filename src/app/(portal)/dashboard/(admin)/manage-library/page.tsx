@@ -315,7 +315,7 @@ export default function ManageLibraryPage() {
         <div className="flex flex-col gap-inset-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-heading-4 text-fg">Posts</h2>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
+            <p className="mt-0.5 text-body-md text-fg-muted">
               Newest first. Hidden posts stay off the member shelf.
             </p>
           </div>

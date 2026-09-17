@@ -325,7 +325,7 @@ export default function EpisodePage() {
             <>
               {episode.speakers.length > 0 ? (
                 <Card as="section" className="space-y-stack-sm">
-                  <h2 className="text-heading-5 text-fg">
+                  <h2 className="text-heading-4 text-fg">
                     {isEs ? "En este episodio" : "In this episode"}
                   </h2>
                   <ul className="space-y-stack-xs">

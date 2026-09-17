@@ -20,19 +20,19 @@ import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 const latestResults = [
   {
-    label: "CREATININE",
+    label: "Creatinine",
     value: "0.9",
     unit: "umol/L",
     normal: "Normal: 60-110",
   },
   {
-    label: "HEMOGLOBIN",
+    label: "Hemoglobin",
     value: "13.5",
     unit: "g/L",
     normal: "Normal: 115-165",
   },
-  { label: "ALBUMIN", value: "4.5", unit: "g/L", normal: "Normal: 35-50" },
-  { label: "UREA", value: "29.0", unit: "mmol/L", normal: "Normal: 2.5-7.8" },
+  { label: "Albumin", value: "4.5", unit: "g/L", normal: "Normal: 35-50" },
+  { label: "Urea", value: "29.0", unit: "mmol/L", normal: "Normal: 2.5-7.8" },
 ];
 
 const labGoals = [
@@ -72,7 +72,7 @@ function LabGoalsCard() {
         <div>
           <div className="flex flex-wrap items-center gap-inline-md">
             <h2 className="text-heading-4 text-fg">My Lab Goal</h2>
-            <p className="text-caption text-fg-muted">June 1, 2026</p>
+            <p className="mt-0.5 text-body-md text-fg-muted">June 1, 2026</p>
           </div>
           <p className="mt-stack-sm text-body-sm text-fg-secondary">
             Allow members to enter provider recommended goals:

@@ -69,7 +69,7 @@ export function RecentEntries({
   return (
     <section className="rounded-[14px] border border-line bg-surface p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
+        <h2 className="text-heading-4 text-fg">
           {w?.recentEntries?.title || "Recent Entries"}
         </h2>
         <button

@@ -31,7 +31,7 @@ export function TravelBanner() {
 
   return (
     <section className="overflow-hidden rounded-card border border-primary-soft-line">
-      <h1 className="m-0">
+      <h2 className="m-0">
         {/* Intrinsic width and height rather than `fill`: the browser
           reserves the exact space before the bytes arrive, and nothing
           depends on a parent resolving a height. */}
@@ -49,7 +49,7 @@ export function TravelBanner() {
           sizes="100vw"
           className="block h-auto w-full"
         />
-      </h1>
+      </h2>
 
       {/* Only for Spanish: the artwork says all of this already in English,
         and repeating it there would be the same line twice. */}

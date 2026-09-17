@@ -126,8 +126,7 @@
   --text-label-sm--font-weight: 500;
   --text-label-sm--letter-spacing: 0.01em;
 
-  /* Overline lives below as a utility, not here — uppercase has to travel
-     with the style, and @theme cannot set text-transform. */
+  /* Overline lives below as a utility, next to the other composites. */
 
   /* ======================================================================
      CAPTION — supporting detail. 12px is the floor; nothing goes below.
@@ -205,14 +204,14 @@
    Composite utilities
    ========================================================================== */
 
-/* 12/16 · category eyebrows above a heading. "BLOOD COUNTS".
-   Uppercase is part of the style — never add `uppercase` at a call site. */
+/* 12/16 · category eyebrows above a heading. "Blood counts".
+   Sentence case, like every other label in the portal: text is never set
+   in capitals, so the tracking stays close to normal. */
 @utility text-overline {
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 /* Inline text links. The underline is NOT optional — colour alone fails

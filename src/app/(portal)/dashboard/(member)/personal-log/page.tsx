@@ -25,6 +25,7 @@ import {
   EmptyState,
   Input,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -117,7 +118,7 @@ function UpcomingAppointments() {
       className="space-y-stack-md border border-line bg-white shadow-card"
     >
       <div className="flex items-center justify-between gap-inline-lg">
-        <h2 className="text-heading-5 text-fg">
+        <h2 className="text-heading-4 text-fg">
           {t("personalLogHub.upcoming.title")}
         </h2>
         <Link
@@ -159,7 +160,7 @@ function HealthcareTeam() {
       className="space-y-stack-md border border-line bg-white shadow-card"
     >
       <div>
-        <h2 className="text-heading-5 text-fg">
+        <h2 className="text-heading-4 text-fg">
           {t("personalLogHub.team.title")}
         </h2>
       </div>
@@ -205,20 +206,14 @@ function HealthcareTeam() {
 }
 
 export default function PersonalLogPage() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <NoticeRailLayout
       notices={<PersonalLogDisclaimer spaced={false} stacked />}
     >
       <div className="w-full space-y-stack-xl">
-        <header>
-          {/* The greeting belongs to the dashboard; here the page is named
-            for what it is. */}
-          <h1 className="text-heading-1 text-fg">
-            {language === "ES" ? "Registro Personal" : "Personal Log"}
-          </h1>
-        </header>
+        <PageTitle href="/dashboard/personal-log" />
 
         <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
           {tileConfigs.map((tile) => (

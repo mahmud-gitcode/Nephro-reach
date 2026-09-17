@@ -110,7 +110,7 @@ export function ExtraTreatmentModal({
       >
         {/* 1. Interactive Calendar Date Selection */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold tracking-wider text-fg-secondary uppercase sm:text-sm">
+          <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
             {isEs
               ? "Seleccionar Fecha en el Calendario"
               : "Select Date on Calendar"}
@@ -145,7 +145,7 @@ export function ExtraTreatmentModal({
         {/* 2. Auto-Calculated Session Number */}
         <div className="flex flex-col justify-between gap-3 rounded-card border border-accent-soft-line bg-accent-soft/50 p-4 sm:flex-row sm:items-center sm:p-5">
           <div className="space-y-0.5">
-            <label className="text-xs font-bold tracking-wider text-accent-fg uppercase">
+            <label className="text-xs font-bold text-accent-fg">
               {isEs
                 ? "Número de Sesión (Automático)"
                 : "Session Number (Auto-Assigned)"}

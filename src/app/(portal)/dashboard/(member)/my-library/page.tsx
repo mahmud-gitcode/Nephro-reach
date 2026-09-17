@@ -34,6 +34,7 @@ import {
   Input,
   Skeleton,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 /* ==========================================================================
    My Library
@@ -185,11 +186,10 @@ export default function MyLibraryPage() {
 
   return (
     <div className="space-y-stack-xl">
+      <PageTitle href="/dashboard/my-library" />
+
       <Card as="section" padding="none" className="overflow-hidden p-inset-lg">
-        <h1 className="text-heading-2 text-fg">
-          {isEs ? "Mi Biblioteca" : "My Library"}
-        </h1>
-        <div className="mt-stack-lg flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
           <Input
             type="search"
             value={filter.search}

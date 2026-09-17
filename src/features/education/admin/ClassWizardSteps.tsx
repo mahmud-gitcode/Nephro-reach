@@ -22,9 +22,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-bold tracking-wide text-fg-muted uppercase">
-        {label}
-      </span>
+      <span className="block text-xs font-bold text-fg-muted">{label}</span>
       {hint && (
         <span className="mt-0.5 block text-[11px] font-medium text-fg-subtle">
           {hint}

@@ -21,6 +21,7 @@ import {
   FormField,
   Input,
   Modal,
+  SectionTitle,
   SwitchRow,
   Table,
   TableBody,
@@ -285,38 +286,29 @@ export function TravelTreatmentLog({ trip }: { trip: TripRequest }) {
   return (
     <>
       <Card as="section" aria-labelledby="travel-treatment-log">
-        <div className="flex flex-wrap items-start justify-between gap-inline-lg">
-          <div className="flex items-start gap-inline-md">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
-            >
-              <ClipboardList className="h-5 w-5" />
-            </span>
-            <div>
-              <h3 id="travel-treatment-log" className="text-heading-5 text-fg">
-                {isEs ? "Registro de Tratamientos" : "Travel Dialysis Log"}
-              </h3>
-              <p className="mt-stack-xs text-body-sm text-fg-muted">
+        <SectionTitle
+          as="h3"
+          id="travel-treatment-log"
+          title={isEs ? "Registro de Tratamientos" : "Travel Dialysis Log"}
+          subtitle={
+            isEs
+              ? "Registra tus tratamientos mientras estás fuera."
+              : "Track your treatments while away."
+          }
+          action={
+            <div className="flex flex-wrap items-center gap-inline-md">
+              <Badge tone={progress.incomplete > 0 ? "warning" : "neutral"}>
                 {isEs
-                  ? "Registra tus tratamientos mientras estás fuera."
-                  : "Track your treatments while away."}
-              </p>
+                  ? `${progress.logged} de ${progress.expected} registrados`
+                  : `${progress.logged} of ${progress.expected} logged`}
+              </Badge>
+              <Button size="small" onClick={openNew}>
+                <Plus aria-hidden="true" className="size-4 shrink-0" />
+                {isEs ? "Añadir tratamiento" : "Add Treatment"}
+              </Button>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-inline-md">
-            <Badge tone={progress.incomplete > 0 ? "warning" : "neutral"}>
-              {isEs
-                ? `${progress.logged} de ${progress.expected} registrados`
-                : `${progress.logged} of ${progress.expected} logged`}
-            </Badge>
-            <Button size="small" onClick={openNew}>
-              <Plus aria-hidden="true" className="size-4 shrink-0" />
-              {isEs ? "Añadir tratamiento" : "Add Treatment"}
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         {rows.length === 0 ? (
           <div className="mt-stack-md">

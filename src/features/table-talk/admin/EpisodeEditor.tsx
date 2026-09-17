@@ -208,7 +208,7 @@ export function EpisodeEditor({
       <div className="space-y-stack-lg">
         {/* ---------------------------------------------------- the video */}
         <section className="space-y-stack-md">
-          <h3 className="text-heading-5 text-fg">Video</h3>
+          <h3 className="text-heading-4 text-fg">Video</h3>
 
           <div className="flex flex-wrap items-center gap-inline-md">
             <FileButton
@@ -252,7 +252,7 @@ export function EpisodeEditor({
 
         {/* ---------------------------------------------------- the words */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-5 text-fg">Title and description</h3>
+          <h3 className="text-heading-4 text-fg">Title and description</h3>
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
             <FormField
@@ -315,7 +315,7 @@ export function EpisodeEditor({
         {/* -------------------------------------------------- the speakers */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
           <div className="flex flex-wrap items-center justify-between gap-inline-md">
-            <h3 className="text-heading-5 text-fg">Speakers</h3>
+            <h3 className="text-heading-4 text-fg">Speakers</h3>
             <Button
               size="small"
               variant="neutral"
@@ -402,7 +402,7 @@ export function EpisodeEditor({
 
         {/* ------------------------------------------------- categorising */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-5 text-fg">Topics and audience</h3>
+          <h3 className="text-heading-4 text-fg">Topics and audience</h3>
 
           <FormField
             label="Topics"
@@ -459,7 +459,7 @@ export function EpisodeEditor({
 
         {/* ----------------------------------- captions and the transcript */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-5 text-fg">Captions and transcript</h3>
+          <h3 className="text-heading-4 text-fg">Captions and transcript</h3>
 
           <div className="flex flex-wrap items-center gap-inline-md">
             <FileButton
@@ -517,7 +517,7 @@ export function EpisodeEditor({
 
         {/* ------------------------------------------------- when it goes live */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-5 text-fg">Publishing</h3>
+          <h3 className="text-heading-4 text-fg">Publishing</h3>
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
             <FormField label="Status">

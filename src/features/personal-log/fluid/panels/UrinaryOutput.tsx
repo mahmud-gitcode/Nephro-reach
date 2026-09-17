@@ -51,7 +51,7 @@ export function UrinaryOutput() {
 
   return (
     <section className="flex h-full flex-col rounded-xl border border-[var(--color-gray-200)] bg-surface p-[17px]">
-      <h2 className="text-body-md text-fg">
+      <h2 className="text-heading-4 text-fg">
         {w?.urinaryOutput?.title || "Urinary Output"}{" "}
         <span className="text-sm font-medium text-fg-muted">
           {w?.urinaryOutput?.subtitle || "(24 Hours)"}

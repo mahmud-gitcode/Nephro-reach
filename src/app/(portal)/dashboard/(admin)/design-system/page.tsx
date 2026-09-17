@@ -343,7 +343,7 @@ export default function DesignSystemPage() {
                 ]}
               />
               <Ramp
-                name="Categorical · 8 series · L 60% / C 0.13"
+                name="Categorical · 8 series · L 65% / max chroma"
                 steps={[
                   "bg-cat-1",
                   "bg-cat-2",

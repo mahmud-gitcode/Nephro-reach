@@ -398,7 +398,7 @@ export default function UserDashboard() {
             public until an admin approves it. */}
         {userSubmissions.length > 0 ? (
           <Card padding="small" className="space-y-stack-sm">
-            <h3 className="text-heading-5 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {language === "ES" ? "Tus historias" : "Your stories"}
             </h3>
             <ul className="space-y-stack-xs">

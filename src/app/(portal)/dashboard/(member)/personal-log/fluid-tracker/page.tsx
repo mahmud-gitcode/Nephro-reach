@@ -224,7 +224,7 @@ export default function FluidTrackerPage() {
               <div className="animate-in fade-in zoom-in-95 absolute top-full right-0 z-50 mt-2 w-72 rounded-card border border-line bg-surface p-3.5 shadow-xl duration-150 sm:w-80 sm:p-4">
                 {/* Header with Title and Close */}
                 <div className="mb-2.5 flex items-center justify-between border-b border-line-subtle pb-2.5">
-                  <span className="text-[11px] font-bold tracking-wider text-fg-muted uppercase sm:text-xs">
+                  <span className="text-[11px] font-bold text-fg-muted sm:text-xs">
                     {language === "ES" ? "Seleccionar Fecha" : "Select Date"}
                   </span>
                   <button

@@ -62,7 +62,7 @@ const cmpFields: Field[] = [
 
 const labSections: LabSection[] = [
   {
-    title: "METABOLIC PANEL (CMP)",
+    title: "Metabolic panel (CMP)",
     icon: FlaskConical,
     metricCount: "20 Metrics",
     columns: "four",
@@ -84,7 +84,7 @@ const labSections: LabSection[] = [
     ],
   },
   {
-    title: "WBC DIFFERENTIAL",
+    title: "WBC differential",
     icon: Droplet,
     fields: [
       { label: "Neutrophils (%)", placeholder: "40-70" },
@@ -96,7 +96,7 @@ const labSections: LabSection[] = [
     ],
   },
   {
-    title: "IRON STUDIES",
+    title: "Iron studies",
     icon: FlaskConical,
     fields: [
       { label: "Iron (mcg/dL)", placeholder: "50-170" },
@@ -106,7 +106,7 @@ const labSections: LabSection[] = [
     ],
   },
   {
-    title: "BONE & MINERAL",
+    title: "Bone & mineral",
     icon: Bone,
     fields: [
       { label: "PTH (Intact) (pg/mL)", placeholder: "10-65" },
@@ -114,7 +114,7 @@ const labSections: LabSection[] = [
     ],
   },
   {
-    title: "DIABETES LABS",
+    title: "Diabetes labs",
     icon: FlaskConical,
     fields: [
       { label: "Hemoglobin A1C (%)", placeholder: "4.0-5.6" },
@@ -173,7 +173,7 @@ function SectionHeading({
             className="h-6 w-1 rounded-pill bg-primary-solid"
           />
         )}
-        <h2 className="truncate text-heading-5 text-fg">{title}</h2>
+        <h2 className="truncate text-heading-4 text-fg">{title}</h2>
       </div>
       {metricCount && (
         <p className="shrink-0 text-caption text-fg-muted">{metricCount}</p>
@@ -255,7 +255,7 @@ export default function AddBloodResultsPage() {
             aria-hidden="true"
             className="h-6 w-1 rounded-pill bg-primary-solid"
           />
-          <h2 className="text-heading-3 text-fg">General Information</h2>
+          <h2 className="text-heading-4 text-fg">General Information</h2>
         </div>
         <div className="grid grid-cols-1 gap-stack-lg md:grid-cols-2">
           <TextField label="Test Date" placeholder="mm/dd/yyyy" />
@@ -289,7 +289,7 @@ export default function AddBloodResultsPage() {
             aria-hidden="true"
             className="h-icon-big w-icon-big text-fg-brand"
           />
-          <h2 className="text-heading-3 text-fg">Clinical Notes</h2>
+          <h2 className="text-heading-4 text-fg">Clinical Notes</h2>
         </div>
         <FormField label="Clinical notes">
           {(props) => (

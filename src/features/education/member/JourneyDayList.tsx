@@ -171,7 +171,7 @@ export default function JourneyDayList({
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 border-b border-line px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-xs font-bold tracking-wide text-fg-muted uppercase">
+          <h2 className="truncate text-xs font-bold text-fg-muted">
             {j?.yourProgress || "Your progress"}
           </h2>
 
@@ -232,7 +232,7 @@ export default function JourneyDayList({
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold tracking-wider text-fg-brand uppercase">
+                    <span className="block text-[11px] font-bold text-fg-brand">
                       {isEs ? phase.moduleEs : phase.moduleEn}
                     </span>
                     <span className="block truncate text-base leading-6 font-semibold text-fg">

@@ -35,6 +35,7 @@ import {
   Input,
   Skeleton,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 /* ==========================================================================
    Dialysis Table Talk
@@ -346,6 +347,8 @@ export default function TableTalkPage() {
 
   return (
     <div className="space-y-stack-xl">
+      <PageTitle href="/dashboard/table-talk" />
+
       {/* Banner: the series masthead, nothing else competing with it.
 
         The artwork already carries the logo, the name and the tagline, so it
@@ -360,7 +363,7 @@ export default function TableTalkPage() {
         padding="none"
         className="overflow-hidden border-primary-soft-line"
       >
-        <h1 className="m-0">
+        <h2 className="m-0">
           {/* Intrinsic width and height rather than `fill`: the artwork is a
             fixed 1024x157 strip, so giving the real numbers lets the browser
             reserve the exact space before the bytes arrive, and the image
@@ -379,7 +382,7 @@ export default function TableTalkPage() {
             sizes="100vw"
             className="block h-auto w-full"
           />
-        </h1>
+        </h2>
 
         <div className="flex flex-wrap items-center justify-between gap-inline-lg p-inset-lg">
           <p className="measure text-body-lg text-fg-secondary">

@@ -213,7 +213,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
         {isEs ? day.summaryEs : day.summaryEn}
       </p>
 
-      <h4 className="mt-5 text-xs font-bold tracking-wide text-fg-muted uppercase">
+      <h4 className="mt-5 text-xs font-bold text-fg-muted">
         {j?.keyPoints || "What you will learn"}
       </h4>
       <ul className="mt-2 space-y-2">
@@ -227,7 +227,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
 
       <dl className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
+          <dt className="text-[11px] font-semibold text-fg-muted">
             {j?.duration || "Length"}
           </dt>
           <dd className="mt-1 text-sm font-bold text-fg">
@@ -235,7 +235,7 @@ function OverviewTab({ day }: { day: JourneyDay }) {
           </dd>
         </div>
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
+          <dt className="text-[11px] font-semibold text-fg-muted">
             {j?.moduleLabel || "Module"}
           </dt>
           <dd className="mt-1 text-sm font-bold text-fg">

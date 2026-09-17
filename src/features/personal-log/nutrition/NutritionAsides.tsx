@@ -22,7 +22,7 @@ export function ResourceCard() {
   return (
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+        <h2 className="text-heading-4 text-fg">
           {n?.resources?.title || "Resources"}
         </h2>
       </div>
@@ -66,7 +66,7 @@ export function TipsCard() {
   return (
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+        <h2 className="text-heading-4 text-fg">
           {n?.dietTips?.title || "Diet Tips"}
         </h2>
       </div>

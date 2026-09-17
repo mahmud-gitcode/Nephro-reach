@@ -8,7 +8,7 @@ import type { CategoryGroup } from "./labs.panel.types";
 export const LAB_CATEGORIES: CategoryGroup[] = [
   {
     id: "kidney-function",
-    name: "KIDNEY FUNCTION",
+    name: "Kidney function",
     icon: Kidneys,
     tests: [
       {
@@ -51,7 +51,7 @@ export const LAB_CATEGORIES: CategoryGroup[] = [
   },
   {
     id: "electrolytes",
-    name: "ELECTROLYTES",
+    name: "Electrolytes",
     icon: FlaskConical,
     tests: [
       {
@@ -106,7 +106,7 @@ export const LAB_CATEGORIES: CategoryGroup[] = [
   },
   {
     id: "mineral-bone",
-    name: "MINERAL & BONE",
+    name: "Mineral & bone",
     icon: Bone,
     tests: [
       {
@@ -161,7 +161,7 @@ export const LAB_CATEGORIES: CategoryGroup[] = [
   },
   {
     id: "blood-counts",
-    name: "BLOOD COUNTS",
+    name: "Blood counts",
     icon: Droplet,
     tests: [
       {
@@ -216,7 +216,7 @@ export const LAB_CATEGORIES: CategoryGroup[] = [
   },
   {
     id: "nutrition",
-    name: "NUTRITION",
+    name: "Nutrition",
     icon: Apple,
     tests: [
       {
@@ -247,7 +247,7 @@ export const LAB_CATEGORIES: CategoryGroup[] = [
   },
   {
     id: "dialysis-adequacy",
-    name: "DIALYSIS ADEQUACY",
+    name: "Dialysis adequacy",
     icon: HeartPulse,
     tests: [
       {

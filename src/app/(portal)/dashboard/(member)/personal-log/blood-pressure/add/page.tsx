@@ -146,7 +146,7 @@ export default function AddBloodPressurePage() {
         </div>
 
         <Card padding="small" className="mt-stack-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {t("bloodPressure.add.howIFelt")}
           </h2>
           <div className="mt-stack-md grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
@@ -167,10 +167,10 @@ export default function AddBloodPressurePage() {
         </Card>
 
         <Card padding="small" className="mt-stack-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
-          <p className="mt-stack-xs text-body-sm text-fg-muted">
+          <p className="mt-0.5 text-body-md text-fg-muted">
             {t("bloodPressure.add.selectCurrentState")}
           </p>
 
@@ -193,7 +193,7 @@ export default function AddBloodPressurePage() {
         </Card>
 
         <Card padding="small" className="mt-stack-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {t("bloodPressure.add.howIFeel")}
           </h2>
           <p className="mt-stack-md text-label-md text-fg">

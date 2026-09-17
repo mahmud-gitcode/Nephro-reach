@@ -221,7 +221,7 @@ function TreatmentDetailContent() {
       <div className="w-full space-y-8 rounded-panel border border-line bg-surface p-6 shadow-card sm:p-8">
         {/* 1. ATTENDANCE & SCHEDULE */}
         <section className="space-y-3">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {dt?.detail?.attendanceSchedule?.title || "Attendance & Schedule"}
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -263,7 +263,7 @@ function TreatmentDetailContent() {
 
         {/* 2. PRE-TREATMENT CONDITION */}
         <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {dt?.detail?.preTreatment?.title || "Pre-Treatment Condition"}
           </h2>
 
@@ -285,7 +285,7 @@ function TreatmentDetailContent() {
 
           {/* Selected Pre-Dialysis Symptoms */}
           <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
-            <h3 className="text-heading-5 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {dt?.detail?.preTreatment?.preSymptoms || "Pre-Dialysis Symptoms"}
             </h3>
             <div className="flex flex-wrap gap-inline-md">
@@ -309,7 +309,7 @@ function TreatmentDetailContent() {
           {/* Symptom Severity if reported */}
           {Object.keys(entry.preSeverity).length > 0 && (
             <div className="space-y-2.5">
-              <h3 className="text-heading-5 text-fg">
+              <h3 className="text-heading-4 text-fg">
                 {dt?.detail?.preTreatment?.severity ||
                   "Symptom Severity (0–10)"}
               </h3>
@@ -334,7 +334,7 @@ function TreatmentDetailContent() {
 
         {/* 3. DURING TREATMENT */}
         <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {dt?.detail?.duringTreatment?.title || "During Treatment"}
           </h2>
 
@@ -370,7 +370,7 @@ function TreatmentDetailContent() {
           {/* Additional Symptoms */}
           {entry.intraSymptoms.length > 0 && (
             <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
-              <h3 className="text-heading-5 text-fg">
+              <h3 className="text-heading-4 text-fg">
                 {dt?.detail?.duringTreatment?.additionalSymptoms ||
                   "Additional Symptoms"}
               </h3>
@@ -390,7 +390,7 @@ function TreatmentDetailContent() {
           {/* Session Notes */}
           {entry.intraNotes && (
             <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-4">
-              <h3 className="text-heading-5 text-fg">
+              <h3 className="text-heading-4 text-fg">
                 {dt?.detail?.duringTreatment?.sessionNotes || "Session Notes"}
               </h3>
               <p className="rounded-card border border-line bg-surface p-inset-sm text-body-sm text-fg-secondary">
@@ -402,7 +402,7 @@ function TreatmentDetailContent() {
 
         {/* 4. RECOVERY & CLINICAL VITALS */}
         <section className="space-y-stack-lg border-t border-line-subtle pt-inset-lg">
-          <h2 className="text-heading-5 text-fg">
+          <h2 className="text-heading-4 text-fg">
             {dt?.detail?.recoveryVitals?.title || "Recovery & Clinical Vitals"}
           </h2>
 
@@ -425,7 +425,7 @@ function TreatmentDetailContent() {
 
           {/* Clinical Measurements (4 Vitals Cards from Form) */}
           <div className="space-y-3 pt-2">
-            <h3 className="text-heading-5 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {dt?.detail?.recoveryVitals?.measurements ||
                 "Clinical Measurements"}
             </h3>
@@ -504,7 +504,7 @@ function TreatmentDetailContent() {
 
           {/* Administered Medications */}
           <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
-            <h3 className="flex items-center gap-1.5 text-base font-bold tracking-tight text-fg">
+            <h3 className="flex items-center gap-1.5 text-heading-4 text-fg">
               <Pill className="size-4 text-fg-muted" />
               <span>
                 {dt?.detail?.recoveryVitals?.medsAdministered ||
@@ -532,7 +532,7 @@ function TreatmentDetailContent() {
           {/* Recovery Notes */}
           {entry.otherNotes && (
             <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-4">
-              <h3 className="text-heading-5 text-fg">
+              <h3 className="text-heading-4 text-fg">
                 {dt?.detail?.recoveryVitals?.recoveryNotes || "Recovery Notes"}
               </h3>
               <p className="rounded-card border border-line bg-surface p-inset-sm text-body-sm text-fg-secondary">

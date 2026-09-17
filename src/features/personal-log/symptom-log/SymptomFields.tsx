@@ -24,11 +24,7 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function PanelTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-xs font-bold tracking-wider text-fg-muted uppercase">
-      {children}
-    </h3>
-  );
+  return <h3 className="text-xs font-bold text-fg-muted">{children}</h3>;
 }
 
 /* Both toggles below go through SegmentedChoice, which owns the radiogroup

@@ -72,7 +72,7 @@ export function WeightTrendChart() {
       className="h-full rounded-card border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-3.5"
     >
       <div className="flex items-center gap-inline-sm">
-        <h2 className="text-body-md text-fg">
+        <h2 className="text-heading-4 text-fg">
           {w?.weightTrend?.title || "Weight Trend"}
         </h2>
         <span className="text-xs text-fg-muted">

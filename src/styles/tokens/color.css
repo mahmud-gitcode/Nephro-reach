@@ -174,24 +174,25 @@
      look like a warning and "Classes Attended" look like a success.
 
      A categorical set has to span the wheel, so some of these land near a
-     status hue. What separates them is weight, not hue: every one of these
-     sits at L 60% / C 0.13, while the status solids are darker and far more
-     saturated (danger-600 is L 52% / C 0.20). Side by side, these read as
-     data and those read as alerts.
+     status hue. What separates them is lightness: every one of these sits
+     around L 65%, with chroma pushed as high as each hue allows (0.11 for
+     cyan up to 0.20), while the status solids are darker (danger-600 is
+     L 52%). Side by side, these read as bright data and those as alerts.
 
      Hues are 45° apart from 20°. Every solid clears 3:1 on white (min
-     3.73:1 — WCAG 1.4.11 for a graphical object) and 3:1 on its own soft
-     surface (min 3.32:1), so an icon on its tint is legible. They are NOT
-     rated for text: use a fg token for the label beside the swatch.
+     3.05:1 — WCAG 1.4.11 for a graphical object), which is where charts
+     draw them. On their own soft tint they sit at 2.7-3.0:1, so an icon on
+     a tint should be a size up rather than a hairline. They are NOT rated
+     for text: use a fg token for the label beside the swatch.
      ====================================================================== */
-  --color-cat-1: #c25c5f;
-  --color-cat-2: #b46d10;
-  --color-cat-3: #868604;
-  --color-cat-4: #2c965d;
-  --color-cat-5: #009298;
-  --color-cat-6: #2d86c8;
-  --color-cat-7: #8071c8;
-  --color-cat-8: #af609f;
+  --color-cat-1: #f44f5d;
+  --color-cat-2: #cf7c00;
+  --color-cat-3: #989900;
+  --color-cat-4: #09a961;
+  --color-cat-5: #06a3aa;
+  --color-cat-6: #0199f0;
+  --color-cat-7: #9272ff;
+  --color-cat-8: #d858c2;
 
   --color-cat-1-soft: #ffebea;
   --color-cat-2-soft: #ffeddc;

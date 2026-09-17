@@ -115,7 +115,7 @@ export function NutrientOverview({
   return (
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
+        <h2 className="text-heading-4 text-fg">
           {n?.nutrientOverview?.title || "Nutrient Overview"}
         </h2>
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-fg-muted">
@@ -210,14 +210,14 @@ export function MealTable({
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl leading-7 font-medium tracking-[0.1px] text-fg">
+          <h2 className="text-heading-4 text-fg">
             {isToday || !dayLabel
               ? n?.mealsTable?.title || "Today's Meals"
               : isEs
                 ? `Comidas · ${dayLabel}`
                 : `Meals · ${dayLabel}`}
           </h2>
-          <p className="mt-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
+          <p className="mt-0.5 text-body-md text-fg-muted">
             {n?.mealsTable?.subtitle ||
               "Review meals and key kidney-related nutrients."}
           </p>
@@ -235,7 +235,7 @@ export function MealTable({
       <div className="mt-3 overflow-hidden rounded-xl border border-[var(--color-gray-200)] bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-surface-sunken text-xs font-semibold tracking-[0.06px] text-fg-muted uppercase">
+            <thead className="bg-surface-sunken text-xs font-semibold tracking-[0.06px] text-fg-muted">
               <tr>
                 <th className="px-4 py-3">
                   {n?.mealsTable?.headers?.food || "Food"}
@@ -376,7 +376,7 @@ export function FluidTracker({
 
   return (
     <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-3">
-      <h2 className="text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+      <h2 className="text-heading-4 text-fg">
         {n?.fluidTracker?.title || "Fluid Tracker"}
       </h2>
       <div className="mt-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-3.5">

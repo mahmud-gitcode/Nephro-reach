@@ -89,7 +89,7 @@ function ModuleSection({
     <section className="rounded-[14px] border border-line bg-surface shadow-card">
       <header className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold tracking-wider text-fg-brand uppercase">
+          <p className="text-[11px] font-bold text-fg-brand">
             Module {index + 1}
           </p>
           <h2 className="truncate text-lg font-semibold text-fg">

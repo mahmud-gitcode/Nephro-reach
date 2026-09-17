@@ -523,9 +523,7 @@ export function ClassEditorPanel({
               />
 
               <div className="space-y-4 border-t border-line pt-4">
-                <h3 className="text-xs font-bold tracking-wide text-fg-muted uppercase">
-                  Transcript
-                </h3>
+                <h3 className="text-xs font-bold text-fg-muted">Transcript</h3>
                 <ClassTranscriptUpload
                   draft={draft}
                   onChange={set}

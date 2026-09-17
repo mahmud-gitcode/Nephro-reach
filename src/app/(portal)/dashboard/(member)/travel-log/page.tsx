@@ -4,6 +4,7 @@ import React from "react";
 import TravelBanner from "@/features/travel/TravelBanner";
 import TravelDialysisSection from "@/features/travel/TravelDialysisSection";
 import { TravelIntroBar } from "@/features/travel/TravelPanels";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 /* ==========================================================================
    Dialysis Travel Log
@@ -23,6 +24,7 @@ import { TravelIntroBar } from "@/features/travel/TravelPanels";
 export default function TravelLogPage() {
   return (
     <div className="space-y-stack-lg">
+      <PageTitle href="/dashboard/travel-log" />
       <TravelBanner />
 
       {/* Only the banner runs full width; the working part of the page

@@ -487,7 +487,7 @@ export default function MyLabsPage() {
                         {/* Category Header Row */}
                         <tr className="bg-[var(--color-gray-100)]">
                           <td colSpan={7} className="px-4 py-2.5">
-                            <div className="flex items-center gap-2 text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
+                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-brand-900)]">
                               <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
                               {category.displayName}
                             </div>
@@ -575,9 +575,9 @@ export default function MyLabsPage() {
                   <div key={category.id} className="space-y-3">
                     <div className="flex items-center gap-2 border-b border-line pb-2">
                       <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
-                      <h3 className="text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
+                      <h3 className="text-xs font-bold text-[var(--color-brand-900)]">
                         {category.displayName} ({category.tests.length}{" "}
-                        {l?.trends?.testsCount || "TESTS"})
+                        {l?.trends?.testsCount || "tests"})
                       </h3>
                     </div>
 
@@ -680,7 +680,7 @@ export default function MyLabsPage() {
                             {
                               category:
                                 l?.categories?.kidneyFunction ||
-                                "KIDNEY FUNCTION",
+                                "Kidney function",
                               tests: [
                                 {
                                   name: getTestDisplayName("bun", "BUN"),
@@ -710,7 +710,7 @@ export default function MyLabsPage() {
                             },
                             {
                               category:
-                                l?.categories?.electrolytes || "ELECTROLYTES",
+                                l?.categories?.electrolytes || "Electrolytes",
                               tests: [
                                 {
                                   name: getTestDisplayName(
@@ -741,7 +741,7 @@ export default function MyLabsPage() {
                     detailedTests: [
                       {
                         category:
-                          l?.categories?.kidneyFunction || "KIDNEY FUNCTION",
+                          l?.categories?.kidneyFunction || "Kidney function",
                         tests: [
                           {
                             name: getTestDisplayName("bun", "BUN"),
@@ -767,7 +767,7 @@ export default function MyLabsPage() {
                         ],
                       },
                       {
-                        category: l?.categories?.electrolytes || "ELECTROLYTES",
+                        category: l?.categories?.electrolytes || "Electrolytes",
                         tests: [
                           {
                             name: getTestDisplayName("sodium", "Sodium"),
@@ -796,7 +796,7 @@ export default function MyLabsPage() {
                     detailedTests: [
                       {
                         category:
-                          l?.categories?.kidneyFunction || "KIDNEY FUNCTION",
+                          l?.categories?.kidneyFunction || "Kidney function",
                         tests: [
                           {
                             name: getTestDisplayName("bun", "BUN"),
@@ -834,7 +834,7 @@ export default function MyLabsPage() {
                     detailedTests: [
                       {
                         category:
-                          l?.categories?.kidneyFunction || "KIDNEY FUNCTION",
+                          l?.categories?.kidneyFunction || "Kidney function",
                         tests: [
                           {
                             name: getTestDisplayName("bun", "BUN"),
@@ -866,7 +866,7 @@ export default function MyLabsPage() {
                     detailedTests: [
                       {
                         category:
-                          l?.categories?.kidneyFunction || "KIDNEY FUNCTION",
+                          l?.categories?.kidneyFunction || "Kidney function",
                         tests: [
                           {
                             name: getTestDisplayName("bun", "BUN"),
@@ -976,7 +976,7 @@ export default function MyLabsPage() {
                                 key={gIdx}
                                 className="overflow-hidden rounded-lg border border-line"
                               >
-                                <div className="border-b border-line bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold tracking-wider text-[var(--color-brand-900)] uppercase">
+                                <div className="border-b border-line bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold text-[var(--color-brand-900)]">
                                   {group.category}
                                 </div>
                                 <table className="w-full text-left text-xs">
@@ -1049,8 +1049,8 @@ export default function MyLabsPage() {
           {/* Card 1: Latest Lab Summary */}
           <div className="space-y-4 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
             <div className="flex items-center justify-between border-b border-line-subtle pb-3">
-              <h2 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-fg-secondary uppercase">
-                {l?.sidebar?.latestSummary?.title || "LATEST LAB SUMMARY"}
+              <h2 className="flex items-center gap-1.5 text-heading-4 text-fg">
+                {l?.sidebar?.latestSummary?.title || "Latest lab summary"}
               </h2>
               <Info className="h-4 w-4 text-fg-subtle" />
             </div>
@@ -1099,8 +1099,8 @@ export default function MyLabsPage() {
 
           {/* Card 2: Lab Categories */}
           <div className="space-y-3 rounded-xl border border-[var(--color-gray-200)] bg-surface p-4">
-            <h2 className="border-b border-line-subtle pb-2 text-xs font-bold tracking-wider text-fg-secondary uppercase">
-              {l?.sidebar?.categories?.title || "LAB CATEGORIES"}
+            <h2 className="border-b border-line-subtle pb-2 text-heading-4 text-fg">
+              {l?.sidebar?.categories?.title || "Lab categories"}
             </h2>
             <div className="space-y-1">
               {[
@@ -1181,8 +1181,8 @@ export default function MyLabsPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-white">
                 <BookOpen className="h-4 w-4" />
               </div>
-              <h2 className="text-xs font-bold tracking-wider text-fg uppercase">
-                {l?.sidebar?.understanding?.title || "UNDERSTANDING YOUR LABS"}
+              <h2 className="text-heading-4 text-fg">
+                {l?.sidebar?.understanding?.title || "Understanding your labs"}
               </h2>
             </div>
             <p className="text-xs leading-relaxed text-fg-muted">

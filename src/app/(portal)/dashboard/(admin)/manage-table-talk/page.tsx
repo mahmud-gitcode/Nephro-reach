@@ -404,7 +404,7 @@ export default function ManageTableTalkPage() {
 
       <Card as="section" className="mt-stack-lg">
         <h2 className="text-heading-4 text-fg">Episodes</h2>
-        <p className="mt-stack-xs text-body-sm text-fg-muted">
+        <p className="mt-0.5 text-body-md text-fg-muted">
           Drafts and scheduled episodes sit at the top. Only an episode with a
           video file can reach members.
         </p>
@@ -459,7 +459,7 @@ export default function ManageTableTalkPage() {
 
       <Card as="section" className="mt-stack-lg">
         <h2 className="text-heading-4 text-fg">Suggested questions</h2>
-        <p className="mt-stack-xs measure text-body-sm text-fg-muted">
+        <p className="mt-0.5 text-body-md text-fg-muted">
           Topic suggestions from members. Nothing here is published, and no
           question ever appears with a member&rsquo;s name on it.
         </p>

@@ -504,10 +504,10 @@ export function AdherenceChart({ log }: { log: MedicationLog }) {
         <div className="mt-stack-md grid grid-cols-1 gap-inset-md xl:grid-cols-3">
           <Card as="article" tone="flat" padding="small">
             <div>
-              <h3 className="text-heading-5 text-fg">
+              <h3 className="text-heading-4 text-fg">
                 {t("medicationsLog.adherence.overallTitle")}
               </h3>
-              <p className="mt-stack-sm text-caption text-fg-muted">
+              <p className="mt-0.5 text-body-md text-fg-muted">
                 {isEs
                   ? `${decided} dosis registradas en 7 días`
                   : `${decided} doses recorded over 7 days`}
@@ -566,10 +566,10 @@ export function AdherenceChart({ log }: { log: MedicationLog }) {
           </Card>
 
           <Card as="article" tone="flat" padding="small">
-            <h3 className="text-heading-5 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {t("medicationsLog.adherence.missedTitle")}
             </h3>
-            <p className="mt-stack-sm text-body-sm text-fg-muted">
+            <p className="mt-0.5 text-body-md text-fg-muted">
               {t("medicationsLog.adherence.totalMissed")}{" "}
               <span className="text-label-md text-danger">
                 {overall.missed}
@@ -593,10 +593,10 @@ export function AdherenceChart({ log }: { log: MedicationLog }) {
               a day nobody logged stays blank instead of counting as a
               failure. */}
           <Card as="article" tone="flat" padding="small">
-            <h3 className="text-heading-5 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {isEs ? "Últimos 7 días" : "Last 7 days"}
             </h3>
-            <p className="mt-stack-sm text-body-sm text-fg-muted">
+            <p className="mt-0.5 text-body-md text-fg-muted">
               {isEs
                 ? "Verde 90% o más, amarillo 70-89%, rojo por debajo."
                 : "Green is 90% or more, yellow 70-89%, red below that."}

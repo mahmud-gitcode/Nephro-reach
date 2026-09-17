@@ -454,7 +454,7 @@
     },
     "detail": {
       "urgentNotice": "Seek Emergency Care Immediately",
-      "call911": "CALL 911",
+      "call911": "Call 911",
       "findNearestEr": "Find Nearest ER",
       "callEmergencyFor": "Call emergency services immediately for:",
       "importantIn": "Especially important in:",
@@ -1128,7 +1128,7 @@
       "footnote": "* Reference ranges may vary slightly by lab. Always follow your healthcare team's guidance."
     },
     "trends": {
-      "testsCount": "TESTS",
+      "testsCount": "tests",
       "refRange": "Ref Range",
       "latest": "Latest"
     },
@@ -1157,7 +1157,7 @@
     },
     "sidebar": {
       "latestSummary": {
-        "title": "LATEST LAB SUMMARY",
+        "title": "Latest lab summary",
         "inRange": "In Range",
         "high": "High",
         "low": "Low",
@@ -1166,13 +1166,13 @@
         "viewTrends": "View Trends"
       },
       "categories": {
-        "title": "LAB CATEGORIES",
+        "title": "Lab categories",
         "tests": "Tests",
         "test": "Test",
         "viewAllTrends": "View All Trends"
       },
       "understanding": {
-        "title": "UNDERSTANDING YOUR LABS",
+        "title": "Understanding your labs",
         "desc": "Learn what your lab numbers mean and how they affect your health.",
         "visitCenter": "Visit My Library"
       }
@@ -1265,7 +1265,7 @@
       "description": "Your past and current medical conditions, surgeries and major health events.",
       "addBtn": "Add Condition",
       "headers": {
-        "condition": "CONDITION / HISTORY",
+        "condition": "Condition / history",
         "status": "Status",
         "diagnosed": "Diagnosed",
         "notes": "Notes",
@@ -1734,7 +1734,7 @@
   "emergencyModal": {
     "title": "This may be a medical emergency.",
     "subtitle": "NephroReach does NOT provide emergency care.",
-    "call911": "CALL 911",
+    "call911": "Call 911",
     "findEr": "Find Nearest Emergency Room",
     "emergencyContact": "Emergency contact",
     "whenToSeekTitle": "When to Seek Emergency Care",

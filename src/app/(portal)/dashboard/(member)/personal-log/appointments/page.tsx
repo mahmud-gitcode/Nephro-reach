@@ -35,8 +35,8 @@ interface AppointmentItem {
 const INITIAL_APPOINTMENTS: AppointmentItem[] = [
   {
     id: "1",
-    monthEn: "MAY",
-    monthEs: "MAY",
+    monthEn: "May",
+    monthEs: "May",
     day: "12",
     weekdayEn: "Fri",
     weekdayEs: "Vie",
@@ -49,8 +49,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
   },
   {
     id: "2",
-    monthEn: "MAY",
-    monthEs: "MAY",
+    monthEn: "May",
+    monthEs: "May",
     day: "19",
     weekdayEn: "Fri",
     weekdayEs: "Vie",
@@ -63,8 +63,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
   },
   {
     id: "3",
-    monthEn: "MAY",
-    monthEs: "MAY",
+    monthEn: "May",
+    monthEs: "May",
     day: "26",
     weekdayEn: "Fri",
     weekdayEs: "Vie",
@@ -136,8 +136,8 @@ function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h3 className="text-heading-3 text-fg">{title}</h3>
-          <p className="mt-stack-xs text-body-md text-fg-secondary">
+          <h3 className="text-heading-4 text-fg">{title}</h3>
+          <p className="mt-0.5 text-body-md text-fg-muted">
             {appointment.doctor}
           </p>
           <div className="mt-stack-sm space-y-stack-xs">
@@ -234,12 +234,10 @@ function NextAppointment() {
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-heading-3 text-fg">
+            <h3 className="text-heading-4 text-fg">
               {t("appointments.sampleSpecialty")}
             </h3>
-            <p className="mt-stack-xs text-body-md text-fg-secondary">
-              Dr. Niro mia
-            </p>
+            <p className="mt-0.5 text-body-md text-fg-muted">Dr. Niro mia</p>
             <IconText icon={<Clock3 className="h-5 w-5" />}>
               10:30 AM - 11:15 AM
             </IconText>
@@ -318,8 +316,8 @@ export default function AppointmentsPage() {
     e.preventDefault();
     if (!specialty.trim() || !doctor.trim()) return;
 
-    let monthEn = "MAY";
-    let monthEs = "MAY";
+    let monthEn = "May";
+    let monthEs = "May";
     let day = "15";
     let weekdayEn = "Mon";
     let weekdayEs = "Lun";
@@ -327,13 +325,13 @@ export default function AppointmentsPage() {
     if (date) {
       const parsed = new Date(date + "T00:00:00");
       if (!isNaN(parsed.getTime())) {
-        monthEn = parsed
-          .toLocaleString("en-US", { month: "short" })
-          .toUpperCase();
-        monthEs = parsed
-          .toLocaleString("es-ES", { month: "short" })
-          .toUpperCase()
-          .replace(".", "");
+        /* "Sep", not "SEP": the app never sets text in capitals. */
+        const title = (text: string) =>
+          text.charAt(0).toUpperCase() + text.slice(1);
+        monthEn = title(parsed.toLocaleString("en-US", { month: "short" }));
+        monthEs = title(
+          parsed.toLocaleString("es-ES", { month: "short" }).replace(".", ""),
+        );
         day = String(parsed.getDate());
         weekdayEn = parsed.toLocaleString("en-US", { weekday: "short" });
         weekdayEs = parsed

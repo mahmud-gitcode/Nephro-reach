@@ -1,17 +1,16 @@
 "use client";
 
 import React from "react";
-import { ClipboardList, FileText, NotebookPen, Plane } from "lucide-react";
+import { Plane } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { PlacementCard } from "./TravelDialysisSection";
 import TripStatusTimeline from "./TripStatusTimeline";
-import { isConfirmed } from "./trip.rules";
 import type { TripRequest } from "./trip.types";
 import { reflectionRemaining } from "./travelTreatment.rules";
 import { REFLECTION_MAX } from "./travelTreatment.types";
 import { useTravelTreatments } from "./useTravelTreatments";
-import { Badge, Card, Textarea } from "@/components/ui";
+import { Card, SectionTitle, Textarea } from "@/components/ui";
 
 /* ==========================================================================
    Travel panels
@@ -28,45 +27,19 @@ import { Badge, Card, Textarea } from "@/components/ui";
    them on a grid; none of them decides where it sits.
    ========================================================================== */
 
-/** The shared head of every panel: icon tile, title, one line of purpose. */
+/** The shared head of every panel: title and one line of purpose. */
 function PanelHead({
-  icon,
   title,
   hint,
   action,
   id,
 }: {
-  icon: React.ReactNode;
   title: string;
   hint?: string;
   action?: React.ReactNode;
   id?: string;
 }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md">
-      {/* A title on its own sits level with its icon; one with a hint
-        underneath starts at the icon's top edge. */}
-      <div
-        className={`flex gap-inline-md ${hint ? "items-start" : "items-center"}`}
-      >
-        <span
-          aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
-        >
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <h2 id={id} className="text-heading-5 text-fg">
-            {title}
-          </h2>
-          {hint ? (
-            <p className="mt-stack-xs text-body-sm text-fg-muted">{hint}</p>
-          ) : null}
-        </div>
-      </div>
-      {action}
-    </div>
-  );
+  return <SectionTitle id={id} title={title} subtitle={hint} action={action} />;
 }
 
 /* ========================================================================== */
@@ -79,7 +52,6 @@ export function RequestStatusPanel({ trip }: { trip: TripRequest }) {
     <Card as="section" aria-labelledby="request-status">
       <PanelHead
         id="request-status"
-        icon={<ClipboardList className="h-5 w-5" />}
         title={isEs ? "Estado de la Solicitud" : "Travel Request Status"}
         hint={
           isEs
@@ -101,26 +73,13 @@ export function ConfirmedTreatmentPanel({ trip }: { trip: TripRequest }) {
   const isEs = language === "ES";
 
   return (
-    <Card as="section" aria-labelledby="confirmed-treatment">
-      <PanelHead
-        id="confirmed-treatment"
-        icon={<FileText className="h-5 w-5" />}
-        title={isEs ? "Detalles Confirmados" : "Confirmed Treatment Details"}
-        action={
-          <Badge tone={isConfirmed(trip) ? "success" : "neutral"}>
-            {isConfirmed(trip)
-              ? isEs
-                ? "Confirmado"
-                : "Confirmed"
-              : isEs
-                ? "Pendiente"
-                : "Pending"}
-          </Badge>
-        }
-      />
-      <div className="mt-stack-md">
-        <PlacementCard trip={trip} />
-      </div>
+    /* No title: the center, how to reach it and the booked times say what
+       this card is, and the trip card above already shows the status. */
+    <Card
+      as="section"
+      aria-label={isEs ? "Detalles confirmados" : "Confirmed treatment details"}
+    >
+      <PlacementCard trip={trip} />
     </Card>
   );
 }
@@ -136,10 +95,15 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
   const remaining = reflectionRemaining(reflection);
 
   return (
-    <Card as="section" aria-labelledby="travel-reflections">
+    /* Fills its grid row, so it stands as tall as the checklist beside
+       it and the writing space takes whatever that leaves. */
+    <Card
+      as="section"
+      aria-labelledby="travel-reflections"
+      className="flex h-full flex-col"
+    >
       <PanelHead
         id="travel-reflections"
-        icon={<NotebookPen className="h-5 w-5" />}
         title={isEs ? "Notas y Reflexiones" : "Notes & Reflections"}
         hint={
           isEs
@@ -150,7 +114,7 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
 
       <Textarea
         rows={5}
-        className="mt-stack-md"
+        className="mt-stack-md flex-1 resize-none"
         value={reflection}
         maxLength={REFLECTION_MAX}
         aria-label={isEs ? "Notas y reflexiones" : "Notes and reflections"}

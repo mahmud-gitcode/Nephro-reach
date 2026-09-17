@@ -27,7 +27,7 @@ export default function DashboardGuard({
 
   if (!ready || !user || !canAccessPath(user.role, pathname)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas text-body-sm text-fg-muted">
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfcfd] text-body-sm text-fg-muted">
         Loading...
       </div>
     );

@@ -16,7 +16,14 @@ import {
 } from "./trip.rules";
 import type { TripFilter } from "./trip.rules";
 import type { TripRequest } from "./trip.types";
-import { Badge, Button, Card, EmptyState, Select } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+  Select,
+} from "@/components/ui";
 
 /* ==========================================================================
    Your trips
@@ -40,23 +47,24 @@ function TripTile({ trip, onEdit }: { trip: TripRequest; onEdit: () => void }) {
   const phase = tripPhase(trip);
 
   return (
-    <div className="flex h-full flex-col rounded-card border border-line bg-surface p-inset-md shadow-card transition-shadow duration-150 ease-standard focus-within:shadow-raised hover:shadow-raised">
+    /* Same gradient as the dialysis schedule's day slots. */
+    <div className="flex h-full min-h-[160px] flex-col rounded-card border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-lg shadow-card transition-all duration-150 ease-standard focus-within:shadow-raised hover:border-line-strong hover:shadow-raised">
       <Link
         href={`/dashboard/travel-log/${trip.id}`}
         className="flex flex-1 flex-col gap-stack-xs rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span className="flex items-start justify-between gap-inline-md">
-          <span className="min-w-0 text-heading-5 text-fg">
+          <span className="min-w-0 text-heading-4 text-fg">
             {destinationLabel(trip) ||
               (isEs ? "Sin destino" : "No destination")}
           </span>
           <ChevronRight
             aria-hidden="true"
-            className="mt-1 size-4 shrink-0 text-fg-subtle"
+            className="mt-1.5 size-5 shrink-0 text-fg-subtle"
           />
         </span>
 
-        <span className="block text-body-sm text-fg-muted">
+        <span className="block text-body-md text-fg-secondary">
           {formatTripDates(trip, isEs)}
         </span>
 
@@ -121,67 +129,60 @@ export function YourTrips({
   ];
 
   return (
-    /* The heading and its controls sit on the page; each trip is its own
-       card below them, like every other list of cards in the portal. */
-    <section aria-labelledby="your-trips" className="space-y-stack-md">
-      <div className="flex flex-wrap items-center justify-between gap-inline-md">
-        <div className="flex items-center gap-inline-md">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-primary-soft-line bg-primary-soft text-fg-brand"
-          >
-            <Plane className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 id="your-trips" className="text-heading-4 text-fg">
-              {isEs ? "Tus viajes" : "Your trips"}
-            </h2>
-            {trips.length === 0 ? (
-              <p className="mt-stack-xs text-body-sm text-fg-muted">
-                {isEs
-                  ? "Pide tus tratamientos fuera de casa. Tu clínica los coordina."
-                  : "Ask for treatments away from home. Your clinic arranges them."}
-              </p>
+    /* One card for the whole section; each trip is its own card inside. */
+    <Card
+      as="section"
+      aria-labelledby="your-trips"
+      className="space-y-stack-md"
+    >
+      <SectionTitle
+        id="your-trips"
+        title={isEs ? "Tus viajes" : "Your trips"}
+        subtitle={
+          trips.length === 0
+            ? isEs
+              ? "Pide tus tratamientos fuera de casa. Tu clínica los coordina."
+              : "Ask for treatments away from home. Your clinic arranges them."
+            : undefined
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-inline-md">
+            {/* Only once there is enough to narrow. A filter over two trips is
+                a control that cannot help. */}
+            {trips.length > 2 ? (
+              <Select
+                value={filter}
+                onChange={(event) =>
+                  setChosen(event.target.value as TripFilter)
+                }
+                aria-label={isEs ? "Filtrar viajes" : "Filter trips"}
+                className="sm:w-[200px]"
+              >
+                {OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {`${isEs ? option.labelEs : option.labelEn} (${counts[option.value]})`}
+                  </option>
+                ))}
+              </Select>
             ) : null}
+
+            <Button onClick={onRequest}>
+              <Plus aria-hidden="true" className="size-4 shrink-0" />
+              {isEs ? "Solicitar un viaje" : "Request a Trip"}
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-inline-md">
-          {/* Only once there is enough to narrow. A filter over two trips is
-            a control that cannot help. */}
-          {trips.length > 2 ? (
-            <Select
-              value={filter}
-              onChange={(event) => setChosen(event.target.value as TripFilter)}
-              aria-label={isEs ? "Filtrar viajes" : "Filter trips"}
-              className="sm:w-[200px]"
-            >
-              {OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {`${isEs ? option.labelEs : option.labelEn} (${counts[option.value]})`}
-                </option>
-              ))}
-            </Select>
-          ) : null}
-
-          <Button onClick={onRequest}>
-            <Plus aria-hidden="true" className="size-4 shrink-0" />
-            {isEs ? "Solicitar un viaje" : "Request a Trip"}
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {trips.length === 0 ? (
         /* The explanation belongs here on an empty log, where it is the only
            thing to read, rather than in a panel of its own that stays on
            screen forever once it has been understood. */
-        <Card>
-          <p className="text-body-sm text-fg-secondary">
-            {isEs
-              ? "Cuando planees un viaje, envía una solicitud a tu centro de diálisis. Ellos coordinarán tu tratamiento en un centro local y te enviarán la confirmación. Avisa con cuatro semanas si puedes."
-              : "When you plan a trip, submit a request to your dialysis facility. They will coordinate your treatment at a local center and send you a confirmation. Give them four weeks if you can."}
-          </p>
-        </Card>
+        <p className="text-body-sm text-fg-secondary">
+          {isEs
+            ? "Cuando planees un viaje, envía una solicitud a tu centro de diálisis. Ellos coordinarán tu tratamiento en un centro local y te enviarán la confirmación. Avisa con cuatro semanas si puedes."
+            : "When you plan a trip, submit a request to your dialysis facility. They will coordinate your treatment at a local center and send you a confirmation. Give them four weeks if you can."}
+        </p>
       ) : shown.length === 0 ? (
         <div>
           <EmptyState
@@ -203,13 +204,13 @@ export function YourTrips({
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((trip) => (
             <TripTile key={trip.id} trip={trip} onEdit={() => onEdit(trip)} />
           ))}
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 

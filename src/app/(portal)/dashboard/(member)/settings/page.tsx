@@ -15,6 +15,7 @@ import {
   TabPanel,
   Tabs,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 type SettingsTab = "profile" | "notification" | "password";
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -413,40 +414,43 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-inline-lg lg:flex-row lg:items-start">
-      <SettingsMenu
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        generalHeader={st?.generalHeader || "General"}
-        tabsLabels={tabsLabels}
-      />
-      <div className="flex-1 space-y-stack-lg">
-        <TabPanel id="profile" value={activeTab}>
-          <div className="space-y-stack-lg">
-            <ProfileInformation profileData={st?.profile} />
+    <div className="space-y-stack-lg">
+      <PageTitle href="/dashboard/settings" />
+      <div className="flex flex-col gap-inline-lg lg:flex-row lg:items-start">
+        <SettingsMenu
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          generalHeader={st?.generalHeader || "General"}
+          tabsLabels={tabsLabels}
+        />
+        <div className="flex-1 space-y-stack-lg">
+          <TabPanel id="profile" value={activeTab}>
+            <div className="space-y-stack-lg">
+              <ProfileInformation profileData={st?.profile} />
 
-            {/* Under the profile rather than a tab of its own: it is one more
-              fact about the member, and burying it behind its own heading is
-              how it stays empty until the day it is needed. */}
-            <SettingsSection
-              id="emergency-contact"
-              icon={Phone}
-              title={
-                language === "ES"
-                  ? "Contacto de Emergencia"
-                  : "Emergency Contact"
-              }
-            >
-              <EmergencyContactSection />
-            </SettingsSection>
-          </div>
-        </TabPanel>
-        <TabPanel id="notification" value={activeTab}>
-          <NotificationPreferences notificationData={st?.notifications} />
-        </TabPanel>
-        <TabPanel id="password" value={activeTab}>
-          <ChangePassword passwordData={st?.password} />
-        </TabPanel>
+              {/* Under the profile rather than a tab of its own: it is one more
+                fact about the member, and burying it behind its own heading is
+                how it stays empty until the day it is needed. */}
+              <SettingsSection
+                id="emergency-contact"
+                icon={Phone}
+                title={
+                  language === "ES"
+                    ? "Contacto de Emergencia"
+                    : "Emergency Contact"
+                }
+              >
+                <EmergencyContactSection />
+              </SettingsSection>
+            </div>
+          </TabPanel>
+          <TabPanel id="notification" value={activeTab}>
+            <NotificationPreferences notificationData={st?.notifications} />
+          </TabPanel>
+          <TabPanel id="password" value={activeTab}>
+            <ChangePassword passwordData={st?.password} />
+          </TabPanel>
+        </div>
       </div>
     </div>
   );

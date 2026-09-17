@@ -78,7 +78,7 @@ export function CategoryManager({
     >
       <div className="space-y-stack-lg">
         <Card tone="flat" padding="small" className="space-y-stack-md">
-          <h3 className="text-heading-5 text-fg">Add a topic</h3>
+          <h3 className="text-heading-4 text-fg">Add a topic</h3>
           <div className="flex flex-wrap items-end gap-inline-md">
             <FormField
               label="Name (English)"

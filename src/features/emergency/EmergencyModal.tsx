@@ -71,7 +71,7 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
             className={buttonStyles({ variant: "danger", fullWidth: true })}
           >
             <Phone aria-hidden="true" />
-            {em?.call911 || "CALL 911"}
+            {em?.call911 || "Call 911"}
           </a>
 
           <a

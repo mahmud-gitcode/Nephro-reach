@@ -45,7 +45,8 @@ export type TabsProps<T extends string = string> = {
 
 const shells: Record<TabsVariant, string> = {
   underline: "flex gap-inline-md border-b border-line",
-  pill: "inline-flex rounded-control border border-line bg-surface-sunken p-1",
+  /* White bar, so the pill reads the same on any page background. */
+  pill: "inline-flex rounded-control border border-line bg-surface p-1 shadow-card",
   vertical: "flex flex-col gap-stack-sm",
 };
 
@@ -72,8 +73,8 @@ function tabClass(variant: TabsVariant, selected: boolean) {
       base,
       "rounded-control-small px-inset-md py-inset-xs text-label-md",
       selected
-        ? "bg-surface text-fg-brand shadow-sm"
-        : "text-fg-secondary hover:text-fg",
+        ? "bg-primary-soft text-fg-brand"
+        : "text-fg-secondary hover:bg-surface-sunken hover:text-fg",
     );
   }
 

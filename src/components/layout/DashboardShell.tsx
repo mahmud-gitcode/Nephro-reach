@@ -484,7 +484,7 @@ export default function DashboardShell({
 
   if (isClassroomRoute(pathname)) {
     return (
-      <div className="min-h-screen bg-canvas font-sans text-fg">
+      <div className="min-h-screen bg-[#fcfcfd] font-sans text-fg">
         <ClassroomHeader />
         <main className="px-4 py-5 md:px-6">{children}</main>
       </div>
@@ -492,7 +492,8 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen bg-canvas font-sans text-fg">
+    /* The portal sits on one flat colour, #fcfcfd, behind every page. */
+    <div className="min-h-screen bg-[#fcfcfd] font-sans text-fg">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         <Sidebar />
       </div>

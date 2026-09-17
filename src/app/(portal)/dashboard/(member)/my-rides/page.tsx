@@ -18,6 +18,7 @@ import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { useRides } from "@/features/travel/useRides";
 import { RideContactCard } from "@/features/travel/RideContactCard";
 import type { RideContact } from "@/features/travel/rides.types";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 /* This screen is the first one moved onto the data layer, and it is the
    pattern for the rest: no storage calls in the component, the list comes
@@ -211,23 +212,18 @@ export default function MyRidesPage() {
       }
     >
       <div className="space-y-8 pb-10">
-        <div className="flex flex-col gap-inline-lg border-b border-line pb-inset-lg sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-inline-lg">
-            <span
-              aria-hidden="true"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-panel bg-primary-solid text-primary-on-solid shadow-card"
+        <PageTitle
+          href="/dashboard/my-rides"
+          action={
+            <Button
+              onClick={openAdd}
+              leadingIcon={<Plus />}
+              disabled={isPending}
             >
-              <Car className="h-icon-big w-icon-big" />
-            </span>
-            <h1 className="text-heading-1 text-fg">
-              {t("myRides.sectionTitle") || "Where's My Ride"}
-            </h1>
-          </div>
-
-          <Button onClick={openAdd} leadingIcon={<Plus />} disabled={isPending}>
-            {t("myRides.addRide")}
-          </Button>
-        </div>
+              {t("myRides.addRide")}
+            </Button>
+          }
+        />
 
         <div>
           <section className="space-y-4">

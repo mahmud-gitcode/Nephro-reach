@@ -84,7 +84,7 @@ function CourseCard({
               {course.titleEn}
             </h3>
             {course.seeded && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-[10px] font-bold tracking-wide text-fg-muted uppercase">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-[10px] font-bold text-fg-muted">
                 <Lock className="h-3 w-3" />
                 Built-in
               </span>
@@ -98,23 +98,17 @@ function CourseCard({
 
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line-subtle pt-4 text-center">
         <div>
-          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-            Modules
-          </dt>
+          <dt className="text-[11px] font-semibold text-fg-muted">Modules</dt>
           <dd className="mt-0.5 text-base font-bold text-fg">
             {course.modules.length}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-            Classes
-          </dt>
+          <dt className="text-[11px] font-semibold text-fg-muted">Classes</dt>
           <dd className="mt-0.5 text-base font-bold text-fg">{classes}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-            Length
-          </dt>
+          <dt className="text-[11px] font-semibold text-fg-muted">Length</dt>
           <dd className="mt-0.5 text-base font-bold text-fg">
             {formatTotalDuration(minutes)}
           </dd>
@@ -224,8 +218,8 @@ export default function ManageCurriculumPage() {
       <section className="mt-6 rounded-[14px] border border-line bg-surface p-4 shadow-card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-fg">Course Library</h2>
-            <p className="mt-1 text-sm font-medium text-fg-muted">
+            <h2 className="text-heading-4 text-fg">Course Library</h2>
+            <p className="mt-0.5 text-body-md text-fg-muted">
               Open a course to manage its modules and classes.
             </p>
           </div>

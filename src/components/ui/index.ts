@@ -105,3 +105,6 @@ export type {
   SegmentedChoiceProps,
   SegmentedChoiceOption,
 } from "./SegmentedChoice";
+
+export { SectionTitle } from "./SectionTitle";
+export type { SectionTitleProps } from "./SectionTitle";

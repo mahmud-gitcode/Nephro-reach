@@ -186,8 +186,8 @@ function SymptomDetailContent() {
               <AlertTriangle className="size-4" />
             </span>
             <div>
-              <span className="text-xs font-black tracking-wider text-danger uppercase">
-                {isEs ? "AVISO DE EMERGENCIA" : "EMERGENCY NOTICE"}
+              <span className="text-xs font-black text-danger">
+                {isEs ? "Aviso de emergencia" : "Emergency notice"}
               </span>
             </div>
 
@@ -214,7 +214,7 @@ function SymptomDetailContent() {
         {selectedSlugList.length > 1 && (
           <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary-fg uppercase">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-primary-fg">
                 <Activity className="h-4 w-4 text-fg-brand" />
                 <span>
                   {isEs
@@ -256,8 +256,8 @@ function SymptomDetailContent() {
           className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 shadow-control sm:p-6`}
         >
           <div className="space-y-1.5">
-            <span className="text-xs font-black tracking-wider text-fg-muted uppercase">
-              {isEs ? "SU SIGUIENTE PASO" : "YOUR NEXT STEP"}
+            <span className="text-xs font-black text-fg-muted">
+              {isEs ? "Su siguiente paso" : "Your next step"}
             </span>
             <p className="text-sm leading-relaxed font-semibold text-fg sm:text-base">
               {isEs
@@ -384,7 +384,7 @@ function SymptomDetailContent() {
 
           {/* What to Watch For Section */}
           <div className="space-y-3">
-            <h2 className="text-base font-bold text-fg sm:text-lg">
+            <h2 className="text-heading-4 text-fg">
               {isEs ? "Qué Observar (What to Watch For)" : "What to Watch For"}
             </h2>
 
@@ -413,7 +413,7 @@ function SymptomDetailContent() {
 
           {/* Subsection 2: Especially Important In */}
           <div className="space-y-3 border-t border-line-subtle pt-2">
-            <h2 className="text-base font-bold text-fg sm:text-lg">
+            <h2 className="text-heading-4 text-fg">
               {t("beforeTheEr.detail.importantIn")}
             </h2>
 

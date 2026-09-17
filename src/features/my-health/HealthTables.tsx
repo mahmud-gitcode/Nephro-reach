@@ -73,9 +73,7 @@ export function SectionHeader({
     <div className="flex flex-col gap-inset-md sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 className="text-heading-4 text-fg">{title}</h2>
-        <p className="mt-stack-sm measure text-body-sm text-fg-secondary">
-          {description}
-        </p>
+        <p className="mt-0.5 text-body-md text-fg-muted">{description}</p>
       </div>
       <Button
         onClick={onAddClick}
@@ -219,7 +217,7 @@ export function MedicalHistoryTable({
   };
 
   const headers = [
-    h?.history?.headers?.condition || "CONDITION / HISTORY",
+    h?.history?.headers?.condition || "Condition / history",
     h?.history?.headers?.status || "Status",
     h?.history?.headers?.diagnosed || "Diagnosed",
     h?.history?.headers?.notes || "Notes",

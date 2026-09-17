@@ -126,9 +126,7 @@ function ClassCard({ item }: { item: (typeof classColumns)[number]["class"] }) {
 
       <div className="mt-stack-xl">
         <h3 className="text-heading-4 text-fg">{item.title}</h3>
-        <p className="mt-stack-sm measure text-body-sm text-fg-muted">
-          {item.description}
-        </p>
+        <p className="mt-0.5 text-body-md text-fg-muted">{item.description}</p>
       </div>
 
       <ul className="mt-stack-xl space-y-stack-md">
@@ -188,7 +186,7 @@ function ClassRegistrations() {
               key={column.title}
               className="min-h-[540px] border-b border-line p-inset-md last:border-b-0 lg:border-b-0 lg:border-l lg:first:border-l-0"
             >
-              <h2 className="mb-stack-lg text-heading-5 text-fg">
+              <h2 className="mb-stack-lg text-heading-4 text-fg">
                 {column.title}
               </h2>
               <ClassCard item={column.class} />

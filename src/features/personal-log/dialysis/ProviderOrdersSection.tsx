@@ -15,6 +15,7 @@ import {
   FormField,
   Input,
   Modal,
+  SectionTitle,
   Skeleton,
   Table,
   TableBody,
@@ -122,48 +123,26 @@ export function ProviderOrdersSection() {
     setTouched(false);
   };
 
-  const outstanding = sorted.filter((order) => !order.completed).length;
-
   return (
     <Card as="section">
-      <div className="flex flex-wrap items-start justify-between gap-inline-md">
-        <div className="flex items-center gap-inline-md">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-primary-soft-line bg-primary-soft text-fg-brand"
+      <SectionTitle
+        title={
+          isEs ? "Órdenes e Instrucciones" : "Provider Orders & Instructions"
+        }
+        action={
+          <Button
+            onClick={() => {
+              setDate(todayIso());
+              setText("");
+              setTouched(false);
+              setOpen(true);
+            }}
           >
-            <ClipboardList className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-heading-4 text-fg">
-              {isEs
-                ? "Órdenes e Instrucciones"
-                : "Provider Orders & Instructions"}
-            </h2>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              {outstanding > 0
-                ? isEs
-                  ? `${outstanding} pendiente(s)`
-                  : `${outstanding} still to do`
-                : isEs
-                  ? "Lo que tu equipo te ha indicado."
-                  : "What your care team has asked you to do."}
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => {
-            setDate(todayIso());
-            setText("");
-            setTouched(false);
-            setOpen(true);
-          }}
-        >
-          <Plus aria-hidden="true" className="size-4 shrink-0" />
-          {isEs ? "Nueva Orden" : "Add Order"}
-        </Button>
-      </div>
+            <Plus aria-hidden="true" className="size-4 shrink-0" />
+            {isEs ? "Nueva Orden" : "Add Order"}
+          </Button>
+        }
+      />
 
       {write.error ? (
         <Alert tone="danger" className="mt-stack-md" onDismiss={reset}>

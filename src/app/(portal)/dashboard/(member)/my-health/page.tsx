@@ -22,6 +22,7 @@ import type {
 } from "@/features/my-health/health.types";
 import { Card, Tabs, TabPanel } from "@/components/ui";
 import type { TabItem } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 export default function MyHealthPage() {
   const [activeTab, setActiveTab] = React.useState<HealthTab>("allergies");
@@ -118,6 +119,8 @@ export default function MyHealthPage() {
 
   return (
     <div className="space-y-stack-xl">
+      <PageTitle href="/dashboard/my-health" />
+
       <Tabs
         items={tabItems}
         value={activeTab}

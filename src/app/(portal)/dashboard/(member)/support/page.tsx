@@ -24,6 +24,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 type CommentItem = {
   author: string;
@@ -487,59 +488,65 @@ export default function SupportPage() {
   };
 
   return (
-    <Card as="section" tone="sunken" padding="small">
-      <div className="mb-stack-md flex flex-wrap items-center justify-between gap-inline-lg px-inset-xs pt-inset-xs">
-        <div className="flex items-center gap-inline-md">
-          <Mail className="h-icon-small w-icon-small text-fg" />
-          <h1 className="text-heading-4 text-fg">
-            {sup?.pageTitle || "My Tickets"}
-          </h1>
+    <div className="space-y-stack-lg">
+      <PageTitle href="/dashboard/support" />
+      <Card as="section" tone="sunken" padding="small">
+        <div className="mb-stack-md flex flex-wrap items-center justify-between gap-inline-lg px-inset-xs pt-inset-xs">
+          <div className="flex items-center gap-inline-md">
+            <Mail className="h-icon-small w-icon-small text-fg" />
+            <h2 className="text-heading-4 text-fg">
+              {sup?.pageTitle || "My Tickets"}
+            </h2>
+          </div>
+          <Button
+            onClick={() => setModalOpen(true)}
+            leadingIcon={<HelpCircle />}
+          >
+            {sup?.newTicketButton || "New Ticket"}
+          </Button>
         </div>
-        <Button onClick={() => setModalOpen(true)} leadingIcon={<HelpCircle />}>
-          {sup?.newTicketButton || "New Ticket"}
-        </Button>
-      </div>
 
-      <Card padding="small" className="space-y-stack-sm">
-        {allTickets.map((ticket) => {
-          const isExpanded = Boolean(expandedIds[ticket.id]);
-          const statusLabel =
-            sup?.status?.[ticket.status] ||
-            (ticket.status === "new"
-              ? "New"
-              : ticket.status === "inProgress"
-                ? "In Progress"
-                : "Resolved");
+        <Card padding="small" className="space-y-stack-sm">
+          {allTickets.map((ticket) => {
+            const isExpanded = Boolean(expandedIds[ticket.id]);
+            const statusLabel =
+              sup?.status?.[ticket.status] ||
+              (ticket.status === "new"
+                ? "New"
+                : ticket.status === "inProgress"
+                  ? "In Progress"
+                  : "Resolved");
 
-          const effectiveTicket = {
-            ...ticket,
-            comments: ticketComments[ticket.id] || ticket.comments || [],
-          };
+            const effectiveTicket = {
+              ...ticket,
+              comments: ticketComments[ticket.id] || ticket.comments || [],
+            };
 
-          return (
-            <TicketCard
-              key={ticket.id}
-              ticket={effectiveTicket}
-              expanded={isExpanded}
-              onToggleExpand={() => handleToggleExpand(ticket.id)}
-              statusLabel={statusLabel}
-              resolvedText={
-                sup?.ticketResolved || "This ticket has been resolved"
-              }
-              replyPlaceholder={sup?.replyPlaceholder || "Type your reply..."}
-              sendReplyButton={sup?.sendReplyButton || "Send Reply"}
-              onAddComment={(msg) => handleAddComment(ticket.id, msg)}
-            />
-          );
-        })}
+            return (
+              <TicketCard
+                key={ticket.id}
+                ticket={effectiveTicket}
+                expanded={isExpanded}
+                onToggleExpand={() => handleToggleExpand(ticket.id)}
+                statusLabel={statusLabel}
+                resolvedText={
+                  sup?.ticketResolved || "This ticket has been resolved"
+                }
+                replyPlaceholder={sup?.replyPlaceholder || "Type your reply..."}
+                sendReplyButton={sup?.sendReplyButton || "Send Reply"}
+                onAddComment={(msg) => handleAddComment(ticket.id, msg)}
+              />
+            );
+          })}
+        </Card>
+
+        <NewTicketModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleCreateTicket}
+          modalData={sup?.modal}
+        />
       </Card>
-
-      <NewTicketModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleCreateTicket}
-        modalData={sup?.modal}
-      />
-    </Card>
+    </div>
   );
 }

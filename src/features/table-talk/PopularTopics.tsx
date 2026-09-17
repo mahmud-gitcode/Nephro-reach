@@ -43,7 +43,7 @@ export function PopularTopics({
   return (
     <Card as="section" aria-labelledby="popular-topics">
       <div className="flex items-baseline justify-between gap-inline-md">
-        <h2 id="popular-topics" className="text-heading-5 text-fg">
+        <h2 id="popular-topics" className="text-heading-4 text-fg">
           {isEs ? "Temas Populares" : "Popular Topics"}
         </h2>
 

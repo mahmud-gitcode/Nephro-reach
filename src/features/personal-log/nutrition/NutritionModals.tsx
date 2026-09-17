@@ -208,7 +208,7 @@ export function AddFoodModal({
         </div>
 
         <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-          <p className="text-xs font-bold tracking-wider text-fg-muted uppercase">
+          <p className="text-xs font-bold text-fg-muted">
             {isEs ? "Nutrientes Renales" : "Kidney Nutrients"}
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -240,7 +240,7 @@ export function AddFoodModal({
         </div>
 
         <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-          <p className="text-xs font-bold tracking-wider text-fg-muted uppercase">
+          <p className="text-xs font-bold text-fg-muted">
             {isEs ? "Macronutrientes (opcional)" : "Macros (optional)"}
           </p>
           <div className="grid grid-cols-2 gap-3">

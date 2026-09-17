@@ -38,6 +38,7 @@ import {
   Modal,
   Skeleton,
 } from "@/components/ui";
+import { PageTitle } from "@/components/layout/PageTitle";
 
 /* ==========================================================================
    Between Treatment Check-in
@@ -244,18 +245,15 @@ export default function BetweenTreatmentPage() {
       notices={<PersonalLogDisclaimer spaced={false} stacked />}
     >
       <div className="space-y-stack-lg">
-        <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-heading-1 text-fg">
-              {isEs ? "Más Allá del Sillón" : "Beyond the Chair"}
-            </h1>
-          </div>
-
-          <Button onClick={() => setOpenDate(todayIso())}>
-            <Plus aria-hidden="true" className="size-4 shrink-0" />
-            {isEs ? "Registrar hoy" : "Check in for today"}
-          </Button>
-        </div>
+        <PageTitle
+          href="/dashboard/beyond-the-chair"
+          action={
+            <Button onClick={() => setOpenDate(todayIso())}>
+              <Plus aria-hidden="true" className="size-4 shrink-0" />
+              {isEs ? "Registrar hoy" : "Check in for today"}
+            </Button>
+          }
+        />
 
         {saveError ? (
           <Alert
@@ -307,10 +305,10 @@ export default function BetweenTreatmentPage() {
           <div className="space-y-stack-lg">
             <Card className="space-y-stack-md">
               <div className="flex flex-wrap items-baseline justify-between gap-inline-md">
-                <h2 className="text-heading-5 text-fg">
+                <h2 className="text-heading-4 text-fg">
                   {isEs ? "Últimos 14 días" : "Last 14 days"}
                 </h2>
-                <p className="text-body-sm text-fg-muted">
+                <p className="mt-0.5 text-body-md text-fg-muted">
                   {isEs
                     ? `${summary.logged} registrados · racha de ${summary.streak}`
                     : `${summary.logged} logged · ${summary.streak}-day streak`}
