@@ -21,11 +21,14 @@ import {
   Tabs,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useAuth } from "@/features/auth/AuthContext";
+import { MODERATION_HOURS } from "@/features/community/moderation";
 import { useModerationQueue } from "@/features/community/useModerationQueue";
 import {
   decidedItems,
   pendingItems,
   pendingCount,
+  urgentPendingCount,
 } from "@/features/community/moderationQueue.rules";
 import type { HeldItem } from "@/features/community/community.types";
 
@@ -43,11 +46,46 @@ import type { HeldItem } from "@/features/community/community.types";
 
 type QueueTab = "pending" | "decided";
 
+/* Level first, because it is what decides the order of the work. */
+function levelBadge(item: HeldItem, isEs: boolean) {
+  if (item.level === 1) {
+    return (
+      <Badge tone="danger" variant="solid">
+        {isEs ? "Nivel 1 · Urgente" : "Level 1 · Urgent"}
+      </Badge>
+    );
+  }
+  if (item.level === 2) {
+    return (
+      <Badge tone="warning">
+        {isEs ? "Nivel 2 · Revisar" : "Level 2 · Review"}
+      </Badge>
+    );
+  }
+  return (
+    <Badge tone="neutral">
+      {isEs ? "Nivel 3 · Comunidad" : "Level 3 · Community"}
+    </Badge>
+  );
+}
+
+const CATEGORY_LABEL: Record<HeldItem["reason"], { en: string; es: string }> = {
+  emergency: { en: "Possible emergency", es: "Posible emergencia" },
+  crisis: { en: "Mental health / safety", es: "Salud mental / seguridad" },
+  access: { en: "Dialysis access", es: "Acceso de diálisis" },
+  symptom: { en: "Symptoms", es: "Síntomas" },
+  "medical-advice": { en: "Medical advice", es: "Consejo médico" },
+  conduct: { en: "Conduct", es: "Conducta" },
+  scam: { en: "Scam / money", es: "Estafa / dinero" },
+  privacy: { en: "Personal information", es: "Datos personales" },
+};
+
 function reasonBadge(item: HeldItem, isEs: boolean) {
-  return item.reason === "harassment" ? (
-    <Badge tone="danger">{isEs ? "Hostilidad" : "Hostility"}</Badge>
-  ) : (
-    <Badge tone="warning">{isEs ? "Médico" : "Medical"}</Badge>
+  const label = CATEGORY_LABEL[item.reason];
+  return (
+    <Badge tone="neutral" variant="outline">
+      {isEs ? label.es : label.en}
+    </Badge>
   );
 }
 
@@ -73,6 +111,7 @@ function formatWhen(iso: string, isEs: boolean): string {
 export default function AdminCommunityPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const { user } = useAuth();
 
   const {
     items,
@@ -89,14 +128,36 @@ export default function AdminCommunityPage() {
 
   const [tab, setTab] = useState<QueueTab>("pending");
 
+  /* Stamped onto every decision. An audit trail that cannot say who
+     decided is not one a member could ever appeal against. */
+  const moderatorName = user?.name ?? (isEs ? "Moderador" : "Moderator");
+
   const pending = pendingItems(items);
   const decided = decidedItems(items);
   const waiting = pendingCount(items);
+  const urgent = urgentPendingCount(items);
   const shown = tab === "pending" ? pending : decided;
 
   return (
     <div className="space-y-stack-xl">
       <PageTitle href="/dashboard/admin-community" />
+
+      {/* Loud, and above everything. A level 1 sitting unread is the one
+          failure state of this screen. */}
+      {urgent > 0 ? (
+        <Alert
+          tone="danger"
+          title={
+            isEs
+              ? `${urgent} mensaje(s) de nivel 1 esperando`
+              : `${urgent} level 1 message(s) waiting`
+          }
+        >
+          {isEs
+            ? "Estos describen una posible emergencia o una crisis de salud mental. Ya se le mostró al miembro la guía del 911 y del 988; léelos primero."
+            : "These describe a possible emergency or a mental health crisis. The member has already been shown 911 and 988 guidance — read these first."}
+        </Alert>
+      ) : null}
 
       <Alert
         tone="info"
@@ -104,8 +165,8 @@ export default function AdminCommunityPage() {
         title={isEs ? "Qué llega aquí" : "What reaches this queue"}
       >
         {isEs
-          ? "El tablero retiene automáticamente las respuestas y publicaciones que parecen hostiles hacia otro miembro. Solo su autor las ve hasta que alguien decide. Los mensajes con síntomas urgentes no llegan aquí: se rechazan de inmediato y se le indica al miembro llamar al 911."
-          : "The board automatically holds replies and posts that read as hostile toward another member. Only their author can see them until someone decides. Messages about urgent symptoms never reach this queue — they are refused outright and the member is told to call 911."}
+          ? `El tablero retiene todo lo que marca el filtro, en tres niveles: 1 posible emergencia o crisis, 2 inquietud para el equipo de atención, 3 conducta, estafas o datos personales. Solo su autor lo ve hasta que alguien decide. Al miembro ya se le respondió según el nivel. ${MODERATION_HOURS.es}`
+          : `The board holds everything the screen catches, at three levels: 1 possible emergency or crisis, 2 a care-team concern, 3 conduct, scams or personal information. Only the author can see it until someone decides. The member has already been answered according to the level. ${MODERATION_HOURS.en}`}
       </Alert>
 
       {saveError ? (
@@ -195,6 +256,7 @@ export default function AdminCommunityPage() {
                       ? "Publicación"
                       : "Post"}
                 </Badge>
+                {levelBadge(item, isEs)}
                 {reasonBadge(item, isEs)}
                 {statusBadge(item, isEs)}
                 <span className="ml-auto text-caption text-fg-muted">
@@ -211,6 +273,15 @@ export default function AdminCommunityPage() {
               <p className="text-caption text-fg-muted">
                 {isEs ? "Frase detectada: " : "Matched phrase: "}
                 <code className="text-fg">{item.matchedPhrase}</code>
+                {/* Said out loud, because a moderator seeing "Level 2" on
+                    a chest-pain phrase needs to know why it is not a 1. */}
+                {item.softenedByContext ? (
+                  <span className="ml-inline-sm">
+                    {isEs
+                      ? "· bajado a nivel 2: el texto habla del pasado"
+                      : "· eased to level 2: the wording refers to the past"}
+                  </span>
+                ) : null}
               </p>
 
               {item.status === "pending" ? (
@@ -219,14 +290,14 @@ export default function AdminCommunityPage() {
                     variant="neutral"
                     appearance="stroke"
                     disabled={isSaving}
-                    onClick={() => void reject(item.id)}
+                    onClick={() => void reject(item.id, moderatorName)}
                   >
                     <X aria-hidden="true" />
                     {isEs ? "Rechazar" : "Reject"}
                   </Button>
                   <Button
                     disabled={isSaving}
-                    onClick={() => void approve(item.id)}
+                    onClick={() => void approve(item.id, moderatorName)}
                   >
                     <Check aria-hidden="true" />
                     {isEs ? "Aprobar y publicar" : "Approve and publish"}
@@ -237,6 +308,7 @@ export default function AdminCommunityPage() {
                   <span className="text-caption text-fg-muted">
                     {isEs ? "Decidida el " : "Decided "}
                     {item.decidedAt ? formatWhen(item.decidedAt, isEs) : "—"}
+                    {item.decidedBy ? ` · ${item.decidedBy}` : ""}
                   </span>
                   <Button
                     variant="neutral"

@@ -27,6 +27,8 @@ export type ReplyItem = {
   likes?: number;
 };
 
+import type { FlagCategory, FlagLevel } from "./moderation";
+
 /* ==========================================================================
    The moderation queue
    --------------------------------------------------------------------------
@@ -51,11 +53,20 @@ export type HeldItem = {
   content: string;
   /** Which category held it, and the phrase that fired — moderators need
       to see what the screen caught, not just that it caught something. */
-  reason: "harassment" | "medical";
+  reason: FlagCategory;
+  /** 1 emergency · 2 care-team concern · 3 community. Drives queue order. */
+  level: FlagLevel;
   matchedPhrase: string;
+  /** True when the wording placed it in the past and the tier was eased. */
+  softenedByContext?: boolean;
   status: HeldStatus;
   submittedAt: string;
   decidedAt?: string;
+  /* Audit trail. Who decided, and anything they wrote down about why —
+     a moderation record nobody can account for afterwards is not one a
+     member could ever appeal. */
+  decidedBy?: string;
+  decisionNote?: string;
   /** Category chosen in the composer, carried so an approved post lands in
       the tab the member picked. */
   categoryId?: string;

@@ -41,7 +41,9 @@ export function buildHeldItem(
     author: draft.author,
     content: draft.content.trim(),
     reason: detail.category,
+    level: detail.level,
     matchedPhrase: detail.phrase,
+    softenedByContext: detail.softenedByContext,
     status: "pending",
     submittedAt: now.toISOString(),
     categoryId: draft.categoryId,
@@ -52,10 +54,20 @@ export function applyDecision(
   items: HeldItem[],
   id: string,
   status: Exclude<HeldStatus, "pending">,
+  by?: string,
+  note?: string,
   now = new Date(),
 ): HeldItem[] {
   return items.map((item) =>
-    item.id === id ? { ...item, status, decidedAt: now.toISOString() } : item,
+    item.id === id
+      ? {
+          ...item,
+          status,
+          decidedAt: now.toISOString(),
+          decidedBy: by,
+          decisionNote: note,
+        }
+      : item,
   );
 }
 
@@ -63,11 +75,29 @@ export function withoutHeldItem(items: HeldItem[], id: string): HeldItem[] {
   return items.filter((item) => item.id !== id);
 }
 
-/** Oldest first: a queue a moderator works top-down should not reshuffle. */
+/**
+ * Level 1 first, then oldest first inside each level.
+ *
+ * A possible emergency must not sit behind yesterday's name-calling just
+ * because the name-calling arrived earlier. Within a level the order is
+ * stable and chronological, so a queue worked top-down does not reshuffle
+ * underneath the person working it.
+ */
 export function pendingItems(items: HeldItem[]): HeldItem[] {
   return items
     .filter((item) => item.status === "pending")
-    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+    .sort(
+      (a, b) => a.level - b.level || a.submittedAt.localeCompare(b.submittedAt),
+    );
+}
+
+/** How many level 1 findings are still waiting. */
+export function urgentPendingCount(items: HeldItem[]): number {
+  return items.reduce(
+    (total, item) =>
+      item.status === "pending" && item.level === 1 ? total + 1 : total,
+    0,
+  );
 }
 
 export function decidedItems(items: HeldItem[]): HeldItem[] {

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<!-- saved from url=(0081)https://cdn.platform.openai.com/deployments/dil/v13/runner.html#dil-diagnostics=1 -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-uoss5+iYf46d4mCjnGu9SR4bYk8jf1lLTmfTe4z5gcs=' 'self' https://cdn.platform.openai.com/assets/dil/ 'unsafe-eval'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; worker-src blob: data:">
+    <script>(() => {
+  if (
+    new URLSearchParams(location.hash.slice(1)).get("dil-diagnostics") !== "1"
+  )
+    return;
+  const documentBootId =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  Object.defineProperty(window, "__oaiDilBootstrap", {
+    value: Object.freeze({ documentBootId }),
+  });
+  let sequence = 0;
+  const now = performance.now.bind(performance);
+  const timeOriginMs = performance.timeOrigin;
+  const record = (operation, phase, details = {}) => {
+    if (sequence >= 64) return;
+    try {
+      parent.postMessage(
+        {
+          __oaiDilFrame: true,
+          kind: "diagnostic",
+          protocolVersion: 13,
+          record: {
+            realm: "bootstrap",
+            sequence: ++sequence,
+            localTimeMs: now(),
+            timeOriginMs,
+            documentBootId,
+            operation,
+            phase,
+            ...details,
+          },
+        },
+        "*",
+      );
+    } catch {}
+  };
+  const isRunnerModule = (script) =>
+    script.hasAttribute("data-dil-runner-module");
+  const recordModuleResource = (script) => {
+    if (!script || !isRunnerModule(script)) return;
+    try {
+      const candidates = performance
+        .getEntriesByName(script.src, "resource")
+        // The preload scanner can start this document's module request before
+        // the inline bootstrap runs. The resource timeline is document-local.
+        .filter((entry) => entry.startTime <= now());
+      const timing = candidates.length === 1 ? candidates[0] : undefined;
+      record("module_resource", "received", {
+        resourceArtifactId: /^runner-([A-Za-z0-9_-]{8,64})\.js$/.exec(
+          new URL(script.src).pathname.split("/").at(-1) ?? "",
+        )?.[1],
+        resourceStartMs: timing?.startTime,
+        resourceEndMs: timing?.responseEnd,
+        // Zero, including for a known 200 response, is not an HTTP failure.
+        ...(timing?.responseStatus >= 100 && timing.responseStatus <= 599
+          ? { httpStatus: timing.responseStatus }
+          : {
+              reason: timing
+                ? "status_unavailable"
+                : candidates.length > 1
+                  ? "timing_ambiguous"
+                  : "timing_missing",
+            }),
+      });
+    } catch {
+      record("module_resource", "ignored", { reason: "timing_unavailable" });
+    }
+  };
+  record("observer_bootstrap", "returned", { hidden: document.hidden });
+  let probes = 0;
+  const probeTimers = new Set();
+  const cancelProbeTimers = () => {
+    for (const timer of probeTimers) clearTimeout(timer);
+    probeTimers.clear();
+  };
+  addEventListener("pagehide", cancelProbeTimers);
+  document.addEventListener("freeze", cancelProbeTimers);
+  addEventListener("message", (event) => {
+    const message = event.data;
+    if (
+      event.source === parent &&
+      message &&
+      typeof message === "object" &&
+      message.__oaiDilFrame === true &&
+      message.kind === "diagnosticProbe" &&
+      message.protocolVersion === 13 &&
+      typeof message.requestId === "string" &&
+      message.requestId.length <= 128 &&
+      probes++ < 4
+    ) {
+      record("frame_probe", "received", {
+        requestId: message.requestId,
+        hidden: document.hidden,
+      });
+      // Inspect the original request even when neither script load nor error fired.
+      recordModuleResource(
+        document.querySelector("script[data-dil-runner-module]"),
+      );
+      const startedAtMs = now();
+      const timer = setTimeout(() => {
+        probeTimers.delete(timer);
+        record("event_loop", "fired", {
+          requestId: message.requestId,
+          budgetMs: 0,
+          elapsedMs: now() - startedAtMs,
+          hidden: document.hidden,
+        });
+      }, 0);
+      probeTimers.add(timer);
+    }
+  });
+  addEventListener(
+    "error",
+    (event) => {
+      const script =
+        event.target instanceof HTMLScriptElement ? event.target : null;
+      const resource = script !== null;
+      record(resource ? "module_load" : "error", "reported_error", {
+        reason: script
+          ? isRunnerModule(script)
+            ? "runner_module_script_error"
+            : "other_script_error"
+          : "uncaught_error",
+      });
+      if (script) recordModuleResource(script);
+    },
+    true,
+  );
+  addEventListener("unhandledrejection", () => {
+    record("error", "reported_error", { reason: "unhandled_rejection" });
+  });
+  document.addEventListener("securitypolicyviolation", (event) => {
+    const directive = event.effectiveDirective;
+    const operation =
+      directive === "script-src" || directive === "script-src-elem"
+        ? "module_load"
+        : directive === "worker-src"
+          ? "worker_create"
+          : "error";
+    const runnerModule = document.querySelector(
+      "script[data-dil-runner-module]",
+    );
+    const blocked = event.blockedURI;
+    record(operation, "reported_error", {
+      reason: "csp_violation",
+      cspDirective: [
+        "script-src",
+        "script-src-elem",
+        "script-src-attr",
+        "worker-src",
+      ].includes(directive)
+        ? directive
+        : "other",
+      cspDisposition: event.disposition,
+      // Keep URLs local. Cross-origin reports can redact the path, so a missing
+      // exact match does not prove that a different resource was blocked.
+      cspResource:
+        blocked && runnerModule?.src === blocked
+          ? "runner_module"
+          : blocked === "inline"
+            ? "inline"
+            : blocked === "eval" || blocked === "wasm-eval"
+              ? "eval"
+              : "unknown",
+    });
+  });
+  document.addEventListener(
+    "load",
+    (event) => {
+      if (
+        event.target instanceof HTMLScriptElement &&
+        isRunnerModule(event.target)
+      ) {
+        record("module_load", "returned");
+        recordModuleResource(event.target);
+      }
+    },
+    true,
+  );
+  document.addEventListener("visibilitychange", () => {
+    record("visibility", "received", { hidden: document.hidden });
+  });
+  for (const name of ["pagehide", "pageshow"]) {
+    addEventListener(name, (event) =>
+      record(name, "received", {
+        hidden: document.hidden,
+        persisted: event.persisted,
+      }),
+    );
+  }
+  for (const name of ["freeze", "resume"]) {
+    document.addEventListener(name, () =>
+      record(name, "received", { hidden: document.hidden }),
+    );
+  }
+})();
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIL Runner</title>
+    <script type="module" crossorigin="" src="./runner-DhiQ3rpx.js.download" data-dil-runner-module=""></script>
+  </head>
+  <body>
+  <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d610bb88adf257',t:'MTc4OTc5NDQzMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+
+</body></html>

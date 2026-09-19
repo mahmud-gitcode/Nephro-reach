@@ -2,9 +2,20 @@
 
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Alert, Button, Chip, ChipGroup, Modal } from "@/components/ui";
-import { FileText, Send } from "lucide-react";
-import { flagReason, routeForCommunity } from "./moderation";
+import {
+  Alert,
+  Button,
+  buttonStyles,
+  Chip,
+  ChipGroup,
+  Modal,
+} from "@/components/ui";
+import { FileText, Phone, Send } from "lucide-react";
+import {
+  autoReplyForText,
+  detectsPersonalInfo,
+  routeForCommunity,
+} from "./moderation";
 
 export const COMPOSE_CATEGORIES = [
   { id: "general", labelEn: "General Kidney", labelEs: "Salud Renal General" },
@@ -45,7 +56,10 @@ export function ComposeModal({
     initialCategory === "all" ? "general" : initialCategory,
   );
 
-  const flag = flagReason(body);
+  const reply = autoReplyForText(body);
+  /* Advice, not a verdict: a member pasting their own phone number is
+     offered the chance to take it out, not told off. */
+  const leaksInfo = detectsPersonalInfo(body);
 
   /* The same routing the reply box uses, so the two cannot drift. Only a
      medical or crisis phrase kills the button; hostility is allowed to be
@@ -139,30 +153,63 @@ export function ComposeModal({
 
         {/* 4. Auto-flag notice. This one IS a response to what was typed, so
             it keeps the live region <Alert> gives it by default. */}
-        {/* The wording follows the reason: a post held for hostility must
-            not be answered with advice about calling 911. */}
-        {flag && (
-          <Alert tone={flag === "harassment" ? "warning" : "danger"}>
-            <p>
-              {flag === "harassment"
-                ? isEs
-                  ? "Su mensaje puede leerse como hostil hacia otro miembro. Esta comunidad es un espacio de apoyo entre personas en diálisis, y no se permite el lenguaje que ataca a alguien."
-                  : "Your message may read as hostile toward another member. This community is a support space for people on dialysis, and language that attacks someone is not allowed here."
-                : isEs
-                  ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
-                  : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
-            </p>
+        {/* One message per tier, not one for everything. Someone asking
+            about their dose and someone describing chest pain must not be
+            answered in the same words. Each reply also says that nothing
+            was sent on their behalf, because a member who thinks their
+            care team got this may wait instead of calling. */}
+        {reply ? (
+          <Alert
+            tone={reply.tone}
+            title={isEs ? reply.title.es : reply.title.en}
+          >
+            <p>{isEs ? reply.body.es : reply.body.en}</p>
+
+            {reply.offersEmergencyCall ? (
+              <p className="mt-stack-sm flex flex-wrap gap-inline-md">
+                <a
+                  href="tel:911"
+                  className={buttonStyles({ variant: "danger" })}
+                >
+                  <Phone aria-hidden="true" />
+                  {isEs ? "Llamar al 911" : "Call 911"}
+                </a>
+                <a
+                  href="tel:988"
+                  className={buttonStyles({
+                    variant: "danger",
+                    appearance: "stroke",
+                  })}
+                >
+                  <Phone aria-hidden="true" />
+                  {isEs ? "Llamar o textear 988" : "Call or text 988"}
+                </a>
+              </p>
+            ) : null}
+
             <p className="mt-stack-sm font-semibold">
-              {flag === "harassment"
-                ? isEs
-                  ? "Si lo publica, un moderador lo revisará primero y nadie más lo verá hasta que lo apruebe."
-                  : "If you post it, a moderator will review it first and nobody else will see it until they approve it."
-                : isEs
-                  ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
-                  : "This message cannot be posted. Please edit it to remove the urgent medical details."}
+              {isEs
+                ? "Puedes publicarlo igualmente: un moderador lo leerá primero y nadie más lo verá hasta que lo apruebe."
+                : "You can still post it — a moderator will read it first, and nobody else will see it until they approve it."}
             </p>
           </Alert>
-        )}
+        ) : null}
+
+        {/* Separate from the tiers on purpose. This is the likeliest
+            accident on a patient board, and the useful response is a
+            reminder before they post, not a refusal afterwards. */}
+        {leaksInfo ? (
+          <Alert
+            tone="warning"
+            title={
+              isEs ? "¿Son datos personales?" : "Is that a personal detail?"
+            }
+          >
+            {isEs
+              ? "Tu mensaje parece incluir un teléfono, correo u otro dato personal. Este tablero es público para todos los miembros. Considera quitarlo antes de publicar."
+              : "Your message looks like it contains a phone number, email address, or other personal detail. This board is visible to every member. Consider taking it out before you post."}
+          </Alert>
+        ) : null}
       </div>
     </Modal>
   );

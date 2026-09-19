@@ -55,10 +55,16 @@ export function useModerationQueue() {
       return item;
     },
 
-    approve: (id: string) =>
-      mutateAsync((current) => applyDecision(current, id, "approved")),
-    reject: (id: string) =>
-      mutateAsync((current) => applyDecision(current, id, "rejected")),
+    /* `by` and `note` are the audit trail: a decision nobody can account
+       for afterwards is not one a member could ever appeal. */
+    approve: (id: string, by?: string, note?: string) =>
+      mutateAsync((current) =>
+        applyDecision(current, id, "approved", by, note),
+      ),
+    reject: (id: string, by?: string, note?: string) =>
+      mutateAsync((current) =>
+        applyDecision(current, id, "rejected", by, note),
+      ),
     remove: (id: string) =>
       mutateAsync((current) => withoutHeldItem(current, id)),
 

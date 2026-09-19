@@ -4,6 +4,7 @@ import React from "react";
 import { AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils/cn";
+import { MODERATION_HOURS } from "./moderation";
 
 /* ==========================================================================
    Community disclaimer
@@ -66,14 +67,19 @@ export default function CommunityDisclaimer({
               : "This community is not monitored in real time. In a medical emergency, call 911 immediately."}
           </p>
 
-          {/* Both outcomes, because they are different and a member who is
-            told the wrong one stops believing the notice: hostility is held
-            for a person to read, urgent medical content is refused on the
-            spot and answered with 911. */}
+          {/* What the screen does, in the member's terms. Held is not the
+            same as refused, and saying the wrong one is how a member stops
+            believing the notice. */}
           <p className="text-body-sm text-fg-secondary">
             {isEs
-              ? "Trata a cada miembro con respeto. Las publicaciones y respuestas se revisan automáticamente. El lenguaje hostil se retiene para que un moderador lo lea, y solo tú lo verás hasta que lo apruebe. Los mensajes sobre síntomas urgentes no se pueden publicar. Usa el menú de una publicación para reportarla."
-              : "Treat every member with respect. Posts and replies are screened automatically. Hostile language is held back for a moderator to read, and only you will see it until they approve it. Messages about urgent symptoms cannot be posted at all. Use a post's menu to report a post."}
+              ? "Trata a cada miembro con respeto. Las publicaciones y respuestas se revisan automáticamente. Si tu mensaje menciona una posible emergencia, síntomas, consejos médicos, estafas o datos personales, se retiene para que lo lea un moderador y solo tú lo verás hasta que lo apruebe. Usa el menú de una publicación para reportarla."
+              : "Treat every member with respect. Posts and replies are screened automatically. If your message mentions a possible emergency, symptoms, medical advice, scams, or personal details, it is held for a moderator to read and only you can see it until they approve it. Use a post's menu to report a post."}
+          </p>
+
+          {/* The promise this board can actually keep. Kept in one place so
+            it cannot drift from what the moderation queue says. */}
+          <p className="text-body-sm text-fg-secondary">
+            {isEs ? MODERATION_HOURS.es : MODERATION_HOURS.en}
           </p>
         </div>
       </div>

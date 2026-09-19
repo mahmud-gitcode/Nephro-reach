@@ -2,10 +2,20 @@
 
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
-import { Heart, MessageCircle, MoreVertical, Plus, Send } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  MoreVertical,
+  Phone,
+  Plus,
+  Send,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { ComposeModal } from "@/features/community/ComposeModal";
-import { flagReason, routeForCommunity } from "@/features/community/moderation";
+import {
+  autoReplyForText,
+  routeForCommunity,
+} from "@/features/community/moderation";
 import CommunityDisclaimer from "@/features/community/CommunityDisclaimer";
 import { useModerationQueue } from "@/features/community/useModerationQueue";
 import {
@@ -18,7 +28,15 @@ import type {
   ReplyItem,
 } from "@/features/community/community.types";
 import { useAuth } from "@/features/auth/AuthContext";
-import { Alert, Badge, Button, Card, Tabs, TabPanel } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonStyles,
+  Card,
+  Tabs,
+  TabPanel,
+} from "@/components/ui";
 import type { TabItem } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 
@@ -336,7 +354,7 @@ export default function CommunityPage() {
           const postReplies = replies[post.id] || [];
           const isExpanded = Boolean(expandedReplies[post.id]);
           const draft = replyDrafts[post.id] || "";
-          const replyFlag = flagReason(draft);
+          const replyAlert = autoReplyForText(draft);
           /* Approved held replies are on the board for everyone; pending and
              rejected ones come back only to the member who wrote them. */
           const heldReplies = visibleHeldReplies(
@@ -628,45 +646,52 @@ export default function CommunityPage() {
                           className="w-full resize-none border-0 p-0 text-body-sm text-fg-secondary outline-none placeholder:text-fg-muted"
                         />
 
-                        {/* Reply Auto-Flag Moderation Disclaimer */}
-                        {/* Says it cannot be posted, not just that something
-                          was noticed. The button beside it is disabled, and
-                          a warning that does not explain a dead control
-                          reads as the app being broken.
-
-                          The message follows the reason. Answering "Die
-                          already" with "call 911 if this is an emergency"
-                          is nonsense, and nonsense is what teaches a member
-                          the check is broken and worth working around. */}
-                        {/* The notice matches what the button will actually
-                          do. Hostility is held for a moderator, so it says
-                          so and the button stays live; a medical or crisis
-                          phrase is refused, and there the button is dead,
-                          because a warning that does not explain a dead
-                          control reads as the app being broken. */}
-                        {replyFlag && (
+                        {/* One message per tier. The same words cannot
+                          serve a member asking about their dose and a
+                          member describing chest pain, and every one of
+                          them says plainly that nothing was sent on their
+                          behalf — a member who believes their care team
+                          got this may wait instead of calling. */}
+                        {replyAlert && (
                           <Alert
-                            tone={
-                              replyFlag === "harassment" ? "warning" : "danger"
-                            }
+                            tone={replyAlert.tone}
                             className="mt-stack-sm"
                             title={
-                              replyFlag === "harassment"
-                                ? isEs
-                                  ? "Un moderador revisará esta respuesta"
-                                  : "A moderator will review this reply"
-                                : isEs
-                                  ? "Esta respuesta no se puede publicar"
-                                  : "This reply cannot be posted"
+                              isEs ? replyAlert.title.es : replyAlert.title.en
                             }
                           >
-                            {replyFlag === "harassment"
-                              ? isEs
-                                ? "Puede leerse como hostil hacia otro miembro, así que no se publicará de inmediato. Si la envías, solo tú la verás hasta que un moderador la apruebe. También puedes reescribirla sin dirigirla contra nadie."
-                                : "It may read as hostile toward another member, so it will not post straight away. If you send it, only you will see it until a moderator approves it. You can also rewrite it without aiming it at anyone."
-                              : isEs
-                                ? "Menciona síntomas o inquietudes que pueden necesitar atención médica urgente. Habla con tu equipo de diálisis, o llama al 911 si es una emergencia. NephroReach solo brinda educación."
-                                : "It mentions symptoms or concerns that may need urgent medical attention. Talk to your dialysis team, or call 911 if this is an emergency. NephroReach provides education only."}
+                            <p>
+                              {isEs ? replyAlert.body.es : replyAlert.body.en}
+                            </p>
+
+                            {/* Shown without waiting for a moderator. */}
+                            {replyAlert.offersEmergencyCall ? (
+                              <p className="mt-stack-sm flex flex-wrap gap-inline-md">
+                                <a
+                                  href="tel:911"
+                                  className={buttonStyles({
+                                    variant: "danger",
+                                    size: "small",
+                                  })}
+                                >
+                                  <Phone aria-hidden="true" />
+                                  {isEs ? "Llamar al 911" : "Call 911"}
+                                </a>
+                                <a
+                                  href="tel:988"
+                                  className={buttonStyles({
+                                    variant: "danger",
+                                    appearance: "stroke",
+                                    size: "small",
+                                  })}
+                                >
+                                  <Phone aria-hidden="true" />
+                                  {isEs
+                                    ? "Llamar o textear 988"
+                                    : "Call or text 988"}
+                                </a>
+                              </p>
+                            ) : null}
                           </Alert>
                         )}
 

@@ -6,6 +6,7 @@ import {
   decidedItems,
   pendingCount,
   pendingItems,
+  urgentPendingCount,
   visibleHeldReplies,
   withoutHeldItem,
 } from "./moderationQueue.rules";
@@ -21,7 +22,8 @@ const held = (patch: Partial<HeldItem> = {}): HeldItem => ({
   postId: "p1",
   author: "Charles D. Xavier",
   content: "Die already",
-  reason: "harassment",
+  reason: "conduct",
+  level: 3,
   matchedPhrase: "die already",
   status: "pending",
   submittedAt: "2026-09-19T10:00:00.000Z",
@@ -45,7 +47,8 @@ describe("buildHeldItem", () => {
 
     expect(item).not.toBeNull();
     expect(item?.status).toBe("pending");
-    expect(item?.reason).toBe("harassment");
+    expect(item?.reason).toBe("conduct");
+    expect(item?.level).toBe(3);
     // The phrase is recorded so the queue can be audited and tuned.
     expect(item?.matchedPhrase).toBe("die already");
     expect(item?.submittedAt).toBe(now.toISOString());
@@ -87,20 +90,56 @@ describe("buildHeldItem", () => {
 });
 
 describe("a moderator's decision", () => {
+  it("records who decided, for the audit trail", () => {
+    // A moderation record nobody can account for afterwards is not one a
+    // member could ever appeal against.
+    const [item] = applyDecision(
+      [held()],
+      "h1",
+      "approved",
+      "Jenny Wilson",
+      "Read in context, not aimed at anyone.",
+      now,
+    );
+    expect(item.decidedBy).toBe("Jenny Wilson");
+    expect(item.decisionNote).toBe("Read in context, not aimed at anyone.");
+  });
+
   it("records approval and when it happened", () => {
-    const [item] = applyDecision([held()], "h1", "approved", now);
+    const [item] = applyDecision(
+      [held()],
+      "h1",
+      "approved",
+      "Jenny",
+      undefined,
+      now,
+    );
     expect(item.status).toBe("approved");
     expect(item.decidedAt).toBe(now.toISOString());
   });
 
   it("records a rejection", () => {
-    const [item] = applyDecision([held()], "h1", "rejected", now);
+    const [item] = applyDecision(
+      [held()],
+      "h1",
+      "rejected",
+      "Jenny",
+      undefined,
+      now,
+    );
     expect(item.status).toBe("rejected");
   });
 
   it("leaves other items alone", () => {
     const items = [held(), held({ id: "h2" })];
-    const next = applyDecision(items, "h1", "approved", now);
+    const next = applyDecision(
+      items,
+      "h1",
+      "approved",
+      "Jenny",
+      undefined,
+      now,
+    );
     expect(next[1].status).toBe("pending");
   });
 
@@ -110,7 +149,7 @@ describe("a moderator's decision", () => {
 });
 
 describe("working the queue", () => {
-  it("lists pending oldest first, so it does not reshuffle underneath", () => {
+  it("lists pending oldest first within a level", () => {
     const items = [
       held({ id: "late", submittedAt: "2026-09-19T11:00:00.000Z" }),
       held({ id: "early", submittedAt: "2026-09-19T09:00:00.000Z" }),
@@ -120,6 +159,44 @@ describe("working the queue", () => {
       "early",
       "late",
     ]);
+  });
+
+  it("puts a possible emergency ahead of older name-calling", () => {
+    // A level 1 must not sit behind yesterday's level 3 just because the
+    // level 3 arrived first.
+    const items = [
+      held({
+        id: "old-conduct",
+        level: 3,
+        submittedAt: "2026-09-18T09:00:00.000Z",
+      }),
+      held({
+        id: "new-emergency",
+        level: 1,
+        reason: "emergency",
+        submittedAt: "2026-09-19T15:00:00.000Z",
+      }),
+      held({
+        id: "concern",
+        level: 2,
+        reason: "access",
+        submittedAt: "2026-09-18T10:00:00.000Z",
+      }),
+    ];
+    expect(pendingItems(items).map((item) => item.id)).toEqual([
+      "new-emergency",
+      "concern",
+      "old-conduct",
+    ]);
+  });
+
+  it("counts the level 1 findings still waiting", () => {
+    const items = [
+      held({ id: "a", level: 1, reason: "emergency" }),
+      held({ id: "b", level: 1, reason: "crisis", status: "approved" }),
+      held({ id: "c", level: 3 }),
+    ];
+    expect(urgentPendingCount(items)).toBe(1);
   });
 
   it("lists decided newest first", () => {
