@@ -98,6 +98,17 @@ export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   selectSize?: ControlSize;
 };
 
+/* Room for the chevron, and no more. The chevron sits 12px from the right
+   edge and is 16px wide, so a `small` select needs 32px of right padding,
+   not the 40px both sizes used to share. In a narrow table cell those
+   eight pixels were the difference between reading "No" and seeing an
+   empty box: 12px left + 40px right left the text almost no content box
+   at all, and the selected value was clipped to nothing. */
+const selectPadding: Record<ControlSize, string> = {
+  big: "pr-10",
+  small: "pr-8",
+};
+
 export function Select({
   selectSize = "big",
   className,
@@ -110,7 +121,8 @@ export function Select({
         className={cn(
           shared,
           sizeClasses[selectSize],
-          "cursor-pointer appearance-none pr-10 [&_option]:bg-surface [&_option]:text-fg",
+          "cursor-pointer appearance-none [&_option]:bg-surface [&_option]:text-fg",
+          selectPadding[selectSize],
           className,
         )}
         {...rest}

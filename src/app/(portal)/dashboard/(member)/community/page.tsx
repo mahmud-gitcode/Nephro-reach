@@ -5,10 +5,13 @@ import Image from "next/image";
 import { Heart, MessageCircle, MoreVertical, Plus, Send } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { ComposeModal } from "@/features/community/ComposeModal";
+import { flagReason, routeForCommunity } from "@/features/community/moderation";
+import CommunityDisclaimer from "@/features/community/CommunityDisclaimer";
+import { useModerationQueue } from "@/features/community/useModerationQueue";
 import {
-  canPublishToCommunity,
-  checkFlaggedMedicalContent,
-} from "@/features/community/moderation";
+  approvedPosts,
+  visibleHeldReplies,
+} from "@/features/community/moderationQueue.rules";
 import type {
   CommunityTab,
   PostItem,
@@ -125,6 +128,12 @@ export default function CommunityPage() {
     label: tab.label,
   }));
 
+  const queue = useModerationQueue();
+
+  /* One spelling of the member's name, so a held reply is matched back to
+     its author by the same string that was stored with it. */
+  const authorName = user?.name || (language === "ES" ? "Usted" : "You");
+
   const [activeTabId, setActiveTabId] = useState<string>("all");
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -148,11 +157,33 @@ export default function CommunityPage() {
       ? comm.posts
       : defaultPosts;
 
+  /* A held post a moderator approved is on the board like any other, so it
+     is folded in here rather than living in a second list the feed would
+     have to remember to render. */
+  const releasedPosts: PostItem[] = useMemo(
+    () =>
+      approvedPosts(queue.items).map((item) => ({
+        id: item.id,
+        author: item.author,
+        badge:
+          comm?.compose?.memberBadge ||
+          (language === "ES" ? "Miembro" : "Member"),
+        time:
+          comm?.compose?.justNow ||
+          (language === "ES" ? "Recién publicado" : "Just now"),
+        paragraphs: [item.content],
+        hashtags: "",
+        likes: 0,
+        categoryId: item.categoryId || "general",
+      })),
+    [queue.items, comm?.compose?.memberBadge, comm?.compose?.justNow, language],
+  );
+
   const allCombinedPosts = useMemo(() => {
-    return [...userPosts, ...dictPosts].filter(
+    return [...userPosts, ...releasedPosts, ...dictPosts].filter(
       (post) => !hiddenPostIds[post.id],
     );
-  }, [userPosts, dictPosts, hiddenPostIds]);
+  }, [userPosts, releasedPosts, dictPosts, hiddenPostIds]);
 
   const posts = useMemo(() => {
     if (activeTabId === "all") return allCombinedPosts;
@@ -163,9 +194,26 @@ export default function CommunityPage() {
   }, [activeTabId, allCombinedPosts]);
 
   const handleAddPost = (text: string, categoryId?: string) => {
+    /* Same three-way routing as a reply: hostility is parked for a
+       moderator rather than published or silently dropped. */
+    const route = routeForCommunity(text);
+    if (route === "block") return;
+
+    if (route === "review") {
+      queue.hold({
+        kind: "post",
+        postId: "",
+        author: authorName,
+        content: text,
+        categoryId:
+          categoryId || (activeTabId === "all" ? "general" : activeTabId),
+      });
+      return;
+    }
+
     const newPost: PostItem = {
       id: `user-${Date.now()}`,
-      author: user?.name || (language === "ES" ? "Usted" : "You"),
+      author: authorName,
       badge:
         comm?.compose?.memberBadge ||
         (language === "ES" ? "Miembro" : "Member"),
@@ -195,16 +243,37 @@ export default function CommunityPage() {
 
   const handleAddReply = (postId: string) => {
     const text = replyDrafts[postId]?.trim();
+    if (!text) return;
 
-    /* Checked here and not only on the button: a disabled button is a
+    /* Routed here and not only on the button: a disabled button is a
        courtesy, not a gate, and this is the one place a flagged reply would
-       actually reach the board. */
-    if (!canPublishToCommunity(text ?? "")) return;
+       actually reach the board.
+
+       Three outcomes, not two. Hostility is parked for a moderator, who
+       needs to know a member keeps typing it. A medical or crisis phrase is
+       refused outright and answered with "call 911", because telling
+       someone with chest pain that a moderator will get to them soon would
+       invite them to wait for it. */
+    const route = routeForCommunity(text);
+    if (route === "block") return;
+
+    if (route === "review") {
+      const held = queue.hold({
+        kind: "reply",
+        postId,
+        author: authorName,
+        content: text,
+      });
+      if (!held) return;
+      setReplyDrafts((prev) => ({ ...prev, [postId]: "" }));
+      setExpandedReplies((prev) => ({ ...prev, [postId]: true }));
+      return;
+    }
 
     const newReply: ReplyItem = {
       id: `reply-${Date.now()}`,
       postId,
-      author: user?.name || (language === "ES" ? "Usted" : "You"),
+      author: authorName,
       badge:
         comm?.compose?.memberBadge ||
         (language === "ES" ? "Miembro" : "Member"),
@@ -240,6 +309,10 @@ export default function CommunityPage() {
     <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
       <PageTitle href="/dashboard/community" className="mb-stack-lg" />
 
+      {/* Standing notice, above the first post: peer support only, nobody
+          watching for emergencies, and what members owe each other. */}
+      <CommunityDisclaimer />
+
       {/* Category Tabs — six separate tab stops became one, with arrow
           keys moving between categories. */}
       <div className="mb-stack-lg overflow-x-auto">
@@ -263,7 +336,14 @@ export default function CommunityPage() {
           const postReplies = replies[post.id] || [];
           const isExpanded = Boolean(expandedReplies[post.id]);
           const draft = replyDrafts[post.id] || "";
-          const isReplyFlagged = checkFlaggedMedicalContent(draft);
+          const replyFlag = flagReason(draft);
+          /* Approved held replies are on the board for everyone; pending and
+             rejected ones come back only to the member who wrote them. */
+          const heldReplies = visibleHeldReplies(
+            queue.items,
+            post.id,
+            authorName,
+          );
 
           return (
             <Card key={post.id} as="article">
@@ -406,6 +486,55 @@ export default function CommunityPage() {
               {/* Replies Section (Collapsible Thread) */}
               {isExpanded && (
                 <div className="mt-stack-lg space-y-stack-md border-t border-line-subtle pt-inset-md">
+                  {/* Held replies. An approved one reads as an ordinary
+                      reply; the other two states are shown only to their
+                      author, who would otherwise think the reply vanished. */}
+                  {heldReplies.length > 0 && (
+                    <div className="space-y-stack-sm">
+                      {heldReplies.map((held) => (
+                        <Card
+                          key={held.id}
+                          padding="small"
+                          tone={
+                            held.status === "approved" ? "default" : "sunken"
+                          }
+                        >
+                          <div className="flex flex-wrap items-center gap-inline-sm">
+                            <span className="text-label-md text-fg">
+                              {held.author}
+                            </span>
+                            {held.status === "pending" && (
+                              <Badge tone="warning">
+                                {isEs
+                                  ? "En revisión del moderador"
+                                  : "Awaiting moderator review"}
+                              </Badge>
+                            )}
+                            {held.status === "rejected" && (
+                              <Badge tone="danger">
+                                {isEs ? "No aprobada" : "Not approved"}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-stack-xs text-body-sm text-fg-secondary">
+                            {held.content}
+                          </p>
+                          {held.status !== "approved" && (
+                            <p className="mt-stack-xs text-caption text-fg-muted">
+                              {held.status === "pending"
+                                ? isEs
+                                  ? "Solo tú puedes ver esta respuesta hasta que un moderador la apruebe."
+                                  : "Only you can see this reply until a moderator approves it."
+                                : isEs
+                                  ? "Un moderador decidió no publicar esta respuesta."
+                                  : "A moderator decided not to publish this reply."}
+                            </p>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
                   {/* List of existing replies */}
                   {postReplies.length > 0 && (
                     <div className="space-y-stack-sm">
@@ -503,20 +632,41 @@ export default function CommunityPage() {
                         {/* Says it cannot be posted, not just that something
                           was noticed. The button beside it is disabled, and
                           a warning that does not explain a dead control
-                          reads as the app being broken. */}
-                        {isReplyFlagged && (
+                          reads as the app being broken.
+
+                          The message follows the reason. Answering "Die
+                          already" with "call 911 if this is an emergency"
+                          is nonsense, and nonsense is what teaches a member
+                          the check is broken and worth working around. */}
+                        {/* The notice matches what the button will actually
+                          do. Hostility is held for a moderator, so it says
+                          so and the button stays live; a medical or crisis
+                          phrase is refused, and there the button is dead,
+                          because a warning that does not explain a dead
+                          control reads as the app being broken. */}
+                        {replyFlag && (
                           <Alert
-                            tone="danger"
+                            tone={
+                              replyFlag === "harassment" ? "warning" : "danger"
+                            }
                             className="mt-stack-sm"
                             title={
-                              isEs
-                                ? "Esta respuesta no se puede publicar"
-                                : "This reply cannot be posted"
+                              replyFlag === "harassment"
+                                ? isEs
+                                  ? "Un moderador revisará esta respuesta"
+                                  : "A moderator will review this reply"
+                                : isEs
+                                  ? "Esta respuesta no se puede publicar"
+                                  : "This reply cannot be posted"
                             }
                           >
-                            {isEs
-                              ? "Menciona síntomas o inquietudes que pueden necesitar atención médica urgente. Habla con tu equipo de diálisis, o llama al 911 si es una emergencia. NephroReach solo brinda educación."
-                              : "It mentions symptoms or concerns that may need urgent medical attention. Talk to your dialysis team, or call 911 if this is an emergency. NephroReach provides education only."}
+                            {replyFlag === "harassment"
+                              ? isEs
+                                ? "Puede leerse como hostil hacia otro miembro, así que no se publicará de inmediato. Si la envías, solo tú la verás hasta que un moderador la apruebe. También puedes reescribirla sin dirigirla contra nadie."
+                                : "It may read as hostile toward another member, so it will not post straight away. If you send it, only you will see it until a moderator approves it. You can also rewrite it without aiming it at anyone."
+                              : isEs
+                                ? "Menciona síntomas o inquietudes que pueden necesitar atención médica urgente. Habla con tu equipo de diálisis, o llama al 911 si es una emergencia. NephroReach solo brinda educación."
+                                : "It mentions symptoms or concerns that may need urgent medical attention. Talk to your dialysis team, or call 911 if this is an emergency. NephroReach provides education only."}
                           </Alert>
                         )}
 
@@ -536,7 +686,7 @@ export default function CommunityPage() {
                             <Button
                               size="small"
                               onClick={() => handleAddReply(post.id)}
-                              disabled={!canPublishToCommunity(draft)}
+                              disabled={routeForCommunity(draft) === "block"}
                             >
                               <Send aria-hidden="true" className="-rotate-12" />
                               {isEs ? "Responder" : "Reply"}

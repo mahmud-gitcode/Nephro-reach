@@ -23,6 +23,9 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import ModalityCard from "@/features/personal-log/dialysis/ModalityCard";
+import PdExchangeLog from "@/features/personal-log/dialysis/PdExchangeLog";
+import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import {
   Badge,
   Button,
@@ -321,6 +324,7 @@ export default function DialysisTreatmentPage() {
   const { language, dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const isEs = language === "ES";
+  const modalityLog = useDialysisModality();
   const [selectedDate, setSelectedDate] = useState<string | null>(
     LATEST_ENTRY_DATE,
   );
@@ -333,73 +337,102 @@ export default function DialysisTreatmentPage() {
     <div className="w-full space-y-stack-xl">
       <PersonalLogDisclaimer />
 
-      {/* MONTH PICKER & ADD ENTRY BUTTON */}
-      <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
-        <div className="flex shrink-0 items-center gap-inline-md">
-          <Input
-            type="date"
-            inputSize="small"
-            className="w-auto"
-            value={selectedDate ?? ""}
-            aria-label={isEs ? "Elegir fecha" : "Pick a date"}
-            leadingIcon={<Calendar />}
-            onChange={(event) => setSelectedDate(event.target.value || null)}
-            onClick={(event) => {
-              // Tapping anywhere on the field opens the calendar, not just
-              // the browser's own small icon.
-              const input = event.currentTarget;
-              if (typeof input.showPicker === "function") {
-                try {
-                  input.showPicker();
-                } catch {
-                  // Some browsers refuse outside a user gesture; focusing
-                  // still lets the field be typed into.
+      {/* Which kind of dialysis this member is on. Everything below is
+          written for a chair at a centre, so a member on PD needs to be
+          able to say so before the page asks them for a chair time. */}
+      <ModalityCard log={modalityLog} />
+
+      {modalityLog.modality === "pd" ? (
+        <PdExchangeLog
+          log={modalityLog}
+          date={selectedDate ?? LATEST_ENTRY_DATE}
+          dayLabel={formatPdDayLabel(selectedDate ?? LATEST_ENTRY_DATE, isEs)}
+        />
+      ) : (
+        <>
+          {/* MONTH PICKER & ADD ENTRY BUTTON */}
+          <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex shrink-0 items-center gap-inline-md">
+              <Input
+                type="date"
+                inputSize="small"
+                className="w-auto"
+                value={selectedDate ?? ""}
+                aria-label={isEs ? "Elegir fecha" : "Pick a date"}
+                leadingIcon={<Calendar />}
+                onChange={(event) =>
+                  setSelectedDate(event.target.value || null)
                 }
-              }
-            }}
+                onClick={(event) => {
+                  // Tapping anywhere on the field opens the calendar, not just
+                  // the browser's own small icon.
+                  const input = event.currentTarget;
+                  if (typeof input.showPicker === "function") {
+                    try {
+                      input.showPicker();
+                    } catch {
+                      // Some browsers refuse outside a user gesture; focusing
+                      // still lets the field be typed into.
+                    }
+                  }
+                }}
+              />
+
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setSelectedDate(toDateInputValue(new Date()))}
+              >
+                {isEs ? "Hoy" : "Today"}
+              </Button>
+
+              <Link
+                href="/dashboard/personal-log/dialysis-treatment/add"
+                className={buttonStyles({ size: "small" })}
+              >
+                <Plus />
+                <span>{dt?.addEntry || "Add Treatment"}</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* TOP 4 SUMMARY CARDS */}
+          <SummaryCards />
+
+          {/* CLINICAL MEASUREMENTS */}
+          <ClinicalMeasurementsCards />
+
+          {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
+          <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12">
+            <div className="xl:col-span-8">
+              <MedicationsGivenSection />
+            </div>
+            <div className="xl:col-span-4">
+              <SymptomsDonut />
+            </div>
+          </section>
+
+          {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
+          <TreatmentEntriesTable
+            entries={visibleEntries}
+            onShowAll={() => setSelectedDate(null)}
           />
-
-          <Button
-            size="small"
-            variant="neutral"
-            appearance="fill-stroke"
-            onClick={() => setSelectedDate(toDateInputValue(new Date()))}
-          >
-            {isEs ? "Hoy" : "Today"}
-          </Button>
-
-          <Link
-            href="/dashboard/personal-log/dialysis-treatment/add"
-            className={buttonStyles({ size: "small" })}
-          >
-            <Plus />
-            <span>{dt?.addEntry || "Add Treatment"}</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* TOP 4 SUMMARY CARDS */}
-      <SummaryCards />
-
-      {/* CLINICAL MEASUREMENTS */}
-      <ClinicalMeasurementsCards />
-
-      {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
-      <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12">
-        <div className="xl:col-span-8">
-          <MedicationsGivenSection />
-        </div>
-        <div className="xl:col-span-4">
-          <SymptomsDonut />
-        </div>
-      </section>
-
-      {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
-      <TreatmentEntriesTable
-        entries={visibleEntries}
-        onShowAll={() => setSelectedDate(null)}
-      />
+        </>
+      )}
     </div>
+  );
+}
+
+/** "Wednesday, Jun 24" — the day the PD exchanges below belong to. */
+function formatPdDayLabel(iso: string, isEs: boolean): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  if (!year || !month || !day) return iso;
+  /* Built from the parts rather than parsed: `new Date("2026-06-24")` is
+     midnight UTC, which is the previous day west of Greenwich. */
+  return new Date(year, month - 1, day).toLocaleDateString(
+    isEs ? "es-ES" : "en-US",
+    { weekday: "long", month: "short", day: "numeric" },
   );
 }
 

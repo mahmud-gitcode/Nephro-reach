@@ -225,7 +225,7 @@ export function MealTable({
         <button
           type="button"
           onClick={() => onAddFood()}
-          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-sm font-bold tracking-[0.07px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover"
+          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded bg-action px-4 text-sm font-bold tracking-[0.07px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover sm:gap-2"
         >
           <Plus className="h-5 w-5" />
           {n?.mealsTable?.addFood || "Add Food"}
@@ -349,7 +349,7 @@ export function MealTable({
       <button
         type="button"
         onClick={() => onAddFood()}
-        className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded border border-line bg-[var(--color-gray-50)] px-4 text-base font-bold tracking-[0.08px] text-fg-brand transition-colors hover:bg-surface"
+        className="mt-3 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded border border-line bg-[var(--color-gray-50)] px-3 text-sm font-bold tracking-[0.08px] text-fg-brand transition-colors hover:bg-surface sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
       >
         <Plus className="h-5 w-5" />
         {n?.mealsTable?.logMeal || "Log Meal"}

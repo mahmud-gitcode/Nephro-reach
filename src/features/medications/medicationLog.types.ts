@@ -38,6 +38,38 @@ export interface DoseRecord {
 /** Medication name to whether the member says they are running low. */
 export type RefillFlags = Record<string, boolean>;
 
+/**
+ * What the member noticed after one scheduled dose.
+ *
+ * Kept in its own record rather than on DoseRecord, because setting a dose
+ * back to `pending` deletes that record — and a side effect must survive a
+ * member changing their mind about whether they took the dose. The two are
+ * also written at different moments: the status when the dose is taken, the
+ * side effect hours later when something is felt.
+ */
+export type SideEffect =
+  | "none"
+  | "fatigue"
+  | "nausea"
+  | "dizziness"
+  | "headache"
+  | "cramps"
+  | "itching"
+  | "low-bp"
+  | "upset-stomach"
+  | "rash"
+  | "other";
+
+export interface SideEffectRecord {
+  /** ISO `yyyy-mm-dd` of the day the dose was due. */
+  date: string;
+  /** Scheduled clock time. With date and medication, the dose's identity. */
+  time: string;
+  medication: string;
+  effect: SideEffect;
+  savedAt: string;
+}
+
 export interface MoodEntry {
   /** ISO `yyyy-mm-dd`. One entry per day. */
   date: string;

@@ -23,6 +23,7 @@ const ADMIN_PREFIXES = [
   "/dashboard/subscriptions",
   "/dashboard/admin-reviews",
   "/dashboard/admin-testimonials",
+  "/dashboard/admin-community",
   "/dashboard/design-system",
 ];
 

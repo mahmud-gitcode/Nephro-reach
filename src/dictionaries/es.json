@@ -570,7 +570,8 @@
       "veryPoor": "Muy Mal",
       "notes": "Notas",
       "notesPlaceholder": "Agrega cómo te sientes, efectos secundarios o síntomas...",
-      "save": "Guardar"
+      "save": "Guardar",
+      "saveLog": "Guardar el registro de hoy"
     },
     "reports": {
       "weeklySummary": "Resumen Semanal (PDF)",

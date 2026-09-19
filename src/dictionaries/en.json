@@ -586,7 +586,8 @@
       "veryPoor": "Very Poor",
       "notes": "Notes",
       "notesPlaceholder": "Add how you feel, side effects, or symptoms...",
-      "save": "Save"
+      "save": "Save",
+      "saveLog": "Save Today's Log"
     },
     "reports": {
       "weeklySummary": "Weekly Summary (PDF)",

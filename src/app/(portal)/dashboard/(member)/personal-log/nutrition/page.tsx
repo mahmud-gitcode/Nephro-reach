@@ -163,7 +163,7 @@ export default function NutritionPage() {
               ? setAddFoodMeal("breakfast")
               : setIsExerciseFormOpen(true)
           }
-          className="flex h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover"
+          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded bg-action px-3 text-sm font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
         >
           <Plus className="h-5 w-5" />
           {tab === "food"

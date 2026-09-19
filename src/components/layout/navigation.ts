@@ -18,6 +18,7 @@ import {
   Palette,
   Plane,
   Settings,
+  ShieldAlert,
   Star,
   Users,
   Video,
@@ -178,6 +179,12 @@ export const sidebarItems: NavItem[] = [
     label: "Reviews Moderation",
     href: "/dashboard/admin-reviews",
     icon: Star,
+    roles: ["admin"],
+  },
+  {
+    label: "Community Moderation",
+    href: "/dashboard/admin-community",
+    icon: ShieldAlert,
     roles: ["admin"],
   },
   {
@@ -349,6 +356,10 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES"
       ? "Moderación de Testimonios"
       : "Testimonials Moderation";
+  if (pathname.startsWith("/dashboard/admin-community"))
+    return language === "ES"
+      ? "Moderación de la Comunidad"
+      : "Community Moderation";
   if (pathname.startsWith("/dashboard/admin-reviews"))
     return language === "ES" ? "Moderación de Reseñas" : "Reviews Moderation";
   if (pathname.startsWith("/dashboard/reviews"))
@@ -391,6 +402,7 @@ export function getNavLabel(
     "/dashboard/subscriptions": "Suscripciones",
     "/dashboard/reviews": "Reseñas",
     "/dashboard/admin-reviews": "Moderación de Reseñas",
+    "/dashboard/admin-community": "Moderación de la Comunidad",
     "/dashboard/admin-testimonials": "Moderación de Testimonios",
     "/dashboard/design-system": "Sistema de Diseño",
     "/dashboard/support": "Soporte",

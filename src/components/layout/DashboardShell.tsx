@@ -1,16 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
+import { canAccessPath } from "@/features/auth/auth";
 import { useLanguage } from "@/context/LanguageContext";
 import { buttonStyles } from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
-import { ArrowLeft, LogOut, Menu, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  LogOut,
+  Menu,
+  Settings,
+  X,
+} from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import {
@@ -40,13 +48,20 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           href="/dashboard"
           className="flex w-full items-center justify-center"
         >
+          {/* Width-driven, height auto. Pinning the height instead left the
+            rendered height matching the `height` prop while the width did
+            not match `width`, which is exactly the one-dimension-modified
+            case next/image warns about. The sidebar is narrower than the
+            logo's natural 240px at this height, so `object-contain` was
+            already letterboxing it — filling the width at its own ratio
+            draws the same logo without the dead space above and below. */}
           <Image
             src="/images/logo.svg"
             alt="NephroReach"
             width={240}
             height={190}
             priority
-            className="h-[190px] w-full shrink-0 object-contain"
+            className="h-auto w-full shrink-0"
           />
         </Link>
         {onClose && (
@@ -429,31 +444,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         ) : null}
 
         {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
-        <div className="flex shrink-0 items-center gap-inline-sm rounded-control border-y border-line bg-surface-sunken p-1 shadow-sm sm:gap-inline-lg sm:px-inset-xs sm:py-1.5">
-          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-line sm:h-10 sm:w-[42px]">
-            <Image
-              src={avatarSrc}
-              alt=""
-              fill
-              sizes="42px"
-              className="object-cover"
-            />
-          </div>
-          <div className="hidden w-[140px] min-w-0 lg:block xl:w-[174px]">
-            <p className="truncate text-label-lg text-fg">
-              {user?.name ?? (language === "ES" ? "Invitado" : "Guest")}
-            </p>
-            <p className="truncate text-caption text-fg-muted">
-              {user?.role === "admin"
-                ? language === "ES"
-                  ? "Administrador"
-                  : "Admin"
-                : language === "ES"
-                  ? "Usuario"
-                  : "User"}
-            </p>
-          </div>
-        </div>
+        <ProfileMenu avatarSrc={avatarSrc} />
       </div>
 
       <EmergencyModal
@@ -461,6 +452,146 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         onClose={() => setEmergencyOpen(false)}
       />
     </header>
+  );
+}
+
+/* ==========================================================================
+   Profile menu
+   --------------------------------------------------------------------------
+   The avatar was a plain <div>: bordered, shadowed and sitting between two
+   real buttons, so it read as tappable and did nothing at all. It now opens
+   the account menu it always looked like it would.
+
+   The name and role are inside the panel as well as beside the avatar,
+   because the text beside it is hidden below `lg` — on a phone the avatar
+   was the only thing on screen identifying who was signed in, and tapping
+   it is the obvious way to ask.
+   ========================================================================== */
+
+function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
+  const { user, logout } = useAuth();
+  const { language } = useLanguage();
+  const router = useRouter();
+  const isEs = language === "ES";
+
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const name = user?.name ?? (isEs ? "Invitado" : "Guest");
+  const roleLabel =
+    user?.role === "admin"
+      ? isEs
+        ? "Administrador"
+        : "Admin"
+      : isEs
+        ? "Usuario"
+        : "User";
+
+  /* Settings is a member route, so an admin is not offered a link that
+     would bounce them straight back out of it. */
+  const canOpenSettings = canAccessPath(
+    user?.role ?? "user",
+    "/dashboard/settings",
+  );
+
+  /* A menu that stays open after a tap elsewhere is one a member has to
+     fight, and on a phone it covers the page underneath it. */
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const itemClass =
+    "flex w-full cursor-pointer items-center gap-inline-md rounded-control-small px-inset-sm py-2.5 text-left text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+
+  return (
+    <div ref={wrapRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={isEs ? `Cuenta de ${name}` : `Account menu for ${name}`}
+        className="flex cursor-pointer items-center gap-inline-sm rounded-control border-y border-line bg-surface-sunken p-1 shadow-sm transition-colors duration-150 ease-standard hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-lg sm:px-inset-xs sm:py-1.5"
+      >
+        <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-line sm:h-10 sm:w-[42px]">
+          <Image
+            src={avatarSrc}
+            alt=""
+            fill
+            sizes="42px"
+            className="object-cover"
+          />
+        </span>
+        <span className="hidden w-[140px] min-w-0 text-left lg:block xl:w-[174px]">
+          <span className="block truncate text-label-lg text-fg">{name}</span>
+          <span className="block truncate text-caption text-fg-muted">
+            {roleLabel}
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className={`hidden h-4 w-4 shrink-0 text-fg-muted transition-transform duration-150 ease-standard lg:block ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          aria-label={isEs ? "Cuenta" : "Account"}
+          className="absolute right-0 z-30 mt-stack-sm w-[min(15rem,calc(100vw-2rem))] overflow-hidden rounded-control border border-line bg-surface p-inset-xs shadow-md"
+        >
+          {/* Who is signed in. Below `lg` this is the only place it is said. */}
+          <div className="border-b border-line-subtle px-inset-sm pt-1 pb-inset-sm">
+            <p className="truncate text-label-lg text-fg">{name}</p>
+            <p className="truncate text-caption text-fg-muted">{roleLabel}</p>
+          </div>
+
+          <div className="pt-inset-xs">
+            {canOpenSettings ? (
+              <Link
+                href="/dashboard/settings"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className={`${itemClass} text-fg-secondary hover:bg-surface-sunken hover:text-fg`}
+              >
+                <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
+                {isEs ? "Configuración" : "Settings"}
+              </Link>
+            ) : null}
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                logout();
+                router.push("/");
+              }}
+              className={`${itemClass} text-danger hover:bg-danger-surface`}
+            >
+              <LogOut aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {isEs ? "Cerrar sesión" : "Log out"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

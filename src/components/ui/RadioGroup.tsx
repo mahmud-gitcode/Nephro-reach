@@ -200,8 +200,12 @@ export function RadioCard({
         tabIndex={selected ? 0 : -1}
         onClick={() => onChange(value)}
         className={cn(
-          "relative flex w-full cursor-pointer flex-col items-center justify-center gap-inline-md",
-          "rounded-card border p-inset-sm text-center",
+          "relative flex w-full cursor-pointer flex-col items-center justify-center",
+          "gap-inline-xs sm:gap-inline-md",
+          /* A five-across scale leaves each tile about 56px on a phone, and
+             16px of padding per side left no room for its label — which is
+             why "Very Good" and "Very Poor" spilled out of their tiles. */
+          "rounded-card border p-inset-xs text-center sm:p-inset-sm",
           "transition-colors duration-150 ease-standard",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle",
@@ -220,7 +224,8 @@ export function RadioCard({
           <span
             aria-hidden="true"
             className={cn(
-              "[&_svg]:h-icon-big [&_svg]:w-icon-big",
+              "[&_svg]:h-icon-small [&_svg]:w-icon-small",
+              "sm:[&_svg]:h-icon-big sm:[&_svg]:w-icon-big",
               selected ? "text-primary-fg" : "text-fg-muted",
             )}
           >
@@ -228,10 +233,12 @@ export function RadioCard({
           </span>
         ) : null}
 
-        <span className="min-w-0">
+        <span className="max-w-full min-w-0">
           <span
             className={cn(
-              "block text-label-md",
+              /* `break-words` so a two-word label wraps rather than
+                 running past the tile's own border. */
+              "block text-label-sm break-words sm:text-label-md",
               selected ? "text-primary-fg" : "text-fg",
             )}
           >

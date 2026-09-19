@@ -48,13 +48,16 @@ import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSect
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import ModalityCard from "@/features/personal-log/dialysis/ModalityCard";
+import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
-import { SectionTitle } from "@/components/ui";
+import { Alert, SectionTitle } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 
 function DialysisManagementDashboard() {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const modalityLog = useDialysisModality();
 
   // Section 2 State: Dialysis Schedule
   // Dated schedule history. The last period is the one currently in force.
@@ -370,7 +373,30 @@ function DialysisManagementDashboard() {
       }
     >
       <div className="space-y-6 pb-12">
+        {/* The modality comes first: it decides whether the schedule below
+            makes sense at all. The weekly grid describes runs with gaps
+            between them, which is not how PD works. */}
+        <ModalityCard log={modalityLog} />
+
         <DialysisClinicCard />
+
+        {/* Said plainly rather than by quietly hiding the schedule: a
+            member who switched to PD should know why the week below still
+            looks the way it does, not wonder whether the app lost it. */}
+        {!modalityLog.hasIntervals ? (
+          <Alert
+            tone="info"
+            title={
+              isEs
+                ? "Tu horario semanal es para hemodiálisis"
+                : "The weekly schedule below is for hemodialysis"
+            }
+          >
+            {isEs
+              ? "En diálisis peritoneal haces intercambios todos los días, así que no hay días de tratamiento ni tiempo entre ellos. Registra cada intercambio en Tratamiento de Diálisis."
+              : "On peritoneal dialysis you exchange every day, so there are no treatment days with gaps between them. Log each exchange under Dialysis Treatment instead."}
+          </Alert>
+        ) : null}
 
         {/* ========================================================================= */}
         {/* ========================================================================= */}

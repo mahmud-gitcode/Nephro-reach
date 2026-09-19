@@ -13,6 +13,11 @@ function parse(value: unknown): DialysisClinic {
   return {
     name: typeof raw.name === "string" ? raw.name : SEED_CLINIC.name,
     phone: typeof raw.phone === "string" ? raw.phone : SEED_CLINIC.phone,
+    /* Blank, not the seed's street. A record already on the device belongs
+       to a member who set their own centre, and attaching the demo
+       clinic's address to their name would be a false record of where they
+       go three times a week. */
+    address: typeof raw.address === "string" ? raw.address : "",
   };
 }
 
@@ -27,6 +32,7 @@ export async function saveClinic(
   return writeJson(KEY, {
     name: clinic.name.trim(),
     phone: clinic.phone.trim(),
+    address: clinic.address.trim(),
   });
 }
 

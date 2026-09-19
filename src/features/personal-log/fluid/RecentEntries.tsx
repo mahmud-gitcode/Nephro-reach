@@ -75,7 +75,7 @@ export function RecentEntries({
         <button
           type="button"
           onClick={onOpenAddModal}
-          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded bg-primary-solid px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-primary-solid-hover active:scale-[0.98]"
+          className="flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded bg-primary-solid px-3 text-sm font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-primary-solid-hover active:scale-[0.98] sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
         >
           <Plus className="h-5 w-5" />
           {w?.recentEntries?.addNewEntry || "New Entry"}

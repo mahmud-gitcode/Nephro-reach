@@ -4,10 +4,7 @@ import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, Button, Chip, ChipGroup, Modal } from "@/components/ui";
 import { FileText, Send } from "lucide-react";
-import {
-  canPublishToCommunity,
-  checkFlaggedMedicalContent,
-} from "./moderation";
+import { flagReason, routeForCommunity } from "./moderation";
 
 export const COMPOSE_CATEGORIES = [
   { id: "general", labelEn: "General Kidney", labelEs: "Salud Renal General" },
@@ -48,10 +45,13 @@ export function ComposeModal({
     initialCategory === "all" ? "general" : initialCategory,
   );
 
-  const isFlagged = checkFlaggedMedicalContent(body);
+  const flag = flagReason(body);
 
-  /* The same gate the reply box uses, so the two cannot drift. */
-  const canPost = canPublishToCommunity(body);
+  /* The same routing the reply box uses, so the two cannot drift. Only a
+     medical or crisis phrase kills the button; hostility is allowed to be
+     submitted and is then held for a moderator. */
+  const route = routeForCommunity(body);
+  const canPost = route !== "block";
 
   const handleSubmit = () => {
     if (!canPost) return;
@@ -139,17 +139,27 @@ export function ComposeModal({
 
         {/* 4. Auto-flag notice. This one IS a response to what was typed, so
             it keeps the live region <Alert> gives it by default. */}
-        {isFlagged && (
-          <Alert tone="danger">
+        {/* The wording follows the reason: a post held for hostility must
+            not be answered with advice about calling 911. */}
+        {flag && (
+          <Alert tone={flag === "harassment" ? "warning" : "danger"}>
             <p>
-              {isEs
-                ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
-                : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
+              {flag === "harassment"
+                ? isEs
+                  ? "Su mensaje puede leerse como hostil hacia otro miembro. Esta comunidad es un espacio de apoyo entre personas en diálisis, y no se permite el lenguaje que ataca a alguien."
+                  : "Your message may read as hostile toward another member. This community is a support space for people on dialysis, and language that attacks someone is not allowed here."
+                : isEs
+                  ? "Su mensaje incluye síntomas o inquietudes que pueden necesitar atención médica urgente. NephroReach solo brinda educación y no diagnostica, trata ni reemplaza a su equipo de diálisis. Comuníquese con su clínica de diálisis, nefrólogo o llame al 911 si esto puede ser una emergencia."
+                  : "Your message includes symptoms or concerns that may need urgent medical attention. NephroReach provides education only and does not diagnose, treat, or replace your dialysis team. Please contact your dialysis clinic, nephrologist, or call 911 if this may be an emergency."}
             </p>
             <p className="mt-stack-sm font-semibold">
-              {isEs
-                ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
-                : "This message cannot be posted. Please edit it to remove the urgent medical details."}
+              {flag === "harassment"
+                ? isEs
+                  ? "Si lo publica, un moderador lo revisará primero y nadie más lo verá hasta que lo apruebe."
+                  : "If you post it, a moderator will review it first and nobody else will see it until they approve it."
+                : isEs
+                  ? "Este mensaje no se puede publicar. Edite el texto para quitar los detalles médicos urgentes."
+                  : "This message cannot be posted. Please edit it to remove the urgent medical details."}
             </p>
           </Alert>
         )}

@@ -1,5 +1,10 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import type { DoseRecord, MoodEntry, RefillFlags } from "./medicationLog.types";
+import type {
+  DoseRecord,
+  MoodEntry,
+  RefillFlags,
+  SideEffectRecord,
+} from "./medicationLog.types";
 
 /* ==========================================================================
    The medication log — storage
@@ -16,6 +21,7 @@ import type { DoseRecord, MoodEntry, RefillFlags } from "./medicationLog.types";
 const DOSES_KEY = storageKey("medication-doses");
 const REFILLS_KEY = storageKey("medication-refills");
 const MOOD_KEY = storageKey("medication-mood");
+const SIDE_EFFECTS_KEY = storageKey("medication-side-effects");
 
 export async function listDoses(): Promise<DoseRecord[]> {
   const stored = await readJson<DoseRecord[] | null>(DOSES_KEY, null);
@@ -44,4 +50,18 @@ export async function listMood(): Promise<MoodEntry[]> {
 
 export async function saveMood(entries: MoodEntry[]): Promise<MoodEntry[]> {
   return writeJson(MOOD_KEY, entries);
+}
+
+export async function listSideEffects(): Promise<SideEffectRecord[]> {
+  const stored = await readJson<SideEffectRecord[] | null>(
+    SIDE_EFFECTS_KEY,
+    null,
+  );
+  return Array.isArray(stored) ? stored : [];
+}
+
+export async function saveSideEffects(
+  records: SideEffectRecord[],
+): Promise<SideEffectRecord[]> {
+  return writeJson(SIDE_EFFECTS_KEY, records);
 }

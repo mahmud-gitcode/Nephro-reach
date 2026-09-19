@@ -347,7 +347,25 @@ export default function TableTalkPage() {
 
   return (
     <div className="space-y-stack-xl">
-      <PageTitle href="/dashboard/table-talk" />
+      {/* Suggesting a question is the one thing a member can do to the
+          series itself, so it rides in the title's action slot, right
+          aligned beside the heading, rather than below the banner. */}
+      <PageTitle
+        href="/dashboard/table-talk"
+        action={
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => setAsking(true)}
+          >
+            <MessageCircleQuestion
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
+            {isEs ? "Sugerir una pregunta" : "Suggest a Question"}
+          </Button>
+        }
+      />
 
       {/* Banner: the series masthead, nothing else competing with it.
 
@@ -365,9 +383,10 @@ export default function TableTalkPage() {
       >
         <h2 className="m-0">
           {/* Intrinsic width and height rather than `fill`: the artwork is a
-            fixed 1024x157 strip, so giving the real numbers lets the browser
+            fixed 3258x534 strip, so giving the real numbers lets the browser
             reserve the exact space before the bytes arrive, and the image
-            does not depend on a parent resolving a height for it. */}
+            does not depend on a parent resolving a height for it. These must
+            track the file: a stale ratio here is a visible jump on load. */}
           <Image
             src="/images/table-talk/banner.jpg"
             alt={
@@ -375,8 +394,8 @@ export default function TableTalkPage() {
                 ? "Dialysis Table Talk de NephroReach. Conversaciones reales. Respuestas reales. Un mañana mejor."
                 : "NephroReach Dialysis Table Talk. Real Conversations. Real Answers. A Brighter Tomorrow."
             }
-            width={1024}
-            height={157}
+            width={3258}
+            height={534}
             /* Top of the page and above the fold, so it is not lazy. */
             priority
             sizes="100vw"
@@ -384,25 +403,19 @@ export default function TableTalkPage() {
           />
         </h2>
 
-        <div className="flex flex-wrap items-center justify-between gap-inline-lg p-inset-lg">
-          <p className="measure text-body-lg text-fg-secondary">
-            {isEs
-              ? "Conversaciones reales. Respuestas reales. Un mañana mejor."
-              : "Short conversations with a host and a guest about living on dialysis."}
-          </p>
-
-          <Button
-            variant="neutral"
-            appearance="fill-stroke"
-            onClick={() => setAsking(true)}
-          >
-            <MessageCircleQuestion
-              aria-hidden="true"
-              className="size-4 shrink-0"
-            />
-            {isEs ? "Sugerir una pregunta" : "Suggest a Question"}
-          </Button>
-        </div>
+        {/* Spanish only, and the whole strip goes with it: the English
+          description that used to sit here was redundant beside the artwork,
+          which already carries the name and the tagline in English. Spanish
+          readers cannot read a tagline baked into English pixels, so they
+          still get it back as text. Rendering the padded strip with nothing
+          in it would leave a blank band under the banner. */}
+        {isEs && (
+          <div className="p-inset-lg">
+            <p className="measure text-body-lg text-fg-secondary">
+              Conversaciones reales. Respuestas reales. Un mañana mejor.
+            </p>
+          </div>
+        )}
       </Card>
 
       {saveError ? (

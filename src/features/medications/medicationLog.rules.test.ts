@@ -6,15 +6,22 @@ import {
   formatStamp,
   needsRefill,
   refillCount,
+  reportedSideEffectCount,
   setDoseStatus,
   setRefill,
+  setSideEffect,
+  sideEffectOf,
   shiftDay,
   statusOf,
   summariseAdherence,
   todayIso,
   upsertMood,
 } from "./medicationLog.rules";
-import type { DoseRecord, MoodEntry } from "./medicationLog.types";
+import type {
+  DoseRecord,
+  MoodEntry,
+  SideEffectRecord,
+} from "./medicationLog.types";
 
 /* The adherence tracker on this page used to be a fixed 86% next to a fixed
  * 50/30/20 ring. Now it is arithmetic on what the member tapped, which means
@@ -272,5 +279,112 @@ describe("the mood log", () => {
       "2026-09-14",
       "2026-09-13",
     ]);
+  });
+});
+
+describe("side effects", () => {
+  const record = (patch: Partial<SideEffectRecord> = {}): SideEffectRecord => ({
+    date: "2026-09-17",
+    time: "07:40 am",
+    medication: "Norvasc",
+    effect: "fatigue",
+    savedAt: "2026-09-17T08:00:00.000Z",
+    ...patch,
+  });
+
+  const now = new Date("2026-09-17T09:00:00.000Z");
+
+  it("reads back what was recorded against one dose", () => {
+    const records = setSideEffect(
+      [],
+      "2026-09-17",
+      "Norvasc",
+      "07:40 am",
+      "fatigue",
+      now,
+    );
+    expect(sideEffectOf(records, "2026-09-17", "Norvasc", "07:40 am")).toBe(
+      "fatigue",
+    );
+  });
+
+  it("answers null for a dose nobody has answered for", () => {
+    // Not the same as "none": an unanswered dose must never read as a dose
+    // that went fine.
+    expect(sideEffectOf([], "2026-09-17", "Norvasc", "07:40 am")).toBeNull();
+  });
+
+  it("keeps doses apart by time, medication and day", () => {
+    const records = [record()];
+    expect(
+      sideEffectOf(records, "2026-09-17", "Norvasc", "09:00 pm"),
+    ).toBeNull();
+    expect(sideEffectOf(records, "2026-09-17", "Lasix", "07:40 am")).toBeNull();
+    expect(
+      sideEffectOf(records, "2026-09-18", "Norvasc", "07:40 am"),
+    ).toBeNull();
+  });
+
+  it("replaces rather than stacks when changed", () => {
+    let records = setSideEffect(
+      [],
+      "2026-09-17",
+      "Norvasc",
+      "07:40 am",
+      "fatigue",
+      now,
+    );
+    records = setSideEffect(
+      records,
+      "2026-09-17",
+      "Norvasc",
+      "07:40 am",
+      "nausea",
+      now,
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].effect).toBe("nausea");
+  });
+
+  it("clears back to unrecorded rather than storing a blank", () => {
+    const records = setSideEffect(
+      [record()],
+      "2026-09-17",
+      "Norvasc",
+      "07:40 am",
+      null,
+      now,
+    );
+    expect(records).toHaveLength(0);
+  });
+
+  it("counts reported symptoms for the day, but not 'none'", () => {
+    // The notice this drives says the page will not pass anything to the
+    // care team, so it should only appear when there is something to pass.
+    const records = [
+      record({ effect: "fatigue" }),
+      record({ time: "09:00 pm", effect: "none" }),
+      record({ time: "01:00 pm", effect: "nausea" }),
+      record({ date: "2026-09-18", effect: "rash" }),
+    ];
+    expect(reportedSideEffectCount(records, "2026-09-17")).toBe(2);
+  });
+
+  it("survives the dose status being set back to pending", () => {
+    // The reason these are a separate record: setDoseStatus deletes the
+    // dose row on "pending", and a member changing their mind about
+    // whether they took it must not erase what it did to them.
+    const effects = [record()];
+    const doses = setDoseStatus(
+      [],
+      "2026-09-17",
+      "Norvasc",
+      "07:40 am",
+      "pending",
+    );
+    expect(doses).toHaveLength(0);
+    expect(sideEffectOf(effects, "2026-09-17", "Norvasc", "07:40 am")).toBe(
+      "fatigue",
+    );
   });
 });

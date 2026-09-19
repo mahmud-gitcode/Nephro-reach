@@ -34,8 +34,10 @@ import {
   Textarea,
   buttonStyles,
 } from "@/components/ui";
+import { cn } from "@/lib/utils/cn";
 import * as rules from "./medicationLog.rules";
-import type { DoseStatus } from "./medicationLog.types";
+import { SIDE_EFFECT_OPTIONS } from "./medicationLog.options";
+import type { DoseStatus, SideEffect } from "./medicationLog.types";
 import type { MedicationLog } from "./useMedicationLog";
 import type { MedicationReminder } from "@/features/medications/useReminders";
 import {
@@ -207,11 +209,14 @@ export function MedicationMasterList({
                           event.target.value === "yes",
                         )
                       }
-                      className={
-                        log.needsRefill(medication.name)
-                          ? "text-warning"
-                          : undefined
-                      }
+                      /* A floor under the width. The table scrolls
+                         horizontally anyway, and a select narrower than its
+                         own longest option shows an empty box instead of
+                         the answer the member picked. */
+                      className={cn(
+                        "mx-auto min-w-[5.5rem]",
+                        log.needsRefill(medication.name) && "text-warning",
+                      )}
                     >
                       <option value="no">{isEs ? "No" : "No"}</option>
                       <option value="yes">{isEs ? "Sí" : "Yes"}</option>
@@ -332,6 +337,11 @@ export function DoseSchedule({
               );
 
               const status = log.statusOf(date, dose.medication, dose.time);
+              const recordedEffect = log.sideEffectOf(
+                date,
+                dose.medication,
+                dose.time,
+              );
               const stamp = rules.formatStamp(
                 log.stampOf(date, dose.medication, dose.time),
                 isEs,
@@ -424,8 +434,49 @@ export function DoseSchedule({
                       <span className="text-body-sm text-fg-muted">—</span>
                     )}
                   </TableCell>
+                  {/* Was the seed's own text printed read-only, so the
+                      column showed side effects nobody could have entered
+                      and gave no way to record a real one. */}
                   <TableCell>
-                    {isEs ? dose.sideEffectsEs : dose.sideEffectsEn}
+                    <Select
+                      selectSize="small"
+                      value={
+                        log.sideEffectOf(date, dose.medication, dose.time) ?? ""
+                      }
+                      aria-label={
+                        isEs
+                          ? `Efectos secundarios de ${dose.medication} a las ${dose.time}`
+                          : `Side effects from ${dose.medication} at ${dose.time}`
+                      }
+                      onChange={(event) =>
+                        log.setSideEffect(
+                          date,
+                          dose.medication,
+                          dose.time,
+                          event.target.value === ""
+                            ? null
+                            : (event.target.value as SideEffect),
+                        )
+                      }
+                      className={cn(
+                        "min-w-[9rem]",
+                        recordedEffect && recordedEffect !== "none"
+                          ? "text-warning"
+                          : undefined,
+                      )}
+                    >
+                      {/* An unanswered dose is not the same as one that went
+                          fine, so "not recorded" is its own choice and the
+                          member can go back to it. */}
+                      <option value="">
+                        {isEs ? "— Sin registrar" : "— Not recorded"}
+                      </option>
+                      {SIDE_EFFECT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {isEs ? option.labelEs : option.labelEn}
+                        </option>
+                      ))}
+                    </Select>
                   </TableCell>
                 </TableRow>
               );
@@ -433,6 +484,18 @@ export function DoseSchedule({
           </TableBody>
         </Table>
       </div>
+
+      {/* The same promise the refill table makes, for the same reason: a
+          member who records nausea has told this device and nobody else,
+          and a log that stays quiet about that reads as one that reported
+          it for them. "None" is not a symptom, so it does not raise this. */}
+      {log.reportedSideEffectCount(date) > 0 ? (
+        <Alert tone="warning" className="mt-stack-md">
+          {isEs
+            ? `Registraste efectos secundarios en ${log.reportedSideEffectCount(date)} dosis de este día. Cuéntaselo a tu equipo de diálisis: esta página no se lo envía. Si es grave o empeora, llama al 911.`
+            : `You recorded side effects on ${log.reportedSideEffectCount(date)} dose(s) on this day. Tell your dialysis team — this page does not send it for you. If it is severe or getting worse, call 911.`}
+        </Alert>
+      ) : null}
     </Card>
   );
 }
@@ -742,7 +805,7 @@ export function AlertsAndMood({
             value={String(selectedMood)}
             onChange={(next) => setSelectedMood(Number(next))}
             orientation="horizontal"
-            className="mt-stack-sm grid grid-cols-5 gap-inline-md"
+            className="mt-stack-sm grid grid-cols-5 gap-inline-xs sm:gap-inline-md"
           >
             {moods.map((m, index) => (
               <RadioCard

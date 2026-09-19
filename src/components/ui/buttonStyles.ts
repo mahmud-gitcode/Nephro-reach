@@ -54,20 +54,41 @@ const tone: Record<ButtonVariant, Record<ButtonAppearance, string>> = {
   },
 };
 
-/* `[&_svg]` sizes any icon the caller passes, including the spinner. */
+/* `[&_svg]` sizes any icon the caller passes, including the spinner.
+
+   A `big` button is lighter on a phone and full size from `sm` up — but the
+   HEIGHT never changes. 44px is exactly WCAG 2.5.5 and the spacing tokens
+   call it a functional requirement for this app: members with diabetic
+   neuropathy tapping during or just after a four-hour session. A phone is
+   where that matters most, so shrinking the target there would be exactly
+   backwards.
+
+   What does shrink is the bulk that has nothing to do with the target: the
+   horizontal inset, the label size and the icon. That is what made a
+   button with an icon and a long label read as oversized on a narrow
+   screen, since `whitespace-nowrap` means it cannot wrap its way out. */
 const standardSizes: Record<ButtonSize, string> = {
   big:
-    "h-control-big min-w-control-big px-control-x-big gap-inline-md " +
-    "rounded-control text-button-lg [&_svg]:h-icon-big [&_svg]:w-icon-big",
+    "h-control-big min-w-control-big rounded-control " +
+    "px-control-x-small sm:px-control-x-big " +
+    "gap-inline-sm sm:gap-inline-md " +
+    "text-button-md sm:text-button-lg " +
+    "[&_svg]:h-icon-small [&_svg]:w-icon-small " +
+    "sm:[&_svg]:h-icon-big sm:[&_svg]:w-icon-big",
   small:
     "h-control-small min-w-control-small px-control-x-small gap-inline-sm " +
     "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
 };
 
+/* Icon-only keeps its square 44px box on every screen — there is no label
+   to trim, and the box IS the touch target. Only the glyph inside eases
+   off, which is what looked heavy on a phone. */
 const iconOnlySizes: Record<ButtonSize, string> = {
   big:
     "h-control-big w-control-big min-w-control-big aspect-square p-0 " +
-    "rounded-control text-button-lg [&_svg]:h-icon-big [&_svg]:w-icon-big",
+    "rounded-control text-button-lg " +
+    "[&_svg]:h-icon-small [&_svg]:w-icon-small " +
+    "sm:[&_svg]:h-icon-big sm:[&_svg]:w-icon-big",
   small:
     "h-control-small w-control-small min-w-control-small aspect-square p-0 " +
     "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",

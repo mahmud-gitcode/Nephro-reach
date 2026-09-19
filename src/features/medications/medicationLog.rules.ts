@@ -7,6 +7,8 @@ import type {
   DoseStatus,
   MoodEntry,
   RefillFlags,
+  SideEffect,
+  SideEffectRecord,
 } from "./medicationLog.types";
 
 /* ==========================================================================
@@ -213,4 +215,84 @@ export function upsertMood(
 ): MoodEntry[] {
   const rest = entries.filter((current) => current.date !== entry.date);
   return [entry, ...rest].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/* ==========================================================================
+   Side effects
+   --------------------------------------------------------------------------
+   One record per scheduled dose, identified the same way a DoseRecord is.
+   `null` means the member has not answered, which is not the same as "none"
+   — an unanswered dose must not be counted as a dose that went fine.
+   ========================================================================== */
+
+export function findSideEffect(
+  records: SideEffectRecord[],
+  date: string,
+  medication: string,
+  time: string,
+): SideEffectRecord | undefined {
+  return records.find(
+    (record) =>
+      record.date === date &&
+      record.medication === medication &&
+      record.time === time,
+  );
+}
+
+export function sideEffectOf(
+  records: SideEffectRecord[],
+  date: string,
+  medication: string,
+  time: string,
+): SideEffect | null {
+  return findSideEffect(records, date, medication, time)?.effect ?? null;
+}
+
+/**
+ * Record what the member felt, or clear it with `null`.
+ *
+ * Clearing removes the record rather than storing a blank one, so "not
+ * answered" has exactly one representation and no row can disagree with
+ * itself about whether it was ever filled in.
+ */
+export function setSideEffect(
+  records: SideEffectRecord[],
+  date: string,
+  medication: string,
+  time: string,
+  effect: SideEffect | null,
+  now = new Date(),
+): SideEffectRecord[] {
+  const rest = records.filter(
+    (record) =>
+      !(
+        record.date === date &&
+        record.medication === medication &&
+        record.time === time
+      ),
+  );
+
+  if (effect === null) return rest;
+
+  return [
+    ...rest,
+    { date, medication, time, effect, savedAt: now.toISOString() },
+  ];
+}
+
+/**
+ * How many doses on this day the member reported something for.
+ *
+ * "none" is an answer, not a symptom, so it does not count — this figure
+ * drives the notice telling the member the page will not pass any of it to
+ * their care team, and that notice should only appear when there is
+ * something worth passing on.
+ */
+export function reportedSideEffectCount(
+  records: SideEffectRecord[],
+  date: string,
+): number {
+  return records.filter(
+    (record) => record.date === date && record.effect !== "none",
+  ).length;
 }

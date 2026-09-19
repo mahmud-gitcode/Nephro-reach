@@ -235,41 +235,63 @@ export default function UserDashboard() {
 
       <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
         <Card as="article" padding="small">
-          <div className="flex items-center gap-inline-md py-inset-xs">
-            <p className="flex-1 text-body-md text-fg">
+          {/* Card header. The title is a real heading and the strongest type
+              here: it used to be `body-md` while the module title nested
+              inside it was `heading-5`, so the section read as less
+              important than one item within it. Wraps on a narrow screen
+              rather than squeezing the title against the day counter. */}
+          <div className="flex flex-wrap items-center gap-inline-md py-inset-xs">
+            <h2
+              id="curriculum-progress-title"
+              className="min-w-0 flex-1 text-heading-4 text-fg"
+            >
               {dh?.curriculum?.title || "Curriculum Progress"}
-            </p>
+            </h2>
             <Link
               href="/dashboard/my-classroom"
-              className="flex items-center gap-inline-md rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex shrink-0 items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {dh?.curriculum?.weekBadge || "Day 1 of 21"}
               <Icon src={asset("arrow-right.svg")} />
             </Link>
           </div>
-          <Card tone="sunken" padding="small">
-            <p className="text-body-md text-fg-brand">
+
+          {/* Three groups inside the well, each tight within itself and a
+              full step from the next, so the card reads as "which day →
+              how far → what to do" instead of five evenly spaced lines. */}
+          <Card tone="sunken" padding="small" className="mt-stack-md">
+            {/* 1 · Which day, and what it is called. One thing, so the
+                eyebrow sits against the title it labels — these used to be
+                a whole stack-lg apart, which read as two unrelated lines. */}
+            <p className="text-overline text-fg-brand">
               {dh?.curriculum?.weekLabel || "Day 1"}
             </p>
+            <h3 className="mt-stack-xs text-heading-5 text-fg">
+              {dh?.curriculum?.moduleTitle || "Foundations of Awareness"}
+            </h3>
+
+            {/* 2 · How far in. The figure now sits directly above the bar it
+                describes, instead of across the row from it beside the
+                title, and it is no longer the faintest text in the card —
+                it is the one number a member came here to read. */}
             <div className="mt-stack-lg">
-              <div className="flex items-center justify-between gap-inline-lg">
-                <p className="text-heading-5 text-fg-secondary">
-                  {dh?.curriculum?.moduleTitle || "Foundations of Awareness"}
-                </p>
-                <p className="shrink-0 text-label-md text-fg-muted">
-                  {dh?.curriculum?.completed || "25% complete"}
-                </p>
-              </div>
+              <p className="text-label-lg text-fg">
+                {dh?.curriculum?.completed || "25% complete"}
+              </p>
               <Progress
                 value={25}
-                label={dh?.curriculum?.title || "Curriculum Progress"}
+                /* The heading above already names this bar, so it is
+                   pointed at rather than given a second, invisible name. */
+                labelledBy="curriculum-progress-title"
                 className="mt-stack-sm"
               />
-              <p className="mt-stack-lg measure text-body-sm text-fg-secondary">
-                {dh?.curriculum?.description ||
-                  "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}
-              </p>
             </div>
+
+            {/* 3 · What to do next — the weakest voice in the card. */}
+            <p className="mt-stack-lg measure text-body-sm text-fg-secondary">
+              {dh?.curriculum?.description ||
+                "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}
+            </p>
           </Card>
         </Card>
 
