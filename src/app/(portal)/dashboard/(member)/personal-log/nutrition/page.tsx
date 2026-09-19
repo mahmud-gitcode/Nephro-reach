@@ -64,10 +64,10 @@ export default function NutritionPage() {
   } = useNutritionLog(date);
   const exercise = useExerciseLog(date);
 
-  /* `undefined` is closed, `null` is a new note, an entry is an edit. */
-  const [exerciseOpen, setExerciseOpen] = useState<
-    ExerciseEntry | null | undefined
-  >(undefined);
+  /* The modal only ever edits: new activity is logged in the panel on the
+     card itself, so there is nothing to open it for. */
+  const [exerciseEdit, setExerciseEdit] = useState<ExerciseEntry | null>(null);
+  const [isExerciseFormOpen, setIsExerciseFormOpen] = useState(false);
 
   type LogTab = "food" | "exercise";
   const [tab, setTab] = useState<LogTab>("food");
@@ -159,7 +159,9 @@ export default function NutritionPage() {
         <button
           type="button"
           onClick={() =>
-            tab === "food" ? setAddFoodMeal("breakfast") : setExerciseOpen(null)
+            tab === "food"
+              ? setAddFoodMeal("breakfast")
+              : setIsExerciseFormOpen(true)
           }
           className="flex h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-base font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover"
         >
@@ -272,9 +274,13 @@ export default function NutritionPage() {
         <TabPanel id="exercise" value={tab}>
           <ExerciseCard
             entries={exercise.entries}
+            date={date}
             isToday={isToday}
-            onAdd={() => setExerciseOpen(null)}
-            onEdit={(entry) => setExerciseOpen(entry)}
+            dayLabel={dayLabel}
+            isFormOpen={isExerciseFormOpen}
+            onFormOpenChange={setIsExerciseFormOpen}
+            onLog={(draft) => exercise.saveEntries([draft])}
+            onEdit={(entry) => setExerciseEdit(entry)}
             onDelete={(entry) => exercise.deleteEntry(entry.id)}
           />
         </TabPanel>
@@ -315,18 +321,16 @@ export default function NutritionPage() {
         />
       ) : null}
 
-      {exerciseOpen !== undefined ? (
+      {exerciseEdit ? (
         <ExerciseModal
-          key={exerciseOpen?.id ?? "new"}
-          entry={exerciseOpen ?? undefined}
+          key={exerciseEdit.id}
+          entry={exerciseEdit}
           date={date}
-          dayLabel={
-            exerciseOpen ? relativeDayLabel(exerciseOpen.date, isEs) : dayLabel
-          }
-          onClose={() => setExerciseOpen(undefined)}
+          dayLabel={relativeDayLabel(exerciseEdit.date, isEs)}
+          onClose={() => setExerciseEdit(null)}
           onSave={(drafts) => {
-            exercise.saveEntries(drafts, exerciseOpen?.id);
-            setExerciseOpen(undefined);
+            exercise.saveEntries(drafts, exerciseEdit.id);
+            setExerciseEdit(null);
           }}
         />
       ) : null}

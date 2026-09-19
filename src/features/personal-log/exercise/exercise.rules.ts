@@ -1,9 +1,16 @@
 import { isValidIso, todayIso } from "../check-in/checkIn.rules";
-import { ACTIVITY_OPTIONS, UNIT_OPTIONS } from "./exercise.options";
+import {
+  ACTIVITY_OPTIONS,
+  FEELING_OPTIONS,
+  INTENSITY_OPTIONS,
+  UNIT_OPTIONS,
+} from "./exercise.options";
 import type {
   ExerciseActivity,
   ExerciseDraft,
   ExerciseEntry,
+  ExerciseFeeling,
+  ExerciseIntensity,
   ExerciseUnit,
 } from "./exercise.types";
 
@@ -47,6 +54,8 @@ export function emptyDraft(
     customName: "",
     amount: 0,
     unit: defaultUnit(activity),
+    intensity: "light",
+    feeling: null,
     note: "",
   };
 }
@@ -128,4 +137,75 @@ export function dayTotals(entries: ExerciseEntry[], isEs: boolean): DayTotal[] {
       totals.set(key, { key, label, amount: entry.amount, unit: entry.unit });
   }
   return [...totals.values()];
+}
+
+/* ==========================================================================
+   Intensity, feeling and the day's summary
+   ========================================================================== */
+
+export function intensityLabel(
+  intensity: ExerciseIntensity,
+  isEs: boolean,
+): string {
+  const option = INTENSITY_OPTIONS.find((item) => item.value === intensity);
+  if (!option) return intensity;
+  return isEs ? option.labelEs : option.labelEn;
+}
+
+export function feelingLabel(feeling: ExerciseFeeling, isEs: boolean): string {
+  const option = FEELING_OPTIONS.find((item) => item.value === feeling);
+  if (!option) return feeling;
+  return isEs ? option.labelEs : option.labelEn;
+}
+
+/** The phrase the activity list reads back: "Felt good", "Slight fatigue". */
+export function feelingSaidBack(
+  feeling: ExerciseFeeling,
+  isEs: boolean,
+): string {
+  const option = FEELING_OPTIONS.find((item) => item.value === feeling);
+  if (!option) return feeling;
+  return isEs ? option.pastEs : option.pastEn;
+}
+
+/**
+ * Minutes of activity on the day. Only entries actually counted in minutes
+ * are summed — 2,000 steps is a real log but not a duration, and guessing
+ * one from the other would put a number on the screen nobody entered.
+ */
+export function minutesOn(entries: ExerciseEntry[]): number {
+  return entries
+    .filter((entry) => entry.unit === "minutes")
+    .reduce((total, entry) => total + entry.amount, 0);
+}
+
+/**
+ * A rough kcal estimate: minutes × the intensity's per-minute average,
+ * again only for entries logged in minutes. Never stored, never shown
+ * without the word "estimated".
+ */
+export function estimateCalories(entries: ExerciseEntry[]): number {
+  const total = entries
+    .filter((entry) => entry.unit === "minutes")
+    .reduce((sum, entry) => {
+      const option = INTENSITY_OPTIONS.find(
+        (item) => item.value === entry.intensity,
+      );
+      return sum + entry.amount * (option?.kcalPerMinute ?? 0);
+    }, 0);
+  return Math.round(total);
+}
+
+/* Worst first is deliberate: the day's summary reports the lowest feeling
+   logged, so one session that left the member unwell is never averaged
+   away behind three that went fine. */
+const FEELING_RANK: ExerciseFeeling[] = ["unwell", "tired", "okay", "good"];
+
+export function lowestFeeling(
+  entries: ExerciseEntry[],
+): ExerciseFeeling | null {
+  for (const feeling of FEELING_RANK) {
+    if (entries.some((entry) => entry.feeling === feeling)) return feeling;
+  }
+  return null;
 }

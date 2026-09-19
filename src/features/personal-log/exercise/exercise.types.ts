@@ -1,8 +1,10 @@
 /* ==========================================================================
    Exercise log — the shapes
    --------------------------------------------------------------------------
-   A note of what the member did and how much, nothing more: no calorie
-   maths, no targets. "2,000 steps", "10 push-ups".
+   A note of what the member did, how much, how hard it felt and how they
+   felt afterwards. Calories are never stored: they are a rough estimate
+   derived from duration and intensity, recomputed on read, so a change to
+   the estimate never rewrites what the member actually logged.
    ========================================================================== */
 
 export type ExerciseUnit = "steps" | "reps" | "minutes" | "km" | "miles";
@@ -20,6 +22,12 @@ export type ExerciseActivity =
   | "swimming"
   | "other";
 
+/** How hard it felt. Drives the calorie estimate. */
+export type ExerciseIntensity = "light" | "moderate" | "vigorous";
+
+/** How the member felt during or after it. Never required. */
+export type ExerciseFeeling = "good" | "okay" | "tired" | "unwell";
+
 export interface ExerciseEntry {
   id: string;
   /** `yyyy-mm-dd` in the member's timezone. */
@@ -29,6 +37,9 @@ export interface ExerciseEntry {
   customName: string;
   amount: number;
   unit: ExerciseUnit;
+  intensity: ExerciseIntensity;
+  /** `null` when the member skipped the question. */
+  feeling: ExerciseFeeling | null;
   note: string;
   savedAt: string;
 }

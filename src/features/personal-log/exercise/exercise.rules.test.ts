@@ -5,7 +5,10 @@ import {
   defaultUnit,
   emptyDraft,
   entriesOn,
+  estimateCalories,
   exerciseError,
+  lowestFeeling,
+  minutesOn,
   formatAmount,
   removeEntry,
   upsertEntry,
@@ -19,6 +22,8 @@ const entry = (patch: Partial<ExerciseEntry>): ExerciseEntry => ({
   customName: "",
   amount: 2000,
   unit: "steps",
+  intensity: "light",
+  feeling: null,
   note: "",
   savedAt: "2026-09-17T08:00:00.000Z",
   ...patch,
@@ -121,5 +126,37 @@ describe("dayTotals", () => {
       "Walking:20:minutes",
       "Push-ups:10:reps",
     ]);
+  });
+});
+
+describe("the day read back", () => {
+  const day = [
+    entry({ id: "a", amount: 15, unit: "minutes", intensity: "light" }),
+    entry({
+      id: "b",
+      amount: 20,
+      unit: "minutes",
+      intensity: "moderate",
+      feeling: "tired",
+    }),
+    /* Steps are a real log but not a duration. */
+    entry({ id: "c", amount: 2000, unit: "steps", feeling: "good" }),
+  ];
+
+  it("sums only what was counted in minutes", () => {
+    expect(minutesOn(day)).toBe(35);
+  });
+
+  it("estimates calories from duration and intensity", () => {
+    // 15 light (4/min) + 20 moderate (6/min); the steps entry adds nothing.
+    expect(estimateCalories(day)).toBe(180);
+  });
+
+  it("reports the lowest feeling, not the most common", () => {
+    expect(lowestFeeling(day)).toBe("tired");
+  });
+
+  it("has no feeling to report when none was answered", () => {
+    expect(lowestFeeling([entry({ feeling: null })])).toBeNull();
   });
 });
