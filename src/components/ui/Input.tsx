@@ -77,11 +77,18 @@ export function Input({
   );
 }
 
-export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+export type TextareaProps =
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+    /* React 19 passes `ref` as an ordinary prop, but the DOM attribute
+       types do not include it. Declared so a caller can measure the field
+       — an auto-growing composer has to read its own scrollHeight. */
+    ref?: React.Ref<HTMLTextAreaElement>;
+  };
 
-export function Textarea({ className, rows = 3, ...rest }: TextareaProps) {
+export function Textarea({ className, rows = 3, ref, ...rest }: TextareaProps) {
   return (
     <textarea
+      ref={ref}
       rows={rows}
       className={cn(
         shared,

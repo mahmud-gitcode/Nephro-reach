@@ -88,6 +88,9 @@ export type { DonutChartProps, DonutSegment } from "./DonutChart";
 export { Progress } from "./Progress";
 export type { ProgressProps, ProgressTone, ProgressSize } from "./Progress";
 
+export { ProgressRing } from "./ProgressRing";
+export type { ProgressRingProps, ProgressRingTone } from "./ProgressRing";
+
 export { Skeleton, SkeletonText } from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";
 

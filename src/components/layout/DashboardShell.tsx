@@ -483,9 +483,13 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
       ? isEs
         ? "Administrador"
         : "Admin"
-      : isEs
-        ? "Usuario"
-        : "User";
+      : user?.role === "clinic"
+        ? isEs
+          ? "Clínica"
+          : "Clinic"
+        : isEs
+          ? "Usuario"
+          : "User";
 
   /* Settings is a member route, so an admin is not offered a link that
      would bounce them straight back out of it. */

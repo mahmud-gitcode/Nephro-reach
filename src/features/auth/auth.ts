@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "clinic";
 
 export type AuthUser = {
   email: string;
@@ -11,6 +11,9 @@ export const AUTH_USERS_KEY = "nr-registered-users";
 
 export const ADMIN_HOME = "/dashboard";
 export const USER_HOME = "/dashboard";
+/* A clinic never sees the shared /dashboard page — every one of its routes,
+   its own dashboard included, lives under this prefix. */
+export const CLINIC_HOME = "/dashboard/clinic";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -27,6 +30,8 @@ const ADMIN_PREFIXES = [
   "/dashboard/design-system",
 ];
 
+export const CLINIC_PREFIX = "/dashboard/clinic";
+
 export const DEMO_ACCOUNTS = [
   {
     email: "admin@nephroreach.com",
@@ -40,9 +45,16 @@ export const DEMO_ACCOUNTS = [
     name: "Charles Xavier",
     role: "user" as const,
   },
+  {
+    email: "clinic@nephroreach.com",
+    password: "clinic123",
+    name: "Riverside Dialysis Center",
+    role: "clinic" as const,
+  },
 ];
 
 export function homeForRole(role: UserRole) {
+  if (role === "clinic") return CLINIC_HOME;
   return role === "admin" ? ADMIN_HOME : USER_HOME;
 }
 
@@ -52,9 +64,19 @@ export function isAdminRoute(pathname: string) {
   );
 }
 
+export function isClinicRoute(pathname: string) {
+  return pathname === CLINIC_PREFIX || pathname.startsWith(`${CLINIC_PREFIX}/`);
+}
+
 export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
-  if (pathname === "/dashboard" || pathname === "/dashboard/") return true;
+  /* Checked first: the clinic prefix sits under /dashboard, so the shared
+     and admin rules below would otherwise claim it. */
+  if (isClinicRoute(pathname)) return role === "clinic";
+  /* /dashboard itself is shared by admin and member. A clinic is sent to
+     its own home instead — it has no page there. */
+  if (pathname === "/dashboard" || pathname === "/dashboard/")
+    return role !== "clinic";
   if (isAdminRoute(pathname)) return role === "admin";
   return role === "user";
 }
@@ -72,7 +94,9 @@ export function parseSession(
     if (
       typeof parsed.email === "string" &&
       typeof parsed.name === "string" &&
-      (parsed.role === "admin" || parsed.role === "user")
+      (parsed.role === "admin" ||
+        parsed.role === "user" ||
+        parsed.role === "clinic")
     ) {
       return parsed;
     }

@@ -10,6 +10,7 @@ import {
   canAccessPath,
   DEMO_ACCOUNTS,
   homeForRole,
+  type UserRole,
 } from "@/features/auth/auth";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 
@@ -35,7 +36,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const goAfterLogin = (role: "admin" | "user") => {
+  const goAfterLogin = (role: UserRole) => {
     const next = searchParams.get("next");
     if (next && next.startsWith("/dashboard") && canAccessPath(role, next)) {
       router.push(next);

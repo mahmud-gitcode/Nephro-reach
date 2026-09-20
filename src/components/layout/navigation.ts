@@ -1,10 +1,14 @@
 import type React from "react";
 import {
   Armchair,
+  BarChart3,
   BookOpen,
+  ClipboardCheck,
   Car,
   CreditCard,
+  FileText,
   FlaskConical,
+  GraduationCap,
   HelpCircle,
   HeartPulse,
   Hospital,
@@ -15,11 +19,13 @@ import {
   Notebook,
   MessageCircle,
   MessagesSquare,
+  MessageSquareText,
   Palette,
   Plane,
   Settings,
   ShieldAlert,
   Star,
+  UserPlus,
   Users,
   Video,
 } from "lucide-react";
@@ -199,6 +205,64 @@ export const sidebarItems: NavItem[] = [
     icon: Palette,
     roles: ["admin"],
   },
+
+  /* Clinic portal. Every clinic route is namespaced under /dashboard/clinic
+     so the role's pages can never collide with a member or admin route of
+     the same name — "live-class" and "settings" already exist for both. */
+  {
+    label: "Dashboard",
+    href: "/dashboard/clinic",
+    icon: LayoutDashboard,
+    roles: ["clinic"],
+  },
+  {
+    label: "Member",
+    href: "/dashboard/clinic/members",
+    icon: Users,
+    roles: ["clinic"],
+  },
+  {
+    label: "Enroll Patients",
+    href: "/dashboard/clinic/enroll-patients",
+    icon: UserPlus,
+    roles: ["clinic"],
+  },
+  {
+    label: "Curriculum Progress",
+    href: "/dashboard/clinic/curriculum-progress",
+    icon: GraduationCap,
+    roles: ["clinic"],
+  },
+  {
+    label: "Live Class",
+    href: "/dashboard/clinic/live-class",
+    icon: Video,
+    roles: ["clinic"],
+  },
+  {
+    label: "Check-ins",
+    href: "/dashboard/clinic/checkins",
+    icon: ClipboardCheck,
+    roles: ["clinic"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/clinic/messages",
+    icon: MessageSquareText,
+    roles: ["clinic"],
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/clinic/reports",
+    icon: BarChart3,
+    roles: ["clinic"],
+  },
+  {
+    label: "Contract & Billing",
+    href: "/dashboard/clinic/billing",
+    icon: FileText,
+    roles: ["clinic"],
+  },
 ];
 
 export const supportItems: NavItem[] = [
@@ -214,6 +278,18 @@ export const supportItems: NavItem[] = [
     icon: Settings,
     roles: ["user"],
   },
+  {
+    label: "Settings",
+    href: "/dashboard/clinic/settings",
+    icon: Settings,
+    roles: ["clinic"],
+  },
+  {
+    label: "Help & Support",
+    href: "/dashboard/clinic/support",
+    icon: HelpCircle,
+    roles: ["clinic"],
+  },
 ];
 
 export function getBreadcrumb(pathname: string, language?: string) {
@@ -221,6 +297,32 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/design-system"))
     return language === "ES" ? "Sistema de Diseño" : "Design System";
+  /* Clinic routes are matched before the member and admin rules below,
+     which would otherwise swallow names the two roles share. */
+  if (pathname.startsWith("/dashboard/clinic/members"))
+    return language === "ES" ? "Miembros" : "Member";
+  if (pathname.startsWith("/dashboard/clinic/enroll-patients"))
+    return language === "ES" ? "Inscribir Pacientes" : "Enroll Patients";
+  if (pathname.startsWith("/dashboard/clinic/curriculum-progress"))
+    return language === "ES"
+      ? "Progreso del Plan de Estudios"
+      : "Curriculum Progress";
+  if (pathname.startsWith("/dashboard/clinic/live-class"))
+    return language === "ES" ? "Clases en Vivo" : "Live Class";
+  if (pathname.startsWith("/dashboard/clinic/checkins"))
+    return language === "ES" ? "Registros" : "Check-ins";
+  if (pathname.startsWith("/dashboard/clinic/messages"))
+    return language === "ES" ? "Mensajes" : "Messages";
+  if (pathname.startsWith("/dashboard/clinic/reports"))
+    return language === "ES" ? "Informes" : "Reports";
+  if (pathname.startsWith("/dashboard/clinic/billing"))
+    return language === "ES" ? "Contrato y Facturación" : "Contract & Billing";
+  if (pathname.startsWith("/dashboard/clinic/settings"))
+    return language === "ES" ? "Configuración" : "Settings";
+  if (pathname.startsWith("/dashboard/clinic/support"))
+    return language === "ES" ? "Ayuda y Soporte" : "Help & Support";
+  if (pathname === "/dashboard/clinic" || pathname === "/dashboard/clinic/")
+    return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/before-the-er/")) {
     const slug = pathname.split("/").pop() || "";
     if (language === "ES") {
@@ -407,6 +509,17 @@ export function getNavLabel(
     "/dashboard/design-system": "Sistema de Diseño",
     "/dashboard/support": "Soporte",
     "/dashboard/settings": "Configuración",
+    "/dashboard/clinic": "Panel",
+    "/dashboard/clinic/members": "Miembros",
+    "/dashboard/clinic/enroll-patients": "Inscribir Pacientes",
+    "/dashboard/clinic/curriculum-progress": "Progreso del Plan de Estudios",
+    "/dashboard/clinic/live-class": "Clases en Vivo",
+    "/dashboard/clinic/checkins": "Registros",
+    "/dashboard/clinic/messages": "Mensajes",
+    "/dashboard/clinic/reports": "Informes",
+    "/dashboard/clinic/billing": "Contrato y Facturación",
+    "/dashboard/clinic/settings": "Configuración",
+    "/dashboard/clinic/support": "Ayuda y Soporte",
   };
   return spanishLabels[href] || defaultLabel;
 }
@@ -423,6 +536,9 @@ export function getBreadcrumbTrail(pathname: string, language?: string) {
   const libraryLabel = language === "ES" ? "Mi Biblioteca" : "My Library";
 
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    return [dashboardLabel];
+  }
+  if (pathname === "/dashboard/clinic" || pathname === "/dashboard/clinic/") {
     return [dashboardLabel];
   }
   if (pathname.startsWith("/dashboard/before-the-er/")) {
@@ -458,6 +574,7 @@ const OWN_TAB_UNDER_PERSONAL_LOG = [
 
 export function isActiveRoute(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/dashboard/clinic") return pathname === "/dashboard/clinic";
   if (href === "/dashboard/personal-log") {
     return (
       pathname === "/dashboard/personal-log" ||
