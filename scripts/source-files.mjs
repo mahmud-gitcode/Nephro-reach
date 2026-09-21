@@ -35,6 +35,7 @@ export const SKIP_DIRS = new Set([
   "public",
   "trash",
   "Clicnic and Ceargiver concept",
+  "Exercise Tracker Section_files",
 ]);
 
 export const CODE_EXTENSIONS = new Set([
