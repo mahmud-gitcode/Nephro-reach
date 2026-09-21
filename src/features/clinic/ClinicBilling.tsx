@@ -50,6 +50,7 @@ import {
   totalPaid,
   type Invoice,
 } from "./billing.data";
+import { useClinicData } from "./useClinicData";
 import { useClinicSettings } from "./useClinicSettings";
 
 function PanelHeading({
@@ -102,9 +103,11 @@ function KeyCard({
 function SummaryCards({
   invoices,
   today,
+  patientsCovered,
 }: {
   invoices: Invoice[];
   today: Date;
+  patientsCovered: number;
 }) {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -303,7 +306,7 @@ function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
   );
 }
 
-function SeatUsage() {
+function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
   const remaining = contract.patientsAllowed - patientsCovered;
   return (
     <Card as="section" padding="small" className="flex flex-col">
@@ -456,6 +459,10 @@ export default function ClinicBilling() {
      during that render would bake in the build date and then disagree with
      the browser on hydration. Read it once the page is in the browser. */
   const mounted = useIsMounted();
+  /* Seats in use come from the live roster, so a patient enrolled on Enroll
+     Patients counts here at once; the demo count stands in until it loads. */
+  const clinic = useClinicData();
+  const covered = clinic.data?.patients.length ?? patientsCovered;
   const today = mounted ? new Date() : null;
   const invoices = today ? invoicesUpTo(today) : [];
 
@@ -474,7 +481,11 @@ export default function ClinicBilling() {
         </div>
       ) : (
         <>
-          <SummaryCards invoices={invoices} today={today} />
+          <SummaryCards
+            invoices={invoices}
+            today={today}
+            patientsCovered={covered}
+          />
 
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <ContractDetails />
@@ -484,7 +495,7 @@ export default function ClinicBilling() {
           </section>
 
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            <SeatUsage />
+            <SeatUsage patientsCovered={covered} />
             <Renewal today={today} />
             <BillingSummary invoices={invoices} today={today} />
           </section>

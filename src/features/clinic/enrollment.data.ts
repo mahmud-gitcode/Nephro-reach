@@ -48,6 +48,7 @@ export type Patient = {
 
 export const ALL_PROGRAMS = "All Programs";
 export const ALL_STATUSES = "All Statuses";
+export const ALL_SOURCES = "All Sources";
 
 export const programOptions = [ALL_PROGRAMS, JOURNEY, CRASH];
 
@@ -309,7 +310,7 @@ export const enrollmentGoalPct = Math.round(
 );
 
 /**
- * Search, program and status in one pass.
+ * Search, program, status and referral source in one pass.
  *
  * The client asked search to cover "name, MRN, or status", so it does —
  * a clinic hunting an MRN off a fax should not have to know which box it
@@ -317,15 +318,22 @@ export const enrollmentGoalPct = Math.round(
  */
 export function filterPatients(
   rows: Patient[],
-  filters: { query?: string; program?: string; status?: string },
+  filters: {
+    query?: string;
+    program?: string;
+    status?: string;
+    source?: string;
+  },
 ) {
   const q = (filters.query ?? "").trim().toLowerCase();
   const program = filters.program ?? ALL_PROGRAMS;
   const status = filters.status ?? ALL_STATUSES;
+  const source = filters.source ?? ALL_SOURCES;
 
   return rows.filter((patient) => {
     if (program !== ALL_PROGRAMS && patient.program !== program) return false;
     if (status !== ALL_STATUSES && patient.status !== status) return false;
+    if (source !== ALL_SOURCES && patient.source !== source) return false;
     if (!q) return true;
     return [patient.name, patient.mrn, patient.status].some((field) =>
       field.toLowerCase().includes(q),

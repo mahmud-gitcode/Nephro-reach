@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Award,
   BellRing,
@@ -29,6 +30,7 @@ import {
   DonutChart,
   MonthCalendar,
   Progress,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -305,9 +307,16 @@ function UpcomingClassesTable() {
 }
 
 function LiveClassCalendar() {
-  /* Opens on the month of the first scheduled class, with it selected, so
-     the panel under the grid shows something the moment the page loads. */
-  const first = classDate(upcomingClasses[0].date);
+  /* ?date=2026-09-19 (the dashboard links here with one) opens on that day,
+     selected. Without it, or with anything that is not a date, it opens on
+     the first scheduled class, so the panel under the grid shows something
+     the moment the page loads. */
+  const params = useSearchParams();
+  const requested = params.get("date");
+  const first =
+    requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
+      ? classDate(requested)
+      : classDate(upcomingClasses[0].date);
   const [year, setYear] = useState(first.getFullYear());
   const [month, setMonth] = useState(first.getMonth());
   const [day, setDay] = useState<number | null>(first.getDate());
@@ -553,7 +562,9 @@ export default function ClinicLiveClass() {
       <UpcomingClassesTable />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <LiveClassCalendar />
+        <Suspense fallback={<Skeleton height={560} className="rounded-card" />}>
+          <LiveClassCalendar />
+        </Suspense>
         <RecentLiveClasses />
         <RegistrationSources />
       </section>

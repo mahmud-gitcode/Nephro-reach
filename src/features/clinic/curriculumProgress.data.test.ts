@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { paginate, patients } from "./enrollment.data";
 import {
   CRASH,
+  curriculumRowFor,
   filterMembers,
   JOURNEY,
   LIBRARY,
@@ -125,5 +126,30 @@ describe("the client's figures, as given", () => {
   it("members by status adds to 33 under a heading of 23", () => {
     expect(membersByStatusHeading).toBe(23);
     expect(membersByStatus.reduce((sum, row) => sum + row.value, 0)).toBe(33);
+  });
+});
+
+describe("rows for patients enrolled since", () => {
+  it("keeps a demo member's specified row", () => {
+    const john = patients.find((p) => p.name === "John D. Smith")!;
+    expect(curriculumRowFor(john)).toBe(
+      members.find((m) => m.name === "John D. Smith"),
+    );
+  });
+
+  it("gives a new patient a Not started row, not an invented day", () => {
+    const row = curriculumRowFor({
+      ...patients[0],
+      name: "Maria L. Gomez",
+      mrn: "700001",
+      program: "Crash Dialysis (5-Day)",
+    });
+    expect(row).toMatchObject({
+      program: CRASH,
+      step: 0,
+      progress: 0,
+      status: "Not Started",
+    });
+    expect(stepLabel(row)).toBe("Not started");
   });
 });

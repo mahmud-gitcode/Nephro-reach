@@ -1,13 +1,18 @@
 import type { BadgeTone } from "@/components/ui";
+import { CONTRACT_SLOTS, patients } from "./enrollment.data";
+import { classDate, type UpcomingClass } from "./liveClass.data";
 
 /* ==========================================================================
    Clinic dashboard — demo data
    --------------------------------------------------------------------------
-   Every figure the clinic dashboard shows, in one file, so the screen stays
-   a layout and nothing has to be hunted for when the numbers become real.
+   The dashboard summarises pages that own their data, so most of what it
+   shows is read from them rather than kept here: members and their recent
+   activity from the Member page (members.data.ts), classes from Live Class,
+   the seat count from Enroll Patients. `useClinicData` gathers them.
 
-   These are the client's demo figures, copied as given. Two sets of them do
-   not reconcile, and that is deliberate — see the note above `statusCards`.
+   What stays here is what only the dashboard shows — the status cards and
+   the three charts — as the client's demo figures, copied as given. Those
+   do not reconcile with the roster; see the note above `statusCards`.
    ========================================================================== */
 
 export type MemberStatus =
@@ -31,9 +36,11 @@ export const statusTone: Record<MemberStatus, BadgeTone> = {
   Completed: "info",
 };
 
+/* Counted from the Enroll Patients roster, so the card and that page
+   cannot disagree. */
 export const enrollment = {
-  enrolled: 23,
-  contracted: 30,
+  enrolled: patients.length,
+  contracted: CONTRACT_SLOTS,
   get remaining() {
     return this.contracted - this.enrolled;
   },
@@ -67,101 +74,67 @@ export const performance = [
   { label: "Live Class Attendance", value: 76 },
 ];
 
-export const upcomingClasses = [
-  { date: "Sep 12", title: "Renal Diet Basics", time: "6:00 PM EST" },
-  { date: "Sep 19", title: "Medications in Dialysis", time: "6:00 PM EST" },
-  { date: "Sep 26", title: "Q&A with The Dialysis NP", time: "6:00 PM EST" },
-];
+/* ------------------------------------------------------------------ links
 
-export type ClinicMember = {
-  name: string;
-  program: string;
-  enrolledOn: string;
-  progress: number;
-  status: MemberStatus;
-  lastActivity: string;
-};
+   The dashboard summarises; the other clinic pages hold the detail. Every
+   link out is built here, once, so a changed route is one edit. */
 
-/** Eight of the 23 enrolled members — what the clinic sees before paging. */
-export const members: ClinicMember[] = [
-  {
-    name: "John D.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/15/2026",
-    progress: 71,
-    status: "On Track",
-    lastActivity: "Today",
-  },
-  {
-    name: "Mary S.",
-    program: "Crash Dialysis (5-Day)",
-    enrolledOn: "08/20/2026",
-    progress: 40,
-    status: "Need Follow-Up",
-    lastActivity: "2 days ago",
-  },
-  {
-    name: "Robert L.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/10/2026",
-    progress: 100,
-    status: "Completed",
-    lastActivity: "Today",
-  },
-  {
-    name: "Angela T.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/25/2026",
-    progress: 18,
-    status: "Not Started",
-    lastActivity: "7 days ago",
-  },
-  {
-    name: "James K.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/12/2026",
-    progress: 55,
-    status: "Need Follow-Up",
-    lastActivity: "3 days ago",
-  },
-  {
-    name: "Patricia M.",
-    program: "Crash Dialysis (5-Day)",
-    enrolledOn: "08/18/2026",
-    progress: 80,
-    status: "On Track",
-    lastActivity: "Today",
-  },
-  {
-    name: "David R.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/14/2026",
-    progress: 35,
-    status: "Attention Needed",
-    lastActivity: "5 days ago",
-  },
-  {
-    name: "Lisa W.",
-    program: "Journey to Dialysis",
-    enrolledOn: "08/22/2026",
-    progress: 62,
-    status: "On Track",
-    lastActivity: "Today",
-  },
-];
+const MEMBERS = "/dashboard/clinic/members";
+const CURRICULUM = "/dashboard/clinic/curriculum-progress";
+
+/** The Member page, filtered to a status or opened on one member. */
+export function memberLink(filters: { status?: string; mrn?: string }) {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.mrn) params.set("mrn", filters.mrn);
+  const query = params.toString();
+  return `${MEMBERS}${query ? `?${query}` : ""}`;
+}
+
+/** Curriculum Progress, filtered, scrolled to its member table. */
+export function curriculumLink(filters: { status?: string; q?: string }) {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.q) params.set("q", filters.q);
+  const query = params.toString();
+  return `${CURRICULUM}${query ? `?${query}` : ""}#member-progress`;
+}
 
 /**
- * Search covers name, program and status, because all three are on screen
- * and a clinic that types "follow" means the status, not a name.
+ * Where a status card goes. The Member page speaks the dashboard's status
+ * names, so four of the five filter there directly. It has no "Completed"
+ * — finishing is a curriculum fact — so that one opens Curriculum
+ * Progress, which does.
  */
-export function filterMembers(list: ClinicMember[], query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return list;
-  return list.filter((member) =>
-    [member.name, member.program, member.status].some((field) =>
-      field.toLowerCase().includes(q),
-    ),
+export function statusCardLink(status: MemberStatus) {
+  return status === "Completed"
+    ? curriculumLink({ status: "Completed" })
+    : memberLink({ status });
+}
+
+export function liveClassLink(iso: string) {
+  return `/dashboard/clinic/live-class?date=${iso}`;
+}
+
+/**
+ * The next classes on the Live Class schedule, from the start of `today`,
+ * soonest first. A class earlier today still shows — it may not have
+ * started — and one from yesterday does not.
+ */
+export function upcomingFrom(
+  classes: UpcomingClass[],
+  today: Date,
+  limit = 3,
+): UpcomingClass[] {
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
   );
+  return classes
+    .filter((item) => classDate(item.date) >= start)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, limit);
 }
 
 /** Ordered bands, so this is a distribution: one hue, not one per bar. */

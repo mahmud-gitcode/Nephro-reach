@@ -1,5 +1,5 @@
 import type { BadgeTone, SeriesTone } from "@/components/ui";
-import { patients } from "./enrollment.data";
+import { patients, type Patient } from "./enrollment.data";
 
 /* ==========================================================================
    Member curriculum progress — demo data
@@ -143,10 +143,44 @@ export const members: MemberProgress[] = rows.map(
   }),
 );
 
-/** "Day 14 of 21", or "Module 4 of 8" for the library. */
+/** "Day 14 of 21", or "Module 4 of 8" for the library; "Not started"
+    for a member who has not opened the first one. */
 export function stepLabel(member: MemberProgress): string {
+  if (member.step === 0) return "Not started";
   const unit = member.program === LIBRARY ? "Module" : "Day";
   return `${unit} ${member.step} of ${member.length}`;
+}
+
+const byMrn = new Map(members.map((member) => [member.mrn, member]));
+
+/** The enrollment program "Journey to Dialysis (21-Day)" is the
+    curriculum's "Journey to Dialysis". */
+function curriculumProgram(enrolled: string): Program {
+  if (enrolled.startsWith(CRASH)) return CRASH;
+  if (enrolled.startsWith(LIBRARY)) return LIBRARY;
+  return JOURNEY;
+}
+
+/**
+ * The curriculum row for any enrolled patient. The demo members keep their
+ * specified rows; anyone enrolled since has not started — step 0, no
+ * module, 0% — rather than an invented day.
+ */
+export function curriculumRowFor(patient: Patient): MemberProgress {
+  const existing = byMrn.get(patient.mrn);
+  if (existing) return existing;
+  const program = curriculumProgram(patient.program);
+  return {
+    name: patient.name,
+    mrn: patient.mrn,
+    program,
+    module: "Not started",
+    step: 0,
+    length: LENGTH[program],
+    progress: 0,
+    status: "Not Started",
+    lastActivity: "No activity yet",
+  };
 }
 
 export const ALL_PROGRAMS = "All Programs";
