@@ -39716,7 +39716,7 @@
       var(--tw-backdrop-sepia,);
   }
   .backdrop-blur-none\! {
-    --tw-backdrop-blur:   !important;
+    --tw-backdrop-blur:     !important;
     -webkit-backdrop-filter: var(--tw-backdrop-blur,)
       var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,)
       var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,)
