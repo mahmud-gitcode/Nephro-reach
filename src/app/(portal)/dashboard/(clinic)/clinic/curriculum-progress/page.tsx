@@ -1,6 +1,6 @@
 import React from "react";
-import UnderConstruction from "@/features/clinic/UnderConstruction";
+import ClinicCurriculumProgress from "@/features/clinic/ClinicCurriculumProgress";
 
 export default function Page() {
-  return <UnderConstruction href="/dashboard/clinic/curriculum-progress" />;
+  return <ClinicCurriculumProgress />;
 }

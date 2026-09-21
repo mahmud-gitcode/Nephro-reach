@@ -147,6 +147,10 @@
   --color-warning-800: #6e4400;
   --color-warning-900: #5d3900;
   --color-warning-950: #3c2300;
+  /* The ramp goes from 400 (2.68:1, too light for a chart on white) to
+     500 (ochre). This sits between them: the brightest amber that clears
+     3:1, for chart fills only — see --chart-warning. */
+  --color-warning-chart: #d97706;
 
   /* Danger · hue 27° */
   --color-danger-50: #fff2f0;
@@ -358,6 +362,24 @@
   --tone-accent-edge: var(--color-accent-600);
   --tone-accent-edge-hover: var(--color-accent-50);
   --tone-accent-fg: var(--color-accent-700);
+
+  /* ---- chart fills ----
+     A status colour in a chart is a shape, not a word, so it answers to
+     WCAG 1.4.11 (3:1 against the card), not 4.5:1. The -600 text steps
+     were being borrowed for fills and read as olive and forest green next
+     to the brand blue. These are the brightest step of each ramp that
+     still clears 3:1, so every status slice sits at the same brightness
+     as brand-600 beside it. Never use them for text. */
+  --chart-brand: var(--color-brand-600);
+  /* 5.27:1 */
+  --chart-success: var(--color-success-500);
+  /* 3.35:1 */
+  --chart-warning: var(--color-warning-chart);
+  /* 3.19:1 */
+  --chart-danger: var(--color-danger-500);
+  /* 4.06:1 */
+  --chart-neutral: var(--color-gray-500);
+  /* "not started", "none" — a state with nothing to flag */
 }
 
 /* ==========================================================================
@@ -466,6 +488,13 @@
   --tone-accent-edge: var(--color-accent-400);
   --tone-accent-edge-hover: var(--color-accent-950);
   --tone-accent-fg: var(--color-accent-300);
+
+  /* ---- chart fills: one step lighter than light mode, as text is ---- */
+  --chart-brand: var(--color-brand-400);
+  --chart-success: var(--color-success-400);
+  --chart-warning: var(--color-warning-400);
+  --chart-danger: var(--color-danger-400);
+  --chart-neutral: var(--color-gray-400);
 }
 
 /* ==========================================================================
@@ -520,6 +549,12 @@
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
   --color-danger-line: var(--danger-line);
+
+  --color-chart-brand: var(--chart-brand);
+  --color-chart-success: var(--chart-success);
+  --color-chart-warning: var(--chart-warning);
+  --color-chart-danger: var(--chart-danger);
+  --color-chart-neutral: var(--chart-neutral);
 
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);

@@ -1,6 +1,6 @@
 import React from "react";
-import UnderConstruction from "@/features/clinic/UnderConstruction";
+import ClinicSettings from "@/features/clinic/ClinicSettings";
 
 export default function Page() {
-  return <UnderConstruction href="/dashboard/clinic/settings" />;
+  return <ClinicSettings />;
 }

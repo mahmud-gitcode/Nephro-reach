@@ -128,6 +128,13 @@ const PAIRS = [
 
   /* UI boundaries, WCAG 1.4.11 — 3:1 is the bar, not 4.5. */
   ["--ring", "--surface", 3, "the focus ring"],
+
+  /* Chart fills are graphical objects: 3:1 against the card they sit on. */
+  ["--chart-brand", "--surface", 3, "chart fill, brand"],
+  ["--chart-success", "--surface", 3, "chart fill, success"],
+  ["--chart-warning", "--surface", 3, "chart fill, warning"],
+  ["--chart-danger", "--surface", 3, "chart fill, danger"],
+  ["--chart-neutral", "--surface", 3, "chart fill, neutral"],
 ];
 
 let failures = 0;

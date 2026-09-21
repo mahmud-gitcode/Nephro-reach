@@ -22,11 +22,13 @@ import { cn } from "@/lib/utils/cn";
 
 export type ProgressRingTone = "primary" | "success" | "warning" | "danger";
 
+/* The arc is a shape, so it takes the bright chart fills, not the text
+   tones — see the chart block in color.css. */
 const arcColor: Record<ProgressRingTone, string> = {
-  primary: "var(--color-brand-600)",
-  success: "var(--color-success)",
-  warning: "var(--color-warning)",
-  danger: "var(--color-danger)",
+  primary: "var(--chart-brand)",
+  success: "var(--chart-success)",
+  warning: "var(--chart-warning)",
+  danger: "var(--chart-danger)",
 };
 
 export type ProgressRingProps = {

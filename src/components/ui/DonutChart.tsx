@@ -96,29 +96,34 @@ export function DonutChart({
         ) : null}
       </div>
 
-      <table id={tableId} className="sr-only">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Segment</th>
-            <th scope="col">Value</th>
-            <th scope="col">Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          {segments.map((segment) => (
-            <tr key={segment.label}>
-              <th scope="row">{segment.label}</th>
-              <td>{segment.value}</td>
-              <td>
-                {total > 0
-                  ? `${Math.round((segment.value / total) * 100)}%`
-                  : "0%"}
-              </td>
+      {/* sr-only sits on a wrapper, not the table: a table ignores the
+          1px width sr-only sets and keeps its natural width, which on a
+          phone pushed the page wider than the screen. */}
+      <div className="sr-only">
+        <table id={tableId}>
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Segment</th>
+              <th scope="col">Value</th>
+              <th scope="col">Share</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {segments.map((segment) => (
+              <tr key={segment.label}>
+                <th scope="row">{segment.label}</th>
+                <td>{segment.value}</td>
+                <td>
+                  {total > 0
+                    ? `${Math.round((segment.value / total) * 100)}%`
+                    : "0%"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

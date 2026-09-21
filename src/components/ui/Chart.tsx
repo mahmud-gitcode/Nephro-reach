@@ -41,6 +41,7 @@ export type SeriesTone =
   | "success"
   | "warning"
   | "danger"
+  | "neutral"
   | "cat-1"
   | "cat-2"
   | "cat-3"
@@ -50,12 +51,16 @@ export type SeriesTone =
   | "cat-7"
   | "cat-8";
 
+/* Status tones draw from the --chart-* fills, not the -600 text steps: a
+   slice or a line is a shape and only needs 3:1, so it can be as bright
+   as the brand blue beside it. See the chart block in color.css. */
 export const toneVar: Record<SeriesTone, string> = {
-  brand: "var(--color-brand-600)",
+  brand: "var(--chart-brand)",
   accent: "var(--color-accent-600)",
-  success: "var(--color-success-600)",
-  warning: "var(--color-warning-600)",
-  danger: "var(--color-danger-600)",
+  success: "var(--chart-success)",
+  warning: "var(--chart-warning)",
+  danger: "var(--chart-danger)",
+  neutral: "var(--chart-neutral)",
   "cat-1": "var(--color-cat-1)",
   "cat-2": "var(--color-cat-2)",
   "cat-3": "var(--color-cat-3)",
@@ -246,33 +251,38 @@ export function LineChart({
 
       {/* The same numbers, reachable by a screen reader. Not decorative:
           on a lab or blood-pressure page the values are the whole point. */}
-      <table id={tableId} className="sr-only">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Point</th>
-            {series.map((s) => (
-              <th key={s.id} scope="col">
-                {s.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {xLabels.map((x, i) => (
-            <tr key={`${x}-${i}`}>
-              <th scope="row">{x}</th>
+      {/* sr-only sits on a wrapper, not the table: a table ignores the
+          1px width sr-only sets and keeps its natural width, which on a
+          phone pushed the page wider than the screen. */}
+      <div className="sr-only">
+        <table id={tableId}>
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Point</th>
               {series.map((s) => (
-                <td key={s.id}>
-                  {s.points[i] === null || s.points[i] === undefined
-                    ? "No reading"
-                    : `${s.points[i]}${unit ? ` ${unit}` : ""}`}
-                </td>
+                <th key={s.id} scope="col">
+                  {s.label}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {xLabels.map((x, i) => (
+              <tr key={`${x}-${i}`}>
+                <th scope="row">{x}</th>
+                {series.map((s) => (
+                  <td key={s.id}>
+                    {s.points[i] === null || s.points[i] === undefined
+                      ? "No reading"
+                      : `${s.points[i]}${unit ? ` ${unit}` : ""}`}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

@@ -145,26 +145,31 @@ export function BarChart({
       </div>
 
       {/* The same numbers, for anyone who cannot see the bars. */}
-      <table id={tableId} className="sr-only">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Category</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bars.map((bar, index) => (
-            <tr key={`${bar.label}-${index}`}>
-              <th scope="row">{bar.label}</th>
-              <td>
-                {bar.value}
-                {unit ? ` ${unit}` : ""}
-              </td>
+      {/* sr-only sits on a wrapper, not the table: a table ignores the
+          1px width sr-only sets and keeps its natural width, which on a
+          phone pushed the page wider than the screen. */}
+      <div className="sr-only">
+        <table id={tableId}>
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col">Value</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {bars.map((bar, index) => (
+              <tr key={`${bar.label}-${index}`}>
+                <th scope="row">{bar.label}</th>
+                <td>
+                  {bar.value}
+                  {unit ? ` ${unit}` : ""}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

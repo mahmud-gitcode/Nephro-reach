@@ -24,11 +24,13 @@ export type ProgressTone =
 
 export type ProgressSize = "small" | "medium" | "large";
 
+/* A bar is a shape, so status tones take the bright chart fills rather
+   than the darker steps text needs — see the chart block in color.css. */
 const tones: Record<ProgressTone, string> = {
   primary: "bg-primary-solid",
-  success: "bg-success-600",
-  warning: "bg-warning-600",
-  danger: "bg-danger-solid",
+  success: "bg-chart-success",
+  warning: "bg-chart-warning",
+  danger: "bg-chart-danger",
   accent: "bg-accent-solid",
 };
 

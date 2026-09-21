@@ -1,6 +1,6 @@
 import React from "react";
-import UnderConstruction from "@/features/clinic/UnderConstruction";
+import ClinicLiveClass from "@/features/clinic/ClinicLiveClass";
 
 export default function Page() {
-  return <UnderConstruction href="/dashboard/clinic/live-class" />;
+  return <ClinicLiveClass />;
 }
