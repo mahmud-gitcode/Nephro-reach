@@ -26,8 +26,15 @@ import path from "node:path";
  * number that will be discovered to have been exceeded some time after it
  * stopped mattering. At this margin, one heavy dependency fails the build
  * and somebody makes a decision about it on the day it arrives.
+ *
+ * Raised to 980 against a measured 888 (2026-09-21). No dependency was
+ * added; the growth is 23 new routes (library, travel, table talk, admin,
+ * exam, exercise, clinic) each shipping its own page chunk — the largest
+ * is 21.7 KB. Same ~10% headroom rule as before. Note this sums every
+ * route's JS, so it grows with every page even though no visitor downloads
+ * more than a fraction of it.
  */
-const BUDGET_KB = 800;
+const BUDGET_KB = 980;
 
 const ROOT = ".next/static";
 
