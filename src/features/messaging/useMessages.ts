@@ -37,8 +37,14 @@ const KEY = storageKey("messaging");
  * `conversations` was an array was not enough to tell those apart — v1
  * data passed that test and then crashed the thread header reaching for
  * `patient.status`. A shape this file owns needs a number, not a guess.
+ *
+ * Version 3 opened the store to the member portal: every thread gained a
+ * `contact` naming its care-team end and a `category`, `patient` became
+ * optional, and the member's own threads joined the seed. A v2 record has
+ * no `contact`, so the member inbox would have rendered a column of blank
+ * names off it.
  */
-const VERSION = 2;
+const VERSION = 3;
 
 /** What actually sits in storage: the state plus its shape number. */
 type StoredEnvelope = { version: number; conversations: unknown };
@@ -58,8 +64,13 @@ function isConversation(value: unknown): value is Conversation {
     typeof c.id === "string" &&
     typeof c.memberName === "string" &&
     Array.isArray(c.messages) &&
-    !!c.patient &&
-    typeof c.patient === "object"
+    /* `contact` is checked and `patient` is not, which is the inversion
+       version 3 introduced: every thread has two ends, but only the ones
+       the clinic holds carry a chart. */
+    !!c.contact &&
+    typeof c.contact === "object" &&
+    typeof (c.contact as { name?: unknown }).name === "string" &&
+    typeof c.category === "string"
   );
 }
 

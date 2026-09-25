@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as rules from "./messaging.rules";
-import type { MessagingState } from "./messaging.types";
+import { DEMO_MEMBER } from "./messaging.seed";
+import type { CareTeamContact, MessagingState } from "./messaging.types";
 
 const NOW = Date.parse("2026-09-20T12:00:00.000Z");
 const MINUTE = 60_000;
@@ -22,6 +23,12 @@ function profile(program: string, mrn: string) {
   };
 }
 
+const FACILITY: CareTeamContact = {
+  name: "Riverside Dialysis Center",
+  role: "Your Dialysis Care Team",
+  kind: "facility",
+};
+
 function stateWith(
   overrides: { unread?: number; flagged?: boolean; archived?: boolean } = {},
 ): MessagingState {
@@ -31,6 +38,8 @@ function stateWith(
       {
         id: "c1",
         memberName: "Mary S. Johnson",
+        contact: FACILITY,
+        category: "care-team",
         unread,
         flagged,
         archived,
@@ -47,6 +56,8 @@ function stateWith(
       {
         id: "c2",
         memberName: "John D. Smith",
+        contact: FACILITY,
+        category: "care-team",
         unread: 0,
         flagged: false,
         archived: false,
@@ -407,6 +418,8 @@ describe("markUnread", () => {
         {
           id: "c3",
           memberName: "Nobody",
+          contact: FACILITY,
+          category: "care-team",
           unread: 0,
           flagged: false,
           archived: false,
@@ -442,8 +455,11 @@ describe("searchConversations, on the patient record", () => {
   });
 });
 
-describe("the seeded inbox", () => {
-  const seeded = rules.seedConversations(NOW);
+describe("the seeded clinic inbox", () => {
+  /* The seed now carries the member's own threads too. These assertions
+     are about the clinic queue, so they take the same slice the clinic
+     screen does rather than the whole store. */
+  const seeded = rules.clinicConversations(rules.seedConversations(NOW));
 
   it("holds the ten threads the client specified", () => {
     expect(seeded).toHaveLength(10);
@@ -455,9 +471,9 @@ describe("the seeded inbox", () => {
 
   it("gives every thread a complete patient record for the rail", () => {
     for (const conversation of seeded) {
-      expect(conversation.patient.mrn).toMatch(/^\d+$/);
-      expect(conversation.patient.program).not.toBe("");
-      expect(conversation.patient.phone).not.toBe("");
+      expect(conversation.patient?.mrn).toMatch(/^\d+$/);
+      expect(conversation.patient?.program).not.toBe("");
+      expect(conversation.patient?.phone).not.toBe("");
     }
   });
 });
@@ -517,5 +533,146 @@ describe("inboxTimeLabel", () => {
       NOW,
     );
     expect(label).toMatch(/\d{4}/);
+  });
+});
+
+/* ==========================================================================
+   The member's end of the store
+   ========================================================================== */
+
+describe("splitting one store between two portals", () => {
+  const seeded = rules.seedConversations(NOW);
+
+  it("gives the clinic only threads addressed to the facility", () => {
+    for (const conversation of rules.clinicConversations(seeded)) {
+      expect(conversation.contact.kind).toBe("facility");
+    }
+  });
+
+  it("gives the clinic one row per patient, never one per thread", () => {
+    const names = rules.clinicConversations(seeded).map((c) => c.memberName);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("gives every thread the clinic works a chart to show in the rail", () => {
+    for (const conversation of rules.clinicConversations(seeded)) {
+      expect(conversation.patient).toBeDefined();
+    }
+  });
+
+  it("gives the member every thread of theirs, both ends included", () => {
+    const mine = rules.memberConversations(seeded, DEMO_MEMBER);
+    expect(mine.length).toBeGreaterThan(1);
+    for (const conversation of mine) {
+      expect(conversation.memberName).toBe(DEMO_MEMBER);
+    }
+  });
+
+  it("puts the member's thread with the centre in both inboxes", () => {
+    /* The point of one store: a reply typed on either screen lands on the
+       same record. If these ever diverge the round trip is broken. */
+    const mine = rules.memberConversations(seeded, DEMO_MEMBER);
+    const facility = mine.find((c) => c.contact.kind === "facility");
+    expect(facility).toBeDefined();
+    expect(rules.clinicConversations(seeded).map((c) => c.id)).toContain(
+      facility!.id,
+    );
+  });
+
+  it("keeps one member's threads out of another member's inbox", () => {
+    expect(rules.memberConversations(seeded, "Sandra Phillips")).toHaveLength(
+      1,
+    );
+  });
+});
+
+describe("applyMemberFilter", () => {
+  const seeded = rules.memberConversations(
+    rules.seedConversations(NOW),
+    DEMO_MEMBER,
+  );
+
+  it("shows everything but the archived under All", () => {
+    const all = rules.applyMemberFilter(seeded, "all");
+    expect(all.length).toBeGreaterThan(0);
+    for (const conversation of all) expect(conversation.archived).toBe(false);
+  });
+
+  it("filters by subject, not by state", () => {
+    for (const conversation of rules.applyMemberFilter(
+      seeded,
+      "appointments",
+    )) {
+      expect(conversation.category).toBe("appointments");
+    }
+  });
+
+  it("shows only the archived under Archived", () => {
+    const archived = rules.applyMemberFilter(seeded, "archived");
+    expect(archived.length).toBeGreaterThan(0);
+    for (const conversation of archived)
+      expect(conversation.archived).toBe(true);
+  });
+
+  it("keeps the open thread listed when it stops matching", () => {
+    const care = seeded.find((c) => c.category === "care-team")!;
+    const shown = rules.applyMemberFilter(seeded, "appointments", care.id);
+    expect(shown.map((c) => c.id)).toContain(care.id);
+  });
+
+  it("counts the folder, not the view", () => {
+    const counts = rules.memberFilterCounts(seeded);
+    expect(counts.all).toBe(rules.applyMemberFilter(seeded, "all").length);
+    expect(counts.all + counts.archived).toBe(seeded.length);
+  });
+});
+
+describe("careTeamFor", () => {
+  const seeded = rules.memberConversations(
+    rules.seedConversations(NOW),
+    DEMO_MEMBER,
+  );
+
+  it("lists the people, not the building", () => {
+    for (const contact of rules.careTeamFor(seeded)) {
+      expect(contact.kind).toBe("person");
+    }
+  });
+
+  it("lists nobody the member cannot actually reach", () => {
+    const names = seeded.map((c) => c.contact.name);
+    for (const contact of rules.careTeamFor(seeded)) {
+      expect(names).toContain(contact.name);
+    }
+  });
+
+  it("lists each person once, however many threads they hold", () => {
+    const names = rules.careTeamFor(seeded).map((c) => c.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("searchConversations, from the member's end", () => {
+  const seeded = rules.memberConversations(
+    rules.seedConversations(NOW),
+    DEMO_MEMBER,
+  );
+
+  it("finds a thread by who it is with", () => {
+    const hits = rules.searchConversations(seeded, "wilson");
+    expect(hits.length).toBe(1);
+    expect(hits[0].contact.name).toBe("Nurse Wilson");
+  });
+
+  it("finds a thread by what that person does", () => {
+    const hits = rules.searchConversations(seeded, "dietitian");
+    expect(hits.length).toBe(1);
+    expect(hits[0].contact.role).toBe("Renal Dietitian");
+  });
+
+  it("does not crash on a thread with no chart behind it", () => {
+    const chartless = seeded.filter((c) => !c.patient);
+    expect(chartless.length).toBeGreaterThan(0);
+    expect(() => rules.searchConversations(chartless, "100245")).not.toThrow();
   });
 });

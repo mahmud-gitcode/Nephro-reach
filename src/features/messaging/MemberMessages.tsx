@@ -8,24 +8,22 @@ import React, {
   useState,
 } from "react";
 import {
-  Archive,
-  ArchiveRestore,
   ArrowLeft,
-  Ban,
-  CalendarClock,
+  BarChart3,
+  Building2,
+  CalendarPlus,
+  CircleHelp,
   Download,
   FileText,
-  Flag,
-  FlaskConical,
-  Info,
-  MailOpen,
-  MessageSquare,
-  NotebookPen,
+  FileUp,
+  Headset,
+  MessageSquarePlus,
   Paperclip,
+  Phone,
+  PhoneCall,
   Search,
   Send,
-  ShieldAlert,
-  UserRound,
+  SquarePen,
 } from "lucide-react";
 
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -34,6 +32,7 @@ import {
   AsyncSection,
   Badge,
   Button,
+  buttonStyles,
   Card,
   EmptyState,
   Input,
@@ -42,37 +41,59 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
-import * as rules from "@/features/messaging/messaging.rules";
-import { useMessages } from "@/features/messaging/useMessages";
+import * as rules from "./messaging.rules";
+import { useMessages } from "./useMessages";
+import { DEMO_MEMBER } from "./messaging.seed";
 import type {
   Attachment,
+  CareTeamContact,
   Conversation,
-  InboxFilter,
-} from "@/features/messaging/messaging.types";
+  MemberInboxFilter,
+} from "./messaging.types";
 
 /* ==========================================================================
-   Clinic messages
+   Member messages
    --------------------------------------------------------------------------
-   Three panes: the inbox, the thread, and the patient beside it. The right
-   rail is the point of the layout — a coordinator answering a question
-   about swelling should not have to leave the conversation to find out who
-   they are talking to or what programme they are on.
+   The same three panes as the clinic screen and the same store behind them,
+   read from the other end: the list is the people on my care team rather
+   than the patients in a queue, and the right rail answers "who can I
+   reach" rather than "who am I talking to".
 
-   Below `xl` there is not room for three, so the rail folds under the
-   thread; below `lg` the inbox and the thread take turns, with a back
-   button returning to the list.
+   The inversion worth naming is authorship. Clinic-side a `clinic` message
+   is mine; here a `member` message is. Nothing else about the thread
+   changes, which is why both screens share `messaging.rules` rather than
+   each carrying a copy with the sides swapped.
+
+   Below `xl` the rail folds under the thread; below `lg` the list and the
+   thread take turns, with a back button returning to the list.
    ========================================================================== */
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
-const FILTERS: Array<{ id: InboxFilter; label: string }> = [
-  { id: "all", label: "All Messages" },
-  { id: "unread", label: "Unread" },
-  { id: "flagged", label: "Flagged" },
+const FILTERS: Array<{ id: MemberInboxFilter; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "care-team", label: "Care Team" },
+  { id: "appointments", label: "Appointments" },
   { id: "archived", label: "Archived" },
 ];
 
-function Avatar({ name, className }: { name: string; className?: string }) {
+/** The centre's own number, shown where a member may need a human now. */
+const URGENT_PHONE = "(803) 555-0187";
+
+/**
+ * A contact's mark.
+ *
+ * A facility gets a building glyph rather than initials: "RDC" reads as a
+ * person with an odd name, and a member's mental model of the centre is a
+ * building, not a colleague.
+ */
+function ContactAvatar({
+  contact,
+  className,
+}: {
+  contact: CareTeamContact;
+  className?: string;
+}) {
   return (
     <span
       aria-hidden="true"
@@ -82,8 +103,39 @@ function Avatar({ name, className }: { name: string; className?: string }) {
         className,
       )}
     >
-      {rules.initials(name)}
+      {contact.kind === "facility" ? (
+        <Building2 className="h-4 w-4" />
+      ) : (
+        rules.initials(contact.name)
+      )}
     </span>
+  );
+}
+
+/**
+ * The presence dot.
+ *
+ * `online` is optional on a contact and absent means unknown, so an absent
+ * value renders nothing rather than claiming somebody is away.
+ */
+function PresenceDot({
+  contact,
+  className,
+}: {
+  contact: CareTeamContact;
+  className?: string;
+}) {
+  if (contact.online === undefined) return null;
+  return (
+    <span
+      role="img"
+      aria-label={contact.online ? "Online" : "Offline"}
+      className={cn(
+        "h-2.5 w-2.5 shrink-0 rounded-pill ring-2 ring-surface",
+        contact.online ? "bg-chart-positive" : "bg-line",
+        className,
+      )}
+    />
   );
 }
 
@@ -170,19 +222,17 @@ function ConversationRow({
           active ? "bg-surface-sunken" : "hover:bg-surface-sunken",
         )}
       >
-        <Avatar name={conversation.memberName} />
+        <span className="relative shrink-0">
+          <ContactAvatar contact={conversation.contact} />
+          <PresenceDot
+            contact={conversation.contact}
+            className="absolute right-0 bottom-0"
+          />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-inline-md">
-            <span className="flex min-w-0 items-center gap-inline-xs">
-              <span className="truncate text-label-md text-fg">
-                {conversation.memberName}
-              </span>
-              {conversation.flagged ? (
-                <Flag
-                  aria-label="Flagged"
-                  className="h-3.5 w-3.5 shrink-0 text-warning"
-                />
-              ) : null}
+            <span className="truncate text-label-md text-fg">
+              {conversation.contact.name}
             </span>
             {last ? (
               <span className="shrink-0 text-caption text-fg-muted">
@@ -193,7 +243,7 @@ function ConversationRow({
           <span className="mt-0.5 flex items-center gap-inline-md">
             <span className="min-w-0 flex-1 truncate text-body-sm text-fg-muted">
               {last
-                ? `${last.author === "clinic" ? "You: " : ""}${last.body}`
+                ? `${last.author === "member" ? "You: " : ""}${last.body}`
                 : "No messages yet"}
             </span>
             {rules.hasAttachment(conversation) ? (
@@ -203,7 +253,7 @@ function ConversationRow({
               />
             ) : null}
             {conversation.unread > 0 ? (
-              <Badge tone="info" variant="solid">
+              <Badge tone="danger" variant="solid">
                 {conversation.unread}
               </Badge>
             ) : null}
@@ -227,8 +277,8 @@ function Inbox({
 }: {
   conversations: Conversation[];
   activeId: string | null;
-  filter: InboxFilter;
-  onFilterChange: (next: InboxFilter) => void;
+  filter: MemberInboxFilter;
+  onFilterChange: (next: MemberInboxFilter) => void;
   query: string;
   onQueryChange: (next: string) => void;
   now: number;
@@ -236,12 +286,12 @@ function Inbox({
   /** Reports the list as ordered on screen, so ↑/↓ can walk it. */
   onVisibleChange: (ids: string[]) => void;
 }) {
-  const counts = rules.filterCounts(conversations);
+  const counts = rules.memberFilterCounts(conversations);
   const visible = useMemo(
     () =>
       rules.sortByRecent(
         rules.searchConversations(
-          rules.applyFilter(conversations, filter, activeId),
+          rules.applyMemberFilter(conversations, filter, activeId),
           query,
         ),
       ),
@@ -257,10 +307,18 @@ function Inbox({
   }, [visibleIds, onVisibleChange]);
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
+      <Button
+        {...notBuiltYet("Starting a new message")}
+        className="mb-stack-sm w-full shrink-0"
+      >
+        <SquarePen aria-hidden="true" />
+        New Message
+      </Button>
+
       {/* A toggle group, not a tablist: `role="tab"` obliges a matching
-          `tabpanel` and arrow-key roving, and the list below is a list, not
-          a panel. `aria-pressed` says the true thing without the debt. */}
+          `tabpanel` and arrow-key roving, and the list below is a list,
+          not a panel. `aria-pressed` says the true thing without the debt. */}
       <div
         role="group"
         aria-label="Message filters"
@@ -284,8 +342,6 @@ function Inbox({
               )}
             >
               {entry.label}
-              {/* A zero is worth showing on a filter: it is the answer to
-                  "is anything flagged", not an empty slot. */}
               <span
                 className={cn(
                   "tabular-nums",
@@ -299,25 +355,28 @@ function Inbox({
         })}
       </div>
 
-      <Input
-        type="search"
-        inputSize="small"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Search patients, messages, or keywords..."
-        aria-label="Search conversations"
-        leadingIcon={<Search aria-hidden="true" />}
-        className="mb-stack-sm shrink-0"
-      />
+      <div className="relative mb-stack-sm shrink-0">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-fg-muted"
+        />
+        <Input
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder="Search messages..."
+          aria-label="Search messages"
+          className="pl-9"
+        />
+      </div>
 
       {visible.length === 0 ? (
-        <p className="p-inset-sm text-body-sm text-fg-muted">
+        <p className="px-inset-sm py-inset-md text-body-sm text-fg-muted">
           {query
             ? "No conversations match that search."
             : "Nothing in this folder."}
         </p>
       ) : (
-        <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+        <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto">
           {visible.map((conversation) => (
             <ConversationRow
               key={conversation.id}
@@ -327,7 +386,7 @@ function Inbox({
               onSelect={() => onSelect(conversation)}
             />
           ))}
-        </ul>
+        </ol>
       )}
     </div>
   );
@@ -361,10 +420,10 @@ function Thread({
     [conversation.messages],
   );
 
-  /* The id of the first message that was still unread when the thread was
-     opened. Everything from there down gets the "new" rule above it, and
-     it stays put while the thread is open rather than disappearing the
-     moment the unread count is cleared. */
+  /* The id of the first message still unread when the thread was opened.
+     Everything from there down gets the "new" rule above it, and it stays
+     put while the thread is open rather than disappearing the moment the
+     unread count is cleared. */
   const firstUnreadId =
     unreadAtOpen > 0
       ? (conversation.messages[conversation.messages.length - unreadAtOpen]
@@ -394,8 +453,6 @@ function Thread({
     onDraftChange("");
   }
 
-  const firstName = conversation.memberName.split(" ")[0];
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center gap-inline-md border-b border-line pb-inset-sm">
@@ -410,21 +467,18 @@ function Thread({
         >
           <ArrowLeft aria-hidden="true" />
         </Button>
-        <Avatar name={conversation.memberName} />
+        <ContactAvatar contact={conversation.contact} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-label-md text-fg">
-            {conversation.memberName}
+          <p className="flex items-center gap-inline-xs text-label-md text-fg">
+            <span className="truncate">{conversation.contact.name}</span>
+            {conversation.contact.online ? (
+              <Badge tone="success">Online</Badge>
+            ) : null}
           </p>
           <p className="truncate text-caption text-fg-muted">
-            {conversation.patient?.status} Member ·{" "}
-            {conversation.patient?.program}
+            {conversation.contact.role}
           </p>
         </div>
-        {conversation.flagged ? (
-          <Badge tone="warning" icon={<Flag aria-hidden="true" />}>
-            Flagged
-          </Badge>
-        ) : null}
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto py-inset-sm">
@@ -436,7 +490,9 @@ function Thread({
               </p>
               <ol className="space-y-stack-sm">
                 {group.messages.map((message) => {
-                  const mine = message.author === "clinic";
+                  /* The one line that differs from the clinic screen: on
+                     this side of the thread, the member is "me". */
+                  const mine = message.author === "member";
                   return (
                     <li
                       key={message.id}
@@ -472,7 +528,7 @@ function Thread({
                             mine ? "text-white/75" : "text-fg-muted",
                           )}
                         >
-                          {mine ? "Staff" : conversation.memberName} ·{" "}
+                          {mine ? "You" : conversation.contact.name} ·{" "}
                           {rules.timeLabel(message.sentAt)}
                         </p>
                         <p className="mt-0.5 text-body-sm whitespace-pre-wrap">
@@ -519,237 +575,178 @@ function Thread({
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={(event) => {
             /* Enter sends, Shift+Enter breaks the line — what every chat
-               does, and what a clinic typing all day will assume. */
+               does, and what anyone typing here will assume. */
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               submit();
             }
           }}
-          placeholder={`Type a message to ${firstName}...`}
-          aria-label={`Message ${conversation.memberName}`}
+          placeholder="Type your message here..."
+          aria-label={`Message ${conversation.contact.name}`}
           className="flex-1 resize-none"
         />
         <Button
           type="submit"
           size="small"
-          iconOnly
           disabled={draft.trim().length === 0 || sending}
           loading={sending}
-          aria-label="Send message"
         >
           <Send aria-hidden="true" />
+          Send
         </Button>
       </form>
     </div>
   );
 }
 
-function RailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function QuickAction({ label, icon: Icon }: { label: string; icon: IconType }) {
   return (
-    <div className="flex items-baseline justify-between gap-inline-md">
-      <dt className="shrink-0 text-caption text-fg-muted">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-body-sm text-fg">
-        {value}
-      </dd>
-    </div>
+    <li>
+      <button
+        {...notBuiltYet(label)}
+        type="button"
+        className={cn(
+          "flex w-full items-center gap-inline-md rounded-control px-inset-xs py-2 text-left",
+          "text-body-sm transition-colors duration-150 ease-standard",
+          "enabled:cursor-pointer enabled:text-fg enabled:hover:bg-surface-sunken",
+          "disabled:cursor-not-allowed disabled:text-fg-muted",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+        )}
+      >
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+        {label}
+      </button>
+    </li>
   );
 }
 
-function RailAction({
-  label,
-  icon: Icon,
-  onClick,
-  feature,
-  tone = "neutral",
+/**
+ * The rail: who is on my team, and what else can I do from here.
+ *
+ * The team is derived from the member's own threads rather than stored
+ * beside them, so it can never list somebody with no way to be reached —
+ * every name here opens a conversation that already exists.
+ */
+function CareTeamRail({
+  conversations,
+  onSelectContact,
 }: {
-  label: string;
-  icon: IconType;
-  /** Omit, and pass `feature`, to mark the action as not built yet. */
-  onClick?: () => void;
-  feature?: string;
-  tone?: "neutral" | "danger";
+  conversations: Conversation[];
+  onSelectContact: (contact: CareTeamContact) => void;
 }) {
-  return (
-    <Button
-      {...(onClick ? { onClick } : notBuiltYet(feature ?? label))}
-      variant={tone}
-      appearance="fill-stroke"
-      size="small"
-      fullWidth
-      className="justify-start"
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      {label}
-    </Button>
-  );
-}
-
-function PatientRail({
-  conversation,
-  onToggleFlag,
-  onMarkUnread,
-  onToggleArchive,
-}: {
-  conversation: Conversation;
-  onToggleFlag: () => void;
-  onMarkUnread: () => void;
-  onToggleArchive: () => void;
-}) {
-  const { patient } = conversation;
-  /* Every thread this screen lists has a chart — `clinicConversations`
-     sees to that — so this is a type narrowing, not an expected state. */
-  if (!patient) return null;
+  const team = useMemo(() => rules.careTeamFor(conversations), [conversations]);
 
   return (
-    <div className="min-h-0 space-y-stack-lg overflow-y-auto pr-1">
-      <section>
-        <h3 className="mb-stack-sm flex items-center gap-inline-xs text-label-md text-fg">
-          <Info aria-hidden="true" className="h-4 w-4 shrink-0 text-fg-muted" />
-          Patient Information
-        </h3>
-        <div className="rounded-control border border-line p-inset-sm">
-          <div className="mb-stack-sm flex items-center gap-inline-md">
-            <Avatar name={conversation.memberName} />
-            <div className="min-w-0">
-              <p className="truncate text-label-md text-fg">
-                {conversation.memberName}
-              </p>
-              <Badge tone="success">{patient.status}</Badge>
-            </div>
-          </div>
-          <dl className="space-y-1.5">
-            <RailRow label="DOB" value={patient.dob} />
-            <RailRow label="Age" value={patient.age} />
-            <RailRow label="MRN" value={patient.mrn} />
-            <RailRow label="Phone" value={patient.phone} />
-            <RailRow label="Email" value={patient.email} />
-            <RailRow label="Program" value={patient.program} />
-            <RailRow label="Enrolled" value={patient.enrolledOn} />
-            <RailRow label="Care Team" value={patient.careTeam} />
-          </dl>
-          {patient.notes ? (
-            <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm text-fg-secondary">
-              {patient.notes}
+    <div className="space-y-stack-md">
+      <Card as="section" padding="small">
+        <h2 className="mb-stack-sm text-label-md text-fg">Care Team</h2>
+        {team.length === 0 ? (
+          <p className="text-body-sm text-fg-muted">
+            Your care team will appear here once they message you.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {team.map((contact) => (
+              <li key={contact.name}>
+                <button
+                  type="button"
+                  onClick={() => onSelectContact(contact)}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center gap-inline-md rounded-control p-inset-xs text-left",
+                    "transition-colors duration-150 ease-standard hover:bg-surface-sunken",
+                    "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                  )}
+                >
+                  <ContactAvatar contact={contact} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-label-sm text-fg">
+                      {contact.name}
+                    </span>
+                    <span className="block truncate text-caption text-fg-muted">
+                      {contact.role}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card as="section" padding="small">
+        <h2 className="mb-stack-sm text-label-md text-fg">Quick Actions</h2>
+        <ul className="space-y-0.5">
+          <QuickAction label="Request a Call" icon={PhoneCall} />
+          <QuickAction label="Schedule an Appointment" icon={CalendarPlus} />
+          <QuickAction label="Send a Document" icon={FileUp} />
+          <QuickAction label="View My Lab Results" icon={BarChart3} />
+          <QuickAction label="Ask a General Question" icon={CircleHelp} />
+        </ul>
+      </Card>
+
+      {/* Messaging is not for emergencies and nothing here is watched out
+          of hours, so the number sits on the screen rather than a click
+          away behind "Support". */}
+      <Card as="section" padding="small" tone="sunken">
+        <div className="flex items-start gap-inline-md">
+          <Headset
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-brand-600"
+          />
+          <div className="min-w-0">
+            <h2 className="text-label-md text-fg">Need Help?</h2>
+            <p className="mt-0.5 text-body-sm text-fg-secondary">
+              If this is an urgent issue, please call your dialysis center
+              directly.
             </p>
-          ) : null}
+          </div>
         </div>
-      </section>
-
-      <section>
-        <h3 className="mb-stack-sm text-label-md text-fg">Quick Actions</h3>
-        <div className="space-y-1">
-          <RailAction
-            label="View Patient Profile"
-            icon={UserRound}
-            feature="The patient profile"
-          />
-          <RailAction
-            label="View Latest Labs"
-            icon={FlaskConical}
-            feature="Viewing labs"
-          />
-          <RailAction
-            label="Send Education Resource"
-            icon={FileText}
-            feature="Sending a resource"
-          />
-          <RailAction
-            label="Schedule Call"
-            icon={CalendarClock}
-            feature="Scheduling a call"
-          />
-          <RailAction
-            label="Add Note"
-            icon={NotebookPen}
-            feature="Adding a note"
-          />
-          <RailAction
-            label={
-              conversation.flagged ? "Unflag Conversation" : "Flag Conversation"
-            }
-            icon={Flag}
-            onClick={onToggleFlag}
-          />
-        </div>
-      </section>
-
-      <section>
-        <h3 className="mb-stack-sm text-label-md text-fg">
-          Conversation Tools
-        </h3>
-        <div className="space-y-1">
-          <RailAction
-            label="Mark as Unread"
-            icon={MailOpen}
-            onClick={onMarkUnread}
-          />
-          <RailAction
-            label={
-              conversation.archived
-                ? "Restore Conversation"
-                : "Archive Conversation"
-            }
-            icon={conversation.archived ? ArchiveRestore : Archive}
-            onClick={onToggleArchive}
-          />
-          <RailAction
-            label="Report Concern"
-            icon={ShieldAlert}
-            feature="Reporting a concern"
-          />
-          <RailAction
-            label="Block Patient"
-            icon={Ban}
-            tone="danger"
-            feature="Blocking a patient"
-          />
-        </div>
-      </section>
+        {/* A real `tel:` link rather than a Button with a handler: on a
+            phone this is the control that actually matters, and an anchor
+            is what the OS, the context menu and a long-press understand. */}
+        <a
+          href={`tel:${URGENT_PHONE.replace(/[^\d+]/g, "")}`}
+          className={cn(buttonStyles(), "mt-stack-sm w-full")}
+        >
+          <Phone aria-hidden="true" />
+          Call {URGENT_PHONE}
+        </a>
+      </Card>
     </div>
   );
 }
 
-export default function ClinicMessages() {
+export default function MemberMessages() {
   const {
     conversations: allConversations,
     isLoading,
     error,
     sendMessage,
     markRead,
-    toggleFlag,
-    markUnread,
-    setArchived,
     writeError,
     isSending,
     clearWriteError,
   } = useMessages();
-  /* One store holds every thread on the platform; this screen works the
-     facility's queue, one row per patient. A member's thread with their
-     own dietitian lives in the same store and belongs to the member
-     portal, not here. */
+
+  /* The member's slice of the one platform-wide store. Their thread with
+     the centre is the same record the clinic screen works, so a reply
+     typed here turns up in the clinic inbox and the other way round. */
   const conversations = useMemo(
-    () => rules.clinicConversations(allConversations),
+    () => rules.memberConversations(allConversations, DEMO_MEMBER),
     [allConversations],
   );
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<InboxFilter>("all");
-  const [activeId, setActiveId] = useState<string | null>(null);
-  /* Drafts live up here, keyed by thread. A coordinator is interrupted
-     mid-reply constantly — losing what they had typed because they glanced
-     at another patient is the kind of small betrayal that stops people
-     trusting a tool. */
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  /* How many messages were unread when each thread was opened, so the
-     "New" rule can stay put after the badge clears. */
-  const [unreadAtOpen, setUnreadAtOpen] = useState<Record<string, number>>({});
-  const [visibleIds, setVisibleIds] = useState<string[]>([]);
 
-  /* One instant for the whole screen, so every "2h" and every "Today" is
-     measured against the same clock rather than each reading it fresh.
-     Held in state because `Date.now()` in a render body is impure — it
-     would hand two renders different answers for the same data. The tick
-     keeps the labels honest during a long session; a minute is as fine as
-     these labels get. */
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<MemberInboxFilter>("all");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+  const [unreadAtOpen, setUnreadAtOpen] = useState(0);
+  /* Drafts are keyed by thread, so switching away and back does not lose
+     what was typed. Losing a half-written question to a stray click on
+     another name is the kind of small betrayal that stops people asking. */
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  /* One clock for the whole screen, so every relative label agrees. */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
@@ -764,63 +761,58 @@ export default function ClinicMessages() {
   const open = useCallback(
     (conversation: Conversation) => {
       setActiveId(conversation.id);
-      setUnreadAtOpen((current) => ({
-        ...current,
-        [conversation.id]: conversation.unread,
-      }));
+      setUnreadAtOpen(conversation.unread);
       if (conversation.unread > 0) markRead(conversation.id);
     },
     [markRead],
   );
 
-  /* ↑/↓ walk the inbox and Escape leaves the thread, because a clinic
-     working a queue of ninety messages should not have to aim at each one.
-     Ignored while a field has focus, or the arrow keys would stop moving
-     the text cursor. */
+  /* ↑/↓ walk the list as it is actually ordered on screen — filtered,
+     searched, then sorted — which only the list itself knows. */
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
       const target = event.target as HTMLElement | null;
-      const typing =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
-
-      if (event.key === "Escape" && !typing) {
-        setActiveId(null);
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
         return;
       }
-      if (typing) return;
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
       if (visibleIds.length === 0) return;
-
       event.preventDefault();
-      const step = event.key === "ArrowDown" ? 1 : -1;
       const current = activeId ? visibleIds.indexOf(activeId) : -1;
-      /* From nowhere, ↓ starts at the top and ↑ at the bottom. */
       const next =
-        current === -1
-          ? step === 1
-            ? 0
-            : visibleIds.length - 1
-          : Math.min(Math.max(current + step, 0), visibleIds.length - 1);
+        event.key === "ArrowDown"
+          ? Math.min(current + 1, visibleIds.length - 1)
+          : Math.max(current - 1, 0);
       const conversation = conversations.find((c) => c.id === visibleIds[next]);
       if (conversation) open(conversation);
     }
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [visibleIds, activeId, conversations, open]);
 
+  const selectContact = useCallback(
+    (contact: CareTeamContact) => {
+      const thread = conversations.find((c) => c.contact.name === contact.name);
+      if (thread) open(thread);
+    },
+    [conversations, open],
+  );
+
   const unread = rules.totalUnread(conversations);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[1600px]">
       <PageTitle
-        href="/dashboard/clinic/messages"
+        href="/dashboard/messages"
         action={
           unread > 0 ? (
-            <Badge tone="info">
-              {unread} unread message{unread === 1 ? "" : "s"}
+            <Badge tone="danger" variant="solid">
+              {unread} unread
             </Badge>
           ) : null
         }
@@ -829,108 +821,90 @@ export default function ClinicMessages() {
       {writeError ? (
         <Alert
           tone="danger"
-          title="That change was not saved"
+          className="mb-stack-md"
           onDismiss={clearWriteError}
+          title="Your message was not saved"
         >
-          Your browser refused to store it — this can happen in a private window
-          or when site data is full. Nothing was sent to the patient.
+          Messages are kept in this browser, which can refuse them in a private
+          window or when site data is full. Nothing was sent to your care team.
         </Alert>
       ) : null}
 
-      <Card as="section" padding="small" className="overflow-hidden">
-        <AsyncSection
-          pending={isLoading}
-          error={error}
-          isEmpty={conversations.length === 0}
-          skeleton={
-            <div className="space-y-stack-md">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </div>
-          }
-          empty={
-            <EmptyState
-              icon={<MessageSquare aria-hidden="true" />}
-              title="No conversations yet"
-              description="Messages from your enrolled members will appear here."
+      <AsyncSection
+        pending={isLoading}
+        error={error}
+        isEmpty={conversations.length === 0}
+        skeleton={<Skeleton className="h-[70vh] w-full" />}
+        empty={
+          <EmptyState
+            icon={<MessageSquarePlus />}
+            title="No messages yet"
+            description="When your care team writes to you, their messages will appear here."
+          />
+        }
+      >
+        <div className="grid min-h-0 gap-stack-md lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)_18rem]">
+          {/* Below `lg` the list and the thread take turns in one column. */}
+          <Card
+            padding="small"
+            className={cn(
+              "h-[70vh] min-h-0 lg:h-[76vh]",
+              active && "hidden lg:block",
+            )}
+          >
+            <Inbox
+              conversations={conversations}
+              activeId={activeId}
+              filter={filter}
+              onFilterChange={setFilter}
+              query={query}
+              onQueryChange={setQuery}
+              now={now}
+              onSelect={open}
+              onVisibleChange={setVisibleIds}
             />
-          }
-        >
-          <div className="grid h-[680px] grid-cols-1 gap-inset-md lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)_296px]">
-            <div
-              className={cn(
-                "min-h-0 lg:border-r lg:border-line lg:pr-inset-sm",
-                active ? "hidden lg:block" : "block",
-              )}
-            >
-              <Inbox
-                conversations={conversations}
-                activeId={activeId}
-                filter={filter}
-                onFilterChange={setFilter}
-                query={query}
-                onQueryChange={setQuery}
-                now={now}
-                onSelect={open}
-                onVisibleChange={setVisibleIds}
-              />
-            </div>
+          </Card>
 
-            <div
-              className={cn("min-h-0", active ? "block" : "hidden lg:block")}
-            >
-              {active ? (
-                <Thread
-                  conversation={active}
-                  now={now}
-                  draft={drafts[active.id] ?? ""}
-                  onDraftChange={(next) =>
-                    setDrafts((current) => ({ ...current, [active.id]: next }))
-                  }
-                  unreadAtOpen={unreadAtOpen[active.id] ?? 0}
-                  sending={isSending}
-                  onSend={(body) => {
-                    clearWriteError();
-                    sendMessage(active.id, body);
-                  }}
-                  onBack={() => setActiveId(null)}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <EmptyState
-                    variant="bare"
-                    icon={<MessageSquare aria-hidden="true" />}
-                    title="Pick a conversation"
-                    description="Choose a patient on the left to read and reply to their messages."
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* The rail has nothing to say without a patient, so it only
-                exists once a thread is open. */}
+          <Card
+            padding="small"
+            className={cn(
+              "h-[70vh] min-h-0 lg:h-[76vh]",
+              !active && "hidden lg:block",
+            )}
+          >
             {active ? (
-              <div className="min-h-0 xl:border-l xl:border-line xl:pl-inset-sm">
-                <PatientRail
-                  conversation={active}
-                  onToggleFlag={() => toggleFlag(active.id)}
-                  /* Marking unread or archiving is a decision to leave the
-                     thread, so the pane closes rather than sitting open on
-                     a conversation the list no longer shows. */
-                  onMarkUnread={() => {
-                    markUnread(active.id);
-                    setActiveId(null);
-                  }}
-                  onToggleArchive={() => {
-                    setArchived(active.id, !active.archived);
-                    setActiveId(null);
-                  }}
-                />
-              </div>
-            ) : null}
+              <Thread
+                conversation={active}
+                now={now}
+                draft={drafts[active.id] ?? ""}
+                onDraftChange={(next) =>
+                  setDrafts((current) => ({ ...current, [active.id]: next }))
+                }
+                unreadAtOpen={unreadAtOpen}
+                sending={isSending}
+                onSend={(body) => sendMessage(active.id, body, "member")}
+                onBack={() => setActiveId(null)}
+              />
+            ) : (
+              <EmptyState
+                variant="bare"
+                icon={<MessageSquarePlus />}
+                title="No conversation selected"
+                description="Choose someone on your care team to read and reply to their messages."
+              />
+            )}
+          </Card>
+
+          {/* The rail is useful with or without a thread open, so unlike
+              the clinic's patient rail it is always rendered. */}
+          <div className="xl:h-[76vh] xl:min-h-0 xl:overflow-y-auto">
+            <CareTeamRail
+              conversations={conversations}
+              onSelectContact={selectContact}
+            />
           </div>
-        </AsyncSection>
-      </Card>
+        </div>
+      </AsyncSection>
     </div>
   );
 }

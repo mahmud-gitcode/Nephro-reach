@@ -3,6 +3,7 @@ import type {
   Attachment,
   Conversation,
   InboxFilter,
+  MemberInboxFilter,
   Message,
   MessageAuthor,
   MessagingState,
@@ -55,8 +56,18 @@ export function searchConversations(
   if (!q) return conversations;
   return conversations.filter((conversation) => {
     if (conversation.memberName.toLowerCase().includes(q)) return true;
-    if (conversation.patient.program.toLowerCase().includes(q)) return true;
-    if (conversation.patient.mrn.includes(q)) return true;
+    /* Both ends of the thread are searchable, because which end the reader
+       thinks of it by depends on which end they are: the clinic hunts for
+       "Sandra", the member for "dietitian". */
+    if (conversation.contact.name.toLowerCase().includes(q)) return true;
+    if (conversation.contact.role.toLowerCase().includes(q)) return true;
+    /* Chart fields only exist on threads the clinic holds; a member-only
+       thread simply has nothing to match here. */
+    const patient = conversation.patient;
+    if (patient) {
+      if (patient.program.toLowerCase().includes(q)) return true;
+      if (patient.mrn.includes(q)) return true;
+    }
     return conversation.messages.some((message) =>
       message.body.toLowerCase().includes(q),
     );
@@ -332,4 +343,88 @@ export function markUnread(
 /** Threads holding at least one attachment, for the list's paperclip. */
 export function hasAttachment(conversation: Conversation): boolean {
   return conversation.messages.some((message) => message.attachment);
+}
+
+/* --------------------------------------------------------------------------
+   Whose inbox is this
+   --------------------------------------------------------------------------
+   One store holds every thread on the platform, and each portal takes the
+   slice it is entitled to. Keeping the split here rather than in the
+   screens is what stops the two inboxes drifting: there is one definition
+   of "the clinic's threads" and one of "mine", and both are testable
+   without rendering anything.
+   -------------------------------------------------------------------------- */
+
+/**
+ * The threads the clinic works.
+ *
+ * Only the ones addressed to the facility itself. A member writing to their
+ * dietitian is not clinic queue work, and listing it there would put the
+ * same member on screen five times over — the clinic inbox is one row per
+ * patient, and that is the property this preserves.
+ */
+export function clinicConversations(
+  conversations: Conversation[],
+): Conversation[] {
+  return conversations.filter((c) => c.contact.kind === "facility");
+}
+
+/** The threads belonging to one member, whichever end they are addressed to. */
+export function memberConversations(
+  conversations: Conversation[],
+  memberName: string,
+): Conversation[] {
+  return conversations.filter((c) => c.memberName === memberName);
+}
+
+/**
+ * The slice of the member inbox a filter shows.
+ *
+ * Same archive rule as the clinic — an archived thread appears under
+ * Archived and nowhere else — over a subject axis rather than a state one.
+ * `keepId` does the same job it does clinic-side: the open thread stays put
+ * until the reader leaves it.
+ */
+export function applyMemberFilter(
+  conversations: Conversation[],
+  filter: MemberInboxFilter,
+  keepId?: string | null,
+): Conversation[] {
+  const matches = (c: Conversation) => {
+    if (c.id === keepId) return true;
+    if (filter === "archived") return c.archived;
+    if (c.archived) return false;
+    if (filter === "all") return true;
+    return c.category === filter;
+  };
+  return conversations.filter(matches);
+}
+
+/** The number beside each member filter. Counts the folder, not the view. */
+export function memberFilterCounts(conversations: Conversation[]) {
+  return {
+    all: applyMemberFilter(conversations, "all").length,
+    "care-team": applyMemberFilter(conversations, "care-team").length,
+    appointments: applyMemberFilter(conversations, "appointments").length,
+    archived: applyMemberFilter(conversations, "archived").length,
+  };
+}
+
+/**
+ * The distinct care-team people behind a member's threads.
+ *
+ * Drives the Care Team rail. Derived from the threads rather than stored
+ * beside them, so the rail can never list somebody the member has no way to
+ * reach. The facility itself is left out: it is the header of the thread
+ * below, not a person on the team.
+ */
+export function careTeamFor(conversations: Conversation[]) {
+  const seen = new Map<string, Conversation["contact"]>();
+  for (const conversation of conversations) {
+    if (conversation.contact.kind !== "person") continue;
+    if (!seen.has(conversation.contact.name)) {
+      seen.set(conversation.contact.name, conversation.contact);
+    }
+  }
+  return [...seen.values()];
 }

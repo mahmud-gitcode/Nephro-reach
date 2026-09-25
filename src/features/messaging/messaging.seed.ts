@@ -1,4 +1,9 @@
-import type { Conversation, Message, MessageAuthor } from "./messaging.types";
+import type {
+  CareTeamContact,
+  Conversation,
+  Message,
+  MessageAuthor,
+} from "./messaging.types";
 
 /* ==========================================================================
    Messaging — the demo inbox
@@ -37,11 +42,72 @@ function msg(
   return { id: `${threadId}-m${index}`, author, body, sentAt, attachment };
 }
 
+/**
+ * The clinic end of every thread the facility holds.
+ *
+ * One object, shared by reference across all ten threads: the facility is
+ * the same correspondent in each, and ten copies of its name would be ten
+ * places to miss when it is renamed. Matches the clinic demo account in
+ * `auth.ts`, so signing in as the clinic and as the member shows two ends
+ * of the same conversation rather than two unrelated centres.
+ */
+const FACILITY: CareTeamContact = {
+  name: "Riverside Dialysis Center",
+  role: "Your Dialysis Care Team",
+  kind: "facility",
+  online: true,
+};
+
+/**
+ * The member whose portal the demo signs into.
+ *
+ * Frontend-only means there is no account linking a login to a chart, so
+ * the member inbox is pinned to one seeded name. When a server arrives this
+ * becomes the signed-in user's id and `memberConversations` stops needing a
+ * constant at all.
+ */
+export const DEMO_MEMBER = "John Taylor";
+
+const CARE_TEAM = {
+  provider: {
+    name: "Melissa Carter, NP",
+    role: "Provider",
+    kind: "person",
+    online: false,
+  },
+  nurse: {
+    name: "Nurse Wilson",
+    role: "Dialysis Nurse",
+    kind: "person",
+    online: true,
+  },
+  dietitian: {
+    name: "Rachel Adams, RD",
+    role: "Renal Dietitian",
+    kind: "person",
+    online: false,
+  },
+  social: {
+    name: "Tanya Green, LMSW",
+    role: "Social Worker",
+    kind: "person",
+    online: false,
+  },
+  frontDesk: {
+    name: "Front Desk",
+    role: "Scheduling",
+    kind: "person",
+    online: false,
+  },
+} satisfies Record<string, CareTeamContact>;
+
 export function seedConversations(now: number): Conversation[] {
   return [
     {
       id: "john-taylor",
       memberName: "John Taylor",
+      contact: FACILITY,
+      category: "care-team",
       unread: 2,
       flagged: false,
       archived: false,
@@ -106,6 +172,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "sandra-phillips",
       memberName: "Sandra Phillips",
+      contact: FACILITY,
+      category: "care-team",
       unread: 1,
       flagged: true,
       archived: false,
@@ -134,6 +202,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "marcus-white",
       memberName: "Marcus White",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: false,
@@ -169,6 +239,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "lisa-reynolds",
       memberName: "Lisa Reynolds",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: false,
@@ -198,6 +270,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "daniel-brooks",
       memberName: "Daniel Brooks",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: false,
@@ -227,6 +301,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "maria-clark",
       memberName: "Maria Clark",
+      contact: FACILITY,
+      category: "care-team",
       unread: 1,
       flagged: false,
       archived: false,
@@ -255,6 +331,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "robert-turner",
       memberName: "Robert Turner",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: false,
@@ -290,6 +368,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "evelyn-green",
       memberName: "Evelyn Green",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: false,
@@ -318,6 +398,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "kevin-walker",
       memberName: "Kevin Walker",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: true,
@@ -346,6 +428,8 @@ export function seedConversations(now: number): Conversation[] {
     {
       id: "tiffany-moore",
       memberName: "Tiffany Moore",
+      contact: FACILITY,
+      category: "care-team",
       unread: 0,
       flagged: false,
       archived: true,
@@ -368,6 +452,188 @@ export function seedConversations(now: number): Conversation[] {
           "member",
           "Can you resend the handout?",
           ago(now, 18 * DAY),
+        ),
+      ],
+    },
+
+    /* ----------------------------------------------------------------
+       The member's own threads.
+
+       These have no `patient` block: they are not clinic queue work, and
+       `clinicConversations` filters them out of that inbox by contact
+       kind. They exist so the member portal has the several standing
+       conversations a real one has, rather than a single thread with
+       "the clinic".
+       ---------------------------------------------------------------- */
+    {
+      id: "mt-provider",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.provider,
+      category: "care-team",
+      unread: 0,
+      flagged: false,
+      archived: false,
+      messages: [
+        msg(
+          "mt-provider",
+          1,
+          "clinic",
+          "Hi John — I reviewed your labs from this week. Your phosphorus is trending down, which is exactly what we wanted to see. Keep doing what you are doing.",
+          ago(now, 1 * DAY + 3 * HOUR),
+        ),
+        msg(
+          "mt-provider",
+          2,
+          "member",
+          "That is great news. Should I stay on the same binder dose?",
+          ago(now, 1 * DAY + 2 * HOUR),
+        ),
+        msg(
+          "mt-provider",
+          3,
+          "clinic",
+          "Yes, no change for now. We will recheck in four weeks.",
+          ago(now, 1 * DAY + 1 * HOUR),
+        ),
+      ],
+    },
+    {
+      id: "mt-nurse",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.nurse,
+      category: "care-team",
+      unread: 1,
+      flagged: false,
+      archived: false,
+      messages: [
+        msg(
+          "mt-nurse",
+          1,
+          "clinic",
+          "Don't forget to bring your full medication list to your next session — including anything over the counter.",
+          ago(now, 3 * DAY),
+        ),
+        msg(
+          "mt-nurse",
+          2,
+          "member",
+          "Will do. Does that include vitamins?",
+          ago(now, 3 * DAY - 40 * MINUTE),
+        ),
+        msg(
+          "mt-nurse",
+          3,
+          "clinic",
+          "It does. Vitamins and supplements count, and some of them interact with your binders.",
+          ago(now, 2 * DAY - 6 * HOUR),
+        ),
+      ],
+    },
+    {
+      id: "mt-dietitian",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.dietitian,
+      category: "care-team",
+      unread: 0,
+      flagged: false,
+      archived: false,
+      messages: [
+        msg(
+          "mt-dietitian",
+          1,
+          "member",
+          "My potassium came back at 5.2. Do I need to make any changes to my diet?",
+          ago(now, 5 * DAY),
+        ),
+        msg(
+          "mt-dietitian",
+          2,
+          "clinic",
+          "Good question. I would limit high potassium foods this week — I've attached a list for you. Let me know if you have any other questions.",
+          ago(now, 5 * DAY - 90 * MINUTE),
+          { name: "Low Potassium Foods.pdf", sizeLabel: "1.4 MB" },
+        ),
+        msg(
+          "mt-dietitian",
+          3,
+          "member",
+          "Thank you so much!",
+          ago(now, 5 * DAY - 2 * HOUR),
+        ),
+      ],
+    },
+    {
+      id: "mt-social",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.social,
+      category: "care-team",
+      unread: 0,
+      flagged: false,
+      archived: false,
+      messages: [
+        msg(
+          "mt-social",
+          1,
+          "clinic",
+          "I pulled together the transportation resources we talked about — there is a county van program that covers dialysis trips.",
+          ago(now, 8 * DAY),
+        ),
+        msg(
+          "mt-social",
+          2,
+          "member",
+          "That would help a lot. How do I apply?",
+          ago(now, 8 * DAY - 3 * HOUR),
+        ),
+      ],
+    },
+    {
+      id: "mt-front-desk",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.frontDesk,
+      category: "appointments",
+      unread: 0,
+      flagged: false,
+      archived: false,
+      messages: [
+        msg(
+          "mt-front-desk",
+          1,
+          "member",
+          "Can I move my Thursday session to the morning slot?",
+          ago(now, 11 * DAY),
+        ),
+        msg(
+          "mt-front-desk",
+          2,
+          "clinic",
+          "Done — you are booked for 7:00 AM Thursday. Your chair assignment stays the same.",
+          ago(now, 11 * DAY - 2 * HOUR),
+        ),
+        msg(
+          "mt-front-desk",
+          3,
+          "member",
+          "Perfect, thank you.",
+          ago(now, 11 * DAY - 3 * HOUR),
+        ),
+      ],
+    },
+    {
+      id: "mt-front-desk-old",
+      memberName: DEMO_MEMBER,
+      contact: CARE_TEAM.frontDesk,
+      category: "appointments",
+      unread: 0,
+      flagged: false,
+      archived: true,
+      messages: [
+        msg(
+          "mt-front-desk-old",
+          1,
+          "clinic",
+          "Your appointment for last month has been confirmed. Please arrive 15 minutes early.",
+          ago(now, 31 * DAY),
         ),
       ],
     },

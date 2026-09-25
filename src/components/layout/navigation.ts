@@ -163,6 +163,12 @@ export const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
+    label: "Messages",
+    href: "/dashboard/messages",
+    icon: MessageSquareText,
+    roles: ["user"],
+  },
+  {
     label: "Community",
     href: "/dashboard/community",
     icon: MessagesSquare,
@@ -397,6 +403,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Diario de Diálisis" : "Dialysis Journal";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-management"))
     return language === "ES" ? "Gestión de Diálisis" : "Dialysis Management";
+  if (pathname.startsWith("/dashboard/messages"))
+    return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/team-questions"))
     return language === "ES" ? "Preguntas al Equipo" : "Care Team Questions";
   if (pathname.startsWith("/dashboard/personal-log"))
@@ -486,6 +494,7 @@ export function getNavLabel(
     "/dashboard/my-health": "Mi Salud",
     "/dashboard/personal-log": "Registro Personal",
     "/dashboard/personal-log/dialysis-journal": "Diario de Diálisis",
+    "/dashboard/messages": "Mensajes",
     "/dashboard/team-questions": "Preguntas al Equipo",
     "/dashboard/members": "Miembros",
     "/dashboard/manage-curriculum": "Gestión de Clases",
