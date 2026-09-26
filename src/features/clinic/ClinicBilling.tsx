@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CheckCircle2,
   DollarSign,
+  CreditCard,
   Download,
   FileSignature,
   FileText,
@@ -30,7 +31,6 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
 import { tableIconButton } from "./tableButton";
 import {
@@ -52,20 +52,41 @@ import {
 } from "./billing.data";
 import { useClinicData } from "./useClinicData";
 import { useClinicSettings } from "./useClinicSettings";
+import { useBillingActions } from "./useBillingActions";
+import {
+  applyPayments,
+  changeTopicLabel,
+  renewalLabel,
+} from "./billing.actions";
+import {
+  ContractDocumentModal,
+  PayInvoiceModal,
+  RenewalOptionsModal,
+  RequestChangeModal,
+  downloadInvoice,
+} from "./BillingModals";
 
 function PanelHeading({
   title,
   description,
+  action,
 }: {
   title: string;
   description?: string;
+  /** Pinned to the right of the title, for a panel-level action. */
+  action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-stack-lg">
-      <h2 className="text-heading-4 text-fg">{title}</h2>
-      {description ? (
-        <p className="mt-stack-xs text-body-sm text-fg-muted">{description}</p>
-      ) : null}
+    <div className="mb-stack-lg flex flex-wrap items-start justify-between gap-inline-md">
+      <div className="min-w-0">
+        <h2 className="text-heading-4 text-fg">{title}</h2>
+        {description ? (
+          <p className="mt-stack-xs text-body-sm text-fg-muted">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {action}
     </div>
   );
 }
@@ -155,7 +176,16 @@ function SummaryCards({
   );
 }
 
-function ContractDetails() {
+function ContractDetails({
+  onViewContract,
+  onRequestChange,
+  lastRequest,
+}: {
+  onViewContract: () => void;
+  onRequestChange: () => void;
+  /** The most recent change request, so the clinic can see it landed. */
+  lastRequest?: { topic: string; requestedAt: string };
+}) {
   /* Name, email and phone are the organization profile from Settings, so
      an edit there shows here rather than leaving two copies to disagree. */
   const { settings } = useClinicSettings();
@@ -209,21 +239,17 @@ function ContractDetails() {
       </dl>
 
       <div className="mt-auto grid gap-inline-md pt-inset-md sm:grid-cols-2">
-        <Button
-          {...notBuiltYet("Viewing the contract document")}
-          size="small"
-          className="sm:col-span-2"
-        >
+        <Button size="small" className="sm:col-span-2" onClick={onViewContract}>
           <FileText className="h-4 w-4" />
           View Contract Document
         </Button>
         {/* A clinic cannot rewrite its own contract, so the mockup's "Edit
             Contract" becomes a request to NephroReach. */}
         <Button
-          {...notBuiltYet("Requesting a contract change")}
           variant="neutral"
           appearance="fill-stroke"
           size="small"
+          onClick={onRequestChange}
         >
           Request a Change
         </Button>
@@ -239,16 +265,50 @@ function ContractDetails() {
           Send Message
         </Link>
       </div>
+
+      {/* A request that vanishes on send is indistinguishable from one that
+          failed, so the latest one stays on the card. */}
+      {lastRequest ? (
+        <p className="mt-inset-md text-body-sm text-fg-muted">
+          Change requested: {lastRequest.topic} ·{" "}
+          {formatDate(new Date(lastRequest.requestedAt))}
+        </p>
+      ) : null}
     </Card>
   );
 }
 
-function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
+function InvoiceTable({
+  invoices,
+  onPay,
+  onDownload,
+}: {
+  invoices: Invoice[];
+  onPay: (invoices: Invoice[]) => void;
+  onDownload: (invoice: Invoice) => void;
+}) {
+  const owed = outstanding(invoices);
+  const unpaid = invoices.filter((invoice) => invoice.status !== "Paid");
+
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading
         title="Invoices"
         description="Every invoice on this contract, newest first."
+        action={
+          /* Stripe is not wired up yet, so this carries the same
+             not-built marker as the download above rather than pretending
+             to take a payment. Disabled when there is nothing owed: a live
+             Pay button over a zero balance invites a double payment. */
+          <Button
+            size="small"
+            disabled={owed <= 0}
+            onClick={() => onPay(unpaid)}
+          >
+            <CreditCard aria-hidden="true" />
+            <span>{owed > 0 ? `Pay ${formatMoney(owed)}` : "Nothing due"}</span>
+          </Button>
+        }
       />
       <div className="overflow-hidden rounded-control border border-line">
         <Table minWidth={560}>
@@ -285,17 +345,32 @@ function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    {...notBuiltYet("Downloading invoices")}
-                    variant="neutral"
-                    appearance="fill-stroke"
-                    size="small"
-                    iconOnly
-                    className={tableIconButton}
-                    aria-label={`Download ${invoice.number}`}
-                  >
-                    <Download aria-hidden="true" />
-                  </Button>
+                  <span className="inline-flex items-center justify-end gap-inline-xs">
+                    {/* Only where money is actually owed. A Pay button on a
+                        settled invoice is how somebody pays twice. */}
+                    {invoice.status !== "Paid" ? (
+                      <Button
+                        size="small"
+                        iconOnly
+                        className={tableIconButton}
+                        aria-label={`Pay ${invoice.number}`}
+                        onClick={() => onPay([invoice])}
+                      >
+                        <CreditCard aria-hidden="true" />
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      size="small"
+                      iconOnly
+                      className={tableIconButton}
+                      aria-label={`Download ${invoice.number}`}
+                      onClick={() => onDownload(invoice)}
+                    >
+                      <Download aria-hidden="true" />
+                    </Button>
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
@@ -358,7 +433,15 @@ function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
   );
 }
 
-function Renewal({ today }: { today: Date }) {
+function Renewal({
+  today,
+  renewal,
+  onReview,
+}: {
+  today: Date;
+  renewal: string;
+  onReview: () => void;
+}) {
   const days = daysUntilEnd(today);
   const elapsed = termElapsedPct(today);
   return (
@@ -397,14 +480,17 @@ function Renewal({ today }: { today: Date }) {
       </ul>
       <div className="mt-auto pt-inset-md">
         <Button
-          {...notBuiltYet("Renewal options")}
           variant="neutral"
           appearance="fill-stroke"
           size="small"
           fullWidth
+          onClick={onReview}
         >
           Review Renewal Options
         </Button>
+        <p className="mt-inset-xs text-center text-body-sm text-fg-muted">
+          {renewal}
+        </p>
       </div>
     </Card>
   );
@@ -464,7 +550,23 @@ export default function ClinicBilling() {
   const clinic = useClinicData();
   const covered = clinic.data?.patients.length ?? patientsCovered;
   const today = mounted ? new Date() : null;
-  const invoices = today ? invoicesUpTo(today) : [];
+
+  /* What this clinic has done here — payments made, changes asked for, the
+     renewal choice. The invoices themselves stay derived from the contract;
+     payments are folded in on read so there is still one source of truth
+     for what was billed. */
+  const billing = useBillingActions();
+  const { settings } = useClinicSettings();
+  const invoices = today
+    ? applyPayments(invoicesUpTo(today), billing.paidInvoices)
+    : [];
+
+  const [contractOpen, setContractOpen] = React.useState(false);
+  const [changeOpen, setChangeOpen] = React.useState(false);
+  const [renewalOpen, setRenewalOpen] = React.useState(false);
+  const [paying, setPaying] = React.useState<Invoice[] | null>(null);
+
+  const lastRequest = billing.changeRequests[0];
 
   return (
     <div className="space-y-4">
@@ -488,17 +590,69 @@ export default function ClinicBilling() {
           />
 
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <ContractDetails />
+            <ContractDetails
+              onViewContract={() => setContractOpen(true)}
+              onRequestChange={() => setChangeOpen(true)}
+              lastRequest={
+                lastRequest
+                  ? {
+                      topic: changeTopicLabel(lastRequest.topic),
+                      requestedAt: lastRequest.requestedAt,
+                    }
+                  : undefined
+              }
+            />
             <div className="xl:col-span-2">
-              <InvoiceTable invoices={invoices} />
+              <InvoiceTable
+                invoices={invoices}
+                onPay={(unpaid) => setPaying(unpaid)}
+                onDownload={(invoice) =>
+                  downloadInvoice(invoice, settings.profile.name)
+                }
+              />
             </div>
           </section>
 
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             <SeatUsage patientsCovered={covered} />
-            <Renewal today={today} />
+            <Renewal
+              today={today}
+              renewal={renewalLabel(billing.renewal)}
+              onReview={() => setRenewalOpen(true)}
+            />
             <BillingSummary invoices={invoices} today={today} />
           </section>
+
+          {/* The dialogs behind the four actions above. Each is keyed on
+              open so a reopened form starts clean, with no effect syncing
+              a draft back to props. */}
+          <ContractDocumentModal
+            open={contractOpen}
+            onClose={() => setContractOpen(false)}
+            clinicName={settings.profile.name}
+          />
+
+          <RequestChangeModal
+            key={`change-${changeOpen}`}
+            open={changeOpen}
+            onClose={() => setChangeOpen(false)}
+            onSubmit={billing.requestChange}
+          />
+
+          <PayInvoiceModal
+            open={paying !== null}
+            onClose={() => setPaying(null)}
+            invoices={paying ?? []}
+            onPaid={billing.pay}
+          />
+
+          <RenewalOptionsModal
+            key={`renewal-${renewalOpen}`}
+            open={renewalOpen}
+            onClose={() => setRenewalOpen(false)}
+            current={billing.renewal}
+            onChoose={billing.setRenewal}
+          />
         </>
       )}
     </div>

@@ -47,8 +47,13 @@ import type {} from "@/features/personal-log/dialysis/treatment.types";
 import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSection";
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
+import HomeVisitsSection from "@/features/personal-log/dialysis/HomeVisitsSection";
+import UrineOutputSection from "@/features/personal-log/dialysis/UrineOutputSection";
+import CareTeamContactSection from "@/features/personal-log/dialysis/CareTeamContactSection";
+import AccessPhotosSection from "@/features/personal-log/dialysis/AccessPhotosSection";
+import SupplyChecklistSection from "@/features/personal-log/dialysis/SupplyChecklistSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import ModalityCard from "@/features/personal-log/dialysis/ModalityCard";
+import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { Alert, SectionTitle } from "@/components/ui";
@@ -376,7 +381,7 @@ function DialysisManagementDashboard() {
         {/* The modality comes first: it decides whether the schedule below
             makes sense at all. The weekly grid describes runs with gaps
             between them, which is not how PD works. */}
-        <ModalityCard log={modalityLog} />
+        <ModalityTabs log={modalityLog} />
 
         <DialysisClinicCard />
 
@@ -422,8 +427,13 @@ function DialysisManagementDashboard() {
 
             <div>
               {/* One card per treatment day, in an even grid: the day as the
-                card's title, then how long, then the chair time. Only
-                treatment days are listed. */}
+                card's title, then how long, then when. Only treatment days
+                are listed.
+
+                At home there is no chair time — no machine or nurse is
+                being shared, so the member starts when it suits them. That
+                row drops out and the reminder becomes a time of its own
+                rather than a subtraction from a slot. */}
               <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2 lg:grid-cols-3">
                 {visibleWeekdays.map((day) => (
                   <li
@@ -447,23 +457,25 @@ function DialysisManagementDashboard() {
                           {formatDuration(durationFor(currentSchedule, day))}
                         </dd>
                       </div>
-                      <div className="flex items-center justify-between gap-inline-md">
-                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
-                          <Clock
-                            aria-hidden="true"
-                            className="h-3.5 w-3.5 shrink-0"
-                          />
-                          {isEs ? "Hora del sillón" : "Chair time"}
-                        </dt>
-                        <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
-                          {formatReminder(
-                            currentSchedule.chairTimes[day] ??
-                              DEFAULT_CHAIR_TIME,
-                            isEs,
-                          )}
-                        </dd>
-                      </div>
-                      {/* When the alarm goes off: the chair time less the lead. */}
+                      {modalityLog.hasChair ? (
+                        <div className="flex items-center justify-between gap-inline-md">
+                          <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                            <Clock
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 shrink-0"
+                            />
+                            {isEs ? "Hora del sillón" : "Chair time"}
+                          </dt>
+                          <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                            {formatReminder(
+                              currentSchedule.chairTimes[day] ??
+                                DEFAULT_CHAIR_TIME,
+                              isEs,
+                            )}
+                          </dd>
+                        </div>
+                      ) : null}
+                      {/* When the alarm goes off. */}
                       <div className="flex items-center justify-between gap-inline-md">
                         <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
                           <Bell
@@ -474,7 +486,11 @@ function DialysisManagementDashboard() {
                         </dt>
                         <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
                           {formatReminder(
-                            reminderTimeFor(currentSchedule, day),
+                            reminderTimeFor(
+                              currentSchedule,
+                              day,
+                              modalityLog.hasChair,
+                            ),
                             isEs,
                           )}
                         </dd>
@@ -490,6 +506,26 @@ function DialysisManagementDashboard() {
         {/* 2. Provider orders and instructions */}
         <ProviderOrdersSection />
 
+        {/* 3. Appointments at the member's own home. Home members only. */}
+        <HomeVisitsSection modalityLog={modalityLog} />
+
+        {/* 4. What is in the cupboard this month. Home members only — the
+            section takes itself away for in-center. */}
+        <SupplyChecklistSection modalityLog={modalityLog} />
+
+        {/* 5. Recorded across the day rather than during a run, so it
+            belongs here and not in the treatment log. Every modality: a
+            member still making urine is worth watching either way. */}
+        <UrineOutputSection />
+
+        {/* 6. Reaching the nurse, and showing them what the phone cannot
+            describe. Side by side because a photo is usually sent with a
+            message about it. */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <CareTeamContactSection />
+          <AccessPhotosSection />
+        </div>
+
         {/* 4. Questions for the care team */}
         <CareTeamQuestionsSection />
 
@@ -503,6 +539,7 @@ function DialysisManagementDashboard() {
           open={isEditWeekModalOpen}
           onClose={() => setIsEditWeekModalOpen(false)}
           initialDays={selectedDays}
+          hasChairTime={modalityLog.hasChair}
           initialChairTimes={currentSchedule.chairTimes}
           initialReminderLead={currentSchedule.reminderLeadMinutes}
           initialDurations={currentSchedule.durations}

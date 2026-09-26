@@ -23,7 +23,10 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import ModalityCard from "@/features/personal-log/dialysis/ModalityCard";
+import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
+import MachineWaterCard from "@/features/personal-log/dialysis/MachineWaterCard";
+import TreatmentVitalsCard from "@/features/personal-log/dialysis/TreatmentVitalsCard";
+import HelpfulTipsCard from "@/features/personal-log/dialysis/HelpfulTipsCard";
 import PdExchangeLog from "@/features/personal-log/dialysis/PdExchangeLog";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import {
@@ -340,7 +343,7 @@ export default function DialysisTreatmentPage() {
       {/* Which kind of dialysis this member is on. Everything below is
           written for a chair at a centre, so a member on PD needs to be
           able to say so before the page asks them for a chair time. */}
-      <ModalityCard log={modalityLog} />
+      <ModalityTabs log={modalityLog} showPdRhythm />
 
       {modalityLog.modality === "pd" ? (
         <PdExchangeLog
@@ -400,6 +403,16 @@ export default function DialysisTreatmentPage() {
           {/* TOP 4 SUMMARY CARDS */}
           <SummaryCards />
 
+          {/* At home the member owns the machine and takes the observations,
+              so the log has to ask for what a technician and a nurse would
+              otherwise have recorded. Neither belongs on an in-center page. */}
+          {modalityLog.modality === "home-hd" ? (
+            <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2">
+              <MachineWaterCard />
+              <TreatmentVitalsCard date={selectedDate ?? LATEST_ENTRY_DATE} />
+            </section>
+          ) : null}
+
           {/* CLINICAL MEASUREMENTS */}
           <ClinicalMeasurementsCards />
 
@@ -420,6 +433,10 @@ export default function DialysisTreatmentPage() {
           />
         </>
       )}
+
+      {/* Advice last, below the fields: a member opening this came to record
+          a session, not to read. */}
+      <HelpfulTipsCard modality={modalityLog.modality} />
     </div>
   );
 }

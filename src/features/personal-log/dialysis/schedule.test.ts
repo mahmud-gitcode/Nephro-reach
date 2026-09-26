@@ -321,6 +321,21 @@ describe("chair time and the reminder that follows it", () => {
     ).toBe("05:30");
   });
 
+  it("treats the stored time as the reminder when there is no chair time", () => {
+    // At home the member starts when it suits them, so the time they set
+    // IS when they want nudging. Subtracting a travel lead from it would
+    // remind them an hour before a slot that does not exist.
+    expect(reminderTimeFor(period, "Monday", false)).toBe("05:30");
+  });
+
+  it("ignores the stored lead once the chair time is gone", () => {
+    // A member who switches from a centre to home keeps whatever lead they
+    // had saved; it must not quietly go on shifting their reminder.
+    expect(
+      reminderTimeFor({ ...period, reminderLeadMinutes: 180 }, "Monday", false),
+    ).toBe("05:30");
+  });
+
   it("wraps back past midnight rather than going negative", () => {
     // An early chair time with a long lead lands on the previous evening.
     expect(shiftClock("00:30", 60)).toBe("23:30");

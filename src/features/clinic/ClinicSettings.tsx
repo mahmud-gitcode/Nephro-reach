@@ -36,14 +36,12 @@ import {
   TableRow,
 } from "@/components/ui";
 import { useLanguage, type LanguageCode } from "@/context/LanguageContext";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { tableIconButton } from "./tableButton";
 import {
   DATE_FORMATS,
   initials,
   ITEMS_PER_PAGE,
   NOTIFICATIONS,
-  officeUsers,
   TIME_ZONES,
   userStatusTone,
   validateProfile,
@@ -52,6 +50,22 @@ import {
   type OrganizationProfile,
 } from "./settings.data";
 import { useClinicSettings } from "./useClinicSettings";
+import { useSettingsActions } from "./useSettingsActions";
+import {
+  exportDocument,
+  exportFilename,
+  type ManagedUser,
+} from "./settings.actions";
+import {
+  AddUserModal,
+  ChangePasswordModal,
+  DataSharingModal,
+  HipaaModal,
+  LoginActivityModal,
+  SessionsModal,
+  TwoFactorModal,
+  UserActionsModal,
+} from "./SettingsModals";
 
 type Update = (change: Partial<ClinicSettings>) => void;
 
@@ -338,14 +352,22 @@ function OrganizationProfileCard({
   );
 }
 
-function UserManagementCard() {
+function UserManagementCard({
+  users,
+  onAdd,
+  onSelect,
+}: {
+  users: ManagedUser[];
+  onAdd: () => void;
+  onSelect: (user: ManagedUser) => void;
+}) {
   return (
     <Card as="section" padding="small" className="h-full">
       <SectionHeading
         title="User Management"
         description="Manage who has access to your office portal."
         action={
-          <Button {...notBuiltYet("Adding a user")} size="small">
+          <Button size="small" onClick={onAdd}>
             <Plus className="h-4 w-4" />
             Add User
           </Button>
@@ -364,7 +386,7 @@ function UserManagementCard() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {officeUsers.map((user) => (
+            {users.map((user) => (
               <TableRow key={user.email}>
                 <TableCell emphasis className="whitespace-nowrap">
                   {user.name}
@@ -378,7 +400,7 @@ function UserManagementCard() {
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
-                    {...notBuiltYet("User actions")}
+                    onClick={() => onSelect(user)}
                     variant="neutral"
                     appearance="fill-stroke"
                     size="small"
@@ -397,7 +419,7 @@ function UserManagementCard() {
           page={1}
           pageCount={1}
           onPageChange={() => {}}
-          summary={`Showing 1–${officeUsers.length} of ${officeUsers.length} users`}
+          summary={`Showing 1–${users.length} of ${users.length} users`}
         />
       </div>
     </Card>
@@ -480,7 +502,21 @@ function NotificationCard({
   );
 }
 
-function SecurityCard() {
+function SecurityCard({
+  twoFactor,
+  passwordChangedAt,
+  onPassword,
+  onTwoFactor,
+  onSessions,
+  onActivity,
+}: {
+  twoFactor: string | null;
+  passwordChangedAt: string;
+  onPassword: () => void;
+  onTwoFactor: () => void;
+  onSessions: () => void;
+  onActivity: () => void;
+}) {
   return (
     <Card as="section" padding="small">
       <SectionHeading
@@ -491,39 +527,57 @@ function SecurityCard() {
         <ActionRow
           icon={<KeyRound />}
           title="Change Password"
-          action={<RowButton feature="Changing your password" label="Change" />}
+          status={
+            passwordChangedAt ? (
+              <Badge tone="neutral">
+                Changed {new Date(passwordChangedAt).toLocaleDateString()}
+              </Badge>
+            ) : null
+          }
+          action={<RowButton label="Change" onClick={onPassword} />}
         />
         <ActionRow
           icon={<Smartphone />}
           title="Two-Factor Authentication (2FA)"
-          status={<Badge tone="neutral">Off</Badge>}
+          status={
+            <Badge tone={twoFactor ? "success" : "neutral"}>
+              {twoFactor === "app"
+                ? "On — app"
+                : twoFactor === "sms"
+                  ? "On — SMS"
+                  : "Off"}
+            </Badge>
+          }
           action={
-            <RowButton feature="Two-factor authentication" label="Enable" />
+            <RowButton
+              label={twoFactor ? "Manage" : "Enable"}
+              onClick={onTwoFactor}
+            />
           }
         />
         <ActionRow
           icon={<Laptop />}
           title="Active Sessions"
-          action={<RowButton feature="Active sessions" label="View" />}
+          action={<RowButton label="View" onClick={onSessions} />}
         />
         <ActionRow
           icon={<Activity />}
           title="Login Activity"
-          action={<RowButton feature="Login activity" label="View" />}
+          action={<RowButton label="View" onClick={onActivity} />}
         />
       </ul>
     </Card>
   );
 }
 
-function RowButton({ feature, label }: { feature: string; label: string }) {
+function RowButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button
-      {...notBuiltYet(feature)}
       variant="neutral"
       appearance="fill-stroke"
       size="small"
       className="shrink-0"
+      onClick={onClick}
     >
       {label}
     </Button>
@@ -634,7 +688,15 @@ function OfficePreferencesCard({
   );
 }
 
-function DataPrivacyCard() {
+function DataPrivacyCard({
+  onDownload,
+  onSharing,
+  onHipaa,
+}: {
+  onDownload: () => void;
+  onSharing: () => void;
+  onHipaa: () => void;
+}) {
   return (
     <Card as="section" padding="small">
       <SectionHeading
@@ -646,21 +708,17 @@ function DataPrivacyCard() {
           <ActionRow
             icon={<Download />}
             title="Download Your Data"
-            action={
-              <RowButton feature="Downloading your data" label="Download" />
-            }
+            action={<RowButton label="Download" onClick={onDownload} />}
           />
           <ActionRow
             icon={<Share2 />}
             title="Data Sharing Preferences"
-            action={<RowButton feature="Data sharing" label="Manage" />}
+            action={<RowButton label="Manage" onClick={onSharing} />}
           />
           <ActionRow
             icon={<FileLock2 />}
             title="HIPAA & Security Information"
-            action={
-              <RowButton feature="HIPAA & security information" label="View" />
-            }
+            action={<RowButton label="View" onClick={onHipaa} />}
           />
         </ul>
         <Alert
@@ -682,6 +740,39 @@ export default function ClinicSettings() {
   const { settings, update, isPending, error, refetch, saveError } =
     useClinicSettings();
   const emailRef = useRef<HTMLDivElement>(null);
+
+  /* The roster, the security record and the sharing choices. Kept apart
+     from the settings above so that adding a user does not rewrite the
+     office's address. */
+  const actions = useSettingsActions();
+
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [sharingOpen, setSharingOpen] = useState(false);
+  const [hipaaOpen, setHipaaOpen] = useState(false);
+
+  /* A real file, built from what the browser already holds — the one action
+     on this page that needs nothing from a server. */
+  function downloadData() {
+    const blob = new Blob([exportDocument(settings, actions.actions)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = exportFilename();
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    // Freed on the next tick: revoking synchronously can beat the download.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
 
   function editEmail() {
     const input = emailRef.current?.querySelector("input");
@@ -720,7 +811,11 @@ export default function ClinicSettings() {
           ready={!isPending}
         />
         <div className="xl:col-span-2">
-          <UserManagementCard />
+          <UserManagementCard
+            users={actions.users}
+            onAdd={() => setAddUserOpen(true)}
+            onSelect={setSelectedUser}
+          />
         </div>
       </section>
 
@@ -730,11 +825,78 @@ export default function ClinicSettings() {
           update={update}
           onEditEmail={editEmail}
         />
-        <SecurityCard />
+        <SecurityCard
+          twoFactor={actions.security.twoFactor}
+          passwordChangedAt={actions.security.passwordChangedAt}
+          onPassword={() => setPasswordOpen(true)}
+          onTwoFactor={() => setTwoFactorOpen(true)}
+          onSessions={() => setSessionsOpen(true)}
+          onActivity={() => setActivityOpen(true)}
+        />
         <OfficePreferencesCard office={settings.office} update={update} />
       </section>
 
-      <DataPrivacyCard />
+      <DataPrivacyCard
+        onDownload={downloadData}
+        onSharing={() => setSharingOpen(true)}
+        onHipaa={() => setHipaaOpen(true)}
+      />
+
+      {/* The dialogs behind the actions above. Keyed on open where they hold
+          a draft, so a reopened form starts clean. */}
+      <AddUserModal
+        key={`add-user-${addUserOpen}`}
+        open={addUserOpen}
+        onClose={() => setAddUserOpen(false)}
+        users={actions.users}
+        onAdd={actions.addUser}
+      />
+
+      <UserActionsModal
+        user={selectedUser}
+        users={actions.users}
+        onClose={() => setSelectedUser(null)}
+        onStatus={actions.setUserStatus}
+        onResend={actions.resendInvite}
+        onRemove={actions.removeUser}
+      />
+
+      <ChangePasswordModal
+        key={`password-${passwordOpen}`}
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+        onChanged={actions.changePassword}
+      />
+
+      <TwoFactorModal
+        key={`two-factor-${twoFactorOpen}`}
+        open={twoFactorOpen}
+        onClose={() => setTwoFactorOpen(false)}
+        current={actions.security.twoFactor}
+        onChoose={actions.setTwoFactor}
+      />
+
+      {sessionsOpen ? (
+        <SessionsModal
+          open
+          onClose={() => setSessionsOpen(false)}
+          signedOut={actions.security.signedOutSessions}
+          onSignOut={actions.signOutSession}
+        />
+      ) : null}
+
+      {activityOpen ? (
+        <LoginActivityModal open onClose={() => setActivityOpen(false)} />
+      ) : null}
+
+      <DataSharingModal
+        open={sharingOpen}
+        onClose={() => setSharingOpen(false)}
+        sharing={actions.sharing}
+        onToggle={actions.setSharing}
+      />
+
+      <HipaaModal open={hipaaOpen} onClose={() => setHipaaOpen(false)} />
     </div>
   );
 }

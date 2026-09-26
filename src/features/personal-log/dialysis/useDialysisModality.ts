@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_MODALITY_SETTINGS,
   hasTreatmentIntervals,
+  hasChairTime,
   isHemodialysis,
   isHomeModality,
   recordsLocation,
@@ -105,6 +106,7 @@ export function useDialysisModality() {
     isHome: useMemo(() => isHomeModality(modality), [modality]),
     showsLocation: useMemo(() => recordsLocation(modality), [modality]),
     hasIntervals: useMemo(() => hasTreatmentIntervals(modality), [modality]),
+    hasChair: useMemo(() => hasChairTime(modality), [modality]),
 
     exchanges,
     exchangesOn: useCallback(

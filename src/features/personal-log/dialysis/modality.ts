@@ -34,7 +34,19 @@ export interface ModalityOption {
   value: DialysisModality;
   labelEn: string;
   labelEs: string;
-  /** One line under the label, saying what it means for the log. */
+  /**
+   * The label shortened for a tab strip on a narrow screen. "Home HD" and
+   * "PD" are what members and nurses say out loud anyway.
+   */
+  shortEn: string;
+  shortEs: string;
+  /**
+   * One line under the label, saying what it means for the log.
+   *
+   * Used where a member first PICKS their modality (settings, onboarding).
+   * The tab strip on the log pages is label-only: once the choice is made,
+   * a sentence under each tab is noise on every visit after the first.
+   */
   hintEn: string;
   hintEs: string;
 }
@@ -44,6 +56,8 @@ export const MODALITY_OPTIONS: ModalityOption[] = [
     value: "in-center-hd",
     labelEn: "In-center hemodialysis",
     labelEs: "Hemodiálisis en centro",
+    shortEn: "In-center",
+    shortEs: "En centro",
     hintEn: "Treatments in a chair at a dialysis center.",
     hintEs: "Tratamientos en un sillón en un centro de diálisis.",
   },
@@ -51,6 +65,8 @@ export const MODALITY_OPTIONS: ModalityOption[] = [
     value: "home-hd",
     labelEn: "Home hemodialysis",
     labelEs: "Hemodiálisis en casa",
+    shortEn: "Home HD",
+    shortEs: "HD en casa",
     hintEn: "The same machine and measurements, run by you at home.",
     hintEs: "La misma máquina y medidas, realizadas por usted en casa.",
   },
@@ -58,6 +74,8 @@ export const MODALITY_OPTIONS: ModalityOption[] = [
     value: "pd",
     labelEn: "Peritoneal dialysis",
     labelEs: "Diálisis peritoneal",
+    shortEn: "PD",
+    shortEs: "DP",
     hintEn: "Exchanges through your catheter, by hand or on a cycler.",
     hintEs: "Intercambios por su catéter, a mano o con una cicladora.",
   },
@@ -91,6 +109,16 @@ export function modalityLabel(
   return isEs ? option.labelEs : option.labelEn;
 }
 
+/** The tab-strip label: the same name, short enough for a phone. */
+export function modalityShortLabel(
+  modality: DialysisModality,
+  isEs: boolean,
+): string {
+  const option = MODALITY_OPTIONS.find((item) => item.value === modality);
+  if (!option) return modality;
+  return isEs ? option.shortEs : option.shortEn;
+}
+
 export function modalityHint(
   modality: DialysisModality,
   isEs: boolean,
@@ -98,6 +126,19 @@ export function modalityHint(
   const option = MODALITY_OPTIONS.find((item) => item.value === modality);
   if (!option) return "";
   return isEs ? option.hintEs : option.hintEn;
+}
+
+/**
+ * Whether a chair time applies.
+ *
+ * A chair time is a slot a unit assigns you — "Monday, Wednesday, Friday at
+ * 5:30" — and it only exists because a machine and a nurse are shared. At
+ * home, on either haemo or PD, there is no queue to join: the member starts
+ * when it suits them, so the page must not ask them what time they are due.
+ * They still keep a run time and a reminder.
+ */
+export function hasChairTime(modality: DialysisModality): boolean {
+  return modality === "in-center-hd";
 }
 
 /** Haemodialysis of either kind: same machine, same measurements. */

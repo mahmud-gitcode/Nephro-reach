@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_MODALITY_SETTINGS,
+  hasChairTime,
   hasTreatmentIntervals,
   isHemodialysis,
   isHomeModality,
   modalityLabel,
+  modalityShortLabel,
   normalizeSettings,
   recordsLocation,
 } from "./modality";
@@ -233,5 +235,42 @@ describe("what an exchange must have to be saved", () => {
     // member can record; refusing it would push them to invent a number.
     expect(exchangeError(draft({ drainMl: 0 }))).toBeNull();
     expect(exchangeError(draft({ drainMl: -1 }))).toBe("missing-drain");
+  });
+});
+
+describe("chair time belongs to the centre, not to dialysis", () => {
+  it("gives a chair time only to members treated at a centre", () => {
+    // The slot exists because a machine and a nurse are shared. At home
+    // nobody is queuing, so asking what time they are due is asking a
+    // question with no answer.
+    expect(hasChairTime("in-center-hd")).toBe(true);
+    expect(hasChairTime("home-hd")).toBe(false);
+    expect(hasChairTime("pd")).toBe(false);
+  });
+
+  it("does not confuse having no chair time with being on PD", () => {
+    // Home haemo drops the chair time but keeps the weekly run schedule,
+    // so the two rules have to stay separate.
+    expect(hasChairTime("home-hd")).toBe(false);
+    expect(hasTreatmentIntervals("home-hd")).toBe(true);
+  });
+});
+
+describe("the names the modality tabs show", () => {
+  it("shortens each name without renaming it", () => {
+    expect(modalityShortLabel("in-center-hd", false)).toBe("In-center");
+    expect(modalityShortLabel("home-hd", false)).toBe("Home HD");
+    expect(modalityShortLabel("pd", false)).toBe("PD");
+  });
+
+  it("shortens the Spanish names too", () => {
+    // A tab strip that falls back to English on one breakpoint is worse
+    // than one that is long in both.
+    expect(modalityShortLabel("home-hd", true)).toBe("HD en casa");
+    expect(modalityShortLabel("pd", true)).toBe("DP");
+  });
+
+  it("keeps the full name for the wide strip", () => {
+    expect(modalityLabel("pd", false)).toBe("Peritoneal dialysis");
   });
 });

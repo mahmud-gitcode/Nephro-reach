@@ -42,6 +42,7 @@ export function EditWeekModal({
   open,
   onClose,
   initialDays,
+  hasChairTime = true,
   initialChairTimes,
   initialReminderLead,
   initialDurations,
@@ -51,6 +52,12 @@ export function EditWeekModal({
   open: boolean;
   onClose: () => void;
   initialDays: string[];
+  /**
+   * False for home haemo and PD, where no unit assigns a slot. The per-day
+   * time then means "remind me at", and the lead below has nothing to count
+   * back from, so it drops out.
+   */
+  hasChairTime?: boolean;
   initialChairTimes: Record<string, string>;
   initialReminderLead: number;
   initialDurations: Record<string, number>;
@@ -159,15 +166,24 @@ export function EditWeekModal({
           </div>
         </div>
 
-        {/* Chair time and session length together, per prescribed day.
+        {/* Time and session length together, per prescribed day.
 
           They belong on the same row because they are one fact — "Monday at
           5:30 for four hours" — and splitting the length into a separate
           panel made it look like one number shared by the week, which it is
-          not. */}
+          not.
+
+          At a centre the time is the chair time the unit gave them. At home
+          it is simply when they plan to start. */}
         <div>
           <label className="mb-2 block font-semibold text-fg-secondary">
-            {isEs ? "Hora del Sillón y Duración" : "Chair Time & Duration"}
+            {hasChairTime
+              ? isEs
+                ? "Hora del Sillón y Duración"
+                : "Chair Time & Duration"
+              : isEs
+                ? "Hora y Duración"
+                : "Time & Duration"}
           </label>
           <div className="space-y-2">
             {ALL_WEEKDAYS.filter((day) => tempDays.includes(day)).map((day) => {
@@ -187,7 +203,15 @@ export function EditWeekModal({
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="time"
-                      aria-label={`${isEs ? "Hora del sillón" : "Chair time"} — ${dayName}`}
+                      aria-label={`${
+                        hasChairTime
+                          ? isEs
+                            ? "Hora del sillón"
+                            : "Chair time"
+                          : isEs
+                            ? "Hora de inicio"
+                            : "Start time"
+                      } — ${dayName}`}
                       value={tempChairTimes[day] ?? DEFAULT_CHAIR_TIME}
                       onChange={(e) =>
                         setTempChairTimes((prev: Record<string, string>) => ({
@@ -252,33 +276,38 @@ export function EditWeekModal({
         </div>
 
         {/* The reminder is expressed against the chair time, not as its own
-          clock time, so moving a chair time moves the reminder with it. */}
-        <div>
-          <label
-            htmlFor="reminder-lead"
-            className="mb-2 block font-semibold text-fg-secondary"
-          >
-            {isEs ? "Recordarme" : "Remind me"}
-          </label>
-          <select
-            id="reminder-lead"
-            value={tempLead}
-            onChange={(e) => setTempLead(Number(e.target.value))}
-            className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:ring-2 focus:ring-ring"
-          >
-            {[0, 30, 60, 90, 120, 180].map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes === 0
-                  ? isEs
-                    ? "A la hora del sillón"
-                    : "At my chair time"
-                  : isEs
-                    ? `${minutes} minutos antes`
-                    : `${minutes} minutes before`}
-              </option>
-            ))}
-          </select>
-        </div>
+          clock time, so moving a chair time moves the reminder with it.
+
+          Without a chair time there is nothing to count back from — the time
+          set above is the reminder — so the lead is not offered at all. */}
+        {hasChairTime ? (
+          <div>
+            <label
+              htmlFor="reminder-lead"
+              className="mb-2 block font-semibold text-fg-secondary"
+            >
+              {isEs ? "Recordarme" : "Remind me"}
+            </label>
+            <select
+              id="reminder-lead"
+              value={tempLead}
+              onChange={(e) => setTempLead(Number(e.target.value))}
+              className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:ring-2 focus:ring-ring"
+            >
+              {[0, 30, 60, 90, 120, 180].map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes === 0
+                    ? isEs
+                      ? "A la hora del sillón"
+                      : "At my chair time"
+                    : isEs
+                      ? `${minutes} minutos antes`
+                      : `${minutes} minutes before`}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </form>
     </Modal>
   );

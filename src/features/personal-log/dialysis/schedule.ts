@@ -225,10 +225,21 @@ export function prevailingChairTime(
   return best;
 }
 
-/** When to nudge for a given day: chair time, less the lead. */
-export function reminderTimeFor(period: SchedulePeriod, day: string): string {
-  const chair = period.chairTimes[day] ?? DEFAULT_CHAIR_TIME;
-  return shiftClock(chair, period.reminderLeadMinutes);
+/**
+ * When to nudge for a given day.
+ *
+ * With a chair time, the reminder is derived from it: the slot less the
+ * lead, so moving the slot moves the nudge. Without one — home haemo and PD,
+ * where nobody is due anywhere — the stored time IS the reminder, and there
+ * is nothing to subtract a travel lead from.
+ */
+export function reminderTimeFor(
+  period: SchedulePeriod,
+  day: string,
+  hasChairTime = true,
+): string {
+  const stored = period.chairTimes[day] ?? DEFAULT_CHAIR_TIME;
+  return hasChairTime ? shiftClock(stored, period.reminderLeadMinutes) : stored;
 }
 
 /**
