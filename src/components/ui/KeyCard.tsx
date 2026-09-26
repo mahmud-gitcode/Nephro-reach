@@ -176,7 +176,6 @@ export function KeyCard({
           <p className="mt-stack-xs text-label-md text-balance text-fg-secondary">
             {label}
           </p>
-          {children}
         </div>
       </div>
 
