@@ -33,8 +33,12 @@ import path from "node:path";
  * is 21.7 KB. Same ~10% headroom rule as before. Note this sums every
  * route's JS, so it grows with every page even though no visitor downloads
  * more than a fraction of it.
+ *
+ * Raised to 1120 against a measured 1018 (2026-09-26). No dependency was
+ * added; the growth is clinic treatment types, additional views, and
+ * management pages each adding their own chunk. Same ~10% headroom rule.
  */
-const BUDGET_KB = 980;
+const BUDGET_KB = 1120;
 
 const ROOT = ".next/static";
 
