@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  Activity,
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
@@ -12,18 +11,23 @@ import {
   ChevronRight,
   Download,
   FileBarChart,
-  GraduationCap,
-  HeartPulse,
-  Users,
-  Video,
 } from "lucide-react";
 
+import {
+  ActivitySolid,
+  GraduationCapSolid,
+  HeartPulseSolid,
+  UsersSolid,
+  VideoSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
   BarChart,
   Button,
   Card,
+  KeyCard,
+  type KeyCardTone,
   ChartLegend,
   DonutChart,
   LineChart,
@@ -52,28 +56,14 @@ import {
 } from "./reports.data";
 import { useClinicSettings } from "./useClinicSettings";
 
-const KPI_ICONS: Record<string, { icon: React.ReactNode; tint: string }> = {
-  members: {
-    icon: <Users className="text-brand-600" />,
-    tint: "bg-surface-brand-subtle",
-  },
-  completion: {
-    icon: <GraduationCap className="text-success" />,
-    tint: "bg-success-surface",
-  },
-  attendees: {
-    icon: <Video className="text-brand-600" />,
-    tint: "bg-surface-brand-subtle",
-  },
-  active: {
-    icon: <Activity className="text-success" />,
-    tint: "bg-success-surface",
-  },
-  er: {
-    icon: <HeartPulse className="text-danger" />,
-    tint: "bg-danger-surface",
-  },
-};
+const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
+  {
+    members: { icon: <UsersSolid />, tone: "brand" },
+    completion: { icon: <GraduationCapSolid />, tone: "success" },
+    attendees: { icon: <VideoSolid />, tone: "brand" },
+    active: { icon: <ActivitySolid />, tone: "success" },
+    er: { icon: <HeartPulseSolid />, tone: "danger" },
+  };
 
 function PanelHeading({
   title,
@@ -187,30 +177,20 @@ function KpiCards() {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {kpis.map((kpi) => (
-        <Card
+        <KeyCard
           key={kpi.id}
-          as="article"
-          padding="small"
-          className="min-h-[164px]"
-        >
-          <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-            <p className="text-heading-5 text-fg-secondary">{kpi.label}</p>
-            <span
-              aria-hidden="true"
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control [&_svg]:h-5 [&_svg]:w-5 ${KPI_ICONS[kpi.id].tint}`}
-            >
-              {KPI_ICONS[kpi.id].icon}
-            </span>
-          </div>
-          <p className="text-metric-lg text-fg">{kpi.value}</p>
-          <p className="mt-stack-sm">
+          tone={KPI_ICONS[kpi.id].tone}
+          icon={KPI_ICONS[kpi.id].icon}
+          value={kpi.value}
+          label={kpi.label}
+          note={
             <Change
               value={kpi.change}
               lowerIsBetter={kpi.lowerIsBetter}
               suffix="vs. last month"
             />
-          </p>
-        </Card>
+          }
+        />
       ))}
     </section>
   );
@@ -219,10 +199,7 @@ function KpiCards() {
 function EngagementTrend() {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Member Engagement Trend"
-        description="Member activity over the last 6 months."
-      />
+      <PanelHeading title="Member Engagement Trend" />
       <LineChart
         series={engagementSeries}
         xLabels={engagementMonths}
@@ -279,12 +256,10 @@ function ShareDonut({
 
 function RateBars({
   title,
-  description,
   label,
   bars,
 }: {
   title: string;
-  description: string;
   label: string;
   bars: { label: string; value: number }[];
 }) {
@@ -292,7 +267,7 @@ function RateBars({
      program or week each is. */
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title={title} description={description} />
+      <PanelHeading title={title} />
       <BarChart
         bars={bars}
         label={label}
@@ -310,10 +285,7 @@ function ModuleCompletion() {
      room for "Journey…" and nothing more. One measure, one hue. */
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Module Completion Rate"
-        description="Average completion by program."
-      />
+      <PanelHeading title="Module Completion Rate" />
       <ul className="space-y-stack-md">
         {moduleCompletion.map((row) => (
           <li key={row.label}>
@@ -342,10 +314,7 @@ function TopTopics() {
   const max = Math.max(...topTopics.map((topic) => topic.views));
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Top Education Topics"
-        description="Most viewed modules this month."
-      />
+      <PanelHeading title="Top Education Topics" />
       <ul className="space-y-stack-md">
         {topTopics.map((topic) => (
           <li key={topic.label}>
@@ -374,10 +343,7 @@ function TopTopics() {
 function MemberOutcomes() {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Member Outcomes"
-        description="Key health and program outcomes, this month against last."
-      />
+      <PanelHeading title="Member Outcomes" />
       <ul className="divide-y divide-line-subtle">
         {outcomes.map((row) => (
           <li
@@ -405,10 +371,7 @@ function MemberOutcomes() {
 function RecentActivity() {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Recent Activity"
-        description="Latest member engagement at your clinic."
-      />
+      <PanelHeading title="Recent Activity" />
       <ul className="divide-y divide-line-subtle">
         {recentActivity.map((entry) => (
           <li
@@ -444,10 +407,7 @@ function RecentActivity() {
 function CustomReports() {
   return (
     <Card as="section" padding="small">
-      <PanelHeading
-        title="Custom Reports"
-        description="Generate detailed reports for your organization."
-      />
+      <PanelHeading title="Custom Reports" />
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {customReports.map((report) => (
           <li key={report.id}>
@@ -520,7 +480,6 @@ export default function ClinicReports() {
         <ModuleCompletion />
         <RateBars
           title="Check-In Completion Rate"
-          description="Weekly check-in submission rate."
           label="Check-in completion rate by week"
           bars={checkInCompletion}
         />

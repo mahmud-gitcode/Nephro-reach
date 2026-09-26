@@ -34,10 +34,13 @@ const tones: Record<ProgressTone, string> = {
   accent: "bg-accent-solid",
 };
 
+/* Fattened at the client's request (2026-09-26). A 6px bar reads as a hair
+   line on a laptop, and the fill's colour is doing real work here — status
+   at a glance — which needs area to land. */
 const sizes: Record<ProgressSize, string> = {
-  small: "h-1.5",
-  medium: "h-2.5",
-  large: "h-3",
+  small: "h-2",
+  medium: "h-3.5",
+  large: "h-5",
 };
 
 export type ProgressProps = {
@@ -98,7 +101,7 @@ export function Progress({
         aria-label={labelledBy ? undefined : label}
         aria-labelledby={labelledBy}
         className={cn(
-          "w-full overflow-hidden rounded-pill bg-surface-sunken",
+          "w-full overflow-hidden rounded-pill bg-track",
           sizes[size],
         )}
       >

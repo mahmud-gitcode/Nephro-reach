@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { paginate, patients } from "./enrollment.data";
 import {
+  ALL_PROGRAMS,
+  COURSES,
+  courseFor,
   CRASH,
   curriculumRowFor,
   filterMembers,
@@ -10,9 +13,11 @@ import {
   membersByStatus,
   membersByStatusHeading,
   moduleBreakdown,
+  programOptions,
   programOverview,
   stepLabel,
   summary,
+  summaryFor,
 } from "./curriculumProgress.data";
 
 const byName = (name: string) => {
@@ -151,5 +156,99 @@ describe("rows for patients enrolled since", () => {
       status: "Not Started",
     });
     expect(stepLabel(row)).toBe("Not started");
+  });
+});
+
+describe("the course catalogue", () => {
+  it("is the one place a course is declared", () => {
+    // The filter list is derived, so a fourth course is filterable the
+    // moment it is added rather than only once somebody remembers to
+    // extend a second array by hand.
+    expect(programOptions).toHaveLength(COURSES.length + 1);
+    expect(programOptions[0]).toBe(ALL_PROGRAMS);
+    for (const course of COURSES) {
+      expect(programOptions).toContain(course.id);
+    }
+  });
+
+  it("gives every course a unique id and a short name", () => {
+    // The id keys member rows and the tab strip; the short name is what a
+    // phone-width tab shows, and an empty one would render a blank tab.
+    const ids = COURSES.map((course) => course.id);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    for (const course of COURSES) {
+      expect(course.shortName.length).toBeGreaterThan(0);
+      expect(course.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("counts in the unit the course is actually measured in", () => {
+    // "Day 14 of 21" for a course, "Module 3 of 8" for the library. The
+    // unit comes from the catalogue, so a new course declares its own.
+    expect(courseFor(JOURNEY)?.unit).toBe("Day");
+    expect(courseFor(LIBRARY)?.unit).toBe("Module");
+    expect(courseFor("Nothing Like This")).toBeUndefined();
+  });
+
+  it("takes each course's length from the catalogue, not from 21", () => {
+    // Twenty-one days is Journey's length, not the page's.
+    expect(courseFor(JOURNEY)?.length).toBe(21);
+    expect(courseFor(CRASH)?.length).toBe(5);
+    expect(courseFor(LIBRARY)?.length).toBe(8);
+  });
+
+  it("points every overview card at a real course", () => {
+    // The card is a filter button; an id that matches no course would
+    // filter the table down to nothing with no way back.
+    for (const overview of programOverview) {
+      expect(courseFor(overview.id)).toBeDefined();
+    }
+  });
+});
+
+describe("the key figures, per course", () => {
+  it("hands back the client's own numbers across all programs", () => {
+    // Verbatim from their mockup, and they do not reconcile with a 23-row
+    // roster. Recomputing them here would quietly "fix" a client decision.
+    expect(summaryFor(members, ALL_PROGRAMS)).toBe(summary);
+  });
+
+  it("counts the roster once narrowed to one course", () => {
+    const crash = summaryFor(members, CRASH);
+    const inCrash = members.filter((member) => member.program === CRASH);
+
+    expect(crash.enrolled).toBe(inCrash.length);
+    expect(crash.completed).toBe(
+      inCrash.filter((m) => m.status === "Completed").length,
+    );
+    expect(crash.inProgress).toBe(
+      inCrash.filter((m) => m.status === "In Progress").length,
+    );
+  });
+
+  it("does not call somebody who has not started an active learner", () => {
+    // Enrolled and learning are different questions, and the card asks the
+    // second one.
+    const journey = summaryFor(members, JOURNEY);
+    expect(journey.activeLearners).toBe(journey.enrolled - journey.notStarted);
+  });
+
+  it("averages the progress actually on the roster", () => {
+    const library = summaryFor(members, LIBRARY);
+    const inLibrary = members.filter((m) => m.program === LIBRARY);
+    const mean = Math.round(
+      inLibrary.reduce((total, m) => total + m.progress, 0) / inLibrary.length,
+    );
+
+    expect(library.averageCompletion).toBe(mean);
+    expect(library.averageCompletion).toBeLessThanOrEqual(100);
+  });
+
+  it("returns zeroes rather than dividing by zero for an empty course", () => {
+    // A course nobody has joined yet must not show NaN%.
+    const empty = summaryFor([], JOURNEY);
+    expect(empty.enrolled).toBe(0);
+    expect(empty.averageCompletion).toBe(0);
   });
 });

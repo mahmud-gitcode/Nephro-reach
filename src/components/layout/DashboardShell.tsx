@@ -627,8 +627,9 @@ export default function DashboardShell({
   }
 
   return (
-    /* The portal sits on one flat colour, #fcfcfd, behind every page. */
-    <div className="min-h-screen bg-[#fcfcfd] font-sans text-fg">
+    /* The portal sits on --canvas behind every page. It was a hardcoded
+       #fcfcfd, which is why changing the token did nothing until now. */
+    <div className="min-h-screen bg-canvas font-sans text-fg">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         <Sidebar />
       </div>

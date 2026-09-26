@@ -1485,7 +1485,7 @@ export default function DesignSystemPage() {
           {/* -------- Tabs -------- */}
           {show("tabs") ? (
             <Block title="Tabs">
-              <Row label="underline">
+              <Row label="pill">
                 <div className="w-full">
                   <Tabs
                     label="Demo sections"
@@ -1522,20 +1522,6 @@ export default function DesignSystemPage() {
                     </p>
                   </TabPanel>
                 </div>
-              </Row>
-
-              <Row label="pill">
-                <Tabs
-                  variant="pill"
-                  label="Demo sections, pill"
-                  value={demoTab}
-                  onChange={setDemoTab}
-                  items={[
-                    { id: "overview", label: "Overview" },
-                    { id: "history", label: "History" },
-                    { id: "trends", label: "Trends" },
-                  ]}
-                />
               </Row>
 
               <Row label="vertical">

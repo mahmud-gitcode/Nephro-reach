@@ -6,18 +6,23 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   CheckCircle2,
-  CircleDashed,
   Clock,
   Download,
   Eye,
   GraduationCap,
   MessageSquareText,
-  PlayCircle,
   Search,
   TrendingUp,
   Users,
 } from "lucide-react";
 
+import {
+  CheckCircleSolid,
+  ClockSolid,
+  NotStartedSolid,
+  TargetSolid,
+  UsersSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
@@ -29,9 +34,9 @@ import {
   EmptyState,
   ErrorState,
   Input,
+  KeyCard,
   Modal,
   Progress,
-  ProgressRing,
   Select,
   Skeleton,
   Table,
@@ -42,6 +47,7 @@ import {
   TableHeaderCell,
   TablePagination,
   TableRow,
+  Tabs,
   toneVar,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
@@ -53,11 +59,9 @@ import { paginate, ROWS_PER_PAGE_OPTIONS } from "./enrollment.data";
 import {
   ALL_PROGRAMS,
   ALL_STATUSES,
-  CRASH,
+  COURSES,
   filterMembers,
-  JOURNEY,
   journeyDetails,
-  LIBRARY,
   membersByStatus,
   membersByStatusHeading,
   moduleBreakdown,
@@ -68,7 +72,7 @@ import {
   statusOptions,
   statusTone,
   stepLabel,
-  summary,
+  summaryFor,
   timeToCompletion,
   type MemberProgress,
 } from "./curriculumProgress.data";
@@ -107,12 +111,60 @@ const filterRow = (on: boolean) =>
 
 type Filters = { query: string; program: string; status: string };
 
-/** "Journey to Dialysis (21-Day)" and "Journey to Dialysis" are one
-    program; the table filters on the curriculum's name. */
-function programOf(label: string) {
-  if (label.startsWith(CRASH)) return CRASH;
-  if (label.startsWith(LIBRARY)) return LIBRARY;
-  return JOURNEY;
+/**
+ * One tab per course, plus All Programs.
+ *
+ * Built from the catalogue, so a fourth course appears here the moment it
+ * is declared — this page must not assume there are three of them, any
+ * more than it assumes a course is twenty-one days long.
+ *
+ * It replaces the program dropdown that used to sit in the table's filter
+ * row: which course you are looking at steers the whole page, not just the
+ * table, so it belongs at the top rather than buried among the filters.
+ */
+function CourseTabs({
+  program,
+  onProgram,
+}: {
+  program: string;
+  onProgram: (program: string) => void;
+}) {
+  const items = [
+    { id: ALL_PROGRAMS, label: ALL_PROGRAMS, short: "All" },
+    ...COURSES.map((course) => ({
+      id: course.id,
+      label: course.id,
+      short: course.shortName,
+    })),
+  ].map((item) => ({
+    id: item.id,
+    label: (
+      /* Both variants are in the DOM and CSS picks one, so both would be
+         announced — "Crash Dialysis Crash". The visible pair is hidden
+         from assistive tech and the full name given once instead. */
+      <>
+        <span aria-hidden="true" className="hidden sm:inline">
+          {item.label}
+        </span>
+        <span aria-hidden="true" className="sm:hidden">
+          {item.short}
+        </span>
+        <span className="sr-only">{item.label}</span>
+      </>
+    ),
+  }));
+
+  return (
+    <Tabs
+      items={items}
+      value={program}
+      onChange={onProgram}
+      label="Course"
+      /* Scrolls rather than wraps: with enough courses the strip has to
+         stay one row, or the page header grows a second line per course. */
+      className="overflow-x-auto"
+    />
+  );
 }
 
 function PanelHeading({
@@ -139,200 +191,118 @@ function PanelHeading({
    the real list behind it — see the header of curriculumProgress.data.ts
    for why the two differ. */
 
-const keyCardClass =
-  "flex min-h-[144px] w-full flex-col rounded-card border bg-surface p-inset-lg text-left transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong";
-
-function KeyCardBody({
-  label,
-  value,
-  note,
-  icon,
-  tint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  note?: string;
-  icon: React.ReactNode;
-  tint: string;
-}) {
-  return (
-    <>
-      <span className="mb-stack-md flex items-start justify-between gap-inline-lg">
-        <span className="text-heading-5 text-fg-secondary">{label}</span>
-        <span
-          aria-hidden="true"
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control [&_svg]:h-5 [&_svg]:w-5 ${tint}`}
-        >
-          {icon}
-        </span>
-      </span>
-      <span className="text-metric-lg text-fg">{value}</span>
-      {note ? (
-        <span className="mt-stack-xs text-body-sm text-fg-muted">{note}</span>
-      ) : null}
-    </>
-  );
-}
-
+/**
+ * The summary row.
+ *
+ * These were filter buttons: pressing one narrowed the table. The client
+ * asked for key cards not to filter (2026-09-26), and the Status select in
+ * the table's own toolbar still does it, so nothing became unreachable.
+ */
 function SummaryCards({
-  status,
-  onStatus,
+  list,
+  program,
 }: {
-  status: string;
-  onStatus: (status: string) => void;
+  list: MemberProgress[];
+  program: string;
 }) {
-  const cards = [
-    {
-      status: "Completed",
-      label: "Members Completed Program",
-      value: summary.completed,
-      icon: <CheckCircle2 className="text-success" />,
-      tint: "bg-success-surface",
-    },
-    {
-      status: "In Progress",
-      label: "In Progress",
-      value: summary.inProgress,
-      icon: <PlayCircle className="text-brand-600" />,
-      tint: "bg-surface-brand-subtle",
-    },
-    {
-      status: "Not Started",
-      label: "Not Started",
-      value: summary.notStarted,
-      icon: <CircleDashed className="text-fg-secondary" />,
-      tint: "bg-surface-sunken",
-    },
-  ];
-  const allOn = status === ALL_STATUSES;
+  /* Follows the course tabs like everything else on the page: the client's
+     own figures across all programs, the roster's own count within one. */
+  const summary = summaryFor(list, program);
 
   return (
     <section
       aria-label="Curriculum summary"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
     >
-      <button
-        type="button"
-        aria-pressed={allOn}
-        onClick={() => onStatus(ALL_STATUSES)}
-        className={cn(
-          keyCardClass,
-          focusRing,
-          allOn ? "border-action ring-1 ring-action" : "border-line",
-        )}
-      >
-        <KeyCardBody
-          label="Active Learners"
-          value={summary.activeLearners}
-          note={`${summary.enrolled} enrolled`}
-          icon={<Users className="text-brand-600" />}
-          tint="bg-surface-brand-subtle"
-        />
-      </button>
-
-      {/* A figure, not a filter — there is no list of "average". */}
-      <Card as="article" padding="small" className="min-h-[144px]">
-        <p className="text-heading-5 text-fg-secondary">
-          Average Curriculum Completion
-        </p>
-        <ProgressRing
-          value={summary.averageCompletion}
-          label="Average curriculum completion"
-          size={72}
-          thickness={9}
-          className="mt-stack-sm"
-        />
-      </Card>
-
-      {cards.map((card) => {
-        const on = status === card.status;
-        return (
-          <button
-            key={card.status}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onStatus(on ? ALL_STATUSES : card.status)}
-            className={cn(
-              keyCardClass,
-              focusRing,
-              on ? "border-action ring-1 ring-action" : "border-line",
-            )}
-          >
-            <KeyCardBody
-              label={card.label}
-              value={card.value}
-              icon={card.icon}
-              tint={card.tint}
-            />
-          </button>
-        );
-      })}
+      <KeyCard
+        tone="brand"
+        icon={<UsersSolid />}
+        value={summary.activeLearners}
+        label="Active Learners"
+        note={`${summary.enrolled} enrolled`}
+      />
+      <KeyCard
+        tone="accent"
+        icon={<TargetSolid />}
+        value={`${summary.averageCompletion}%`}
+        label="Average Curriculum Completion"
+      />
+      <KeyCard
+        tone="success"
+        icon={<CheckCircleSolid />}
+        value={summary.completed}
+        label="Members Completed Program"
+      />
+      <KeyCard
+        tone="warning"
+        icon={<ClockSolid />}
+        value={summary.inProgress}
+        label="In Progress"
+      />
+      <KeyCard
+        tone="neutral"
+        icon={<NotStartedSolid />}
+        value={summary.notStarted}
+        label="Not Started"
+      />
     </section>
   );
 }
 
-function ProgramProgressOverview({
-  program,
-  onProgram,
-}: {
-  program: string;
-  onProgram: (program: string) => void;
-}) {
+function ProgramProgressOverview({ program }: { program: string }) {
+  const shown =
+    program === ALL_PROGRAMS
+      ? programOverview
+      : programOverview.filter((overview) => overview.id === program);
+
   return (
-    <Card as="section" padding="small">
-      <PanelHeading
-        title="Program Progress Overview"
-        description="See how your members are progressing through each program. Select one to list its members."
-      />
-      <ul className="grid gap-4 md:grid-cols-3">
-        {programOverview.map((overview) => {
-          const target = programOf(overview.name);
-          const on = program === target;
-          return (
-            <li key={overview.name}>
-              <button
-                type="button"
-                aria-pressed={on}
-                onClick={() => onProgram(on ? ALL_PROGRAMS : target)}
-                className={cn(
-                  "h-full w-full cursor-pointer rounded-control border bg-surface-sunken p-inset-md text-left transition-colors hover:border-line-strong",
-                  on
-                    ? "border-action ring-1 ring-action"
-                    : "border-line-subtle",
-                  focusRing,
-                )}
-              >
-                <span className="block text-heading-5 text-fg">
-                  {overview.name}
-                </span>
-                <span className="mt-stack-md flex items-baseline justify-between gap-inline-md">
-                  <span className="text-body-sm text-fg-secondary">
-                    Progress
-                  </span>
-                  <span className="text-label-lg text-fg tabular-nums">
-                    {overview.progress}%
-                  </span>
-                </span>
-                <Progress
-                  value={overview.progress}
-                  label={`${overview.name} progress`}
-                  size="medium"
-                  className="mt-stack-xs"
-                />
-                <span className="mt-stack-md block space-y-stack-xs">
-                  {overview.stats.map((stat) => (
+    /* No visible heading: the tab strip directly above already says which
+       course these cards are for, and each card carries its own name. The
+       region keeps a label so it is still announced and reachable. */
+    <Card as="section" padding="small" aria-label="Program progress">
+      {/* auto-fit rather than a fixed three columns: a fourth course must
+          wrap into the grid, not squeeze the other three, and a single
+          selected course fills the row rather than stranding two gaps. */}
+      <ul className="grid [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))] gap-4">
+        {shown.map((overview) => (
+          <li
+            key={overview.name}
+            className="h-full rounded-control border border-line-subtle bg-surface-sunken p-inset-md"
+          >
+            <p className="text-heading-5 text-fg">{overview.name}</p>
+            <p className="mt-stack-md flex items-baseline justify-between gap-inline-md">
+              <span className="text-body-sm text-fg-secondary">Progress</span>
+              <span className="text-label-lg text-fg tabular-nums">
+                {overview.progress}%
+              </span>
+            </p>
+            <Progress
+              value={overview.progress}
+              label={`${overview.name} progress`}
+              size="medium"
+              className="mt-stack-xs"
+            />
+            {/* One row, separated rather than stacked: three short counts
+                read as a single line about the course, and stacking them
+                made every card three lines taller than it needed to be. */}
+            <ul className="mt-stack-md flex flex-wrap items-center gap-x-inline-md gap-y-stack-xs">
+              {overview.stats.map((stat, index) => (
+                <li
+                  key={stat}
+                  className="flex items-center gap-x-inline-md text-body-sm text-fg-secondary tabular-nums"
+                >
+                  {index > 0 ? (
                     <span
-                      key={stat}
-                      className="block text-body-sm text-fg-secondary tabular-nums"
-                    >
-                      {stat}
-                    </span>
-                  ))}
-                </span>
-              </button>
-            </li>
-          );
-        })}
+                      aria-hidden="true"
+                      className="h-3 w-px shrink-0 bg-line"
+                    />
+                  ) : null}
+                  {stat}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
       </ul>
     </Card>
   );
@@ -401,10 +371,7 @@ function MemberTable({
       id="member-progress"
       className="scroll-mt-4"
     >
-      <PanelHeading
-        title="Member Curriculum Progress"
-        description="Track each member's module completion, progress, and status."
-      />
+      <PanelHeading title="Member Curriculum Progress" />
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:items-center">
         <Input
@@ -417,16 +384,6 @@ function MemberTable({
           leadingIcon={<Search aria-hidden="true" />}
           className="lg:max-w-xs lg:flex-1"
         />
-        <Select
-          selectSize="small"
-          aria-label="Program"
-          value={filters.program}
-          onChange={(event) => onFilters({ program: event.target.value })}
-        >
-          {programOptions.map((option) => (
-            <option key={option}>{option}</option>
-          ))}
-        </Select>
         <Select
           selectSize="small"
           aria-label="Status"
@@ -864,11 +821,11 @@ function ProgramCompletionRate({
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Program Completion Rate" />
-      {/* One measure across three programs, so one hue — the label carries
-          which program, colour would only repeat it. */}
+      {/* One measure across every course, so one hue — the label carries
+          which course, colour would only repeat it. */}
       <ul className="space-y-stack-sm">
         {programOverview.map((overview) => {
-          const target = programOf(overview.name);
+          const target = overview.id;
           const on = program === target;
           return (
             <li key={overview.name}>
@@ -1096,21 +1053,14 @@ function CurriculumView() {
 
   return (
     <>
-      <UpdatedBar
-        updatedAt={clinic.updatedAt}
-        isFetching={clinic.isFetching}
-        refetch={clinic.refetch}
-      />
-
-      <SummaryCards
-        status={filters.status}
-        onStatus={(status) => updateFilters({ status })}
-      />
-
-      <ProgramProgressOverview
+      <CourseTabs
         program={filters.program}
         onProgram={(program) => updateFilters({ program })}
       />
+
+      <SummaryCards list={list} program={filters.program} />
+
+      <ProgramProgressOverview program={filters.program} />
 
       <MemberTable
         list={list}
@@ -1143,9 +1093,23 @@ function CurriculumView() {
 }
 
 export default function ClinicCurriculumProgress() {
+  /* Read here as well as in the view below so the refresh control can sit
+     on the title row. Both calls share one query key, so react-query serves
+     them from the same fetch. */
+  const clinic = useClinicData();
+
   return (
     <div className="space-y-4">
-      <PageTitle href="/dashboard/clinic/curriculum-progress" />
+      <PageTitle
+        href="/dashboard/clinic/curriculum-progress"
+        action={
+          <UpdatedBar
+            updatedAt={clinic.updatedAt}
+            isFetching={clinic.isFetching}
+            refetch={clinic.refetch}
+          />
+        }
+      />
       {/* useSearchParams needs a Suspense boundary on a prerendered page. */}
       <Suspense fallback={<PageSkeleton />}>
         <CurriculumView />

@@ -26,6 +26,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
+  KeyCard,
   Progress,
   ProgressRing,
   Select,
@@ -44,7 +45,10 @@ import {
 import { useIsMounted } from "@/lib/utils/useIsMounted";
 import { cn } from "@/lib/utils/cn";
 import { tableIconButton } from "./tableButton";
+import { statusIconSolid, statusKeyTone } from "./StatusIconsSolid";
+import { UsersSolid } from "@/components/icons/solid";
 import { EnrollPatientModal } from "./EnrollPatientModal";
+import { PageTitle } from "@/components/layout/PageTitle";
 import { UpdatedBar } from "./UpdatedBar";
 import {
   activityIcon,
@@ -58,7 +62,6 @@ import {
   memberLink,
   performance,
   programProgress,
-  statusCardLink,
   statusCards,
   statusTone,
   toolUsage,
@@ -77,11 +80,6 @@ import { useClinicData, type ClinicData } from "./useClinicData";
 
 const MESSAGES = "/dashboard/clinic/messages";
 const MEMBERS_PER_PAGE = 8;
-
-/* A summary card that goes somewhere is a link wrapping the card, so the
-   whole tile is the target and a screen reader hears where it leads. */
-const cardLink =
-  "block rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 const outlineLink = buttonStyles({
   variant: "neutral",
@@ -128,7 +126,20 @@ function PanelHeading({
   );
 }
 
-/* ---------------------------------------------------- summary cards */
+/* ---------------------------------------------------- summary cards
+
+   Laid out to the client's reference (2026-09-26): a filled colour panel
+   running the full height of the card's left edge, the figure and its label
+   stacked beside it. Horizontal rather than the stacked label-above-number
+   these used to be, which is what lets the card be a third shorter while
+   carrying a much larger icon.
+
+   The figure comes first and the label second. The number is what somebody
+   scans the row for; the label only explains it once found.
+
+   They are not links. They were, and the client asked for them not to be —
+   the row reads as a summary, and six clickable tiles above a table that
+   has its own filters was two ways to do one thing. */
 
 /* Counts the live roster, so a patient enrolled a minute ago is in it. */
 function EnrollmentCard({ enrolled }: { enrolled: number }) {
@@ -137,76 +148,32 @@ function EnrollmentCard({ enrolled }: { enrolled: number }) {
   const pct = Math.round((enrolled / contracted) * 100);
 
   return (
-    <Link
-      href="/dashboard/clinic/enroll-patients"
-      className={cardLink}
-      aria-label={`${enrolled} of ${contracted} members enrolled — open Enroll Patients`}
-    >
-      <Card
-        as="article"
-        padding="small"
-        interactive
-        className="h-full min-h-[156px]"
-      >
-        <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-          <p className="text-heading-5 text-fg-secondary">Members Enrolled</p>
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 items-center justify-center rounded-control bg-surface-brand-subtle"
-          >
-            <Users className="h-5 w-5 text-brand-600" />
-          </span>
-        </div>
-        <p className="text-metric-lg text-fg">
+    <KeyCard
+      tone="brand"
+      icon={<UsersSolid />}
+      value={
+        <>
           {enrolled}
           <span className="text-heading-4 text-fg-muted"> / {contracted}</span>
-        </p>
-        <Progress
-          value={pct}
-          label="Contracted seats filled"
-          size="small"
-          className="mt-stack-sm"
-        />
-        <p className="mt-stack-sm text-body-sm text-fg-muted">
-          {remaining} slots remaining
-        </p>
-      </Card>
-    </Link>
+        </>
+      }
+      label="Members Enrolled"
+      note={`${pct}% taken · ${remaining} left`}
+    />
   );
 }
 
 function StatusCard({ card }: { card: (typeof statusCards)[number] }) {
-  const Icon = statusIcon[card.status];
+  const Icon = statusIconSolid[card.status];
 
   return (
-    <Link
-      href={statusCardLink(card.status)}
-      className={cardLink}
-      aria-label={`${card.status}: ${card.count} members — view them`}
-    >
-      <Card
-        as="article"
-        padding="small"
-        interactive
-        className="h-full min-h-[156px]"
-      >
-        <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-          <p className="text-heading-5 text-fg-secondary">{card.status}</p>
-          <span
-            aria-hidden="true"
-            className={`flex h-10 w-10 items-center justify-center rounded-control ${statusTile[card.status]}`}
-          >
-            <Icon className="h-5 w-5" />
-          </span>
-        </div>
-        <div className="flex items-end justify-between gap-inline-lg">
-          <p className="text-metric-lg text-fg">{card.count}</p>
-          {card.share ? (
-            <p className="text-body-sm text-fg-muted">{card.share}</p>
-          ) : null}
-        </div>
-      </Card>
-    </Link>
+    <KeyCard
+      tone={statusKeyTone[card.status]}
+      icon={<Icon />}
+      value={card.count}
+      label={card.status}
+      note={card.share ? `${card.share} of members` : undefined}
+    />
   );
 }
 
@@ -231,7 +198,6 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
             ) : null}
           </span>
         }
-        description="Members to reach out to, most urgent first."
       />
       <AsyncSection
         pending={dashboard.isPending}
@@ -826,10 +792,16 @@ export default function ClinicDashboard() {
 
   return (
     <div className="space-y-4">
-      <UpdatedBar
-        updatedAt={dashboard.updatedAt}
-        isFetching={dashboard.isFetching}
-        refetch={dashboard.refetch}
+      {/* The only clinic page that had no title of its own. */}
+      <PageTitle
+        href="/dashboard/clinic"
+        action={
+          <UpdatedBar
+            updatedAt={dashboard.updatedAt}
+            isFetching={dashboard.isFetching}
+            refetch={dashboard.refetch}
+          />
+        }
       />
 
       {justEnrolled ? (

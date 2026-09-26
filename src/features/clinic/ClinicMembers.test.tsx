@@ -98,24 +98,33 @@ describe("states", () => {
 });
 
 describe("filtering from the page", () => {
-  it("narrows the table from a summary card, and writes it to the URL", async () => {
+  it("narrows the table from the status select, and writes it to the URL", async () => {
     set({ data: loaded });
     render(<ClinicMembers />);
     expect(showing()).toHaveTextContent("of 23 members");
 
-    const card = within(
-      screen.getByRole("region", { name: "Member summary" }),
-    ).getByRole("button", { name: /^Need Follow-Up/ });
-    await userEvent.click(card);
-    expect(card).toHaveAttribute("aria-pressed", "true");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Status"),
+      "Need Follow-Up",
+    );
     expect(showing()).toHaveTextContent("Showing 1–3 of 3 members");
     expect(replace).toHaveBeenLastCalledWith(
       "/dashboard/clinic/members?status=Need+Follow-Up",
       { scroll: false },
     );
+  });
 
-    await userEvent.click(card);
-    expect(showing()).toHaveTextContent("of 23 members");
+  it("does not filter from a summary card", () => {
+    // They were filter buttons and the client asked for them not to be. The
+    // select above does the same job, so the row is a summary now.
+    set({ data: loaded });
+    render(<ClinicMembers />);
+
+    expect(
+      within(
+        screen.getByRole("region", { name: "Member summary" }),
+      ).queryAllByRole("button"),
+    ).toHaveLength(0);
   });
 
   it("narrows by program from the chart legend", async () => {

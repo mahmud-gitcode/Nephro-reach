@@ -14,18 +14,23 @@ import {
   Plus,
   Quote,
   Star,
-  TrendingUp,
-  UserCheck,
   Users,
   Video,
 } from "lucide-react";
 
+import {
+  StarSolid,
+  UserCheckSolid,
+  UsersSolid,
+  VideoSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
   BarChart,
   Button,
   Card,
+  KeyCard,
   ChartLegend,
   DonutChart,
   MonthCalendar,
@@ -127,91 +132,62 @@ function Rating({ value, size = "h-4 w-4" }: { value: number; size?: string }) {
   );
 }
 
-function KeyCard({
-  label,
-  value,
-  icon,
-  tint,
-  children,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-  tint: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card as="article" padding="small" className="min-h-[164px]">
-      <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-        <p className="text-heading-5 text-fg-secondary">{label}</p>
-        <span
-          aria-hidden="true"
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control [&_svg]:h-5 [&_svg]:w-5 ${tint}`}
-        >
-          {icon}
-        </span>
-      </div>
-      <p className="text-metric-lg text-fg">{value}</p>
-      {children ? <div className="mt-stack-sm">{children}</div> : null}
-    </Card>
-  );
-}
-
 function SummaryCards() {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <KeyCard
-        label="Upcoming Live Classes"
+        tone="brand"
+        icon={<VideoSolid />}
         value={summary.upcomingThisMonth}
-        icon={<Video className="text-brand-600" />}
-        tint="bg-surface-brand-subtle"
-      >
-        <p className="text-body-sm text-fg-muted">This month</p>
-      </KeyCard>
+        label="Upcoming Live Classes"
+        note="This month"
+      />
 
       <KeyCard
-        label="Total Registrations"
+        tone="success"
+        icon={<UsersSolid />}
         value={summary.totalRegistrations}
-        icon={<Users className="text-success" />}
-        tint="bg-success-surface"
-      >
-        <p className="flex items-center gap-inline-xs text-body-sm text-success">
-          <TrendingUp aria-hidden="true" className="h-4 w-4" />+
-          {summary.registrationsChangePct}% from last month
-        </p>
-      </KeyCard>
+        label="Total Registrations"
+        trend={{
+          direction: "up",
+          value: `${summary.registrationsChangePct}%`,
+          suffix: "from last month",
+        }}
+      />
 
       <KeyCard
-        label="Average Attendance"
+        tone="brand"
+        icon={<UserCheckSolid />}
         value={`${summary.averageAttendancePct}%`}
-        icon={<UserCheck className="text-brand-600" />}
-        tint="bg-surface-brand-subtle"
-      >
-        <p className="flex items-center gap-inline-xs text-body-sm text-success">
-          <TrendingUp aria-hidden="true" className="h-4 w-4" />
-          vs. {summary.lastMonthAttendancePct}% last month
-        </p>
-      </KeyCard>
+        label="Average Attendance"
+        trend={{
+          direction:
+            summary.averageAttendancePct >= summary.lastMonthAttendancePct
+              ? "up"
+              : "down",
+          value: `${summary.averageAttendancePct - summary.lastMonthAttendancePct}pts`,
+          suffix: "from last month",
+          good: summary.averageAttendancePct >= summary.lastMonthAttendancePct,
+        }}
+      />
 
       <KeyCard
-        label="Average Rating"
+        tone="warning"
+        icon={<StarSolid />}
         value={
           <>
             {summary.averageRating}
             <span className="text-heading-4 text-fg-muted">/5</span>
           </>
         }
-        icon={<Star className="text-warning" />}
-        tint="bg-warning-surface"
+        label="Average Rating"
       >
         <Rating value={summary.averageRating} />
       </KeyCard>
 
-      <Card
-        as="article"
-        padding="small"
-        className="flex min-h-[164px] flex-col"
-      >
+      {/* Not a figure, so not a KeyCard: there is no number to lead with
+          and no panel colour that would mean anything. */}
+      <Card as="article" padding="small" className="flex flex-col">
         <p className="text-heading-5 text-fg-secondary">Member Feedback</p>
         <figure className="mt-stack-md flex flex-1 flex-col">
           <Quote aria-hidden="true" className="h-5 w-5 text-fg-brand" />
@@ -242,7 +218,6 @@ function UpcomingClassesTable({
     <Card as="section" padding="small">
       <PanelHeading
         title="Upcoming Live Classes"
-        description="View, manage, and track all upcoming live classes."
         action={
           <Button
             variant="neutral"
@@ -441,10 +416,7 @@ function RecentLiveClasses({
 }) {
   return (
     <Card as="section" padding="small">
-      <PanelHeading
-        title="Recent Live Classes"
-        description="View past class recordings, attendance, and feedback."
-      />
+      <PanelHeading title="Recent Live Classes" />
       <ul className="divide-y divide-line-subtle">
         {recentClasses.map((item) => (
           <li
@@ -525,10 +497,7 @@ function RegistrationSources() {
 function AttendanceTrend() {
   return (
     <Card as="section" padding="small">
-      <PanelHeading
-        title="Attendance Trend"
-        description="Live class attendance over the last 6 months."
-      />
+      <PanelHeading title="Attendance Trend" />
       <BarChart
         bars={attendanceTrend}
         label="Live class attendance by month"
@@ -550,10 +519,7 @@ function LiveClassSettings({
 }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Live Class Settings"
-        description="How classes are run, reminded, and followed up."
-      />
+      <PanelHeading title="Live Class Settings" />
       <ul className="grid gap-4 sm:grid-cols-2">
         {settings.map((item) => (
           <li

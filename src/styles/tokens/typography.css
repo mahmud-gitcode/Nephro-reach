@@ -21,10 +21,15 @@
 
 @theme {
   /* ---- weights ------------------------------------------------------- */
+  /* Lato's real ladder: 100 / 300 / 400 / 700 / 900. There is no 500 and
+     no 600, so `medium` resolves to 400 and `semibold` to 700 — which is
+     what a browser does with them anyway under CSS font matching, and the
+     tokens now say so rather than implying a step that cannot render. */
   --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
+  --font-weight-medium: 400;
+  --font-weight-semibold: 700;
   --font-weight-bold: 700;
+  --font-weight-black: 900;
 
   /* ======================================================================
      DISPLAY — landing page only. Never inside the app.
@@ -33,13 +38,13 @@
   /* 48/1.05 · landing hero headline. One per page, maximum. */
   --text-display-lg: 3rem;
   --text-display-lg--line-height: 1.05;
-  --text-display-lg--font-weight: 700;
+  --text-display-lg--font-weight: 900;
   --text-display-lg--letter-spacing: -0.025em;
 
   /* 40/1.10 · pricing headline, About Us hero, campaign section openers. */
   --text-display-md: 2.5rem;
   --text-display-md--line-height: 1.1;
-  --text-display-md--font-weight: 700;
+  --text-display-md--font-weight: 900;
   --text-display-md--letter-spacing: -0.02em;
 
   /* ======================================================================
@@ -64,19 +69,19 @@
   /* 24/1.30 · card titles, panel headers, modal titles. */
   --text-heading-3: 1.5rem;
   --text-heading-3--line-height: 1.3;
-  --text-heading-3--font-weight: 600;
+  --text-heading-3--font-weight: 700;
   --text-heading-3--letter-spacing: -0.01em;
 
   /* 20/1.35 · sub-sections in a card, accordion headers, FAQ questions. */
   --text-heading-4: 1.25rem;
   --text-heading-4--line-height: 1.35;
-  --text-heading-4--font-weight: 600;
+  --text-heading-4--font-weight: 700;
   --text-heading-4--letter-spacing: -0.005em;
 
   /* 16/1.40 · smallest heading. Compact card headers, sidebar groups. */
   --text-heading-5: 1rem;
   --text-heading-5--line-height: 1.4;
-  --text-heading-5--font-weight: 600;
+  --text-heading-5--font-weight: 700;
   --text-heading-5--letter-spacing: 0em;
 
   /* ======================================================================
@@ -111,19 +116,23 @@
   /* 16/24 · form field labels. Always a real <label>, never a placeholder. */
   --text-label-lg: 1rem;
   --text-label-lg--line-height: 1.5rem;
-  --text-label-lg--font-weight: 500;
+  /* 700, not 400. In Inter these sat at 500, a quiet step above body.
+     Lato has no 500, so the choice was body weight — which makes a label
+     indistinguishable from the text it labels — or bold. Lato's bold is
+     moderate at label sizes, so bold it is. */
+  --text-label-lg--font-weight: 700;
   --text-label-lg--letter-spacing: 0em;
 
   /* 14/20 · table column headers, tab labels, sidebar nav, filter chips. */
   --text-label-md: 0.875rem;
   --text-label-md--line-height: 1.25rem;
-  --text-label-md--font-weight: 500;
+  --text-label-md--font-weight: 700;
   --text-label-md--letter-spacing: 0em;
 
   /* 12/16 · badges and status pills. "At Target EDW", "Above Goal". */
   --text-label-sm: 0.75rem;
   --text-label-sm--line-height: 1rem;
-  --text-label-sm--font-weight: 500;
+  --text-label-sm--font-weight: 700;
   --text-label-sm--letter-spacing: 0.01em;
 
   /* Overline lives below as a utility, next to the other composites. */
@@ -145,12 +154,12 @@
 
   --text-button-lg: 1rem;
   --text-button-lg--line-height: 1.5rem;
-  --text-button-lg--font-weight: 600;
+  --text-button-lg--font-weight: 700;
   --text-button-lg--letter-spacing: 0em;
 
   --text-button-md: 0.875rem;
   --text-button-md--line-height: 1.25rem;
-  --text-button-md--font-weight: 600;
+  --text-button-md--font-weight: 700;
   --text-button-md--letter-spacing: 0em;
 }
 
@@ -186,7 +195,7 @@
   /* 24/28 · secondary stats, comparison values, sparkline endpoints. */
   font-size: 1.5rem;
   line-height: 1.75rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -195,7 +204,7 @@
   /* 16/20 · inline values in tables. Creatinine, Albumin, BP readings. */
   font-size: 1rem;
   line-height: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0em;
   font-variant-numeric: tabular-nums;
 }
@@ -210,7 +219,7 @@
 @utility text-overline {
   font-size: 0.75rem;
   line-height: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
@@ -218,7 +227,7 @@
    WCAG 1.4.1 and fails entirely for colour-blind readers. Size is
    inherited from the surrounding text style. */
 @utility text-link {
-  font-weight: 500;
+  font-weight: 400;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

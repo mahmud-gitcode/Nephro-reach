@@ -4,23 +4,27 @@ import React from "react";
 import Link from "next/link";
 import {
   CalendarClock,
-  CheckCircle2,
-  DollarSign,
   CreditCard,
   Download,
-  FileSignature,
   FileText,
   MessageSquareText,
   RefreshCw,
   Users,
 } from "lucide-react";
 
+import {
+  CheckCircleSolid,
+  ContractSolid,
+  MoneySolid,
+  UsersSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
   Button,
   buttonStyles,
   Card,
+  KeyCard,
   Progress,
   ProgressRing,
   Skeleton,
@@ -91,36 +95,6 @@ function PanelHeading({
   );
 }
 
-function KeyCard({
-  label,
-  value,
-  note,
-  icon,
-  tint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  note: React.ReactNode;
-  icon: React.ReactNode;
-  tint: string;
-}) {
-  return (
-    <Card as="article" padding="small" className="min-h-[164px]">
-      <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-        <p className="text-heading-5 text-fg-secondary">{label}</p>
-        <span
-          aria-hidden="true"
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control [&_svg]:h-5 [&_svg]:w-5 ${tint}`}
-        >
-          {icon}
-        </span>
-      </div>
-      <div className="text-metric-lg text-fg">{value}</div>
-      <p className="mt-stack-sm text-body-sm text-fg-muted">{note}</p>
-    </Card>
-  );
-}
-
 function SummaryCards({
   invoices,
   today,
@@ -133,25 +107,26 @@ function SummaryCards({
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KeyCard
-        label="Contract Status"
+        tone="brand"
+        icon={<ContractSolid />}
         value={
           <Badge tone={contractTone[contract.status]} className="text-label-lg">
             {contract.status}
           </Badge>
         }
+        label="Contract Status"
         note={`${formatDate(localDate(contract.start))} – ${formatDate(localDate(contract.end))}`}
-        icon={<FileSignature className="text-brand-600" />}
-        tint="bg-surface-brand-subtle"
       />
       <KeyCard
-        label="Monthly Fee"
+        tone="success"
+        icon={<MoneySolid />}
         value={formatMoney(contract.monthlyFee)}
+        label="Monthly Fee"
         note={`Billed ${contract.billingCycle.toLowerCase()}`}
-        icon={<DollarSign className="text-success" />}
-        tint="bg-success-surface"
       />
       <KeyCard
-        label="Patients Covered"
+        tone="brand"
+        icon={<UsersSolid />}
         value={
           <>
             {patientsCovered}
@@ -161,16 +136,15 @@ function SummaryCards({
             </span>
           </>
         }
+        label="Patients Covered"
         note={`${contract.patientsAllowed - patientsCovered} slots remaining`}
-        icon={<Users className="text-brand-600" />}
-        tint="bg-surface-brand-subtle"
       />
       <KeyCard
-        label="Invoices Paid"
+        tone="success"
+        icon={<CheckCircleSolid />}
         value={`${paidThisMonthPct(invoices, today)}%`}
+        label="Invoices Paid"
         note="This month"
-        icon={<CheckCircle2 className="text-success" />}
-        tint="bg-success-surface"
       />
     </section>
   );
@@ -294,7 +268,6 @@ function InvoiceTable({
     <Card as="section" padding="small" className="h-full">
       <PanelHeading
         title="Invoices"
-        description="Every invoice on this contract, newest first."
         action={
           /* Stripe is not wired up yet, so this carries the same
              not-built marker as the download above rather than pretending
@@ -385,16 +358,13 @@ function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
   const remaining = contract.patientsAllowed - patientsCovered;
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <PanelHeading
-        title="Patient Seats"
-        description="Enrolled patients against the seats in your contract."
-      />
+      <PanelHeading title="Patient Seats" />
       <div className="flex items-center gap-inset-sm">
         <ProgressRing
           value={(patientsCovered / contract.patientsAllowed) * 100}
           label="Contract seats in use"
           size={96}
-          thickness={11}
+          thickness={14}
         />
         <dl className="space-y-stack-xs">
           <div className="flex gap-inline-md">
@@ -446,10 +416,7 @@ function Renewal({
   const elapsed = termElapsedPct(today);
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <PanelHeading
-        title="Renewal"
-        description="Where you are in the current contract term."
-      />
+      <PanelHeading title="Renewal" />
       <div className="flex items-baseline justify-between gap-inline-md">
         <span className="text-body-sm text-fg-secondary">Term elapsed</span>
         <span className="text-label-lg text-fg tabular-nums">{elapsed}%</span>
@@ -518,10 +485,7 @@ function BillingSummary({
 
   return (
     <Card as="section" padding="small">
-      <PanelHeading
-        title="Billing Summary"
-        description="What has been billed and paid on this contract."
-      />
+      <PanelHeading title="Billing Summary" />
       <dl className="divide-y divide-line-subtle">
         {rows.map(([term, value]) => (
           <div

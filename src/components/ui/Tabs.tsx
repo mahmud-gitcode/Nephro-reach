@@ -31,7 +31,10 @@ export type TabItem<T extends string = string> = {
   disabled?: boolean;
 };
 
-export type TabsVariant = "underline" | "pill" | "vertical";
+/* "underline" was removed at the client's instruction (2026-09-26): the
+   product uses one horizontal tab style, and two of them side by side on
+   different pages read as two different controls. */
+export type TabsVariant = "pill" | "vertical";
 
 export type TabsProps<T extends string = string> = {
   items: ReadonlyArray<TabItem<T>>;
@@ -46,7 +49,6 @@ export type TabsProps<T extends string = string> = {
 };
 
 const shells: Record<TabsVariant, string> = {
-  underline: "flex gap-inline-md border-b border-line",
   /* White bar, so the pill reads the same on any page background. */
   pill: "inline-flex rounded-control border border-line bg-surface p-1 shadow-card",
   vertical: "flex flex-col gap-stack-sm",
@@ -59,16 +61,6 @@ function tabClass(variant: TabsVariant, selected: boolean) {
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
     "disabled:cursor-not-allowed disabled:text-fg-subtle " +
     "[&_svg]:h-icon-small [&_svg]:w-icon-small [&_svg]:shrink-0";
-
-  if (variant === "underline") {
-    return cn(
-      base,
-      "-mb-px border-b-2 px-inset-sm pb-inset-xs text-label-lg",
-      selected
-        ? "border-primary-edge text-fg-brand"
-        : "border-transparent text-fg-muted hover:text-fg",
-    );
-  }
 
   if (variant === "pill") {
     return cn(
@@ -94,7 +86,7 @@ export function Tabs<T extends string = string>({
   items,
   value,
   onChange,
-  variant = "underline",
+  variant = "pill",
   label,
   fullWidth = false,
   className,

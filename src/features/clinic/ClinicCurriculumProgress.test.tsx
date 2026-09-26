@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { members } from "./curriculumProgress.data";
+import { COURSES, members } from "./curriculumProgress.data";
 
 /* The page reads one query and the URL; both are handed in, so these are
  * about what the clinic sees and where the address bar ends up. */
@@ -69,12 +69,11 @@ describe("states", () => {
 });
 
 describe("filtering", () => {
-  it("narrows the table from a status card, and writes it to the URL", async () => {
+  it("narrows the table from the status select, and writes it to the URL", async () => {
     render();
     expect(showing()).toHaveTextContent("of 23 members");
-    await userEvent.click(
-      summary().getByRole("button", { name: /^Members Completed Program/ }),
-    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "Completed");
     expect(showing()).toHaveTextContent("of 7 members");
     expect(replace).toHaveBeenLastCalledWith(
       "/dashboard/clinic/curriculum-progress?status=Completed",
@@ -82,12 +81,57 @@ describe("filtering", () => {
     );
   });
 
-  it("narrows by program from the overview", async () => {
+  it("does not filter from a summary card", () => {
+    // They were filter buttons and the client asked for them not to be. The
+    // select in the table's toolbar does the same job.
+    render();
+    expect(summary().queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("narrows by program from the course tabs", async () => {
     render();
     await userEvent.click(
-      screen.getByRole("button", { name: /^Crash Dialysis \(5-Day\)/ }),
+      within(screen.getByRole("tablist", { name: "Course" })).getByRole("tab", {
+        name: "Crash Dialysis",
+      }),
     );
     expect(showing()).toHaveTextContent("of 6 members");
+  });
+
+  it("narrows the overview to the chosen course, and widens again", async () => {
+    // The overview used to be a second course picker sitting next to the
+    // tabs. It follows them now: every course on All Programs, one on one.
+    render();
+    const overview = () =>
+      within(screen.getByRole("region", { name: "Program progress" }));
+    const tabs = () => within(screen.getByRole("tablist", { name: "Course" }));
+
+    for (const name of COURSES.map((course) => course.name)) {
+      expect(overview().getByText(name)).toBeInTheDocument();
+    }
+
+    await userEvent.click(tabs().getByRole("tab", { name: "Crash Dialysis" }));
+    expect(overview().getByText("Crash Dialysis (5-Day)")).toBeInTheDocument();
+    expect(
+      overview().queryByText("Journey to Dialysis (21-Day)"),
+    ).not.toBeInTheDocument();
+    expect(overview().queryByText("Education Library")).not.toBeInTheDocument();
+
+    await userEvent.click(tabs().getByRole("tab", { name: "All Programs" }));
+    expect(
+      overview().getByText("Journey to Dialysis (21-Day)"),
+    ).toBeInTheDocument();
+  });
+
+  it("no longer offers the overview card as a second course picker", () => {
+    // Two controls a hand's width apart for one choice is how they end up
+    // disagreeing about which course you are looking at.
+    render();
+    expect(
+      within(
+        screen.getByRole("region", { name: "Program progress" }),
+      ).queryAllByRole("button"),
+    ).toHaveLength(0);
   });
 
   it("starts filtered from the dashboard's Completed link", () => {
@@ -123,5 +167,54 @@ describe("a member's progress popup", () => {
     expect(
       screen.getByRole("dialog", { name: "Robert L. Davis" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the course tabs", () => {
+  const strip = () => within(screen.getByRole("tablist", { name: "Course" }));
+
+  it("shows one tab per course, plus All Programs", () => {
+    // Driven by the catalogue, so a fourth course needs no change here.
+    render();
+    expect(strip().getAllByRole("tab")).toHaveLength(COURSES.length + 1);
+
+    for (const course of COURSES) {
+      expect(strip().getByRole("tab", { name: course.id })).toBeInTheDocument();
+    }
+  });
+
+  it("opens on All Programs and filters the table when one is picked", async () => {
+    render();
+    expect(strip().getByRole("tab", { name: "All Programs" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(showing()).toHaveTextContent("of 23 members");
+
+    await userEvent.click(strip().getByRole("tab", { name: "Crash Dialysis" }));
+    expect(showing()).not.toHaveTextContent("of 23 members");
+  });
+
+  it("writes the chosen course to the URL", async () => {
+    render();
+    await userEvent.click(strip().getByRole("tab", { name: "Crash Dialysis" }));
+    expect(replace).toHaveBeenLastCalledWith(
+      "/dashboard/clinic/curriculum-progress?program=Crash+Dialysis",
+      { scroll: false },
+    );
+  });
+
+  it("opens on the course the URL names", () => {
+    // A tab selection somebody bookmarked or shared has to survive a reload.
+    render("program=Crash+Dialysis");
+    expect(
+      strip().getByRole("tab", { name: "Crash Dialysis" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("no longer offers the program dropdown it replaced", () => {
+    // Two controls for one filter is how they end up disagreeing.
+    render();
+    expect(screen.queryByLabelText("Program")).toBeNull();
   });
 });

@@ -3,8 +3,6 @@
 import React, { useMemo, useState } from "react";
 import {
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
   BellRing,
   CalendarPlus,
   CheckCircle2,
@@ -17,11 +15,20 @@ import {
   XCircle,
 } from "lucide-react";
 
+import {
+  AlertTriangleSolid,
+  CheckCircleSolid,
+  ClipboardCheckSolid,
+  UsersSolid,
+  XCircleSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
   Button,
   Card,
+  KeyCard,
+  type KeyCardTone,
   LineChart,
   Modal,
   Progress,
@@ -70,27 +77,48 @@ const statusIcon: Record<CheckInStatus, IconType> = {
   "At Risk": AlertTriangle,
 };
 
+/**
+ * A glyph and a colour per overview card.
+ *
+ * These cards carried neither before — they were a label and a number — so
+ * the pairing is set here rather than in the data, which is the client's
+ * figures and should stay that.
+ */
+const OVERVIEW_KEY: Record<
+  string,
+  { icon: React.ReactNode; tone: KeyCardTone }
+> = {
+  "Check-Ins This Week": { icon: <ClipboardCheckSolid />, tone: "brand" },
+  "Completion Rate": { icon: <CheckCircleSolid />, tone: "success" },
+  "Missed Check-Ins": { icon: <XCircleSolid />, tone: "warning" },
+  "At Risk Members": { icon: <AlertTriangleSolid />, tone: "danger" },
+  "Member Messages": { icon: <UsersSolid />, tone: "accent" },
+};
+
 function OverviewCard({ card }: { card: (typeof overview)[number] }) {
-  const Arrow = card.delta?.direction === "up" ? ArrowUpRight : ArrowDownRight;
+  const key = OVERVIEW_KEY[card.label] ?? {
+    icon: <ClipboardCheckSolid />,
+    tone: "brand" as KeyCardTone,
+  };
 
   return (
-    <Card as="article" padding="small" className="min-h-[154px]">
-      <p className="text-heading-5 text-fg-secondary">{card.label}</p>
-      <p className="mt-stack-sm text-metric-lg text-fg">{card.value}</p>
-      {card.delta ? (
-        <p
-          className={`mt-stack-sm flex items-center gap-inline-xs text-body-sm ${
-            card.delta.good ? "text-success" : "text-danger"
-          }`}
-        >
-          <Arrow aria-hidden="true" className="h-4 w-4 shrink-0" />
-          {card.delta.change} from last week
-        </p>
-      ) : null}
-      {card.note ? (
-        <p className="mt-stack-sm text-body-sm text-fg-muted">{card.note}</p>
-      ) : null}
-    </Card>
+    <KeyCard
+      tone={key.tone}
+      icon={key.icon}
+      value={card.value}
+      label={card.label}
+      trend={
+        card.delta
+          ? {
+              direction: card.delta.direction,
+              value: card.delta.change,
+              suffix: "from last week",
+              good: card.delta.good,
+            }
+          : undefined
+      }
+      note={card.delta ? undefined : card.note}
+    />
   );
 }
 

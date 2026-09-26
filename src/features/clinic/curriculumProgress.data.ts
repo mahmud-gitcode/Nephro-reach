@@ -38,12 +38,63 @@ export const statusTone: Record<ProgressStatus, BadgeTone> = {
   "Not Started": "neutral",
 };
 
-/** Length in days for the two courses, in modules for the library. */
-const LENGTH: Record<Program, number> = {
-  [JOURNEY]: 21,
-  [CRASH]: 5,
-  [LIBRARY]: 8,
-};
+export type CourseUnit = "Day" | "Module";
+
+export interface Course {
+  /** The curriculum name carried on every member row. */
+  id: Program;
+  /** The full name, as the clinic's own materials write it. */
+  name: string;
+  /** Short enough for a tab strip on a phone. */
+  shortName: string;
+  /** How many days a course runs, or how many modules a library holds. */
+  length: number;
+  unit: CourseUnit;
+}
+
+/**
+ * Every course this clinic runs.
+ *
+ * The one place a course is declared. The tab strip, the program filter,
+ * each member's "Day 14 of 21" and the length arithmetic all read from
+ * here, so adding a fourth course is one entry rather than four edits in
+ * four files — and TypeScript names anything still missing.
+ *
+ * Twenty-one days is Journey's length, not the page's: nothing below
+ * assumes a course is three weeks long, or that there are three courses.
+ */
+export const COURSES: Course[] = [
+  {
+    id: JOURNEY,
+    name: "Journey to Dialysis (21-Day)",
+    shortName: "Journey",
+    length: 21,
+    unit: "Day",
+  },
+  {
+    id: CRASH,
+    name: "Crash Dialysis (5-Day)",
+    shortName: "Crash",
+    length: 5,
+    unit: "Day",
+  },
+  {
+    id: LIBRARY,
+    name: "Education Library",
+    shortName: "Library",
+    length: 8,
+    unit: "Module",
+  },
+];
+
+export function courseFor(id: string): Course | undefined {
+  return COURSES.find((course) => course.id === id);
+}
+
+/** Length in days for a course, in modules for a library. */
+const LENGTH: Record<Program, number> = Object.fromEntries(
+  COURSES.map((course) => [course.id, course.length]),
+) as Record<Program, number>;
 
 /* Module titles by position. The client named eleven of them across the
    eight rows; the rest are written to fill the gaps. */
@@ -147,7 +198,7 @@ export const members: MemberProgress[] = rows.map(
     for a member who has not opened the first one. */
 export function stepLabel(member: MemberProgress): string {
   if (member.step === 0) return "Not started";
-  const unit = member.program === LIBRARY ? "Module" : "Day";
+  const unit = courseFor(member.program)?.unit ?? "Day";
   return `${unit} ${member.step} of ${member.length}`;
 }
 
@@ -186,7 +237,12 @@ export function curriculumRowFor(patient: Patient): MemberProgress {
 export const ALL_PROGRAMS = "All Programs";
 export const ALL_STATUSES = "All Statuses";
 
-export const programOptions = [ALL_PROGRAMS, JOURNEY, CRASH, LIBRARY];
+/* Derived, so a course added to COURSES is filterable and tabbable at
+   once rather than only once somebody remembers this line. */
+export const programOptions = [
+  ALL_PROGRAMS,
+  ...COURSES.map((course) => course.id),
+];
 
 export const statusOptions = [
   ALL_STATUSES,
@@ -226,7 +282,46 @@ export const summary = {
   notStarted: 7,
 };
 
+export type CurriculumSummary = typeof summary;
+
+/**
+ * The five key figures, for one course or for all of them.
+ *
+ * On All Programs it hands back the client's own numbers untouched — they
+ * are verbatim from their mockup and do not reconcile with a 23-row roster
+ * (see the header). Narrowed to one course there is no client figure to
+ * quote, so it counts the roster instead, which is the only honest answer.
+ */
+export function summaryFor(
+  list: MemberProgress[],
+  program: string,
+): CurriculumSummary {
+  if (program === ALL_PROGRAMS) return summary;
+
+  const inCourse = list.filter((member) => member.program === program);
+  const countOf = (status: ProgressStatus) =>
+    inCourse.filter((member) => member.status === status).length;
+
+  return {
+    /* Someone who has not opened the course yet is enrolled, not learning. */
+    activeLearners: inCourse.filter((m) => m.status !== "Not Started").length,
+    enrolled: inCourse.length,
+    averageCompletion:
+      inCourse.length === 0
+        ? 0
+        : Math.round(
+            inCourse.reduce((total, m) => total + m.progress, 0) /
+              inCourse.length,
+          ),
+    completed: countOf("Completed"),
+    inProgress: countOf("In Progress"),
+    notStarted: countOf("Not Started"),
+  };
+}
+
 export type ProgramOverview = {
+  /** Which course this is about — no name parsing anywhere. */
+  id: Program;
   name: string;
   progress: number;
   stats: string[];
@@ -234,16 +329,19 @@ export type ProgramOverview = {
 
 export const programOverview: ProgramOverview[] = [
   {
+    id: JOURNEY,
     name: "Journey to Dialysis (21-Day)",
     progress: 82,
     stats: ["16 Members Enrolled", "12 Completed", "4 In Progress"],
   },
   {
+    id: CRASH,
     name: "Crash Dialysis (5-Day)",
     progress: 74,
     stats: ["7 Members Enrolled", "5 Completed", "2 In Progress"],
   },
   {
+    id: LIBRARY,
     name: "Education Library",
     progress: 69,
     stats: ["Accessed by 20 Members", "120 Modules Completed"],

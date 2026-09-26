@@ -51,26 +51,30 @@
       it is the one large brand-coloured surface in the product, so it gets
       its own step rather than bending the ramp to fit. White on it is
       14.62:1. */
-  --color-brand-1000: #06265b;
+  --color-brand-1000: #001e47;
 
   /* ======================================================================
-     PRIMITIVE — Secondary · violet · hue 300°
-     37° from the brand. The old #7C6CFF sat at 283° — only 20° away, which
-     is why it read as "another blue" rather than a secondary.
+     PRIMITIVE — Secondary · indigo-violet · hue 285.4°
+     23° from the brand. Pulled in from 300° and desaturated by 28% to the
+     client's reference palette (2026-09-26): their secondary is a muted
+     indigo, and a fully saturated violet beside it did not read as the
+     same brand. Still far enough from the brand's 262.9° to be a second
+     colour rather than "another blue" — the old #7C6CFF failed at 283°
+     only because it also shared the brand's chroma.
      Never appears in the same component as a primary action.
      ====================================================================== */
-  --color-accent-50: #f6f3fe;
-  --color-accent-100: #ece4fd;
-  --color-accent-200: #decffd;
-  --color-accent-300: #cbb0ff;
-  --color-accent-400: #b382ff;
-  --color-accent-500: #a056fc;
-  --color-accent-600: #8e23f1;
+  --color-accent-50: #f4f4fc;
+  --color-accent-100: #e7e7f9;
+  --color-accent-200: #d4d4f6;
+  --color-accent-300: #bbbaf3;
+  --color-accent-400: #9994ee;
+  --color-accent-500: #8073e7;
+  --color-accent-600: #6b55da;
   /* 5.49:1 */
-  --color-accent-700: #7c04d7;
-  --color-accent-800: #640cb0;
-  --color-accent-900: #522189;
-  --color-accent-950: #321952;
+  --color-accent-700: #5b45c2;
+  --color-accent-800: #4a389e;
+  --color-accent-900: #3f357c;
+  --color-accent-950: #27234b;
 
   /* ======================================================================
      PRIMITIVE — Gray · hue 262.9° (the brand's own hue)
@@ -101,56 +105,152 @@
   --color-gray-300: #bbc1cc;
   --color-gray-400: #9ca3b1;
   --color-gray-500: #7f8898;
-  --color-gray-600: #687081;
+  /* Nudged two steps darker when the page surfaces moved off white
+     (2026-09-26): muted text on the new sunken tint was 4.47:1 and on the
+     new canvas 4.38:1, both under the floor. At this value it clears both. */
+  --color-gray-600: #666e7f;
   --color-gray-700: #535b6b;
   --color-gray-800: #3f4754;
   --color-gray-900: #2c323d;
   --color-gray-950: #10141c;
 
   /* ======================================================================
-     PRIMITIVE — Status
-     Each ramp has a TEXT value (600+, AA-safe) and FILL values (300-500).
-     The bright steps may never carry a word: #00A24A is 3.35:1 and fails.
+     PRIMITIVE — Client palette (supplied 2026-09-26)
+     Fifty colours, five families of ten, every one hsl(H, 70%, 50%)
+     resolved to hex. Added at the client's instruction.
+
+     READ THIS BEFORE USING ONE FOR TEXT OR AN ICON.
+
+     They are all one HSL lightness, which is not one perceived lightness:
+     --yellow-4 is 1.51:1 on white and --blue-9 is 8.89:1, from the same
+     "50%". Measured against WCAG:
+
+       every green   1.83-1.90:1  -- fails even the 3:1 shape floor
+       every yellow  1.51-2.13:1  -- fails 3:1
+       red            2.97-4.93:1  -- 5 of 10 carry text
+       purple         4.02-7.04:1  -- 6 of 10
+       blue           3.04-8.89:1  -- 6 of 10
+
+     So these are decorative fills. The status ramps above still own text,
+     surfaces, lines and the gated --chart-* fills, because those have to
+     clear 4.5:1 and 3:1 and twenty of these cannot.
+
+     The family names are the client's and do not match their contents:
+     --yellow-10 is green (hue 90), --red-10 is orange (hue 30) and
+     --purple-8 is magenta (hue 300).
      ====================================================================== */
 
-  /* Success · hue 150° */
-  --color-success-50: #eff7f1;
-  --color-success-100: #dcefdf;
-  --color-success-200: #c0e3c6;
-  --color-success-300: #93d3a0;
-  --color-success-400: #4eba6c;
-  --color-success-500: #00a24a;
-  /* fill only — 3.35:1 */
-  --color-success-600: #00813a;
-  /* 4.63:1 */
-  --color-success-700: #007433;
-  /* 5.92:1 — badge text */
-  --color-success-800: #005f28;
-  --color-success-900: #005121;
-  --color-success-950: #033314;
+  /* green */
+  --color-green-1: #62d926; /* hue 100 - 1.83:1 */
+  --color-green-2: #53d926; /* hue 105 - 1.85:1 */
+  --color-green-3: #44d926; /* hue 110 - 1.88:1 */
+  --color-green-4: #35d926; /* hue 115 - 1.89:1 */
+  --color-green-5: #26d926; /* hue 120 - 1.90:1 */
+  --color-green-6: #26d935; /* hue 125 - 1.90:1 */
+  --color-green-7: #26d944; /* hue 130 - 1.89:1 */
+  --color-green-8: #26d953; /* hue 135 - 1.89:1 */
+  --color-green-9: #26d962; /* hue 140 - 1.88:1 */
+  --color-green-10: #26d971; /* hue 145 - 1.87:1 */
 
-  /* Warning · hue 70°
+  /* yellow */
+  --color-yellow-1: #d9ac26; /* hue 45 - 2.13:1 */
+  --color-yellow-2: #d9bb26; /* hue 50 - 1.89:1 */
+  --color-yellow-3: #d9ca26; /* hue 55 - 1.69:1 */
+  --color-yellow-4: #d9d926; /* hue 60 - 1.51:1 */
+  --color-yellow-5: #cad926; /* hue 65 - 1.56:1 */
+  --color-yellow-6: #bbd926; /* hue 70 - 1.61:1 */
+  --color-yellow-7: #acd926; /* hue 75 - 1.65:1 */
+  --color-yellow-8: #9dd926; /* hue 80 - 1.70:1 */
+  --color-yellow-9: #8ed926; /* hue 85 - 1.74:1 */
+  --color-yellow-10: #80d926; /* hue 90 - 1.77:1 */
+
+  /* red */
+  --color-red-1: #d92653; /* hue 345 - 4.82:1 */
+  --color-red-2: #d92644; /* hue 350 - 4.87:1 */
+  --color-red-3: #d92635; /* hue 355 - 4.91:1 */
+  --color-red-4: #d92626; /* hue 0 - 4.93:1 */
+  --color-red-5: #d93526; /* hue 5 - 4.68:1 */
+  --color-red-6: #d94426; /* hue 10 - 4.37:1 */
+  --color-red-7: #d95326; /* hue 15 - 4.03:1 */
+  --color-red-8: #d96226; /* hue 20 - 3.67:1 */
+  --color-red-9: #d97126; /* hue 25 - 3.31:1 */
+  --color-red-10: #d98026; /* hue 30 - 2.97:1 */
+
+  /* purple */
+  --color-purple-1: #7126d9; /* hue 265 - 7.04:1 */
+  --color-purple-2: #7f26d9; /* hue 270 - 6.60:1 */
+  --color-purple-3: #8e26d9; /* hue 275 - 6.12:1 */
+  --color-purple-4: #9d26d9; /* hue 280 - 5.66:1 */
+  --color-purple-5: #ac26d9; /* hue 285 - 5.21:1 */
+  --color-purple-6: #bb26d9; /* hue 290 - 4.78:1 */
+  --color-purple-7: #ca26d9; /* hue 295 - 4.38:1 */
+  --color-purple-8: #d926d9; /* hue 300 - 4.02:1 */
+  --color-purple-9: #d926ca; /* hue 305 - 4.13:1 */
+  --color-purple-10: #d926bb; /* hue 310 - 4.25:1 */
+
+  /* blue */
+  --color-blue-1: #269dd9; /* hue 200 - 3.04:1 */
+  --color-blue-2: #268ed9; /* hue 205 - 3.53:1 */
+  --color-blue-3: #267fd9; /* hue 210 - 4.10:1 */
+  --color-blue-4: #2671d9; /* hue 215 - 4.72:1 */
+  --color-blue-5: #2662d9; /* hue 220 - 5.48:1 */
+  --color-blue-6: #2653d9; /* hue 225 - 6.32:1 */
+  --color-blue-7: #2644d9; /* hue 230 - 7.21:1 */
+  --color-blue-8: #2635d9; /* hue 235 - 8.10:1 */
+  --color-blue-9: #2626d9; /* hue 240 - 8.89:1 */
+  --color-blue-10: #3526d9; /* hue 245 - 8.64:1 */
+
+  /* ======================================================================
+     PRIMITIVE — Status
+     Each ramp has a TEXT value (600+, AA-safe) and FILL values (300-500).
+     The bright steps may never carry a word: #00A460 is 3.24:1 and fails.
+     ====================================================================== */
+
+  /* Success · hue 159.5°
+     Rotated from 150° to the client's reference green (2026-09-26), which
+     carries more emerald than ours did. Lightness is untouched, so every
+     step holds the contrast it was chosen for. */
+  --color-success-50: #eef7f2;
+  --color-success-100: #d9efe2;
+  --color-success-200: #bbe4cc;
+  --color-success-300: #88d5ab;
+  --color-success-400: #29bc7e;
+  --color-success-500: #00a460;
+  /* fill only — 3.24:1 */
+  /* Nudged a step darker than a pure hue-rotation gave (#00834c): at the
+     new hue that landed on 4.42:1 against its own 50 tint, just under the
+     floor. Badge text sits on that tint, so the tint is the pair that
+     matters, not white. */
+  --color-success-600: #00804e;
+  /* 4.63:1 */
+  --color-success-700: #007643;
+  /* 5.72:1 — badge text */
+  --color-success-800: #006136;
+  --color-success-900: #00522d;
+  --color-success-950: #00341c;
+
+  /* Warning · hue 74° — the client's reference amber
      warning-500 is a dark gold, not a bright yellow. Yellow cannot carry
      text at any lightness where it still looks yellow — bright amber lives
      at 300/400 for fills, 600/700 for words. */
   --color-warning-50: #fbf4ec;
-  --color-warning-100: #f5e6d5;
-  --color-warning-200: #eed3b4;
-  --color-warning-300: #e7b77f;
-  --color-warning-400: #d98e23;
-  --color-warning-500: #ba7600;
-  /* fill only — 3.70:1 */
-  --color-warning-600: #9b6200;
-  /* 5.07:1 */
-  --color-warning-700: #855300;
-  /* 6.49:1 — badge text */
-  --color-warning-800: #6e4400;
-  --color-warning-900: #5d3900;
-  --color-warning-950: #3c2300;
-  /* The ramp goes from 400 (2.68:1, too light for a chart on white) to
+  --color-warning-100: #f4e6d5;
+  --color-warning-200: #edd4b3;
+  --color-warning-300: #e4b87e;
+  --color-warning-400: #d5911b;
+  --color-warning-500: #b77800;
+  /* fill only — 3.68:1 */
+  --color-warning-600: #986400;
+  /* 5.05:1 */
+  --color-warning-700: #835500;
+  /* 6.43:1 — badge text */
+  --color-warning-800: #6c4500;
+  --color-warning-900: #5b3a00;
+  --color-warning-950: #3b2400;
+  /* The ramp goes from 400 (2.66:1, too light for a chart on white) to
      500 (ochre). This sits between them: the brightest amber that clears
      3:1, for chart fills only — see --chart-warning. */
-  --color-warning-chart: #d97706;
+  --color-warning-chart: #cd8100;
 
   /* Danger · hue 27° */
   --color-danger-50: #fff2f0;
@@ -183,29 +283,38 @@
      cyan up to 0.20), while the status solids are darker (danger-600 is
      L 52%). Side by side, these read as bright data and those as alerts.
 
-     Hues are 45° apart from 20°. Every solid clears 3:1 on white (min
-     3.05:1 — WCAG 1.4.11 for a graphical object), which is where charts
-     draw them. On their own soft tint they sit at 2.7-3.0:1, so an icon on
-     a tint should be a size up rather than a hairline. They are NOT rated
-     for text: use a fg token for the label beside the swatch.
-     ====================================================================== */
-  --color-cat-1: #f44f5d;
-  --color-cat-2: #cf7c00;
-  --color-cat-3: #989900;
-  --color-cat-4: #09a961;
-  --color-cat-5: #06a3aa;
-  --color-cat-6: #0199f0;
-  --color-cat-7: #9272ff;
-  --color-cat-8: #d858c2;
+     REPOINTED to the client's palette (2026-09-26). These are now eight of
+     those fifty hues, with a tint of each at the same hue.
 
-  --color-cat-1-soft: #ffebea;
-  --color-cat-2-soft: #ffeddc;
-  --color-cat-3-soft: #f1f2dc;
-  --color-cat-4-soft: #e1f7e7;
-  --color-cat-5-soft: #daf7f8;
-  --color-cat-6-soft: #e4f2ff;
-  --color-cat-7-soft: #efeeff;
-  --color-cat-8-soft: #fee9f8;
+     The set no longer clears 3:1. The client's palette holds every colour
+     at one HSL lightness, so its greens and yellows land at 1.5-1.9:1 on
+     white: cat-3, cat-4 and cat-5 are now below the graphical-object floor
+     and will read faintly on a white card. That is the client's call, made
+     with the figures in front of them. The gated --chart-* fills were left
+     on the status ramps, so the contrast script still passes.
+
+     The palette also has no hue between 145° and 200°, so the teal slot
+     this set used to hold is gone and cat-5/cat-6 sit further apart than
+     the rest. They are NOT rated for text: use a fg token for the label
+     beside the swatch.
+     ====================================================================== */
+  --color-cat-1: #d92626;
+  --color-cat-2: #d98026;
+  --color-cat-3: #d9d926;
+  --color-cat-4: #8ed926;
+  --color-cat-5: #26d944;
+  --color-cat-6: #269dd9;
+  --color-cat-7: #2635d9;
+  --color-cat-8: #ac26d9;
+
+  --color-cat-1-soft: #fae5e5;
+  --color-cat-2-soft: #faf0e5;
+  --color-cat-3-soft: #fafae5;
+  --color-cat-4-soft: #f1fae5;
+  --color-cat-5-soft: #e5fae9;
+  --color-cat-6-soft: #e5f3fa;
+  --color-cat-7-soft: #e5e7fa;
+  --color-cat-8-soft: #f5e5fa;
 }
 
 /* ==========================================================================
@@ -219,11 +328,20 @@
 
 :root {
   /* ---- surfaces ---- */
-  --canvas: var(--color-gray-50);
+  /* The three surfaces the client specified (2026-09-26), stacked:
+     the page sits on --canvas, cards on --surface, and anything set into a
+     card on --surface-sunken. Literal values rather than gray-50, because
+     the page and the well are now two different colours and the neutral
+     ramp only has one step there.
+
+     The page is the LIGHTEST of the three and the well the darkest, so the
+     depth runs the other way to the usual: a card reads as a sheet on pale
+     paper, and a well inside it is the only tinted surface. */
+  --canvas: #fcfcfd;
   /* page background */
   --surface: #ffffff;
   /* cards, inputs, modals */
-  --surface-sunken: var(--color-gray-50);
+  --surface-sunken: #f2f6fb;
   /* table stripes, wells */
   --surface-raised: #ffffff;
   /* dropdowns, popovers (+ shadow) */
@@ -249,15 +367,20 @@
   --fg-inverse: #ffffff;
 
   /* ---- lines ---- */
-  /* Every border in the portal is one soft grey, #eaeaea. */
-  --line-subtle: #eaeaea;
+  /* Every neutral border in the portal is one soft grey, #eff1f6.
+     The status lines further down stay coloured — see the note there. */
+  --line-subtle: #eff1f6;
   /* internal dividers */
-  --line: #eaeaea;
+  --line: #eff1f6;
   /* card and panel edges */
   --line-strong: var(--color-gray-300);
   /* emphasis, selected */
   --field: var(--line);
   /* input borders — matches table border (border-line) */
+  /* The unfilled part of a progress bar or ring. Its own token because the
+     bar was borrowing --surface-sunken and the ring --line, so the same
+     "empty" read as two different colours depending on the shape. */
+  --track: #deeafb;
   --ring: var(--color-brand-500);
   /* focus ring */
 
@@ -373,9 +496,9 @@
   --chart-brand: var(--color-brand-600);
   /* 5.27:1 */
   --chart-success: var(--color-success-500);
-  /* 3.35:1 */
+  /* 3.24:1 */
   --chart-warning: var(--color-warning-chart);
-  /* 3.19:1 */
+  /* 3.12:1 */
   --chart-danger: var(--color-danger-500);
   /* 4.06:1 */
   --chart-neutral: var(--color-gray-500);
@@ -419,6 +542,7 @@
   --line-subtle: var(--color-gray-800);
   --line: var(--color-gray-700);
   --line-strong: var(--color-gray-600);
+  --track: var(--color-gray-700);
   --field: var(--line);
   --ring: var(--color-brand-400);
 
@@ -527,6 +651,7 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-field: var(--field);
+  --color-track: var(--track);
   --color-ring: var(--ring);
 
   --color-action: var(--action);

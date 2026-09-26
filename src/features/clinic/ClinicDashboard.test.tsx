@@ -1,7 +1,8 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LanguageProvider } from "@/context/LanguageContext";
 import { recentActivity, roster } from "./members.data";
 import { upcomingClasses } from "./liveClass.data";
 
@@ -38,6 +39,11 @@ function set(partial: Partial<typeof state>) {
     ...partial,
   });
 }
+
+/* The page heading reads its label through the language context, the same
+   way every other clinic page does. */
+const render = (ui: React.ReactElement) =>
+  rtlRender(<LanguageProvider>{ui}</LanguageProvider>);
 
 beforeEach(() => refetch.mockReset());
 

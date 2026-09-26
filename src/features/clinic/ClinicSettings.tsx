@@ -81,21 +81,20 @@ const LANGUAGES: { code: LanguageCode; label: string }[] = [
   { code: "ES", label: "Español" },
 ];
 
+/* Title and an optional action. The descriptions under these were removed
+   at the client's instruction (2026-09-26) — a panel that says "Manage your
+   organization information" above fields labelled Name, Address and Phone
+   is repeating itself. */
 function SectionHeading({
   title,
-  description,
   action,
 }: {
   title: string;
-  description: string;
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-stack-lg flex items-start justify-between gap-inline-lg">
-      <div className="min-w-0">
-        <h2 className="text-heading-4 text-fg">{title}</h2>
-        <p className="mt-stack-xs text-body-sm text-fg-muted">{description}</p>
-      </div>
+    <div className="mb-stack-lg flex items-center justify-between gap-inline-lg">
+      <h2 className="min-w-0 text-heading-4 text-fg">{title}</h2>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
@@ -198,10 +197,7 @@ function OrganizationProfileCard({
       {/* noValidate: the field errors below say what is wrong in words;
           the browser bubble would say it first, and differently. */}
       <form onSubmit={save} noValidate>
-        <SectionHeading
-          title="Organization Profile"
-          description="Manage your organization information."
-        />
+        <SectionHeading title="Organization Profile" />
 
         <div className="space-y-stack-md">
           <FormField label="Organization Name" required error={errors.name}>
@@ -365,7 +361,6 @@ function UserManagementCard({
     <Card as="section" padding="small" className="h-full">
       <SectionHeading
         title="User Management"
-        description="Manage who has access to your office portal."
         action={
           <Button size="small" onClick={onAdd}>
             <Plus className="h-4 w-4" />
@@ -437,10 +432,7 @@ function NotificationCard({
 }) {
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <SectionHeading
-        title="Notification Preferences"
-        description="Choose what you want to be notified about."
-      />
+      <SectionHeading title="Notification Preferences" />
 
       {/* Each switch saves as it flips — that is what makes it a switch
           rather than a checkbox waiting on a Save button. */}
@@ -519,10 +511,7 @@ function SecurityCard({
 }) {
   return (
     <Card as="section" padding="small">
-      <SectionHeading
-        title="Security Settings"
-        description="Keep your account secure."
-      />
+      <SectionHeading title="Security Settings" />
       <ul className="divide-y divide-line-subtle">
         <ActionRow
           icon={<KeyRound />}
@@ -602,10 +591,7 @@ function OfficePreferencesCard({
 
   return (
     <Card as="section" padding="small">
-      <SectionHeading
-        title="Office Preferences"
-        description="Customize your portal experience."
-      />
+      <SectionHeading title="Office Preferences" />
       <div className="space-y-stack-md">
         <FormField label="Default Landing Page">
           {(props) => (
@@ -699,10 +685,7 @@ function DataPrivacyCard({
 }) {
   return (
     <Card as="section" padding="small">
-      <SectionHeading
-        title="Data & Privacy"
-        description="Manage your data and compliance settings."
-      />
+      <SectionHeading title="Data & Privacy" />
       <div className="grid gap-inset-md lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <ul className="divide-y divide-line-subtle">
           <ActionRow

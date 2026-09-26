@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Lato } from "next/font/google";
 import "@/styles/globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/features/auth/AuthContext";
 
-const inter = Inter({
-  variable: "--font-inter",
+/* Lato ships 100/300/400/700/900 — it has no 500 and no 600. The type
+   scale is mapped onto the weights it does have; see tokens/typography.css. */
+const lato = Lato({
+  variable: "--font-lato",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "700", "900"],
 });
 
 export const metadata: Metadata = {
@@ -26,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${inter.className} h-full antialiased`}
+      className={`${lato.variable} ${lato.className} h-full antialiased`}
     >
-      <body className={`${inter.className} flex min-h-full flex-col`}>
+      <body className={`${lato.className} flex min-h-full flex-col`}>
         <LanguageProvider>
           <AuthProvider>
             <LandingAnimationObserver />

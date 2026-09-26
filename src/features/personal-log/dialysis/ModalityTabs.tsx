@@ -48,12 +48,18 @@ export default function ModalityTabs({
   const items = MODALITY_OPTIONS.map((option) => ({
     id: option.value,
     label: (
+      /* Both variants are in the DOM and CSS picks one, so both would be
+         announced — "Peritoneal dialysis PD". The visible pair is hidden
+         from assistive tech and the full name given once instead. */
       <>
-        <span className="hidden sm:inline">
+        <span aria-hidden="true" className="hidden sm:inline">
           {isEs ? option.labelEs : option.labelEn}
         </span>
-        <span className="sm:hidden">
+        <span aria-hidden="true" className="sm:hidden">
           {isEs ? option.shortEs : option.shortEn}
+        </span>
+        <span className="sr-only">
+          {isEs ? option.labelEs : option.labelEn}
         </span>
       </>
     ),

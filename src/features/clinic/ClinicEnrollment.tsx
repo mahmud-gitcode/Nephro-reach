@@ -7,14 +7,17 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  FileText,
   MessageSquareText,
   Plus,
   Search,
-  Target,
   Users,
 } from "lucide-react";
 
+import {
+  FileTextSolid,
+  TargetSolid,
+  UsersSolid,
+} from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Alert,
@@ -26,8 +29,8 @@ import {
   EmptyState,
   ErrorState,
   Input,
+  KeyCard,
   Progress,
-  ProgressRing,
   Select,
   Skeleton,
   Table,
@@ -150,29 +153,44 @@ function SummaryCards({
 
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card as="article" padding="small" className="min-h-[164px]">
-        <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-          <p className="text-heading-5 text-fg-secondary">Patients Enrolled</p>
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 items-center justify-center rounded-control bg-surface-brand-subtle"
-          >
-            <Users className="h-5 w-5 text-brand-600" />
-          </span>
-        </div>
-        <p className="text-metric-lg text-fg">
-          {enrolled}
-          <span className="text-heading-4 text-fg-muted">
-            {" "}
-            / {CONTRACT_SLOTS}
-          </span>
-        </p>
-        <p className="mt-stack-sm text-body-sm text-fg-muted">
-          {remaining} slots remaining
-        </p>
-      </Card>
+      <KeyCard
+        tone="brand"
+        icon={<UsersSolid />}
+        value={
+          <>
+            {enrolled}
+            <span className="text-heading-4 text-fg-muted">
+              {" "}
+              / {CONTRACT_SLOTS}
+            </span>
+          </>
+        }
+        label="Patients Enrolled"
+        note={`${remaining} slots remaining`}
+      />
 
-      <Card as="article" padding="small" className="min-h-[164px]">
+      <KeyCard
+        tone="neutral"
+        icon={<FileTextSolid />}
+        value={CONTRACT_SLOTS}
+        label="Total Contract Slots"
+      >
+        <Link href={BILLING} className={cn(outlineLink, "w-full")}>
+          View Contract
+        </Link>
+      </KeyCard>
+
+      <KeyCard
+        tone="success"
+        icon={<TargetSolid />}
+        value={`${goalPct}%`}
+        label="Enrollment Goal"
+        note={`${enrolled} of ${CONTRACT_SLOTS} enrolled`}
+      />
+
+      {/* Not a figure, so not a KeyCard: this one is the action, and the
+          only card on the row with something to press. */}
+      <Card as="article" padding="small" className="flex flex-col">
         <p className="text-heading-5 text-fg-secondary">Enroll New Patient</p>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
           {full
@@ -184,7 +202,7 @@ function SummaryCards({
         <Button
           size="small"
           fullWidth
-          className="mt-stack-md"
+          className="mt-auto pt-stack-md"
           onClick={onEnroll}
           disabled={full}
           title={full ? "All contract seats are filled" : undefined}
@@ -192,44 +210,6 @@ function SummaryCards({
           <Plus className="h-4 w-4" />
           Enroll New Patient
         </Button>
-      </Card>
-
-      <Card as="article" padding="small" className="min-h-[164px]">
-        <div className="mb-stack-md flex items-start justify-between gap-inline-lg">
-          <p className="text-heading-5 text-fg-secondary">
-            Total Contract Slots
-          </p>
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 items-center justify-center rounded-control bg-surface-sunken"
-          >
-            <FileText className="h-5 w-5 text-fg-secondary" />
-          </span>
-        </div>
-        <p className="text-metric-lg text-fg">{CONTRACT_SLOTS}</p>
-        <Link href={BILLING} className={cn(outlineLink, "mt-stack-md w-full")}>
-          View Contract
-        </Link>
-      </Card>
-
-      <Card as="article" padding="small" className="min-h-[164px]">
-        <div className="flex items-center gap-inset-sm">
-          <ProgressRing
-            value={goalPct}
-            label="Enrollment goal"
-            size={84}
-            thickness={10}
-          />
-          <div className="min-w-0">
-            <p className="flex items-center gap-inline-xs text-heading-5 text-fg-secondary">
-              <Target aria-hidden="true" className="h-4 w-4 shrink-0" />
-              Enrollment Goal
-            </p>
-            <p className="mt-stack-xs text-body-sm text-fg-secondary">
-              {enrolled} of {CONTRACT_SLOTS} enrolled
-            </p>
-          </div>
-        </div>
       </Card>
     </section>
   );
@@ -300,14 +280,9 @@ function PatientTable({
 
   return (
     <Card as="section" padding="small" aria-labelledby="enrolled-heading">
-      <div className="mb-stack-lg">
-        <h2 id="enrolled-heading" className="text-heading-4 text-fg">
-          Enrolled Patients
-        </h2>
-        <p className="mt-stack-xs text-body-sm text-fg-muted">
-          Add, manage, and track patients enrolled in your NephroReach program.
-        </p>
-      </div>
+      <h2 id="enrolled-heading" className="mb-stack-lg text-heading-4 text-fg">
+        Enrolled Patients
+      </h2>
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:flex-wrap lg:items-center">
         <Input
@@ -788,12 +763,6 @@ function EnrollmentView() {
 
   return (
     <>
-      <UpdatedBar
-        updatedAt={clinic.updatedAt}
-        isFetching={clinic.isFetching}
-        refetch={clinic.refetch}
-      />
-
       {justEnrolled ? (
         <Alert
           tone="success"
@@ -870,9 +839,23 @@ function EnrollmentView() {
 }
 
 export default function ClinicEnrollment() {
+  /* Read here as well as in the view below so the refresh control can sit
+     on the title row. Both calls share one query key, so react-query serves
+     them from the same fetch. */
+  const clinic = useClinicData();
+
   return (
     <div className="space-y-4">
-      <PageTitle href="/dashboard/clinic/enroll-patients" />
+      <PageTitle
+        href="/dashboard/clinic/enroll-patients"
+        action={
+          <UpdatedBar
+            updatedAt={clinic.updatedAt}
+            isFetching={clinic.isFetching}
+            refetch={clinic.refetch}
+          />
+        }
+      />
       {/* useSearchParams needs a Suspense boundary on a prerendered page. */}
       <Suspense fallback={<PageSkeleton />}>
         <EnrollmentView />

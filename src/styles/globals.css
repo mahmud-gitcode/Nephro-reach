@@ -11,9 +11,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans:
-    var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, sans-serif;
+  /* Lato alone, at the client's instruction. The generic `sans-serif` is
+     the browser's last resort if the webfont fails to load; there is no
+     other family in the stack. */
+  --font-sans: var(--font-lato), "Lato", sans-serif;
 }
 
 /* The `prefers-color-scheme: dark` block that used to sit here has been
@@ -30,14 +31,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family:
-    var(--font-inter),
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-lato), "Lato", sans-serif;
 }
 
 .sidebar-scroll {

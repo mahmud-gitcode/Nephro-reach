@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils/cn";
    DonutChart is the wrong tool for this: it splits a whole into categories,
    so every slice gets its own hue and the eye reads two things being
    compared. A gauge has one measure and a remainder, and the remainder is
-   not a category — it is the empty part of the track. So it takes the same
-   recessive grey every other track in the app uses, and only the filled arc
+   not a category — it is the empty part of the track. So it takes --track,
+   the one colour every unfilled progress uses, and only the filled arc
    carries colour.
 
    The ring is a conic gradient rather than an SVG arc for the same reason
@@ -74,7 +74,7 @@ export function ProgressRing({
         style={{
           width: size,
           height: size,
-          background: `conic-gradient(${arcColor[tone]} 0deg ${degrees}deg, var(--color-line) ${degrees}deg 360deg)`,
+          background: `conic-gradient(${arcColor[tone]} 0deg ${degrees}deg, var(--color-track) ${degrees}deg 360deg)`,
         }}
       >
         <div

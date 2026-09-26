@@ -13,11 +13,12 @@ import {
   MessageSquareText,
   Plus,
   Search,
-  UserPlus,
   Users,
   Video,
 } from "lucide-react";
 
+import { UserPlusSolid, UsersSolid } from "@/components/icons/solid";
+import { statusIconSolid, statusKeyTone, statusText } from "./StatusIconsSolid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Alert,
@@ -25,6 +26,7 @@ import {
   Button,
   buttonStyles,
   Card,
+  KeyCard,
   DonutChart,
   EmptyState,
   ErrorState,
@@ -52,7 +54,6 @@ import {
   initials,
   shortProgram,
   statusIcon,
-  statusTile,
 } from "./clinicIcons";
 import { paginate, ROWS_PER_PAGE_OPTIONS } from "./enrollment.data";
 import {
@@ -130,130 +131,55 @@ function PanelHeading({
    button may only hold phrasing content. aria-pressed says which filter is
    on, since the highlight alone would be colour only. */
 
-const keyCardClass =
-  "flex min-h-[156px] w-full flex-col rounded-card border bg-surface p-inset-lg text-left transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong";
-
-function KeyCardBody({
-  label,
-  value,
-  note,
-  icon,
-  tint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  note: string;
-  icon: React.ReactNode;
-  tint: string;
-}) {
-  return (
-    <>
-      <span className="mb-stack-md flex items-start justify-between gap-inline-lg">
-        <span className="text-heading-5 text-fg-secondary">{label}</span>
-        <span
-          aria-hidden="true"
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control [&_svg]:h-5 [&_svg]:w-5 ${tint}`}
-        >
-          {icon}
-        </span>
-      </span>
-      <span className="text-metric-lg text-fg">{value}</span>
-      <span className="mt-stack-sm text-body-sm text-fg-muted">{note}</span>
-    </>
-  );
-}
-
-function SummaryCards({
-  list,
-  status,
-  onStatus,
-  onEnroll,
-}: {
-  list: RosterMember[];
-  status: string;
-  onStatus: (status: string) => void;
-  onEnroll: () => void;
-}) {
+/**
+ * The summary row.
+ *
+ * These were filter buttons: pressing one narrowed the table. The client
+ * asked for key cards not to filter (2026-09-26), and the Status select and
+ * the search box directly below still do it, so nothing became unreachable
+ * — there were two controls for one job and this was the quieter one.
+ */
+function SummaryCards({ list }: { list: RosterMember[] }) {
   const cards = MEMBER_STATUSES.filter((s) => s !== "Not Started");
-  const allOn = status === ALL_STATUSES;
 
   return (
     <section
       aria-label="Member summary"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
     >
-      <button
-        type="button"
-        aria-pressed={allOn}
-        onClick={() => onStatus(ALL_STATUSES)}
-        className={cn(
-          keyCardClass,
-          focusRing,
-          allOn ? "border-action ring-1 ring-action" : "border-line",
-        )}
-      >
-        <KeyCardBody
-          label="Total Members"
-          value={
-            <>
-              {list.length}
-              <span className="text-heading-4 text-fg-muted"> / {allowed}</span>
-            </>
-          }
-          note="Show everyone"
-          icon={<Users className="text-brand-600" />}
-          tint="bg-surface-brand-subtle"
-        />
-      </button>
+      <KeyCard
+        tone="brand"
+        icon={<UsersSolid />}
+        value={
+          <>
+            {list.length}
+            <span className="text-heading-4 text-fg-muted"> / {allowed}</span>
+          </>
+        }
+        label="Total Members"
+      />
 
       {cards.map((card) => {
-        const Icon = statusIcon[card];
+        const Icon = statusIconSolid[card];
         const count = countStatus(list, card);
-        const on = status === card;
         return (
-          <button
+          <KeyCard
             key={card}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onStatus(on ? ALL_STATUSES : card)}
-            className={cn(
-              keyCardClass,
-              focusRing,
-              on ? "border-action ring-1 ring-action" : "border-line",
-            )}
-          >
-            <KeyCardBody
-              label={card}
-              value={count}
-              note={`${shareOf(count, list.length)}% of members`}
-              icon={<Icon />}
-              tint={statusTile[card]}
-            />
-          </button>
+            tone={statusKeyTone[card]}
+            icon={<Icon />}
+            value={count}
+            label={card}
+            note={`${shareOf(count, list.length)}% of members`}
+          />
         );
       })}
 
-      {/* Not a filter: an open seat is filled by enrolling someone, and
-          the form opens here rather than on another page. */}
-      <button
-        type="button"
-        onClick={onEnroll}
-        disabled={list.length >= allowed}
-        className={cn(
-          keyCardClass,
-          focusRing,
-          "border-line disabled:cursor-not-allowed disabled:opacity-60",
-        )}
-        aria-label={`${Math.max(0, allowed - list.length)} available slots — enroll a patient`}
-      >
-        <KeyCardBody
-          label="Available Slots"
-          value={Math.max(0, allowed - list.length)}
-          note="Enroll a patient"
-          icon={<UserPlus className="text-brand-600" />}
-          tint="bg-surface-brand-subtle"
-        />
-      </button>
+      <KeyCard
+        tone="neutral"
+        icon={<UserPlusSolid />}
+        value={Math.max(0, allowed - list.length)}
+        label="Available Slots"
+      />
     </section>
   );
 }
@@ -321,10 +247,7 @@ function MemberTable({
 
   return (
     <Card as="section" padding="small" className="h-full min-w-0">
-      <PanelHeading
-        title="Member List"
-        description="View and manage all members enrolled under your organization."
-      />
+      <PanelHeading title="Member List" />
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:items-center">
         <Input
@@ -773,59 +696,53 @@ const statusBar: Record<RosterStatus, ProgressTone | undefined> = {
   "Not Started": undefined,
 };
 
-function StatusBreakdown({
-  list,
-  status,
-  onStatus,
-}: {
-  list: RosterMember[];
-  status: string;
-  onStatus: (status: string) => void;
-}) {
+/**
+ * How the roster splits by status.
+ *
+ * Read-only: it was five buttons that filtered the table, and the client
+ * asked for that to go — the Status select above the table does the same
+ * job. It is also much quieter than it was. Every row used to carry a
+ * coloured Badge pill AND a coloured bar, so the same fact was colour-coded
+ * twice, five times over, with the pills leaving a ragged left edge. Now it
+ * is one glyph, the name, the numbers, and the bar.
+ */
+function StatusBreakdown({ list }: { list: RosterMember[] }) {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Status Breakdown" />
-      <ul className="space-y-stack-sm">
+      <ul className="space-y-stack-md">
         {MEMBER_STATUSES.map((row) => {
           const count = countStatus(list, row);
-          const Icon = statusIcon[row];
-          const on = status === row;
+          const Icon = statusIconSolid[row];
+
           return (
             <li key={row}>
-              <button
-                type="button"
-                aria-pressed={on}
-                onClick={() => onStatus(on ? ALL_STATUSES : row)}
-                className={cn(
-                  "w-full cursor-pointer rounded-control-small p-inset-xs text-left hover:bg-surface-sunken",
-                  on && "bg-surface-brand-subtle",
-                  focusRing,
-                )}
-              >
-                <span className="flex items-center justify-between gap-inline-md">
-                  <Badge
-                    tone={statusTone[row]}
-                    icon={<Icon aria-hidden="true" />}
-                  >
-                    {row}
-                  </Badge>
-                  <span className="text-label-md text-fg tabular-nums">
-                    {count}
-                    <span className="text-fg-muted">
-                      {" "}
-                      · {shareOf(count, list.length)}%
-                    </span>
-                  </span>
-                </span>
-                <Progress
-                  value={count}
-                  max={Math.max(1, list.length)}
-                  label={`${row} members`}
-                  tone={statusBar[row]}
-                  size="medium"
-                  className="mt-stack-xs"
+              <p className="flex items-baseline gap-inline-md">
+                <Icon
+                  aria-hidden="true"
+                  className={cn(
+                    "h-4 w-4 shrink-0 translate-y-0.5",
+                    statusText[row],
+                  )}
                 />
-              </button>
+                <span className="min-w-0 flex-1 truncate text-label-md text-fg-secondary">
+                  {row}
+                </span>
+                <span className="shrink-0 text-label-md text-fg tabular-nums">
+                  {count}
+                </span>
+                <span className="w-10 shrink-0 text-right text-body-sm text-fg-muted tabular-nums">
+                  {shareOf(count, list.length)}%
+                </span>
+              </p>
+              <Progress
+                value={count}
+                max={Math.max(1, list.length)}
+                label={`${row} members`}
+                tone={statusBar[row]}
+                size="small"
+                className="mt-stack-xs"
+              />
             </li>
           );
         })}
@@ -1047,12 +964,6 @@ function MembersView() {
 
   return (
     <>
-      <UpdatedBar
-        updatedAt={clinic.updatedAt}
-        isFetching={clinic.isFetching}
-        refetch={clinic.refetch}
-      />
-
       {justEnrolled ? (
         <Alert
           tone="success"
@@ -1076,12 +987,7 @@ function MembersView() {
         </Alert>
       ) : null}
 
-      <SummaryCards
-        list={list}
-        status={filters.status}
-        onStatus={(status) => updateFilters({ status })}
-        onEnroll={() => setEnrolling(true)}
-      />
+      <SummaryCards list={list} />
 
       <MemberTable
         list={list}
@@ -1104,11 +1010,7 @@ function MembersView() {
           program={filters.program}
           onProgram={(program) => updateFilters({ program })}
         />
-        <StatusBreakdown
-          list={list}
-          status={filters.status}
-          onStatus={(status) => updateFilters({ status })}
-        />
+        <StatusBreakdown list={list} />
         <RecentMemberActivity
           list={list}
           activity={clinic.data?.activity ?? []}
@@ -1120,9 +1022,23 @@ function MembersView() {
 }
 
 export default function ClinicMembers() {
+  /* Read here as well as in the view below so the refresh control can sit
+     on the title row. Both calls share one query key, so react-query serves
+     them from the same fetch. */
+  const clinic = useClinicData();
+
   return (
     <div className="space-y-4">
-      <PageTitle href="/dashboard/clinic/members" />
+      <PageTitle
+        href="/dashboard/clinic/members"
+        action={
+          <UpdatedBar
+            updatedAt={clinic.updatedAt}
+            isFetching={clinic.isFetching}
+            refetch={clinic.refetch}
+          />
+        }
+      />
       {/* useSearchParams needs a Suspense boundary on a prerendered page. */}
       <Suspense fallback={<PageSkeleton />}>
         <MembersView />

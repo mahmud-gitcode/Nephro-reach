@@ -19,6 +19,8 @@ export { Modal } from "./Modal";
 export type { ModalProps, ModalSize } from "./Modal";
 
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
+export { KeyCard } from "./KeyCard";
+export type { KeyCardProps, KeyCardTone, KeyCardTrend } from "./KeyCard";
 export type { CardProps, CardTone, CardPadding } from "./Card";
 
 export { Badge } from "./Badge";
