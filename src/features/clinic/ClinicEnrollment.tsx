@@ -197,19 +197,23 @@ function SummaryCards({
             ? "Every contract seat is filled."
             : "Add a new patient to your program."}
         </p>
-        {/* A full contract disables the button and says why, rather than
-            opening a form that can only fail. */}
-        <Button
-          size="small"
-          fullWidth
-          className="mt-auto pt-stack-md"
-          onClick={onEnroll}
-          disabled={full}
-          title={full ? "All contract seats are filled" : undefined}
-        >
-          <Plus className="h-4 w-4" />
-          Enroll New Patient
-        </Button>
+        {/* The spacing goes on a wrapper, not on the button. `pt-stack-md`
+            was on the Button itself, which added padding INSIDE a control
+            that already has a fixed height — so its icon and label sat
+            below centre. A full contract disables it and says why, rather
+            than opening a form that can only fail. */}
+        <div className="mt-auto pt-stack-md">
+          <Button
+            size="small"
+            fullWidth
+            onClick={onEnroll}
+            disabled={full}
+            title={full ? "All contract seats are filled" : undefined}
+          >
+            <Plus />
+            Enroll New Patient
+          </Button>
+        </div>
       </Card>
     </section>
   );
@@ -221,13 +225,11 @@ function PatientTable({
   list,
   filters,
   onFilters,
-  onEnroll,
   highlightMrn,
 }: {
   list: Patient[];
   filters: Filters;
   onFilters: (change: Partial<Filters>) => void;
-  onEnroll: () => void;
   highlightMrn: string | null;
 }) {
   const [page, setPage] = useState(1);
@@ -276,7 +278,6 @@ function PatientTable({
     filters.program !== ALL_PROGRAMS ||
     filters.status !== ALL_STATUSES ||
     filters.source !== ALL_SOURCES;
-  const full = list.length >= CONTRACT_SLOTS;
 
   return (
     <Card as="section" padding="small" aria-labelledby="enrolled-heading">
@@ -325,11 +326,9 @@ function PatientTable({
             <option key={option}>{option}</option>
           ))}
         </Select>
+        {/* No Enroll button here: the summary card directly above this
+            table already carries it, and the two sat on screen together. */}
         <div className="flex gap-inline-md lg:ml-auto">
-          <Button size="small" onClick={onEnroll} disabled={full}>
-            <Plus className="h-4 w-4" />
-            Enroll New Patient
-          </Button>
           <Button
             {...notBuiltYet("Exporting the patient list")}
             variant="neutral"
@@ -803,7 +802,6 @@ function EnrollmentView() {
             list={list}
             filters={filters}
             onFilters={updateFilters}
-            onEnroll={() => setEnrolling(true)}
             highlightMrn={justEnrolled?.mrn ?? null}
           />
 
