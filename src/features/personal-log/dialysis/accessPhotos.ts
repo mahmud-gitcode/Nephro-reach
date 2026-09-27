@@ -51,6 +51,26 @@ export function subjectLabel(value: PhotoSubject, isEs: boolean): string {
   return isEs ? option.labelEs : option.labelEn;
 }
 
+/**
+ * A photo as a message attachment: its name, a size label, and a copy of
+ * the image. Copied rather than referenced so a sent message still shows it
+ * after the member deletes the original from their log.
+ */
+export function photoAttachment(
+  photo: AccessPhoto,
+  isEs: boolean,
+): { name: string; sizeLabel: string; imageUrl: string } {
+  // base64 carries 3 bytes in every 4 characters.
+  const base64 = photo.dataUrl.slice(photo.dataUrl.indexOf(",") + 1);
+  const kb = Math.max(1, Math.round((base64.length * 3) / 4 / 1024));
+  const label = subjectLabel(photo.subject, isEs);
+  return {
+    name: photo.note ? `${label} — ${photo.note}` : label,
+    sizeLabel: `JPEG · ${kb} KB`,
+    imageUrl: photo.dataUrl,
+  };
+}
+
 export interface AccessPhoto {
   id: string;
   /** A downscaled JPEG data URL — see the note at the top of this file. */

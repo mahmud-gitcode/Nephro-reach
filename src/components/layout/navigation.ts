@@ -1,5 +1,6 @@
 import type React from "react";
 import {
+  Activity,
   Armchair,
   BarChart3,
   BookOpen,
@@ -25,6 +26,7 @@ import {
   Settings,
   ShieldAlert,
   Star,
+  Stethoscope,
   UserPlus,
   Users,
   Video,
@@ -100,6 +102,12 @@ export const sidebarItems: NavItem[] = [
     label: "Dialysis Management",
     href: "/dashboard/personal-log/dialysis-management",
     icon: Hospital,
+    roles: ["user"],
+  },
+  {
+    label: "Vascular Access",
+    href: "/dashboard/vascular-access",
+    icon: Activity,
     roles: ["user"],
   },
   {
@@ -252,6 +260,18 @@ export const sidebarItems: NavItem[] = [
     roles: ["clinic"],
   },
   {
+    label: "Vascular Access",
+    href: "/dashboard/clinic/vascular-access",
+    icon: Activity,
+    roles: ["clinic"],
+  },
+  {
+    label: "Chronic Care Management",
+    href: "/dashboard/clinic/ccm",
+    icon: Stethoscope,
+    roles: ["clinic"],
+  },
+  {
     label: "Messages",
     href: "/dashboard/clinic/messages",
     icon: MessageSquareText,
@@ -317,6 +337,12 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Clases en Vivo" : "Live Class";
   if (pathname.startsWith("/dashboard/clinic/checkins"))
     return language === "ES" ? "Registros" : "Check-ins";
+  if (pathname.startsWith("/dashboard/clinic/vascular-access"))
+    return language === "ES" ? "Acceso Vascular" : "Vascular Access";
+  if (pathname.startsWith("/dashboard/clinic/ccm"))
+    return language === "ES"
+      ? "Gestión de Atención Crónica"
+      : "Chronic Care Management";
   if (pathname.startsWith("/dashboard/clinic/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/clinic/reports"))
@@ -403,6 +429,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Diario de Diálisis" : "Dialysis Journal";
   if (pathname.startsWith("/dashboard/personal-log/dialysis-management"))
     return language === "ES" ? "Gestión de Diálisis" : "Dialysis Management";
+  if (pathname.startsWith("/dashboard/vascular-access"))
+    return language === "ES" ? "Acceso Vascular" : "Vascular Access";
   if (pathname.startsWith("/dashboard/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/team-questions"))
@@ -507,6 +535,7 @@ export function getNavLabel(
     "/dashboard/travel-log": "Registro de Diálisis en Viaje",
     "/dashboard/beyond-the-chair": "Más Allá del Sillón",
     "/dashboard/personal-log/dialysis-management": "Gestión de Diálisis",
+    "/dashboard/vascular-access": "Acceso Vascular",
     "/dashboard/live-class": "Clases en Vivo",
     "/dashboard/community": "Comunidad",
     "/dashboard/sms-analytics": "Análisis de Notificaciones",
@@ -524,6 +553,8 @@ export function getNavLabel(
     "/dashboard/clinic/curriculum-progress": "Progreso del Plan de Estudios",
     "/dashboard/clinic/live-class": "Clases en Vivo",
     "/dashboard/clinic/checkins": "Registros",
+    "/dashboard/clinic/vascular-access": "Acceso Vascular",
+    "/dashboard/clinic/ccm": "Gestión de Atención Crónica",
     "/dashboard/clinic/messages": "Mensajes",
     "/dashboard/clinic/reports": "Informes",
     "/dashboard/clinic/billing": "Contrato y Facturación",

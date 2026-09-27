@@ -97,6 +97,34 @@ function AttachmentCard({
      colour scheme. */
   onLight: boolean;
 }) {
+  /* A photo is the point of the message, so it shows as itself; the file
+     row would make the nurse click to see a red exit site. */
+  if (attachment.imageUrl) {
+    return (
+      <div
+        className={cn(
+          "mt-stack-sm block overflow-hidden rounded-control",
+          onLight ? "border border-line" : "border border-white/25",
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+        <img
+          src={attachment.imageUrl}
+          alt={attachment.name}
+          className="block max-h-64 w-full max-w-xs object-cover"
+        />
+        <span
+          className={cn(
+            "block truncate px-inset-xs py-1 text-caption",
+            onLight ? "bg-surface text-fg-muted" : "bg-white/10 text-white/75",
+          )}
+        >
+          {attachment.name}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

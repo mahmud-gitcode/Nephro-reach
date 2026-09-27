@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import * as rules from "./messaging.rules";
 import type {
+  Attachment,
   Conversation,
   MessageAuthor,
   MessagingState,
@@ -124,9 +125,21 @@ export function useMessages() {
   const state = useMemo(() => query.data ?? EMPTY, [query.data]);
 
   const sendMessage = useCallback(
-    (conversationId: string, body: string, author: MessageAuthor = "clinic") =>
+    (
+      conversationId: string,
+      body: string,
+      author: MessageAuthor = "clinic",
+      attachment?: Attachment,
+    ) =>
       mutate((current) =>
-        rules.appendMessage(current, conversationId, body, author, Date.now()),
+        rules.appendMessage(
+          current,
+          conversationId,
+          body,
+          author,
+          Date.now(),
+          attachment,
+        ),
       ),
     [mutate],
   );

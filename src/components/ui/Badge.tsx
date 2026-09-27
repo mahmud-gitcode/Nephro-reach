@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils/cn";
    2. Text colour comes from the -700 step of each ramp, which clears 4.5:1
       on its own -50 surface. The bright -500 steps are fills only and may
       never carry a word.
+
+   The soft (default) tags have no visible border — the tint alone marks
+   them (client, 2026-09-27). The border stays, transparent, so every
+   variant keeps the same size.
    ========================================================================== */
 
 export type BadgeTone =
@@ -29,32 +33,32 @@ export type BadgeVariant = "soft" | "solid" | "outline";
 
 const tones: Record<BadgeTone, Record<BadgeVariant, string>> = {
   neutral: {
-    soft: "bg-surface-sunken border-line text-fg-secondary",
+    soft: "bg-surface-sunken border-transparent text-fg-secondary",
     solid: "bg-neutral-solid border-transparent text-neutral-on-solid",
     outline: "bg-transparent border-line-strong text-fg-secondary",
   },
   info: {
-    soft: "bg-info-surface border-info-line text-info",
+    soft: "bg-info-surface border-transparent text-info",
     solid: "bg-primary-solid border-transparent text-primary-on-solid",
     outline: "bg-transparent border-primary-edge text-primary-edge",
   },
   success: {
-    soft: "bg-success-surface border-success-line text-success",
+    soft: "bg-success-surface border-transparent text-success",
     solid: "bg-success-600 border-transparent text-white",
     outline: "bg-transparent border-success-600 text-success",
   },
   warning: {
-    soft: "bg-warning-surface border-warning-line text-warning",
+    soft: "bg-warning-surface border-transparent text-warning",
     solid: "bg-warning-600 border-transparent text-white",
     outline: "bg-transparent border-warning-600 text-warning",
   },
   danger: {
-    soft: "bg-danger-surface border-danger-line text-danger",
+    soft: "bg-danger-surface border-transparent text-danger",
     solid: "bg-danger-solid border-transparent text-danger-on-solid",
     outline: "bg-transparent border-danger-edge text-danger-edge",
   },
   accent: {
-    soft: "bg-accent-soft border-accent-soft-line text-accent-fg",
+    soft: "bg-accent-soft border-transparent text-accent-fg",
     solid: "bg-accent-solid border-transparent text-accent-on-solid",
     outline: "bg-transparent border-accent-edge text-accent-edge",
   },

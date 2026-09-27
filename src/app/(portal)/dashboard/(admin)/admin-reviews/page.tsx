@@ -214,7 +214,7 @@ export default function AdminReviewsPage() {
 
                   <div className="flex items-center gap-2">
                     {rev.status === "approved" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-success-line bg-success-surface px-3 py-1 text-xs font-bold text-success">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-success-surface px-3 py-1 text-xs font-bold text-success">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         {isEs
                           ? "Aprobada (En sitio web)"
@@ -222,13 +222,13 @@ export default function AdminReviewsPage() {
                       </span>
                     )}
                     {rev.status === "pending" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-warning-line bg-warning-surface px-3 py-1 text-xs font-bold text-warning">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-warning-surface px-3 py-1 text-xs font-bold text-warning">
                         <Clock className="h-3.5 w-3.5" />
                         {isEs ? "Pendiente de revisión" : "Pending Review"}
                       </span>
                     )}
                     {rev.status === "declined" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-danger-line bg-danger-surface px-3 py-1 text-xs font-bold text-danger">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-danger-surface px-3 py-1 text-xs font-bold text-danger">
                         <XCircle className="h-3.5 w-3.5" />
                         {isEs ? "Rechazada" : "Declined"}
                       </span>

@@ -522,7 +522,7 @@ function DialysisManagementDashboard() {
             describe. Side by side because a photo is usually sent with a
             message about it. */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <CareTeamContactSection />
+          <CareTeamContactSection isHome={modalityLog.isHome} />
           <AccessPhotosSection />
         </div>
 

@@ -179,13 +179,13 @@ export default function CareTeamQuestionsSection({
   const getStatusBadgeStyle = (status: QuestionStatus) => {
     switch (status) {
       case "Answered":
-        return "bg-success-surface text-success border-success-line hover:bg-success-100";
+        return "bg-success-surface text-success hover:bg-success-100";
       case "Discussed":
-        return "bg-primary-soft text-fg-brand border-primary-soft-line hover:bg-brand-100";
+        return "bg-primary-soft text-fg-brand hover:bg-brand-100";
       case "Submitted":
-        return "bg-danger-surface text-danger border-danger-line hover:bg-danger-100";
+        return "bg-danger-surface text-danger hover:bg-danger-100";
       default:
-        return "bg-surface-sunken text-fg-secondary border-line";
+        return "bg-surface-sunken text-fg-secondary";
     }
   };
 
@@ -355,7 +355,7 @@ export default function CareTeamQuestionsSection({
                           ? "Clic para cambiar estado (Pendiente → Discutida → Respondida)"
                           : "Click to cycle status (Submitted → Discussed → Answered)"
                       }
-                      className={`cursor-pointer rounded-pill border px-3 py-1 text-xs font-bold shadow-control transition-all select-none active:scale-95 ${getStatusBadgeStyle(
+                      className={`cursor-pointer rounded-pill border border-transparent px-3 py-1 text-xs font-bold transition-all select-none active:scale-95 ${getStatusBadgeStyle(
                         q.status,
                       )}`}
                     >

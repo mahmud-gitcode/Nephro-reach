@@ -27,6 +27,12 @@ export type MessageAuthor = "clinic" | "member";
 export type Attachment = {
   name: string;
   sizeLabel: string;
+  /**
+   * A photo sent from the member's access-photo log, as the same downscaled
+   * JPEG data URL. Copied rather than referenced so the message still shows
+   * it after the member deletes the original from their log.
+   */
+  imageUrl?: string;
 };
 
 export type Message = {

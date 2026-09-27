@@ -16,6 +16,9 @@ import {
 import { useMessages } from "@/features/messaging/useMessages";
 import * as rules from "@/features/messaging/messaging.rules";
 import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
+import { useAccessPhotos } from "./useAccessPhotos";
+import { photoAttachment } from "./accessPhotos";
+import { PhotoPicker } from "./PhotoPicker";
 
 /* ==========================================================================
    Communication with the care team
@@ -30,21 +33,57 @@ import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
    The reason chips are a subject line, not a category: they get prefixed to
    the message so the nurse reading the thread knows what it is about
    without a taxonomy nobody maintains.
+
+   A photo from the Photos card beside this one can ride along with the
+   message, so the nurse sees the exit site the words are about.
    ========================================================================== */
 
-const REASONS: { id: string; en: string; es: string }[] = [
-  { id: "question", en: "Question", es: "Pregunta" },
-  { id: "symptom", en: "Symptom", es: "Síntoma" },
-  { id: "supplies", en: "Supply issue", es: "Problema de insumos" },
-  { id: "treatment", en: "Treatment issue", es: "Problema de tratamiento" },
-  { id: "labs", en: "Lab results", es: "Resultados de laboratorio" },
-];
+type Reason = { id: string; en: string; es: string };
+
+const QUESTION: Reason = { id: "question", en: "Question", es: "Pregunta" };
+const SYMPTOM: Reason = { id: "symptom", en: "Symptom", es: "Síntoma" };
+const ACCESS: Reason = {
+  id: "access",
+  en: "Access concern",
+  es: "Problema con el acceso",
+};
+const SUPPLIES: Reason = {
+  id: "supplies",
+  en: "Supply issue",
+  es: "Problema de insumos",
+};
+const TREATMENT: Reason = {
+  id: "treatment",
+  en: "Treatment issue",
+  es: "Problema de tratamiento",
+};
+const LABS: Reason = {
+  id: "labs",
+  en: "Lab results",
+  es: "Resultados de laboratorio",
+};
+
+/* An in-center member's supplies are the unit's problem, not theirs, so the
+   chip would only invite messages about something they do not manage. Every
+   modality has an access to worry about. */
+function reasonsFor(isHome: boolean): Reason[] {
+  return isHome
+    ? [QUESTION, SYMPTOM, ACCESS, SUPPLIES, TREATMENT, LABS]
+    : [QUESTION, SYMPTOM, ACCESS, TREATMENT, LABS];
+}
 
 const MAX_BODY = 500;
 
-export default function CareTeamContactSection() {
+export default function CareTeamContactSection({
+  isHome,
+}: {
+  /** Home HD and PD manage their own supplies; in-center does not. */
+  isHome: boolean;
+}) {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const REASONS = reasonsFor(isHome);
+  const photoLog = useAccessPhotos();
 
   const messaging = useMessages();
   const threads = useMemo(
@@ -55,11 +94,14 @@ export default function CareTeamContactSection() {
   const [threadId, setThreadId] = useState("");
   const [reasons, setReasons] = useState<string[]>([]);
   const [body, setBody] = useState("");
+  const [photoId, setPhotoId] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   // Default to the first thread once they have loaded.
   const activeThread = threadId || threads[0]?.id || "";
-  const canSend = !!activeThread && body.trim().length > 0;
+  // Deleted from the Photos card since it was picked: nothing to send.
+  const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
+  const canSend = !!activeThread && (body.trim().length > 0 || !!photo);
 
   const toggleReason = (id: string) =>
     setReasons((current) =>
@@ -72,21 +114,27 @@ export default function CareTeamContactSection() {
     event.preventDefault();
     if (!canSend) return;
 
+    // A chip for a modality switched away from since it was picked is dropped.
     const subject = reasons
+      .filter((id) => REASONS.some((entry) => entry.id === id))
       .map((id) => {
         const reason = REASONS.find((entry) => entry.id === id);
         return reason ? (isEs ? reason.es : reason.en) : id;
       })
       .join(", ");
 
+    const text = body.trim();
     messaging.sendMessage(
       activeThread,
-      subject ? `[${subject}] ${body.trim()}` : body.trim(),
+      subject ? `[${subject}] ${text}`.trim() : text,
       "member",
+      photo ? photoAttachment(photo, isEs) : undefined,
     );
+    if (photo) photoLog.markSent(photo.id);
 
     setBody("");
     setReasons([]);
+    setPhotoId(null);
     setSent(true);
   };
 
@@ -166,6 +214,16 @@ export default function CareTeamContactSection() {
             {body.length}/{MAX_BODY}
           </p>
         </div>
+
+        <PhotoPicker
+          photos={photoLog.photos}
+          value={photoId}
+          onChange={(id) => {
+            setPhotoId(id);
+            setSent(false);
+          }}
+          isEs={isEs}
+        />
 
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
           <Button type="submit" size="small" disabled={!canSend}>
