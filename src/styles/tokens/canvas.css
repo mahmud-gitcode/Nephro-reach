@@ -1,0 +1,132 @@
+/* ==========================================================================
+   NephroReach — Canvas tokens (UI redesign, phase 2)
+   --------------------------------------------------------------------------
+   The portal's content area — the main column, the top bar, every modal —
+   restyled after the client's reference dashboard. Measured and approved on
+   the admin Design System page (Reference tab) in phase 1.
+
+   Scoped to [data-canvas], NOT :root. The sidebar and the landing page
+   read these same tokens and must not change: the sidebar is the client's
+   (its colour, its large logo, its menu weights), and the landing page is
+   off-limits. [data-canvas] is set by:
+     · DashboardShell — the column beside the sidebar, and the classroom
+       layout, which has no sidebar;
+     · Modal — it portals to <body>, outside that column.
+
+   Only values change here; no component does. Where a token is an alias
+   resolved on :root (--action: var(--color-brand-600) and the like), the
+   alias is restated, because a custom property computed on :root does not
+   see an override made lower in the tree.
+
+   Light theme only. Dark mode is still opt-in and unbuilt (color.css);
+   its canvas values are a later pass.
+   ========================================================================== */
+
+[data-canvas] {
+  /* ---- surfaces and lines ----------------------------------------------
+     The reference's greys are neutral; the app's lean blue (they share the
+     brand hue). That difference is much of why the reference reads cleaner. */
+  --canvas: #f5f7f9;
+  --surface-sunken: #f5f7f9;
+  --line: #e5e7ea;
+  --field: #e5e7ea;
+
+  /* ---- text ---------------------------------------------------------- */
+  --fg: #111317; /* 18.6:1 */
+  --fg-secondary: #313035; /* 13.1:1 */
+  --fg-muted: #6b6c72; /* 5.2:1 on white, 4.9:1 on --canvas */
+  /* The "⋯" menu's dots (reference #939597; this clears 3:1 for a shape). */
+  --fg-icon-quiet: #8b8d91;
+
+  /* ---- brand blue -----------------------------------------------------
+     A touch brighter than #125cfe; white on it is 4.81:1. Every alias of
+     brand-600 is restated so the whole canvas moves together. */
+  --color-brand-600: #2065ff;
+  --action: #2065ff;
+  --fg-brand: #2065ff;
+  --surface-brand: #2065ff;
+  --info: #2065ff;
+  --chart-brand: #2065ff;
+  --tone-primary-solid: #2065ff;
+  --tone-primary-solid-hover: #1a55e0;
+  --tone-primary-edge: #2065ff;
+
+  /* ---- status: tint + text --------------------------------------------
+     Sampled off the reference chips; the text shades are the nearest
+     same-hue ones that reach 4.5:1 on their tint. */
+  --success-surface: #e7f6ef;
+  --success: #287c52;
+  --danger-surface: #fce7ec;
+  --danger: #c03660;
+  --warning-surface: #fef1e6;
+  --warning: #b05408;
+  --warning-glyph: #ed710b; /* a shape: 3:1 */
+
+  /* ---- cards ---------------------------------------------------------- */
+  --radius-card: 1.25rem; /* 20px */
+  --radius-card-nested: 0.875rem; /* 14px, a box inside a card */
+  --spacing-card: 1.5rem; /* 24px, unchanged */
+  --card-shadow:
+    0 1px 2px 0 rgb(16 20 28 / 0.04), 0 1px 3px 0 rgb(16 20 28 / 0.03);
+
+  /* ---- buttons ---------------------------------------------------------
+     Pills. Small controls are 40px (big stay 44px, the tap-target floor).
+     Neutral buttons: white, hairline, no shadow, a near-black glyph. The
+     primary: a sheen from the top and a soft blue glow. */
+  --radius-button: 9999px;
+  --radius-button-small: 9999px;
+  --spacing-control-small: 2.5rem;
+  --tone-neutral-soft-line: #e5e7ea;
+  --tone-neutral-fg: #111317;
+  --button-shadow: 0 0 #0000;
+  --button-primary-shadow:
+    0 1px 2px 0 rgb(32 101 255 / 0.2), 0 4px 12px -2px rgb(32 101 255 / 0.35);
+  --action-gloss: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.16),
+    rgb(255 255 255 / 0)
+  );
+
+  /* ---- fields ----------------------------------------------------------
+     Compact fields (search, filters) are pills; form fields keep soft 12px
+     corners. Light grey at rest, white while typed in. */
+  --radius-field: 0.75rem;
+  --radius-field-small: 9999px;
+  --field-fill: #f5f7f9;
+
+  /* ---- tags ------------------------------------------------------------ */
+  --radius-status: 0.5rem; /* 8px on a ~23px tag */
+
+  /* ---- type ------------------------------------------------------------
+     Quieter than before: no bold outside titles. */
+  --text-heading-1: 1.5rem; /* page title, 24px */
+  --text-heading-1--font-weight: 600;
+  --text-heading-1--letter-spacing: -0.01em;
+  --text-heading-5--font-weight: 500; /* card titles */
+  --metric-font-weight: 600; /* figures */
+  --text-button-lg--font-weight: 500;
+  --text-button-md--font-weight: 500;
+  --text-label-lg--font-weight: 500; /* form labels */
+  --text-label-md--font-weight: 500; /* tabs, small labels */
+  --text-label-sm--font-weight: 500; /* tags, chips */
+
+  /* ---- tables ----------------------------------------------------------
+     12px caps header, 14px cells, 12px second line; the outer columns line
+     up under the card title. The TABLE colours are aliases, restated. */
+  --table-edge: 1.5rem;
+  --table-header-case: uppercase;
+  --text-table-header: 0.75rem;
+  --text-table-header--line-height: 1rem;
+  --text-table-header--font-weight: 400;
+  --text-table-header--letter-spacing: 0.06em;
+  --text-table-cell: 0.875rem;
+  --text-table-cell--line-height: 1.25rem;
+  --text-table-meta: 0.75rem;
+  --text-table-meta--line-height: 1rem;
+  --table-header-fg: #595d60; /* 6.7:1 */
+  --table-header-line: #e5e7ea;
+  --table-row-hover: #f5f7f9;
+  --table-cell-fg: #313035;
+  --table-cell-strong-fg: #111317;
+  --table-meta-fg: #6b6c72;
+}

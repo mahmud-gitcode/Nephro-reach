@@ -36,116 +36,18 @@ import {
 } from "@/components/ui";
 
 /* ==========================================================================
-   Reference preview — phase 1 of the UI redesign
+   Reference preview — the UI redesign's working page
    --------------------------------------------------------------------------
-   The same real components, drawn twice. The left panel uses the tokens as
-   they are. The right panel overrides those tokens for its own subtree with
-   the values measured off the client's reference dashboard, so it shows
-   exactly what phase 2 would do to the app — and phase 2 is then nothing
-   more than moving REFERENCE below into the token files.
+   Phase 1 measured the client's reference dashboard and agreed every value
+   here. Phase 2 moved those values into tokens/canvas.css, which the whole
+   canvas reads — this page included — so the tables below record them and
+   the panels show them live.
 
-   Nothing here changes any other page.
+   The left panel is the app's components as they are built today, on the
+   new tokens. The right panel is the phase 3 layouts (stat card, breakdown,
+   charts, top bar, filters, thumbnails) as prototypes, until each becomes a
+   real component.
    ========================================================================== */
-
-/* Measured off the reference. It is a ~1.58x export: the 16px card title
-   measures 25px there, so pixel values were divided by 1.58. */
-const REFERENCE = {
-  // Page: cool light grey, so white cards stand off it.
-  "--canvas": "#f5f7f9",
-  // Wells, hovers and the message box: the same neutral grey, not blue.
-  "--surface-sunken": "#f5f7f9",
-  // One 1px neutral hairline for the card AND the box inside it (measured
-  // #e4e6e7 on the card, #e3e3e3 on the nested box).
-  "--line": "#e5e7ea",
-  // Cards: 20px corners, 24px padding (today's), a faint shadow at the foot.
-  "--radius-card": "1.25rem",
-  // A box inside a card: 14px corners, same hairline, white.
-  "--radius-card-nested": "0.875rem",
-  "--spacing-card": "1.5rem",
-  "--card-shadow":
-    "0 1px 2px 0 rgb(16 20 28 / 0.04), 0 1px 3px 0 rgb(16 20 28 / 0.03)",
-  // Buttons are pills; the primary gets a sheen from the top.
-  "--radius-button": "9999px",
-  "--radius-button-small": "9999px",
-  "--action-gloss":
-    "linear-gradient(to bottom, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0))",
-  /* Icon and toolbar buttons: 40px, white, a light hairline, no shadow,
-     a near-black glyph. The primary keeps a soft blue glow. */
-  "--spacing-control-small": "2.5rem",
-  "--tone-neutral-soft-line": "#e5e7ea",
-  "--tone-neutral-fg": "#111317",
-  "--button-shadow": "0 0 #0000",
-  "--button-primary-shadow":
-    "0 1px 2px 0 rgb(32 101 255 / 0.2), 0 4px 12px -2px rgb(32 101 255 / 0.35)",
-  // The "⋯" glyph: grey dots, no box (reference #939597; this passes 3:1).
-  "--fg-icon-quiet": "#8b8d91",
-  /* Fields. Compact ones (search, filters) are pills like the reference's
-     search box; form fields keep soft 12px corners, since a pill textarea
-     or a labelled form field reads oddly. */
-  "--radius-field": "0.75rem",
-  // Fields are filled light grey, going white while typed in.
-  "--field-fill": "#f5f7f9",
-  "--radius-field-small": "9999px",
-  // Status tags: the reference's chips, 8px corners on a ~23px tag.
-  "--radius-status": "0.5rem",
-  // Page title 24px semibold; card titles medium weight.
-  "--text-heading-1": "1.5rem",
-  "--text-heading-1--font-weight": "600",
-  "--text-heading-1--letter-spacing": "-0.01em",
-  "--text-heading-5--font-weight": "500",
-
-  /* Type, measured as ratios to the 16px card title (stem width / cap
-     height gives the weight). The reference is quieter than the app: no
-     bold outside titles, smaller table text, caps table headers. */
-  // Figures: semibold, not bold.
-  "--metric-font-weight": "600",
-  // Buttons, tabs and small labels: medium, not bold.
-  "--text-button-lg--font-weight": "500",
-  "--text-button-md--font-weight": "500",
-  "--text-label-md--font-weight": "500",
-  // Form labels too.
-  "--text-label-lg--font-weight": "500",
-  // Tag and chip text: medium, as the reference chips are.
-  "--text-label-sm--font-weight": "500",
-  // Table: its outer columns line up under the card title.
-  "--table-edge": "1.5rem",
-  // Table: 12px caps header, 14px cells, 12px second line.
-  "--text-table-header": "0.75rem",
-  "--text-table-header--line-height": "1rem",
-  "--text-table-header--font-weight": "400",
-  "--text-table-header--letter-spacing": "0.06em",
-  "--table-header-case": "uppercase",
-  "--text-table-cell": "0.875rem",
-  "--text-table-cell--line-height": "1.25rem",
-  "--text-table-meta": "0.75rem",
-  "--text-table-meta--line-height": "1rem",
-
-  /* Colour, sampled off the reference. Its greys are NEUTRAL; ours lean
-     blue (they share the brand hue), which is much of why it reads cleaner.
-     Where a sampled colour failed contrast (the green / red chip text, the
-     orange and green fills), it is the nearest same-hue shade that passes. */
-  "--fg": "#111317",
-  "--fg-secondary": "#313035",
-  "--fg-muted": "#6b6c72",
-  // The primary blue, a touch brighter than #125cfe. White on it: 4.81:1.
-  "--color-brand-600": "#2065ff",
-  "--tone-primary-solid": "#2065ff",
-  "--tone-primary-solid-hover": "#1a55e0",
-  "--fg-brand": "#2065ff",
-  // Status chips: tint + text.
-  "--success-surface": "#e7f6ef",
-  "--success": "#287c52",
-  "--danger-surface": "#fce7ec",
-  "--danger": "#c03660",
-  "--warning-surface": "#fef1e6",
-  "--warning": "#b05408",
-  "--warning-glyph": "#ed710b",
-  // The TABLE colours resolve on :root, so they are restated here.
-  "--table-header-fg": "#595d60",
-  "--table-cell-fg": "#313035",
-  "--table-cell-strong-fg": "#111317",
-  "--table-meta-fg": "#6b6c72",
-} as React.CSSProperties;
 
 /* The swatch list: what each role becomes, next to what it is today. */
 const PALETTE: {
@@ -301,7 +203,7 @@ function TypeTable() {
       <div className="p-card pb-0">
         <CardHeader
           title="Reference typography"
-          description="Measured from the reference image, set in Roboto. Only the right-hand panel below uses it."
+          description="Measured from the reference image, set in Roboto. Applied to the canvas in phase 2."
         />
       </div>
       <div className="mt-stack-md">
@@ -310,7 +212,7 @@ function TypeTable() {
             <TableRow>
               <TableHeaderCell>Role</TableHeaderCell>
               <TableHeaderCell>Reference</TableHeaderCell>
-              <TableHeaderCell>Today</TableHeaderCell>
+              <TableHeaderCell>Before</TableHeaderCell>
               <TableHeaderCell>Sample</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -353,7 +255,7 @@ function PaletteTable() {
       <div className="p-card pb-0">
         <CardHeader
           title="Reference colours"
-          description="Sampled from the reference image. Only the right-hand panel below uses them."
+          description="Sampled from the reference image. Applied to the canvas in phase 2."
         />
       </div>
       <div className="mt-stack-md">
@@ -362,7 +264,7 @@ function PaletteTable() {
             <TableRow>
               <TableHeaderCell>Role</TableHeaderCell>
               <TableHeaderCell>Reference</TableHeaderCell>
-              <TableHeaderCell>Today</TableHeaderCell>
+              <TableHeaderCell>Before</TableHeaderCell>
               <TableHeaderCell>Contrast / note</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -488,7 +390,7 @@ function SpecTable({
             <TableRow>
               <TableHeaderCell>Element</TableHeaderCell>
               <TableHeaderCell>Reference</TableHeaderCell>
-              <TableHeaderCell>Today</TableHeaderCell>
+              <TableHeaderCell>Before</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -1371,16 +1273,14 @@ function Sample({ reference = false }: { reference?: boolean }) {
 function Panel({
   label,
   note,
-  style,
   reference = false,
 }: {
   label: string;
   note: string;
-  style?: React.CSSProperties;
   reference?: boolean;
 }) {
   return (
-    <section style={style} className="min-w-0">
+    <section className="min-w-0">
       <div className="mb-stack-sm">
         <p className="text-label-md text-fg">{label}</p>
         <p className="text-caption text-fg-muted">{note}</p>
@@ -1398,19 +1298,18 @@ export function ReferencePreview() {
   return (
     <div className="space-y-stack-lg">
       <div className="max-w-3xl space-y-stack-xs">
-        <h2 className="text-heading-4 text-fg">Reference style preview</h2>
+        <h2 className="text-heading-4 text-fg">Reference style</h2>
         <p className="text-body-md text-fg-secondary">
-          The same components, side by side. Left is the app today. Right is the
-          reference dashboard&rsquo;s page background, cards, buttons, titles
-          and status tags. Nothing outside this tab changes until the right side
-          is approved.
+          Every value below is live on the canvas since phase 2. Left: the
+          components as built today. Right: the phase 3 layouts, still
+          prototypes here.
         </p>
       </div>
       <PaletteTable />
       <TypeTable />
       <SpecTable
         title="Reference shapes and borders"
-        description="Measured from the reference image. Only the right-hand panel below uses them."
+        description="Measured from the reference image. Applied to the canvas in phase 2."
         rows={SHAPES}
       />
       <SpecTable
@@ -1419,11 +1318,13 @@ export function ReferencePreview() {
         rows={ICONS}
       />
       <div className="grid gap-inset-lg xl:grid-cols-2">
-        <Panel label="Current" note="The app as it is today." />
         <Panel
-          label="Reference"
-          note="Reference colours, type, shapes, icons and stat card."
-          style={REFERENCE}
+          label="Components as built"
+          note="Today's component layouts, on the new canvas tokens."
+        />
+        <Panel
+          label="Phase 3 layouts"
+          note="Phase 3 layouts: stat card, breakdown, charts, top bar, filters, thumbnails."
           reference
         />
       </div>

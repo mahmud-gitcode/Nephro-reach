@@ -619,7 +619,8 @@ export default function DashboardShell({
 
   if (isClassroomRoute(pathname)) {
     return (
-      <div className="min-h-screen bg-[#fcfcfd] font-sans text-fg">
+      /* No sidebar here, so the whole page is canvas (tokens/canvas.css). */
+      <div data-canvas className="min-h-screen bg-canvas font-sans text-fg">
         <ClassroomHeader />
         <main className="px-4 py-5 md:px-6">{children}</main>
       </div>
@@ -648,7 +649,10 @@ export default function DashboardShell({
         </div>
       )}
 
-      <div className="lg:pl-[272px]">
+      {/* The canvas: top bar and page, never the sidebar. It takes the
+          redesign's tokens (tokens/canvas.css), so it paints its own ground
+          and text colour rather than inheriting the shell's. */}
+      <div data-canvas className="min-h-screen bg-canvas text-fg lg:pl-[272px]">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <main className="px-4 py-5 md:px-8 lg:px-8">{children}</main>
       </div>
