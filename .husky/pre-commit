@@ -1,1 +1,4 @@
 npx lint-staged
+# The design system, enforced: no file may get worse than
+# scripts/ui-rules.baseline.json (see scripts/ui-rules.mjs).
+npm run --silent ui:rules:check

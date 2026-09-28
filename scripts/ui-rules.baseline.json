@@ -1,0 +1,203 @@
+{
+  "src/app/(auth)/login/page.tsx": {
+    "hex-colour": 24,
+    "text-size": 13,
+    "palette-colour": 11,
+    "radius": 3
+  },
+  "src/app/(auth)/registration/page.tsx": {
+    "hex-colour": 25,
+    "text-size": 11,
+    "palette-colour": 11,
+    "radius": 5
+  },
+  "src/app/(portal)/dashboard/(admin)/admin-reviews/page.tsx": {
+    "text-size": 16
+  },
+  "src/app/(portal)/dashboard/(admin)/admin-testimonials/page.tsx": {
+    "text-size": 12
+  },
+  "src/app/(portal)/dashboard/(admin)/manage-curriculum/[courseId]/page.tsx": {
+    "radius": 6,
+    "text-size": 27,
+    "raw-table": 1
+  },
+  "src/app/(portal)/dashboard/(admin)/manage-curriculum/page.tsx": {
+    "radius": 5,
+    "text-size": 19
+  },
+  "src/app/(portal)/dashboard/(admin)/sms-analytics/page.tsx": {
+    "text-size": 7,
+    "radius": 2
+  },
+  "src/app/(portal)/dashboard/(member)/before-the-er/[slug]/page.tsx": {
+    "text-size": 22
+  },
+  "src/app/(portal)/dashboard/(member)/my-classroom/details/page.tsx": {
+    "text-size": 1
+  },
+  "src/app/(portal)/dashboard/(member)/my-rides/page.tsx": {
+    "palette-colour": 1,
+    "hex-colour": 2
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/dialysis-journal/page.tsx": {
+    "text-size": 1
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/dialysis-management/page.tsx": {
+    "text-size": 5,
+    "radius": 7
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/dialysis-treatment/view/page.tsx": {
+    "text-size": 5,
+    "radius": 1
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/fluid-tracker/page.tsx": {
+    "text-size": 20,
+    "radius": 10
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/lab-tracking/page.tsx": {
+    "radius": 33,
+    "text-size": 45,
+    "raw-table": 2
+  },
+  "src/app/(portal)/dashboard/(member)/personal-log/nutrition/page.tsx": {
+    "text-size": 3
+  },
+  "src/features/auth/DashboardGuard.tsx": {
+    "hex-colour": 1
+  },
+  "src/features/care-team/CareTeamQuestionsSection.tsx": {
+    "text-size": 9
+  },
+  "src/features/dashboard/AdminDashboard.tsx": {
+    "text-size": 6
+  },
+  "src/features/dashboard/UserDashboard.tsx": {
+    "text-size": 1
+  },
+  "src/features/education/admin/ClassTranscriptUpload.tsx": {
+    "text-size": 12
+  },
+  "src/features/education/admin/ClassWizardSteps.tsx": {
+    "text-size": 8
+  },
+  "src/features/education/admin/CourseAdmin.tsx": {
+    "text-size": 14
+  },
+  "src/features/education/admin/LearnerProgressCard.tsx": {
+    "text-size": 1,
+    "raw-table": 1
+  },
+  "src/features/education/admin/QuestionEditor.tsx": {
+    "text-size": 10
+  },
+  "src/features/education/dialysisJourneyData.ts": {
+    "palette-colour": 16
+  },
+  "src/features/education/member/JourneyDayList.tsx": {
+    "text-size": 11
+  },
+  "src/features/education/member/JourneyResourcePanel.tsx": {
+    "text-size": 18
+  },
+  "src/features/labs/StatusBadge.tsx": {
+    "text-size": 3
+  },
+  "src/features/labs/TrendLineCard.tsx": {
+    "radius": 1,
+    "text-size": 6
+  },
+  "src/features/library/member/RelatedLibrary.tsx": {
+    "text-size": 3
+  },
+  "src/features/personal-log/DialysisDaySymptomLogForm.tsx": {
+    "text-size": 18
+  },
+  "src/features/personal-log/MedicationsGivenSection.tsx": {
+    "text-size": 9,
+    "raw-table": 1
+  },
+  "src/features/personal-log/dialysis/EditWeekModal.tsx": {
+    "radius": 6,
+    "text-size": 2
+  },
+  "src/features/personal-log/dialysis/ExtraTreatmentModal.tsx": {
+    "text-size": 17,
+    "radius": 3
+  },
+  "src/features/personal-log/exercise/ExerciseLog.tsx": {
+    "text-size": 24,
+    "radius": 20
+  },
+  "src/features/personal-log/fluid/AddWeightLogModal.tsx": {
+    "text-size": 18,
+    "radius": 12
+  },
+  "src/features/personal-log/fluid/EditEdwModal.tsx": {
+    "radius": 1,
+    "text-size": 2
+  },
+  "src/features/personal-log/fluid/FluidIcons.tsx": {
+    "text-size": 1
+  },
+  "src/features/personal-log/fluid/MetricCards.tsx": {
+    "text-size": 6,
+    "radius": 2
+  },
+  "src/features/personal-log/fluid/RecentEntries.tsx": {
+    "radius": 2,
+    "text-size": 4,
+    "raw-table": 1
+  },
+  "src/features/personal-log/fluid/YesNoChoice.tsx": {
+    "text-size": 1,
+    "radius": 1
+  },
+  "src/features/personal-log/fluid/panels/AlertsInsights.tsx": {
+    "radius": 2,
+    "text-size": 2
+  },
+  "src/features/personal-log/fluid/panels/FluidIntakeTrend.tsx": {
+    "radius": 1,
+    "text-size": 3
+  },
+  "src/features/personal-log/fluid/panels/GoalProgress.tsx": {
+    "radius": 1,
+    "text-size": 4
+  },
+  "src/features/personal-log/fluid/panels/UrinaryOutput.tsx": {
+    "radius": 2,
+    "text-size": 2,
+    "raw-table": 1
+  },
+  "src/features/personal-log/fluid/panels/WeightTrendChart.tsx": {
+    "text-size": 3
+  },
+  "src/features/personal-log/nutrition/NutritionAsides.tsx": {
+    "radius": 5,
+    "text-size": 3
+  },
+  "src/features/personal-log/nutrition/NutritionCards.tsx": {
+    "radius": 9,
+    "text-size": 21,
+    "raw-table": 1
+  },
+  "src/features/personal-log/nutrition/NutritionDayPicker.tsx": {
+    "radius": 3,
+    "text-size": 4
+  },
+  "src/features/personal-log/nutrition/NutritionModals.tsx": {
+    "text-size": 14,
+    "radius": 11
+  },
+  "src/features/personal-log/symptom-log/SymptomFields.tsx": {
+    "text-size": 9
+  },
+  "src/features/personal-log/symptom-log/symptomLog.styles.ts": {
+    "text-size": 3
+  },
+  "src/features/travel/TravelDialysisSection.tsx": {
+    "radius": 2,
+    "text-size": 1
+  }
+}
