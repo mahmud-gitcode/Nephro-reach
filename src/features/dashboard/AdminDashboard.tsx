@@ -234,7 +234,7 @@ const weeklyBars = [
   { day: "Wed", value: 91 },
   { day: "Thu", value: 74 },
   { day: "Fri", value: 72 },
-  { day: "Sta", value: 74 },
+  { day: "Sat", value: 74 },
   { day: "Sun", value: 78 },
 ];
 

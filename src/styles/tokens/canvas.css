@@ -102,6 +102,10 @@
   --text-heading-1: 1.5rem; /* page title, 24px */
   --text-heading-1--font-weight: 600;
   --text-heading-1--letter-spacing: -0.01em;
+  /* Section titles: 18px semibold, not 20px bold — the reference's card
+     titles are quieter than the app's were. */
+  --text-heading-4: 1.125rem;
+  --text-heading-4--font-weight: 600;
   --text-heading-5--font-weight: 500; /* card titles */
   --metric-font-weight: 600; /* figures */
   --text-button-lg--font-weight: 500;

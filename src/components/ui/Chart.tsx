@@ -110,7 +110,8 @@ export type LineChartProps = {
   height?: number;
   /** Hides the legend when the caller draws its own. */
   showLegend?: boolean;
-  /** A faint gradient under the first series. On by default. */
+  /** A faint gradient under the first series. Defaults to on for a single
+      line, or a line and a dashed comparison; off for peer series. */
   area?: boolean;
   className?: string;
 };
@@ -131,7 +132,7 @@ export function LineChart({
   label,
   height = 200,
   showLegend = true,
-  area = true,
+  area,
   className,
 }: LineChartProps) {
   const tableId = useId();
@@ -159,9 +160,16 @@ export function LineChart({
   );
 
   const lead = series[0];
-  /* The fill only makes sense under an unbroken line. */
+  /* The fill marks THE line — so by default only when there is one, or one
+     and a dashed comparison. Under the first of several peers (systolic
+     over diastolic, four engagement lines) it shades across the others and
+     reads as muddle. It also needs an unbroken line. */
   const filled =
-    area && lead !== undefined && lead.points.every((v) => v !== null);
+    (area ??
+      (series.length === 1 ||
+        (series.length === 2 && series[1].dashed === true))) &&
+    lead !== undefined &&
+    lead.points.every((v) => v !== null);
 
   const withUnit = (v: number) => `${v}${unit ? ` ${unit}` : ""}`;
 

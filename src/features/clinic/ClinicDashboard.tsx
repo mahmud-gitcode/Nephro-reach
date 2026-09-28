@@ -10,8 +10,6 @@ import {
   Inbox,
   MessageSquareText,
   PartyPopper,
-  Plus,
-  Search,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -20,15 +18,16 @@ import {
   Alert,
   AsyncSection,
   Badge,
+  BarChart,
   Button,
   buttonStyles,
   Card,
   EmptyState,
   ErrorState,
-  Input,
   KeyCard,
   Progress,
   ProgressRing,
+  SearchField,
   Select,
   Skeleton,
   SkeletonText,
@@ -41,6 +40,7 @@ import {
   TablePagination,
   TableRow,
   TableSkeleton,
+  TableThumb,
 } from "@/components/ui";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
 import { cn } from "@/lib/utils/cn";
@@ -448,38 +448,49 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
       : [];
 
   return (
-    <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Upcoming Classes"
-        action={
-          <Link href="/dashboard/clinic/live-class" className={outlineLink}>
-            View All
-          </Link>
-        }
-      />
+    <Card as="section" padding="none" className="h-full overflow-hidden">
+      <div className="px-card pt-card">
+        <PanelHeading
+          title="Upcoming Classes"
+          action={
+            <Link href="/dashboard/clinic/live-class" className={outlineLink}>
+              View All
+            </Link>
+          }
+        />
+      </div>
       <AsyncSection
         pending={dashboard.isPending || !mounted}
         error={dashboard.error}
         onRetry={dashboard.refetch}
         isEmpty={items.length === 0}
-        skeleton={<Skeleton height={176} className="rounded-control" />}
+        skeleton={
+          <div className="px-card pb-card">
+            <Skeleton height={176} className="rounded-control" />
+          </div>
+        }
         empty={
-          <EmptyState
-            variant="bare"
-            icon={<CalendarPlus />}
-            title="No upcoming classes"
-            description="Nothing is scheduled yet."
-            action={
-              <Link href="/dashboard/clinic/live-class" className={outlineLink}>
-                Go to Live Class
-              </Link>
-            }
-          />
+          <div className="px-card pb-card">
+            <EmptyState
+              variant="bare"
+              icon={<CalendarPlus />}
+              title="No upcoming classes"
+              description="Nothing is scheduled yet."
+              action={
+                <Link
+                  href="/dashboard/clinic/live-class"
+                  className={outlineLink}
+                >
+                  Go to Live Class
+                </Link>
+              }
+            />
+          </div>
         }
       >
-        <div className="overflow-hidden rounded-control border border-line">
-          <Table minWidth={360}>
-            <TableHead className="bg-surface-sunken">
+        <div>
+          <Table minWidth={0}>
+            <TableHead>
               <TableRow>
                 <TableHeaderCell>Date</TableHeaderCell>
                 <TableHeaderCell>Class</TableHeaderCell>
@@ -527,11 +538,16 @@ function MemberRow({ member }: { member: RosterMember }) {
   return (
     <TableRow>
       <TableCell emphasis className="whitespace-nowrap">
-        <Link href={memberLink({ mrn: member.mrn })} className={textLink}>
-          {member.name}
-        </Link>
-        <span className="block text-caption font-normal text-fg-muted tabular-nums">
-          MRN {member.mrn}
+        <span className="flex items-center gap-inline-md">
+          <TableThumb name={member.name} />
+          <span>
+            <Link href={memberLink({ mrn: member.mrn })} className={textLink}>
+              {member.name}
+            </Link>
+            <span className="block text-caption font-normal text-fg-muted tabular-nums">
+              MRN {member.mrn}
+            </span>
+          </span>
         </span>
       </TableCell>
       <TableCell>{shortProgram(member.program)}</TableCell>
@@ -581,13 +597,7 @@ function MemberRow({ member }: { member: RosterMember }) {
   );
 }
 
-function MembersPanel({
-  dashboard,
-  onEnroll,
-}: {
-  dashboard: Dashboard;
-  onEnroll: () => void;
-}) {
+function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState(ALL_STATUSES);
   const [page, setPage] = useState(1);
@@ -612,19 +622,19 @@ function MembersPanel({
   }
 
   return (
-    <Card as="section" padding="small">
-      <div className="mb-stack-lg flex flex-col gap-inset-sm lg:flex-row lg:items-center lg:justify-between">
+    /* The table runs to the card's edges, as in the reference: no box
+       inside the box. Its outer columns inset by --table-edge, so they line
+       up under the title. */
+    <Card as="section" padding="none" className="overflow-hidden">
+      <div className="flex flex-col gap-inset-sm p-card pb-stack-lg lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-heading-4 text-fg">Members</h2>
         <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center">
-          <Input
-            type="search"
-            inputSize="small"
+          <SearchField
+            label="Search members"
+            placeholder="Search by name or MRN…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name or MRN..."
-            aria-label="Search members"
-            leadingIcon={<Search aria-hidden="true" />}
-            className="sm:w-56"
+            className="sm:w-60"
           />
           <Select
             selectSize="small"
@@ -636,20 +646,18 @@ function MembersPanel({
               <option key={option}>{option}</option>
             ))}
           </Select>
-          <Button size="small" onClick={onEnroll}>
-            <Plus className="h-4 w-4" />
-            Enroll Member
-          </Button>
         </div>
       </div>
 
       {dashboard.error ? (
-        <ErrorState error={dashboard.error} onRetry={dashboard.refetch} />
+        <div className="px-card pb-card">
+          <ErrorState error={dashboard.error} onRetry={dashboard.refetch} />
+        </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-control border border-line">
+          <div>
             <Table minWidth={720}>
-              <TableHead className="bg-surface-sunken">
+              <TableHead>
                 <TableRow>
                   <TableHeaderCell>Name</TableHeaderCell>
                   <TableHeaderCell>Program</TableHeaderCell>
@@ -696,7 +704,7 @@ function MembersPanel({
             </Table>
           </div>
 
-          <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-inline-md border-t border-line p-card py-inset-md sm:flex-row sm:items-center sm:justify-between">
             <Link href={memberLink({})} className={outlineLink}>
               View all members
             </Link>
@@ -716,36 +724,30 @@ function MembersPanel({
 }
 
 function ProgramProgressPanel() {
-  const max = Math.max(...programProgress.map((band) => band.value), 1);
+  const total = programProgress.reduce((sum, band) => sum + band.value, 0);
+  /* A top that divides by four, so the gridlines land on whole members. */
+  const peak = Math.max(...programProgress.map((band) => band.value), 1);
+  const top = Math.ceil(peak / 4) * 4;
   return (
     <Card as="section" padding="small" className="h-full">
-      <h2 className="mb-6 text-heading-4 text-fg">
-        Program Progress (All Members)
-      </h2>
-      {/* Ordered day bands: a distribution across one measure, so one hue.
-          Horizontal, so each band keeps its full label in a third-width
-          column — as columns they read "Not…" and "Day…". */}
-      <ul className="space-y-stack-md">
-        {programProgress.map((band) => (
-          <li key={band.label}>
-            <div className="flex items-baseline justify-between gap-inline-md">
-              <span className="text-body-sm text-fg-secondary">
-                {band.label}
-              </span>
-              <span className="text-label-md text-fg tabular-nums">
-                {band.value} members
-              </span>
-            </div>
-            <Progress
-              value={band.value}
-              max={max}
-              label={`${band.label}: ${band.value} members`}
-              size="small"
-              className="mt-stack-xs"
-            />
-          </li>
-        ))}
-      </ul>
+      <PanelHeading
+        title="Program Progress"
+        description={`Where all ${total} members are in their program.`}
+      />
+      {/* Ordered day bands — one measure, so one hue — with the busiest band
+          featured, as the reference's "most active day". The values are in
+          the chart's hidden table for a screen reader. */}
+      <BarChart
+        label="Members by program stage"
+        unit="members"
+        highlight="max"
+        yMax={top}
+        height={180}
+        bars={programProgress.map((band) => ({
+          label: band.label,
+          value: band.value,
+        }))}
+      />
     </Card>
   );
 }
@@ -796,11 +798,19 @@ export default function ClinicDashboard() {
       <PageTitle
         href="/dashboard/clinic"
         action={
-          <UpdatedBar
-            updatedAt={dashboard.updatedAt}
-            isFetching={dashboard.isFetching}
-            refetch={dashboard.refetch}
-          />
+          /* The reference's toolbar: quiet status on the left, the page's
+             one primary action last. */
+          <div className="flex flex-wrap items-center gap-inline-md">
+            <UpdatedBar
+              updatedAt={dashboard.updatedAt}
+              isFetching={dashboard.isFetching}
+              refetch={dashboard.refetch}
+            />
+            <Button size="small" onClick={() => setEnrolling(true)}>
+              <UserPlus />
+              Enroll Patient
+            </Button>
+          </div>
         }
       />
 
@@ -833,7 +843,8 @@ export default function ClinicDashboard() {
         />
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      {/* One row of six on a wide screen, as the reference's stat row. */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <EnrollmentCard
           enrolled={dashboard.data?.roster.length ?? enrollment.enrolled}
         />
@@ -842,6 +853,9 @@ export default function ClinicDashboard() {
         ))}
       </section>
 
+      {/* The reference's grid: each row splits two thirds / one third, the
+          work on the left and its side panel on the right; the members
+          table, which needs the width, runs the full row. */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <NeedsAttention dashboard={dashboard} />
@@ -849,12 +863,14 @@ export default function ClinicDashboard() {
         <QuickActions onEnroll={() => setEnrolling(true)} />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
-        <PerformanceOverview />
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <PerformanceOverview />
+        </div>
         <UpcomingClasses dashboard={dashboard} />
       </section>
 
-      <MembersPanel dashboard={dashboard} onEnroll={() => setEnrolling(true)} />
+      <MembersPanel dashboard={dashboard} />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <ProgramProgressPanel />

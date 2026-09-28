@@ -119,12 +119,14 @@ describe("once loaded", () => {
 });
 
 describe("enrolling from the dashboard", () => {
-  it("opens the enroll form in place from the members table", async () => {
+  it("opens the enroll form in place from the page's primary action", async () => {
     set({ data: loaded });
     render(<ClinicDashboard />);
-    await userEvent.click(
-      screen.getByRole("button", { name: /Enroll Member/ }),
-    );
+    /* The page header's primary action (the redesign moved it there from
+       the members table). Quick Actions carries a second one, further
+       down; the header's comes first in the document. */
+    const [primary] = screen.getAllByRole("button", { name: /Enroll Patient/ });
+    await userEvent.click(primary);
     expect(
       screen.getByRole("dialog", { name: "Enroll New Patient" }),
     ).toBeInTheDocument();

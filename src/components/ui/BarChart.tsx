@@ -172,8 +172,10 @@ export function BarChart({
             {bars.map((bar, index) => (
               <span
                 key={`${bar.label}-${index}`}
+                /* Wraps rather than truncates: "Not Started" as two short
+                   lines reads; "Not S…" does not. */
                 className={cn(
-                  "w-full truncate text-center",
+                  "w-full text-center leading-tight text-balance wrap-break-word",
                   index === featured && "text-label-sm text-fg-brand",
                 )}
               >
