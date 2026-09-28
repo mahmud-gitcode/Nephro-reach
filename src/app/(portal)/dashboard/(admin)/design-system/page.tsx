@@ -56,6 +56,7 @@ import {
   Textarea,
   type SortDirection,
 } from "@/components/ui";
+import { ReferencePreview } from "./ReferencePreview";
 
 /* ------------------------------------------------------------------ */
 /*  Page-local helpers                                                 */
@@ -150,7 +151,7 @@ function TypeSpec({
 
 /* ------------------------------------------------------------------ */
 
-type Tab = "color" | "typography" | "shadow" | "component";
+type Tab = "reference" | "color" | "typography" | "shadow" | "component";
 
 const COMPONENTS = [
   { id: "all", label: "All" },
@@ -181,7 +182,7 @@ const LABS = [
 ];
 
 export default function DesignSystemPage() {
-  const [tab, setTab] = useState<Tab>("color");
+  const [tab, setTab] = useState<Tab>("reference");
   const [component, setComponent] = useState<ComponentId>("all");
 
   const [modalSize, setModalSize] = useState<"small" | "big" | "wide" | null>(
@@ -219,6 +220,7 @@ export default function DesignSystemPage() {
       >
         {(
           [
+            ["reference", "Reference"],
             ["color", "Color"],
             ["typography", "Typography"],
             ["shadow", "Shadow"],
@@ -240,6 +242,9 @@ export default function DesignSystemPage() {
           </button>
         ))}
       </div>
+
+      {/* ================= REFERENCE (UI redesign, phase 1) ================= */}
+      {tab === "reference" ? <ReferencePreview /> : null}
 
       {/* ================= COLOR ================= */}
       {tab === "color" ? (

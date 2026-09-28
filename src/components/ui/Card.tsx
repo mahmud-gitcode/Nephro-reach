@@ -22,9 +22,9 @@ export type CardPadding = "none" | "small" | "big";
 
 const tones: Record<CardTone, string> = {
   /* A real object on the page: Level 1 elevation */
-  default: "bg-surface border border-line",
+  default: "bg-surface border border-line shadow-(--card-shadow)",
   /* Grouping only — no elevation, no claim to be its own object. */
-  flat: "bg-surface border border-line",
+  flat: "bg-surface border border-line shadow-(--card-shadow)",
   /* A well: recessed area inside another surface. */
   sunken: "bg-surface-sunken border border-line-subtle",
   /* Floats above the page: Level 2 elevation (dropdowns, popovers, raised cards). */
@@ -33,9 +33,9 @@ const tones: Record<CardTone, string> = {
 
 const paddings: Record<CardPadding, string> = {
   none: "",
-  /* Every card breathes the same: 24px on all sides. */
-  small: "p-inset-lg",
-  big: "p-inset-lg",
+  /* Every card breathes the same on all sides: --spacing-card. */
+  small: "p-card",
+  big: "p-card",
 };
 
 export type CardProps = React.HTMLAttributes<HTMLElement> & {

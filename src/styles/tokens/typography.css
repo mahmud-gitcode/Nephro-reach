@@ -196,13 +196,16 @@
    forgotten. Without it a value jitters as it goes from 9.8 to 10.2, and a
    lab column stops lining up. Only 3 uses of tabular-nums existed in the
    whole codebase before this file.
+
+   Their weight reads --metric-font-weight (700 when unset), so the
+   design-system preview can try a lighter figure without a new class.
    ========================================================================== */
 
 @utility text-metric-xl {
   /* 40/44 · the single hero number on a dashboard. Today's weight. */
   font-size: 2.5rem;
   line-height: 2.75rem;
-  font-weight: 700;
+  font-weight: var(--metric-font-weight, 700);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -211,7 +214,7 @@
   /* 32/36 · primary stat-card values. */
   font-size: 2rem;
   line-height: 2.25rem;
-  font-weight: 700;
+  font-weight: var(--metric-font-weight, 700);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -220,7 +223,7 @@
   /* 24/28 · secondary stats, comparison values, sparkline endpoints. */
   font-size: 1.5rem;
   line-height: 1.75rem;
-  font-weight: 700;
+  font-weight: var(--metric-font-weight, 700);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -229,7 +232,7 @@
   /* 16/20 · inline values in tables. Creatinine, Albumin, BP readings. */
   font-size: 1rem;
   line-height: 1.25rem;
-  font-weight: 700;
+  font-weight: var(--metric-font-weight, 700);
   letter-spacing: 0em;
   font-variant-numeric: tabular-nums;
 }
@@ -238,7 +241,7 @@
   /* 18/24 · numeric table cells. The metric of the TABLE group above. */
   font-size: 1.125rem;
   line-height: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--metric-font-weight, 700);
   letter-spacing: 0em;
   font-variant-numeric: tabular-nums;
 }

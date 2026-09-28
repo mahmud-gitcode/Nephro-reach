@@ -361,6 +361,9 @@
   --fg-muted: var(--color-gray-600);
   /* labels, captions, placeholders */
   --fg-subtle: var(--color-gray-400);
+  /* A quiet icon with no box around it (the ghost button's glyph).
+     3.57:1 on white: a shape, so 3:1 is the bar. */
+  --fg-icon-quiet: var(--color-gray-500);
   /* DISABLED ONLY — fails contrast */
   --fg-brand: var(--color-brand-600);
   --fg-on-brand: #ffffff;
@@ -376,6 +379,8 @@
   --line-strong: var(--color-gray-300);
   /* emphasis, selected */
   --field: var(--line);
+  /* An input's fill at rest. It turns --surface on focus. */
+  --field-fill: var(--surface);
   /* input borders — matches table border (border-line) */
   /* The unfilled part of a progress bar or ring. Its own token because the
      bar was borrowing --surface-sunken and the ring --line, so the same
@@ -394,6 +399,8 @@
   --action-danger-hover: var(--color-danger-700);
   --action-accent: var(--color-accent-600);
   --action-accent-hover: var(--color-accent-700);
+  /* A sheen laid over a primary fill button, top to bottom. None for now. */
+  --action-gloss: none;
 
   /* ---- status: text / surface / line ----------------------------------
      Status text sits on step 600, not 700.
@@ -548,6 +555,8 @@
   --line-strong: var(--color-gray-600);
   --track: var(--color-gray-700);
   --field: var(--line);
+  /* An input's fill at rest. It turns --surface on focus. */
+  --field-fill: var(--surface);
   --ring: var(--color-brand-400);
 
   --action: var(--color-brand-600);
@@ -673,6 +682,7 @@
   --color-fg-secondary: var(--fg-secondary);
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
+  --color-fg-icon-quiet: var(--fg-icon-quiet);
   --color-fg-brand: var(--fg-brand);
   --color-fg-on-brand: var(--fg-on-brand);
   --color-fg-inverse: var(--fg-inverse);
@@ -681,6 +691,7 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-field: var(--field);
+  --color-field-fill: var(--field-fill);
   --color-track: var(--track);
   --color-ring: var(--ring);
 

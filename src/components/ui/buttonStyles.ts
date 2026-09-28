@@ -10,7 +10,9 @@
 import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "neutral" | "danger" | "accent";
-export type ButtonAppearance = "fill" | "fill-stroke" | "stroke";
+/* `ghost` has no box at all until hovered: a glyph on its own, e.g. the
+   "⋯" menu in a card header. */
+export type ButtonAppearance = "fill" | "fill-stroke" | "stroke" | "ghost";
 export type ButtonSize = "big" | "small";
 
 const base =
@@ -25,32 +27,40 @@ const base =
    dark-theme answer without a single extra class. */
 const tone: Record<ButtonVariant, Record<ButtonAppearance, string>> = {
   primary: {
-    fill: "bg-primary-solid border-transparent text-primary-on-solid shadow-control hover:bg-primary-solid-hover",
+    fill: "bg-primary-solid bg-(image:--action-gloss) border-transparent text-primary-on-solid shadow-(--button-primary-shadow) hover:bg-primary-solid-hover disabled:bg-none",
     "fill-stroke":
       "bg-primary-soft border-primary-soft-line text-primary-fg hover:bg-primary-soft-hover",
     stroke:
       "bg-transparent border-primary-edge text-primary-edge hover:bg-primary-edge-hover",
+    ghost:
+      "bg-transparent border-transparent text-primary-fg hover:bg-primary-soft",
   },
   neutral: {
-    fill: "bg-neutral-solid border-transparent text-neutral-on-solid shadow-control hover:bg-neutral-solid-hover",
+    fill: "bg-neutral-solid border-transparent text-neutral-on-solid shadow-(--button-shadow) hover:bg-neutral-solid-hover",
     "fill-stroke":
-      "bg-neutral-soft border-neutral-soft-line text-neutral-fg shadow-control hover:bg-neutral-soft-hover",
+      "bg-neutral-soft border-neutral-soft-line text-neutral-fg shadow-(--button-shadow) hover:bg-neutral-soft-hover",
     stroke:
       "bg-transparent border-neutral-edge text-neutral-edge hover:bg-neutral-edge-hover",
+    ghost:
+      "bg-transparent border-transparent text-fg-icon-quiet hover:bg-neutral-soft-hover hover:text-fg",
   },
   danger: {
-    fill: "bg-danger-solid border-transparent text-danger-on-solid shadow-control hover:bg-danger-solid-hover",
+    fill: "bg-danger-solid border-transparent text-danger-on-solid shadow-(--button-shadow) hover:bg-danger-solid-hover",
     "fill-stroke":
       "bg-danger-soft border-danger-soft-line text-danger-fg hover:bg-danger-soft-hover",
     stroke:
       "bg-transparent border-danger-edge text-danger-edge hover:bg-danger-edge-hover",
+    ghost:
+      "bg-transparent border-transparent text-danger-fg hover:bg-danger-soft",
   },
   accent: {
-    fill: "bg-accent-solid border-transparent text-accent-on-solid shadow-control hover:bg-accent-solid-hover",
+    fill: "bg-accent-solid border-transparent text-accent-on-solid shadow-(--button-shadow) hover:bg-accent-solid-hover",
     "fill-stroke":
       "bg-accent-soft border-accent-soft-line text-accent-fg hover:bg-accent-soft-hover",
     stroke:
       "bg-transparent border-accent-edge text-accent-edge hover:bg-accent-edge-hover",
+    ghost:
+      "bg-transparent border-transparent text-accent-fg hover:bg-accent-soft",
   },
 };
 
@@ -69,7 +79,7 @@ const tone: Record<ButtonVariant, Record<ButtonAppearance, string>> = {
    screen, since `whitespace-nowrap` means it cannot wrap its way out. */
 const standardSizes: Record<ButtonSize, string> = {
   big:
-    "h-control-big min-w-control-big rounded-control " +
+    "h-control-big min-w-control-big rounded-button " +
     "px-control-x-small sm:px-control-x-big " +
     "gap-inline-sm sm:gap-inline-md " +
     "text-button-md sm:text-button-lg " +
@@ -77,7 +87,7 @@ const standardSizes: Record<ButtonSize, string> = {
     "sm:[&_svg]:h-icon-big sm:[&_svg]:w-icon-big",
   small:
     "h-control-small min-w-control-small px-control-x-small gap-inline-sm " +
-    "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
+    "rounded-button-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
 };
 
 /* Icon-only keeps its square 44px box on every screen — there is no label
@@ -86,12 +96,12 @@ const standardSizes: Record<ButtonSize, string> = {
 const iconOnlySizes: Record<ButtonSize, string> = {
   big:
     "h-control-big w-control-big min-w-control-big aspect-square p-0 " +
-    "rounded-control text-button-lg " +
+    "rounded-button text-button-lg " +
     "[&_svg]:h-icon-small [&_svg]:w-icon-small " +
     "sm:[&_svg]:h-icon-big sm:[&_svg]:w-icon-big",
   small:
     "h-control-small w-control-small min-w-control-small aspect-square p-0 " +
-    "rounded-control-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
+    "rounded-button-small text-button-md [&_svg]:h-icon-small [&_svg]:w-icon-small",
 };
 
 export type ButtonStyleOptions = {

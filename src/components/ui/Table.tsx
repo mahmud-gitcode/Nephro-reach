@@ -117,6 +117,10 @@ export function TableHeaderCell({
       }
       className={cn(
         "border-b border-table-header-line bg-table-header-bg px-inset-sm py-inset-xs text-table-header text-table-header-fg",
+        // The outer columns take the table edge (--table-edge).
+        "first:pl-(--table-edge) last:pr-(--table-edge)",
+        // Letter case is a token too (--table-header-case, none when unset).
+        "[text-transform:var(--table-header-case,none)]",
         numeric && "text-right",
         className,
       )}
@@ -169,6 +173,7 @@ export function TableCell({
     <td
       className={cn(
         "px-inset-sm py-inset-sm align-middle",
+        "first:pl-(--table-edge) last:pr-(--table-edge)",
         // The second line under a name ("MRN 448120") is written as a
         // caption at the call site; inside a table it takes table-meta. The
         // descendant selector outranks the caption's own class.
@@ -225,7 +230,7 @@ export function TableEmptyRow({
 }) {
   return (
     <TableRow>
-      <td colSpan={colSpan} className="px-inset-sm py-inset-xl">
+      <td colSpan={colSpan} className="px-(--table-edge) py-inset-xl">
         {children}
       </td>
     </TableRow>
@@ -249,7 +254,7 @@ export function TablePagination({
   if (pageCount <= 1 && !summary) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-table-row-line px-inset-sm py-inset-sm">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-table-row-line px-(--table-edge) py-inset-sm">
       <p className="text-caption text-table-meta-fg">
         {summary ?? (
           <>
