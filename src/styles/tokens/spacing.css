@@ -97,6 +97,7 @@
   --radius-status: 0.125rem; /*  2px · status tags    */
   --radius-card: 0.75rem; /* 12px · cards          */
   --radius-card-nested: 0.75rem; /* 12px · a box inside a card */
+  --radius-chart-bar: 0.5rem; /*  8px · a bar in a bar chart */
   /* Buttons have their own radius so they can go round without taking
      inputs and selects with them. Equal to the control radii for now. */
   --radius-button: 0.5rem; /*  8px · big buttons    */

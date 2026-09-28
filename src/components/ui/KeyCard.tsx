@@ -1,62 +1,53 @@
 import React from "react";
-import { ChevronsDown, ChevronsUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 /* ==========================================================================
    KeyCard
    --------------------------------------------------------------------------
-   The summary tile every dashboard in the product opens with: a square
-   tinted icon tile beside the figure and its label, and an optional
-   footnote below a divider.
+   The summary tile every dashboard in the product opens with. Laid out after
+   the client's reference dashboard (UI redesign, phase 3 — 2026-09-28):
 
-   Built from the client's reference (2026-09-26). Three things about it are
-   deliberate:
+     ┌──────────────────────────────┐
+     │ Label                   icon │   what the figure is · what kind
+     │                              │
+     │ 2,884  ▲ 15.5%               │   the figure · its movement
+     │ vs. 2,496 last period        │   the comparison or footnote
+     └──────────────────────────────┘
 
-   1. HORIZONTAL, and the figure before the label. The number is what
-      somebody scans a row of these for; the label only explains it once
-      found. Putting the label first, as the old cards did, spent a line of
-      height on the part nobody reads first.
+   Three things about it are deliberate:
 
-   2. THE TILE IS A SQUARE. It ran the full height of the card's left edge
-      for a while, which made it a stripe rather than a tile and tied its
-      shape to however tall the text below happened to be. A fixed 64px
-      square keeps every card in a row identical whatever its text does.
+   1. NO TILE. The icon used to sit in a 64px tinted square beside the
+      figure. Six of those across a page competed with the numbers they
+      labelled; a 20px glyph in the corner names the card's kind and gets
+      out of the way. It still takes the tone's colour, so a warning card
+      is still orange and an attention card still red at a glance.
+
+   2. THE MOVEMENT SITS ON THE FIGURE'S LINE, as a tinted chip. A trend is
+      read with its number ("2,884, up 15.5%"), not as a footnote under a
+      rule. What it is measured against drops to the grey line beneath.
 
    3. NOT INTERACTIVE. These were links on some pages and filter buttons on
       others; the client asked for neither (2026-09-26). Every page that
-      filtered from a card still has a status select and a search box, so
-      nothing became unreachable — there were simply two controls for one
-      job. A card that cannot be pressed also does not have to explain that
-      it can be.
+      filtered from a card still has a status select and a search box.
 
-   The icon should be a FILLED glyph — see `@/components/icons/solid`. The
-   panel is a tint rather than a solid, so the glyph carries the colour; a
-   hairline outline icon would disappear into it at this size.
+   The icon should be a FILLED glyph — see `@/components/icons/solid`.
    ========================================================================== */
 
 export type KeyCardTone =
   "brand" | "success" | "warning" | "danger" | "accent" | "neutral";
 
 /**
- * A tint behind a coloured glyph, not a saturated block behind a white one.
- *
- * Six of these can sit in a row, and six solid blocks of colour across the
- * top of a page shout over the figures they are there to label. The tint
- * carries the same meaning at a fraction of the weight.
- *
- * Each pairs a ramp's 50 tint with its own 600 (700 for accent, where 600
- * sits lighter). A glyph is a shape, so it answers to 3:1, and every pair
- * here clears it: warning's orange glyph is the tightest at 3.04, success
- * next at 4.58, accent and neutral run past 6.
+ * The glyph's colour per tone. A glyph is a shape, so it answers to 3:1:
+ * warning's orange is the tightest at ~3.0, every other tone clears 4.5.
  */
-const bands: Record<KeyCardTone, string> = {
-  brand: "bg-surface-brand-subtle text-brand-600",
-  success: "bg-success-surface text-success",
-  /* Orange glyph, not the amber-brown warning text colour. */
-  warning: "bg-warning-surface text-warning-glyph",
-  danger: "bg-danger-surface text-danger",
-  accent: "bg-accent-soft text-accent-fg",
-  neutral: "bg-surface-sunken text-fg-secondary",
+const glyphs: Record<KeyCardTone, string> = {
+  brand: "text-fg-brand",
+  success: "text-success",
+  /* Orange, not the amber-brown warning text colour. */
+  warning: "text-warning-glyph",
+  danger: "text-danger",
+  accent: "text-accent-fg",
+  neutral: "text-fg-secondary",
 };
 
 /**
@@ -68,9 +59,9 @@ const bands: Record<KeyCardTone, string> = {
  */
 export type KeyCardTrend = {
   direction: "up" | "down";
-  /** The movement itself, e.g. "12%". Carries the colour. */
+  /** The movement itself, e.g. "12%". Shown in the chip. */
   value: string;
-  /** What it is measured against, e.g. "vs yesterday". Stays grey. */
+  /** What it is measured against, e.g. "vs yesterday". The grey line. */
   suffix?: string;
   good?: boolean;
 };
@@ -84,19 +75,49 @@ export type KeyCardProps = {
   /** What the figure is. Wraps to a second line when it must. */
   label: string;
   /**
-   * A share, a comparison, a remainder. Sits below a divider at the foot of
-   * the card. Use `trend` instead when the note is a movement.
+   * A share, a comparison, a remainder — the grey line under the figure.
+   * With a `trend`, the trend's `suffix` takes this line instead.
    */
   note?: React.ReactNode;
-  /** A movement since an earlier point. Rendered with an arrow. */
+  /** A movement since an earlier point. A chip beside the figure. */
   trend?: KeyCardTrend;
   /**
-   * Anything extra — a rating, a link. Renders in the footer beside where a
-   * note would go, so the figure above stays level with every other card.
+   * Anything extra — a rating, a link. Sits at the foot of the card, so the
+   * figure above stays level with every other card in the row.
    */
   children?: React.ReactNode;
   className?: string;
 };
+
+/** The movement chip: a tint, a small triangle and the value. */
+function TrendChip({ trend }: { trend: KeyCardTrend }) {
+  /* Unset means up is the good direction, which is true of most figures a
+     card like this carries. */
+  const good = trend.good ?? trend.direction === "up";
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-inline-xs rounded-status px-inset-xs py-0.5 text-label-sm tabular-nums",
+        good
+          ? "bg-success-surface text-success"
+          : "bg-danger-surface text-danger",
+      )}
+    >
+      <svg
+        viewBox="0 0 8 5"
+        aria-hidden="true"
+        className="h-[5px] w-2 shrink-0 fill-current"
+      >
+        <path d={trend.direction === "up" ? "M4 0l4 5H0z" : "M4 5L0 0h8z"} />
+      </svg>
+      {/* The triangle is decoration; the words say which way. */}
+      <span className="sr-only">
+        {trend.direction === "up" ? "Up " : "Down "}
+      </span>
+      {trend.value}
+    </span>
+  );
+}
 
 export function KeyCard({
   icon,
@@ -108,85 +129,52 @@ export function KeyCard({
   children,
   className,
 }: KeyCardProps) {
-  const Arrow = trend?.direction === "down" ? ChevronsDown : ChevronsUp;
-  /* Unset means up is the good direction, which is true of most figures a
-     card like this carries. */
-  const rising = (trend?.good ?? trend?.direction === "up") === true;
-
-  const footer = trend ? (
-    <p className="flex items-center gap-inline-xs text-body-sm">
-      <Arrow
-        aria-hidden="true"
-        className={cn(
-          "h-4 w-4 shrink-0",
-          rising ? "text-success" : "text-danger",
-        )}
-      />
-      <span
-        className={cn(
-          "font-bold tabular-nums",
-          rising ? "text-success" : "text-danger",
-        )}
-      >
-        {trend.value}
-      </span>
-      {trend.suffix ? (
-        <span className="text-fg-muted">{trend.suffix}</span>
-      ) : null}
-    </p>
-  ) : note ? (
-    <p className="text-body-sm text-fg-muted">{note}</p>
-  ) : null;
-
-  /* Anything extra sits in the footer too, on the same line as a note would
-     be. It used to render under the label inside the text column, which
-     pushed the figure up and left a card carrying a button sitting
-     differently from every other card in its row. */
-  const hasFooter = footer !== null || children !== undefined;
+  const caption = trend ? trend.suffix : note;
 
   return (
     <article
       className={cn(
-        "flex h-full flex-col gap-inset-sm rounded-card border border-line bg-surface p-inset-md",
+        "flex h-full flex-col rounded-card border border-line bg-surface p-card shadow-(--card-shadow)",
         className,
       )}
     >
-      {/* The tile and the figure are one line of reading, so they are
-          centred against each other. */}
-      <div className="flex items-center gap-inline-lg">
+      {/* What the figure is, and what kind of figure. Six of these can sit
+          across one row, so the label may take a second line; `text-balance`
+          splits it evenly instead of stranding one word. */}
+      <div className="flex items-start justify-between gap-inline-md">
+        <p className="text-heading-5 text-balance text-fg">{label}</p>
         <span
           aria-hidden="true"
           className={cn(
-            /* A square, so it reads as a tile rather than a stripe down the
-               card. 64px, which is the same square the client's reference
-               uses beside a figure this size. */
-            "flex h-16 w-16 shrink-0 items-center justify-center rounded-card",
-            /* 36px inside 64px: filled without crowding the corners. */
-            "[&_svg]:h-9 [&_svg]:w-9",
-            bands[tone],
+            "mt-0.5 shrink-0 [&_svg]:h-5 [&_svg]:w-5",
+            glyphs[tone],
           )}
         >
           {icon}
         </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-metric-lg leading-none text-fg">{value}</p>
-          {/* Six of these can sit across one row, so a label like "Need
-              Follow-Up" has to be able to take a second line. `text-balance`
-              splits it evenly instead of stranding one word under seven. */}
-          <p className="mt-stack-xs text-label-md text-balance text-fg-secondary">
-            {label}
-          </p>
-        </div>
       </div>
 
-      {/* A rule, then the footnote. Below the content rather than floating
-          over it: it briefly sat absolute in the corner, where a long note
-          ran under the label. A divider gives it a place of its own and
-          says it is a different kind of fact from the figure above. */}
-      {hasFooter ? (
-        <div className="mt-auto space-y-stack-xs border-t border-line pt-inset-xs">
-          {footer}
+      {/* `mt-auto` anchors the figure to the foot of the card. Cards in a
+          row share a height, so the figures line up across it even when one
+          label runs to two lines and its neighbour's does not. */}
+      <div className="mt-auto flex flex-wrap items-center gap-x-inline-md gap-y-stack-xs pt-stack-xl">
+        <p className="text-metric-lg leading-none text-fg">{value}</p>
+        {trend ? <TrendChip trend={trend} /> : null}
+      </div>
+
+      {/* The grey line under the figure. A card without one keeps its space
+          (or gives it to `children`, e.g. a star rating), so a row where only
+          some cards carry a note still has its figures on one line. */}
+      {caption ? (
+        <p className="mt-stack-sm text-caption text-fg-muted">{caption}</p>
+      ) : children === undefined ? (
+        <p aria-hidden="true" className="mt-stack-sm text-caption">
+          &nbsp;
+        </p>
+      ) : null}
+
+      {children !== undefined ? (
+        <div className={caption ? "pt-stack-md" : "mt-stack-sm"}>
           {children}
         </div>
       ) : null}

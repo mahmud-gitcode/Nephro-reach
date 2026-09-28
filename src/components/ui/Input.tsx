@@ -47,6 +47,9 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   inputSize?: ControlSize;
   /** Rendered inside the field, before the text. Sized by the component. */
   leadingIcon?: React.ReactNode;
+  /* React 19 passes `ref` as an ordinary prop; declared so a caller can
+     focus the field (SearchField's ⌘K does). */
+  ref?: React.Ref<HTMLInputElement>;
 };
 
 export function Input({

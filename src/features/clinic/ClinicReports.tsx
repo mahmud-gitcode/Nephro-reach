@@ -183,13 +183,14 @@ function KpiCards() {
           icon={KPI_ICONS[kpi.id].icon}
           value={kpi.value}
           label={kpi.label}
-          note={
-            <Change
-              value={kpi.change}
-              lowerIsBetter={kpi.lowerIsBetter}
-              suffix="vs. last month"
-            />
-          }
+          // The card's own trend chip, so these read like every other stat
+          // card: the movement beside the figure, the comparison under it.
+          trend={{
+            direction: kpi.change < 0 ? "down" : "up",
+            value: `${Math.abs(kpi.change)}%`,
+            suffix: "vs. last month",
+            good: isImprovement(kpi.change, kpi.lowerIsBetter),
+          }}
         />
       ))}
     </section>

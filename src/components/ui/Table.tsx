@@ -193,6 +193,35 @@ export function TableCell({
   );
 }
 
+/**
+ * The small square that leads a row's identifying cell: a photo when there
+ * is one, else the name's initials. 32px, 6px corners, a hairline and a
+ * near-white fill — the reference dashboard's product thumbnail. Decorative:
+ * the name beside it says who the row is.
+ */
+export function TableThumb({ name, src }: { name: string; src?: string }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-line bg-surface-sunken text-label-sm text-fg-secondary"
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a 32px thumbnail; next/image's sizing adds nothing here
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        initials
+      )}
+    </span>
+  );
+}
+
 /* --------------------------------------------------------------------------
    States — the parts no table in this app currently has.
    -------------------------------------------------------------------------- */

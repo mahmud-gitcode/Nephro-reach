@@ -513,6 +513,11 @@
   --chart-danger: var(--color-danger-500);
   /* 4.06:1 */
   --chart-neutral: var(--color-gray-500);
+  /* A bar that is not the highlighted one: a quiet grey column, so the
+     highlighted bar carries the colour. Decorative — the values are in the
+     chart's table — so it is exempt from the 3:1 a data shape needs. */
+  --chart-bar-rest: #eef0f4;
+  --chart-bar-rest-line: #e6e8ec;
   /* "not started", "none" — a state with nothing to flag */
 }
 
@@ -722,6 +727,8 @@
   --color-chart-warning: var(--chart-warning);
   --color-chart-danger: var(--chart-danger);
   --color-chart-neutral: var(--chart-neutral);
+  --color-chart-bar-rest: var(--chart-bar-rest);
+  --color-chart-bar-rest-line: var(--chart-bar-rest-line);
 
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);

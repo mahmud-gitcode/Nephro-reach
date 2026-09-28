@@ -1,31 +1,23 @@
 "use client";
 
 import React from "react";
-import {
-  ArrowUp,
-  Bell,
-  Calendar,
-  ChevronDown,
-  Download,
-  LayoutGrid,
-  Mic,
-  MoreHorizontal,
-  Paperclip,
-  Search,
-  Sun,
-} from "lucide-react";
+import { Bell, Download, LayoutGrid, MoreHorizontal, Sun } from "lucide-react";
 import { ClockSolid, MoreSolid, UsersSolid } from "@/components/icons/solid";
 import {
   Badge,
   BarChart,
+  Breakdown,
   Button,
   Card,
   CardBody,
   CardHeader,
+  Composer,
+  DateRangeFilter,
   FormField,
   Input,
   KeyCard,
   LineChart,
+  SearchField,
   Select,
   Table,
   TableBody,
@@ -33,6 +25,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
+  TableThumb,
 } from "@/components/ui";
 
 /* ==========================================================================
@@ -409,221 +402,41 @@ function SpecTable({
 }
 
 /* ---------------------------------------------------------------------------
-   The reference stat card. Preview-only here; it replaces KeyCard's layout
-   in phase 3. Measured: 24px padding; title top left (16px medium); a 20px
-   filled brand-blue icon top right; the figure with a trend chip beside it;
-   a 12px muted comparison line under it.
-   --------------------------------------------------------------------------- */
-
-function TrendChip({
-  direction,
-  value,
-  good = direction === "up",
-}: {
-  direction: "up" | "down";
-  value: string;
-  good?: boolean;
-}) {
-  return (
-    <span
-      className={
-        "inline-flex items-center gap-inline-xs rounded-status px-inset-xs py-0.5 text-label-sm " +
-        (good
-          ? "bg-success-surface text-success"
-          : "bg-danger-surface text-danger")
-      }
-    >
-      <svg
-        viewBox="0 0 8 5"
-        aria-hidden="true"
-        className="h-[5px] w-2 fill-current"
-      >
-        <path d={direction === "up" ? "M4 0l4 5H0z" : "M4 5L0 0h8z"} />
-      </svg>
-      {value}
-    </span>
-  );
-}
-
-function RefKeyCard({
-  title,
-  icon,
-  value,
-  trend,
-  note,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  value: string;
-  trend: React.ComponentProps<typeof TrendChip>;
-  note: string;
-}) {
-  return (
-    <Card>
-      <div className="flex items-start justify-between gap-inline-md">
-        <h3 className="text-heading-5 text-fg">{title}</h3>
-        <span
-          aria-hidden="true"
-          className="text-fg-brand [&_svg]:h-5 [&_svg]:w-5"
-        >
-          {icon}
-        </span>
-      </div>
-      <div className="mt-stack-xl flex flex-wrap items-center gap-inline-lg">
-        <p className="text-metric-lg text-fg">{value}</p>
-        <TrendChip {...trend} />
-      </div>
-      <p className="mt-stack-sm text-caption text-fg-muted">{note}</p>
-    </Card>
-  );
-}
-
-/* A breakdown ("Customers"), redesigned after review: the reference's
-   bracket segments (left line + wash + thick foot bar) read busy. Now one
-   slim bar shows the split, and three columns under hairline dividers give
-   each part a dot, its label, the figure and its share. No box inside the
-   card. Colours are the contrast-safe shades from the palette above. */
-const SEGMENTS = [
-  { count: 2884, label: "Retailers", colour: "#2065ff" },
-  { count: 1432, label: "Distributors", colour: "#3ea76d" },
-  { count: 562, label: "Wholesalers", colour: "#ed710b" },
-];
-
-function Segments() {
-  const total = SEGMENTS.reduce((sum, segment) => sum + segment.count, 0);
-  const share = (count: number) => Math.round((count / total) * 100);
-
-  return (
-    <div className="space-y-stack-lg">
-      {/* The split. Decorative: the columns below carry the same numbers
-          as text, so a screen reader is not read a bar it cannot see. */}
-      <div aria-hidden="true" className="flex h-2 gap-1">
-        {SEGMENTS.map((segment) => (
-          <span
-            key={segment.label}
-            className="rounded-pill"
-            style={{
-              width: `${(segment.count / total) * 100}%`,
-              background: segment.colour,
-            }}
-          />
-        ))}
-      </div>
-
-      <dl className="grid grid-cols-3 divide-x divide-line">
-        {SEGMENTS.map((segment) => (
-          <div key={segment.label} className="px-inset-md first:pl-0 last:pr-0">
-            <dt className="flex items-center gap-inline-sm text-caption text-fg-muted">
-              <span
-                aria-hidden="true"
-                className="h-2 w-2 shrink-0 rounded-pill"
-                style={{ background: segment.colour }}
-              />
-              {segment.label}
-            </dt>
-            <dd className="mt-stack-xs flex items-baseline gap-inline-sm">
-              <span className="text-metric-md text-fg">
-                {segment.count.toLocaleString("en-US")}
-              </span>
-              <span className="text-caption text-fg-muted">
-                {share(segment.count)}%
-              </span>
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------------------------
    Inputs. The real Input / Select / FormField in both panels; on the right
    they take the reference tokens. The date-range pill and the composer are
    compositions the reference shows (toolbar filter, "Ask me anything…"),
    drawn here to agree on the look before phase 3 makes them components.
    --------------------------------------------------------------------------- */
 
-function SearchField({ reference }: { reference: boolean }) {
+/* The real DateRangeFilter and Composer, with state, for the preview. */
+function PeriodFilter() {
+  const [period, setPeriod] = React.useState("30");
   return (
-    <div className="relative">
-      <Input
-        inputSize="small"
-        leadingIcon={<Search />}
-        placeholder="Search anything…"
-        aria-label="Search"
-      />
-      {reference ? (
-        <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-status border border-line bg-surface px-1.5 font-sans text-label-sm text-fg-muted">
-          ⌘K
-        </kbd>
-      ) : null}
-    </div>
+    <DateRangeFilter
+      rangeLabel="Jan 1, 2025 – Feb 1, 2025"
+      period={period}
+      onPeriodChange={setPeriod}
+      periods={[
+        { value: "7", label: "Last 7 days" },
+        { value: "30", label: "Last 30 days" },
+        { value: "90", label: "Last 90 days" },
+      ]}
+    />
   );
 }
 
-/* The reference's toolbar filter: the date range and the period, joined in
-   one pill with a hairline between them. */
-function DateRangeFilter() {
+function ComposerDemo() {
+  const [message, setMessage] = React.useState("");
   return (
-    <div className="inline-flex h-control-small items-stretch overflow-hidden rounded-pill border border-line bg-surface text-body-sm text-fg">
-      <button
-        type="button"
-        className="flex cursor-pointer items-center gap-inline-sm px-inset-sm hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-      >
-        <Calendar
-          aria-hidden="true"
-          className="h-icon-small w-icon-small text-fg-secondary"
-        />
-        Jan 1, 2025 – Feb 1, 2025
-      </button>
-      <span aria-hidden="true" className="w-px bg-line" />
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        className="flex cursor-pointer items-center gap-inline-sm px-inset-sm hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-      >
-        Last 30 days
-        <ChevronDown
-          aria-hidden="true"
-          className="h-icon-small w-icon-small text-fg-icon-quiet"
-        />
-      </button>
-    </div>
-  );
-}
-
-/* The reference's "Ask me anything…" box: a grey pill holding round attach
-   and mic buttons and a round primary send button. */
-function Composer() {
-  return (
-    <div className="flex items-center gap-inline-sm rounded-pill border border-line bg-surface-sunken p-1.5">
-      <Button
-        variant="neutral"
-        appearance="fill-stroke"
-        size="small"
-        iconOnly
-        aria-label="Attach a file"
-      >
-        <Paperclip />
-      </Button>
-      <input
-        aria-label="Message"
-        placeholder="Ask me anything…"
-        className="min-w-0 flex-1 bg-transparent text-body-md text-fg placeholder:text-fg-muted focus-visible:outline-none"
-      />
-      <Button
-        variant="neutral"
-        appearance="fill-stroke"
-        size="small"
-        iconOnly
-        aria-label="Dictate"
-      >
-        <Mic />
-      </Button>
-      <Button size="small" iconOnly aria-label="Send">
-        <ArrowUp />
-      </Button>
-    </div>
+    <Composer
+      label="Message"
+      placeholder="Ask me anything…"
+      value={message}
+      onChange={setMessage}
+      onSend={() => setMessage("")}
+      onAttach={() => {}}
+      onDictate={() => {}}
+    />
   );
 }
 
@@ -632,9 +445,13 @@ function Inputs({ reference }: { reference: boolean }) {
     <Card>
       <CardHeader title="Inputs" />
       <CardBody className="space-y-stack-lg">
-        <SearchField reference={reference} />
+        <SearchField
+          label="Search"
+          placeholder="Search anything…"
+          shortcut={reference}
+        />
         {reference ? (
-          <DateRangeFilter />
+          <PeriodFilter />
         ) : (
           <Select selectSize="small" aria-label="Period" defaultValue="30">
             <option value="7">Last 7 days</option>
@@ -656,7 +473,7 @@ function Inputs({ reference }: { reference: boolean }) {
             )}
           </FormField>
         </div>
-        {reference ? <Composer /> : null}
+        {reference ? <ComposerDemo /> : null}
       </CardBody>
     </Card>
   );
@@ -684,163 +501,6 @@ const TREATMENT_DAYS = [
   "29 Jan",
 ];
 
-/* Area chart: the current period as a 2px brand line over a faint brand
-   gradient, the previous period as a dashed grey line, dashed gridlines,
-   and a white tooltip card that follows the pointer. */
-function RefAreaChart() {
-  const gradientId = React.useId();
-  const [active, setActive] = React.useState(7);
-  const W = 560;
-  const H = 200;
-  // Label text is 14 units: once the SVG scales into a card it renders at
-  // ~12.7px, so the 12px floor holds.
-  const left = 36;
-  const right = 8;
-  const top = 12;
-  const bottom = 30;
-  const n = TREATMENTS_THIS.length;
-  const x = (i: number) => left + (i * (W - left - right)) / (n - 1);
-  const y = (v: number) => top + (1 - v / 100) * (H - top - bottom);
-  const line = (values: number[]) =>
-    values.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ");
-  const area = `${line(TREATMENTS_THIS)} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`;
-
-  return (
-    <div className="relative">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label="Treatments completed per day in January, this month against last month"
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="0%"
-              stopColor="var(--color-brand-600)"
-              stopOpacity="0.16"
-            />
-            <stop
-              offset="100%"
-              stopColor="var(--color-brand-600)"
-              stopOpacity="0"
-            />
-          </linearGradient>
-        </defs>
-        {[0, 25, 50, 75, 100].map((tick) => (
-          <g key={tick}>
-            <line
-              x1={left}
-              x2={W - right}
-              y1={y(tick)}
-              y2={y(tick)}
-              stroke="var(--line)"
-              strokeDasharray="4 4"
-            />
-            <text
-              x={left - 8}
-              y={y(tick) + 4}
-              textAnchor="end"
-              fontSize="14"
-              fill="var(--fg-muted)"
-            >
-              {tick}
-            </text>
-          </g>
-        ))}
-        {[0, 3, 6, 9, 11].map((i) => (
-          <text
-            key={i}
-            x={x(i)}
-            y={H - 8}
-            // The end labels hug the plot's edges instead of spilling past.
-            textAnchor={i === 0 ? "start" : i === 11 ? "end" : "middle"}
-            fontSize="14"
-            fill="var(--fg-muted)"
-          >
-            {TREATMENT_DAYS[i]}
-          </text>
-        ))}
-        <path d={area} fill={`url(#${gradientId})`} />
-        <path
-          d={line(TREATMENTS_LAST)}
-          fill="none"
-          stroke="#b9bdc4"
-          strokeWidth="1.5"
-          strokeDasharray="5 4"
-        />
-        <path
-          d={line(TREATMENTS_THIS)}
-          fill="none"
-          stroke="var(--color-brand-600)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <line
-          x1={x(active)}
-          x2={x(active)}
-          y1={top}
-          y2={y(0)}
-          stroke="#9ca0a6"
-          strokeDasharray="3 3"
-        />
-        <circle
-          cx={x(active)}
-          cy={y(TREATMENTS_THIS[active])}
-          r="4.5"
-          fill="var(--surface)"
-          stroke="var(--color-brand-600)"
-          strokeWidth="2"
-        />
-        {TREATMENTS_THIS.map((_, i) => (
-          <rect
-            key={i}
-            x={x(i) - (W - left - right) / (n - 1) / 2}
-            y={top}
-            width={(W - left - right) / (n - 1)}
-            height={y(0) - top}
-            fill="transparent"
-            onMouseEnter={() => setActive(i)}
-          />
-        ))}
-      </svg>
-      <div
-        /* Beside the point, never on it, so the dot and the guide line stay
-           visible: to its right, or to its left past the middle. */
-        className={
-          "pointer-events-none absolute top-2 w-44 rounded-[10px] border border-line bg-surface px-inset-sm py-inset-xs shadow-md " +
-          (active > (n - 1) / 2
-            ? "-translate-x-[calc(100%+12px)]"
-            : "translate-x-3")
-        }
-        style={{ left: `${(x(active) / W) * 100}%` }}
-      >
-        <p className="text-label-sm text-fg">{TREATMENT_DAYS[active]}, 2025</p>
-        <p className="mt-stack-xs flex items-center gap-inline-sm text-caption text-fg-muted">
-          <span
-            aria-hidden="true"
-            className="h-0.5 w-3 rounded-pill bg-brand-600"
-          />
-          <span className="font-semibold text-fg">
-            {TREATMENTS_THIS[active]}
-          </span>{" "}
-          this month
-        </p>
-        <p className="flex items-center gap-inline-sm text-caption text-fg-muted">
-          <span
-            aria-hidden="true"
-            className="w-3 border-t-2 border-dashed border-[#b9bdc4]"
-          />
-          <span className="font-semibold text-fg">
-            {TREATMENTS_LAST[active]}
-          </span>{" "}
-          last month
-        </p>
-      </div>
-    </div>
-  );
-}
-
 const WEEKDAYS = [
   { day: "Sun", value: 52 },
   { day: "Mon", value: 40 },
@@ -850,101 +510,6 @@ const WEEKDAYS = [
   { day: "Fri", value: 47 },
   { day: "Sat", value: 56 },
 ];
-
-/* Bars: light grey rounded columns, the peak in a brand gradient with its
-   value above it and its day label in brand blue. Dashed gridlines with a
-   value scale on the left (the same treatment as the area chart) let each
-   bar be read as a quantity, not only compared by height. */
-const BAR_SCALE = 100;
-const BAR_TICKS = [0, 25, 50, 75, 100];
-
-function RefBarChart() {
-  const max = Math.max(...WEEKDAYS.map((d) => d.value));
-  const pct = (v: number) => `${(v / BAR_SCALE) * 100}%`;
-
-  return (
-    <div
-      role="img"
-      aria-label={`Check-ins by weekday: ${WEEKDAYS.map((d) => `${d.day} ${d.value}`).join(", ")}.`}
-    >
-      <div className="flex gap-inline-sm">
-        {/* The scale. Each label is centred on its gridline. */}
-        <div aria-hidden="true" className="relative h-44 w-7 shrink-0">
-          {BAR_TICKS.map((tick) => (
-            <span
-              key={tick}
-              className="absolute right-0 translate-y-1/2 text-caption text-fg-muted tabular-nums"
-              style={{ bottom: pct(tick) }}
-            >
-              {tick}
-            </span>
-          ))}
-        </div>
-
-        <div className="relative h-44 flex-1">
-          {BAR_TICKS.map((tick) => (
-            <span
-              key={tick}
-              aria-hidden="true"
-              className="absolute inset-x-0 border-t border-dashed border-line"
-              style={{ bottom: pct(tick) }}
-            />
-          ))}
-
-          <div className="absolute inset-0 flex items-end justify-between gap-inline-md">
-            {WEEKDAYS.map(({ day, value }) => {
-              const peak = value === max;
-              return (
-                <div
-                  key={day}
-                  className="relative flex h-full flex-1 items-end justify-center"
-                >
-                  <span
-                    className="relative w-full max-w-[30px] rounded-[8px] border"
-                    style={{
-                      height: pct(value),
-                      background: peak
-                        ? "linear-gradient(to bottom, #2065ff, #6a95ff)"
-                        : "#eef0f4",
-                      borderColor: peak ? "transparent" : "#e6e8ec",
-                    }}
-                  >
-                    {peak ? (
-                      <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-label-sm text-fg">
-                        {value}
-                      </span>
-                    ) : null}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Day labels, under the plot and clear of the scale column. */}
-      <div
-        aria-hidden="true"
-        // 34px = the 28px scale column + its 6px gap.
-        className="mt-stack-sm ml-8.5 flex justify-between gap-inline-md"
-      >
-        {WEEKDAYS.map(({ day, value }) => (
-          <span
-            key={day}
-            className={
-              "flex-1 text-center " +
-              (value === max
-                ? "text-label-sm text-fg-brand"
-                : "text-caption text-fg-muted")
-            }
-          >
-            {day}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function MoreButton() {
   return (
@@ -971,7 +536,27 @@ function Charts({ reference }: { reference: boolean }) {
         />
         <CardBody>
           {reference ? (
-            <RefAreaChart />
+            <LineChart
+              label="Treatments completed per day in January"
+              xLabels={TREATMENT_DAYS}
+              yMin={0}
+              yMax={100}
+              series={[
+                {
+                  id: "this",
+                  label: "This month",
+                  tone: "brand",
+                  points: TREATMENTS_THIS,
+                },
+                {
+                  id: "last",
+                  label: "Last month",
+                  tone: "neutral",
+                  points: TREATMENTS_LAST,
+                  dashed: true,
+                },
+              ]}
+            />
           ) : (
             <LineChart
               label="Treatments completed per day in January"
@@ -1003,7 +588,12 @@ function Charts({ reference }: { reference: boolean }) {
         />
         <CardBody>
           {reference ? (
-            <RefBarChart />
+            <BarChart
+              label="Check-ins by weekday"
+              highlight="max"
+              yMax={100}
+              bars={WEEKDAYS.map(({ day, value }) => ({ label: day, value }))}
+            />
           ) : (
             <BarChart
               label="Check-ins by weekday"
@@ -1023,7 +613,7 @@ function TopBar() {
   return (
     <div className="-mx-inset-lg -mt-inset-lg mb-stack-xl flex items-center justify-between gap-inline-md rounded-t-panel border-b border-line bg-surface px-inset-lg py-inset-sm">
       <div className="w-full max-w-xs">
-        <SearchField reference />
+        <SearchField label="Search" placeholder="Search anything…" shortcut />
       </div>
       <div className="flex items-center gap-inline-md">
         <Button
@@ -1056,23 +646,6 @@ function TopBar() {
   );
 }
 
-/* A table thumbnail: 32px square, 6px corners, hairline, near-white fill.
-   Patients have no product photo, so it holds their initials. */
-function Thumb({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((part) => part[0])
-    .join("");
-  return (
-    <span
-      aria-hidden="true"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-line bg-[#fafcfc] text-label-sm text-fg-secondary"
-    >
-      {initials}
-    </span>
-  );
-}
-
 const ROWS = [
   {
     name: "John Taylor",
@@ -1102,7 +675,7 @@ function Sample({ reference = false }: { reference?: boolean }) {
           <div className="flex flex-wrap items-center justify-between gap-inline-md">
             <h1 className="text-heading-1 text-fg">Dashboard</h1>
             <div className="flex flex-wrap items-center gap-inline-md">
-              <DateRangeFilter />
+              <PeriodFilter />
               <Button variant="neutral" appearance="fill-stroke" size="small">
                 <LayoutGrid />
                 Add widget
@@ -1147,40 +720,38 @@ function Sample({ reference = false }: { reference?: boolean }) {
         </div>
       )}
 
-      {/* Stat cards: today's KeyCard, or the reference layout. */}
+      {/* Stat cards: the real KeyCard (phase 3). Right shows the trend chip. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {reference ? (
-          <>
-            <RefKeyCard
-              title="Active Members"
-              icon={<UsersSolid />}
-              value="2,884"
-              trend={{ direction: "up", value: "15.5%" }}
-              note="vs. 2,496 last period"
-            />
-            <RefKeyCard
-              title="Need Follow-Up"
-              icon={<ClockSolid />}
-              value="12"
-              trend={{ direction: "up", value: "10.5%", good: false }}
-              note="vs. 11 last period"
-            />
-          </>
-        ) : (
-          <>
-            <KeyCard
-              icon={<UsersSolid />}
-              value="2,884"
-              label="Active Members"
-            />
-            <KeyCard
-              icon={<ClockSolid />}
-              tone="warning"
-              value="12"
-              label="Need Follow-Up"
-            />
-          </>
-        )}
+        <KeyCard
+          icon={<UsersSolid />}
+          value="2,884"
+          label="Active Members"
+          {...(reference
+            ? {
+                trend: {
+                  direction: "up",
+                  value: "15.5%",
+                  suffix: "vs. 2,496 last period",
+                } as const,
+              }
+            : { note: "77% of seats taken" })}
+        />
+        <KeyCard
+          icon={<ClockSolid />}
+          tone="warning"
+          value="12"
+          label="Need Follow-Up"
+          {...(reference
+            ? {
+                trend: {
+                  direction: "up",
+                  value: "10.5%",
+                  suffix: "vs. 11 last period",
+                  good: false,
+                } as const,
+              }
+            : { note: "13% of members" })}
+        />
       </div>
 
       {/* A content card with a nested box. */}
@@ -1204,7 +775,14 @@ function Sample({ reference = false }: { reference?: boolean }) {
         />
         <CardBody>
           {reference ? (
-            <Segments />
+            <Breakdown
+              label="Customers"
+              items={[
+                { label: "Retailers", value: 2884, tone: "brand" },
+                { label: "Distributors", value: 1432, tone: "success" },
+                { label: "Wholesalers", value: 562, tone: "warning" },
+              ]}
+            />
           ) : (
             <div className="grid grid-cols-3 gap-inline-md rounded-card-nested border border-line p-inset-md">
               {[
@@ -1247,7 +825,7 @@ function Sample({ reference = false }: { reference?: boolean }) {
                 <TableRow key={row.mrn}>
                   <TableCell emphasis>
                     <span className="flex items-center gap-inline-md">
-                      {reference ? <Thumb name={row.name} /> : null}
+                      {reference ? <TableThumb name={row.name} /> : null}
                       <span>
                         {row.name}
                         <span className="block text-caption font-normal text-fg-muted tabular-nums">
