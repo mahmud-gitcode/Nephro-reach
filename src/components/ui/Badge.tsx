@@ -82,7 +82,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center gap-inline-xs rounded-pill border",
+        /* 2px corners, not a pill (client, 2026-09-28). */
+        "inline-flex items-center justify-center gap-inline-xs rounded-status border",
         "px-inset-xs py-0.5 text-label-sm whitespace-nowrap",
         "[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0",
         tones[tone][variant],

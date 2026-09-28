@@ -93,6 +93,7 @@
   --radius-control: 0.5rem; /*  8px · big controls   */
   --radius-control-small: 0.25rem; /*  4px · small controls */
   --radius-chip: 0.25rem; /*  4px · badges, tags   */
+  --radius-status: 0.125rem; /*  2px · status tags    */
   --radius-card: 0.75rem; /* 12px · cards          */
   --radius-panel: 1rem; /* 16px · modals, sheets */
   --radius-pill: 9999px; /*        avatars, pills */

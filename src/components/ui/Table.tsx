@@ -17,7 +17,12 @@ import { Button } from "./Button";
    empty state, or a loading state. The wrapper is the least valuable part
    of this component — those three are the point.
 
-   Numeric cells use `text-metric-sm`, which carries tabular-nums, so a lab
+   Type comes from the TABLE group in tokens/typography.css: table-header,
+   table-cell, table-meta and table-metric. Change a table's type there.
+   Colour comes from the TABLE block in tokens/color.css (table-header-fg,
+   table-row-line, table-cell-fg, ...). Change a table's colour there.
+
+   Numeric cells use `text-table-metric`, which carries tabular-nums, so a lab
    column stays aligned and a value does not shift width going from 9.8 to
    10.2. Only 3 uses of tabular-nums existed in the entire codebase before
    the tokens landed.
@@ -67,9 +72,9 @@ export function TableRow({
   return (
     <tr
       className={cn(
-        "border-b border-line-subtle last:border-b-0",
+        "border-b border-table-row-line last:border-b-0",
         interactive &&
-          "cursor-pointer transition-colors duration-150 ease-standard hover:bg-surface-sunken",
+          "cursor-pointer transition-colors duration-150 ease-standard hover:bg-table-row-hover",
         className,
       )}
       {...rest}
@@ -111,7 +116,7 @@ export function TableHeaderCell({
               : "none"
       }
       className={cn(
-        "border-b border-line px-inset-sm py-inset-xs text-overline text-fg-muted",
+        "border-b border-table-header-line bg-table-header-bg px-inset-sm py-inset-xs text-table-header text-table-header-fg",
         numeric && "text-right",
         className,
       )}
@@ -164,11 +169,18 @@ export function TableCell({
     <td
       className={cn(
         "px-inset-sm py-inset-sm align-middle",
+        // The second line under a name ("MRN 448120") is written as a
+        // caption at the call site; inside a table it takes table-meta. The
+        // descendant selector outranks the caption's own class.
+        "[&_.text-caption]:text-table-meta",
+        // Only a plain grey caption takes the table's meta colour. A caption
+        // that is coloured on purpose (text-success, text-danger) keeps it.
+        "[&_.text-caption.text-fg-muted]:text-table-meta-fg",
         numeric
-          ? "text-right text-metric-sm text-fg"
+          ? "text-right text-table-metric text-table-cell-strong-fg"
           : emphasis
-            ? "text-body-sm font-semibold text-fg"
-            : "text-body-sm text-fg-secondary",
+            ? "text-table-cell font-semibold text-table-cell-strong-fg"
+            : "text-table-cell text-table-cell-fg",
         className,
       )}
       {...rest}
@@ -237,8 +249,8 @@ export function TablePagination({
   if (pageCount <= 1 && !summary) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-line-subtle px-inset-sm py-inset-sm">
-      <p className="text-caption text-fg-muted">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-table-row-line px-inset-sm py-inset-sm">
+      <p className="text-caption text-table-meta-fg">
         {summary ?? (
           <>
             Page <span className="text-metric-sm">{page}</span> of{" "}

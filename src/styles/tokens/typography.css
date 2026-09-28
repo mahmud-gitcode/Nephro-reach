@@ -1,7 +1,7 @@
 /* ==========================================================================
    NephroReach — Typography tokens
    --------------------------------------------------------------------------
-   22 named styles. One class sets size, line-height, weight and tracking
+   26 named styles. One class sets size, line-height, weight and tracking
    together — never `text-2xl font-bold tracking-tight` at a call site.
 
    Rules this file encodes:
@@ -14,20 +14,21 @@
        would make a 44px button impossible to hit exactly.
      · Ratio falls as size rises; tracking goes negative as size rises.
        12px text gets slightly POSITIVE tracking — small type needs air.
-     · Four weights only: 400 / 500 / 600 / 700.
+     · Weights 400 / 500 / 600 / 700. 900 is the landing display only.
 
    Default colour per style is defined in tokens/colour.css, not here.
    ========================================================================== */
 
 @theme {
   /* ---- weights ------------------------------------------------------- */
-  /* Lato's real ladder: 100 / 300 / 400 / 700 / 900. There is no 500 and
-     no 600, so `medium` resolves to 400 and `semibold` to 700 — which is
-     what a browser does with them anyway under CSS font matching, and the
-     tokens now say so rather than implying a step that cannot render. */
+  /* The portal's Roboto is a variable font, 100–900,
+     so medium and semibold are real steps. The landing page's Lato has no
+     500 or 600; there the browser's font matching renders 500 as 400 and
+     600 as 700, exactly as these tokens did before, so the landing page
+     does not change. */
   --font-weight-normal: 400;
-  --font-weight-medium: 400;
-  --font-weight-semibold: 700;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-black: 900;
 
@@ -161,6 +162,30 @@
   --text-button-md--line-height: 1.25rem;
   --text-button-md--font-weight: 700;
   --text-button-md--letter-spacing: 0em;
+
+  /* ======================================================================
+     TABLE — applied inside the Table component, never at a call site.
+     One step up from dense UI: a table is read line by line, often by a
+     clinician scanning a roster, so it sits at body size, not body-sm.
+     ====================================================================== */
+
+  /* 14/20 · column headers. */
+  --text-table-header: 0.875rem;
+  --text-table-header--line-height: 1.25rem;
+  --text-table-header--font-weight: 700;
+  --text-table-header--letter-spacing: 0em;
+
+  /* 16/24 · cell text. Emphasis cells add font-semibold on top. */
+  --text-table-cell: 1rem;
+  --text-table-cell--line-height: 1.5rem;
+  --text-table-cell--font-weight: 500;
+  --text-table-cell--letter-spacing: 0em;
+
+  /* 14/20 · the second line in a cell. "MRN 448120", "Left Forearm". */
+  --text-table-meta: 1rem;
+  --text-table-meta--line-height: 1.25rem;
+  --text-table-meta--font-weight: 400;
+  --text-table-meta--letter-spacing: 0em;
 }
 
 /* ==========================================================================
@@ -204,6 +229,15 @@
   /* 16/20 · inline values in tables. Creatinine, Albumin, BP readings. */
   font-size: 1rem;
   line-height: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-table-metric {
+  /* 18/24 · numeric table cells. The metric of the TABLE group above. */
+  font-size: 1.125rem;
+  line-height: 1.5rem;
   font-weight: 700;
   letter-spacing: 0em;
   font-variant-numeric: tabular-nums;

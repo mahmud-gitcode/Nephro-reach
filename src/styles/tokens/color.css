@@ -417,6 +417,10 @@
   /* 5.07:1 on white */
   --warning-surface: var(--color-warning-50);
   --warning-line: var(--color-warning-200);
+  /* Orange, for a warning GLYPH on its tint (the KeyCard tile). A shape,
+     so it answers to 3:1, not 4.5:1; never use it for text. 3.31:1 on
+     white. */
+  --warning-glyph: var(--color-red-9);
 
   --danger: var(--color-danger-600);
   /* 5.55:1 on white */
@@ -562,6 +566,7 @@
   --warning: var(--color-warning-300);
   --warning-surface: var(--color-warning-950);
   --warning-line: var(--color-warning-800);
+  --warning-glyph: var(--color-red-10);
 
   --danger: var(--color-danger-300);
   --danger-surface: var(--color-danger-950);
@@ -622,6 +627,31 @@
 }
 
 /* ==========================================================================
+   TABLE — the colours of the Table component, in one place.
+
+   Each one points at a general semantic, so a table follows the theme with
+   no dark block of its own. Declared on [data-theme] as well as :root so
+   the reference re-resolves wherever a theme is switched, not only on
+   <html>. Change a table's colour here; never at a call site.
+   ========================================================================== */
+
+:root,
+[data-theme] {
+  /* column header row */
+  --table-header-bg: transparent;
+  --table-header-fg: var(--fg-muted);
+  --table-header-line: var(--line);
+  /* body */
+  --table-row-line: var(--line-subtle);
+  --table-row-hover: var(--surface-sunken);
+  --table-cell-fg: var(--fg-secondary);
+  /* emphasis cells (the row's name) and numeric cells */
+  --table-cell-strong-fg: var(--fg);
+  /* the second line in a cell: "MRN 448120", "Left Forearm" */
+  --table-meta-fg: var(--fg-muted);
+}
+
+/* ==========================================================================
    Expose semantics to Tailwind.
    `inline` makes the utility emit `var(--fg)` rather than copying the value,
    which is what lets [data-theme] swap it at runtime.
@@ -670,6 +700,7 @@
   --color-warning: var(--warning);
   --color-warning-surface: var(--warning-surface);
   --color-warning-line: var(--warning-line);
+  --color-warning-glyph: var(--warning-glyph);
 
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
@@ -684,6 +715,15 @@
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
   --color-info-line: var(--info-line);
+
+  --color-table-header-bg: var(--table-header-bg);
+  --color-table-header-fg: var(--table-header-fg);
+  --color-table-header-line: var(--table-header-line);
+  --color-table-row-line: var(--table-row-line);
+  --color-table-row-hover: var(--table-row-hover);
+  --color-table-cell-fg: var(--table-cell-fg);
+  --color-table-cell-strong-fg: var(--table-cell-strong-fg);
+  --color-table-meta-fg: var(--table-meta-fg);
 
   /* tones */
   --color-primary-solid: var(--tone-primary-solid);

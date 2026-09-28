@@ -9,10 +9,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <QueryProvider>
-      <DashboardGuard>
-        <DashboardShell>{children}</DashboardShell>
-      </DashboardGuard>
-    </QueryProvider>
+    // Sets the portal in Roboto; see globals.css.
+    // `contents` keeps the wrapper out of the layout.
+    <div data-typeface="portal" className="contents">
+      <QueryProvider>
+        <DashboardGuard>
+          <DashboardShell>{children}</DashboardShell>
+        </DashboardGuard>
+      </QueryProvider>
+    </div>
   );
 }

@@ -46,13 +46,14 @@ export type KeyCardTone =
  *
  * Each pairs a ramp's 50 tint with its own 600 (700 for accent, where 600
  * sits lighter). A glyph is a shape, so it answers to 3:1, and every pair
- * here clears it with room: success is the tightest at 4.58, accent and
- * neutral run past 6.
+ * here clears it: warning's orange glyph is the tightest at 3.04, success
+ * next at 4.58, accent and neutral run past 6.
  */
 const bands: Record<KeyCardTone, string> = {
   brand: "bg-surface-brand-subtle text-brand-600",
   success: "bg-success-surface text-success",
-  warning: "bg-warning-surface text-warning",
+  /* Orange glyph, not the amber-brown warning text colour. */
+  warning: "bg-warning-surface text-warning-glyph",
   danger: "bg-danger-surface text-danger",
   accent: "bg-accent-soft text-accent-fg",
   neutral: "bg-surface-sunken text-fg-secondary",
