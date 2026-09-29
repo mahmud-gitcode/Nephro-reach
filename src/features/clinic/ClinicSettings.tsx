@@ -8,13 +8,13 @@ import {
   FileLock2,
   KeyRound,
   Laptop,
-  MoreHorizontal,
   Plus,
   Share2,
   ShieldCheck,
   Smartphone,
   Upload,
 } from "lucide-react";
+import { MoreSolid } from "@/components/icons/solid";
 
 import { PageTitle } from "@/components/layout/PageTitle";
 import { sidebarItems } from "@/components/layout/navigation";
@@ -403,7 +403,7 @@ function UserManagementCard({
                     className={tableIconButton}
                     aria-label={`Actions for ${user.name}`}
                   >
-                    <MoreHorizontal aria-hidden="true" />
+                    <MoreSolid />
                   </Button>
                 </TableCell>
               </TableRow>

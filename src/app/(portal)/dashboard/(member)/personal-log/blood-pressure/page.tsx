@@ -2,14 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  Download,
-  Edit3,
-  HeartPulse,
-  MoreHorizontal,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Download, Edit3, HeartPulse, Plus, Trash2 } from "lucide-react";
+import { MoreSolid } from "@/components/icons/solid";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -290,10 +284,10 @@ function DailyBloodPressureList() {
                           iconOnly
                           size="small"
                           variant="neutral"
-                          appearance="stroke"
+                          appearance="fill-stroke"
                           aria-label={`More actions for ${dateLabel} at ${reading.time}`}
                         >
-                          <MoreHorizontal />
+                          <MoreSolid />
                         </Button>
                       </span>
                     </TableCell>

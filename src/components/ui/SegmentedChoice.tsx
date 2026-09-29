@@ -14,11 +14,12 @@ import { cn } from "@/lib/utils/cn";
    picked. A screen reader heard "Yes button, No button" and could not tell
    that Yes was already selected.
 
-   This component owns that correctness and nothing else. The look is the
-   caller's, passed in as class names, because the two screens are drawn
-   differently and unifying them is a visual decision nobody has made. What
-   is not negotiable is the radiogroup: the question names the group, each
-   option reports whether it is checked.
+   This component owns that correctness, and a default look: the question
+   set like a form field's label, the options in the same white pill track
+   as Tabs, the chosen one tinted brand. A caller may still pass its own
+   class names (the personal-log screens do); each one it leaves out falls
+   back to the default. What is not negotiable is the radiogroup: the
+   question names the group, each option reports whether it is checked.
 
    Values are compared by identity, so anything with a stable equality works
    as a value — usually a string union.
@@ -51,6 +52,17 @@ export type SegmentedChoiceProps<T> = {
   unselectedClassName?: string;
 };
 
+const defaults = {
+  wrapper: "flex flex-col gap-stack-xs",
+  label: "text-label-lg text-fg",
+  track:
+    "inline-flex w-fit flex-wrap gap-inline-xs rounded-control border border-line bg-surface p-1",
+  option:
+    "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-control-small px-inset-md text-label-md whitespace-nowrap transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+  selected: "bg-primary-soft text-fg-brand",
+  unselected: "text-fg-secondary hover:bg-surface-sunken hover:text-fg",
+};
+
 export function SegmentedChoice<T>({
   label,
   options,
@@ -64,16 +76,22 @@ export function SegmentedChoice<T>({
   unselectedClassName,
 }: SegmentedChoiceProps<T>) {
   const labelId = useId();
+  /* A caller that styles the track styles the whole control; one that
+     passes nothing gets the house look. */
+  const custom = trackClassName !== undefined;
 
   return (
-    <div className={className}>
-      <span id={labelId} className={labelClassName}>
+    <div className={className ?? (custom ? undefined : defaults.wrapper)}>
+      <span
+        id={labelId}
+        className={labelClassName ?? (custom ? undefined : defaults.label)}
+      >
         {label}
       </span>
       <div
         role="radiogroup"
         aria-labelledby={labelId}
-        className={trackClassName}
+        className={trackClassName ?? defaults.track}
       >
         {options.map((option, index) => {
           const isSelected = option.value === value;
@@ -86,8 +104,12 @@ export function SegmentedChoice<T>({
               aria-label={option.srLabel}
               onClick={() => onChange(option.value)}
               className={cn(
-                optionClassName,
-                isSelected ? selectedClassName : unselectedClassName,
+                optionClassName ?? defaults.option,
+                isSelected
+                  ? (selectedClassName ??
+                      (custom ? undefined : defaults.selected))
+                  : (unselectedClassName ??
+                      (custom ? undefined : defaults.unselected)),
               )}
             >
               {option.label}

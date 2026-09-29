@@ -8,7 +8,6 @@ import {
   CalendarDays,
   ClipboardList,
   FolderOpen,
-  MoreHorizontal,
   Pencil,
   PlayCircle,
   Plus,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 
 import {
+  MoreSolid,
   StarSolid,
   UserCheckSolid,
   UsersSolid,
@@ -292,7 +292,7 @@ function UpcomingClassesTable({
                       className={tableIconButton}
                       aria-label={`Actions for ${item.topic}`}
                     >
-                      <MoreHorizontal aria-hidden="true" />
+                      <MoreSolid />
                     </Button>
                   </span>
                 </TableCell>

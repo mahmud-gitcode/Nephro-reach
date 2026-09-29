@@ -226,11 +226,11 @@ export default function AdminCommunityPage() {
             description={
               tab === "pending"
                 ? isEs
-                  ? "Cuando el tablero retenga una respuesta, aparecerá aquí."
-                  : "When the board holds a reply, it will appear here."
+                  ? "Cuando el tablero retenga una publicación, aparecerá aquí."
+                  : "When the board holds a post, it will appear here."
                 : isEs
-                  ? "Las respuestas que apruebe o rechace quedarán registradas aquí."
-                  : "Replies you approve or reject are recorded here."
+                  ? "Las publicaciones que apruebe o rechace quedarán registradas aquí."
+                  : "Posts you approve or reject are recorded here."
             }
           />
         }

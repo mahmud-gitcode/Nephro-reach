@@ -1,39 +1,27 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
-import {
-  Heart,
-  MessageCircle,
-  MoreVertical,
-  Phone,
-  Plus,
-  Send,
-} from "lucide-react";
+import { EyeOff, Heart, Plus } from "lucide-react";
+import { MoreSolid } from "@/components/icons/solid";
+import { useDismiss } from "@/lib/utils/useDismiss";
 import { useLanguage } from "@/context/LanguageContext";
 import { ComposeModal } from "@/features/community/ComposeModal";
-import {
-  autoReplyForText,
-  routeForCommunity,
-} from "@/features/community/moderation";
+import { routeForCommunity } from "@/features/community/moderation";
 import CommunityDisclaimer from "@/features/community/CommunityDisclaimer";
 import { useModerationQueue } from "@/features/community/useModerationQueue";
-import {
-  approvedPosts,
-  visibleHeldReplies,
-} from "@/features/community/moderationQueue.rules";
+import { approvedPosts } from "@/features/community/moderationQueue.rules";
 import type {
   CommunityTab,
   PostItem,
-  ReplyItem,
 } from "@/features/community/community.types";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
-  Alert,
   Badge,
   Button,
-  buttonStyles,
   Card,
+  menuItemStyles,
+  menuStyles,
   Tabs,
   TabPanel,
 } from "@/components/ui";
@@ -104,32 +92,11 @@ const defaultPosts: PostItem[] = [
   },
 ];
 
-const defaultReplies: Record<string, ReplyItem[]> = {
-  "1": [
-    {
-      id: "r-1",
-      postId: "1",
-      author: "Dr. Evelyn Reed",
-      badge: "Nephrologist",
-      time: "2m ago",
-      content:
-        "Great milestone! Gentle, regular exercise has wonderful benefits for blood pressure and energy.",
-      likes: 14,
-    },
-  ],
-  "2": [
-    {
-      id: "r-2",
-      postId: "2",
-      author: "Maria Gonzalez",
-      badge: "Family Caregiver",
-      time: "1m ago",
-      content:
-        "So inspiring to see your progress! Sharing these wins really encourages the whole community.",
-      likes: 8,
-    },
-  ],
-};
+/* A positive board, not a chat (client decision, 2026-09): members post
+   encouragement and like each other's posts, and there are no replies.
+   A reply thread under a health post is where advice, arguments and
+   "have you tried…" gather, which is what the board is meant to be free
+   of. */
 export default function CommunityPage() {
   const { dictionary, language } = useLanguage();
   const isEs = language === "ES";
@@ -148,7 +115,7 @@ export default function CommunityPage() {
 
   const queue = useModerationQueue();
 
-  /* One spelling of the member's name, so a held reply is matched back to
+  /* One spelling of the member's name, so a held post is matched back to
      its author by the same string that was stored with it. */
   const authorName = user?.name || (language === "ES" ? "Usted" : "You");
 
@@ -160,15 +127,6 @@ export default function CommunityPage() {
     {},
   );
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
-
-  // Reply States
-  const [replies, setReplies] =
-    useState<Record<string, ReplyItem[]>>(defaultReplies);
-  const [expandedReplies, setExpandedReplies] = useState<
-    Record<string, boolean>
-  >({});
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [replyLikes, setReplyLikes] = useState<Record<string, boolean>>({});
 
   const dictPosts: PostItem[] =
     comm?.posts && Array.isArray(comm.posts) && comm.posts.length > 0
@@ -252,77 +210,6 @@ export default function CommunityPage() {
     setMenuOpen(null);
   };
 
-  const toggleReplies = (postId: string) => {
-    setExpandedReplies((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-  };
-
-  const handleAddReply = (postId: string) => {
-    const text = replyDrafts[postId]?.trim();
-    if (!text) return;
-
-    /* Routed here and not only on the button: a disabled button is a
-       courtesy, not a gate, and this is the one place a flagged reply would
-       actually reach the board.
-
-       Three outcomes, not two. Hostility is parked for a moderator, who
-       needs to know a member keeps typing it. A medical or crisis phrase is
-       refused outright and answered with "call 911", because telling
-       someone with chest pain that a moderator will get to them soon would
-       invite them to wait for it. */
-    const route = routeForCommunity(text);
-    if (route === "block") return;
-
-    if (route === "review") {
-      const held = queue.hold({
-        kind: "reply",
-        postId,
-        author: authorName,
-        content: text,
-      });
-      if (!held) return;
-      setReplyDrafts((prev) => ({ ...prev, [postId]: "" }));
-      setExpandedReplies((prev) => ({ ...prev, [postId]: true }));
-      return;
-    }
-
-    const newReply: ReplyItem = {
-      id: `reply-${Date.now()}`,
-      postId,
-      author: authorName,
-      badge:
-        comm?.compose?.memberBadge ||
-        (language === "ES" ? "Miembro" : "Member"),
-      time: language === "ES" ? "Recién publicado" : "Just now",
-      content: text,
-      likes: 0,
-    };
-
-    setReplies((prev) => ({
-      ...prev,
-      [postId]: [...(prev[postId] || []), newReply],
-    }));
-
-    setReplyDrafts((prev) => ({
-      ...prev,
-      [postId]: "",
-    }));
-
-    setExpandedReplies((prev) => ({
-      ...prev,
-      [postId]: true,
-    }));
-  };
-
-  const handleToggleReplyLike = (replyId: string) => {
-    setReplyLikes((prev) => ({
-      ...prev,
-      [replyId]: !prev[replyId],
-    }));
-  };
-
   return (
     <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
       <PageTitle href="/dashboard/community" className="mb-stack-lg" />
@@ -351,17 +238,6 @@ export default function CommunityPage() {
       >
         {posts.map((post) => {
           const isLiked = Boolean(liked[post.id]);
-          const postReplies = replies[post.id] || [];
-          const isExpanded = Boolean(expandedReplies[post.id]);
-          const draft = replyDrafts[post.id] || "";
-          const replyAlert = autoReplyForText(draft);
-          /* Approved held replies are on the board for everyone; pending and
-             rejected ones come back only to the member who wrote them. */
-          const heldReplies = visibleHeldReplies(
-            queue.items,
-            post.id,
-            authorName,
-          );
 
           return (
             <Card key={post.id} as="article">
@@ -385,40 +261,13 @@ export default function CommunityPage() {
                     </p>
                   </div>
                 </div>
-                <div className="relative">
-                  {/* Was a bare <img> inside a button with no visible focus
-                      state; now a real icon button with aria-expanded. */}
-                  <Button
-                    variant="neutral"
-                    appearance="stroke"
-                    size="small"
-                    className="px-inset-xs"
-                    aria-label={comm?.postOptionsAria || "Post options"}
-                    aria-expanded={menuOpen === post.id}
-                    onClick={() =>
-                      setMenuOpen((current) =>
-                        current === post.id ? null : post.id,
-                      )
-                    }
-                  >
-                    <MoreVertical aria-hidden="true" />
-                  </Button>
-                  {menuOpen === post.id && (
-                    <Card
-                      tone="raised"
-                      padding="none"
-                      className="absolute right-0 z-10 mt-stack-xs w-36 py-inset-xs"
-                    >
-                      <button
-                        type="button"
-                        className="block w-full cursor-pointer px-inset-sm py-inset-xs text-left text-body-sm text-fg-secondary transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                        onClick={() => handleHidePost(post.id)}
-                      >
-                        {comm?.hidePost || "Hide post"}
-                      </button>
-                    </Card>
-                  )}
-                </div>
+                <PostMenu
+                  open={menuOpen === post.id}
+                  onOpenChange={(open) => setMenuOpen(open ? post.id : null)}
+                  onHide={() => handleHidePost(post.id)}
+                  label={comm?.postOptionsAria || "Post options"}
+                  hideLabel={comm?.hidePost || "Hide post"}
+                />
               </div>
 
               <div className="mt-stack-md text-body-sm text-fg">
@@ -441,7 +290,7 @@ export default function CommunityPage() {
               {/* Actions Divider */}
               <div className="mt-stack-md h-px w-full bg-line-subtle" />
 
-              {/* Action Buttons: Like & Reply */}
+              {/* The one response a post takes: a like. */}
               <div className="mt-stack-md flex items-center gap-inset-lg">
                 {/* Like Button */}
                 <button
@@ -468,261 +317,7 @@ export default function CommunityPage() {
                     {post.likes + (isLiked ? 1 : 0)}
                   </span>
                 </button>
-
-                {/* Reply Button */}
-                <button
-                  type="button"
-                  className="group flex cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  onClick={() => toggleReplies(post.id)}
-                  aria-expanded={isExpanded}
-                  aria-label={
-                    isEs ? "Responder a la publicación" : "Reply to post"
-                  }
-                >
-                  <MessageCircle
-                    aria-hidden="true"
-                    className="size-5 text-fg-subtle transition-colors duration-150 ease-standard group-hover:text-fg-brand"
-                  />
-                  <span className="text-label-md">
-                    {postReplies.length > 0
-                      ? `${postReplies.length} ${
-                          postReplies.length === 1
-                            ? isEs
-                              ? "respuesta"
-                              : "Reply"
-                            : isEs
-                              ? "respuestas"
-                              : "Replies"
-                        }`
-                      : isEs
-                        ? "Responder"
-                        : "Reply"}
-                  </span>
-                </button>
               </div>
-
-              {/* Replies Section (Collapsible Thread) */}
-              {isExpanded && (
-                <div className="mt-stack-lg space-y-stack-md border-t border-line-subtle pt-inset-md">
-                  {/* Held replies. An approved one reads as an ordinary
-                      reply; the other two states are shown only to their
-                      author, who would otherwise think the reply vanished. */}
-                  {heldReplies.length > 0 && (
-                    <div className="space-y-stack-sm">
-                      {heldReplies.map((held) => (
-                        <Card
-                          key={held.id}
-                          padding="small"
-                          tone={
-                            held.status === "approved" ? "default" : "sunken"
-                          }
-                        >
-                          <div className="flex flex-wrap items-center gap-inline-sm">
-                            <span className="text-label-md text-fg">
-                              {held.author}
-                            </span>
-                            {held.status === "pending" && (
-                              <Badge tone="warning">
-                                {isEs
-                                  ? "En revisión del moderador"
-                                  : "Awaiting moderator review"}
-                              </Badge>
-                            )}
-                            {held.status === "rejected" && (
-                              <Badge tone="danger">
-                                {isEs ? "No aprobada" : "Not approved"}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                            {held.content}
-                          </p>
-                          {held.status !== "approved" && (
-                            <p className="mt-stack-xs text-caption text-fg-muted">
-                              {held.status === "pending"
-                                ? isEs
-                                  ? "Solo tú puedes ver esta respuesta hasta que un moderador la apruebe."
-                                  : "Only you can see this reply until a moderator approves it."
-                                : isEs
-                                  ? "Un moderador decidió no publicar esta respuesta."
-                                  : "A moderator decided not to publish this reply."}
-                            </p>
-                          )}
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* List of existing replies */}
-                  {postReplies.length > 0 && (
-                    <div className="space-y-stack-sm">
-                      {postReplies.map((reply) => {
-                        const isReplyLiked = Boolean(replyLikes[reply.id]);
-                        return (
-                          <Card
-                            key={reply.id}
-                            tone="sunken"
-                            padding="small"
-                            className="flex items-start gap-inline-md text-left"
-                          >
-                            <span
-                              aria-hidden="true"
-                              className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-primary-soft text-label-sm text-primary-fg"
-                            >
-                              {reply.author.slice(0, 2).toUpperCase()}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-inline-md">
-                                <span className="text-label-md text-fg">
-                                  {reply.author}
-                                </span>
-                                {reply.badge && (
-                                  <Badge tone="neutral" variant="outline">
-                                    {reply.badge}
-                                  </Badge>
-                                )}
-                                <span className="text-caption text-fg-subtle">
-                                  {reply.time}
-                                </span>
-                              </div>
-                              <p className="mt-stack-xs text-body-sm text-fg-secondary">
-                                {reply.content}
-                              </p>
-                            </div>
-                            {/* The count and the heart were the only cue that
-                                this toggles; aria-pressed now says so too. */}
-                            <button
-                              type="button"
-                              onClick={() => handleToggleReplyLike(reply.id)}
-                              aria-pressed={isReplyLiked}
-                              aria-label={isEs ? "Me gusta" : "Like"}
-                              className="flex cursor-pointer items-center gap-inline-xs rounded-control-small p-1 text-fg-subtle transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              <span className="text-label-sm">
-                                {(reply.likes || 0) + (isReplyLiked ? 1 : 0)}
-                              </span>
-                              <Heart
-                                aria-hidden="true"
-                                className={`size-3.5 transition-colors duration-150 ease-standard ${
-                                  isReplyLiked ? "fill-current text-danger" : ""
-                                }`}
-                              />
-                            </button>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Inline Compose Reply Input */}
-                  <div className="rounded-card border border-line bg-surface p-inset-sm transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
-                    <div className="flex items-start gap-inline-lg">
-                      <span
-                        aria-hidden="true"
-                        className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-primary-solid text-label-sm text-primary-on-solid"
-                      >
-                        {(user?.name || "U").slice(0, 2).toUpperCase()}
-                      </span>
-                      <div className="flex-1">
-                        <label htmlFor={`reply-${post.id}`} className="sr-only">
-                          {isEs ? "Su respuesta" : "Your reply"}
-                        </label>
-                        <textarea
-                          id={`reply-${post.id}`}
-                          value={draft}
-                          onChange={(e) =>
-                            setReplyDrafts((prev) => ({
-                              ...prev,
-                              [post.id]: e.target.value,
-                            }))
-                          }
-                          maxLength={200}
-                          rows={2}
-                          placeholder={
-                            isEs
-                              ? "Escriba una respuesta de apoyo..."
-                              : "Write a supportive reply..."
-                          }
-                          className="w-full resize-none border-0 p-0 text-body-sm text-fg-secondary outline-none placeholder:text-fg-muted"
-                        />
-
-                        {/* One message per tier. The same words cannot
-                          serve a member asking about their dose and a
-                          member describing chest pain, and every one of
-                          them says plainly that nothing was sent on their
-                          behalf — a member who believes their care team
-                          got this may wait instead of calling. */}
-                        {replyAlert && (
-                          <Alert
-                            tone={replyAlert.tone}
-                            className="mt-stack-sm"
-                            title={
-                              isEs ? replyAlert.title.es : replyAlert.title.en
-                            }
-                          >
-                            <p>
-                              {isEs ? replyAlert.body.es : replyAlert.body.en}
-                            </p>
-
-                            {/* Shown without waiting for a moderator. */}
-                            {replyAlert.offersEmergencyCall ? (
-                              <p className="mt-stack-sm flex flex-wrap gap-inline-md">
-                                <a
-                                  href="tel:911"
-                                  className={buttonStyles({
-                                    variant: "danger",
-                                    size: "small",
-                                  })}
-                                >
-                                  <Phone aria-hidden="true" />
-                                  {isEs ? "Llamar al 911" : "Call 911"}
-                                </a>
-                                <a
-                                  href="tel:988"
-                                  className={buttonStyles({
-                                    variant: "danger",
-                                    appearance: "stroke",
-                                    size: "small",
-                                  })}
-                                >
-                                  <Phone aria-hidden="true" />
-                                  {isEs
-                                    ? "Llamar o textear 988"
-                                    : "Call or text 988"}
-                                </a>
-                              </p>
-                            ) : null}
-                          </Alert>
-                        )}
-
-                        <div className="mt-stack-sm flex items-center justify-between border-t border-line-subtle pt-inset-xs">
-                          <span className="text-caption text-fg-muted">
-                            {draft.length}/200
-                          </span>
-                          <div className="flex items-center gap-inline-md">
-                            <Button
-                              variant="neutral"
-                              appearance="stroke"
-                              size="small"
-                              onClick={() => toggleReplies(post.id)}
-                            >
-                              {isEs ? "Cerrar" : "Close"}
-                            </Button>
-                            <Button
-                              size="small"
-                              onClick={() => handleAddReply(post.id)}
-                              disabled={routeForCommunity(draft) === "block"}
-                            >
-                              <Send aria-hidden="true" className="-rotate-12" />
-                              {isEs ? "Responder" : "Reply"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </Card>
           );
         })}
@@ -747,6 +342,58 @@ export default function CommunityPage() {
         onPost={handleAddPost}
         initialCategory={activeTabId}
       />
+    </div>
+  );
+}
+
+/* A post's "⋯" menu: the system's ghost button with the solid dots, and the
+   shared floating menu. Closes on a tap outside it or on Escape. */
+function PostMenu({
+  open,
+  onOpenChange,
+  onHide,
+  label,
+  hideLabel,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onHide: () => void;
+  label: string;
+  hideLabel: string;
+}) {
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  const wrapRef = useDismiss<HTMLDivElement>(open, close);
+
+  return (
+    <div ref={wrapRef} className="relative -my-1.5 shrink-0">
+      <Button
+        variant="neutral"
+        appearance="ghost"
+        size="small"
+        iconOnly
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+      >
+        <MoreSolid />
+      </Button>
+      {open ? (
+        <div role="menu" className={`${menuStyles} right-0 w-44`}>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${menuItemStyles} text-fg hover:bg-surface-sunken`}
+            onClick={onHide}
+          >
+            <EyeOff
+              aria-hidden="true"
+              className="size-4 shrink-0 text-fg-muted"
+            />
+            {hideLabel}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -10,14 +10,17 @@ import {
   countStatus,
   dayKey,
   durationMinutes,
+  filterWorklist,
   followUpsDue,
   minutesFor,
   monthOf,
+  pendingMinutesFor,
   recentMonths,
   requirementsMet,
   resolveInbox,
   seedCcmState,
   setRequirement,
+  sortWorklist,
   statusFor,
   worklist,
   worklistCsv,
@@ -37,8 +40,8 @@ describe("the threshold is 30 minutes", () => {
     [0, "Below Threshold"],
     [20, "Below Threshold"],
     [29, "Below Threshold"],
-    [30, "Threshold Reached"],
-    [45, "Threshold Reached"],
+    [30, "Ready for Review"],
+    [45, "Ready for Review"],
   ] as const)("%i minutes is %s", (minutes, status) => {
     expect(statusFor(minutes, false)).toBe(status);
   });
@@ -63,6 +66,8 @@ describe("time", () => {
       note: "x",
       outcome: "Continue monitoring",
       staff: "Nurse Lisa, RN",
+      counts: "yes" as const,
+      ehrDocumented: true,
     };
     let next = addActivity(
       state,
@@ -73,6 +78,24 @@ describe("time", () => {
     next = addActivity(next, { ...base, date: "2026-08-30", minutes: 40 }, 3);
     expect(minutesFor(next, "1", "2026-09")).toBe(22);
     expect(minutesFor(next, "1", "2026-08")).toBe(40);
+  });
+
+  it("counts only the minutes marked to include", () => {
+    const state: CcmState = { activities: [], requirements: {}, inbox: [] };
+    const base = {
+      mrn: "1",
+      type: "BP Review & Follow-Up",
+      note: "",
+      outcome: "Continue monitoring",
+      staff: "Nurse Lisa, RN",
+      date: "2026-09-02",
+      ehrDocumented: false,
+    };
+    let next = addActivity(state, { ...base, minutes: 12, counts: "yes" }, 1);
+    next = addActivity(next, { ...base, minutes: 8, counts: "pending" }, 2);
+    next = addActivity(next, { ...base, minutes: 5, counts: "no" }, 3);
+    expect(minutesFor(next, "1", "2026-09")).toBe(12);
+    expect(pendingMinutesFor(next, "1", "2026-09")).toBe(8);
   });
 
   it("offers the current month and the two before it", () => {
@@ -94,7 +117,7 @@ describe("the seeded worklist", () => {
     expect(
       countStatus(rows, "Needs Attention") +
         countStatus(rows, "Below Threshold") +
-        countStatus(rows, "Threshold Reached"),
+        countStatus(rows, "Ready for Review"),
     ).toBe(rows.length);
   });
 
@@ -119,8 +142,10 @@ describe("the seeded worklist", () => {
 
   it("shows what is left under the threshold", () => {
     const mary = rows.find((row) => row.mrn === "789012")!;
-    expect(mary.minutes).toBe(28);
-    expect(mary.remaining).toBe(2);
+    /* 28 logged, but 14 of them wait on the practice's review. */
+    expect(mary.minutes).toBe(14);
+    expect(pendingMinutesFor(state, "789012", MONTH)).toBe(14);
+    expect(mary.remaining).toBe(16);
   });
 
   it("clears attention once the alert is resolved and follow-up done", () => {
@@ -152,6 +177,35 @@ describe("the seeded worklist", () => {
     const csv = worklistCsv(rows, MONTH).split("\n");
     expect(csv).toHaveLength(rows.length + 1);
     expect(csv[0]).toContain("Minutes");
+  });
+});
+
+describe("worklist filters and sorting", () => {
+  const rows = worklist(seedCcmState(NOW), CCM_PATIENTS, MONTH, TODAY);
+
+  it("filters by location", () => {
+    const north = filterWorklist(rows, {
+      query: "",
+      provider: "All",
+      location: "North Clinic",
+      careManager: "All",
+      status: "All",
+    });
+    expect(north.length).toBeGreaterThan(0);
+    expect(north.every((row) => row.location === "North Clinic")).toBe(true);
+  });
+
+  it("sorts by next follow-up with patients who have none last", () => {
+    const sorted = sortWorklist(rows, {
+      key: "nextFollowUp",
+      direction: "asc",
+    });
+    const dates = sorted.map((row) => row.nextFollowUp);
+    const firstNone = dates.indexOf(null);
+    expect(firstNone).toBeGreaterThan(0);
+    expect(dates.slice(firstNone).every((d) => d === null)).toBe(true);
+    const set = dates.slice(0, firstNone) as string[];
+    expect([...set].sort()).toEqual(set);
   });
 });
 

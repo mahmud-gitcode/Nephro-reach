@@ -72,8 +72,8 @@ export default function CommunityDisclaimer({
             believing the notice. */}
           <p className="text-body-sm text-fg-secondary">
             {isEs
-              ? "Trata a cada miembro con respeto. Las publicaciones y respuestas se revisan automáticamente. Si tu mensaje menciona una posible emergencia, síntomas, consejos médicos, estafas o datos personales, se retiene para que lo lea un moderador y solo tú lo verás hasta que lo apruebe. Usa el menú de una publicación para reportarla."
-              : "Treat every member with respect. Posts and replies are screened automatically. If your message mentions a possible emergency, symptoms, medical advice, scams, or personal details, it is held for a moderator to read and only you can see it until they approve it. Use a post's menu to report a post."}
+              ? "Este es un tablero positivo: comparte ánimo y logros, y dale me gusta a las publicaciones que te animen. Las publicaciones no admiten respuestas. Trata a cada miembro con respeto. Las publicaciones se revisan automáticamente. Si tu mensaje menciona una posible emergencia, síntomas, consejos médicos, estafas o datos personales, se retiene para que lo lea un moderador y solo tú lo verás hasta que lo apruebe. Usa el menú de una publicación para reportarla."
+              : "This is a positive board: share encouragement and milestones, and like the posts that lift you up. Posts cannot be replied to. Treat every member with respect. Posts are screened automatically. If your message mentions a possible emergency, symptoms, medical advice, scams, or personal details, it is held for a moderator to read and only you can see it until they approve it. Use a post's menu to report a post."}
           </p>
 
           {/* The promise this board can actually keep. Kept in one place so

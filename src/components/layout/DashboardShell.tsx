@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
 import { useLanguage } from "@/context/LanguageContext";
-import { Button, buttonStyles } from "@/components/ui";
+import {
+  Button,
+  buttonStyles,
+  menuItemStyles,
+  menuStyles,
+} from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
@@ -25,6 +30,7 @@ import {
 } from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { useDismiss } from "@/lib/utils/useDismiss";
 import {
   getBreadcrumb,
   getBreadcrumbTrail,
@@ -172,44 +178,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
    --------------------------------------------------------------------------
    Every control in the top bar is the same object: a 40px white pill with a
    hairline, the reference's round icon buttons stretched to fit a label.
-   The menus they open are the same floating card as a dropdown list
-   (select.css), so a language menu, an account menu and a <select> all
+   The menus they open use the shared menuStyles, the same floating card
+   as a dropdown list (select.css), so a language menu, an account menu and a <select> all
    look like one family.
    ========================================================================== */
 const topBarControl =
   "flex h-control-small min-w-control-small shrink-0 cursor-pointer items-center justify-center gap-inline-sm rounded-pill border border-line bg-surface px-3 text-fg transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-
-const topBarMenu =
-  "absolute right-0 z-50 mt-stack-sm rounded-card-nested border border-line bg-surface p-1.5 shadow-(--popover-shadow)";
-
-const topBarMenuItem =
-  "flex w-full cursor-pointer items-center gap-inline-md rounded-control px-3 py-2.5 text-left text-body-sm transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
-
-/* A menu that stays open after a tap elsewhere is one a member has to
-   fight, and on a phone it covers the page underneath it. */
-function useDismiss<T extends HTMLElement>(open: boolean, close: () => void) {
-  const ref = useRef<T>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, close]);
-
-  return ref;
-}
 
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
@@ -249,7 +223,7 @@ function LanguageSwitcher() {
         />
       </button>
       {langOpen ? (
-        <div role="menu" className={`${topBarMenu} w-40`}>
+        <div role="menu" className={`${menuStyles} right-0 w-40`}>
           {(["EN", "ES"] as const).map((code) => {
             const current = language === code;
             return (
@@ -258,7 +232,7 @@ function LanguageSwitcher() {
                 type="button"
                 role="menuitemradio"
                 aria-checked={current}
-                className={`${topBarMenuItem} ${
+                className={`${menuItemStyles} ${
                   current
                     ? "bg-primary-soft text-label-md text-fg-brand"
                     : "text-fg hover:bg-surface-sunken"
@@ -585,7 +559,7 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
         <div
           role="menu"
           aria-label={isEs ? "Cuenta" : "Account"}
-          className={`${topBarMenu} w-60 max-w-[calc(100vw-2rem)]`}
+          className={`${menuStyles} right-0 w-60 max-w-[calc(100vw-2rem)]`}
         >
           {/* Who is signed in. Below `lg` this is the only place it is said. */}
           <div className="border-b border-line px-3 pt-1.5 pb-2.5">
@@ -599,7 +573,7 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
                 href="/dashboard/settings"
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className={`${topBarMenuItem} text-fg hover:bg-surface-sunken`}
+                className={`${menuItemStyles} text-fg hover:bg-surface-sunken`}
               >
                 <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
                 {isEs ? "Configuración" : "Settings"}
@@ -614,7 +588,7 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
                 logout();
                 router.push("/");
               }}
-              className={`${topBarMenuItem} text-danger hover:bg-danger-surface`}
+              className={`${menuItemStyles} text-danger hover:bg-danger-surface`}
             >
               <LogOut aria-hidden="true" className="h-4 w-4 shrink-0" />
               {isEs ? "Cerrar sesión" : "Log out"}

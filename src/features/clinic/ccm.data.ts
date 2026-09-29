@@ -77,14 +77,17 @@ export const STAFF = [
 ] as const;
 
 export const PROVIDERS = ["Dr. Chen", "Dr. Patel"] as const;
+export const LOCATIONS = ["Main Office", "North Clinic"] as const;
 export const CARE_MANAGERS = ["Jennifer Smith", "Nurse Lisa"] as const;
 
+/* "Ready for Review", not "billable": the threshold is met, and the
+   practice decides whether the month is billed. */
 export type CcmStatus =
-  "Needs Attention" | "Below Threshold" | "Threshold Reached";
+  "Needs Attention" | "Below Threshold" | "Ready for Review";
 export const CCM_STATUSES: CcmStatus[] = [
   "Needs Attention",
   "Below Threshold",
-  "Threshold Reached",
+  "Ready for Review",
 ];
 
 export type CcmPatient = {
@@ -95,6 +98,7 @@ export type CcmPatient = {
   conditions: string[];
   provider: string;
   careManager: string;
+  location: string;
 };
 
 export type FollowUp = {
@@ -103,6 +107,16 @@ export type FollowUp = {
   assignee: string;
   task: string;
   done: boolean;
+};
+
+/** Whether an activity's minutes count toward the month's CCM time. Only
+ *  "yes" counts; "pending" waits for the practice to decide. */
+export type CountsToward = "yes" | "no" | "pending";
+
+export const COUNTS_LABEL: Record<CountsToward, string> = {
+  yes: "Yes",
+  no: "No",
+  pending: "Pending Review",
 };
 
 export type CcmActivity = {
@@ -115,13 +129,32 @@ export type CcmActivity = {
   /** HH:MM, when entered as a start and end time. */
   start?: string;
   end?: string;
+  /** A short administrative note, never the clinical note, which stays in
+   *  the practice EHR. May be empty. */
   note: string;
   outcome: string;
   staff: string;
+  counts: CountsToward;
+  /** The practice has documented this activity in its EHR. */
+  ehrDocumented: boolean;
   followUp?: FollowUp;
 };
 
-export type RequirementState = { met: boolean; detail: string };
+export type RequirementState = {
+  met: boolean;
+  /** Started but not complete, e.g. care coordination under way. */
+  inProgress?: boolean;
+  /** YYYY-MM-DD the requirement was completed. */
+  date?: string;
+  detail: string;
+};
+
+export type RequirementStatus = "complete" | "in-progress" | "missing";
+
+export function requirementStatus(state: RequirementState): RequirementStatus {
+  if (state.met) return "complete";
+  return state.inProgress ? "in-progress" : "missing";
+}
 
 export type InboxItem = {
   id: string;
@@ -238,15 +271,26 @@ export function activitiesFor(
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 }
 
+/** The month's CCM minutes: only activities marked to count. */
 export function minutesFor(
   state: CcmState,
   mrn: string,
   month: string,
 ): number {
-  return activitiesFor(state, mrn, month).reduce(
-    (sum, a) => sum + a.minutes,
-    0,
-  );
+  return activitiesFor(state, mrn, month)
+    .filter((a) => a.counts === "yes")
+    .reduce((sum, a) => sum + a.minutes, 0);
+}
+
+/** Minutes logged but waiting on the practice's review. */
+export function pendingMinutesFor(
+  state: CcmState,
+  mrn: string,
+  month: string,
+): number {
+  return activitiesFor(state, mrn, month)
+    .filter((a) => a.counts === "pending")
+    .reduce((sum, a) => sum + a.minutes, 0);
 }
 
 export function remainingMinutes(minutes: number): number {
@@ -295,7 +339,7 @@ export function openInbox(state: CcmState, mrn?: string): InboxItem[] {
 export function statusFor(minutes: number, needsAttention: boolean): CcmStatus {
   if (needsAttention) return "Needs Attention";
   return minutes >= CCM_THRESHOLD_MINUTES
-    ? "Threshold Reached"
+    ? "Ready for Review"
     : "Below Threshold";
 }
 
@@ -346,6 +390,7 @@ export function countStatus(rows: WorklistRow[], status: CcmStatus): number {
 export type WorklistFilters = {
   query: string;
   provider: string;
+  location: string;
   careManager: string;
   status: string;
 };
@@ -360,6 +405,7 @@ export function filterWorklist(
   return rows.filter(
     (row) =>
       (filters.provider === ALL || row.provider === filters.provider) &&
+      (filters.location === ALL || row.location === filters.location) &&
       (filters.careManager === ALL ||
         row.careManager === filters.careManager) &&
       (filters.status === ALL || row.status === filters.status) &&
@@ -368,6 +414,26 @@ export function filterWorklist(
         row.mrn.includes(q) ||
         usDate(row.dob).includes(q)),
   );
+}
+
+export type WorklistSort = {
+  key: "name" | "nextFollowUp";
+  direction: "asc" | "desc";
+};
+
+/** Sorted by name, or by next follow-up with "none" always last. */
+export function sortWorklist(
+  rows: WorklistRow[],
+  sort: WorklistSort,
+): WorklistRow[] {
+  const sign = sort.direction === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    if (sort.key === "name") return sign * a.name.localeCompare(b.name);
+    if (a.nextFollowUp === b.nextFollowUp) return 0;
+    if (!a.nextFollowUp) return 1;
+    if (!b.nextFollowUp) return -1;
+    return sign * a.nextFollowUp.localeCompare(b.nextFollowUp);
+  });
 }
 
 /** The worklist as CSV, one row per patient, for the Export button. */
@@ -383,6 +449,7 @@ export function worklistCsv(rows: WorklistRow[], month: string): string {
     "DOB",
     "Conditions",
     "Provider",
+    "Location",
     "Care Manager",
     "Minutes",
     "Requirements Met",
@@ -398,6 +465,7 @@ export function worklistCsv(rows: WorklistRow[], month: string): string {
       usDate(row.dob),
       row.conditions.join("; "),
       row.provider,
+      row.location,
       row.careManager,
       row.minutes,
       `${row.met}/${CCM_REQUIREMENTS.length}`,
@@ -440,6 +508,19 @@ export function setRequirement(
   };
 }
 
+export function setEhrDocumented(
+  state: CcmState,
+  activityId: string,
+  ehrDocumented: boolean,
+): CcmState {
+  return {
+    ...state,
+    activities: state.activities.map((a) =>
+      a.id === activityId ? { ...a, ehrDocumented } : a,
+    ),
+  };
+}
+
 export function completeFollowUp(
   state: CcmState,
   activityId: string,
@@ -476,6 +557,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 4", "HTN", "DM"],
     provider: "Dr. Chen",
     careManager: "Jennifer Smith",
+    location: "Main Office",
   },
   {
     mrn: "789012",
@@ -483,6 +565,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 3", "HTN"],
     provider: "Dr. Patel",
     careManager: "Nurse Lisa",
+    location: "North Clinic",
   },
   {
     mrn: "345678",
@@ -490,6 +573,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 4", "DM"],
     provider: "Dr. Chen",
     careManager: "Nurse Lisa",
+    location: "Main Office",
   },
   {
     mrn: "901234",
@@ -497,6 +581,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 3", "HTN", "CHF"],
     provider: "Dr. Patel",
     careManager: "Jennifer Smith",
+    location: "North Clinic",
   },
   {
     mrn: "567890",
@@ -504,6 +589,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 4", "HTN"],
     provider: "Dr. Chen",
     careManager: "Jennifer Smith",
+    location: "Main Office",
   },
   {
     mrn: "234567",
@@ -511,6 +597,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 3", "DM"],
     provider: "Dr. Patel",
     careManager: "Nurse Lisa",
+    location: "Main Office",
   },
   {
     mrn: "890123",
@@ -518,6 +605,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 4", "HTN", "Anemia"],
     provider: "Dr. Chen",
     careManager: "Nurse Lisa",
+    location: "North Clinic",
   },
   {
     mrn: "456789",
@@ -525,6 +613,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
     conditions: ["CKD 3", "HTN", "Gout"],
     provider: "Dr. Patel",
     careManager: "Jennifer Smith",
+    location: "North Clinic",
   },
 ];
 
@@ -565,6 +654,7 @@ export function seedCcmState(now: number): CcmState {
     outcome: string,
     note: string,
     followUp?: Omit<FollowUp, "done">,
+    extra: Partial<Pick<CcmActivity, "counts" | "ehrDocumented">> = {},
   ): CcmActivity => ({
     id: `seed-${++n}`,
     mrn,
@@ -574,6 +664,9 @@ export function seedCcmState(now: number): CcmState {
     note,
     outcome,
     staff,
+    counts: "yes",
+    ehrDocumented: true,
+    ...extra,
     ...(followUp ? { followUp: { ...followUp, done: false } } : {}),
   });
 
@@ -609,6 +702,7 @@ export function seedCcmState(now: number): CcmState {
         assignee: "Nurse Lisa, RN",
         task: "Recheck BP and review log",
       },
+      { ehrDocumented: false },
     ),
     act(
       "789012",
@@ -627,6 +721,8 @@ export function seedCcmState(now: number): CcmState {
       "Nurse Lisa, RN",
       "Continue monitoring",
       "Home readings within goal.",
+      undefined,
+      { counts: "pending", ehrDocumented: false },
     ),
     act(
       "345678",
@@ -709,6 +805,8 @@ export function seedCcmState(now: number): CcmState {
       "Jennifer Smith, Care Manager",
       "Continue monitoring",
       "Coordinated with rheumatology.",
+      undefined,
+      { ehrDocumented: false },
     ),
     act(
       "123456",
@@ -747,19 +845,28 @@ export function seedCcmState(now: number): CcmState {
     "234567": ["care-plan"],
     "890123": ["transitions"],
   };
+  /* Started, not finished: coordination under way this month. */
+  const started: Record<string, RequirementId[]> = {
+    "789012": ["transitions"],
+    "345678": ["care-plan"],
+  };
+  const enrolled = lastMonth(1);
   for (const patient of CCM_PATIENTS) {
     const gaps = missing[patient.mrn] ?? [];
+    const underway = started[patient.mrn] ?? [];
     requirements[patient.mrn] = Object.fromEntries(
       ALL_MET.map((id) => [
         id,
-        {
-          met: !gaps.includes(id),
-          detail: gaps.includes(id)
-            ? ""
-            : id === "eligibility"
-              ? patient.conditions.join(", ")
-              : (REQUIREMENT_DETAILS[id] ?? ""),
-        },
+        gaps.includes(id)
+          ? { met: false, inProgress: underway.includes(id), detail: "" }
+          : {
+              met: true,
+              date: enrolled,
+              detail:
+                id === "eligibility"
+                  ? patient.conditions.join(", ")
+                  : (REQUIREMENT_DETAILS[id] ?? ""),
+            },
       ]),
     );
   }

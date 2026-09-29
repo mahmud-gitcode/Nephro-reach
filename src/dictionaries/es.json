@@ -1634,7 +1634,7 @@
         {
           "id": "community",
           "title": "Actividad de la Comunidad",
-          "description": "Notificaciones sobre respuestas y menciones en la comunidad"
+          "description": "Notificaciones cuando a otros miembros les gustan tus publicaciones"
         }
       ]
     },
