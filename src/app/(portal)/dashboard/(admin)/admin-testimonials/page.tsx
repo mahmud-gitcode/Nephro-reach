@@ -101,12 +101,12 @@ export default function AdminTestimonialsPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
+          <h1 className="text-heading-3 font-bold tracking-tight text-fg sm:text-heading-2">
             {isEs
               ? "Moderación de Testimonios en Video"
               : "'From Fear to Hope' Testimonials Moderation"}
           </h1>
-          <p className="mt-1 text-sm font-medium text-fg-muted sm:text-base">
+          <p className="mt-1 text-body-sm font-medium text-fg-muted sm:text-body-md">
             {isEs
               ? "Revise, apruebe o rechace videos de testimonios enviados por miembros."
               : "Review, watch, and approve member video testimonials before publishing to the dashboard."}
@@ -115,11 +115,11 @@ export default function AdminTestimonialsPage() {
 
         {/* Count Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-bold text-fg-secondary shadow-control">
+          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-caption font-bold text-fg-secondary shadow-control">
             Total: {testimonials.length}
           </span>
           {pendingCount > 0 && (
-            <span className="bg-warning-soft text-warning-fg inline-flex items-center gap-1.5 rounded-control border border-warning-line px-3 py-1.5 text-xs font-bold">
+            <span className="bg-warning-soft text-warning-fg inline-flex items-center gap-1.5 rounded-control border border-warning-line px-3 py-1.5 text-caption font-bold">
               <Clock className="size-3.5" />
               {pendingCount} {isEs ? "Pendientes" : "Pending"}
             </span>
@@ -246,7 +246,7 @@ export default function AdminTestimonialsPage() {
                           </span>
                         </span>
                         {item.duration && (
-                          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1.5 py-0.5 text-caption font-medium text-white">
                             {item.duration}
                           </span>
                         )}
@@ -254,7 +254,7 @@ export default function AdminTestimonialsPage() {
 
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-bold text-fg sm:text-lg">
+                          <h3 className="text-body-md font-bold text-fg sm:text-body-lg">
                             {item.title}
                           </h3>
                           {isPending && (
@@ -289,7 +289,7 @@ export default function AdminTestimonialsPage() {
                           )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
+                        <div className="flex flex-wrap items-center gap-x-3 text-caption text-fg-muted">
                           <span className="font-semibold text-fg-secondary">
                             {item.memberName}
                           </span>
@@ -308,7 +308,7 @@ export default function AdminTestimonialsPage() {
                         </p>
 
                         {item.adminFeedback && isDeclined && (
-                          <div className="rounded-control bg-danger-soft p-2 text-xs text-danger-fg">
+                          <div className="rounded-control bg-danger-soft p-2 text-caption text-danger-fg">
                             <strong>Admin Feedback:</strong>{" "}
                             {item.adminFeedback}
                           </div>
@@ -389,7 +389,7 @@ export default function AdminTestimonialsPage() {
                   {/* Decline modal / box */}
                   {declineId === item.id && (
                     <div className="mt-4 space-y-3 rounded-panel border border-danger-line bg-surface-sunken p-4">
-                      <p className="text-sm font-semibold text-fg">
+                      <p className="text-body-sm font-semibold text-fg">
                         {isEs
                           ? "Proporcione retroalimentación para el rechazo (opcional):"
                           : "Reason for declining (optional private feedback for member):"}

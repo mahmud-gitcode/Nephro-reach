@@ -110,7 +110,7 @@ export function ExtraTreatmentModal({
       >
         {/* 1. Interactive Calendar Date Selection */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
+          <label className="block text-caption font-bold text-fg-secondary sm:text-body-sm">
             {isEs
               ? "Seleccionar Fecha en el Calendario"
               : "Select Date on Calendar"}
@@ -134,7 +134,7 @@ export function ExtraTreatmentModal({
             />
 
             {/* Selected Date Confirmation */}
-            <div className="flex items-center gap-2 border-t border-line/80 pt-2 text-xs font-semibold text-fg-secondary sm:text-sm">
+            <div className="flex items-center gap-2 border-t border-line/80 pt-2 text-caption font-semibold text-fg-secondary sm:text-body-sm">
               <Calendar className="h-4 w-4 text-fg-brand" />
               <span>{isEs ? "Fecha Seleccionada:" : "Selected Date:"}</span>
               <strong className="font-bold text-fg">{dateLabel}</strong>
@@ -145,35 +145,35 @@ export function ExtraTreatmentModal({
         {/* 2. Auto-Calculated Session Number */}
         <div className="flex flex-col justify-between gap-3 rounded-card border border-accent-soft-line bg-accent-soft/50 p-4 sm:flex-row sm:items-center sm:p-5">
           <div className="space-y-0.5">
-            <label className="text-xs font-bold text-accent-fg">
+            <label className="text-caption font-bold text-accent-fg">
               {isEs
                 ? "Número de Sesión (Automático)"
                 : "Session Number (Auto-Assigned)"}
             </label>
-            <p className="text-xl font-extrabold tracking-tight text-accent-900 sm:text-2xl">
+            <p className="text-heading-4 font-extrabold tracking-tight text-accent-900 sm:text-heading-3">
               Treatment {session.sessionNumber}
             </p>
-            <p className="text-xs font-medium text-accent-fg">
+            <p className="text-caption font-medium text-accent-fg">
               {isEs
                 ? `Calculado automáticamente para ${session.intervalName} (${session.intervalLabel})`
                 : `Auto-calculated for ${session.intervalName} (${session.intervalLabel})`}
             </p>
           </div>
 
-          <span className="self-start rounded-xl border border-accent-300 bg-accent-200/80 px-3 py-1.5 text-xs font-bold text-accent-900 sm:self-center">
+          <span className="self-start rounded-card-nested border border-accent-300 bg-accent-200/80 px-3 py-1.5 text-caption font-bold text-accent-900 sm:self-center">
             Extra #{session.extraIndex}
           </span>
         </div>
 
         {/* 3. Clinical Reason */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
+          <label className="block text-caption font-bold text-fg-secondary sm:text-body-sm">
             {isEs ? "Motivo Clínico" : "Clinical Reason"}
           </label>
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-base"
+            className="w-full rounded-card border border-line bg-surface px-4 py-3 text-body-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-body-md"
           >
             <option value="Fluid Overload">
               Fluid Overload (Extra Ultrafiltration needed)
@@ -192,7 +192,7 @@ export function ExtraTreatmentModal({
 
         {/* 4. Additional Notes */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-fg-secondary sm:text-sm">
+          <label className="block text-caption font-bold text-fg-secondary sm:text-body-sm">
             {isEs ? "Notas Adicionales" : "Additional Notes / Symptoms"}
           </label>
           <textarea
@@ -204,7 +204,7 @@ export function ExtraTreatmentModal({
                 ? "Describe los síntomas o indicaciones médicas para esta sesión..."
                 : "Symptoms, fluid overload indicators, or instructions for this extra session..."
             }
-            className="w-full resize-none rounded-xl border border-line bg-surface p-3.5 text-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-base"
+            className="w-full resize-none rounded-card border border-line bg-surface p-3.5 text-body-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-body-md"
           />
         </div>
       </form>

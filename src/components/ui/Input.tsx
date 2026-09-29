@@ -25,23 +25,31 @@ import { cn } from "@/lib/utils/cn";
 export type ControlSize = "big" | "small";
 
 const sizeClasses: Record<ControlSize, string> = {
-  big: "h-control-big px-control-x-small rounded-control text-body-md",
-  small:
-    "h-control-small px-control-x-small rounded-control-small text-body-sm",
+  big: "h-control-big px-control-x-small rounded-field text-body-md",
+  small: "h-control-small px-control-x-small rounded-field-small text-body-sm",
 };
 
 const shared =
-  "w-full border bg-surface text-fg transition-colors duration-150 ease-standard " +
+  "w-full border bg-field-fill text-fg transition-colors duration-150 ease-standard " +
+  // A filled field goes white while it is being typed in.
+  "focus-visible:bg-surface " +
   "placeholder:text-fg-muted " +
   "border-line hover:border-line-strong " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge focus-visible:border-neutral-edge " +
-  "aria-invalid:border-danger-edge aria-invalid:focus-visible:outline-danger-edge " +
+  /* Focus: the border turns brand blue (4.8:1 against white, so the change
+     is plain to see) inside a soft 4px brand glow. It replaces a black 2px
+     outline offset from a black border, which drew a harsh double ring on
+     every click — text fields take :focus-visible on a mouse click too. */
+  "focus-visible:outline-none focus-visible:border-action focus-visible:ring-4 focus-visible:ring-action/20 " +
+  "aria-invalid:border-danger-edge aria-invalid:focus-visible:border-danger-edge aria-invalid:focus-visible:ring-danger-edge/20 " +
   "disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-subtle";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   inputSize?: ControlSize;
   /** Rendered inside the field, before the text. Sized by the component. */
   leadingIcon?: React.ReactNode;
+  /* React 19 passes `ref` as an ordinary prop; declared so a caller can
+     focus the field (SearchField's ⌘K does). */
+  ref?: React.Ref<HTMLInputElement>;
 };
 
 export function Input({
@@ -93,7 +101,7 @@ export function Textarea({ className, rows = 3, ref, ...rest }: TextareaProps) {
       className={cn(
         shared,
         // Height is content-driven here, so pad rather than fix a height.
-        "min-h-control-big rounded-control px-control-x-small py-inset-xs text-body-md",
+        "min-h-control-big rounded-field px-control-x-small py-inset-xs text-body-md",
         className,
       )}
       {...rest}

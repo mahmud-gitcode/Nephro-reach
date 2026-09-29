@@ -182,7 +182,7 @@ export default function ClassTranscriptUpload({
           onChange={(event) =>
             setLanguage(event.target.value as CaptionLanguage)
           }
-          className="cursor-pointer rounded-control border border-line bg-surface px-2.5 py-2 text-xs font-bold text-fg-secondary outline-none hover:bg-surface-sunken focus:border-primary-edge"
+          className="cursor-pointer rounded-control border border-line bg-surface px-2.5 py-2 text-caption font-bold text-fg-secondary outline-none hover:bg-surface-sunken focus:border-primary-edge"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -191,7 +191,7 @@ export default function ClassTranscriptUpload({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
+          className="flex cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <Upload className="h-3.5 w-3.5" />
           Upload transcript
@@ -201,7 +201,7 @@ export default function ClassTranscriptUpload({
           type="button"
           onClick={() => setPasting((value) => !value)}
           aria-expanded={pasting}
-          className="flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+          className="flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-caption font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
         >
           <FileText className="h-3.5 w-3.5" />
           Paste script
@@ -212,7 +212,7 @@ export default function ClassTranscriptUpload({
         <div className="space-y-2 rounded-control border border-line bg-surface-sunken p-3">
           <label
             htmlFor="script-paste"
-            className="block text-xs font-bold text-fg-muted"
+            className="block text-caption font-bold text-fg-muted"
           >
             Script ({LANGUAGE_NAME[language]}) — one caption per line. Lines are
             spaced evenly across the recording.
@@ -222,7 +222,7 @@ export default function ClassTranscriptUpload({
             rows={6}
             value={script}
             onChange={(event) => setScript(event.target.value)}
-            className="w-full resize-y rounded-control border border-line bg-surface px-3 py-2 text-sm text-fg outline-none focus:border-primary-edge"
+            className="w-full resize-y rounded-control border border-line bg-surface px-3 py-2 text-body-sm text-fg outline-none focus:border-primary-edge"
           />
           <div className="flex justify-end gap-2">
             <button
@@ -231,7 +231,7 @@ export default function ClassTranscriptUpload({
                 setScript("");
                 setPasting(false);
               }}
-              className="cursor-pointer rounded-control px-3 py-1.5 text-xs font-bold text-fg-muted hover:bg-surface"
+              className="cursor-pointer rounded-control px-3 py-1.5 text-caption font-bold text-fg-muted hover:bg-surface"
             >
               Cancel
             </button>
@@ -239,7 +239,7 @@ export default function ClassTranscriptUpload({
               type="button"
               onClick={importScript}
               disabled={!script.trim()}
-              className="cursor-pointer rounded-control bg-primary-solid px-3 py-1.5 text-xs font-bold text-primary-on-solid hover:bg-primary-solid-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="cursor-pointer rounded-control bg-primary-solid px-3 py-1.5 text-caption font-bold text-primary-on-solid hover:bg-primary-solid-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add script
             </button>
@@ -248,14 +248,14 @@ export default function ClassTranscriptUpload({
       )}
 
       {error && (
-        <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-[11px] leading-relaxed font-medium text-warning">
+        <p className="flex gap-2 rounded-control bg-warning-surface px-3 py-2 text-caption leading-relaxed font-medium text-warning">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {error}
         </p>
       )}
 
       {durationMismatch && (
-        <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-[11px] leading-relaxed font-medium text-danger">
+        <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-caption leading-relaxed font-medium text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           This transcript ends at {formatClock(lastCueAt)} but the media is only{" "}
           {formatClock(mediaSeconds ?? 0)} long. The two may not belong
@@ -264,7 +264,7 @@ export default function ClassTranscriptUpload({
       )}
 
       {loaded.length === 0 ? (
-        <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+        <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
           No transcript uploaded yet.
         </p>
       ) : (
@@ -278,10 +278,10 @@ export default function ClassTranscriptUpload({
                 <Captions className="h-4.5 w-4.5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-fg">
+                <span className="block text-body-sm font-semibold text-fg">
                   {LANGUAGE_NAME[entry.code]}
                 </span>
-                <span className="block text-xs font-medium text-fg-muted">
+                <span className="block text-caption font-medium text-fg-muted">
                   {entry.lines} lines
                 </span>
               </span>

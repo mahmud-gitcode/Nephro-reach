@@ -21,17 +21,17 @@ export function FluidIntakeTrend() {
       : ["May 1", "May 2", "May 3", "May 4", "May 5", "May 6"];
 
   return (
-    <section className="h-full rounded-xl border border-line bg-[var(--color-gray-50)] p-3.5">
+    <section className="h-full rounded-card-nested border border-line bg-[var(--color-gray-50)] p-3.5">
       <div className="flex items-center gap-inline-sm">
         <h2 className="text-heading-4 text-fg">
           {w?.fluidIntakeTrend?.title || "Fluid Intake Trend"}
         </h2>
-        <span className="text-xs text-fg-muted">
+        <span className="text-caption text-fg-muted">
           {w?.fluidIntakeTrend?.subtitle || "(30 Day)"}
         </span>
       </div>
       <div className="mt-3 flex min-h-[250px] gap-2">
-        <div className="flex flex-col justify-between pb-6 text-right text-xs text-black/70">
+        <div className="flex flex-col justify-between pb-6 text-right text-caption text-black/70">
           {["100", "80", "60", "40", "20", "0"].map((tick) => (
             <span key={tick}>{tick}</span>
           ))}
@@ -56,7 +56,7 @@ export function FluidIntakeTrend() {
               </div>
             ))}
           </div>
-          <div className="absolute inset-x-0 bottom-0 flex justify-between pl-2 text-[12px] text-black/70">
+          <div className="absolute inset-x-0 bottom-0 flex justify-between pl-2 text-caption text-black/70">
             {labels.map((label) => (
               <span key={label}>{label}</span>
             ))}

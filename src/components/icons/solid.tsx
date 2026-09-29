@@ -173,6 +173,22 @@ export function VideoSolid(p: SolidIconProps) {
   );
 }
 
+/**
+ * Three solid dots — the "⋯" card menu.
+ *
+ * Lucide's `MoreHorizontal` draws 2.7px dots 11px apart at 16px, which reads
+ * thin next to a card title. These are 3.7px dots spanning 15px at 16px,
+ * the reference dashboard's proportions.
+ */
+export function MoreSolid(p: SolidIconProps) {
+  return (
+    <Glyph
+      {...p}
+      d="M0.75 12a2.75 2.75 0 1 0 5.5 0 2.75 2.75 0 1 0-5.5 0ZM9.25 12a2.75 2.75 0 1 0 5.5 0 2.75 2.75 0 1 0-5.5 0ZM17.75 12a2.75 2.75 0 1 0 5.5 0 2.75 2.75 0 1 0-5.5 0Z"
+    />
+  );
+}
+
 /** A five-point star. */
 export function StarSolid(p: SolidIconProps) {
   return (

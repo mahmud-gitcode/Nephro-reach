@@ -141,12 +141,12 @@ export function EditEdwModal({
             {language === "ES" ? "Fecha y Hora" : "Date & Timestamp"}
           </label>
           {/* Recorded automatically from the clock when the settings are saved */}
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-sunken px-3.5 py-2.5">
+          <div className="flex items-center gap-2 rounded-card border border-line bg-surface-sunken px-3.5 py-2.5">
             <Clock className="h-4 w-4 shrink-0 text-fg-brand" />
-            <span className="text-sm font-semibold text-fg">
+            <span className="text-body-sm font-semibold text-fg">
               {formatNowStamp(language)}
             </span>
-            <span className="ml-auto text-[11px] font-semibold text-fg-muted">
+            <span className="ml-auto text-caption font-semibold text-fg-muted">
               {language === "ES" ? "Automático" : "Automatic"}
             </span>
           </div>

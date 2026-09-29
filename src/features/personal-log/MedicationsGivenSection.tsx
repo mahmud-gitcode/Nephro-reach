@@ -11,6 +11,13 @@ import {
   Modal,
   Select,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableEmptyRow,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
 } from "@/components/ui";
 import {
   useTreatmentMedications,
@@ -223,7 +230,7 @@ export default function MedicationsGivenSection() {
         <button
           type="button"
           onClick={handleOpenAddMedModal}
-          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-control bg-primary-solid px-3.5 py-1.5 text-xs font-bold text-primary-on-solid shadow-control transition-all hover:bg-primary-solid-hover active:scale-95"
+          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-control bg-primary-solid px-3.5 py-1.5 text-caption font-bold text-primary-on-solid shadow-control transition-all hover:bg-primary-solid-hover active:scale-95"
         >
           <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
           <span>
@@ -260,97 +267,109 @@ export default function MedicationsGivenSection() {
         }
         skeleton={<Skeleton height={220} />}
       >
-        <div className="flex-1 overflow-x-auto rounded-card border border-line">
-          <table className="w-full border-collapse text-left text-xs sm:text-sm">
-            <thead>
-              <tr className="border-b border-line bg-surface-sunken text-xs font-bold text-fg-muted">
-                <th className="px-3.5 py-2.5">
+        <div className="flex-1 overflow-hidden rounded-card-nested border border-line">
+          <Table minWidth={560}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>
                   {language === "ES" ? "Fecha" : "Date"}
-                </th>
-                <th className="px-3.5 py-2.5">
+                </TableHeaderCell>
+                <TableHeaderCell>
                   {language === "ES" ? "Medicamento" : "Medication"}
-                </th>
-                <th className="px-3.5 py-2.5">
+                </TableHeaderCell>
+                <TableHeaderCell>
                   {language === "ES" ? "Dosis" : "Dose"}
-                </th>
-                <th className="px-3.5 py-2.5">
+                </TableHeaderCell>
+                <TableHeaderCell>
                   {language === "ES" ? "Razón" : "Reason"}
-                </th>
-                <th className="px-3.5 py-2.5 text-center">
+                </TableHeaderCell>
+                <TableHeaderCell className="text-center">
                   {language === "ES" ? "Administrado" : "Given"}
-                </th>
-                <th className="w-8 px-2 py-2.5 text-center"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-subtle font-medium text-fg-secondary">
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  <span className="sr-only">
+                    {language === "ES" ? "Acciones" : "Actions"}
+                  </span>
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {medications.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="py-8 text-center text-xs text-fg-subtle"
-                  >
+                <TableEmptyRow colSpan={6}>
+                  <p className="text-center text-body-sm text-fg-muted">
                     {language === "ES"
                       ? "No hay medicamentos registrados para este tratamiento."
                       : "No medications recorded for this treatment."}
-                  </td>
-                </tr>
+                  </p>
+                </TableEmptyRow>
               ) : (
-                medications.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="transition-colors hover:bg-surface-sunken"
-                  >
-                    <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg">
-                      {item.date}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-xs font-bold whitespace-nowrap text-fg">
-                      {item.medication}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap text-fg-secondary">
-                      {item.dose}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-xs whitespace-nowrap text-fg-muted">
-                      {item.reason}
-                    </td>
-                    <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleGiven(item.id)}
-                        className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded border transition-colors select-none active:scale-95 ${
-                          item.given
-                            ? "border-primary-edge bg-primary-solid text-primary-on-solid shadow-control"
-                            : "border-line-strong bg-surface text-transparent hover:border-line-strong"
-                        }`}
-                        title={
-                          item.given
-                            ? language === "ES"
-                              ? "Desmarcar medicamento"
-                              : "Uncheck medication"
-                            : language === "ES"
-                              ? "Marcar como administrado"
-                              : "Mark as given"
-                        }
-                      >
-                        {item.given && (
-                          <Check className="h-3.5 w-3.5 stroke-[3]" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-2 py-2.5 text-center whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMedication(item.id)}
-                        className="cursor-pointer rounded-control-small p-1 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
-                        title={language === "ES" ? "Eliminar" : "Delete"}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                medications.map((item) => {
+                  const toggleLabel = item.given
+                    ? language === "ES"
+                      ? `Desmarcar ${item.medication}`
+                      : `Uncheck ${item.medication}`
+                    : language === "ES"
+                      ? `Marcar ${item.medication} como administrado`
+                      : `Mark ${item.medication} as given`;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {item.date}
+                      </TableCell>
+                      <TableCell emphasis className="whitespace-nowrap">
+                        {item.medication}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {item.dose}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-fg-muted">
+                        {item.reason}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {/* A checkbox drawn as a button: aria-pressed says
+                            its state, the label says which medication. */}
+                        <button
+                          type="button"
+                          aria-pressed={item.given}
+                          aria-label={toggleLabel}
+                          title={toggleLabel}
+                          onClick={() => handleToggleGiven(item.id)}
+                          className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-control-small border transition-colors duration-150 ease-standard select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                            item.given
+                              ? "border-primary-edge bg-primary-solid text-primary-on-solid"
+                              : "border-line-strong bg-surface text-transparent"
+                          }`}
+                        >
+                          {item.given && (
+                            <Check
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 stroke-3"
+                            />
+                          )}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="danger"
+                          appearance="ghost"
+                          size="small"
+                          iconOnly
+                          aria-label={
+                            language === "ES"
+                              ? `Eliminar ${item.medication}`
+                              : `Delete ${item.medication}`
+                          }
+                          onClick={() => handleDeleteMedication(item.id)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </AsyncSection>
 

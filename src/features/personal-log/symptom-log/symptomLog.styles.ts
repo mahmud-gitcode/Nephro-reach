@@ -41,15 +41,15 @@ export const MOODS = [
 export const SEGMENT_TRACK =
   "flex items-center gap-0.5 rounded-control border border-line bg-surface-sunken p-1";
 export const SEGMENT_ITEM =
-  "flex h-7 items-center justify-center rounded-control-small px-3 text-xs font-bold transition-colors cursor-pointer";
+  "flex h-7 items-center justify-center rounded-control-small px-3 text-caption font-bold transition-colors cursor-pointer";
 export const SEGMENT_ACTIVE =
   "bg-primary-solid text-primary-on-solid shadow-control";
 export const SEGMENT_IDLE = "text-fg-muted hover:text-fg-secondary";
 
 export const FIELD_ROW =
   "flex flex-col gap-2.5 rounded-control border border-line bg-surface p-3.5 transition-colors hover:border-line-strong sm:flex-row sm:items-center sm:justify-between sm:gap-4";
-export const FIELD_LABEL = "text-sm font-semibold text-fg-secondary";
+export const FIELD_LABEL = "text-body-sm font-semibold text-fg-secondary";
 
 export const PANEL = "rounded-control border border-line bg-surface-sunken p-4";
 export const CHIP_BASE =
-  "rounded-control border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer";
+  "rounded-control border px-3 py-1.5 text-caption font-bold transition-colors cursor-pointer";

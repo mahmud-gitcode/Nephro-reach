@@ -18,7 +18,11 @@ import { CATEGORICAL_TONES, SeriesTone, toneVar } from "./Chart";
    rectangles better than a viewBox does — the labels stay real text at real
    sizes instead of scaled SVG glyphs.
 
-   Deliberately small: no stacking, no grouping, no tooltips.
+   Styled after the client's reference dashboard (UI redesign, phase 3):
+   30px columns with 8px corners. With `highlight`, one bar carries the
+   colour (a brand gradient, its value above it, its label in brand blue)
+   and the rest sit back as quiet grey columns — "which day was busiest"
+   read at a glance. Deliberately small: no stacking, no grouping.
    ========================================================================== */
 
 export type Bar = {
@@ -43,6 +47,11 @@ export type BarChartProps = {
   tone?: SeriesTone;
   /** `categorical` gives each bar the next tone off the categorical ramp. */
   colorBy?: "single" | "categorical";
+  /**
+   * One bar to feature: `"max"` for the tallest, or its index. The others
+   * turn grey. Leave unset when every bar's colour means something.
+   */
+  highlight?: "max" | number;
   height?: number;
   className?: string;
 };
@@ -63,6 +72,7 @@ export function BarChart({
   unit,
   tone = "brand",
   colorBy = "single",
+  highlight,
   height = 160,
   className,
 }: BarChartProps) {
@@ -72,6 +82,13 @@ export function BarChart({
   const ticks = Array.from({ length: yTicks }, (_, i) =>
     Math.round((top / (yTicks - 1)) * (yTicks - 1 - i)),
   );
+
+  const peak = bars.reduce(
+    (best, bar, index) => (bar.value > bars[best].value ? index : best),
+    0,
+  );
+  const featured =
+    highlight === undefined ? null : highlight === "max" ? peak : highlight;
 
   return (
     <div className={className}>
@@ -108,17 +125,37 @@ export function BarChart({
                   (colorBy === "categorical"
                     ? CATEGORICAL_TONES[index % CATEGORICAL_TONES.length]
                     : tone);
+                const resting = featured !== null && index !== featured;
                 return (
                   <span
                     key={`${bar.label}-${index}`}
-                    className="w-full max-w-[22px] rounded-t-control-small"
+                    className={cn(
+                      "relative w-full max-w-[30px] rounded-chart-bar",
+                      resting && "border border-chart-bar-rest-line",
+                    )}
                     style={{
                       // A zero bar still shows a sliver, so the category
                       // reads as present-and-empty rather than missing.
                       height: `${Math.max((bar.value / top) * 100, 1)}%`,
-                      backgroundColor: toneVar[barTone],
+                      backgroundColor: resting
+                        ? "var(--color-chart-bar-rest)"
+                        : toneVar[barTone],
+                      // The featured bar lightens toward its foot.
+                      backgroundImage:
+                        index === featured
+                          ? "linear-gradient(to bottom, transparent, rgb(255 255 255 / 0.3))"
+                          : undefined,
                     }}
-                  />
+                  >
+                    {index === featured ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-label-sm whitespace-nowrap text-fg"
+                      >
+                        {bar.value}
+                      </span>
+                    ) : null}
+                  </span>
                 );
               })}
             </div>
@@ -135,7 +172,12 @@ export function BarChart({
             {bars.map((bar, index) => (
               <span
                 key={`${bar.label}-${index}`}
-                className="w-full truncate text-center"
+                /* Wraps rather than truncates: "Not Started" as two short
+                   lines reads; "Not S…" does not. */
+                className={cn(
+                  "w-full text-center leading-tight text-balance wrap-break-word",
+                  index === featured && "text-label-sm text-fg-brand",
+                )}
               >
                 {bar.label}
               </span>

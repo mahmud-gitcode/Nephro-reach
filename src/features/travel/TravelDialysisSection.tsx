@@ -177,12 +177,12 @@ export function PlacementCard({ trip }: { trip: TripRequest }) {
               {placement.treatments.map((treatment) => (
                 <li
                   key={treatment.id}
-                  className="flex min-w-0 items-center justify-between gap-inline-sm rounded-xl border border-line bg-gradient-to-r from-primary-soft via-surface to-surface py-2.5 pr-2 pl-3 shadow-card"
+                  className="flex min-w-0 items-center justify-between gap-inline-sm rounded-card-nested border border-line bg-gradient-to-r from-primary-soft via-surface to-surface py-2.5 pr-2 pl-3 shadow-card"
                 >
                   <span className="min-w-0 text-label-sm whitespace-nowrap text-fg-brand">
                     {formatDateLabel(treatment.date, isEs)}
                   </span>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-bold whitespace-nowrap text-fg tabular-nums select-none">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-line bg-surface-sunken px-2.5 py-1 text-caption font-bold whitespace-nowrap text-fg tabular-nums select-none">
                     <Clock
                       aria-hidden="true"
                       className="h-3.5 w-3.5 shrink-0 stroke-[2.4] text-fg-muted"

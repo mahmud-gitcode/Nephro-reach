@@ -234,7 +234,7 @@ const weeklyBars = [
   { day: "Wed", value: 91 },
   { day: "Thu", value: 74 },
   { day: "Fri", value: 72 },
-  { day: "Sta", value: 74 },
+  { day: "Sat", value: 74 },
   { day: "Sun", value: 78 },
 ];
 
@@ -444,13 +444,15 @@ function EducationFooter() {
     <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
       {items.map((item) => (
         <div key={item.label}>
-          <p className="min-h-10 text-sm leading-5 font-medium text-fg">
+          <p className="min-h-10 text-body-sm leading-5 font-medium text-fg">
             {item.label}
           </p>
-          <p className="text-xl leading-6 font-bold text-fg-brand">
+          <p className="text-heading-4 leading-6 font-bold text-fg-brand">
             {item.value}
           </p>
-          <p className="text-sm font-medium text-fg-secondary">{item.unit}</p>
+          <p className="text-body-sm font-medium text-fg-secondary">
+            {item.unit}
+          </p>
         </div>
       ))}
     </div>
@@ -478,11 +480,11 @@ function RecentActivity() {
                 className="object-cover object-top"
               />
             </div>
-            <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-sm">
+            <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-body-sm">
               <span className="font-semibold text-fg">{row.status}</span>
               <span className="font-medium text-fg-secondary">{row.name}</span>
             </div>
-            <span className="flex items-center gap-2 text-xs font-medium whitespace-nowrap text-fg-muted">
+            <span className="flex items-center gap-2 text-caption font-medium whitespace-nowrap text-fg-muted">
               <Clock3 className="h-4 w-4" />
               {row.time}
             </span>
@@ -501,7 +503,7 @@ function EarningsOverview() {
         <button
           {...notBuiltYet("Changing the date range")}
           type="button"
-          className="flex items-center gap-4 rounded-control-small border border-line bg-surface-sunken px-5 py-2 text-base font-bold text-fg"
+          className="flex items-center gap-4 rounded-control-small border border-line bg-surface-sunken px-5 py-2 text-body-md font-bold text-fg"
         >
           This Week
           <ChevronDown className="h-5 w-5" />

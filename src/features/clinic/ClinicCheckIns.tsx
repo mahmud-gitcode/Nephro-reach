@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   BellRing,
@@ -26,6 +27,7 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Badge,
   Button,
+  buttonStyles,
   Card,
   KeyCard,
   type KeyCardTone,
@@ -41,8 +43,25 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import { cn } from "@/lib/utils/cn";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { tableIconButton } from "./tableButton";
+
+/* Reminders and follow-ups go out through clinic Messages. The check-in
+   rows carry a short name and no MRN, so the link opens Messages rather
+   than one patient's thread. */
+const MESSAGES = "/dashboard/clinic/messages";
+
+const iconLink = (primary = false) =>
+  cn(
+    buttonStyles({
+      variant: primary ? "primary" : "neutral",
+      appearance: primary ? "fill" : "fill-stroke",
+      size: "small",
+      iconOnly: true,
+    }),
+    tableIconButton,
+  );
 import {
   ALL_PROGRAMS,
   byProgram,
@@ -349,17 +368,31 @@ function RecentCheckIns({ program }: { program: string }) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        {...notBuiltYet(action.feature)}
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        size="small"
-                        iconOnly
-                        className={tableIconButton}
-                        aria-label={`${action.label} — ${row.name}`}
-                      >
-                        <action.icon aria-hidden="true" />
-                      </Button>
+                      {row.status === "Completed" ? (
+                        /* Reading a completed check-in: the full note, in
+                           the same popup "See more" opens. */
+                        <Button
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          size="small"
+                          iconOnly
+                          className={tableIconButton}
+                          aria-label={`${action.label} — ${row.name}`}
+                          title={`${action.label} check-in`}
+                          onClick={() => setOpenNote(row)}
+                        >
+                          <action.icon aria-hidden="true" />
+                        </Button>
+                      ) : (
+                        <Link
+                          href={MESSAGES}
+                          className={iconLink()}
+                          aria-label={`${action.label} — ${row.name}`}
+                          title={`${action.label} in Messages`}
+                        >
+                          <action.icon aria-hidden="true" />
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -477,26 +510,22 @@ function FollowUpPanel({ program }: { program: string }) {
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="flex justify-end gap-inline-md">
-                        <Button
-                          {...notBuiltYet("Messaging a member")}
-                          variant="neutral"
-                          appearance="fill-stroke"
-                          size="small"
-                          iconOnly
-                          className={tableIconButton}
+                        <Link
+                          href={MESSAGES}
+                          className={iconLink()}
                           aria-label={`Send a message to ${row.name}`}
+                          title="Message in Messages"
                         >
                           <MessageSquare aria-hidden="true" />
-                        </Button>
-                        <Button
-                          {...notBuiltYet(action.feature)}
-                          size="small"
-                          iconOnly
-                          className={tableIconButton}
+                        </Link>
+                        <Link
+                          href={MESSAGES}
+                          className={iconLink(true)}
                           aria-label={`${action.label} — ${row.name}`}
+                          title={`${action.label} in Messages`}
                         >
                           <action.icon aria-hidden="true" />
-                        </Button>
+                        </Link>
                       </span>
                     </TableCell>
                   </TableRow>

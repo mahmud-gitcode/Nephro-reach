@@ -19,12 +19,14 @@ import {
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-bold tracking-tight text-fg">{children}</h3>
+    <h3 className="text-body-sm font-bold tracking-tight text-fg">
+      {children}
+    </h3>
   );
 }
 
 export function PanelTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-xs font-bold text-fg-muted">{children}</h3>;
+  return <h3 className="text-caption font-bold text-fg-muted">{children}</h3>;
 }
 
 /* Both toggles below go through SegmentedChoice, which owns the radiogroup
@@ -105,7 +107,7 @@ export function CounterField({
         >
           <Minus className="size-3.5" />
         </button>
-        <span className="w-9 text-center text-sm font-bold text-fg">
+        <span className="w-9 text-center text-body-sm font-bold text-fg">
           {value}
         </span>
         <button
@@ -133,7 +135,7 @@ export function SeverityRow({
 
   return (
     <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3.5 py-3 transition-colors hover:border-line-strong">
-      <span className="w-32 shrink-0 truncate text-sm font-semibold text-fg-secondary sm:w-36">
+      <span className="w-32 shrink-0 truncate text-body-sm font-semibold text-fg-secondary sm:w-36">
         {label}
       </span>
       <input
@@ -147,7 +149,7 @@ export function SeverityRow({
         }}
         className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-pill accent-[var(--color-primary-solid)] outline-none"
       />
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-xs font-bold text-primary-on-solid">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-control-small bg-primary-solid text-caption font-bold text-primary-on-solid">
         {value}
       </span>
     </div>
@@ -174,7 +176,7 @@ export function VitalCard({
   return (
     <div className="space-y-2.5 rounded-control border border-line bg-surface p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-fg-muted">{label}</span>
+        <span className="text-caption font-bold text-fg-muted">{label}</span>
         <Icon className="size-4 shrink-0 text-fg-brand" />
       </div>
       <input
@@ -183,9 +185,9 @@ export function VitalCard({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-lg font-bold text-fg transition-colors outline-none placeholder:font-semibold placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body-lg font-bold text-fg transition-colors outline-none placeholder:font-semibold placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
-      <p className="truncate text-xs font-medium text-fg-muted">{unit}</p>
+      <p className="truncate text-caption font-medium text-fg-muted">{unit}</p>
     </div>
   );
 }
@@ -249,7 +251,7 @@ export function MoodPicker({
               className={`size-7 shrink-0 transition-transform group-hover:scale-110 sm:size-8 ${m.color}`}
             />
             <span
-              className={`text-xs font-bold ${
+              className={`text-caption font-bold ${
                 active ? "text-fg-brand" : "text-fg-muted"
               }`}
             >

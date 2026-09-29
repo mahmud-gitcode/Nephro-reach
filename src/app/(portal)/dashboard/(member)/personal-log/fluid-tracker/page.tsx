@@ -159,17 +159,17 @@ export default function FluidTrackerPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[28px] leading-none font-medium text-fg sm:text-[32px]">
+          <h1 className="text-heading-2 leading-none font-medium text-fg sm:text-heading-1">
             {w?.title || "Weight & Fluid Management Center"}
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           {/* Unit Switcher: kg / lbs */}
-          <div className="flex h-10 items-center rounded-xl border border-line bg-[var(--color-gray-100)] p-1 shadow-control sm:h-12">
+          <div className="flex h-10 items-center rounded-card-nested border border-line bg-[var(--color-gray-100)] p-1 shadow-control sm:h-12">
             <button
               type="button"
               onClick={() => setUnit("kg")}
-              className={`h-full cursor-pointer rounded-lg px-2.5 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
+              className={`h-full cursor-pointer rounded-control px-2.5 text-caption font-bold transition-all sm:px-3 sm:text-body-sm ${
                 unit === "kg"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"
@@ -180,7 +180,7 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setUnit("lbs")}
-              className={`h-full cursor-pointer rounded-lg px-2.5 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
+              className={`h-full cursor-pointer rounded-control px-2.5 text-caption font-bold transition-all sm:px-3 sm:text-body-sm ${
                 unit === "lbs"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"
@@ -193,7 +193,7 @@ export default function FluidTrackerPage() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary-solid px-3 text-xs font-bold tracking-[0.08px] whitespace-nowrap text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98] sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
+            className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-card-nested bg-primary-solid px-3 text-caption font-bold tracking-[0.08px] whitespace-nowrap text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98] sm:h-12 sm:gap-2 sm:px-4 sm:text-body-md"
           >
             <Plus className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
             <span>{w?.recentEntries?.addNewEntry || "New Entry"}</span>
@@ -204,7 +204,7 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-              className={`flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold tracking-[0.08px] whitespace-nowrap transition-all sm:h-12 sm:gap-2 sm:px-4 sm:text-base ${
+              className={`flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-card border px-3 text-caption font-bold tracking-[0.08px] whitespace-nowrap transition-all sm:h-12 sm:gap-2 sm:px-4 sm:text-body-md ${
                 isDatePickerOpen
                   ? "border-primary-edge bg-primary-soft/50 text-fg-brand shadow-control"
                   : "border-line bg-[var(--color-gray-50)] text-fg hover:bg-surface"
@@ -224,13 +224,13 @@ export default function FluidTrackerPage() {
               <div className="animate-in fade-in zoom-in-95 absolute top-full right-0 z-50 mt-2 w-72 rounded-card border border-line bg-surface p-3.5 shadow-xl duration-150 sm:w-80 sm:p-4">
                 {/* Header with Title and Close */}
                 <div className="mb-2.5 flex items-center justify-between border-b border-line-subtle pb-2.5">
-                  <span className="text-[11px] font-bold text-fg-muted sm:text-xs">
+                  <span className="text-caption font-bold text-fg-muted sm:text-caption">
                     {language === "ES" ? "Seleccionar Fecha" : "Select Date"}
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsDatePickerOpen(false)}
-                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-muted"
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-muted"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -244,7 +244,7 @@ export default function FluidTrackerPage() {
                       setSelectedDateFilter("today");
                       setIsDatePickerOpen(false);
                     }}
-                    className={`flex w-full cursor-pointer items-center justify-between rounded-xl p-2.5 text-left transition-all sm:p-3 ${
+                    className={`flex w-full cursor-pointer items-center justify-between rounded-card p-2.5 text-left transition-all sm:p-3 ${
                       selectedDateFilter === "today"
                         ? "border border-primary-soft-line bg-primary-soft text-primary-fg"
                         : "border border-transparent text-fg-secondary hover:bg-surface-sunken"
@@ -252,7 +252,7 @@ export default function FluidTrackerPage() {
                   >
                     <div className="flex items-center gap-inline-md">
                       <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-caption font-bold ${
                           selectedDateFilter === "today"
                             ? "bg-primary-solid text-white shadow-control"
                             : "bg-surface-sunken text-fg-muted"
@@ -261,12 +261,12 @@ export default function FluidTrackerPage() {
                         <Calendar className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="text-xs leading-tight font-bold sm:text-sm">
+                        <div className="text-caption leading-tight font-bold sm:text-body-sm">
                           {language === "ES"
                             ? "Hoy (Fecha actual)"
                             : "Today (Current Date)"}
                         </div>
-                        <div className="text-[11px] font-medium text-fg-muted">
+                        <div className="text-caption font-medium text-fg-muted">
                           {new Date().toLocaleDateString(
                             language === "ES" ? "es-ES" : "en-US",
                             {
@@ -286,7 +286,7 @@ export default function FluidTrackerPage() {
 
                 {/* Divider: Custom Date Picker */}
                 <div className="mt-3 border-t border-line-subtle pt-3">
-                  <label className="mb-1.5 block text-xs font-bold text-fg-secondary">
+                  <label className="mb-1.5 block text-caption font-bold text-fg-secondary">
                     {language === "ES"
                       ? "Elegir Fecha (Date Picker):"
                       : "Pick Date (Date Picker):"}
@@ -306,7 +306,7 @@ export default function FluidTrackerPage() {
                           (e.target as HTMLInputElement).showPicker?.();
                         } catch {}
                       }}
-                      className="w-full cursor-pointer rounded-xl border border-line bg-surface-sunken px-3 py-2 text-xs font-semibold text-fg-secondary transition-colors outline-none hover:bg-surface focus:border-primary-edge focus:bg-surface focus:ring-1 focus:ring-ring sm:text-sm"
+                      className="w-full cursor-pointer rounded-card border border-line bg-surface-sunken px-3 py-2 text-caption font-semibold text-fg-secondary transition-colors outline-none hover:bg-surface focus:border-primary-edge focus:bg-surface focus:ring-1 focus:ring-ring sm:text-body-sm"
                     />
                   </div>
                   <button
@@ -315,7 +315,7 @@ export default function FluidTrackerPage() {
                       setSelectedDateFilter("custom");
                       setIsDatePickerOpen(false);
                     }}
-                    className="mt-2.5 flex w-full cursor-pointer items-center justify-center rounded-xl bg-primary-solid py-2 text-xs font-bold text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98]"
+                    className="mt-2.5 flex w-full cursor-pointer items-center justify-center rounded-card-nested bg-primary-solid py-2 text-caption font-bold text-white shadow-control transition-colors hover:bg-primary-solid-hover active:scale-[0.98]"
                   >
                     {language === "ES" ? "Aplicar Fecha" : "Apply Date"}
                   </button>

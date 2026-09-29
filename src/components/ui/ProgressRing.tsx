@@ -11,13 +11,14 @@ import { cn } from "@/lib/utils/cn";
    DonutChart is the wrong tool for this: it splits a whole into categories,
    so every slice gets its own hue and the eye reads two things being
    compared. A gauge has one measure and a remainder, and the remainder is
-   not a category — it is the empty part of the track. So it takes --track,
-   the one colour every unfilled progress uses, and only the filled arc
-   carries colour.
+   not a category — it is the empty part of the track. So only the filled
+   arc carries colour, on the neutral --track.
 
-   The ring is a conic gradient rather than an SVG arc for the same reason
-   DonutChart is: two hard colour stops and a punched-out centre need no
-   path maths, and they stay crisp at any size.
+   Styled to the redesign (2026-09-28): the arc is an SVG stroke with ROUND
+   ends, as the reference dashboard's gauges have — a conic gradient can
+   only cut square. Thickness follows the size (a twelfth of it) unless set,
+   so every ring in the product has the same proportions, and the figure in
+   the middle scales with the ring: semibold, as on the stat cards.
    ========================================================================== */
 
 export type ProgressRingTone = "primary" | "success" | "warning" | "danger";
@@ -46,7 +47,7 @@ export type ProgressRingProps = {
   centerLabel?: React.ReactNode;
   /** Outer diameter in px. */
   size?: number;
-  /** Ring thickness in px. */
+  /** Ring thickness in px. Defaults to a twelfth of the size. */
   thickness?: number;
   tone?: ProgressRingTone;
   className?: string;
@@ -58,31 +59,58 @@ export function ProgressRing({
   centerValue,
   centerLabel,
   size = 140,
-  thickness = 14,
+  thickness = Math.round(size / 12),
   tone = "primary",
   className,
 }: ProgressRingProps) {
   const pct = Math.min(100, Math.max(0, value));
-  const degrees = (pct / 100) * 360;
+  const radius = (size - thickness) / 2;
+  const circumference = 2 * Math.PI * radius;
+  /* The figure grows with the ring: a big ring gets the stat-card size. */
+  const figure = size >= 112 ? "text-metric-md" : "text-metric-sm";
 
   return (
     <div className={cn("flex flex-col items-center", className)}>
       <div
         role="img"
         aria-label={`${label}: ${Math.round(pct)}%`}
-        className="relative shrink-0 rounded-pill"
-        style={{
-          width: size,
-          height: size,
-          background: `conic-gradient(${arcColor[tone]} 0deg ${degrees}deg, var(--color-track) ${degrees}deg 360deg)`,
-        }}
+        className="relative shrink-0"
+        style={{ width: size, height: size }}
       >
-        <div
-          className="absolute rounded-pill bg-surface"
-          style={{ inset: thickness }}
-        />
+        {/* Rotated so the arc starts at twelve o'clock. */}
+        <svg
+          aria-hidden="true"
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="-rotate-90"
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            /* --track itself, not the --color-track alias: the alias is
+               resolved on :root and would miss the canvas's grey. */
+            stroke="var(--track)"
+            strokeWidth={thickness}
+          />
+          {/* Nothing at 0%: a round cap on an empty arc would draw a dot. */}
+          {pct > 0 ? (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke={arcColor[tone]}
+              strokeWidth={thickness}
+              strokeLinecap="round"
+              strokeDasharray={`${(pct / 100) * circumference} ${circumference}`}
+            />
+          ) : null}
+        </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-metric-sm text-fg">
+          <span className={cn(figure, "text-fg")}>
             {centerValue ?? `${Math.round(pct)}%`}
           </span>
           {centerLabel ? (

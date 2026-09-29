@@ -71,8 +71,9 @@ export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
     titleEs: "Entendiendo la Diálisis",
     rangeEn: "Days 1-5",
     rangeEs: "Días 1-5",
-    chipClass: "border-blue-200 bg-blue-50 text-blue-700",
-    dotClass: "bg-blue-500",
+    /* Categorical tokens: the phase colours only tell phases apart. */
+    chipClass: "border-line bg-cat-6-soft text-fg",
+    dotClass: "bg-cat-6",
   },
   routine: {
     key: "routine",
@@ -82,8 +83,8 @@ export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
     titleEs: "Su Rutina de Tratamiento",
     rangeEn: "Days 6-10",
     rangeEs: "Días 6-10",
-    chipClass: "border-violet-200 bg-violet-50 text-violet-700",
-    dotClass: "bg-violet-500",
+    chipClass: "border-line bg-cat-8-soft text-fg",
+    dotClass: "bg-cat-8",
   },
   nutrition: {
     key: "nutrition",
@@ -93,8 +94,8 @@ export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
     titleEs: "Dieta, Laboratorios y Medicamentos",
     rangeEn: "Days 11-16",
     rangeEs: "Días 11-16",
-    chipClass: "border-amber-200 bg-amber-50 text-amber-700",
-    dotClass: "bg-amber-500",
+    chipClass: "border-line bg-cat-2-soft text-fg",
+    dotClass: "bg-cat-2",
   },
   living: {
     key: "living",
@@ -104,8 +105,8 @@ export const JOURNEY_PHASES: Record<JourneyPhaseKey, JourneyPhase> = {
     titleEs: "Vivir Bien y Mantenerse Seguro",
     rangeEn: "Days 17-21",
     rangeEs: "Días 17-21",
-    chipClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    dotClass: "bg-emerald-500",
+    chipClass: "border-line bg-cat-5-soft text-fg",
+    dotClass: "bg-cat-5",
   },
 };
 

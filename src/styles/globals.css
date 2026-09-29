@@ -2,6 +2,10 @@
 @import "./tokens/color.css";
 @import "./tokens/typography.css";
 @import "./tokens/spacing.css";
+/* Last: the canvas (main column, top bar, modals) overrides the above. */
+@import "./tokens/canvas.css";
+/* The dropdown list every <select> on the canvas opens. */
+@import "./select.css" layer(components);
 
 :root {
   --background: #ffffff;

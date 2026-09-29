@@ -189,7 +189,7 @@ export default function MyRidesPage() {
               href="https://m.uber.com"
               target="_blank"
               rel="noopener noreferrer"
-              className={`${RIDE_APP_SHAPE} bg-black text-white hover:bg-neutral-800`}
+              className={`${RIDE_APP_SHAPE} bg-rideshare-uber text-white hover:bg-rideshare-uber-hover`}
             >
               <Car />
               <span>{t("myRides.openUber")}</span>
@@ -199,7 +199,7 @@ export default function MyRidesPage() {
               href="https://www.lyft.com"
               target="_blank"
               rel="noopener noreferrer"
-              className={`${RIDE_APP_SHAPE} bg-[#EA0B8C] text-white hover:bg-[#c50a77]`}
+              className={`${RIDE_APP_SHAPE} bg-rideshare-lyft text-white hover:bg-rideshare-lyft-hover`}
             >
               <Car />
               <span>{t("myRides.openLyft")}</span>

@@ -1,18 +1,46 @@
 "use client";
 
 import React from "react";
+import { Card, LineChart, type SeriesTone } from "@/components/ui";
 
 /* ==========================================================================
    TrendLineCard
    --------------------------------------------------------------------------
-   A single test's readings over time, drawn as an SVG path.
+   One test's readings over time, on the Labs page's Trends tab.
 
-   NOTE: this is a hand-drawn chart, not the design system's LineChart, so
-   it carries no accessible name and no data table — a screen reader gets
-   nothing from it. Swapping it is a visual change on six cards and wants
-   doing deliberately, alongside the other hand-drawn charts in
-   personal-log/fluid/panels.
+   Built on the shared LineChart (UI redesign, phase 6). It was a hand-drawn
+   SVG with no accessible name and no data — a screen reader got nothing —
+   and it labelled the unit "Ref Range", because the range itself was never
+   passed in. Now the chart carries its readings as a hidden table, the
+   hover tooltip reads each draw, and the card states the real range.
    ========================================================================== */
+
+/* One lab panel, many series — these say "different test", not "good" or
+   "bad", so they come off the categorical ramp. */
+const THEME_TONE: Record<
+  "purple" | "green" | "orange" | "blue" | "rose" | "teal",
+  SeriesTone
+> = {
+  purple: "cat-7",
+  green: "cat-4",
+  orange: "cat-2",
+  blue: "cat-6",
+  rose: "cat-1",
+  teal: "cat-5",
+};
+
+/**
+ * A round top for the axis, a little above the highest reading — and an
+ * even multiple of its magnitude, so the middle tick is round too (0 · 30 ·
+ * 60, not 0 · 28 · 55).
+ */
+function axisTop(peak: number): number {
+  if (peak <= 0) return 2;
+  const magnitude = 10 ** Math.floor(Math.log10(peak));
+  let steps = Math.ceil((peak * 1.1) / magnitude);
+  if (steps % 2 === 1) steps += 1;
+  return steps * magnitude;
+}
 
 export function TrendLineCard({
   testName,
@@ -20,6 +48,7 @@ export function TrendLineCard({
   data,
   dates,
   colorTheme = "purple",
+  refRange,
   refRangeLabel,
   latestLabel,
 }: {
@@ -27,141 +56,60 @@ export function TrendLineCard({
   unit: string;
   data: number[];
   dates: string[];
-  colorTheme?: "purple" | "green" | "orange" | "blue" | "rose" | "teal";
+  colorTheme?: keyof typeof THEME_TONE;
+  /** The test's reference range, e.g. "7 – 20 mg/dL". */
+  refRange?: string;
   refRangeLabel?: string;
   latestLabel?: string;
 }) {
-  /* One lab panel, six series — these say "different test", not "good" or
-     "bad", so they come off the categorical ramp. They used to sit on the
-     status ramps, which put green and teal on success-600 and success-400:
-     two lines a member could barely tell apart, both reading as "healthy". */
-  const themeMap = {
-    purple: { stroke: "var(--color-cat-7)" },
-    green: { stroke: "var(--color-cat-4)" },
-    orange: { stroke: "var(--color-cat-2)" },
-    blue: { stroke: "var(--color-cat-6)" },
-    rose: { stroke: "var(--color-cat-1)" },
-    teal: { stroke: "var(--color-cat-5)" },
-  };
-
-  const theme = themeMap[colorTheme] || themeMap.purple;
-
-  const width = 300;
-  const height = 150;
-  const paddingLeft = 24;
-  const paddingRight = 12;
-  const paddingTop = 14;
-  const paddingBottom = 22;
-
-  const chartW = width - paddingLeft - paddingRight;
-  const chartH = height - paddingTop - paddingBottom;
-
-  const maxValRaw = Math.max(...data);
-  let yMax = 8;
-  if (maxValRaw > 300) yMax = 500;
-  else if (maxValRaw > 100) yMax = 160;
-  else if (maxValRaw > 50) yMax = 60;
-  else if (maxValRaw > 20) yMax = 35;
-  else if (maxValRaw > 8) yMax = 15;
-  else if (maxValRaw <= 2) yMax = 2;
-
-  const yMin = 0;
-  const yRange = yMax - yMin || 1;
-
-  const getX = (idx: number) =>
-    paddingLeft + (idx / (data.length - 1)) * chartW;
-  const getY = (val: number) =>
-    paddingTop + chartH - ((val - yMin) / yRange) * chartH;
-
-  const pointsStr = data
-    .map((val, idx) => `${getX(idx)},${getY(val)}`)
-    .join(" ");
-
-  const latestVal = data[data.length - 1];
-  const lastX = getX(data.length - 1);
-  const lastY = getY(latestVal);
+  const latest = data[data.length - 1];
+  const top = axisTop(Math.max(...data));
+  /* One label per reading, even if the dates run short. */
+  const xLabels = data.map((_, i) => dates[i] ?? "");
 
   return (
-    <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-bold text-fg">{testName}</h4>
-          <p className="text-xs text-fg-muted">
-            {refRangeLabel || "Ref Range"}: {unit ? `(${unit})` : ""}
+    <Card as="article" className="h-full">
+      <div className="flex items-start justify-between gap-inline-md">
+        <div className="min-w-0">
+          <h4 className="text-heading-5 text-fg">{testName}</h4>
+          {refRange ? (
+            <p className="mt-stack-xs text-caption text-fg-muted">
+              {refRangeLabel || "Ref Range"}: {refRange}
+            </p>
+          ) : null}
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-metric-sm text-fg">
+            {latest}
+            {unit ? (
+              <span className="text-caption text-fg-muted"> {unit}</span>
+            ) : null}
+          </p>
+          <p className="text-caption text-fg-muted">
+            {latestLabel || "Latest"}
           </p>
         </div>
-        <div className="text-right">
-          <span className="text-base font-bold text-fg">
-            {latestVal} {unit}
-          </span>
-          <span className="block text-[11px] font-medium text-fg-subtle">
-            {latestLabel || "Latest"}
-          </span>
-        </div>
       </div>
 
-      <div className="w-full">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="h-28 w-full overflow-visible"
-        >
-          {[0, 0.5, 1].map((ratio, i) => {
-            const y = paddingTop + chartH * ratio;
-            return (
-              <line
-                key={i}
-                x1={paddingLeft}
-                y1={y}
-                x2={width - paddingRight}
-                y2={y}
-                stroke="var(--color-gray-100)"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-            );
-          })}
-
-          <polyline
-            fill="none"
-            stroke={theme.stroke}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={pointsStr}
-          />
-
-          {data.map((val, idx) => (
-            <circle
-              key={idx}
-              cx={getX(idx)}
-              cy={getY(val)}
-              r="3"
-              fill="white"
-              stroke={theme.stroke}
-              strokeWidth="2"
-            />
-          ))}
-
-          <circle cx={lastX} cy={lastY} r="4.5" fill={theme.stroke} />
-
-          <text
-            x={paddingLeft}
-            y={height - 3}
-            textAnchor="start"
-            className="fill-gray-400 text-xs font-medium"
-          >
-            {dates[0]}
-          </text>
-          <text
-            x={width - paddingRight}
-            y={height - 3}
-            textAnchor="end"
-            className="fill-gray-400 text-xs font-medium"
-          >
-            {dates[dates.length - 1]}
-          </text>
-        </svg>
-      </div>
-    </div>
+      <LineChart
+        className="mt-stack-lg"
+        label={`${testName} over time`}
+        unit={unit}
+        showLegend={false}
+        height={110}
+        yMin={0}
+        yMax={top}
+        yTicks={3}
+        xLabels={xLabels}
+        series={[
+          {
+            id: "reading",
+            label: testName,
+            tone: THEME_TONE[colorTheme],
+            points: data,
+          },
+        ]}
+      />
+    </Card>
   );
 }

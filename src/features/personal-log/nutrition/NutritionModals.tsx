@@ -14,7 +14,7 @@ import type { FoodEntry, Goals, MealKey, NutrientKey } from "./nutrition.types";
 /* The three forms: log a food, change the goals, add water. */
 
 const FIELD_CLASS =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
+  "w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
 
 export function ModalShell({
   title,
@@ -146,7 +146,7 @@ export function AddFoodModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         {error ? (
-          <p className="rounded-xl border border-danger-line bg-danger-surface p-3 text-xs font-semibold text-danger">
+          <p className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger">
             {error}
           </p>
         ) : null}
@@ -154,7 +154,7 @@ export function AddFoodModal({
         <div className="space-y-1.5">
           <label
             htmlFor="food-meal"
-            className="block text-xs font-bold text-fg-secondary"
+            className="block text-caption font-bold text-fg-secondary"
           >
             {isEs ? "Comida" : "Meal"}
           </label>
@@ -176,7 +176,7 @@ export function AddFoodModal({
           <div className="space-y-1.5">
             <label
               htmlFor="food-name"
-              className="block text-xs font-bold text-fg-secondary"
+              className="block text-caption font-bold text-fg-secondary"
             >
               {n?.mealsTable?.headers?.food || "Food"}{" "}
               <span className="text-danger">*</span>
@@ -193,7 +193,7 @@ export function AddFoodModal({
           <div className="space-y-1.5">
             <label
               htmlFor="food-portion"
-              className="block text-xs font-bold text-fg-secondary"
+              className="block text-caption font-bold text-fg-secondary"
             >
               {n?.mealsTable?.headers?.portion || "Portion"}
             </label>
@@ -207,8 +207,8 @@ export function AddFoodModal({
           </div>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-          <p className="text-xs font-bold text-fg-muted">
+        <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-3.5">
+          <p className="text-caption font-bold text-fg-muted">
             {isEs ? "Nutrientes Renales" : "Kidney Nutrients"}
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -239,8 +239,8 @@ export function AddFoodModal({
           </div>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-3.5">
-          <p className="text-xs font-bold text-fg-muted">
+        <div className="space-y-2 rounded-card border border-line-subtle bg-surface-sunken p-3.5">
+          <p className="text-caption font-bold text-fg-muted">
             {isEs ? "Macronutrientes (opcional)" : "Macros (optional)"}
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -275,13 +275,13 @@ export function AddFoodModal({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
+            className="cursor-pointer rounded-card border border-line bg-surface px-4 py-2.5 text-body-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="cursor-pointer rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
+            className="cursor-pointer rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
           >
             {n?.mealsTable?.addFood || "Add Food"}
           </button>
@@ -369,13 +369,13 @@ export function GoalsModal({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
+            className="cursor-pointer rounded-card border border-line bg-surface px-4 py-2.5 text-body-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="cursor-pointer rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
+            className="cursor-pointer rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
           >
             {isEs ? "Guardar Metas" : "Save Goals"}
           </button>
@@ -428,7 +428,7 @@ export function AddWaterModal({
                 key={preset}
                 type="button"
                 onClick={() => setAmount(`${preset}`)}
-                className={`cursor-pointer rounded-xl border px-2 py-2.5 text-sm font-bold transition-all ${
+                className={`cursor-pointer rounded-card border px-2 py-2.5 text-body-sm font-bold transition-all ${
                   isSelected
                     ? "border-primary-edge bg-primary-soft text-fg-brand"
                     : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
@@ -451,13 +451,13 @@ export function AddWaterModal({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
+            className="cursor-pointer rounded-card border border-line bg-surface px-4 py-2.5 text-body-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="cursor-pointer rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
+            className="cursor-pointer rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
           >
             {n?.fluidTracker?.addWater || "Add Water"}
           </button>

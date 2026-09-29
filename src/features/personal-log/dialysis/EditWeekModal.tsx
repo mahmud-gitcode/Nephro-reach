@@ -150,7 +150,7 @@ export function EditWeekModal({
                   key={day}
                   type="button"
                   onClick={() => toggleDaySelection(day)}
-                  className={`flex cursor-pointer items-center justify-between rounded-xl border p-2.5 text-left font-bold transition-all ${
+                  className={`flex cursor-pointer items-center justify-between rounded-card border p-2.5 text-left font-bold transition-all ${
                     isSelected
                       ? "border-[var(--color-brand-600)] bg-primary-soft text-fg-brand"
                       : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
@@ -193,7 +193,7 @@ export function EditWeekModal({
               return (
                 <div
                   key={day}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2"
                 >
                   <span className="inline-flex items-center gap-2 font-bold text-fg-secondary">
                     <Clock className="h-4 w-4 shrink-0 stroke-[2.4] text-fg-subtle" />
@@ -219,7 +219,7 @@ export function EditWeekModal({
                           [day]: e.target.value,
                         }))
                       }
-                      className="cursor-pointer rounded-lg border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                      className="cursor-pointer rounded-control border border-line bg-surface-sunken px-2.5 py-1.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
                     />
 
                     <span className="font-bold text-fg-muted">
@@ -242,9 +242,9 @@ export function EditWeekModal({
                             (Number(e.target.value) || 0) * 60 + (minutes % 60),
                         }))
                       }
-                      className="w-14 rounded-lg border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                      className="w-14 rounded-control border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
                     />
-                    <span className="text-xs font-bold text-fg-muted">
+                    <span className="text-caption font-bold text-fg-muted">
                       {isEs ? "h" : "h"}
                     </span>
 
@@ -263,9 +263,9 @@ export function EditWeekModal({
                             (Number(e.target.value) || 0),
                         }))
                       }
-                      className="w-14 rounded-lg border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
+                      className="w-14 rounded-control border border-line bg-surface-sunken px-2 py-1.5 text-center font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:bg-surface focus:ring-2 focus:ring-ring"
                     />
-                    <span className="text-xs font-bold text-fg-muted">
+                    <span className="text-caption font-bold text-fg-muted">
                       {isEs ? "m" : "m"}
                     </span>
                   </div>
@@ -292,7 +292,7 @@ export function EditWeekModal({
               id="reminder-lead"
               value={tempLead}
               onChange={(e) => setTempLead(Number(e.target.value))}
-              className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:ring-2 focus:ring-ring"
+              className="w-full cursor-pointer rounded-card border border-line bg-surface px-3 py-2.5 font-bold text-fg-secondary transition-colors outline-none focus:border-[var(--color-brand-600)] focus:ring-2 focus:ring-ring"
             >
               {[0, 30, 60, 90, 120, 180].map((minutes) => (
                 <option key={minutes} value={minutes}>

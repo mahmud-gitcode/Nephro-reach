@@ -117,6 +117,10 @@ export function TableHeaderCell({
       }
       className={cn(
         "border-b border-table-header-line bg-table-header-bg px-inset-sm py-inset-xs text-table-header text-table-header-fg",
+        // The outer columns take the table edge (--table-edge).
+        "first:pl-(--table-edge) last:pr-(--table-edge)",
+        // Letter case is a token too (--table-header-case, none when unset).
+        "[text-transform:var(--table-header-case,none)]",
         numeric && "text-right",
         className,
       )}
@@ -169,6 +173,7 @@ export function TableCell({
     <td
       className={cn(
         "px-inset-sm py-inset-sm align-middle",
+        "first:pl-(--table-edge) last:pr-(--table-edge)",
         // The second line under a name ("MRN 448120") is written as a
         // caption at the call site; inside a table it takes table-meta. The
         // descendant selector outranks the caption's own class.
@@ -185,6 +190,35 @@ export function TableCell({
       )}
       {...rest}
     />
+  );
+}
+
+/**
+ * The small square that leads a row's identifying cell: a photo when there
+ * is one, else the name's initials. 32px, 6px corners, a hairline and a
+ * near-white fill — the reference dashboard's product thumbnail. Decorative:
+ * the name beside it says who the row is.
+ */
+export function TableThumb({ name, src }: { name: string; src?: string }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-line bg-surface-sunken text-label-sm text-fg-secondary"
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a 32px thumbnail; next/image's sizing adds nothing here
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        initials
+      )}
+    </span>
   );
 }
 
@@ -225,7 +259,7 @@ export function TableEmptyRow({
 }) {
   return (
     <TableRow>
-      <td colSpan={colSpan} className="px-inset-sm py-inset-xl">
+      <td colSpan={colSpan} className="px-(--table-edge) py-inset-xl">
         {children}
       </td>
     </TableRow>
@@ -249,7 +283,7 @@ export function TablePagination({
   if (pageCount <= 1 && !summary) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-table-row-line px-inset-sm py-inset-sm">
+    <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-table-row-line px-(--table-edge) py-inset-sm">
       <p className="text-caption text-table-meta-fg">
         {summary ?? (
           <>

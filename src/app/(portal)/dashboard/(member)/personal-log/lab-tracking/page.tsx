@@ -10,7 +10,6 @@ import {
   BookOpen,
   CalendarDays,
   ChevronDown,
-  CircleCheck,
   Download,
   Droplet,
   FlaskConical,
@@ -20,11 +19,29 @@ import {
   Plus,
   TrendingDown,
   TrendingUp,
-  TriangleAlert,
 } from "lucide-react";
 import { Kidneys } from "@/components/icons/Kidneys";
 
-import { Alert, Button, Sparkline } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonStyles,
+  Card,
+  CardHeader,
+  KeyCard,
+  Select,
+  Sparkline,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TabPanel,
+  Tabs,
+} from "@/components/ui";
+import { AlertTriangleSolid, CheckCircleSolid } from "@/components/icons/solid";
 import { StatusBadge, sparklineTone } from "@/features/labs/StatusBadge";
 import { TrendLineCard } from "@/features/labs/TrendLineCard";
 import { LAB_CATEGORIES } from "@/features/labs/labs.panels.seed";
@@ -108,6 +125,16 @@ export default function MyLabsPage() {
       ? "31 May, 2024"
       : "May 31, 2024";
 
+  /* The stat card shows the day large and the year beneath it: a full date
+     at figure size does not fit a fifth of the row. */
+  const drawDate = customData?.date
+    ? new Date(customData.date)
+    : new Date(2024, 4, 31);
+  const drawDay = drawDate.toLocaleDateString(
+    language === "ES" ? "es-ES" : "en-US",
+    { month: "short", day: "numeric" },
+  );
+
   const getCategoryName = (catId: string, fallback: string) => {
     if (catId === "kidney-function")
       return l?.categories?.kidneyFunction || fallback;
@@ -187,7 +214,7 @@ export default function MyLabsPage() {
       : ["Feb 4", "Mar 1", "Apr 10", "May 15", "Jun 12"];
 
   return (
-    <div className="w-full space-y-6" aria-busy={labsPending || undefined}>
+    <div className="w-full space-y-4" aria-busy={labsPending || undefined}>
       <PersonalLogDisclaimer />
 
       {/* Most of this page is reference data, which renders either way. Only
@@ -219,139 +246,81 @@ export default function MyLabsPage() {
         </Alert>
       ) : null}
 
-      {/* 1. Top KPI Summary Cards */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {/* Card 1: Latest Lab Date */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-fg-brand">
-            <CalendarDays className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-fg-muted">
-              {l?.kpis?.latestDate || "Latest Lab Date"}
-            </p>
-            <p className="truncate text-xl font-bold text-fg">
-              {latestDrawDate}
-            </p>
-          </div>
-        </article>
-
-        {/* Card 2: Values In Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
-            <CircleCheck className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-fg-muted">
-                {l?.kpis?.inRange || "In Range"}
-              </p>
-              <span className="rounded bg-success-surface px-1.5 py-0.5 text-xs font-bold text-success">
-                64%
-              </span>
-            </div>
-            <p className="text-xl font-bold text-fg">16 / 25</p>
-          </div>
-        </article>
-
-        {/* Card 3: Values Out of Range */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-surface text-warning">
-            <TriangleAlert className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-fg-muted">
-                {l?.kpis?.outOfRange || "Out of Range"}
-              </p>
-              <span className="rounded bg-warning-surface px-1.5 py-0.5 text-xs font-bold text-warning">
-                24%
-              </span>
-            </div>
-            <p className="text-xl font-bold text-fg">6 / 25</p>
-          </div>
-        </article>
-
-        {/* Card 4: Trending Up */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-surface text-success">
-            <TrendingUp className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-fg-muted">
-              {l?.kpis?.trendingUp || "Trending Up"}
-            </p>
-            <p className="text-xl font-bold text-fg">7</p>
-          </div>
-        </article>
-
-        {/* Card 5: Trending Down */}
-        <article className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-surface text-danger">
-            <TrendingDown className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-fg-muted">
-              {l?.kpis?.trendingDown || "Trending Down"}
-            </p>
-            <p className="text-xl font-bold text-fg">5</p>
-          </div>
-        </article>
+      {/* 1. Stat cards — the shared KeyCard, as on every dashboard. */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <KeyCard
+          icon={<CalendarDays />}
+          value={drawDay}
+          label={l?.kpis?.latestDate || "Latest Lab Date"}
+          note={String(drawDate.getFullYear())}
+        />
+        <KeyCard
+          tone="success"
+          icon={<CheckCircleSolid />}
+          value={
+            <>
+              16
+              <span className="text-heading-4 text-fg-muted"> / 25</span>
+            </>
+          }
+          label={l?.kpis?.inRange || "In Range"}
+          note={language === "ES" ? "64% de los resultados" : "64% of results"}
+        />
+        <KeyCard
+          tone="warning"
+          icon={<AlertTriangleSolid />}
+          value={
+            <>
+              6<span className="text-heading-4 text-fg-muted"> / 25</span>
+            </>
+          }
+          label={l?.kpis?.outOfRange || "Out of Range"}
+          note={language === "ES" ? "24% de los resultados" : "24% of results"}
+        />
+        <KeyCard
+          tone="success"
+          icon={<TrendingUp />}
+          value="7"
+          label={l?.kpis?.trendingUp || "Trending Up"}
+        />
+        <KeyCard
+          tone="danger"
+          icon={<TrendingDown />}
+          value="5"
+          label={l?.kpis?.trendingDown || "Trending Down"}
+        />
       </section>
 
       {/* 3. Main Grid Layout (Left Content + Right Sidebar) */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
-        {/* Left Column (Table Area) */}
-        <div className="space-y-4 xl:col-span-3">
-          {/* Unified Top Control Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface p-3">
-            {/* Left Controls Group: Tab Switcher + Category Filter */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Segmented Pill Tab Switcher */}
-              <div className="inline-flex items-center rounded-xl border border-line/60 bg-[var(--color-gray-100)] p-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("overview")}
-                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
-                    activeTab === "overview"
-                      ? "border border-line/80 bg-surface text-fg-brand"
-                      : "text-fg-secondary hover:text-fg"
-                  }`}
-                >
-                  {l?.tabs?.overview || "Lab Overview"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("trends")}
-                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
-                    activeTab === "trends"
-                      ? "border border-line/80 bg-surface text-fg-brand"
-                      : "text-fg-secondary hover:text-fg"
-                  }`}
-                >
-                  {l?.tabs?.trends || "Trends"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("history")}
-                  className={`cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
-                    activeTab === "history"
-                      ? "border border-line/80 bg-surface text-fg-brand"
-                      : "text-fg-secondary hover:text-fg"
-                  }`}
-                >
-                  {l?.tabs?.history || "History"}
-                </button>
-              </div>
-
-              {/* Category Filter Dropdown */}
+      {/* The table needs ~930px for its seven columns, so it takes the full
+          row (the showcase rule) and the side cards sit in a row beneath. */}
+      <div className="space-y-4">
+        <div className="space-y-4">
+          {/* The view's toolbar: the tabs and the category filter on the
+              left, the page's actions on the right, the primary one last. */}
+          <div className="flex flex-wrap items-center justify-between gap-inline-md">
+            <div className="flex flex-wrap items-center gap-inline-md">
+              <Tabs
+                label={
+                  language === "ES" ? "Vista de laboratorios" : "Lab views"
+                }
+                value={activeTab}
+                onChange={setActiveTab}
+                items={[
+                  {
+                    id: "overview",
+                    label: l?.tabs?.overview || "Lab Overview",
+                  },
+                  { id: "trends", label: l?.tabs?.trends || "Trends" },
+                  { id: "history", label: l?.tabs?.history || "History" },
+                ]}
+              />
               {activeTab !== "history" && (
-                <select
-                  id="cat-filter"
+                <Select
+                  selectSize="small"
                   aria-label="Filter by category"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-9 cursor-pointer rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-fg-secondary outline-none focus:border-primary-edge"
                 >
                   <option value="all">
                     {l?.categories?.all || "All Categories"}
@@ -374,208 +343,198 @@ export default function MyLabsPage() {
                   <option value="dialysis-adequacy">
                     {l?.categories?.dialysisAdequacy || "Dialysis Adequacy"}
                   </option>
-                </select>
+                </Select>
               )}
             </div>
 
-            {/* Right Group: Action Buttons */}
-            <div className="flex items-center gap-3 print:hidden">
-              <button
-                type="button"
+            <div className="flex items-center gap-inline-md print:hidden">
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
                 onClick={() => window.print()}
-                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
               >
-                <Download className="h-3.5 w-3.5" />
+                <Download />
                 {l?.actions?.exportPdf || "Export PDF"}
-              </button>
-
+              </Button>
               <Link
                 href="/dashboard/personal-log/lab-tracking/add"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-action px-3.5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className={buttonStyles({ size: "small" })}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus />
                 {l?.actions?.addLabResult || "Add Lab Result"}
               </Link>
             </div>
           </div>
 
-          {/* TAB 1: OVERVIEW & COMPARE VIEW */}
-          {activeTab === "overview" && (
-            <div className="overflow-hidden rounded-xl border border-line bg-surface">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-line bg-[var(--color-gray-50)] text-sm font-semibold text-fg-muted">
-                    <tr>
-                      <th className="min-w-[200px] px-4 py-3">
-                        {l?.overview?.headers?.test || "Test"}
-                      </th>
-                      <th className="min-w-[140px] px-4 py-3 font-bold text-fg">
-                        {l?.overview?.headers?.latestResult || "Latest Result"}{" "}
-                        <span className="block text-sm font-semibold text-fg-muted">
-                          {latestDrawDate}
-                        </span>
-                      </th>
-                      <th className="min-w-[150px] px-4 py-3 font-bold text-fg">
-                        {l?.overview?.headers?.previousResult ||
-                          "Previous Result"}
-                        <div className="relative mt-0.5 flex items-center justify-between">
-                          <select
-                            aria-label="Select comparison lab draw date"
-                            value={compareDateId}
-                            onChange={(e) => setCompareDateId(e.target.value)}
-                            className="w-full cursor-pointer appearance-none bg-transparent pr-4 text-xs font-semibold text-fg-brand outline-none hover:underline"
+          {/* TAB 1: OVERVIEW & COMPARE VIEW — the shared Table, flush in its
+              card, each category a sub-header row. */}
+          <TabPanel id="overview" value={activeTab}>
+            <Card padding="none" className="overflow-hidden">
+              <Table minWidth={960}>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.test || "Test"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.latestResult || "Latest Result"}
+                      <span className="block tracking-normal normal-case">
+                        {latestDrawDate}
+                      </span>
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.previousResult ||
+                        "Previous Result"}
+                      <span className="relative mt-0.5 flex items-center tracking-normal normal-case">
+                        <select
+                          aria-label="Select comparison lab draw date"
+                          value={compareDateId}
+                          onChange={(e) => setCompareDateId(e.target.value)}
+                          className="w-full cursor-pointer appearance-none rounded-control-small bg-transparent pr-5 text-label-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          <optgroup
+                            label={
+                              l?.overview?.compare?.pastDrawDatesGroup ||
+                              "Past Lab Draw Dates"
+                            }
                           >
-                            <optgroup
-                              label={
-                                l?.overview?.compare?.pastDrawDatesGroup ||
-                                "Past Lab Draw Dates"
-                              }
-                              className="bg-surface font-bold text-fg"
-                            >
-                              {pastDrawDates
-                                .filter((d) => d.type === "draw")
-                                .map((date) => (
-                                  <option
-                                    key={date.id}
-                                    value={date.id}
-                                    className="bg-surface font-medium text-fg"
-                                  >
-                                    {date.label}
-                                  </option>
-                                ))}
-                            </optgroup>
-                            <optgroup
-                              label={
-                                l?.overview?.compare?.presetsGroup ||
-                                "Timeframe Presets"
-                              }
-                              className="bg-surface font-bold text-fg"
-                            >
-                              {pastDrawDates
-                                .filter((d) => d.type === "preset")
-                                .map((date) => (
-                                  <option
-                                    key={date.id}
-                                    value={date.id}
-                                    className="bg-surface font-medium text-fg"
-                                  >
-                                    {date.label}
-                                  </option>
-                                ))}
-                            </optgroup>
-                          </select>
-                          <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-fg-brand" />
-                        </div>
-                      </th>
-                      <th className="min-w-[100px] px-4 py-3">
-                        {l?.overview?.headers?.change || "Change"}
-                      </th>
-                      <th className="min-w-[150px] px-4 py-3">
-                        {l?.overview?.headers?.refRange || "Reference Range"}
-                      </th>
-                      <th className="min-w-[100px] px-4 py-3">
-                        {l?.overview?.headers?.status || "Status"}
-                      </th>
-                      <th className="min-w-[120px] px-4 py-3">
-                        {l?.overview?.headers?.trend || "Trend"}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line-subtle">
-                    {filteredCategories.map((category) => (
-                      <React.Fragment key={category.id}>
-                        {/* Category Header Row */}
-                        <tr className="bg-[var(--color-gray-100)]">
-                          <td colSpan={7} className="px-4 py-2.5">
-                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-brand-900)]">
-                              <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
-                              {category.displayName}
-                            </div>
-                          </td>
-                        </tr>
+                            {pastDrawDates
+                              .filter((d) => d.type === "draw")
+                              .map((date) => (
+                                <option key={date.id} value={date.id}>
+                                  {date.label}
+                                </option>
+                              ))}
+                          </optgroup>
+                          <optgroup
+                            label={
+                              l?.overview?.compare?.presetsGroup ||
+                              "Timeframe Presets"
+                            }
+                          >
+                            {pastDrawDates
+                              .filter((d) => d.type === "preset")
+                              .map((date) => (
+                                <option key={date.id} value={date.id}>
+                                  {date.label}
+                                </option>
+                              ))}
+                          </optgroup>
+                        </select>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-fg-brand"
+                        />
+                      </span>
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.change || "Change"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.refRange || "Reference Range"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.status || "Status"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {l?.overview?.headers?.trend || "Trend"}
+                    </TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredCategories.map((category) => (
+                    <React.Fragment key={category.id}>
+                      {/* The category, as a sub-header row. */}
+                      <TableRow className="bg-surface-sunken">
+                        <TableCell colSpan={7} className="py-inset-xs">
+                          <span className="flex items-center gap-inline-sm text-label-md text-fg">
+                            <category.icon
+                              aria-hidden="true"
+                              className="h-4 w-4 shrink-0 fill-current text-fg-brand"
+                            />
+                            {category.displayName}
+                          </span>
+                        </TableCell>
+                      </TableRow>
 
-                        {/* Category Test Rows */}
-                        {category.tests.map((test) => (
-                          <tr
-                            key={test.id}
-                            className="group transition-colors hover:bg-surface-sunken"
-                          >
-                            <td className="px-4 py-3 font-semibold text-fg">
-                              {test.displayName}
-                            </td>
-                            <td className="px-4 py-3 font-semibold text-fg">
-                              {test.latestResult}
-                            </td>
-                            <td className="px-4 py-3 font-medium text-fg-secondary">
-                              {test.previousResult}
-                            </td>
-                            <td className="px-4 py-3 text-xs font-semibold">
-                              <span
-                                className={`inline-flex items-center gap-0.5 ${
-                                  test.changeColor === "red"
-                                    ? "text-danger"
-                                    : test.changeColor === "orange"
-                                      ? "text-warning"
-                                      : "text-success"
-                                }`}
-                              >
-                                {test.changeDirection === "up" ? (
-                                  <ArrowUp className="h-3.5 w-3.5" />
-                                ) : (
-                                  <ArrowDown className="h-3.5 w-3.5" />
-                                )}
-                                {test.change}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs font-medium text-fg-muted">
-                              {test.refRange}
-                            </td>
-                            <td className="px-4 py-3">
-                              <StatusBadge
-                                status={test.status}
-                                label={getStatusLabel(test.status)}
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              {/* The shared Sparkline, not the local copy
-                                  this file used to carry: that one was a
-                                  bare <svg> a screen reader could not see,
-                                  and it divided by data.length - 1, so a
-                                  single reading produced NaN. */}
-                              <Sparkline
-                                points={test.sparkline}
-                                tone={sparklineTone(test.status)}
-                                label={`${getTestDisplayName(
-                                  test.id,
-                                  test.name,
-                                )} trend`}
-                                width={80}
-                                height={24}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="border-t border-line-subtle bg-surface-sunken px-4 py-2.5 text-xs font-medium text-fg-muted">
+                      {category.tests.map((test) => (
+                        <TableRow key={test.id}>
+                          <TableCell emphasis>{test.displayName}</TableCell>
+                          <TableCell emphasis>{test.latestResult}</TableCell>
+                          <TableCell>{test.previousResult}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center gap-0.5 text-label-sm ${
+                                test.changeColor === "red"
+                                  ? "text-danger"
+                                  : test.changeColor === "orange"
+                                    ? "text-warning"
+                                    : "text-success"
+                              }`}
+                            >
+                              {test.changeDirection === "up" ? (
+                                <ArrowUp
+                                  aria-hidden="true"
+                                  className="h-3.5 w-3.5"
+                                />
+                              ) : (
+                                <ArrowDown
+                                  aria-hidden="true"
+                                  className="h-3.5 w-3.5"
+                                />
+                              )}
+                              {test.change}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-fg-muted">
+                            {test.refRange}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={test.status}
+                              label={getStatusLabel(test.status)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {/* The shared Sparkline: a screen reader gets its
+                                label, and one reading does not divide by 0. */}
+                            <Sparkline
+                              points={test.sparkline}
+                              tone={sparklineTone(test.status)}
+                              label={`${getTestDisplayName(
+                                test.id,
+                                test.name,
+                              )} trend`}
+                              width={80}
+                              height={24}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+              <p className="border-t border-line px-(--table-edge) py-inset-sm text-caption text-fg-muted">
                 {l?.overview?.footnote ||
                   "* Reference ranges may vary slightly by lab. Always follow your healthcare team's guidance."}
-              </div>
-            </div>
-          )}
+              </p>
+            </Card>
+          </TabPanel>
 
           {/* TAB 2: TRENDS VIEW */}
-          {activeTab === "trends" && (
+          <TabPanel id="trends" value={activeTab}>
             <div className="space-y-6">
               <div className="space-y-6">
                 {filteredCategories.map((category) => (
                   <div key={category.id} className="space-y-3">
-                    <div className="flex items-center gap-2 border-b border-line pb-2">
-                      <category.icon className="h-4.5 w-4.5 shrink-0 fill-current text-fg-brand" />
-                      <h3 className="text-xs font-bold text-[var(--color-brand-900)]">
+                    <div className="flex items-center gap-inline-sm border-b border-line pb-stack-sm">
+                      <category.icon
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 fill-current text-fg-brand"
+                      />
+                      <h3 className="text-label-md text-fg">
                         {category.displayName} ({category.tests.length}{" "}
                         {l?.trends?.testsCount || "tests"})
                       </h3>
@@ -618,6 +577,7 @@ export default function MyLabsPage() {
                             data={test.sparkline}
                             dates={datesOverview}
                             colorTheme={theme}
+                            refRange={test.refRange}
                             refRangeLabel={l?.trends?.refRange || "Ref Range"}
                             latestLabel={l?.trends?.latest || "Latest"}
                           />
@@ -628,17 +588,17 @@ export default function MyLabsPage() {
                 ))}
               </div>
             </div>
-          )}
+          </TabPanel>
 
           {/* TAB 3: DEDICATED HISTORY VIEW */}
-          {activeTab === "history" && (
+          <TabPanel id="history" value={activeTab}>
             <div className="space-y-4">
               <div className="space-y-4">
                 {[
                   {
                     date: latestDrawDate,
                     tag: l?.history?.latestDraw || "Latest Draw",
-                    tagColor: "bg-success-600 text-white",
+                    tagTone: "success" as const,
                     notes:
                       customData?.notes ||
                       l?.history?.sampleNotes?.draw1 ||
@@ -734,7 +694,7 @@ export default function MyLabsPage() {
                   {
                     date: language === "ES" ? "30 Abr, 2024" : "Apr 30, 2024",
                     tag: l?.history?.previousDraw || "Previous Draw",
-                    tagColor: "bg-action text-white",
+                    tagTone: "info" as const,
                     notes:
                       l?.history?.sampleNotes?.draw2 ||
                       "Pre-dialysis lab check. Fasting draw at 8:00 AM.",
@@ -788,8 +748,7 @@ export default function MyLabsPage() {
                   {
                     date: language === "ES" ? "15 Mar, 2024" : "Mar 15, 2024",
                     tag: l?.history?.twoMonthsAgo || "2 Months Ago",
-                    tagColor:
-                      "bg-surface-sunken text-fg-secondary border border-line",
+                    tagTone: "neutral" as const,
                     notes:
                       l?.history?.sampleNotes?.draw3 ||
                       "Monthly nephrology review panel.",
@@ -826,8 +785,7 @@ export default function MyLabsPage() {
                   {
                     date: language === "ES" ? "01 Feb, 2024" : "Feb 01, 2024",
                     tag: l?.history?.threeMonthsAgo || "3 Months Ago",
-                    tagColor:
-                      "bg-surface-sunken text-fg-secondary border border-line",
+                    tagTone: "neutral" as const,
                     notes:
                       l?.history?.sampleNotes?.draw4 ||
                       "Routine electrolyte & iron panel.",
@@ -858,8 +816,7 @@ export default function MyLabsPage() {
                   {
                     date: language === "ES" ? "10 Ene, 2024" : "Jan 10, 2024",
                     tag: l?.history?.fourMonthsAgo || "4 Months Ago",
-                    tagColor:
-                      "bg-surface-sunken text-fg-secondary border border-line",
+                    tagTone: "neutral" as const,
                     notes:
                       l?.history?.sampleNotes?.draw5 ||
                       "Initial Stage 5 CKD baseline laboratory evaluation.",
@@ -892,15 +849,12 @@ export default function MyLabsPage() {
                   return (
                     <div
                       key={idx}
-                      className={`overflow-hidden rounded-xl border bg-surface transition-all ${
-                        isExpanded
-                          ? "border-primary-edge ring-1 ring-ring"
-                          : "border-line hover:border-primary-soft-line"
+                      className={`overflow-hidden rounded-card border bg-surface shadow-(--card-shadow) transition-colors duration-150 ease-standard ${
+                        isExpanded ? "border-action" : "border-line"
                       }`}
                     >
-                      {/* The whole header is the control. It used to be a
-                          <div onClick> wrapping a <button> with no handler,
-                          so a keyboard user could never open a draw. */}
+                      {/* The whole header is the control, so a keyboard user
+                          can open a draw. */}
                       <button
                         type="button"
                         onClick={() =>
@@ -908,132 +862,123 @@ export default function MyLabsPage() {
                         }
                         aria-expanded={isExpanded}
                         aria-controls={`draw-${idx}-values`}
-                        className="flex w-full flex-wrap items-center justify-between gap-inline-md border-b border-line-subtle bg-surface p-inset-md text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="flex w-full flex-wrap items-center justify-between gap-inline-md p-card text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       >
                         <span className="flex items-center gap-inline-md">
-                          <span className="text-label-md text-fg">
+                          <span className="text-heading-5 text-fg">
                             {draw.date}
                           </span>
-                          <span
-                            className={`rounded-pill px-inset-xs py-0.5 text-label-sm ${draw.tagColor}`}
+                          <Badge
+                            tone={draw.tagTone}
+                            variant={
+                              draw.tagTone === "neutral" ? "soft" : "solid"
+                            }
                           >
                             {draw.tag}
-                          </span>
+                          </Badge>
                         </span>
-
                         <span
-                          className={`inline-flex items-center gap-inline-xs rounded-control border px-inset-sm py-inset-xs text-label-sm transition-colors duration-150 ease-standard ${
-                            isExpanded
-                              ? "border-primary-soft-line bg-primary-soft text-primary-fg"
-                              : "border-line bg-surface-sunken text-fg-secondary"
-                          }`}
+                          className={buttonStyles({
+                            variant: isExpanded ? "primary" : "neutral",
+                            appearance: "fill-stroke",
+                            size: "small",
+                          })}
                         >
                           {isExpanded
                             ? l?.history?.hideValues || "Hide Values"
                             : l?.history?.viewValues || "View Values"}
                           <ChevronDown
                             aria-hidden="true"
-                            className={`h-3.5 w-3.5 ${isExpanded ? "rotate-180" : ""}`}
+                            className={isExpanded ? "rotate-180" : undefined}
                           />
                         </span>
                       </button>
 
-                      {/* Dynamic Key Readings Grid */}
+                      {/* Key readings */}
                       <div
                         id={`draw-${idx}-values`}
-                        className="grid grid-cols-2 gap-inline-md border-b border-line-subtle bg-surface-sunken p-inset-sm text-caption sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+                        className="grid grid-cols-2 gap-inline-md border-t border-line bg-surface-sunken px-card py-inset-sm sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
                       >
                         {draw.detailedTests
                           .flatMap((g) => g.tests)
                           .map((t, tIdx) => (
-                            <div key={tIdx}>
-                              <span className="block truncate text-sm font-semibold text-fg-muted">
+                            <div key={tIdx} className="min-w-0">
+                              <span className="block truncate text-caption text-fg-muted">
                                 {t.name}
                               </span>
-                              <span className="font-bold text-fg">{t.val}</span>
+                              <span className="text-label-md text-fg">
+                                {t.val}
+                              </span>
                             </div>
                           ))}
                       </div>
 
-                      {/* Notes Section */}
                       {draw.notes && (
-                        <div className="flex items-start gap-2 border-b border-line-subtle bg-surface-sunken/90 px-4 py-2 text-xs text-fg-secondary">
-                          <span className="shrink-0 font-bold text-fg">
+                        <p className="border-t border-line px-card py-inset-sm text-body-sm text-fg-muted">
+                          <span className="text-label-md text-fg">
                             {l?.history?.noteLabel || "Note:"}
-                          </span>
-                          <p className="leading-normal font-medium text-fg-muted">
-                            {draw.notes}
-                          </p>
-                        </div>
+                          </span>{" "}
+                          {draw.notes}
+                        </p>
                       )}
 
-                      {/* EXPANDED DETAILED LAB VALUE TABLE BREAKDOWN */}
+                      {/* The draw's values, one table per category. */}
                       {isExpanded && (
-                        <div className="space-y-4 bg-surface p-4">
-                          <div className="space-y-4">
-                            {draw.detailedTests.map((group, gIdx) => (
-                              <div
-                                key={gIdx}
-                                className="overflow-hidden rounded-lg border border-line"
-                              >
-                                <div className="border-b border-line bg-[var(--color-gray-100)] px-3.5 py-2 text-xs font-bold text-[var(--color-brand-900)]">
-                                  {group.category}
-                                </div>
-                                <table className="w-full text-left text-xs">
-                                  <thead className="border-b border-line bg-surface-sunken font-semibold text-fg-muted">
-                                    <tr>
-                                      <th className="px-3.5 py-2">
-                                        {l?.history?.tableHeaders?.test ||
-                                          "Test"}
-                                      </th>
-                                      <th className="px-3.5 py-2">
-                                        {l?.history?.tableHeaders
-                                          ?.recordedValue || "Recorded Value"}
-                                      </th>
-                                      <th className="px-3.5 py-2">
-                                        {l?.history?.tableHeaders?.refRange ||
-                                          "Reference Range"}
-                                      </th>
-                                      <th className="px-3.5 py-2">
-                                        {l?.history?.tableHeaders?.status ||
-                                          "Status"}
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-line-subtle">
-                                    {group.tests.map((t, tIdx) => (
-                                      <tr
-                                        key={tIdx}
-                                        className="hover:bg-surface-sunken"
-                                      >
-                                        <td className="px-3.5 py-2 font-semibold text-fg">
-                                          {t.name}
-                                        </td>
-                                        <td className="px-3.5 py-2 font-bold text-fg">
-                                          {t.val}
-                                        </td>
-                                        <td className="px-3.5 py-2 text-fg-muted">
-                                          {t.ref}
-                                        </td>
-                                        <td className="px-3.5 py-2">
-                                          <StatusBadge
-                                            status={
-                                              t.status as
-                                                "High" | "In Range" | "Low"
-                                            }
-                                            label={getStatusLabel(
-                                              t.status as
-                                                "High" | "In Range" | "Low",
-                                            )}
-                                          />
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ))}
-                          </div>
+                        <div className="space-y-4 border-t border-line p-card">
+                          {draw.detailedTests.map((group, gIdx) => (
+                            <div
+                              key={gIdx}
+                              className="overflow-hidden rounded-card-nested border border-line"
+                            >
+                              <p className="border-b border-line bg-surface-sunken px-(--table-edge) py-inset-xs text-label-md text-fg">
+                                {group.category}
+                              </p>
+                              <Table minWidth={480}>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.test || "Test"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders
+                                        ?.recordedValue || "Recorded Value"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.refRange ||
+                                        "Reference Range"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.status ||
+                                        "Status"}
+                                    </TableHeaderCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {group.tests.map((t, tIdx) => (
+                                    <TableRow key={tIdx}>
+                                      <TableCell emphasis>{t.name}</TableCell>
+                                      <TableCell emphasis>{t.val}</TableCell>
+                                      <TableCell className="text-fg-muted">
+                                        {t.ref}
+                                      </TableCell>
+                                      <TableCell>
+                                        <StatusBadge
+                                          status={
+                                            t.status as
+                                              "High" | "In Range" | "Low"
+                                          }
+                                          label={getStatusLabel(
+                                            t.status as
+                                              "High" | "In Range" | "Low",
+                                          )}
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -1041,68 +986,74 @@ export default function MyLabsPage() {
                 })}
               </div>
             </div>
-          )}
+          </TabPanel>
         </div>
 
-        {/* Right Sidebar Column */}
-        <div className="space-y-6">
-          {/* Card 1: Latest Lab Summary */}
-          <div className="space-y-4 rounded-xl border border-line bg-surface p-4">
-            <div className="flex items-center justify-between border-b border-line-subtle pb-3">
-              <h2 className="flex items-center gap-1.5 text-heading-4 text-fg">
-                {l?.sidebar?.latestSummary?.title || "Latest lab summary"}
-              </h2>
-              <Info className="h-4 w-4 text-fg-subtle" />
+        {/* The summary, the category list, the library — a row of three. */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+          <Card>
+            <CardHeader
+              title={l?.sidebar?.latestSummary?.title || "Latest lab summary"}
+              action={
+                <Info
+                  aria-hidden="true"
+                  className="h-4 w-4 text-fg-icon-quiet"
+                />
+              }
+            />
+            <div className="mt-stack-lg grid grid-cols-3 gap-inline-md">
+              {[
+                {
+                  n: 16,
+                  label: l?.sidebar?.latestSummary?.inRange || "In Range",
+                  tone: "bg-success-surface text-success",
+                },
+                {
+                  n: 6,
+                  label: l?.sidebar?.latestSummary?.high || "High",
+                  tone: "bg-warning-surface text-warning",
+                },
+                {
+                  n: 3,
+                  label: l?.sidebar?.latestSummary?.low || "Low",
+                  tone: "bg-danger-surface text-danger",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`rounded-card-nested p-inset-sm text-center ${stat.tone}`}
+                >
+                  <p className="text-metric-md">{stat.n}</p>
+                  <p className="text-label-sm">{stat.label}</p>
+                </div>
+              ))}
             </div>
-
-            {/* 3 Pill Stats */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg bg-success-surface p-2.5 text-center">
-                <p className="text-xl font-bold text-success">16</p>
-                <p className="text-xs font-medium text-success">
-                  {l?.sidebar?.latestSummary?.inRange || "In Range"}
-                </p>
-              </div>
-              <div className="rounded-lg bg-warning-surface p-2.5 text-center">
-                <p className="text-xl font-bold text-warning">6</p>
-                <p className="text-xs font-medium text-warning">
-                  {l?.sidebar?.latestSummary?.high || "High"}
-                </p>
-              </div>
-              <div className="rounded-lg bg-danger-surface p-2.5 text-center">
-                <p className="text-xl font-bold text-danger">3</p>
-                <p className="text-xs font-medium text-danger">
-                  {l?.sidebar?.latestSummary?.low || "Low"}
-                </p>
-              </div>
-            </div>
-
-            {/* Encouragement Box */}
-            <div className="space-y-2 rounded-lg border border-line bg-surface-sunken p-3.5">
-              <p className="text-xs font-bold text-fg">
+            <div className="mt-stack-lg space-y-stack-sm rounded-card-nested border border-line bg-surface-sunken p-inset-md">
+              <p className="text-label-md text-fg">
                 {l?.sidebar?.latestSummary?.keepUpTitle ||
                   "Keep up the good work!"}
               </p>
-              <p className="text-xs leading-relaxed text-fg-muted">
+              <p className="text-body-sm text-fg-muted">
                 {l?.sidebar?.latestSummary?.keepUpDesc ||
                   "Continue following your care plan and attend your dialysis treatments."}
               </p>
-              <button
-                type="button"
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                fullWidth
                 onClick={() => setActiveTab("trends")}
-                className="mt-2 w-full cursor-pointer rounded-lg border border-line bg-surface py-1.5 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
               >
                 {l?.sidebar?.latestSummary?.viewTrends || "View Trends"}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
-          {/* Card 2: Lab Categories */}
-          <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
-            <h2 className="border-b border-line-subtle pb-2 text-heading-4 text-fg">
-              {l?.sidebar?.categories?.title || "Lab categories"}
-            </h2>
-            <div className="space-y-1">
+          <Card>
+            <CardHeader
+              title={l?.sidebar?.categories?.title || "Lab categories"}
+            />
+            <ul className="mt-stack-md space-y-stack-xs">
               {[
                 {
                   name: l?.categories?.all || "All Categories",
@@ -1146,56 +1097,78 @@ export default function MyLabsPage() {
                   icon: HeartPulse,
                   key: "dialysis-adequacy",
                 },
-              ].map((cat) => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
-                    selectedCategory === cat.key
-                      ? "bg-primary-soft font-bold text-fg-brand"
-                      : "text-fg-secondary hover:bg-surface-sunken"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <cat.icon className="h-4 w-4 shrink-0 fill-current text-fg-muted" />
-                    {cat.name}
-                  </span>
-                  <span className="text-xs text-fg-subtle">{cat.count}</span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
+              ].map((cat) => {
+                const selected = selectedCategory === cat.key;
+                return (
+                  <li key={cat.key}>
+                    {/* A filter list, so a pressed state, not a link. */}
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={`flex w-full cursor-pointer items-center justify-between gap-inline-md rounded-control px-inset-sm py-inset-xs text-left text-body-sm transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                        selected
+                          ? "bg-primary-soft text-fg-brand"
+                          : "text-fg-secondary hover:bg-surface-sunken"
+                      }`}
+                    >
+                      <span className="flex items-center gap-inline-sm">
+                        <cat.icon
+                          aria-hidden="true"
+                          className={`h-4 w-4 shrink-0 fill-current ${selected ? "text-fg-brand" : "text-fg-muted"}`}
+                        />
+                        {cat.name}
+                      </span>
+                      <span className="text-caption text-fg-muted">
+                        {cat.count}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              size="small"
+              fullWidth
+              className="mt-stack-md"
               onClick={() => setSelectedCategory("all")}
-              className="mt-2 w-full cursor-pointer rounded-lg border border-line bg-surface-sunken py-2 text-xs font-semibold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               {l?.sidebar?.categories?.viewAllTrends || "View All Trends"}
-            </button>
-          </div>
+            </Button>
+          </Card>
 
-          {/* Card 3: Understanding Your Labs */}
-          <div className="space-y-3 rounded-xl border border-primary-soft-line bg-gradient-to-br from-primary-soft to-accent-soft p-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-white">
+          <Card>
+            <div className="flex items-center gap-inline-md">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-brand-subtle text-fg-brand"
+              >
                 <BookOpen className="h-4 w-4" />
-              </div>
+              </span>
               <h2 className="text-heading-4 text-fg">
                 {l?.sidebar?.understanding?.title || "Understanding your labs"}
               </h2>
             </div>
-            <p className="text-xs leading-relaxed text-fg-muted">
+            <p className="mt-stack-sm text-body-sm text-fg-muted">
               {l?.sidebar?.understanding?.desc ||
                 "Learn what your lab numbers mean and how they affect your health."}
             </p>
             <Link
               href="/dashboard/my-library"
-              className="block w-full rounded-lg border border-primary-soft-line bg-surface py-2 text-center text-xs font-semibold text-fg-brand transition-colors hover:bg-primary-soft"
+              className={
+                buttonStyles({
+                  variant: "neutral",
+                  appearance: "fill-stroke",
+                  size: "small",
+                  fullWidth: true,
+                }) + " mt-stack-md"
+              }
             >
               {l?.sidebar?.understanding?.visitCenter || "Visit My Library"}
             </Link>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

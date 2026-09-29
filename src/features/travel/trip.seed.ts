@@ -49,6 +49,9 @@ function timeFrom(offset: number, hour: number, minute = 0, now = new Date()) {
 export function sampleTrip(now = new Date()): TripRequest {
   return {
     id: `${SAMPLE_PREFIX}orlando`,
+    /* The demo member (user@nephroreach.com), so the clinic's Travel
+       Requests page can say whose trip this is. */
+    patient: { name: "Charles Xavier", email: "user@nephroreach.com" },
 
     destination: {
       street: "820 Sunbridge Parkway, Apt 4B",

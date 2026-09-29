@@ -88,10 +88,10 @@ export default function AdminReviewsPage() {
       {/* Header - Simple & Clean */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
+          <h1 className="text-heading-3 font-bold tracking-tight text-fg sm:text-heading-2">
             {isEs ? "Moderación de Reseñas" : "Reviews Moderation"}
           </h1>
-          <p className="mt-1 text-sm font-medium text-fg-muted sm:text-base">
+          <p className="mt-1 text-body-sm font-medium text-fg-muted sm:text-body-md">
             {isEs
               ? "Revise, apruebe o rechace reseñas para mostrarlas en el sitio web."
               : "Approve or decline member reviews to display on the public website."}
@@ -100,14 +100,14 @@ export default function AdminReviewsPage() {
 
         {/* Status Count Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-bold text-fg-secondary shadow-control">
+          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-caption font-bold text-fg-secondary shadow-control">
             {isEs ? "Total" : "Total"}: {reviews.length}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-warning-line bg-warning-surface px-3 py-1.5 text-xs font-bold text-warning shadow-control">
+          <span className="inline-flex items-center gap-1.5 rounded-control border border-warning-line bg-warning-surface px-3 py-1.5 text-caption font-bold text-warning shadow-control">
             <Clock className="h-3.5 w-3.5" />
             {isEs ? "Pendientes" : "Pending"}: {pendingCount}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-success-line bg-success-surface px-3 py-1.5 text-xs font-bold text-success shadow-control">
+          <span className="inline-flex items-center gap-1.5 rounded-control border border-success-line bg-success-surface px-3 py-1.5 text-caption font-bold text-success shadow-control">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {isEs ? "Aprobadas" : "Approved"}: {approvedCount}
           </span>
@@ -192,14 +192,14 @@ export default function AdminReviewsPage() {
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex items-center gap-2.5">
-                      <h3 className="text-base font-bold text-fg">
+                      <h3 className="text-body-md font-bold text-fg">
                         {rev.userName}
                       </h3>
-                      <span className="rounded-control-small bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-fg-brand">
+                      <span className="rounded-control-small bg-primary-soft px-2.5 py-0.5 text-caption font-bold text-fg-brand">
                         {rev.role}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs font-medium text-fg-subtle">
+                    <p className="mt-0.5 text-caption font-medium text-fg-subtle">
                       {rev.userEmail} •{" "}
                       {new Date(rev.createdAt).toLocaleDateString(
                         isEs ? "es-ES" : "en-US",
@@ -214,7 +214,7 @@ export default function AdminReviewsPage() {
 
                   <div className="flex items-center gap-2">
                     {rev.status === "approved" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-success-surface px-3 py-1 text-xs font-bold text-success">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-success-surface px-3 py-1 text-caption font-bold text-success">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         {isEs
                           ? "Aprobada (En sitio web)"
@@ -222,13 +222,13 @@ export default function AdminReviewsPage() {
                       </span>
                     )}
                     {rev.status === "pending" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-warning-surface px-3 py-1 text-xs font-bold text-warning">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-warning-surface px-3 py-1 text-caption font-bold text-warning">
                         <Clock className="h-3.5 w-3.5" />
                         {isEs ? "Pendiente de revisión" : "Pending Review"}
                       </span>
                     )}
                     {rev.status === "declined" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-danger-surface px-3 py-1 text-xs font-bold text-danger">
+                      <span className="inline-flex items-center gap-1.5 rounded-pill border border-transparent bg-danger-surface px-3 py-1 text-caption font-bold text-danger">
                         <XCircle className="h-3.5 w-3.5" />
                         {isEs ? "Rechazada" : "Declined"}
                       </span>
@@ -248,13 +248,13 @@ export default function AdminReviewsPage() {
                       }`}
                     />
                   ))}
-                  <span className="ml-1.5 text-xs font-bold text-fg-muted">
+                  <span className="ml-1.5 text-caption font-bold text-fg-muted">
                     {rev.rating}.0
                   </span>
                 </div>
 
                 {/* Review Text */}
-                <p className="mt-2.5 text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
+                <p className="mt-2.5 text-body-sm leading-relaxed font-medium text-fg-secondary sm:text-body-md">
                   &ldquo;{rev.comment}&rdquo;
                 </p>
 

@@ -279,7 +279,9 @@ function TreatmentDetailContent() {
                   className={`relative size-7 ${preMoodConfig.color}`}
                 />
               </div>
-              <span className="text-sm font-bold text-fg">{preMoodLabel}</span>
+              <span className="text-body-sm font-bold text-fg">
+                {preMoodLabel}
+              </span>
             </div>
           </div>
 
@@ -317,7 +319,7 @@ function TreatmentDetailContent() {
                 {Object.entries(entry.preSeverity).map(([symptom, score]) => (
                   <div
                     key={symptom}
-                    className="flex items-center justify-between gap-4 rounded-xl border border-line-subtle bg-surface-sunken/50 p-3"
+                    className="flex items-center justify-between gap-4 rounded-card border border-line-subtle bg-surface-sunken/50 p-3"
                   >
                     <span className="text-body-md text-fg-secondary">
                       {symptom}
@@ -433,7 +435,7 @@ function TreatmentDetailContent() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-xs font-semibold">
+                  <span className="text-caption font-semibold">
                     {dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed"}
                   </span>
                   <Droplets className="size-4 text-fg-subtle" />
@@ -450,7 +452,7 @@ function TreatmentDetailContent() {
 
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-xs font-semibold">
+                  <span className="text-caption font-semibold">
                     {dt?.clinicalMeasurements?.postWeight || "Post Weight"}
                   </span>
                   <Scale className="size-4 text-fg-subtle" />
@@ -467,7 +469,7 @@ function TreatmentDetailContent() {
 
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-xs font-semibold">
+                  <span className="text-caption font-semibold">
                     {dt?.clinicalMeasurements?.bloodPressure ||
                       "Blood Pressure"}
                   </span>
@@ -485,7 +487,7 @@ function TreatmentDetailContent() {
 
               <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
                 <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-xs font-semibold">
+                  <span className="text-caption font-semibold">
                     {dt?.clinicalMeasurements?.heartRate || "Heart Rate"}
                   </span>
                   <Activity className="size-4 text-fg-subtle" />

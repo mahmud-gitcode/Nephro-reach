@@ -560,7 +560,7 @@ export default function UserDashboard() {
                     <span className="font-semibold text-fg">
                       {item.memberName}
                     </span>
-                    <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] text-fg-secondary">
+                    <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-caption text-fg-secondary">
                       {item.role}
                     </span>
                   </div>

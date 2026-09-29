@@ -150,7 +150,7 @@ export default function NutritionPage() {
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[32px] leading-none font-medium text-fg">
+          <h1 className="text-heading-1 leading-none font-medium text-fg">
             {isEs ? "Nutrición" : "Nutrition"}
           </h1>
         </div>
@@ -163,7 +163,7 @@ export default function NutritionPage() {
               ? setAddFoodMeal("breakfast")
               : setIsExerciseFormOpen(true)
           }
-          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded bg-action px-3 text-sm font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
+          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded bg-action px-3 text-body-sm font-bold tracking-[0.08px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover sm:h-12 sm:gap-2 sm:px-4 sm:text-body-md"
         >
           <Plus className="h-5 w-5" />
           {tab === "food"

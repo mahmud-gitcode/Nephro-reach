@@ -74,7 +74,7 @@ function CollapsedRail({
         >
           <PanelLeftOpen className="h-5 w-5" />
         </button>
-        <span className="text-[11px] font-bold text-fg-muted tabular-nums">
+        <span className="text-caption font-bold text-fg-muted tabular-nums">
           {completedCount}/{totalDays}
         </span>
       </div>
@@ -95,7 +95,7 @@ function CollapsedRail({
                 title={title}
                 aria-label={title}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex h-9 w-full items-center justify-center rounded-control text-xs font-bold transition-colors ${
+                className={`flex h-9 w-full items-center justify-center rounded-control text-caption font-bold transition-colors ${
                   isDone
                     ? "bg-success-600 text-white"
                     : isActive
@@ -187,7 +187,7 @@ export default function JourneyDayList({
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 border-b border-line px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-xs font-bold text-fg-muted">
+          <h2 className="truncate text-caption font-bold text-fg-muted">
             {j?.yourProgress || "Your progress"}
           </h2>
 
@@ -204,7 +204,7 @@ export default function JourneyDayList({
           )}
         </div>
 
-        <p className="mt-1 text-sm font-bold text-fg">
+        <p className="mt-1 text-body-sm font-bold text-fg">
           {completedCount}/{totalDays} {isEs ? "completados" : "complete"}
         </p>
         <Progress
@@ -248,15 +248,15 @@ export default function JourneyDayList({
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold text-fg-brand">
+                    <span className="block text-caption font-bold text-fg-brand">
                       {isEs ? phase.labelEs : phase.labelEn}
                     </span>
-                    <span className="block truncate text-base leading-6 font-semibold text-fg">
+                    <span className="block truncate text-body-md leading-6 font-semibold text-fg">
                       {isEs ? phase.titleEs : phase.titleEn}
                     </span>
                   </span>
 
-                  <span className="shrink-0 rounded-pill bg-surface-sunken px-2 py-0.5 text-[11px] font-bold text-fg-muted">
+                  <span className="shrink-0 rounded-pill bg-surface-sunken px-2 py-0.5 text-caption font-bold text-fg-muted">
                     {phaseComplete}/{phaseDays.length}
                   </span>
                 </button>
@@ -283,7 +283,7 @@ export default function JourneyDayList({
                           }`}
                         >
                           <span
-                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-xs font-bold transition-colors ${
+                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-caption font-bold transition-colors ${
                               isDone
                                 ? "bg-success-600 text-white"
                                 : isActive
@@ -302,14 +302,14 @@ export default function JourneyDayList({
 
                           <span className="min-w-0 flex-1">
                             <span
-                              className={`block text-sm leading-5 font-semibold ${
+                              className={`block text-body-sm leading-5 font-semibold ${
                                 isActive ? "text-fg-brand" : "text-fg-secondary"
                               }`}
                             >
                               {isEs ? day.titleEs : day.titleEn}
                             </span>
 
-                            <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-fg-muted">
+                            <span className="mt-1.5 flex items-center gap-1.5 text-caption font-medium text-fg-muted">
                               <KindIcon className="h-3.5 w-3.5 shrink-0" />
                               <span>{kindLabel(day.kind, j)}</span>
                               <span aria-hidden="true">·</span>
@@ -338,7 +338,7 @@ export default function JourneyDayList({
         })}
 
         {days.length === 0 && (
-          <p className="flex items-center gap-2 px-4 py-6 text-sm text-fg-muted">
+          <p className="flex items-center gap-2 px-4 py-6 text-body-sm text-fg-muted">
             <Lock className="h-4 w-4" />
             {j?.noResults || "No days match your search."}
           </p>

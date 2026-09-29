@@ -186,6 +186,9 @@ export function Modal({
       // without it. It is deliberately not a <button> — a full-screen button
       // announces itself to a screen reader as something worth pressing.
       role="presentation"
+      // Portalled to <body>, outside the canvas column, so it carries the
+      // canvas tokens itself (tokens/canvas.css).
+      data-canvas
       className="fixed inset-0 z-50 flex items-center justify-center bg-fg/50 p-inset-md backdrop-blur-xs"
       onMouseDown={(e) => {
         // mousedown, not click: a drag that starts inside the panel and ends

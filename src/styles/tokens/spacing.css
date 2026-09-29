@@ -50,6 +50,7 @@
   --spacing-inset-md: 1rem; /* 16px · DEFAULT card (p-4, 143 uses)    */
   --spacing-inset-lg: 1.5rem; /* 24px · modal, large card               */
   --spacing-inset-xl: 2rem; /* 32px · page panel                      */
+  --spacing-card: 1.5rem; /* 24px · the Card component's padding     */
 
   /* ======================================================================
      SECTION — between major page regions
@@ -95,6 +96,15 @@
   --radius-chip: 0.25rem; /*  4px · badges, tags   */
   --radius-status: 0.125rem; /*  2px · status tags    */
   --radius-card: 0.75rem; /* 12px · cards          */
+  --radius-card-nested: 0.75rem; /* 12px · a box inside a card */
+  --radius-chart-bar: 0.5rem; /*  8px · a bar in a bar chart */
+  /* Buttons have their own radius so they can go round without taking
+     inputs and selects with them. Equal to the control radii for now. */
+  --radius-button: 0.5rem; /*  8px · big buttons    */
+  --radius-button-small: 0.25rem; /*  4px · small buttons  */
+  /* Inputs, selects and textareas, apart from tabs and chips. */
+  --radius-field: 0.5rem; /*  8px · form fields    */
+  --radius-field-small: 0.25rem; /*  4px · compact fields (search, filters) */
   --radius-panel: 1rem; /* 16px · modals, sheets */
   --radius-pill: 9999px; /*        avatars, pills */
 
@@ -154,4 +164,18 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* The Card component's shadow. A plain custom property, not a @theme
+   shadow, because Tailwind bakes @theme shadow values into the class and a
+   scope (the design-system preview) could not override it. Flat for now. */
+:root {
+  --card-shadow: 0 0 #0000;
+  /* Button shadows, for the same reason. Both equal --shadow-control today. */
+  --button-shadow: 0 1px 2px 0 rgb(16 20 28 / 0.05);
+  --button-primary-shadow: 0 1px 2px 0 rgb(16 20 28 / 0.05);
+  /* A table's outer padding: the first column's left, the last column's
+     right, and the pagination bar. Set it to the card padding and a table
+     inside a card lines up under the card's title. 12px today. */
+  --table-edge: var(--spacing-inset-sm);
 }

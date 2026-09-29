@@ -20,7 +20,6 @@ const ADMIN_PREFIXES = [
   "/dashboard/manage-curriculum",
   "/dashboard/manage-library",
   "/dashboard/manage-table-talk",
-  "/dashboard/manage-travel",
   "/dashboard/live-class",
   "/dashboard/sms-analytics",
   "/dashboard/subscriptions",

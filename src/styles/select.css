@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Dropdown lists — every <select> on the canvas
+   --------------------------------------------------------------------------
+   The list a <select> drops open used to be the operating system's own grey
+   menu: no radius, no spacing, a different font, nothing like the rest of
+   the portal. Browsers now let a page style it (`appearance: base-select`),
+   so the list is drawn here, once, for every dropdown on the canvas — the
+   shared Select, the DateRangeFilter's period, and the hand-built ones.
+
+   It stays a real <select>: keyboard, screen readers, form submission and
+   the phone's own picker all work as before. A browser without
+   customizable select (Safari and Firefox, for now) keeps its native list,
+   which is why this sits behind @supports rather than being rebuilt as a
+   custom widget.
+
+   Scoped to [data-canvas], like tokens/canvas.css: the landing page and
+   the sign-in pages are the client's and keep their own.
+   ========================================================================== */
+
+/* Imported into the components layer (see globals.css), so a page's own
+   utilities — hidden, a width — still win over these defaults. */
+@supports (appearance: base-select) {
+  [data-canvas] select {
+    /* !important: the Select and the hand-built selects carry
+       `appearance-none` (for browsers without this feature), and a
+       utility outranks this layer. An important declaration in a lower
+       layer wins back just this one property. */
+    appearance: base-select !important;
+    /* base-select stops centring the chosen value; this puts it back on
+       the field's middle line. */
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Every Select draws its own chevron; the browser's second one goes. */
+  [data-canvas] select::picker-icon {
+    display: none;
+  }
+
+  /* The list: a floating card, at least as wide as its field. */
+  [data-canvas] select::picker(select) {
+    appearance: base-select;
+    min-inline-size: anchor-size(inline);
+    max-block-size: min(20rem, 60vh);
+    overflow-y: auto;
+    margin-block: 6px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card-nested);
+    background: var(--surface);
+    box-shadow:
+      0 12px 28px -8px rgb(16 20 28 / 0.16),
+      0 4px 10px -4px rgb(16 20 28 / 0.08);
+  }
+
+  /* Each choice: a soft row, the same type as the field it came from. */
+  [data-canvas] select option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-inline-md);
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    font-family: inherit;
+    font-size: var(--text-body-sm);
+    line-height: 1.25rem;
+    font-weight: 400;
+    color: var(--fg);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-standard);
+  }
+
+  [data-canvas] select option:hover,
+  [data-canvas] select option:focus-visible {
+    background: var(--surface-sunken);
+    outline: none;
+  }
+
+  /* The chosen one: brand tint, medium weight, a check on the right. */
+  [data-canvas] select option:checked {
+    background: var(--tone-primary-soft);
+    color: var(--fg-brand);
+    font-weight: 500;
+  }
+
+  [data-canvas] select option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    color: var(--fg-brand);
+  }
+
+  [data-canvas] select option:disabled {
+    color: var(--fg-subtle);
+    cursor: not-allowed;
+  }
+
+  /* Group headings ("Past Lab Draw Dates"): small, quiet, not choosable. */
+  [data-canvas] select optgroup {
+    padding-block-start: 6px;
+    font-family: inherit;
+    font-size: var(--text-caption);
+    font-weight: 500;
+    color: var(--fg-muted);
+  }
+
+  [data-canvas] select optgroup + optgroup {
+    margin-block-start: 6px;
+    border-block-start: 1px solid var(--line);
+  }
+}

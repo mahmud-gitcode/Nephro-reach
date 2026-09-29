@@ -85,7 +85,7 @@ export function RelatedLibrary({
         <h2 className="text-heading-4 text-fg">{title}</h2>
         <Link
           href="/dashboard/my-library"
-          className="flex shrink-0 items-center gap-1 rounded-control-small text-xs font-bold text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="flex shrink-0 items-center gap-1 rounded-control-small text-caption font-bold text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <span>{isEs ? "Ver Mi Biblioteca" : "View My Library"}</span>
           <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
@@ -117,12 +117,12 @@ export function RelatedLibrary({
                     />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="line-clamp-2 text-sm font-bold text-fg">
+                    <h3 className="line-clamp-2 text-body-sm font-bold text-fg">
                       {isEs
                         ? resource.titleEs || resource.titleEn
                         : resource.titleEn}
                     </h3>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-fg-muted">
+                    <p className="mt-0.5 flex items-center gap-1 text-caption font-medium text-fg-muted">
                       <KindIcon
                         aria-hidden="true"
                         className="h-3.5 w-3.5 shrink-0 text-fg-brand"

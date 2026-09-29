@@ -246,7 +246,7 @@ function OptionsEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-bold text-fg-muted">
+      <p className="text-caption font-bold text-fg-muted">
         Answers — pick the correct one, and write feedback for each
       </p>
       {draft.options.map((option, index) => {
@@ -261,7 +261,7 @@ function OptionsEditor({
             }`}
           >
             <div className="flex items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-fg">
+              <label className="flex cursor-pointer items-center gap-2 text-body-sm font-semibold text-fg">
                 <input
                   type="radio"
                   name={`${draft.id}-correct`}
@@ -304,7 +304,7 @@ function OptionsEditor({
                 onEs={(textEs) => update(option.id, { textEs })}
               />
             ) : (
-              <p className="text-sm font-bold text-fg">{option.textEn}</p>
+              <p className="text-body-sm font-bold text-fg">{option.textEn}</p>
             )}
             <BilingualInput
               label="Feedback"
@@ -350,7 +350,7 @@ function PairsEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-bold text-fg-muted">
+      <p className="text-caption font-bold text-fg-muted">
         Pairs — the member matches each left item to its right item
       </p>
       {draft.pairs.map((pair, index) => (
@@ -359,7 +359,7 @@ function PairsEditor({
           className="space-y-3 rounded-card border border-line bg-surface-sunken p-inset-md"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-fg">
+            <span className="text-body-sm font-semibold text-fg">
               Pair {index + 1}
             </span>
             <button
@@ -439,7 +439,7 @@ function FieldsEditor({
         </select>
       </Field>
 
-      <p className="text-xs font-bold text-fg-muted">Fields</p>
+      <p className="text-caption font-bold text-fg-muted">Fields</p>
       {draft.fields.map((field, index) => (
         <div
           key={field.id}
@@ -523,10 +523,10 @@ function QuestionRow({
         {time !== undefined ? <Clock3 className="h-4 w-4" /> : index + 1}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-fg">
+        <p className="truncate text-body-sm font-semibold text-fg">
           {question.promptEn || "Untitled question"}
         </p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-caption text-fg-muted">
           <Badge tone="neutral">{kindText(question.kind)}</Badge>
           {time !== undefined ? <span>at {formatClockShort(time)}</span> : null}
         </p>
@@ -590,7 +590,7 @@ export function QuestionListEditor({
   return (
     <div className="space-y-3">
       {questions.length === 0 ? (
-        <p className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+        <p className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
           <MessageCircleQuestion className="h-6 w-6 text-fg-subtle" />
           {emptyText}
         </p>
@@ -654,7 +654,7 @@ export function VideoQuestionListEditor({
   return (
     <div className="space-y-3">
       {sorted.length === 0 ? (
-        <p className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+        <p className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
           <Clock3 className="h-6 w-6 text-fg-subtle" />
           No pop-up questions yet. Add one to pause the video at a set time.
         </p>
