@@ -422,7 +422,7 @@ function RecentActivity({ dashboard }: { dashboard: Dashboard }) {
 function PerformanceOverview() {
   return (
     <Card as="section" padding="small" className="h-full">
-      <h2 className="mb-6 text-heading-4 text-fg">Performance Overview</h2>
+      <PanelHeading title="Performance Overview" />
       {/* The shared ring row: one size and label style everywhere. */}
       <RingStats items={performance} />
     </Card>

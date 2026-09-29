@@ -33,11 +33,11 @@ export type RingStatsProps = {
   className?: string;
 };
 
-/* Thickness is ProgressRing's default, a twelfth of the diameter, so these
+/* Thickness is ProgressRing's default, a seventh of the diameter, so these
    match every other ring in the product. */
 const RING = {
-  big: { diameter: 120 },
-  small: { diameter: 96 },
+  big: { diameter: 112, column: 160 },
+  small: { diameter: 88, column: 132 },
 };
 
 export function RingStats({ items, size = "big", className }: RingStatsProps) {
@@ -45,24 +45,32 @@ export function RingStats({ items, size = "big", className }: RingStatsProps) {
 
   return (
     <ul
-      className={cn("grid gap-x-inset-md gap-y-inset-lg", className)}
+      className={cn("grid gap-inline-md", className)}
       style={{
-        /* Each column is at least a ring and its gutter wide; past that
-           the rings share the width, and on a narrow card they wrap. */
-        gridTemplateColumns: `repeat(auto-fit, minmax(${ring.diameter + 24}px, 1fr))`,
+        /* Each tile is at least a ring and its padding wide; past that the
+           tiles share the width, and on a narrow card they wrap. */
+        gridTemplateColumns: `repeat(auto-fit, minmax(${ring.column}px, 1fr))`,
       }}
     >
       {items.map((item) => (
-        <li key={item.label} className="flex flex-col items-center">
+        /* A nested box per figure, the same shape as the dashboard's other
+           boxes-in-a-card (Quick Actions), so the ring is framed rather
+           than floating in the card's white. */
+        <li
+          key={item.label}
+          className="flex flex-col items-center rounded-card-nested border border-line-subtle px-inset-sm py-inset-md"
+        >
           <ProgressRing
             value={item.value}
             label={item.label}
             tone={item.tone}
             size={ring.diameter}
           />
+          {/* Two lines are always reserved, so a label that wraps does not
+              push its tile's ring out of line with its neighbours'. */}
           <p
             aria-hidden="true"
-            className="mt-stack-md max-w-40 text-center text-body-sm text-balance text-fg-secondary"
+            className="mt-stack-md line-clamp-2 min-h-10 max-w-40 text-center text-label-md text-balance text-fg-secondary"
           >
             {item.label}
           </p>
