@@ -48,9 +48,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-card-nested);
     background: var(--surface);
-    box-shadow:
-      0 12px 28px -8px rgb(16 20 28 / 0.16),
-      0 4px 10px -4px rgb(16 20 28 / 0.08);
+    box-shadow: var(--popover-shadow);
   }
 
   /* Each choice: a soft row, the same type as the field it came from. */

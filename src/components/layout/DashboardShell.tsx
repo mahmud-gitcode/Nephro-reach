@@ -1,22 +1,26 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
 import { useLanguage } from "@/context/LanguageContext";
-import { buttonStyles } from "@/components/ui";
+import { Button, buttonStyles } from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import {
   ArrowLeft,
+  Bell,
+  Check,
   ChevronDown,
+  ChevronRight,
   LogOut,
   Menu,
   Settings,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
@@ -163,33 +167,67 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   );
 }
 
-function HeaderIcon({
-  src,
-  className = "size-6",
-}: {
-  src: string;
-  className?: string;
-}) {
-  return (
-    <span className={`relative block shrink-0 overflow-clip ${className}`}>
-      <LocalSvg src={src} alt="" className="size-full" />
-    </span>
-  );
+/* ==========================================================================
+   Top bar controls
+   --------------------------------------------------------------------------
+   Every control in the top bar is the same object: a 40px white pill with a
+   hairline, the reference's round icon buttons stretched to fit a label.
+   The menus they open are the same floating card as a dropdown list
+   (select.css), so a language menu, an account menu and a <select> all
+   look like one family.
+   ========================================================================== */
+const topBarControl =
+  "flex h-control-small min-w-control-small shrink-0 cursor-pointer items-center justify-center gap-inline-sm rounded-pill border border-line bg-surface px-3 text-fg transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+
+const topBarMenu =
+  "absolute right-0 z-50 mt-stack-sm rounded-card-nested border border-line bg-surface p-1.5 shadow-(--popover-shadow)";
+
+const topBarMenuItem =
+  "flex w-full cursor-pointer items-center gap-inline-md rounded-control px-3 py-2.5 text-left text-body-sm transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+
+/* A menu that stays open after a tap elsewhere is one a member has to
+   fight, and on a phone it covers the page underneath it. */
+function useDismiss<T extends HTMLElement>(open: boolean, close: () => void) {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, close]);
+
+  return ref;
 }
 
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
   const [langOpen, setLangOpen] = useState(false);
+  const close = useCallback(() => setLangOpen(false), []);
+  const wrapRef = useDismiss<HTMLDivElement>(langOpen, close);
 
   return (
-    <div className="relative">
+    <div ref={wrapRef} className="relative">
       <button
         type="button"
         onClick={() => setLangOpen((open) => !open)}
-        className="flex cursor-pointer items-center gap-inline-xs rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-colors duration-150 ease-standard hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:p-2.5"
+        aria-haspopup="menu"
+        aria-expanded={langOpen}
+        className={topBarControl}
         aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
       >
-        <span className="relative h-4.5 w-6 shrink-0 overflow-clip rounded-[2px] sm:h-6 sm:w-[33px]">
+        <span className="relative size-5 shrink-0 overflow-clip rounded-pill ring-1 ring-line">
           <LocalSvg
             src={
               language === "ES"
@@ -200,37 +238,49 @@ function LanguageSwitcher() {
             className="size-full object-cover"
           />
         </span>
-        <HeaderIcon
-          src="/images/dashboard-header/arrow-down.svg"
-          className="size-3 sm:size-4"
+        <span className="hidden text-label-md text-fg sm:inline">
+          {language}
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className={`size-4 shrink-0 text-fg-muted transition-transform duration-150 ease-standard ${
+            langOpen ? "rotate-180" : ""
+          }`}
         />
       </button>
       {langOpen ? (
-        <div className="absolute right-0 z-50 mt-stack-sm w-28 rounded-control border border-line bg-surface-raised py-inset-xs text-body-sm shadow-md">
-          {(["EN", "ES"] as const).map((code) => (
-            <button
-              key={code}
-              type="button"
-              aria-current={language === code ? "true" : undefined}
-              className={`block w-full cursor-pointer px-inset-sm py-1.5 text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${
-                language === code
-                  ? "text-label-md text-fg-brand"
-                  : "text-fg-secondary"
-              }`}
-              onClick={() => {
-                setLanguage(code);
-                setLangOpen(false);
-              }}
-            >
-              {code === "EN"
-                ? language === "ES"
-                  ? "Inglés"
-                  : "English"
-                : language === "ES"
-                  ? "Español"
-                  : "Spanish"}
-            </button>
-          ))}
+        <div role="menu" className={`${topBarMenu} w-40`}>
+          {(["EN", "ES"] as const).map((code) => {
+            const current = language === code;
+            return (
+              <button
+                key={code}
+                type="button"
+                role="menuitemradio"
+                aria-checked={current}
+                className={`${topBarMenuItem} ${
+                  current
+                    ? "bg-primary-soft text-label-md text-fg-brand"
+                    : "text-fg hover:bg-surface-sunken"
+                }`}
+                onClick={() => {
+                  setLanguage(code);
+                  setLangOpen(false);
+                }}
+              >
+                {code === "EN"
+                  ? language === "ES"
+                    ? "Inglés"
+                    : "English"
+                  : language === "ES"
+                    ? "Español"
+                    : "Spanish"}
+                {current ? (
+                  <Check aria-hidden="true" className="ml-auto size-4" />
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>
@@ -294,27 +344,26 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const isUser = user?.role === "user";
   const trail = getBreadcrumbTrail(pathname, language);
   const currentPage = getBreadcrumb(pathname, language);
+  const homeLabel = language === "ES" ? "Panel" : "Dashboard";
+  const onHome = currentPage === homeLabel;
   const avatarSrc = isUser
     ? "/images/dashboard-header/user-avatar.png"
     : "/images/dashboard-header/admin-avatar.png";
-  const bellSrc = isUser
-    ? "/images/dashboard-header/user-bell.svg"
-    : "/images/dashboard-header/admin-bell.svg";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-md border-b border-line bg-white px-inset-sm py-2.5 sm:px-inset-md sm:py-inset-sm md:px-inset-xl print:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-inline-md border-b border-line bg-surface px-inset-sm py-2.5 sm:px-inset-md sm:py-inset-sm md:px-inset-xl print:hidden">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
-          className="shrink-0 cursor-pointer rounded-control border border-line bg-surface p-1.5 text-fg-secondary shadow-sm transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2 lg:hidden"
+          className={`${topBarControl} px-0 lg:hidden`}
           aria-label={
             language === "ES" ? "Abrir menú del panel" : "Open dashboard menu"
           }
         >
-          <Menu className="h-5 w-5" />
+          <Menu aria-hidden="true" className="size-5" />
         </button>
-        <nav className="flex min-w-0 items-center gap-2 overflow-hidden text-xs font-medium tracking-[0.08px] sm:gap-4 sm:text-base">
+        <nav className="flex min-w-0 items-center gap-inline-sm overflow-hidden text-body-sm text-fg-muted">
           {isUser ? (
             <>
               {/* Mobile: concise active page title */}
@@ -322,7 +371,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                 {trail[trail.length - 1] ?? "Dashboard"}
               </span>
               {/* Tablet/Desktop: full breadcrumbs trail */}
-              <div className="hidden items-center gap-3 truncate sm:flex md:gap-4">
+              <div className="hidden items-center gap-inline-sm truncate sm:flex">
                 {trail.map((item, index) => {
                   const last = index === trail.length - 1;
                   let href: string | null = null;
@@ -349,15 +398,13 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   return (
                     <span
                       key={`${item}-${index}`}
-                      className="flex items-center gap-3 md:gap-4"
+                      className="flex items-center gap-inline-sm"
                     >
                       {index > 0 ? (
-                        <span
+                        <ChevronRight
                           aria-hidden="true"
-                          className="text-body-sm text-fg-subtle"
-                        >
-                          /
-                        </span>
+                          className="size-4 shrink-0 text-fg-subtle"
+                        />
                       ) : null}
                       {href && !last ? (
                         <Link
@@ -383,18 +430,22 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             </>
           ) : (
             <>
-              <Link
-                href="/dashboard"
-                className="hidden rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline"
-              >
-                {language === "ES" ? "Panel" : "Dashboard"}
-              </Link>
-              <span
-                aria-hidden="true"
-                className="hidden text-body-sm text-fg-subtle sm:inline"
-              >
-                /
-              </span>
+              {/* On the dashboard itself the trail would read
+                  "Dashboard > Dashboard"; the page's own name says it. */}
+              {onHome ? null : (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="hidden rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline"
+                  >
+                    {homeLabel}
+                  </Link>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="hidden size-4 shrink-0 text-fg-subtle sm:block"
+                  />
+                </>
+              )}
               <span
                 aria-current="page"
                 className="truncate text-label-md text-fg"
@@ -406,42 +457,38 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         </nav>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-4">
+      <div className="flex shrink-0 items-center gap-inline-sm sm:gap-inline-md">
         {/* Language Switcher - Compact on mobile, full on desktop */}
         {isUser ? <LanguageSwitcher /> : null}
 
-        {/* Notifications Button */}
-        <button
+        <Button
           {...notBuiltYet("Notifications")}
-          type="button"
-          className="flex cursor-pointer items-center rounded-control border-b-2 border-line-strong bg-surface-sunken p-1.5 shadow-sm transition-all duration-150 ease-standard hover:bg-line hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-2"
+          variant="neutral"
+          appearance="fill-stroke"
+          size="small"
+          iconOnly
           aria-label={language === "ES" ? "Notificaciones" : "Notifications"}
         >
-          <HeaderIcon src={bellSrc} className="size-4 sm:size-5" />
-        </button>
+          <Bell aria-hidden="true" />
+        </Button>
 
-        <span aria-hidden="true" className="hidden h-6 w-px bg-line sm:block" />
-
-        {/* Emergency Button - Compact on mobile, full on desktop */}
+        {/* The one loud thing in the bar, and only for members. */}
         {isUser ? (
-          <button
-            type="button"
+          <Button
+            variant="danger"
+            size="small"
             onClick={() => setEmergencyOpen(true)}
-            className="flex shrink-0 cursor-pointer items-center gap-inline-xs rounded-control bg-danger-solid px-inset-xs py-1.5 text-label-md text-danger-on-solid shadow-sm transition-all duration-150 ease-standard hover:bg-danger-solid-hover hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-md sm:px-3.5 sm:py-inset-sm"
-            title={language === "ES" ? "Emergencia" : "Emergency"}
+            leadingIcon={<TriangleAlert aria-hidden="true" />}
+            className="shrink-0"
           >
-            <HeaderIcon
-              src="/images/dashboard-header/danger.svg"
-              className="size-3.5 sm:size-5"
-            />
             <span className="hidden min-[440px]:inline">
               {language === "ES" ? "Emergencia" : "Emergency"}
             </span>
-            <span className="min-[440px]:hidden">
-              {language === "ES" ? "SOS" : "SOS"}
-            </span>
-          </button>
+            <span className="min-[440px]:hidden">SOS</span>
+          </Button>
         ) : null}
+
+        <span aria-hidden="true" className="hidden h-6 w-px bg-line sm:block" />
 
         {/* Profile Avatar & Info - Compact avatar on mobile, name + role on desktop */}
         <ProfileMenu avatarSrc={avatarSrc} />
@@ -475,7 +522,8 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
   const isEs = language === "ES";
 
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  const wrapRef = useDismiss<HTMLDivElement>(open, close);
 
   const name = user?.name ?? (isEs ? "Invitado" : "Guest");
   const roleLabel =
@@ -498,29 +546,6 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
     "/dashboard/settings",
   );
 
-  /* A menu that stays open after a tap elsewhere is one a member has to
-     fight, and on a phone it covers the page underneath it. */
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
-  const itemClass =
-    "flex w-full cursor-pointer items-center gap-inline-md rounded-control-small px-inset-sm py-2.5 text-left text-label-md transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
-
   return (
     <div ref={wrapRef} className="relative shrink-0">
       <button
@@ -529,20 +554,22 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={isEs ? `Cuenta de ${name}` : `Account menu for ${name}`}
-        className="flex cursor-pointer items-center gap-inline-sm rounded-control border-y border-line bg-surface-sunken p-1 shadow-sm transition-colors duration-150 ease-standard hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:gap-inline-lg sm:px-inset-xs sm:py-1.5"
+        className={`${topBarControl} px-1 lg:pr-3`}
       >
-        <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-line sm:h-10 sm:w-[42px]">
+        <span className="relative size-8 shrink-0 overflow-hidden rounded-pill bg-line">
           <Image
             src={avatarSrc}
             alt=""
             fill
-            sizes="42px"
+            sizes="32px"
             className="object-cover"
           />
         </span>
-        <span className="hidden w-[140px] min-w-0 text-left lg:block xl:w-[174px]">
-          <span className="block truncate text-label-lg text-fg">{name}</span>
-          <span className="block truncate text-caption text-fg-muted">
+        <span className="hidden max-w-44 min-w-0 text-left lg:block">
+          <span className="block truncate text-label-md leading-tight text-fg">
+            {name}
+          </span>
+          <span className="block truncate text-caption leading-tight text-fg-muted">
             {roleLabel}
           </span>
         </span>
@@ -558,21 +585,21 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
         <div
           role="menu"
           aria-label={isEs ? "Cuenta" : "Account"}
-          className="absolute right-0 z-30 mt-stack-sm w-[min(15rem,calc(100vw-2rem))] overflow-hidden rounded-control border border-line bg-surface p-inset-xs shadow-md"
+          className={`${topBarMenu} w-60 max-w-[calc(100vw-2rem)]`}
         >
           {/* Who is signed in. Below `lg` this is the only place it is said. */}
-          <div className="border-b border-line-subtle px-inset-sm pt-1 pb-inset-sm">
+          <div className="border-b border-line px-3 pt-1.5 pb-2.5">
             <p className="truncate text-label-lg text-fg">{name}</p>
             <p className="truncate text-caption text-fg-muted">{roleLabel}</p>
           </div>
 
-          <div className="pt-inset-xs">
+          <div className="pt-1.5">
             {canOpenSettings ? (
               <Link
                 href="/dashboard/settings"
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className={`${itemClass} text-fg-secondary hover:bg-surface-sunken hover:text-fg`}
+                className={`${topBarMenuItem} text-fg hover:bg-surface-sunken`}
               >
                 <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
                 {isEs ? "Configuración" : "Settings"}
@@ -587,7 +614,7 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
                 logout();
                 router.push("/");
               }}
-              className={`${itemClass} text-danger hover:bg-danger-surface`}
+              className={`${topBarMenuItem} text-danger hover:bg-danger-surface`}
             >
               <LogOut aria-hidden="true" className="h-4 w-4 shrink-0" />
               {isEs ? "Cerrar sesión" : "Log out"}

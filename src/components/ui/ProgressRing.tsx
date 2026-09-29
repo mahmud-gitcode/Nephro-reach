@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils/cn";
 
    Styled to the redesign (2026-09-28): the arc is an SVG stroke with ROUND
    ends, as the reference dashboard's gauges have — a conic gradient can
-   only cut square. Thickness follows the size (a twelfth of it) unless set,
+   only cut square. Thickness follows the size (a seventh of it) unless set,
    so every ring in the product has the same proportions, and the figure in
    the middle scales with the ring: semibold, as on the stat cards.
    ========================================================================== */
@@ -47,7 +47,7 @@ export type ProgressRingProps = {
   centerLabel?: React.ReactNode;
   /** Outer diameter in px. */
   size?: number;
-  /** Ring thickness in px. Defaults to a twelfth of the size. */
+  /** Ring thickness in px. Defaults to a seventh of the size. */
   thickness?: number;
   tone?: ProgressRingTone;
   className?: string;
@@ -59,7 +59,7 @@ export function ProgressRing({
   centerValue,
   centerLabel,
   size = 140,
-  thickness = Math.round(size / 12),
+  thickness = Math.round(size / 7),
   tone = "primary",
   className,
 }: ProgressRingProps) {
@@ -67,7 +67,7 @@ export function ProgressRing({
   const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
   /* The figure grows with the ring: a big ring gets the stat-card size. */
-  const figure = size >= 112 ? "text-metric-md" : "text-metric-sm";
+  const figure = size >= 104 ? "text-metric-md" : "text-metric-sm";
 
   return (
     <div className={cn("flex flex-col items-center", className)}>
