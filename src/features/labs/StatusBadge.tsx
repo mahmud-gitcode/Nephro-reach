@@ -15,20 +15,20 @@ export function StatusBadge({
 }) {
   if (status === "In Range") {
     return (
-      <span className="inline-flex items-center rounded-status bg-success-100 px-2.5 py-1 text-xs font-semibold text-success">
+      <span className="inline-flex items-center rounded-status bg-success-100 px-2.5 py-1 text-caption font-semibold text-success">
         {label || "In Range"}
       </span>
     );
   }
   if (status === "High") {
     return (
-      <span className="inline-flex items-center rounded-status bg-danger-100 px-2.5 py-1 text-xs font-semibold text-danger">
+      <span className="inline-flex items-center rounded-status bg-danger-100 px-2.5 py-1 text-caption font-semibold text-danger">
         {label || "High"}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-status bg-warning-100 px-2.5 py-1 text-xs font-semibold text-warning-800">
+    <span className="inline-flex items-center rounded-status bg-warning-100 px-2.5 py-1 text-caption font-semibold text-warning-800">
       {label || "Low"}
     </span>
   );

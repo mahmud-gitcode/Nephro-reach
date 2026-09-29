@@ -57,12 +57,12 @@ import type {
    so nothing here repeats it. */
 
 const FIELD_CLASS =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
+  "w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
 
 const ICON_BUTTON =
   "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-fg-muted transition-colors";
 
-const LABEL_CLASS = "block text-xs font-bold text-fg-secondary";
+const LABEL_CLASS = "block text-caption font-bold text-fg-secondary";
 
 /* The standing-to-sprinting glyphs the intensity row is read by. */
 const INTENSITY_ICON: Record<
@@ -127,7 +127,7 @@ function StatTile({
 }) {
   return (
     <article
-      className={`flex items-center gap-3 rounded-[10px] border border-line p-4 ${tint}`}
+      className={`flex items-center gap-3 rounded-card-nested border border-line p-4 ${tint}`}
       title={hint}
     >
       <span
@@ -136,10 +136,10 @@ function StatTile({
         <Icon className={`h-5 w-5 ${iconClass}`} />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-xl leading-7 font-semibold tracking-[0.1px] text-fg">
+        <p className="truncate text-heading-4 leading-7 font-semibold tracking-[0.1px] text-fg">
           {value}
         </p>
-        <p className="flex items-center gap-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
+        <p className="flex items-center gap-1 text-body-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
           <span className="truncate">{label}</span>
           {hint ? (
             <Info
@@ -184,9 +184,9 @@ export function ExerciseCard({
   const feeling = lowestFeeling(entries);
 
   return (
-    <section className="space-y-6 rounded-[10px] border border-line bg-[var(--surface)] p-6">
+    <section className="space-y-6 rounded-card-nested border border-line bg-[var(--surface)] p-6">
       <header className="flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card-nested bg-brand-100">
           <Activity className="h-6 w-6 text-fg-brand" />
         </span>
         <div className="min-w-0">
@@ -252,7 +252,7 @@ export function ExerciseCard({
       </div>
 
       <div>
-        <h3 className="text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+        <h3 className="text-body-lg leading-7 font-medium tracking-[0.09px] text-fg">
           {isToday
             ? isEs
               ? "Actividades de hoy"
@@ -263,8 +263,8 @@ export function ExerciseCard({
         </h3>
 
         {entries.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-line bg-surface px-4 py-10 text-center">
-            <p className="text-sm font-semibold text-fg-muted">
+          <div className="mt-3 rounded-card border border-line bg-surface px-4 py-10 text-center">
+            <p className="text-body-sm font-semibold text-fg-muted">
               {isToday
                 ? isEs
                   ? "Aún no hay actividad registrada hoy."
@@ -273,7 +273,7 @@ export function ExerciseCard({
                   ? "No hay actividad registrada este día."
                   : "No activity logged on this day."}
             </p>
-            <p className="mt-1 text-sm text-fg-subtle">
+            <p className="mt-1 text-body-sm text-fg-subtle">
               {isEs
                 ? "Por ejemplo: 15 minutos de caminata."
                 : "For example: 15 minutes of walking."}
@@ -286,16 +286,16 @@ export function ExerciseCard({
               return (
                 <li
                   key={entry.id}
-                  className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3"
+                  className="flex items-start gap-3 rounded-card border border-line bg-surface px-4 py-3"
                 >
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100">
+                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-card-nested bg-brand-100">
                     <Activity className="h-5 w-5 text-fg-brand" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium text-fg">{label}</p>
+                    <p className="text-body-md font-medium text-fg">{label}</p>
                     {/* Amount, intensity and feeling read as one line, the
                         feeling dropped when it was never answered. */}
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-fg-muted">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body-sm text-fg-muted">
                       <span>
                         {formatAmount(entry.amount, entry.unit, isEs)}
                       </span>
@@ -317,7 +317,7 @@ export function ExerciseCard({
                       ) : null}
                     </p>
                     {entry.note ? (
-                      <p className="mt-1 text-sm text-fg-subtle">
+                      <p className="mt-1 text-body-sm text-fg-subtle">
                         {entry.note}
                       </p>
                     ) : null}
@@ -358,7 +358,7 @@ export function ExerciseCard({
         onLog={onLog}
       />
 
-      <p className="flex items-start gap-2 rounded-xl border border-warning-line bg-warning-surface p-4 text-sm font-medium text-warning">
+      <p className="flex items-start gap-2 rounded-card-nested border border-warning-line bg-warning-surface p-4 text-body-sm font-medium text-warning">
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <span>
           {isEs
@@ -433,7 +433,7 @@ function LogActivityPanel({
   return (
     <div
       ref={panelRef}
-      className="overflow-hidden rounded-xl border border-primary-edge bg-surface"
+      className="overflow-hidden rounded-card-nested border border-primary-edge bg-surface"
     >
       <button
         type="button"
@@ -444,7 +444,7 @@ function LogActivityPanel({
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-action text-white">
           {isOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
         </span>
-        <span className="text-lg leading-7 font-medium tracking-[0.09px] text-fg-brand">
+        <span className="text-body-lg leading-7 font-medium tracking-[0.09px] text-fg-brand">
           {isEs ? "Registrar Nueva Actividad" : "Log a New Activity"}
         </span>
       </button>
@@ -454,7 +454,7 @@ function LogActivityPanel({
           {error ? (
             <p
               role="alert"
-              className="rounded-xl border border-danger-line bg-danger-surface p-3 text-sm font-semibold text-danger"
+              className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-body-sm font-semibold text-danger"
             >
               {isEs ? ERROR_TEXT[error].es : ERROR_TEXT[error].en}
             </p>
@@ -527,7 +527,7 @@ function LogActivityPanel({
                       role="radio"
                       aria-checked={selected}
                       onClick={() => update({ intensity: option.value })}
-                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-sm font-semibold transition-colors ${
+                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card border px-2 py-2.5 text-body-sm font-semibold transition-colors ${
                         selected
                           ? "border-success-line bg-success-surface text-success"
                           : "border-line bg-surface-sunken text-fg-muted hover:bg-surface"
@@ -587,14 +587,14 @@ function LogActivityPanel({
                       onClick={() =>
                         update({ feeling: selected ? null : option.value })
                       }
-                      className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-1 py-2.5 transition-colors ${
+                      className={`flex cursor-pointer flex-col items-center gap-1 rounded-card border px-1 py-2.5 transition-colors ${
                         selected
                           ? face.selected
                           : "border-transparent hover:bg-surface-sunken"
                       }`}
                     >
                       <Icon className={`h-6 w-6 ${face.tone}`} />
-                      <span className="truncate text-xs font-semibold text-fg-muted">
+                      <span className="truncate text-caption font-semibold text-fg-muted">
                         {isEs ? option.labelEs : option.labelEn}
                       </span>
                     </button>
@@ -626,13 +626,13 @@ function LogActivityPanel({
             <button
               type="button"
               onClick={close}
-              className="cursor-pointer rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
+              className="cursor-pointer rounded-card border border-line bg-surface px-5 py-2.5 text-body-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
             >
               {isEs ? "Cancelar" : "Cancel"}
             </button>
             <button
               type="submit"
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
             >
               <Plus className="h-4 w-4" />
               {isEs ? "Registrar Actividad" : "Log Activity"}
@@ -793,10 +793,10 @@ export function ExerciseModal({
             return (
               <li
                 key={row.key}
-                className="space-y-3 rounded-xl border border-line-subtle bg-surface-sunken p-3.5"
+                className="space-y-3 rounded-card border border-line-subtle bg-surface-sunken p-3.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-fg-muted">
+                  <p className="text-caption font-bold text-fg-muted">
                     {isEs ? `Ejercicio ${index + 1}` : `Exercise ${index + 1}`}
                   </p>
                   {count > 1 ? (
@@ -819,7 +819,7 @@ export function ExerciseModal({
                 {error ? (
                   <p
                     role="alert"
-                    className="rounded-xl border border-danger-line bg-danger-surface p-3 text-xs font-semibold text-danger"
+                    className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger"
                   >
                     {isEs ? ERROR_TEXT[error].es : ERROR_TEXT[error].en}
                   </p>
@@ -938,7 +938,7 @@ export function ExerciseModal({
                           onClick={() =>
                             updateRow(row.key, { intensity: option.value })
                           }
-                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold transition-colors ${
+                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card border px-2 py-2 text-caption font-semibold transition-colors ${
                             selected
                               ? "border-success-line bg-success-surface text-success"
                               : "border-line bg-surface text-fg-muted hover:bg-surface-sunken"
@@ -978,14 +978,14 @@ export function ExerciseModal({
                               feeling: selected ? null : option.value,
                             })
                           }
-                          className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-1 py-2 transition-colors ${
+                          className={`flex cursor-pointer flex-col items-center gap-1 rounded-card border px-1 py-2 transition-colors ${
                             selected
                               ? face.selected
                               : "border-transparent hover:bg-surface"
                           }`}
                         >
                           <Icon className={`h-5 w-5 ${face.tone}`} />
-                          <span className="truncate text-[11px] font-semibold text-fg-muted">
+                          <span className="truncate text-caption font-semibold text-fg-muted">
                             {isEs ? option.labelEs : option.labelEn}
                           </span>
                         </button>
@@ -1018,7 +1018,7 @@ export function ExerciseModal({
         <button
           type="button"
           onClick={addRow}
-          className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded border border-line bg-[var(--color-gray-50)] px-4 text-sm font-bold tracking-[0.07px] text-fg-brand transition-colors hover:bg-surface"
+          className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded border border-line bg-[var(--color-gray-50)] px-4 text-body-sm font-bold tracking-[0.07px] text-fg-brand transition-colors hover:bg-surface"
         >
           <Plus className="h-4 w-4" />
           {isEs ? "Agregar otro ejercicio" : "Add another exercise"}
@@ -1028,13 +1028,13 @@ export function ExerciseModal({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
+            className="cursor-pointer rounded-card border border-line bg-surface px-4 py-2.5 text-body-sm font-semibold text-fg-muted transition-colors hover:bg-surface-sunken"
           >
             {isEs ? "Cancelar" : "Cancel"}
           </button>
           <button
             type="submit"
-            className="cursor-pointer rounded-xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
+            className="cursor-pointer rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
           >
             {count > 1
               ? isEs

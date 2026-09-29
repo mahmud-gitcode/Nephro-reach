@@ -36,7 +36,7 @@ export function NutritionDayPicker({
   return (
     <section
       aria-label={isEs ? "Día mostrado" : "Day shown"}
-      className="flex flex-col gap-3 rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-3 rounded-card-nested border border-line bg-[var(--color-gray-100)] p-6 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-center gap-3">
         <button
@@ -52,11 +52,11 @@ export function NutritionDayPicker({
           className="min-w-0 text-center sm:min-w-[180px]"
           aria-live="polite"
         >
-          <p className="text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+          <p className="text-body-lg leading-7 font-medium tracking-[0.09px] text-fg">
             {relative}
           </p>
           {!isToday && relative !== full ? (
-            <p className="text-sm leading-5 font-medium text-fg-muted">
+            <p className="text-body-sm leading-5 font-medium text-fg-muted">
               {full}
             </p>
           ) : null}
@@ -90,14 +90,14 @@ export function NutritionDayPicker({
               const next = event.target.value;
               if (isValidIso(next) && !isFutureDay(next)) onChange(next);
             }}
-            className="h-10 w-full cursor-pointer rounded-xl border border-line bg-surface py-2 pr-3 pl-9 text-sm font-medium text-fg transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+            className="h-10 w-full cursor-pointer rounded-card border border-line bg-surface py-2 pr-3 pl-9 text-body-sm font-medium text-fg transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
           />
         </label>
         {isToday ? null : (
           <button
             type="button"
             onClick={() => onChange(today)}
-            className="h-10 shrink-0 cursor-pointer rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-fg-brand transition-colors hover:bg-surface-sunken"
+            className="h-10 shrink-0 cursor-pointer rounded-card border border-line bg-surface px-4 text-body-sm font-semibold text-fg-brand transition-colors hover:bg-surface-sunken"
           >
             {isEs ? "Hoy" : "Today"}
           </button>

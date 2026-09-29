@@ -94,7 +94,7 @@ function TranscriptTab({
         <Languages className="h-4 w-4 shrink-0 text-fg-muted" />
         <label
           htmlFor="journey-transcript-language"
-          className="text-xs font-semibold text-fg-muted"
+          className="text-caption font-semibold text-fg-muted"
         >
           {j?.transcriptLanguage || "Language"}
         </label>
@@ -105,7 +105,7 @@ function TranscriptTab({
           onChange={(event) =>
             onTranscriptLanguageChange(event.target.value as LanguageCode)
           }
-          className="ml-auto cursor-pointer rounded-control border border-line bg-surface px-2 py-1.5 text-xs font-bold text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-1 focus:ring-ring"
+          className="ml-auto cursor-pointer rounded-control border border-line bg-surface px-2 py-1.5 text-caption font-bold text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-1 focus:ring-ring"
         >
           <option value="EN">English</option>
           <option value="ES">Español</option>
@@ -127,7 +127,7 @@ function TranscriptTab({
                 } ${seekDisabled ? "cursor-default" : "cursor-pointer"}`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 rounded-control-small px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${
+                  className={`mt-0.5 shrink-0 rounded-control-small px-1.5 py-0.5 font-mono text-caption font-semibold tabular-nums ${
                     isActive
                       ? "bg-primary-solid text-primary-on-solid"
                       : "bg-surface-sunken text-fg-muted"
@@ -136,7 +136,7 @@ function TranscriptTab({
                   {formatCueTime(cue.at)}
                 </span>
                 <span
-                  className={`text-sm leading-relaxed ${
+                  className={`text-body-sm leading-relaxed ${
                     isActive ? "font-medium text-fg" : "text-fg-secondary"
                   }`}
                 >
@@ -185,7 +185,7 @@ export function JourneyPanelRail({
             onClick={() => onSelect(tab)}
             aria-pressed={isActive}
             title={label}
-            className={`flex w-[58px] cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2.5 text-[10px] leading-tight font-semibold transition-colors ${
+            className={`flex w-[58px] cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2.5 text-caption leading-tight font-semibold transition-colors ${
               isActive
                 ? "bg-primary-soft text-fg-brand"
                 : "text-fg-muted hover:bg-surface-sunken hover:text-fg-secondary"
@@ -214,16 +214,16 @@ function OverviewTab({
 
   return (
     <div>
-      <p className="text-sm leading-relaxed text-fg-secondary">
+      <p className="text-body-sm leading-relaxed text-fg-secondary">
         {isEs ? day.summaryEs : day.summaryEn}
       </p>
 
-      <h4 className="mt-5 text-xs font-bold text-fg-muted">
+      <h4 className="mt-5 text-caption font-bold text-fg-muted">
         {j?.keyPoints || "What you will learn"}
       </h4>
       <ul className="mt-2 space-y-2">
         {keyPoints.map((point) => (
-          <li key={point} className="flex gap-2 text-sm text-fg-secondary">
+          <li key={point} className="flex gap-2 text-body-sm text-fg-secondary">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <span className="leading-relaxed">{point}</span>
           </li>
@@ -232,18 +232,18 @@ function OverviewTab({
 
       <dl className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold text-fg-muted">
+          <dt className="text-caption font-semibold text-fg-muted">
             {j?.duration || "Length"}
           </dt>
-          <dd className="mt-1 text-sm font-bold text-fg">
+          <dd className="mt-1 text-body-sm font-bold text-fg">
             {day.durationMinutes} {j?.minutesShort || "min"}
           </dd>
         </div>
         <div className="rounded-control border border-line bg-surface-sunken p-3">
-          <dt className="text-[11px] font-semibold text-fg-muted">
+          <dt className="text-caption font-semibold text-fg-muted">
             {j?.moduleLabel || "Module"}
           </dt>
-          <dd className="mt-1 text-sm font-bold text-fg">{groupLabel}</dd>
+          <dd className="mt-1 text-body-sm font-bold text-fg">{groupLabel}</dd>
         </div>
       </dl>
     </div>
@@ -278,10 +278,10 @@ function DocumentsTab({
                 <Icon className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-fg">
+                <span className="block truncate text-body-sm font-semibold text-fg">
                   {isEs ? doc.titleEs : doc.titleEn}
                 </span>
-                <span className="block text-xs font-medium text-fg-muted">
+                <span className="block text-caption font-medium text-fg-muted">
                   {isEs ? doc.metaEs : doc.metaEn}
                 </span>
               </span>
@@ -337,13 +337,13 @@ function NotesTab({
           j?.notesPlaceholder ||
           "Write anything you want to remember from this lesson, or a question for your care team."
         }
-        className="min-h-[260px] w-full flex-1 resize-none rounded-control border border-line bg-surface p-3 text-sm leading-relaxed text-fg-secondary transition-colors outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+        className="min-h-[260px] w-full flex-1 resize-none rounded-control border border-line bg-surface p-3 text-body-sm leading-relaxed text-fg-secondary transition-colors outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
       />
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <span
           role={failed ? "alert" : undefined}
-          className={`text-xs font-medium ${failed ? "text-danger" : "text-fg-muted"}`}
+          className={`text-caption font-medium ${failed ? "text-danger" : "text-fg-muted"}`}
         >
           {saveLabel}
         </span>
@@ -357,7 +357,7 @@ function NotesTab({
               `${isEs ? day.titleEs : day.titleEn}\n\n${note}`,
             )
           }
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-caption font-bold text-fg-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-3.5 w-3.5" />
           {j?.downloadNotes || "Download .txt"}
@@ -412,7 +412,7 @@ export function JourneyPanelContent({
   return (
     <>
       <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3.5">
-        <h2 className="truncate text-base font-semibold text-fg">
+        <h2 className="truncate text-body-md font-semibold text-fg">
           {tabLabel(activeTab, j)}
         </h2>
         <button

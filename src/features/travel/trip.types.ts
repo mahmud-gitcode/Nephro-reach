@@ -172,8 +172,19 @@ export interface TimeChangeRequest {
   facilityReply?: string;
 }
 
+/** Who the trip is for. The clinic handles many patients' trips. */
+export interface TripPatient {
+  name: string;
+  email: string;
+}
+
 export interface TripRequest {
   id: string;
+  /**
+   * Stamped from the signed-in member when they submit. Optional so trips
+   * saved before the clinic side existed still read.
+   */
+  patient?: TripPatient;
 
   /* ---- what the member asks for ---------------------------------------- */
   destination: TripAddress;

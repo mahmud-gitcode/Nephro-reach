@@ -3,7 +3,18 @@
 import React from "react";
 import { ChevronRight, Droplet, Plus, Trash2, Utensils } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Progress } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Progress,
+  Table,
+  TableBody,
+  TableCell,
+  TableEmptyRow,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui";
 import { formatNumber, statusForPercent } from "./nutrition.format";
 import {
   MEAL_KEYS,
@@ -29,23 +40,23 @@ export interface MetricItem {
 
 export function KeyMetricCard({ metric }: { metric: MetricItem }) {
   return (
-    <article className="rounded-[10px] border border-line bg-surface p-6">
+    <article className="rounded-card-nested border border-line bg-surface p-6">
       <div className="flex items-start justify-between gap-3">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${metric.iconBg}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-card-nested ${metric.iconBg}`}
         >
           <metric.icon className={`h-5 w-5 ${metric.iconClass}`} />
         </div>
         {metric.value && (
-          <p className="text-xl leading-7 font-semibold tracking-[0.1px] text-fg">
+          <p className="text-heading-4 leading-7 font-semibold tracking-[0.1px] text-fg">
             {metric.value}
           </p>
         )}
       </div>
-      <h2 className="mt-3 text-lg leading-7 font-medium tracking-[0.09px] text-fg">
+      <h2 className="mt-3 text-body-lg leading-7 font-medium tracking-[0.09px] text-fg">
         {metric.title}
       </h2>
-      <p className="mt-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
+      <p className="mt-1 text-body-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
         {metric.description}
       </p>
       {metric.progress !== undefined && (
@@ -57,7 +68,7 @@ export function KeyMetricCard({ metric }: { metric: MetricItem }) {
         <button
           type="button"
           onClick={metric.onFooterClick}
-          className="mt-3 inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-fg-brand hover:text-fg-brand"
+          className="mt-3 inline-flex cursor-pointer items-center gap-1 text-body-sm font-semibold text-fg-brand hover:text-fg-brand"
         >
           {metric.footer}
           <ChevronRight className="h-4 w-4" />
@@ -113,12 +124,12 @@ export function NutrientOverview({
   };
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
+    <section className="rounded-card-nested border border-line bg-[var(--color-gray-100)] p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-heading-4 text-fg">
           {n?.nutrientOverview?.title || "Nutrient Overview"}
         </h2>
-        <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-fg-muted">
+        <div className="flex flex-wrap items-center gap-3 text-caption font-medium text-fg-muted">
           {Object.entries(statusStyles).map(([key, style]) => (
             <span key={key} className="inline-flex items-center gap-1.5">
               <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
@@ -141,20 +152,20 @@ export function NutrientOverview({
           return (
             <article
               key={key}
-              className="rounded-xl border border-line bg-surface p-3.5"
+              className="rounded-card border border-line bg-surface p-3.5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-base leading-6 font-medium tracking-[0.08px] text-fg">
+                  <h3 className="text-body-md leading-6 font-medium tracking-[0.08px] text-fg">
                     {name}
                   </h3>
-                  <p className="mt-1 text-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
+                  <p className="mt-1 text-body-sm leading-5 font-medium tracking-[0.07px] text-fg-muted">
                     {formatNumber(consumed)} / {formatNumber(goal)}{" "}
                     {NUTRIENT_UNITS[key]}
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-semibold ${style.bg} ${style.text}`}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-body-sm font-semibold ${style.bg} ${style.text}`}
                 >
                   {percent}%
                 </span>
@@ -207,8 +218,9 @@ export function MealTable({
   })).filter((meal) => meal.foods.length > 0);
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    /* The shared Card and Table, flush — the showcase's table layout. */
+    <Card as="section" padding="none" className="overflow-hidden">
+      <div className="flex flex-col gap-inline-md p-card pb-stack-md sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-heading-4 text-fg">
             {isToday || !dayLabel
@@ -222,139 +234,128 @@ export function MealTable({
               "Review meals and key kidney-related nutrients."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => onAddFood()}
-          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded bg-action px-4 text-sm font-bold tracking-[0.07px] text-white shadow-[inset_0_-1px_0_var(--color-brand-100)] transition-colors hover:bg-action-hover sm:gap-2"
-        >
-          <Plus className="h-5 w-5" />
+        <Button size="small" onClick={() => onAddFood()}>
+          <Plus />
           {n?.mealsTable?.addFood || "Add Food"}
-        </button>
+        </Button>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-surface">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-surface-sunken text-xs font-semibold tracking-[0.06px] text-fg-muted">
-              <tr>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.food || "Food"}
-                </th>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.portion || "Portion"}
-                </th>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.calories || "Calories"}
-                </th>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.sodium || "Sodium"}
-                </th>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.potassium || "Potassium"}
-                </th>
-                <th className="px-4 py-3">
-                  {n?.mealsTable?.headers?.phosphorus || "Phosphorus"}
-                </th>
-                <th className="px-4 py-3 text-right">
-                  {n?.mealsTable?.headers?.action || "Action"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-subtle">
-              {mealsWithFood.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
-                    <p className="text-sm font-semibold text-fg-muted">
-                      {isToday
-                        ? isEs
-                          ? "Aún no hay comidas registradas hoy."
-                          : "No meals logged yet today."
-                        : isEs
-                          ? "No hay comidas registradas este día."
-                          : "No meals logged on this day."}
-                    </p>
-                    <p className="mt-1 text-sm text-fg-subtle">
-                      {isEs
-                        ? "Usa Agregar Alimento para empezar."
-                        : "Use Add Food to get started."}
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                mealsWithFood.map((meal) => {
-                  const mealCalories = meal.foods.reduce(
-                    (sum, food) => sum + food.calories,
-                    0,
-                  );
+      <Table minWidth={760}>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.food || "Food"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.portion || "Portion"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.calories || "Calories"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.sodium || "Sodium"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.potassium || "Potassium"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {n?.mealsTable?.headers?.phosphorus || "Phosphorus"}
+            </TableHeaderCell>
+            <TableHeaderCell className="text-right">
+              {n?.mealsTable?.headers?.action || "Action"}
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {mealsWithFood.length === 0 ? (
+            <TableEmptyRow colSpan={7}>
+              <p className="text-center text-label-md text-fg-muted">
+                {isToday
+                  ? isEs
+                    ? "Aún no hay comidas registradas hoy."
+                    : "No meals logged yet today."
+                  : isEs
+                    ? "No hay comidas registradas este día."
+                    : "No meals logged on this day."}
+              </p>
+              <p className="mt-stack-xs text-center text-body-sm text-fg-muted">
+                {isEs
+                  ? "Usa Agregar Alimento para empezar."
+                  : "Use Add Food to get started."}
+              </p>
+            </TableEmptyRow>
+          ) : (
+            mealsWithFood.map((meal) => {
+              const mealCalories = meal.foods.reduce(
+                (sum, food) => sum + food.calories,
+                0,
+              );
 
-                  return (
-                    <React.Fragment key={meal.key}>
-                      <tr className="bg-[var(--color-gray-50)]">
-                        <td colSpan={7} className="px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="inline-flex items-center gap-2 text-base font-medium text-fg">
-                              <Utensils className="h-5 w-5 text-fg-brand" />
-                              {meal.label}
-                            </span>
-                            <span className="text-sm font-medium text-fg-muted">
-                              {formatNumber(mealCalories)} kcal
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                      {meal.foods.map((food) => (
-                        <tr key={food.id} className="text-fg-secondary">
-                          <td className="px-4 py-3 font-medium text-fg">
-                            {food.name}
-                          </td>
-                          <td className="px-4 py-3">{food.portion || "—"}</td>
-                          <td className="px-4 py-3">
-                            {formatNumber(food.calories)}
-                          </td>
-                          <td className="px-4 py-3">
-                            {formatNumber(food.sodium)} mg
-                          </td>
-                          <td className="px-4 py-3">
-                            {formatNumber(food.potassium)} mg
-                          </td>
-                          <td className="px-4 py-3">
-                            {formatNumber(food.phosphorus)} mg
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => onRemoveFood(food.id)}
-                              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
-                              aria-label={
-                                isEs
-                                  ? `Eliminar ${food.name}`
-                                  : `Remove ${food.name}`
-                              }
-                              title={isEs ? "Eliminar" : "Remove"}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+              return (
+                <React.Fragment key={meal.key}>
+                  {/* The meal, as a sub-header row with its total. */}
+                  <TableRow className="bg-surface-sunken">
+                    <TableCell colSpan={7} className="py-inset-xs">
+                      <span className="flex items-center justify-between gap-inline-md">
+                        <span className="inline-flex items-center gap-inline-sm text-label-md text-fg">
+                          <Utensils
+                            aria-hidden="true"
+                            className="h-4 w-4 text-fg-brand"
+                          />
+                          {meal.label}
+                        </span>
+                        <span className="text-body-sm text-fg-muted">
+                          {formatNumber(mealCalories)} kcal
+                        </span>
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                  {meal.foods.map((food) => (
+                    <TableRow key={food.id}>
+                      <TableCell emphasis>{food.name}</TableCell>
+                      <TableCell>{food.portion || "—"}</TableCell>
+                      <TableCell>{formatNumber(food.calories)}</TableCell>
+                      <TableCell>{formatNumber(food.sodium)} mg</TableCell>
+                      <TableCell>{formatNumber(food.potassium)} mg</TableCell>
+                      <TableCell>{formatNumber(food.phosphorus)} mg</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="danger"
+                          appearance="ghost"
+                          size="small"
+                          iconOnly
+                          onClick={() => onRemoveFood(food.id)}
+                          aria-label={
+                            isEs
+                              ? `Eliminar ${food.name}`
+                              : `Remove ${food.name}`
+                          }
+                          title={isEs ? "Eliminar" : "Remove"}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+
+      <div className="border-t border-line p-card py-inset-md">
+        <Button
+          variant="primary"
+          appearance="fill-stroke"
+          fullWidth
+          onClick={() => onAddFood()}
+        >
+          <Plus />
+          {n?.mealsTable?.logMeal || "Log Meal"}
+        </Button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => onAddFood()}
-        className="mt-3 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded border border-line bg-[var(--color-gray-50)] px-3 text-sm font-bold tracking-[0.08px] text-fg-brand transition-colors hover:bg-surface sm:h-12 sm:gap-2 sm:px-4 sm:text-base"
-      >
-        <Plus className="h-5 w-5" />
-        {n?.mealsTable?.logMeal || "Log Meal"}
-      </button>
-    </section>
+    </Card>
   );
 }
 
@@ -375,22 +376,22 @@ export function FluidTracker({
   const filledDrops = Math.min(7, Math.round((percent / 100) * 7));
 
   return (
-    <section className="rounded-[10px] border border-line bg-[var(--color-gray-100)] p-6">
+    <section className="rounded-card-nested border border-line bg-[var(--color-gray-100)] p-6">
       <h2 className="text-heading-4 text-fg">
         {n?.fluidTracker?.title || "Fluid Tracker"}
       </h2>
-      <div className="mt-6 rounded-xl border border-line bg-surface p-3.5">
+      <div className="mt-6 rounded-card border border-line bg-surface p-3.5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[32px] leading-none font-semibold text-fg">
+            <p className="text-heading-1 leading-none font-semibold text-fg">
               {formatNumber(fluidMl)} ml
             </p>
-            <p className="mt-1 text-sm leading-5 font-medium text-fg-muted">
+            <p className="mt-1 text-body-sm leading-5 font-medium text-fg-muted">
               of {formatNumber(goalMl)} ml
             </p>
           </div>
           <p
-            className={`text-xl font-semibold ${
+            className={`text-heading-4 font-semibold ${
               percent >= 100 ? "text-danger" : "text-fg-brand"
             }`}
           >
@@ -408,7 +409,7 @@ export function FluidTracker({
           {Array.from({ length: 7 }).map((_, index) => (
             <span
               key={index}
-              className={`flex h-8 items-center justify-center rounded-lg ${
+              className={`flex h-8 items-center justify-center rounded-control ${
                 index < filledDrops
                   ? "bg-brand-100 text-fg-brand"
                   : "bg-surface-sunken text-fg-subtle"
@@ -421,7 +422,7 @@ export function FluidTracker({
         <button
           type="button"
           onClick={onAddWater}
-          className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-sm font-bold text-white transition-colors hover:bg-action-hover"
+          className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-body-sm font-bold text-white transition-colors hover:bg-action-hover"
         >
           <Plus className="h-4 w-4" />
           {n?.fluidTracker?.addWater || "Add Water"}

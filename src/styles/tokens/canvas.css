@@ -30,6 +30,9 @@
   --surface-sunken: #f5f7f9;
   --line: #e5e7ea;
   --field: #e5e7ea;
+  /* The unfilled part of every ring and progress bar: the reference's
+     neutral grey (its resting chart bars), not the old pale blue. */
+  --track: #eef0f4;
 
   /* ---- text ---------------------------------------------------------- */
   --fg: #111317; /* 18.6:1 */

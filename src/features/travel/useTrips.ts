@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/features/auth/AuthContext";
 import { listTrips, saveTrips } from "./trip.repository";
 import * as rules from "./trip.rules";
 import type {
@@ -19,8 +20,9 @@ export const tripsKey = ["travel", "trips"] as const;
  * The member's travel dialysis requests.
  *
  * Only `submit` and `cancel` are the member's to call. Moving a request
- * along the status ladder belongs to the facility, so that lives behind
- * `setStatus` and is not wired to anything on the member's screen.
+ * along the status ladder belongs to the patient's clinic — the Travel
+ * Requests page in the clinic portal — so that lives behind `setStatus`
+ * and is not wired to anything on the member's screen.
  */
 export function useTrips() {
   const queryClient = useQueryClient();
@@ -35,10 +37,21 @@ export function useTrips() {
 
   const { mutate, reset } = write;
   const trips = useMemo(() => query.data ?? [], [query.data]);
+  const { user } = useAuth();
 
+  /* The request carries who sent it, so the clinic — which handles many
+     patients' trips — can see whose trip it is. */
   const submit = useCallback(
-    (trip: TripRequest) => mutate((current) => rules.addTrip(current, trip)),
-    [mutate],
+    (trip: TripRequest) =>
+      mutate((current) =>
+        rules.addTrip(current, {
+          ...trip,
+          patient:
+            trip.patient ??
+            (user ? { name: user.name, email: user.email } : undefined),
+        }),
+      ),
+    [mutate, user],
   );
 
   const cancel = useCallback(
@@ -142,6 +155,33 @@ export function useTrips() {
     [mutate],
   );
 
+  /* The clinic's Manage popup saves status, placement and message together.
+     One write, not three: each mutation reads the stored list and saves it
+     back, so three fired at once could each start from the same old list
+     and the last would undo the first two. Only what changed is applied,
+     so re-saving an unchanged status stamps no new history event. */
+  const saveArrangement = useCallback(
+    (
+      id: string,
+      changes: {
+        status?: TripRequest["status"];
+        placement?: TripPlacement;
+        note?: string;
+      },
+    ) =>
+      mutate((current) => {
+        let next = current;
+        if (changes.status !== undefined)
+          next = rules.updateTripStatus(next, id, changes.status);
+        if (changes.placement !== undefined)
+          next = rules.setPlacement(next, id, changes.placement);
+        if (changes.note !== undefined)
+          next = rules.setFacilityNote(next, id, changes.note);
+        return next;
+      }),
+    [mutate],
+  );
+
   const sorted = useMemo(() => rules.sortTrips(trips), [trips]);
 
   return {
@@ -166,6 +206,7 @@ export function useTrips() {
     setStatus,
     setPlacement,
     setFacilityNote,
+    saveArrangement,
 
     isPending: query.isPending,
     error: query.error,

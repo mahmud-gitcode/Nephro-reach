@@ -19,7 +19,8 @@
  *   npm run ui:rules:update     accept the current counts as the baseline
  *
  * Scope is the portal canvas. Not scanned: the landing page and its
- * Header/Footer (off-limits), the dashboard shell (it holds the sidebar,
+ * Header/Footer, and Login and Registration (all off-limits — the client's
+ * branded designs, kept as they are), the dashboard shell (it holds the sidebar,
  * the client's), components/ui and the tokens (the system itself), the
  * design-system page (it shows raw values on purpose), and tests.
  */
@@ -85,12 +86,9 @@ const RULES = [
 ];
 
 /* ---- scope ------------------------------------------------------------ */
-const INCLUDE = [
-  "src/app/(portal)",
-  "src/app/(auth)",
-  "src/features",
-  "src/components",
-];
+/* Not src/app/(auth): Login and Registration are the client's branded
+   designs and stay as they are (decided 2026-09-28). */
+const INCLUDE = ["src/app/(portal)", "src/features", "src/components"];
 const EXCLUDE = [
   "src/app/(landing-page)",
   "src/features/landing-page",

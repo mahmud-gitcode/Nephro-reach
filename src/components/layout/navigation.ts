@@ -141,12 +141,6 @@ export const sidebarItems: NavItem[] = [
     roles: ["admin"],
   },
   {
-    label: "Travel Requests",
-    href: "/dashboard/manage-travel",
-    icon: Plane,
-    roles: ["admin"],
-  },
-  {
     label: "My Classroom",
     href: "/dashboard/my-classroom",
     icon: BookOpen,
@@ -265,6 +259,14 @@ export const sidebarItems: NavItem[] = [
     icon: Activity,
     roles: ["clinic"],
   },
+  /* Patients' travel dialysis requests. Moved here from the admin menu
+     (2026-09-29): arranging the chair away from home is the clinic's job. */
+  {
+    label: "Travel Requests",
+    href: "/dashboard/clinic/travel",
+    icon: Plane,
+    roles: ["clinic"],
+  },
   {
     label: "Chronic Care Management",
     href: "/dashboard/clinic/ccm",
@@ -339,6 +341,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Registros" : "Check-ins";
   if (pathname.startsWith("/dashboard/clinic/vascular-access"))
     return language === "ES" ? "Acceso Vascular" : "Vascular Access";
+  if (pathname.startsWith("/dashboard/clinic/travel"))
+    return language === "ES" ? "Solicitudes de Viaje" : "Travel Requests";
   if (pathname.startsWith("/dashboard/clinic/ccm"))
     return language === "ES"
       ? "Gestión de Atención Crónica"
@@ -445,8 +449,6 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Gestión de Clases" : "Class Management";
   if (pathname.startsWith("/dashboard/beyond-the-chair"))
     return language === "ES" ? "Más Allá del Sillón" : "Beyond the Chair";
-  if (pathname.startsWith("/dashboard/manage-travel"))
-    return language === "ES" ? "Solicitudes de Viaje" : "Travel Requests";
   /* A trip's own page, before the section prefix below can swallow it. */
   if (/^\/dashboard\/travel-log\/[^/]+$/.test(pathname))
     return language === "ES" ? "Viaje" : "Trip";
@@ -531,7 +533,6 @@ export function getNavLabel(
     "/dashboard/my-library": "Mi Biblioteca",
     "/dashboard/table-talk": "Dialysis Table Talk",
     "/dashboard/manage-table-talk": "Gestión de Table Talk",
-    "/dashboard/manage-travel": "Solicitudes de Viaje",
     "/dashboard/travel-log": "Registro de Diálisis en Viaje",
     "/dashboard/beyond-the-chair": "Más Allá del Sillón",
     "/dashboard/personal-log/dialysis-management": "Gestión de Diálisis",
@@ -554,6 +555,7 @@ export function getNavLabel(
     "/dashboard/clinic/live-class": "Clases en Vivo",
     "/dashboard/clinic/checkins": "Registros",
     "/dashboard/clinic/vascular-access": "Acceso Vascular",
+    "/dashboard/clinic/travel": "Solicitudes de Viaje",
     "/dashboard/clinic/ccm": "Gestión de Atención Crónica",
     "/dashboard/clinic/messages": "Mensajes",
     "/dashboard/clinic/reports": "Informes",

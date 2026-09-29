@@ -94,6 +94,9 @@ export type { ProgressProps, ProgressTone, ProgressSize } from "./Progress";
 export { ProgressRing } from "./ProgressRing";
 export type { ProgressRingProps, ProgressRingTone } from "./ProgressRing";
 
+export { RingStats } from "./RingStats";
+export type { RingStatsProps, RingStat } from "./RingStats";
+
 export { Skeleton, SkeletonText } from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";
 

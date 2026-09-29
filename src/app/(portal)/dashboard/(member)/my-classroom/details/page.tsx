@@ -132,7 +132,7 @@ function CourseExamsRail({
                     <span className="block truncate text-label-md text-fg">
                       {exam.title}
                     </span>
-                    <span className="block text-xs text-fg-muted">
+                    <span className="block text-caption text-fg-muted">
                       {[
                         exam.meta,
                         isEs

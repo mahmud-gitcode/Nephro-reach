@@ -139,7 +139,7 @@ function NewEntryModal({
         </FormField>
 
         {isFlaggedMedical && (
-          <div className="bg-warning-soft text-warning-fg space-y-1 rounded-control border border-warning-line p-3 text-xs">
+          <div className="bg-warning-soft text-warning-fg space-y-1 rounded-control border border-warning-line p-3 text-caption">
             <div className="flex items-center gap-1.5 font-semibold">
               <AlertTriangle className="size-4 shrink-0 text-warning" />
               <span>

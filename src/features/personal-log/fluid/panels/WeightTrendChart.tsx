@@ -75,7 +75,7 @@ export function WeightTrendChart() {
         <h2 className="text-heading-4 text-fg">
           {w?.weightTrend?.title || "Weight Trend"}
         </h2>
-        <span className="text-xs text-fg-muted">
+        <span className="text-caption text-fg-muted">
           {w?.weightTrend?.subtitle || "(30 Day)"}
         </span>
       </div>
@@ -91,7 +91,7 @@ export function WeightTrendChart() {
                 x={left - 8}
                 y={y + 4}
                 textAnchor="end"
-                className="fill-black/70 text-[12px]"
+                className="fill-black/70 text-caption"
               >
                 {tick}
               </text>
@@ -129,7 +129,7 @@ export function WeightTrendChart() {
             x={left + (index / (labels.length - 1)) * plotWidth}
             y={height + 20}
             textAnchor="middle"
-            className="fill-black/70 text-[12px]"
+            className="fill-black/70 text-caption"
           >
             {label}
           </text>

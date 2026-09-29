@@ -282,7 +282,7 @@ export default function DialysisDaySymptomLogForm({
       {/* 1. CLINICAL SESSION INFORMATION CARD */}
       <div className="w-full rounded-card border border-line bg-surface p-6 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <h1 className="text-xl font-bold tracking-tight text-fg">
+          <h1 className="text-heading-4 font-bold tracking-tight text-fg">
             Dialysis Day Log
           </h1>
 
@@ -291,7 +291,7 @@ export default function DialysisDaySymptomLogForm({
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="dialysis-log-date"
-                className="text-xs font-bold text-fg-muted"
+                className="text-caption font-bold text-fg-muted"
               >
                 Date
               </label>
@@ -307,13 +307,13 @@ export default function DialysisDaySymptomLogForm({
                     e.currentTarget.showPicker?.();
                   } catch {}
                 }}
-                className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-xs font-bold text-fg-secondary transition-colors outline-none hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                className="h-9 cursor-pointer rounded-control border border-line bg-surface px-3 text-caption font-bold text-fg-secondary transition-colors outline-none hover:border-line-strong focus:border-primary-edge focus:ring-1 focus:ring-ring"
               />
             </div>
 
             {/* Dialysis Day Toggle with Label */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-fg-muted">
+              <span className="text-caption font-bold text-fg-muted">
                 Dialysis Day
               </span>
               <div className={`${SEGMENT_TRACK} h-9`}>
@@ -368,10 +368,10 @@ export default function DialysisDaySymptomLogForm({
               key={item.label}
               className="min-w-0 bg-surface-sunken px-3.5 py-3"
             >
-              <p className="truncate text-[11px] font-medium text-fg-muted">
+              <p className="truncate text-caption font-medium text-fg-muted">
                 {item.label}
               </p>
-              <p className="mt-1 truncate text-sm font-bold text-fg">
+              <p className="mt-1 truncate text-body-sm font-bold text-fg">
                 {item.value}
               </p>
             </div>
@@ -396,7 +396,7 @@ export default function DialysisDaySymptomLogForm({
                     className="group flex shrink-0 cursor-pointer flex-col items-center gap-2 sm:flex-row"
                   >
                     <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-bold transition-colors ${
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-pill text-caption font-bold transition-colors ${
                         isCurrent
                           ? "bg-primary-solid text-primary-on-solid ring-4 ring-ring"
                           : isCompleted
@@ -409,11 +409,11 @@ export default function DialysisDaySymptomLogForm({
                       ) : step.id <= 3 ? (
                         step.id
                       ) : (
-                        <span className="text-[10px]">ALL</span>
+                        <span className="text-caption">ALL</span>
                       )}
                     </span>
                     <span
-                      className={`text-center text-xs font-bold transition-colors sm:text-left ${
+                      className={`text-center text-caption font-bold transition-colors sm:text-left ${
                         isCurrent
                           ? "text-fg-brand"
                           : isCompleted
@@ -572,7 +572,7 @@ export default function DialysisDaySymptomLogForm({
                   value={intraNotes}
                   onChange={(e) => setIntraNotes(e.target.value)}
                   placeholder="Session details, interventions, or notes..."
-                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-body-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -644,12 +644,12 @@ export default function DialysisDaySymptomLogForm({
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-primary-soft-line bg-primary-soft px-3.5 py-3">
-                  <span className="text-xs font-medium text-fg-muted">
+                  <span className="text-caption font-medium text-fg-muted">
                     Need a prompt for your doses?
                   </span>
                   <Link
                     href="/dashboard/personal-log/medications"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-fg-brand hover:text-fg-brand hover:underline"
+                    className="inline-flex items-center gap-1.5 text-caption font-bold text-fg-brand hover:text-fg-brand hover:underline"
                   >
                     <Bell className="size-3.5" />
                     <span>Set Medication Reminders</span>
@@ -709,7 +709,7 @@ export default function DialysisDaySymptomLogForm({
                   value={generalNotes}
                   onChange={(e) => setGeneralNotes(e.target.value)}
                   placeholder="Post-dialysis notes or recovery observations..."
-                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                  className="w-full resize-none rounded-control border border-line bg-surface p-3 text-body-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -722,7 +722,7 @@ export default function DialysisDaySymptomLogForm({
             <button
               type="button"
               onClick={() => setActiveTab(activeTab - 1)}
-              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <ArrowLeft className="size-3.5" />
               <span>Previous Page</span>
@@ -731,14 +731,14 @@ export default function DialysisDaySymptomLogForm({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 cursor-pointer items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
+              className="inline-flex h-10 cursor-pointer items-center rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
               Cancel
             </button>
           ) : (
             <Link
               href="/dashboard/personal-log/dialysis-treatment"
-              className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-xs font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
+              className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
               Cancel
             </Link>
@@ -748,7 +748,7 @@ export default function DialysisDaySymptomLogForm({
             <button
               type="button"
               onClick={() => setActiveTab(activeTab + 1)}
-              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-5 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-5 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
               <span>Next Page</span>
               <ArrowRight className="size-3.5" />
@@ -757,7 +757,7 @@ export default function DialysisDaySymptomLogForm({
             <button
               type="button"
               onClick={handleSave}
-              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-6 text-xs font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
+              className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-6 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
               <Check className="size-4" />
               <span>Save Log</span>

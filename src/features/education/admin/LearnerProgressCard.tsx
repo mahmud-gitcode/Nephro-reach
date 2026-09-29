@@ -2,7 +2,18 @@
 
 import React from "react";
 import { Award, ClipboardCheck, PlayCircle } from "lucide-react";
-import { Badge, Card, Progress, SectionTitle } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  Progress,
+  SectionTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui";
 import { certificateStatus, toLessons } from "../classroom";
 import type { Course } from "../courseLibrary";
 import {
@@ -106,39 +117,32 @@ export function LearnerProgressCard({ course }: { course: Course }) {
       </div>
 
       {quizzes.length > 0 ? (
-        <div className="mt-6 overflow-x-auto rounded-control border border-line">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="bg-surface-sunken text-left">
+        <div className="mt-6 overflow-hidden rounded-card-nested border border-line">
+          <Table minWidth={560}>
+            <TableHead>
+              <TableRow>
                 {["Check / exam", "Attempts", "Best score", "Result"].map(
                   (header) => (
-                    <th
-                      key={header}
-                      className="h-11 px-3 font-semibold text-fg"
-                    >
-                      {header}
-                    </th>
+                    <TableHeaderCell key={header}>{header}</TableHeaderCell>
                   ),
                 )}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {quizzes.map((quiz) => {
                 const tries = attemptsFor(attempts, quiz.key);
                 const best = bestAttempt(attempts, quiz.key);
                 return (
-                  <tr key={quiz.key} className="border-t border-line">
-                    <td className="h-12 px-3 font-medium text-fg-secondary">
-                      {quiz.label}
-                    </td>
-                    <td className="px-3 text-fg-secondary tabular-nums">
+                  <TableRow key={quiz.key}>
+                    <TableCell emphasis>{quiz.label}</TableCell>
+                    <TableCell className="tabular-nums">
                       {tries.length}
                       {course.maxAttempts > 0 ? ` / ${course.maxAttempts}` : ""}
-                    </td>
-                    <td className="px-3 text-fg-secondary tabular-nums">
+                    </TableCell>
+                    <TableCell className="tabular-nums">
                       {best ? `${best.percent}%` : "—"}
-                    </td>
-                    <td className="px-3">
+                    </TableCell>
+                    <TableCell>
                       {!best ? (
                         <Badge tone="neutral">Not taken</Badge>
                       ) : tries.some((attempt) => attempt.passed) ? (
@@ -146,12 +150,12 @@ export function LearnerProgressCard({ course }: { course: Course }) {
                       ) : (
                         <Badge tone="warning">Not passed</Badge>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       ) : null}
     </Card>

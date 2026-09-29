@@ -1123,8 +1123,8 @@
       "twoMonthsAgo": "Hace 2 Meses",
       "threeMonthsAgo": "Hace 3 Meses",
       "fourMonthsAgo": "Hace 4 Meses",
-      "viewValues": "Ver Valores ▾",
-      "hideValues": "Ocultar Valores ▲",
+      "viewValues": "Ver Valores",
+      "hideValues": "Ocultar Valores",
       "noteLabel": "Nota:",
       "tableHeaders": {
         "test": "Prueba",

@@ -15,7 +15,7 @@ import {
 import { formatClock } from "@/features/education/vtt";
 
 export const FIELD_CLASS =
-  "w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
+  "w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-body-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
 
 export function Field({
   label,
@@ -28,9 +28,11 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-bold text-fg-muted">{label}</span>
+      <span className="block text-caption font-bold text-fg-muted">
+        {label}
+      </span>
       {hint && (
-        <span className="mt-0.5 block text-[11px] font-medium text-fg-subtle">
+        <span className="mt-0.5 block text-caption font-medium text-fg-subtle">
           {hint}
         </span>
       )}
@@ -152,11 +154,11 @@ export function TypeStep({
                 className={`h-7 w-7 ${selected ? "text-fg-brand" : "text-fg-subtle"}`}
               />
               <span
-                className={`text-sm font-bold ${selected ? "text-fg-brand" : "text-fg-secondary"}`}
+                className={`text-body-sm font-bold ${selected ? "text-fg-brand" : "text-fg-secondary"}`}
               >
                 {option.label}
               </span>
-              <span className="text-[11px] leading-snug font-medium text-fg-muted">
+              <span className="text-caption leading-snug font-medium text-fg-muted">
                 {option.detail}
               </span>
             </button>
@@ -239,16 +241,16 @@ export function MediaUpload({
         className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft"
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
-        <span className="text-sm font-bold text-fg-secondary">
+        <span className="text-body-sm font-bold text-fg-secondary">
           Upload {label} file
         </span>
-        <span className="text-xs font-medium text-fg-muted">
+        <span className="text-caption font-medium text-fg-muted">
           Reads the length and previews it here
         </span>
       </button>
 
       {mediaFileName && (
-        <p className="mt-2 flex items-center gap-2 rounded-control bg-success-surface px-3 py-2 text-xs font-semibold text-success">
+        <p className="mt-2 flex items-center gap-2 rounded-control bg-success-surface px-3 py-2 text-caption font-semibold text-success">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{mediaFileName}</span>
           {mediaSeconds !== null && (

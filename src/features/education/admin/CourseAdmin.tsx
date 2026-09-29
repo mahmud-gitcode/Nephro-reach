@@ -265,13 +265,13 @@ function DocumentsStep({
         className="flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:border-primary-edge hover:bg-primary-soft"
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
-        <span className="text-sm font-bold text-fg-secondary">
+        <span className="text-body-sm font-bold text-fg-secondary">
           Upload handouts
         </span>
       </button>
 
       {documents.length === 0 ? (
-        <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+        <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
           No handouts attached yet.
         </p>
       ) : (
@@ -287,7 +287,7 @@ function DocumentsStep({
 
               <span className="min-w-0 flex-1">
                 <input
-                  className="w-full rounded-control border border-transparent px-2 py-1 text-sm font-semibold text-fg transition-colors outline-none hover:border-line focus:border-primary-edge"
+                  className="w-full rounded-control border border-transparent px-2 py-1 text-body-sm font-semibold text-fg transition-colors outline-none hover:border-line focus:border-primary-edge"
                   value={doc.titleEn}
                   onChange={(event) =>
                     onChange(
@@ -303,7 +303,7 @@ function DocumentsStep({
                     )
                   }
                 />
-                <span className="block px-2 text-xs font-medium text-fg-muted">
+                <span className="block px-2 text-caption font-medium text-fg-muted">
                   {doc.metaEn}
                 </span>
               </span>
@@ -498,7 +498,7 @@ export function ClassEditorPanel({
                 >
                   <span
                     aria-hidden="true"
-                    className={`flex h-5 w-5 items-center justify-center rounded-pill text-[10px] ${
+                    className={`flex h-5 w-5 items-center justify-center rounded-pill text-caption ${
                       active
                         ? "bg-surface/25"
                         : done
@@ -541,7 +541,9 @@ export function ClassEditorPanel({
               />
 
               <div className="space-y-4 border-t border-line pt-4">
-                <h3 className="text-xs font-bold text-fg-muted">Transcript</h3>
+                <h3 className="text-caption font-bold text-fg-muted">
+                  Transcript
+                </h3>
                 <ClassTranscriptUpload
                   draft={draft}
                   onChange={set}
@@ -560,7 +562,7 @@ export function ClassEditorPanel({
 
           {step === "exam" && (
             <>
-              <p className="text-sm text-fg-muted">
+              <p className="text-body-sm text-fg-muted">
                 A scored exam, taken in order like any other class. Members need
                 the course pass mark to finish it.
               </p>
@@ -575,7 +577,7 @@ export function ClassEditorPanel({
 
           {step === "activities" && (
             <>
-              <p className="text-sm text-fg-muted">
+              <p className="text-body-sm text-fg-muted">
                 Questions shown under the lesson. Members answer them to finish
                 the class; they are not marked.
               </p>
@@ -589,7 +591,7 @@ export function ClassEditorPanel({
 
           {step === "video" &&
             (draft.kind === "reading" ? (
-              <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-fg-muted">
+              <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
                 Pop-up questions need a video or audio class.
               </p>
             ) : (
@@ -637,8 +639,10 @@ export function CourseSettingsModal({
         className="mt-0.5 h-4 w-4 accent-[var(--color-brand-600)]"
       />
       <span>
-        <span className="block text-sm font-semibold text-fg">{label}</span>
-        <span className="mt-0.5 block text-xs text-fg-muted">{hint}</span>
+        <span className="block text-body-sm font-semibold text-fg">
+          {label}
+        </span>
+        <span className="mt-0.5 block text-caption text-fg-muted">{hint}</span>
       </span>
     </label>
   );
@@ -653,7 +657,7 @@ export function CourseSettingsModal({
       submitDisabled={!valid}
     >
       <div className="space-y-4">
-        <p className="text-xs font-bold text-fg-muted">Names</p>
+        <p className="text-caption font-bold text-fg-muted">Names</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
             label="A group is called (English)"
@@ -699,7 +703,9 @@ export function CourseSettingsModal({
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-bold text-fg-muted">Checks and final exam</p>
+        <p className="text-caption font-bold text-fg-muted">
+          Checks and final exam
+        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Pass mark (%)">
             <input
@@ -735,7 +741,7 @@ export function CourseSettingsModal({
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-bold text-fg-muted">Certificate</p>
+        <p className="text-caption font-bold text-fg-muted">Certificate</p>
         {toggle(
           "certificateEnabled",
           "Issue a certificate of completion",

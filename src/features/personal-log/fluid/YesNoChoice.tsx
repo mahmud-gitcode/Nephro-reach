@@ -42,7 +42,7 @@ export function YesNoChoice({
       className="flex items-center justify-between rounded-card border border-line-subtle bg-surface-sunken px-inset-sm py-inset-xs transition-colors duration-150 ease-standard"
       labelClassName="text-body-sm text-fg-secondary"
       trackClassName="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1"
-      optionClassName="cursor-pointer rounded-lg px-3.5 py-1 text-xs font-bold transition-all"
+      optionClassName="cursor-pointer rounded-control px-3.5 py-1 text-caption font-bold transition-all"
       selectedClassName="bg-surface text-fg shadow-control"
       unselectedClassName="text-fg-secondary hover:text-fg"
     />

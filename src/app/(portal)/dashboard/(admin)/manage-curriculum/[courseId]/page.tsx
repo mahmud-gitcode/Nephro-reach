@@ -43,10 +43,18 @@ import { LearnerProgressCard } from "@/features/education/admin/LearnerProgressC
 import {
   Alert,
   Badge,
+  Button,
   Card,
   ErrorState,
   SectionTitle,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  type BadgeTone,
 } from "@/components/ui";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -65,11 +73,12 @@ const KIND_LABEL: Record<CourseClassKind, string> = {
   exam: "Exam",
 };
 
-const KIND_PILL: Record<CourseClassKind, string> = {
-  video: "bg-primary-soft text-fg-brand",
-  audio: "bg-accent-soft text-accent-fg",
-  reading: "bg-warning-surface text-warning",
-  exam: "bg-success-surface text-success",
+/* Categorical, not good-or-bad: each kind keeps its own tag colour. */
+const KIND_TONE: Record<CourseClassKind, BadgeTone> = {
+  video: "info",
+  audio: "accent",
+  reading: "warning",
+  exam: "success",
 };
 
 /** Which class the editor is open on, and where it belongs. */
@@ -112,18 +121,19 @@ function ModuleSection({
   const lessonCount = courseModule.classes.length - examCount;
 
   return (
-    <section className="rounded-[14px] border border-line bg-surface shadow-card">
-      <header className="flex flex-wrap items-center gap-3 border-b border-line p-4">
+    /* The shared Card, with its table flush — the showcase's layout. */
+    <Card as="section" padding="none" className="overflow-hidden">
+      <header className="flex flex-wrap items-center gap-inline-md border-b border-line p-card py-inset-md">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold text-fg-brand">
+          <p className="text-overline text-fg-brand">
             {course.groupLabelEn} {index + 1}
           </p>
-          <h2 className="truncate text-lg font-semibold text-fg">
+          <h2 className="truncate text-heading-4 text-fg">
             {courseModule.titleEn}
           </h2>
         </div>
 
-        <span className="flex items-center gap-3 text-xs font-semibold text-fg-muted">
+        <span className="flex items-center gap-inline-md text-body-sm text-fg-muted">
           <span>
             {lessonCount} {course.itemLabelEn.toLowerCase()}
             {lessonCount === 1 ? "" : "s"}
@@ -135,169 +145,179 @@ function ModuleSection({
           <span>{formatTotalDuration(minutes)}</span>
         </span>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
+        <div className="flex shrink-0 items-center gap-inline-sm">
+          <Button
+            variant="neutral"
+            appearance="ghost"
+            size="small"
+            iconOnly
             onClick={onEditModule}
             aria-label={`Rename ${courseModule.titleEn}`}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
           >
-            <Edit3 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
+            <Edit3 />
+          </Button>
+          <Button
+            variant="danger"
+            appearance="ghost"
+            size="small"
+            iconOnly
             onClick={onDeleteModule}
             aria-label={`Delete ${courseModule.titleEn}`}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
           >
-            <Trash2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
+            <Trash2 />
+          </Button>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            size="small"
             onClick={onAddExam}
-            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line"
           >
-            <ClipboardCheck className="h-4 w-4" />
+            <ClipboardCheck />
             Add Exam
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            size="small"
             onClick={onAddClass}
-            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-control bg-surface-sunken px-3 text-xs font-bold text-fg-secondary transition-colors hover:bg-line"
           >
-            <Plus className="h-4 w-4" />
+            <Plus />
             Add {course.itemLabelEn}
-          </button>
+          </Button>
         </div>
       </header>
 
-      <div className="p-3">
-        {visibleClasses.length === 0 ? (
-          <p className="rounded-control border border-dashed border-line p-8 text-center text-sm font-medium text-fg-muted">
-            {courseModule.classes.length === 0
-              ? `No ${course.itemLabelEn.toLowerCase()}s in this ${course.groupLabelEn.toLowerCase()} yet.`
-              : `Nothing of that type in this ${course.groupLabelEn.toLowerCase()}.`}
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-control border border-line">
-            <table className="w-full min-w-[860px] border-collapse text-sm">
-              <thead>
-                <tr className="bg-surface-sunken text-left">
-                  {[
-                    course.itemLabelEn,
-                    "Type",
-                    "Duration",
-                    "Transcript",
-                    "Questions",
-                    "Documents",
-                    "Actions",
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      className={`h-[55px] border-b border-line px-3 font-semibold tracking-[0.07px] text-fg ${
-                        header === "Actions" ? "text-center" : ""
-                      }`}
-                    >
-                      <span className="block border-l border-line pl-3 leading-5 first:border-l-0">
-                        {header}
+      {visibleClasses.length === 0 ? (
+        <p className="m-card rounded-card-nested border border-dashed border-line p-inset-xl text-center text-body-sm text-fg-muted">
+          {courseModule.classes.length === 0
+            ? `No ${course.itemLabelEn.toLowerCase()}s in this ${course.groupLabelEn.toLowerCase()} yet.`
+            : `Nothing of that type in this ${course.groupLabelEn.toLowerCase()}.`}
+        </p>
+      ) : (
+        <Table minWidth={860}>
+          <TableHead>
+            <TableRow>
+              {[
+                course.itemLabelEn,
+                "Type",
+                "Duration",
+                "Transcript",
+                "Questions",
+                "Documents",
+                "Actions",
+              ].map((header) => (
+                <TableHeaderCell
+                  key={header}
+                  className={header === "Actions" ? "text-right" : undefined}
+                >
+                  {header}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {visibleClasses.map((courseClass, classIndex) => {
+              const KindIcon = KIND_ICON[courseClass.kind];
+              return (
+                <TableRow key={courseClass.id}>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-md">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-cat-4-soft text-label-sm text-fg">
+                        {classIndex + 1}
                       </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visibleClasses.map((courseClass, classIndex) => {
-                  const KindIcon = KIND_ICON[courseClass.kind];
-                  return (
-                    <tr
-                      key={courseClass.id}
-                      className="border-b border-dashed border-line last:border-0"
+                      <span className="min-w-0">
+                        <span className="block truncate text-label-md text-fg">
+                          {courseClass.titleEn}
+                        </span>
+                        <span className="block truncate text-caption text-fg-muted">
+                          {courseClass.kind === "exam"
+                            ? `${courseClass.activities.length} scored questions · ${course.passMark}% to pass`
+                            : courseClass.mediaSrc || "No media path set"}
+                        </span>
+                      </span>
+                    </span>
+                  </TableCell>
+
+                  <TableCell>
+                    <Badge
+                      tone={KIND_TONE[courseClass.kind]}
+                      icon={<KindIcon aria-hidden="true" />}
                     >
-                      <td className="h-[62px] px-3 py-2">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-cat-4-soft text-label-sm text-fg">
-                            {classIndex + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate leading-5 font-semibold text-fg-secondary">
-                              {courseClass.titleEn}
-                            </p>
-                            <p className="truncate text-xs leading-[18px] text-fg-muted">
-                              {courseClass.kind === "exam"
-                                ? `${courseClass.activities.length} scored questions · ${course.passMark}% to pass`
-                                : courseClass.mediaSrc || "No media path set"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                      {KIND_LABEL[courseClass.kind]}
+                    </Badge>
+                  </TableCell>
 
-                      <td className="h-[62px] px-3 py-2">
-                        <span
-                          className={`inline-flex h-6 items-center gap-1.5 rounded px-2 text-xs font-semibold ${KIND_PILL[courseClass.kind]}`}
-                        >
-                          <KindIcon className="h-3.5 w-3.5" />
-                          {KIND_LABEL[courseClass.kind]}
-                        </span>
-                      </td>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-sm whitespace-nowrap">
+                      <Clock3
+                        aria-hidden="true"
+                        className="h-4 w-4 text-fg-muted"
+                      />
+                      {courseClass.durationMinutes} min
+                    </span>
+                  </TableCell>
 
-                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                        <span className="flex items-center gap-2">
-                          <Clock3 className="h-4 w-4 text-fg-muted" />
-                          {courseClass.durationMinutes} min
-                        </span>
-                      </td>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-sm whitespace-nowrap">
+                      <Captions
+                        aria-hidden="true"
+                        className="h-4 w-4 text-fg-muted"
+                      />
+                      {courseClass.transcript.length} lines
+                    </span>
+                  </TableCell>
 
-                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                        <span className="flex items-center gap-2">
-                          <Captions className="h-4 w-4 text-fg-muted" />
-                          {courseClass.transcript.length} lines
-                        </span>
-                      </td>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-sm">
+                      <MessageCircleQuestion
+                        aria-hidden="true"
+                        className="h-4 w-4 text-fg-muted"
+                      />
+                      {courseClass.activities.length +
+                        courseClass.videoQuestions.length}
+                    </span>
+                  </TableCell>
 
-                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                        <span className="flex items-center gap-2">
-                          <MessageCircleQuestion className="h-4 w-4 text-fg-muted" />
-                          {courseClass.activities.length +
-                            courseClass.videoQuestions.length}
-                        </span>
-                      </td>
+                  <TableCell>
+                    <span className="flex items-center gap-inline-sm">
+                      <FileText
+                        aria-hidden="true"
+                        className="h-4 w-4 text-fg-muted"
+                      />
+                      {courseClass.documents.length}
+                    </span>
+                  </TableCell>
 
-                      <td className="h-[62px] px-3 py-2 font-medium text-fg-secondary">
-                        <span className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-fg-muted" />
-                          {courseClass.documents.length}
-                        </span>
-                      </td>
-
-                      <td className="h-[62px] px-3 py-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => onEditClass(courseClass)}
-                            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-control px-2.5 text-xs font-bold text-fg transition-colors hover:bg-surface-sunken"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteClass(courseClass.id)}
-                            aria-label={`Delete ${courseClass.titleEn}`}
-                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </section>
+                  <TableCell>
+                    <span className="flex items-center justify-end gap-inline-xs">
+                      <Button
+                        variant="neutral"
+                        appearance="ghost"
+                        size="small"
+                        onClick={() => onEditClass(courseClass)}
+                      >
+                        <Edit3 />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        appearance="ghost"
+                        size="small"
+                        iconOnly
+                        onClick={() => onDeleteClass(courseClass.id)}
+                        aria-label={`Delete ${courseClass.titleEn}`}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </Card>
   );
 }
 
@@ -356,14 +376,16 @@ export default function ManageCoursePage() {
 
   if (!course) {
     return (
-      <div className="rounded-[14px] border border-line bg-surface p-8 text-center shadow-card">
-        <h1 className="text-xl font-semibold text-fg">Course not found</h1>
-        <p className="mt-2 text-sm text-fg-muted">
+      <div className="rounded-card-nested border border-line bg-surface p-8 text-center shadow-card">
+        <h1 className="text-heading-4 font-semibold text-fg">
+          Course not found
+        </h1>
+        <p className="mt-2 text-body-sm text-fg-muted">
           It may have been deleted from this browser.
         </p>
         <Link
           href="/dashboard/manage-curriculum"
-          className="mt-5 inline-flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
+          className="mt-5 inline-flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-body-sm font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to courses
@@ -404,7 +426,7 @@ export default function ManageCoursePage() {
     <>
       <Link
         href="/dashboard/manage-curriculum"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
+        className="inline-flex items-center gap-2 text-body-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
       >
         <ArrowLeft className="h-4 w-4" />
         All courses
@@ -412,32 +434,32 @@ export default function ManageCoursePage() {
 
       {saveFailure ? <div className="mt-4">{saveFailure}</div> : null}
 
-      <section className="mt-4 rounded-[14px] border border-line bg-surface p-5 shadow-card sm:p-6">
+      <section className="mt-4 rounded-card-nested border border-line bg-surface p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-fg sm:text-3xl">
+            <h1 className="text-heading-3 font-semibold text-fg sm:text-heading-2">
               {course.titleEn}
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-fg-muted">
+            <p className="mt-2 max-w-3xl text-body-sm leading-relaxed text-fg-muted">
               {course.descriptionEn || "No description yet."}
             </p>
 
             <ul className="mt-4 flex flex-wrap items-center gap-3">
-              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-caption font-medium text-fg-muted">
                 <Layers className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
                   {course.modules.length}
                 </span>
                 {course.groupLabelEn.toLowerCase()}s
               </li>
-              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-caption font-medium text-fg-muted">
                 <BookOpen className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
                   {courseClassCount(course) - examTotal}
                 </span>
                 {course.itemLabelEn.toLowerCase()}s
               </li>
-              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-xs font-medium text-fg-muted">
+              <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-caption font-medium text-fg-muted">
                 <Clock3 className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
                   {formatTotalDuration(courseMinutes(course))}
@@ -451,7 +473,7 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setEditingCourse(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-body-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <Edit3 className="h-4 w-4 text-fg-muted" />
               Edit course
@@ -459,7 +481,7 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setEditingSettings(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
+              className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-body-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <Settings className="h-4 w-4 text-fg-muted" />
               Settings
@@ -467,7 +489,7 @@ export default function ManageCoursePage() {
             <button
               type="button"
               onClick={() => setAddingModule(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
+              className="flex cursor-pointer items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-body-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
               Add {course.groupLabelEn}
@@ -490,7 +512,7 @@ export default function ManageCoursePage() {
                 role="tab"
                 aria-selected={courseModule.id === selectedModule?.id}
                 onClick={() => setActiveModuleId(courseModule.id)}
-                className={`flex h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-[10px] border px-4 text-sm font-medium transition-colors ${
+                className={`flex h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-card-nested border px-4 text-body-sm font-medium transition-colors ${
                   courseModule.id === selectedModule?.id
                     ? "border-primary-edge bg-primary-solid font-bold text-primary-on-solid shadow-card"
                     : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
@@ -500,7 +522,7 @@ export default function ManageCoursePage() {
                   {course.groupLabelEn} {index + 1}
                 </span>
                 <span
-                  className={`rounded-pill px-1.5 py-0.5 text-[11px] font-bold ${
+                  className={`rounded-pill px-1.5 py-0.5 text-caption font-bold ${
                     courseModule.id === selectedModule?.id
                       ? "bg-surface/20 text-fg-inverse"
                       : "bg-surface-sunken text-fg-muted"
@@ -523,7 +545,7 @@ export default function ManageCoursePage() {
               onChange={(event) =>
                 setTypeFilter(event.target.value as "all" | CourseClassKind)
               }
-              className="h-[38px] cursor-pointer rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring"
+              className="h-[38px] cursor-pointer rounded-card-nested border border-line bg-surface px-3 text-body-sm font-medium text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring"
             >
               <option value="all">All Types</option>
               <option value="video">Video</option>
@@ -582,7 +604,7 @@ export default function ManageCoursePage() {
             onDeleteModule={() => deleteModule(course.id, selectedModule.id)}
           />
         ) : (
-          <p className="rounded-[14px] border border-dashed border-line-strong bg-surface p-10 text-center text-sm font-medium text-fg-muted">
+          <p className="rounded-card-nested border border-dashed border-line-strong bg-surface p-10 text-center text-body-sm font-medium text-fg-muted">
             This course has no {course.groupLabelEn.toLowerCase()}s yet. Add one
             to start building {course.itemLabelEn.toLowerCase()}s.
           </p>

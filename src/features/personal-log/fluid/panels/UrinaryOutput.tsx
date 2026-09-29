@@ -2,6 +2,15 @@
 
 import React from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  Card,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui";
 import { TrendIcon } from "../FluidIcons";
 
 /* NOTE: the figures in this panel are fixed demo values. It renders the same
@@ -50,47 +59,40 @@ export function UrinaryOutput() {
   };
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-line bg-surface p-[17px]">
-      <h2 className="text-heading-4 text-fg">
+    /* The shared Card and Table, flush: the table runs to the card's edges
+       and its columns line up under the title (--table-edge). */
+    <Card as="section" padding="none" className="h-full overflow-hidden">
+      <h2 className="p-card pb-stack-md text-heading-4 text-fg">
         {w?.urinaryOutput?.title || "Urinary Output"}{" "}
-        <span className="text-sm font-medium text-fg-muted">
+        <span className="text-body-sm text-fg-muted">
           {w?.urinaryOutput?.subtitle || "(24 Hours)"}
         </span>
       </h2>
-      <div className="mt-6 overflow-hidden rounded-lg border border-[var(--color-gray-300)]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--color-gray-50)]">
-            <tr>
-              <th className="border-b border-[var(--color-gray-300)] px-3 py-3 font-medium text-fg">
-                {w?.urinaryOutput?.date || "Date"}
-              </th>
-              <th className="border-b border-[var(--color-gray-300)] px-3 py-3 font-medium text-fg">
-                {w?.urinaryOutput?.trend || "Trend"}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {urineTrends.map((row) => (
-              <tr
-                key={row.date}
-                className="border-b border-dashed border-[var(--color-gray-300)] last:border-b-0"
-              >
-                <td className="px-3 py-3 text-[var(--color-gray-950)]">
-                  {row.date}
-                </td>
-                <td className="px-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <TrendIcon type={row.icon} />
-                    <span className="font-medium text-[var(--color-gray-950)]">
-                      {getTrendText(row.trendKey, row.defaultTrend)}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <Table minWidth={0}>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>
+              {w?.urinaryOutput?.date || "Date"}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {w?.urinaryOutput?.trend || "Trend"}
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {urineTrends.map((row) => (
+            <TableRow key={row.date}>
+              <TableCell>{row.date}</TableCell>
+              <TableCell emphasis>
+                <span className="flex items-center gap-inline-md">
+                  <TrendIcon type={row.icon} />
+                  {getTrendText(row.trendKey, row.defaultTrend)}
+                </span>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

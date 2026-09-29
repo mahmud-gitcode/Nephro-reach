@@ -364,7 +364,6 @@ function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
           value={(patientsCovered / contract.patientsAllowed) * 100}
           label="Contract seats in use"
           size={96}
-          thickness={14}
         />
         <dl className="space-y-stack-xs">
           <div className="flex gap-inline-md">

@@ -228,7 +228,7 @@ export function AddWeightLogModal({
                 (e.target as HTMLInputElement).showPicker?.();
               } catch {}
             }}
-            className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+            className="w-full cursor-pointer rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-semibold text-fg shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
           />
         </div>
 
@@ -258,7 +258,7 @@ export function AddWeightLogModal({
                     ? "ej. 125"
                     : "e.g. 125"
               }
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+              className="w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
 
@@ -286,7 +286,7 @@ export function AddWeightLogModal({
                     ? "ej. 122"
                     : "e.g. 122"
               }
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+              className="w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
         </div>
@@ -302,7 +302,7 @@ export function AddWeightLogModal({
               value={formIntake}
               onChange={(e) => setFormIntake(e.target.value)}
               placeholder={language === "ES" ? "ej. 48 OZ" : "e.g. 48 OZ"}
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+              className="w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
 
@@ -315,21 +315,21 @@ export function AddWeightLogModal({
               value={formGoal}
               onChange={(e) => setFormGoal(e.target.value)}
               placeholder="48 OZ"
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
+              className="w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-body-sm font-semibold text-fg shadow-control outline-none placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring"
             />
           </div>
         </div>
 
         {/* Goal Met Row */}
         <div className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-2.5">
-          <span className="text-xs font-bold text-fg-secondary sm:text-sm">
+          <span className="text-caption font-bold text-fg-secondary sm:text-body-sm">
             {language === "ES" ? "Meta Cumplida" : "Goal Met"}
           </span>
           <div className="flex items-center gap-inline-xs rounded-control bg-primary-soft p-1">
             <button
               type="button"
               onClick={() => setFormGoalMet(true)}
-              className={`cursor-pointer rounded-lg px-4 py-1 text-xs font-bold transition-all ${
+              className={`cursor-pointer rounded-control px-4 py-1 text-caption font-bold transition-all ${
                 formGoalMet
                   ? "bg-surface text-fg shadow-control"
                   : "text-fg-secondary hover:text-fg"
@@ -340,7 +340,7 @@ export function AddWeightLogModal({
             <button
               type="button"
               onClick={() => setFormGoalMet(false)}
-              className={`cursor-pointer rounded-lg px-4 py-1 text-xs font-bold transition-all ${
+              className={`cursor-pointer rounded-control px-4 py-1 text-caption font-bold transition-all ${
                 !formGoalMet
                   ? "bg-surface text-fg shadow-control"
                   : "text-fg-secondary hover:text-fg"
@@ -356,16 +356,16 @@ export function AddWeightLogModal({
           {/* Section Header */}
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-fg-brand">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-brand-100 text-fg-brand">
                 <Droplets className="h-3.5 w-3.5" />
               </div>
-              <h3 className="text-sm font-bold text-fg">
+              <h3 className="text-body-sm font-bold text-fg">
                 {language === "ES"
                   ? "Control del Estado Hídrico"
                   : "Fluid Status Check"}
               </h3>
             </div>
-            <p className="mt-1 text-xs font-medium text-fg-muted">
+            <p className="mt-1 text-caption font-medium text-fg-muted">
               {language === "ES"
                 ? "Ayúdenos a comprender cómo se siente después de la diálisis."
                 : "Help us understand how you’re feeling after dialysis."}
@@ -452,10 +452,10 @@ export function AddWeightLogModal({
         {/* Urinary Output (24 Hours) Card */}
         <div className="space-y-2.5 rounded-card border border-line bg-surface p-3.5">
           <div className="flex items-baseline gap-1.5">
-            <h3 className="text-xs font-bold text-fg sm:text-sm">
+            <h3 className="text-caption font-bold text-fg sm:text-body-sm">
               {language === "ES" ? "Gasto Urinario" : "Urinary Output"}
             </h3>
-            <span className="text-[11px] font-semibold text-fg-muted">
+            <span className="text-caption font-semibold text-fg-muted">
               {language === "ES" ? "(24 Horas)" : "(24 Hours)"}
             </span>
           </div>
@@ -469,7 +469,7 @@ export function AddWeightLogModal({
                 <select
                   value={formUoAmount}
                   onChange={(e) => setFormUoAmount(e.target.value)}
-                  className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-surface px-3 py-2 pr-7 text-xs font-bold text-fg-secondary shadow-control outline-none focus:border-primary-edge"
+                  className="w-full cursor-pointer appearance-none rounded-card border border-line bg-surface px-3 py-2 pr-7 text-caption font-bold text-fg-secondary shadow-control outline-none focus:border-primary-edge"
                 >
                   <option value="Moderate">
                     {language === "ES" ? "Moderada" : "Moderate"}
@@ -496,7 +496,7 @@ export function AddWeightLogModal({
                 <button
                   type="button"
                   onClick={() => setFormUoTrend("decreasing")}
-                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card px-1.5 py-2 text-caption font-bold transition-all ${
                     formUoTrend === "decreasing"
                       ? "border-2 border-danger-edge bg-danger-surface text-danger shadow-control"
                       : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"
@@ -513,7 +513,7 @@ export function AddWeightLogModal({
                 <button
                   type="button"
                   onClick={() => setFormUoTrend("noChange")}
-                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card px-1.5 py-2 text-caption font-bold transition-all ${
                     formUoTrend === "noChange"
                       ? "border-2 border-primary-edge bg-primary-soft text-fg-brand shadow-control"
                       : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"
@@ -530,7 +530,7 @@ export function AddWeightLogModal({
                 <button
                   type="button"
                   onClick={() => setFormUoTrend("increasing")}
-                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-bold transition-all ${
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card px-1.5 py-2 text-caption font-bold transition-all ${
                     formUoTrend === "increasing"
                       ? "border-2 border-success-600 bg-success-surface text-success shadow-control"
                       : "border border-line bg-surface-sunken text-fg-secondary hover:bg-surface-sunken"

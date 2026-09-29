@@ -186,13 +186,13 @@ function SymptomDetailContent() {
               <AlertTriangle className="size-4" />
             </span>
             <div>
-              <span className="text-xs font-black text-danger">
+              <span className="text-caption font-black text-danger">
                 {isEs ? "Aviso de emergencia" : "Emergency notice"}
               </span>
             </div>
 
             <div className="flex flex-col items-start gap-3">
-              <p className="text-justify text-sm leading-relaxed font-medium text-fg-secondary sm:text-base">
+              <p className="text-justify text-body-sm leading-relaxed font-medium text-fg-secondary sm:text-body-md">
                 {isEs
                   ? "Before-the-ER™ no diagnostica afecciones médicas. Si cree que está experimentando una emergencia potencialmente mortal, llame al 911 de inmediato."
                   : "Before-the-ER™ does not diagnose medical conditions. If you believe you are experiencing a life-threatening emergency, call 911 immediately."}
@@ -200,7 +200,7 @@ function SymptomDetailContent() {
 
               <a
                 href="tel:911"
-                className="shrink-0 text-sm font-bold whitespace-nowrap text-danger underline underline-offset-4 transition-colors hover:text-danger sm:text-base"
+                className="shrink-0 text-body-sm font-bold whitespace-nowrap text-danger underline underline-offset-4 transition-colors hover:text-danger sm:text-body-md"
               >
                 {isEs ? "Llamar al 911" : "Call 911"}
               </a>
@@ -214,7 +214,7 @@ function SymptomDetailContent() {
         {selectedSlugList.length > 1 && (
           <section className="space-y-stack-sm rounded-card border border-primary-soft-line bg-primary-soft p-inset-md">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold text-primary-fg">
+              <p className="flex items-center gap-1.5 text-caption font-bold text-primary-fg">
                 <Activity className="h-4 w-4 text-fg-brand" />
                 <span>
                   {isEs
@@ -222,7 +222,7 @@ function SymptomDetailContent() {
                     : `Selected Symptoms for Guidance (${selectedSlugList.length})`}
                 </span>
               </p>
-              <span className="text-[11px] font-medium text-fg-brand">
+              <span className="text-caption font-medium text-fg-brand">
                 {isEs ? "Toca para ver cada guía" : "Tap any to view guide"}
               </span>
             </div>
@@ -236,7 +236,7 @@ function SymptomDetailContent() {
                     key={slug}
                     type="button"
                     onClick={() => handleSelectTopic(slug)}
-                    className={`flex cursor-pointer items-center gap-1.5 rounded-control px-3.5 py-2 text-xs font-bold transition-all sm:text-sm ${
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-control px-3.5 py-2 text-caption font-bold transition-all sm:text-body-sm ${
                       isActive
                         ? "bg-primary-solid text-primary-on-solid shadow-control"
                         : "border border-primary-soft-line bg-surface text-fg-secondary hover:bg-primary-soft-hover"
@@ -256,10 +256,10 @@ function SymptomDetailContent() {
           className={`rounded-panel border ${nextStepConfig.cardBorder} ${nextStepConfig.cardBg} space-y-3.5 p-5 sm:p-6`}
         >
           <div className="space-y-1.5">
-            <span className="text-xs font-black text-fg-muted">
+            <span className="text-caption font-black text-fg-muted">
               {isEs ? "Su siguiente paso" : "Your next step"}
             </span>
-            <p className="text-sm leading-relaxed font-semibold text-fg sm:text-base">
+            <p className="text-body-sm leading-relaxed font-semibold text-fg sm:text-body-md">
               {isEs
                 ? nextStepConfig.descriptionEs
                 : nextStepConfig.descriptionEn}
@@ -354,7 +354,7 @@ function SymptomDetailContent() {
         <section className="space-y-6 rounded-panel border border-line bg-surface p-6">
           <div className="border-b border-line-subtle pb-4">
             <div className="group relative inline-flex items-center gap-2">
-              <h1 className="flex items-center gap-2 text-2xl font-bold text-fg sm:text-3xl">
+              <h1 className="flex items-center gap-2 text-heading-3 font-bold text-fg sm:text-heading-2">
                 <span>{title}</span>
                 <ChevronDown className="pointer-events-none h-5 w-5 text-fg-subtle transition-colors group-hover:text-fg-secondary sm:h-6 sm:w-6" />
               </h1>
@@ -363,7 +363,7 @@ function SymptomDetailContent() {
                 value={currentTopic.slug}
                 onChange={(e) => handleSelectTopic(e.target.value)}
                 aria-label={isEs ? "Seleccionar Tema" : "Select Topic"}
-                className="absolute inset-0 h-full w-full cursor-pointer text-base opacity-0"
+                className="absolute inset-0 h-full w-full cursor-pointer text-body-md opacity-0"
               >
                 {SLUG_LIST.map((slug) => {
                   const item = BEFORE_THE_ER_TOPICS[slug];
@@ -372,7 +372,7 @@ function SymptomDetailContent() {
                     <option
                       key={slug}
                       value={slug}
-                      className="py-1 text-base font-semibold text-fg"
+                      className="py-1 text-body-md font-semibold text-fg"
                     >
                       {itemTitle}
                     </option>
@@ -392,7 +392,7 @@ function SymptomDetailContent() {
               {parsedWatchFor.bullets.map((bullet, idx) => (
                 <li
                   key={idx}
-                  className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
+                  className="flex items-start gap-2.5 text-caption leading-relaxed font-medium text-fg-secondary sm:text-body-sm"
                 >
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
                   <span>{renderFormattedText(formatBulletText(bullet))}</span>
@@ -402,7 +402,7 @@ function SymptomDetailContent() {
 
             {/* Emergency Directive & Source Citation Callout */}
             {parsedWatchFor.directive && (
-              <div className="mt-2 inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-xs leading-relaxed font-medium text-danger sm:text-sm">
+              <div className="mt-2 inline-flex w-fit max-w-full items-start gap-2.5 rounded-control border border-danger-line bg-danger-surface p-3.5 text-caption leading-relaxed font-medium text-danger sm:text-body-sm">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
                 <div className="leading-relaxed">
                   {renderFormattedText(parsedWatchFor.directive)}
@@ -421,7 +421,7 @@ function SymptomDetailContent() {
               {importantInList.map((item, idx) => (
                 <li
                   key={idx}
-                  className="flex items-start gap-2.5 text-xs leading-relaxed font-medium text-fg-secondary sm:text-sm"
+                  className="flex items-start gap-2.5 text-caption leading-relaxed font-medium text-fg-secondary sm:text-body-sm"
                 >
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fg-muted" />
                   <span>{item}</span>

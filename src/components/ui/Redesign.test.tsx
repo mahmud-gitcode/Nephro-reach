@@ -6,6 +6,7 @@ import { axe } from "vitest-axe";
 import { Breakdown } from "./Breakdown";
 import { BarChart } from "./BarChart";
 import { Composer } from "./Composer";
+import { RingStats } from "./RingStats";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { SearchField } from "./SearchField";
 import { TableThumb } from "./Table";
@@ -188,6 +189,28 @@ describe("Composer", () => {
 
   it("has no axe violations", async () => {
     const { container } = render(<ComposerHarness onSend={() => {}} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe("RingStats", () => {
+  const items = [
+    { label: "Average curriculum completion", value: 78 },
+    { label: "Weekly engagement", value: 84 },
+  ];
+
+  it("names each ring with its label and value", () => {
+    render(<RingStats items={items} />);
+    expect(
+      screen.getByRole("img", { name: "Average curriculum completion: 78%" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Weekly engagement: 84%" }),
+    ).toBeInTheDocument();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(<RingStats items={items} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

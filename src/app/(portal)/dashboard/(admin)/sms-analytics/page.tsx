@@ -62,7 +62,7 @@ function TemplateBadge({
 }) {
   return (
     <span
-      className={`inline-flex h-[30px] items-center rounded-control border px-[9px] text-sm font-medium ${className}`}
+      className={`inline-flex h-[30px] items-center rounded-control border px-[9px] text-body-sm font-medium ${className}`}
     >
       {children}
     </span>
@@ -77,7 +77,7 @@ function SmsTemplateCard({
   onEdit: () => void;
 }) {
   return (
-    <article className="rounded-[10px] border border-black/10 bg-surface px-[17px] py-4">
+    <article className="rounded-card-nested border border-black/10 bg-surface px-[17px] py-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -90,11 +90,11 @@ function SmsTemplateCard({
             </TemplateBadge>
           </div>
 
-          <p className="text-base leading-6 font-medium text-fg-muted">
+          <p className="text-body-md leading-6 font-medium text-fg-muted">
             {template.message}
           </p>
 
-          <p className="flex items-center gap-2 text-base leading-6 font-medium text-fg-muted">
+          <p className="flex items-center gap-2 text-body-md leading-6 font-medium text-fg-muted">
             <Clock3 className="h-5 w-5 shrink-0" />
             <span>Schedule: {template.schedule}</span>
           </p>
@@ -406,10 +406,10 @@ export default function SmsAnalyticsPage() {
       <section className="rounded-card border border-line bg-surface px-3 py-4">
         <div className="mb-[14px] flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl leading-8 font-medium text-fg">
+            <h1 className="text-heading-3 leading-8 font-medium text-fg">
               Notification Configuration
             </h1>
-            <p className="mt-2 text-base leading-6 font-medium text-fg-secondary">
+            <p className="mt-2 text-body-md leading-6 font-medium text-fg-secondary">
               Configure automated messages and check-ins
             </p>
           </div>
@@ -440,11 +440,11 @@ export default function SmsAnalyticsPage() {
             key={label}
             className="rounded-card border border-line bg-surface p-6"
           >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand-100 text-fg-brand">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card-nested bg-brand-100 text-fg-brand">
               <MessageCircle className="h-5 w-5" />
             </div>
-            <p className="text-sm font-semibold text-fg-muted">{label}</p>
-            <p className="mt-2 text-3xl leading-8 font-semibold text-fg">
+            <p className="text-body-sm font-semibold text-fg-muted">{label}</p>
+            <p className="mt-2 text-heading-2 leading-8 font-semibold text-fg">
               {value}
             </p>
           </article>

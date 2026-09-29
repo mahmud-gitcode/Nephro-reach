@@ -518,6 +518,14 @@
      chart's table — so it is exempt from the 3:1 a data shape needs. */
   --chart-bar-rest: #eef0f4;
   --chart-bar-rest-line: #e6e8ec;
+
+  /* Third-party brand colours, for the ride-share buttons that open the
+     Uber and Lyft apps. Not ours to change — named here so no page writes
+     a raw hex. White on each clears 4.5:1. */
+  --rideshare-uber: #000000;
+  --rideshare-uber-hover: #262626;
+  --rideshare-lyft: #ea0b8c;
+  --rideshare-lyft-hover: #c50a77;
   /* "not started", "none" — a state with nothing to flag */
 }
 
@@ -729,6 +737,10 @@
   --color-chart-neutral: var(--chart-neutral);
   --color-chart-bar-rest: var(--chart-bar-rest);
   --color-chart-bar-rest-line: var(--chart-bar-rest-line);
+  --color-rideshare-uber: var(--rideshare-uber);
+  --color-rideshare-uber-hover: var(--rideshare-uber-hover);
+  --color-rideshare-lyft: var(--rideshare-lyft);
+  --color-rideshare-lyft-hover: var(--rideshare-lyft-hover);
 
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);

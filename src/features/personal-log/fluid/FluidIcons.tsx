@@ -18,7 +18,7 @@ export function GoalBadge({
 
   return (
     <span
-      className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${className}`}
+      className={`inline-flex rounded px-2 py-0.5 text-caption font-semibold ${className}`}
     >
       {status}
     </span>

@@ -322,7 +322,7 @@ function DialysisManagementDashboard() {
           >
             {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
             <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
-              <span className="text-xs font-bold text-fg-secondary">
+              <span className="text-caption font-bold text-fg-secondary">
                 {isEs ? "Notas del horario" : "Schedule Notes"}
               </span>
 
@@ -332,7 +332,7 @@ function DialysisManagementDashboard() {
                   onClick={handleUndoNote}
                   disabled={historyIndex <= 0}
                   title={isEs ? "Deshacer (Undo)" : "Undo"}
-                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Undo2 className="h-3.5 w-3.5" />
                 </button>
@@ -342,7 +342,7 @@ function DialysisManagementDashboard() {
                   onClick={handleRedoNote}
                   disabled={historyIndex >= noteHistory.length - 1}
                   title={isEs ? "Rehacer (Redo)" : "Redo"}
-                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Redo2 className="h-3.5 w-3.5" />
                 </button>
@@ -354,7 +354,7 @@ function DialysisManagementDashboard() {
                   onClick={handleCleanNote}
                   disabled={!weeklyNote}
                   title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                  className="cursor-pointer rounded-lg p-1.5 text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Eraser className="h-3.5 w-3.5" />
                 </button>
@@ -371,7 +371,7 @@ function DialysisManagementDashboard() {
                   ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
                   : "Write any notes, symptoms, or reminders here..."
               }
-              className="min-h-[160px] w-full flex-1 resize-none bg-transparent text-xs font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-sm"
+              className="min-h-[160px] w-full flex-1 resize-none bg-transparent text-caption font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-body-sm"
             />
           </section>
         </>
@@ -417,7 +417,7 @@ function DialysisManagementDashboard() {
                 <button
                   type="button"
                   onClick={handleOpenEditWeek}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-sm"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-body-sm"
                 >
                   <Settings className="h-4 w-4 text-fg-muted" />
                   <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
@@ -438,7 +438,7 @@ function DialysisManagementDashboard() {
                 {visibleWeekdays.map((day) => (
                   <li
                     key={day}
-                    className="flex min-w-0 flex-col gap-stack-sm rounded-xl border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-sm shadow-card transition-all hover:border-line-strong hover:shadow-md"
+                    className="flex min-w-0 flex-col gap-stack-sm rounded-card-nested border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-sm shadow-card transition-all hover:border-line-strong hover:shadow-md"
                   >
                     <span className="truncate text-label-md text-fg-brand select-none">
                       {isEs ? WEEKDAY_ES[day] : day}
@@ -466,7 +466,7 @@ function DialysisManagementDashboard() {
                             />
                             {isEs ? "Hora del sillón" : "Chair time"}
                           </dt>
-                          <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                          <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
                             {formatReminder(
                               currentSchedule.chairTimes[day] ??
                                 DEFAULT_CHAIR_TIME,
@@ -484,7 +484,7 @@ function DialysisManagementDashboard() {
                           />
                           {isEs ? "Recordatorio" : "Reminder"}
                         </dt>
-                        <dd className="rounded-lg border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                        <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
                           {formatReminder(
                             reminderTimeFor(
                               currentSchedule,

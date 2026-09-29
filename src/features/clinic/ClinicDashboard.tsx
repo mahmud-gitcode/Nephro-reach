@@ -26,7 +26,7 @@ import {
   ErrorState,
   KeyCard,
   Progress,
-  ProgressRing,
+  RingStats,
   SearchField,
   Select,
   Skeleton,
@@ -423,16 +423,8 @@ function PerformanceOverview() {
   return (
     <Card as="section" padding="small" className="h-full">
       <h2 className="mb-6 text-heading-4 text-fg">Performance Overview</h2>
-      <div className="grid gap-inset-lg sm:grid-cols-3">
-        {performance.map((metric) => (
-          <div key={metric.label} className="flex flex-col items-center">
-            <ProgressRing value={metric.value} label={metric.label} />
-            <p className="mt-stack-md text-center text-body-sm text-fg-secondary">
-              {metric.label}
-            </p>
-          </div>
-        ))}
-      </div>
+      {/* The shared ring row: one size and label style everywhere. */}
+      <RingStats items={performance} />
     </Card>
   );
 }
@@ -843,8 +835,9 @@ export default function ClinicDashboard() {
         />
       ) : null}
 
-      {/* One row of six on a wide screen, as the reference's stat row. */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* Three across on a laptop, six only on a wide screen: a sixth of a
+          laptop row is too narrow for the icon tile beside "23 / 30". */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <EnrollmentCard
           enrolled={dashboard.data?.roster.length ?? enrollment.enrolled}
         />

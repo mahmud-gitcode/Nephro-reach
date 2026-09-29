@@ -148,7 +148,7 @@ export function MetricCards({
           <button
             type="button"
             onClick={onOpenEdwModal}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-2.5 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -179,7 +179,7 @@ export function MetricCards({
           <button
             type="button"
             onClick={onOpenEdwModal}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-2.5 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -203,7 +203,7 @@ export function MetricCards({
               </span>
             </p>
             <p
-              className={`mt-0.5 text-xs font-bold sm:text-[13px] ${statusTextColor}`}
+              className={`mt-0.5 text-caption font-bold sm:text-caption ${statusTextColor}`}
             >
               {statusSubtitle}
             </p>
@@ -236,7 +236,7 @@ export function MetricCards({
                 )}
               </p>
               <p
-                className={`mt-0.5 truncate text-xs sm:text-[13px] ${card.subtitleClass}`}
+                className={`mt-0.5 truncate text-caption sm:text-caption ${card.subtitleClass}`}
               >
                 {card.subtitle}
               </p>

@@ -51,7 +51,7 @@ export function AlertsInsights() {
   ];
 
   return (
-    <section className="h-full rounded-xl border border-line bg-surface p-4">
+    <section className="h-full rounded-card border border-line bg-surface p-4">
       <h2 className="text-heading-4 text-fg">
         {w?.alerts?.title || "Alerts & Insights"}
       </h2>
@@ -59,7 +59,7 @@ export function AlertsInsights() {
         {alerts.map((alert) => (
           <article
             key={alert.title}
-            className={`rounded-lg border p-2.5 ${
+            className={`rounded-control border p-2.5 ${
               toneClass[alert.tone as keyof typeof toneClass]
             }`}
           >
@@ -70,8 +70,10 @@ export function AlertsInsights() {
                 <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
               )}
               <div>
-                <p className="text-xs font-medium text-fg">{alert.title}</p>
-                <p className="mt-0.5 text-[11px] leading-[13px] text-fg-muted">
+                <p className="text-caption font-medium text-fg">
+                  {alert.title}
+                </p>
+                <p className="mt-0.5 text-caption leading-[13px] text-fg-muted">
                   {alert.body}
                 </p>
               </div>

@@ -11,13 +11,13 @@ The portal has one design system, taken from the client's reference dashboard (r
 
 ## Hard limits
 
-- **Never touch the sidebar** (colour, the large logo, its menu) or the **landing page** and its Header/Footer. Both are the client's.
+- **Never touch the sidebar** (colour, the large logo, its menu), the **landing page** and its Header/Footer, or the **Login and Registration** pages. All are the client's branded designs and stay as they are.
 - The portal font is Roboto; the landing page keeps Lato. Do not change fonts.
 - Accessibility floors: text ≥ 12px, tap targets ≥ 44px (small controls 40px), text contrast ≥ 4.5:1, icons and chart shapes ≥ 3:1.
 
 ## Build from the system, never around it
 
-1. **Components first.** Use `@/components/ui`: `Card`, `CardHeader`, `KeyCard` (stat cards), `Button`, `Input`, `Select`, `Textarea`, `FormField`, `SearchField`, `DateRangeFilter`, `Table` + `TableThumb`, `Badge`, `Breakdown`, `LineChart`, `BarChart`, `Modal`, `Tabs`, `Alert`, `EmptyState`, `Composer`. If none fits, **stop and ask** — do not hand-build a lookalike.
+1. **Components first.** Use `@/components/ui`: `Card`, `CardHeader`, `KeyCard` (stat cards), `Button`, `Input`, `Select`, `Textarea`, `FormField`, `SearchField`, `DateRangeFilter`, `Table` + `TableThumb`, `Badge`, `Breakdown`, `LineChart`, `BarChart`, `DonutChart` (a whole split into parts), `RingStats` (a row of percentage rings), `ProgressRing` (one ring), `Modal`, `Tabs`, `Alert`, `EmptyState`, `Composer`. If none fits, **stop and ask** — do not hand-build a lookalike.
 2. **Tokens only.** Colours: semantic names (`text-fg`, `text-fg-muted`, `bg-surface`, `border-line`, `text-danger`, `bg-success-surface`…). Type: named styles (`text-heading-4`, `text-body-sm`, `text-label-md`, `text-caption`, `text-metric-lg`…). Corners: `rounded-card`, `rounded-card-nested`, `rounded-button`, `rounded-field`, `rounded-status`, `rounded-pill`.
 3. **Never** write raw values: no `bg-[#…]`, no `text-slate-500`, no `text-sm` / `text-xl`, no `rounded-lg` / `rounded-[10px]`, no raw `<table>`.
 4. Values live in `src/styles/tokens/` — `color.css`, `typography.css`, `spacing.css`, and `canvas.css` (the redesign's values, scoped to `[data-canvas]`: the main column, top bar and modals). To change how something looks everywhere, change the token, not the page.
