@@ -124,3 +124,44 @@ describe("Modal", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe("Modal as a bottom sheet", () => {
+  function Sheet({ onClose = () => {} }: { onClose?: () => void }) {
+    return (
+      <Modal open onClose={onClose} title="Mary Johnson" placement="bottom">
+        <button type="button">Inside</button>
+      </Modal>
+    );
+  }
+
+  it("opens at half height, with focus on its content, not the handle", () => {
+    render(<Sheet />);
+    expect(screen.getByRole("dialog")).toHaveStyle({ height: "50dvh" });
+    expect(screen.getByRole("button", { name: "Close dialog" })).toHaveFocus();
+  });
+
+  it("expands and collapses from the handle, by tap or arrow key", async () => {
+    const user = userEvent.setup();
+    render(<Sheet />);
+    const dialog = screen.getByRole("dialog");
+
+    await user.click(screen.getByRole("button", { name: "Expand panel" }));
+    expect(dialog).toHaveStyle({ height: "92dvh" });
+
+    const handle = screen.getByRole("button", { name: "Collapse panel" });
+    expect(handle).toHaveAttribute("aria-expanded", "true");
+    handle.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(dialog).toHaveStyle({ height: "50dvh" });
+    await user.keyboard("{ArrowUp}");
+    expect(dialog).toHaveStyle({ height: "92dvh" });
+  });
+
+  it("still closes on Escape", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<Sheet onClose={onClose} />);
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

@@ -15,8 +15,10 @@ const KEY = storageKey("clinic-ccm");
 /**
  * Bump when CcmState changes shape, so old data re-seeds.
  * Version 2: the placeholder activity types gave way to the client's list.
+ * Version 3: activities say whether they count and whether the EHR has
+ * them; patients have a location; requirements carry a date.
  */
-const VERSION = 2;
+const VERSION = 3;
 
 type StoredEnvelope = { version: number; state: unknown };
 
@@ -74,6 +76,11 @@ export function useCcm() {
     ) => mutate((s) => rules.setRequirement(s, mrn, id, change)),
     [mutate],
   );
+  const setEhrDocumented = useCallback(
+    (activityId: string, documented: boolean) =>
+      mutate((s) => rules.setEhrDocumented(s, activityId, documented)),
+    [mutate],
+  );
   const completeFollowUp = useCallback(
     (activityId: string) =>
       mutate((s) => rules.completeFollowUp(s, activityId)),
@@ -96,6 +103,7 @@ export function useCcm() {
     clearWriteError: write.reset,
     addActivity,
     setRequirement,
+    setEhrDocumented,
     completeFollowUp,
     resolveInbox,
   };

@@ -131,7 +131,10 @@ export function TableHeaderCell({
           type="button"
           onClick={onSort}
           className={cn(
-            "inline-flex items-center gap-inline-xs rounded-control-small",
+            "inline-flex items-center gap-inline-xs rounded-control-small text-left",
+            // The reset gives a button `text-transform: none`; a sortable
+            // header reads the same as its neighbours.
+            "[text-transform:inherit]",
             "cursor-pointer transition-colors duration-150 ease-standard hover:text-fg",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             numeric && "flex-row-reverse",

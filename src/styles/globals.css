@@ -71,6 +71,23 @@ body {
   background: rgba(255, 255, 255, 0.55);
 }
 
+/* A bottom sheet (Modal placement="bottom") rises into place. Motion is
+   skipped for anyone who has asked their system for less of it. */
+@keyframes sheet-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-rise {
+    animation: sheet-rise 280ms var(--ease-standard, ease-out);
+  }
+}
+
 /* Hide scrollbar for Chrome, Safari, Opera, Edge, and Firefox */
 .no-scrollbar {
   -ms-overflow-style: none;

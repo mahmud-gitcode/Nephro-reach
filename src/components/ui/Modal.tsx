@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useId,
   useRef,
+  useState,
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
@@ -30,6 +31,17 @@ import { cn } from "@/lib/utils/cn";
 
    Composition: <Modal> owns the shell. Pass `title` for the header, and
    `footer` for the action row. Body is children.
+
+   Placement: `center` (the default) is the dialog in the middle of the
+   screen. `bottom` is a sheet that slides up from the bottom edge and
+   overlaps the page (up to 900px wide, centred), which stays visible above it: for a record opened
+   from a list (a CCM patient from the worklist), where the work needs the
+   width of the page and the list behind it is still the context. It opens
+   at half the screen; its handle drags it up to nearly full height, back
+   down to half, or right down to close. The handle is also a button, so a
+   tap, Enter or the arrow keys do the same without dragging. The height is
+   set by the sheet, never its content, so switching tabs inside it does
+   not make it jump; `size` does not apply to it.
    ========================================================================== */
 
 const FOCUSABLE = [
@@ -41,10 +53,17 @@ const FOCUSABLE = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+/* The bottom sheet's heights, as shares of the screen. */
+const SHEET_HALF = 0.5;
+const SHEET_FULL = 0.92;
+/** Dragged below this, the sheet closes. */
+const SHEET_CLOSE = 0.3;
+
 /** The mounted check never changes after hydration, so it has no subscribers. */
 const subscribeNoop = () => () => {};
 
 export type ModalSize = "small" | "big" | "wide";
+export type ModalPlacement = "center" | "bottom";
 
 /* 700px is the ceiling for every dialog. Wider than that and a form's
    two-column rows stretch into fields nobody can scan across; narrower than
@@ -73,6 +92,8 @@ export type ModalProps = {
   /** Action row, pinned to the bottom of the dialog. */
   footer?: React.ReactNode;
   size?: ModalSize;
+  /** `bottom` opens a sheet (max 900px wide) from the bottom of the screen. */
+  placement?: ModalPlacement;
   /** Clicking the backdrop closes. Turn off for destructive confirmations. */
   closeOnBackdrop?: boolean;
   /** Hides the X. The dialog must then have a close action in the footer. */
@@ -88,6 +109,7 @@ export function Modal({
   description,
   footer,
   size = "big",
+  placement = "center",
   closeOnBackdrop = true,
   hideCloseButton = false,
   className,
@@ -97,6 +119,17 @@ export function Modal({
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
+
+  /* The sheet's snap point, and its live height while being dragged. Reset
+     to half each time the modal opens (state adjusted during render, not in
+     an effect). */
+  const [sheetState, setSheetState] = useState({ open, full: false });
+  if (sheetState.open !== open) setSheetState({ open, full: false });
+  const full = sheetState.full;
+  const setFull = (next: boolean) => setSheetState({ open, full: next });
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const drag = useRef<{ startY: number; startH: number; moved: boolean }>(null);
+  const suppressClick = useRef(false);
 
   // Portals need a DOM target, which does not exist during SSR.
   // useSyncExternalStore returns the server snapshot (false) during render on
@@ -115,7 +148,10 @@ export function Modal({
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
 
     const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    /* Not the sheet's handle: focus starts on the dialog's own controls. */
+    const first = Array.from(
+      panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
+    ).find((el) => !el.hasAttribute("data-sheet-handle"));
     // Fall back to the panel itself so focus is never left behind the dialog.
     (first ?? panel)?.focus();
 
@@ -178,6 +214,40 @@ export function Modal({
 
   if (!mounted || !open) return null;
 
+  const sheet = placement === "bottom";
+
+  const onHandleDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    drag.current = {
+      startY: event.clientY,
+      startH: panel.getBoundingClientRect().height,
+      moved: false,
+    };
+  };
+  const onHandleMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    const dy = event.clientY - d.startY;
+    if (Math.abs(dy) > 4) d.moved = true;
+    if (!d.moved) return;
+    const vh = window.innerHeight;
+    setDragHeight(Math.min(vh * SHEET_FULL, Math.max(vh * 0.2, d.startH - dy)));
+  };
+  const onHandleUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d?.moved) return;
+    /* A drag is not also a tap: the click that follows is ignored. */
+    suppressClick.current = true;
+    const vh = window.innerHeight;
+    const h = dragHeight ?? d.startH;
+    setDragHeight(null);
+    if (h < vh * SHEET_CLOSE) onClose();
+    else setFull(h > vh * ((SHEET_HALF + SHEET_FULL) / 2));
+  };
+
   return createPortal(
     <div
       // The scrim is decoration, not a control: role="presentation" says so.
@@ -189,7 +259,10 @@ export function Modal({
       // Portalled to <body>, outside the canvas column, so it carries the
       // canvas tokens itself (tokens/canvas.css).
       data-canvas
-      className="fixed inset-0 z-50 flex items-center justify-center bg-fg/50 p-inset-md backdrop-blur-xs"
+      className={cn(
+        "fixed inset-0 z-50 flex justify-center bg-fg/50 backdrop-blur-xs",
+        sheet ? "items-end pt-inset-lg" : "items-center p-inset-md",
+      )}
       onMouseDown={(e) => {
         // mousedown, not click: a drag that starts inside the panel and ends
         // on the backdrop should not close the dialog.
@@ -208,12 +281,60 @@ export function Modal({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
-          "flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-panel border border-line",
-          "bg-surface shadow-lg outline-none",
-          sizes[size],
+          "flex w-full flex-col border border-line bg-surface shadow-lg outline-none",
+          sheet
+            ? cn(
+                "sheet-rise max-w-[900px] rounded-t-panel border-b-0",
+                dragHeight === null &&
+                  "transition-[height] duration-200 ease-standard",
+              )
+            : cn("max-h-[calc(100dvh-2rem)] rounded-panel", sizes[size]),
           className,
         )}
+        style={
+          sheet
+            ? {
+                height:
+                  dragHeight ?? `${(full ? SHEET_FULL : SHEET_HALF) * 100}dvh`,
+              }
+            : undefined
+        }
       >
+        {/* The sheet's handle: drag it, tap it, or use the arrow keys. */}
+        {sheet ? (
+          <button
+            type="button"
+            data-sheet-handle
+            aria-label={full ? "Collapse panel" : "Expand panel"}
+            aria-expanded={full}
+            onPointerDown={onHandleDown}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+            onClick={() => {
+              if (suppressClick.current) {
+                suppressClick.current = false;
+                return;
+              }
+              setFull(!full);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setFull(true);
+              } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setFull(false);
+              }
+            }}
+            className="flex h-6 w-full shrink-0 cursor-grab touch-none items-center justify-center rounded-t-panel focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring active:cursor-grabbing"
+          >
+            <span
+              aria-hidden="true"
+              className="h-1 w-10 rounded-pill bg-line-strong"
+            />
+          </button>
+        ) : null}
         {/* Header */}
         <div className="flex items-start justify-between gap-inline-lg border-b border-line-subtle p-inset-lg pb-inset-md">
           <div className="min-w-0">

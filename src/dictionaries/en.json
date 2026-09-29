@@ -1650,7 +1650,7 @@
         {
           "id": "community",
           "title": "Community Activity",
-          "description": "Notifications for replies and mentions in community"
+          "description": "Notifications when members like your community posts"
         }
       ]
     },

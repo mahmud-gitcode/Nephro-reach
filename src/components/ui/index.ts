@@ -7,6 +7,7 @@
 
 export { Button } from "./Button";
 export { buttonStyles } from "./buttonStyles";
+export { menuStyles, menuItemStyles } from "./menuStyles";
 export type { ButtonProps } from "./Button";
 export type {
   ButtonSize,
@@ -16,7 +17,7 @@ export type {
 } from "./buttonStyles";
 
 export { Modal } from "./Modal";
-export type { ModalProps, ModalSize } from "./Modal";
+export type { ModalProps, ModalSize, ModalPlacement } from "./Modal";
 
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
 export { KeyCard } from "./KeyCard";
