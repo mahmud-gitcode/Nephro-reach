@@ -45,6 +45,11 @@ export function useAppointments() {
         mutate((current) => rules.addAppointment(current, draft, Date.now())),
       [mutate],
     ),
+    setAttendance: useCallback(
+      (id: string, attendance: rules.Attendance) =>
+        mutate((current) => rules.setAttendance(current, id, attendance)),
+      [mutate],
+    ),
     remove: useCallback(
       (id: string) => mutate((current) => rules.removeAppointment(current, id)),
       [mutate],

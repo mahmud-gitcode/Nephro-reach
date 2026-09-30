@@ -82,6 +82,11 @@ export function useCcm() {
     (patient: rules.CcmPatient) => mutate((s) => rules.enrollInCcm(s, patient)),
     [mutate],
   );
+  const setConditions = useCallback(
+    (mrn: string, conditions: string[]) =>
+      mutate((s) => rules.setPatientConditions(s, mrn, conditions)),
+    [mutate],
+  );
   const setEhrDocumented = useCallback(
     (activityId: string, documented: boolean) =>
       mutate((s) => rules.setEhrDocumented(s, activityId, documented)),
@@ -111,6 +116,7 @@ export function useCcm() {
     setRequirement,
     setEhrDocumented,
     enroll,
+    setConditions,
     completeFollowUp,
     resolveInbox,
   };

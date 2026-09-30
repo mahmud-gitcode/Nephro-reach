@@ -13,7 +13,7 @@ import { GoalProgress } from "@/features/personal-log/fluid/panels/GoalProgress"
 import { FluidIntakeTrend } from "@/features/personal-log/fluid/panels/FluidIntakeTrend";
 import { UrinaryOutput } from "@/features/personal-log/fluid/panels/UrinaryOutput";
 import { AlertsInsights } from "@/features/personal-log/fluid/panels/AlertsInsights";
-import { SEED_ENTRIES } from "@/features/personal-log/fluid/fluid.seed";
+import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
 import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
 
 /* ==========================================================================
@@ -26,10 +26,10 @@ import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types
    Two things about this screen are worth knowing before changing it, because
    neither is visible from here:
 
-     1. Nothing is persisted. `entries` is component state, so a member who
-        logs a weight and refreshes has lost it. Every other log in the app
-        goes through the data layer; this one never did, because it never
-        touched localStorage for step 5 to find.
+     1. The log is stored (useWeightLog). Each entry also keeps its date
+        and the morning weight in kg, which the care team's CCM dashboard
+        reads for weight-change alerts. EDW and "today's weight" are still
+        page state.
 
      2. The five panels below — weight trend, goal progress, fluid intake,
         urinary output, alerts — take no props and render fixed numbers.
@@ -37,15 +37,15 @@ import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types
         hand-drawn divs rather than the chart components, so a screen reader
         gets nothing from them at all.
 
-   Both are noted rather than fixed here: the first needs a decision about
-   what a real entry looks like, the second needs the first.
+   The second is noted rather than fixed here.
    ========================================================================== */
 
 export default function FluidTrackerPage() {
   const { language, dictionary } = useLanguage();
   const w = dictionary?.weightFluidTracker;
 
-  const [entries, setEntries] = useState<WeightFluidEntry[]>(SEED_ENTRIES);
+  const weightLog = useWeightLog();
+  const entries = weightLog.entries;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEdwModalOpen, setIsEdwModalOpen] = useState(false);
 
@@ -59,7 +59,7 @@ export default function FluidTrackerPage() {
   const [todayDateStr, setTodayDateStr] = useState<string>("May 31, 7:30 AM");
 
   const handleSaveEntry = (newEntry: WeightFluidEntry) => {
-    setEntries([newEntry, ...entries]);
+    weightLog.add(newEntry);
     setIsModalOpen(false);
     // If a morning weight is logged, sync it as Today's weight
     const weightVal = parseFloat(newEntry.morning);

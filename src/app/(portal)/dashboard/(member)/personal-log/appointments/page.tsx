@@ -13,6 +13,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Alert,
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -20,11 +21,13 @@ import {
   FormField,
   Input,
   Modal,
+  SegmentedChoice,
   Skeleton,
   Textarea,
 } from "@/components/ui";
 import {
   appointmentError,
+  awaitingAnswer,
   directionsUrl,
   past,
   timeRange,
@@ -32,6 +35,7 @@ import {
   type Appointment,
   type AppointmentDraft,
   type AppointmentError,
+  type Attendance,
 } from "@/features/personal-log/appointments/appointments";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useNow } from "@/lib/utils/useNow";
@@ -110,7 +114,22 @@ function AppointmentRow({
     <article className="flex flex-col gap-inline-lg border-b border-line-subtle bg-surface p-inset-sm last:border-b-0 sm:flex-row sm:items-center">
       <DateBadge iso={appointment.date} isEs={isEs} />
       <div className="min-w-0 flex-1">
-        <h3 className="text-heading-4 text-fg">{appointment.title}</h3>
+        <h3 className="flex flex-wrap items-center gap-inline-md text-heading-4 text-fg">
+          {appointment.title}
+          {appointment.attendance ? (
+            <Badge
+              tone={appointment.attendance === "missed" ? "warning" : "success"}
+            >
+              {appointment.attendance === "missed"
+                ? isEs
+                  ? "Perdida"
+                  : "Missed"
+                : isEs
+                  ? "Asistió"
+                  : "Attended"}
+            </Badge>
+          ) : null}
+        </h3>
         <p className="mt-0.5 text-body-md text-fg-muted">
           {appointment.doctor}
         </p>
@@ -143,11 +162,16 @@ function AppointmentRow({
 function DetailsModal({
   appointment,
   isEs,
+  isPast,
+  onAttendance,
   onDelete,
   onClose,
 }: {
   appointment: Appointment;
   isEs: boolean;
+  /** The day has gone by, so "did you go?" can be answered. */
+  isPast: boolean;
+  onAttendance: (attendance: Attendance) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -212,6 +236,24 @@ function DetailsModal({
               ? "¿Eliminar esta cita? No se puede deshacer."
               : "Delete this appointment? This cannot be undone."}
           </Alert>
+        ) : null}
+        {isPast ? (
+          <SegmentedChoice<Attendance | null>
+            label={
+              isEs ? "¿Fue a esta cita?" : "Did you go to this appointment?"
+            }
+            value={appointment.attendance ?? null}
+            onChange={(next) => {
+              if (next) onAttendance(next);
+            }}
+            options={[
+              { value: "attended", label: isEs ? "Sí, fui" : "Yes, I went" },
+              {
+                value: "missed",
+                label: isEs ? "No, la perdí" : "No, I missed it",
+              },
+            ]}
+          />
         ) : null}
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-inline-lg gap-y-stack-sm text-body-md">
           <dt className="text-fg-muted">{t("appointments.doctorLabel")}</dt>
@@ -326,6 +368,10 @@ export default function AppointmentsPage() {
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const ahead = upcoming(store.appointments, today);
   const before = past(store.appointments, today);
+  /* The one past visit still waiting for "did you go?" — asked here rather
+     than left in a details dialog nobody opens. The answer (or the lack of
+     one) reaches the care team's CCM dashboard. */
+  const unanswered = awaitingAnswer(store.appointments, today)[0];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [draft, setDraft] = useState<AppointmentDraft>(EMPTY);
@@ -367,6 +413,40 @@ export default function AppointmentsPage() {
           {t("appointments.addAppointment")}
         </Button>
       </header>
+
+      {unanswered ? (
+        <Alert
+          tone="info"
+          title={
+            isEs
+              ? `¿Fue a su cita de ${unanswered.title}?`
+              : `Did you make it to your ${unanswered.title} appointment?`
+          }
+        >
+          <p>
+            {dateParts(unanswered.date, isEs).long} · {unanswered.doctor}.{" "}
+            {isEs
+              ? "Su equipo de atención lo verá."
+              : "Your care team will see your answer."}
+          </p>
+          <div className="mt-stack-sm flex flex-wrap gap-inline-md">
+            <Button
+              size="small"
+              onClick={() => store.setAttendance(unanswered.id, "attended")}
+            >
+              {isEs ? "Sí, fui" : "Yes, I went"}
+            </Button>
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => store.setAttendance(unanswered.id, "missed")}
+            >
+              {isEs ? "No, la perdí" : "No, I missed it"}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
 
       {store.error ? (
         <ErrorState
@@ -457,6 +537,10 @@ export default function AppointmentsPage() {
           key={opened.id}
           appointment={opened}
           isEs={isEs}
+          isPast={opened.date < today}
+          onAttendance={(attendance) =>
+            store.setAttendance(opened.id, attendance)
+          }
           onClose={() => setOpenId(null)}
           onDelete={() => {
             store.remove(opened.id);

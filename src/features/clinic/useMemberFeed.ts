@@ -6,7 +6,11 @@ import { useMedicationLog } from "@/features/medications/useMedicationLog";
 import { useMessages } from "@/features/messaging/useMessages";
 import { useCheckIns } from "@/features/personal-log/check-in/useCheckIns";
 import { useClinicNotices } from "@/features/personal-log/check-in/useClinicNotices";
-import { memberCheckInRows, memberInbox } from "./memberFeed";
+import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
+import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
+import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
+import { LINKED_MEMBER, memberCheckInRows, memberInbox } from "./memberFeed";
 
 /**
  * What the linked member's app has raised for the clinic: inbox items and
@@ -24,6 +28,14 @@ export function useMemberFeed(now: number, today: string, program: string) {
   const meds = useMedicationLog();
   const checkIns = useCheckIns();
   const notices = useClinicNotices();
+  const bloodPressure = useBloodPressure();
+  const weights = useWeightLog();
+  const appointments = useAppointments();
+  const access = useVascularAccess();
+  const accessRecord = useMemo(
+    () => access.records.find((r) => r.mrn === LINKED_MEMBER.mrn) ?? null,
+    [access.records],
+  );
 
   const inbox = useMemo(
     () =>
@@ -35,11 +47,19 @@ export function useMemberFeed(now: number, today: string, program: string) {
           doses: meds.doses,
           notices: notices.notices,
           checkIns: checkIns.entries,
+          bloodPressure: bloodPressure.readings,
+          weights: weights.entries,
+          appointments: appointments.appointments,
+          access: accessRecord,
         },
         now,
         today,
       ),
     [
+      bloodPressure.readings,
+      weights.entries,
+      appointments.appointments,
+      accessRecord,
       messages.conversations,
       lab.result,
       meds.sideEffects,

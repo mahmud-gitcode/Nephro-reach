@@ -20,9 +20,14 @@ export type Appointment = {
   /** Street address, for directions. */
   address: string;
   notes: string;
+  /** The member's answer once the day has passed. Unset until they say;
+   *  the clinic's CCM dashboard hears about "missed" and about silence. */
+  attendance?: Attendance;
 };
 
-export type AppointmentDraft = Omit<Appointment, "id">;
+export type Attendance = "attended" | "missed";
+
+export type AppointmentDraft = Omit<Appointment, "id" | "attendance">;
 
 export type AppointmentError = "title" | "doctor" | "date" | "start" | "end";
 
@@ -70,6 +75,26 @@ export function addAppointment(
       notes: draft.notes.trim(),
     },
   ];
+}
+
+export function setAttendance(
+  list: Appointment[],
+  id: string,
+  attendance: Attendance,
+): Appointment[] {
+  return list.map((a) => (a.id === id ? { ...a, attendance } : a));
+}
+
+/** Past appointments from the last 30 days the member has not answered
+ *  "did you go?" for, most recent first. */
+export function awaitingAnswer(
+  list: Appointment[],
+  today: string,
+): Appointment[] {
+  const [y, m, d] = today.split("-").map(Number);
+  const since = new Date(y, m - 1, d - 30);
+  const sinceIso = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
+  return past(list, today).filter((a) => !a.attendance && a.date >= sinceIso);
 }
 
 export function removeAppointment(
@@ -124,6 +149,13 @@ export function seedAppointments(now: number): Appointment[] {
       title: "Dietitian Visit",
       doctor: "Rachel Adams, RD",
     },
-    { ...base, id: "seed-appt-4", date: at(-14), start: "10:30", end: "11:15" },
+    {
+      ...base,
+      id: "seed-appt-4",
+      date: at(-14),
+      start: "10:30",
+      end: "11:15",
+      attendance: "attended",
+    },
   ];
 }

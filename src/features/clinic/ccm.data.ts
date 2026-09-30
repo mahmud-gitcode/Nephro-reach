@@ -14,6 +14,12 @@
 
 import { patients as roster } from "./enrollment.data";
 import { LINKED_MEMBER, type FeedItem, type FeedKind } from "./memberFeed";
+import {
+  DEFAULT_CONDITIONS,
+  conditionLabels,
+  hasCondition,
+  type CcmCondition,
+} from "./ccmConditions";
 
 /** Minutes of care in a month before it can be billed. Client: 30, not 20. */
 export const CCM_THRESHOLD_MINUTES = 30;
@@ -60,6 +66,28 @@ export const ACTIVITY_TYPES = [
   "Care Plan Review / Monitoring",
   "Other CCM Activity",
 ] as const;
+
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+/**
+ * The Activity Type an alert's follow-up is logged under. The client's
+ * rule (2026-09-30): anything under the Activity Type dropdown can raise an
+ * alert, so each alert opens the time log already pointed at its type.
+ */
+export const ALERT_ACTIVITY: Record<InboxItem["kind"], ActivityType> = {
+  "Patient message": "Patient Communication",
+  "Lab alert": "Lab / Test Result Review & Follow-Up",
+  "Side effect": "Medication Review / Reconciliation",
+  "Missed doses": "Medication Review / Reconciliation",
+  "Blood pressure": "BP Review & Follow-Up",
+  "BP symptoms": "BP Review & Follow-Up",
+  "Weight change": "Weight / Fluid Review & Follow-Up",
+  "Access appointment": "Appointment Coordination",
+  "Access concern": "Symptom Review & Follow-Up",
+  "Missed appointment": "Appointment Coordination",
+  "Hospital discharge": "Hospital / ER / Care Transition Follow-Up",
+  "Medication change": "Medication Review / Reconciliation",
+};
 
 export const OUTCOMES = [
   "Continue monitoring",
@@ -185,11 +213,31 @@ export type CcmState = {
    *  seeded ones. CCM needs the patient's consent, so a clinic patient is
    *  not in CCM until someone adds them. */
   enrolled?: CcmPatient[];
+  /** A patient's conditions as edited on their CCM record, by MRN. Wins
+   *  over the list they were enrolled with. */
+  conditions?: Record<string, string[]>;
 };
 
 /** Everyone in CCM: the seeded patients and those added since. */
 export function ccmPatientsOf(state: CcmState): CcmPatient[] {
-  return [...CCM_PATIENTS, ...(state.enrolled ?? [])];
+  const edited = state.conditions ?? {};
+  return [...CCM_PATIENTS, ...(state.enrolled ?? [])].map((patient) =>
+    edited[patient.mrn]
+      ? { ...patient, conditions: edited[patient.mrn] }
+      : patient,
+  );
+}
+
+/** Replaces a patient's conditions on their CCM record. */
+export function setPatientConditions(
+  state: CcmState,
+  mrn: string,
+  conditions: string[],
+): CcmState {
+  return {
+    ...state,
+    conditions: { ...(state.conditions ?? {}), [mrn]: [...conditions] },
+  };
 }
 
 /** Adds a clinic patient to CCM, with every requirement still to do. */
@@ -430,6 +478,8 @@ export type WorklistFilters = {
   location: string;
   careManager: string;
   status: string;
+  /** A library condition id, or ALL. */
+  condition?: string;
 };
 
 export const ALL = "All";
@@ -437,6 +487,7 @@ export const ALL = "All";
 export function filterWorklist(
   rows: WorklistRow[],
   filters: WorklistFilters,
+  library: CcmCondition[] = DEFAULT_CONDITIONS,
 ): WorklistRow[] {
   const q = filters.query.trim().toLowerCase();
   return rows.filter(
@@ -446,6 +497,9 @@ export function filterWorklist(
       (filters.careManager === ALL ||
         row.careManager === filters.careManager) &&
       (filters.status === ALL || row.status === filters.status) &&
+      (!filters.condition ||
+        filters.condition === ALL ||
+        hasCondition(row.conditions, filters.condition, library)) &&
       (q === "" ||
         row.name.toLowerCase().includes(q) ||
         row.mrn.includes(q) ||
@@ -474,7 +528,11 @@ export function sortWorklist(
 }
 
 /** The worklist as CSV, one row per patient, for the Export button. */
-export function worklistCsv(rows: WorklistRow[], month: string): string {
+export function worklistCsv(
+  rows: WorklistRow[],
+  month: string,
+  library: CcmCondition[] = DEFAULT_CONDITIONS,
+): string {
   const cell = (value: string | number) => {
     const text = String(value);
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -500,7 +558,7 @@ export function worklistCsv(rows: WorklistRow[], month: string): string {
       row.name,
       row.mrn,
       usDate(row.dob),
-      row.conditions.join("; "),
+      conditionLabels(row.conditions, library).join("; "),
       row.provider,
       row.location,
       row.careManager,
@@ -598,7 +656,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "123456",
     dob: "1953-04-12",
-    conditions: ["CKD 4", "HTN", "DM"],
+    conditions: ["ckd-4", "htn", "t2dm", "hyperlipidemia"],
     provider: "Dr. Chen",
     careManager: "Jennifer Smith",
     location: "Main Office",
@@ -606,7 +664,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "789012",
     dob: "1960-06-23",
-    conditions: ["CKD 3", "HTN"],
+    conditions: ["ckd-3b", "htn"],
     provider: "Dr. Patel",
     careManager: "Nurse Lisa",
     location: "North Clinic",
@@ -614,7 +672,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "345678",
     dob: "1959-11-02",
-    conditions: ["CKD 4", "DM"],
+    conditions: ["ckd-4", "t2dm", "anemia-ckd"],
     provider: "Dr. Chen",
     careManager: "Nurse Lisa",
     location: "Main Office",
@@ -622,7 +680,14 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "901234",
     dob: "1962-08-30",
-    conditions: ["CKD 3", "HTN", "CHF"],
+    conditions: [
+      "ckd-3b",
+      "htn",
+      "chf",
+      "t2dm",
+      "hyperlipidemia",
+      "anemia-ckd",
+    ],
     provider: "Dr. Patel",
     careManager: "Jennifer Smith",
     location: "North Clinic",
@@ -630,7 +695,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "567890",
     dob: "1970-01-15",
-    conditions: ["CKD 4", "HTN"],
+    conditions: ["ckd-4", "htn"],
     provider: "Dr. Chen",
     careManager: "Jennifer Smith",
     location: "Main Office",
@@ -638,7 +703,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "234567",
     dob: "1966-03-09",
-    conditions: ["CKD 3", "DM"],
+    conditions: ["ckd-3a", "t2dm"],
     provider: "Dr. Patel",
     careManager: "Nurse Lisa",
     location: "Main Office",
@@ -646,7 +711,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "890123",
     dob: "1957-12-19",
-    conditions: ["CKD 4", "HTN", "Anemia"],
+    conditions: ["ckd-4", "htn", "anemia-ckd", "shpt"],
     provider: "Dr. Chen",
     careManager: "Nurse Lisa",
     location: "North Clinic",
@@ -654,7 +719,7 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   {
     mrn: "456789",
     dob: "1964-05-27",
-    conditions: ["CKD 3", "HTN", "Gout"],
+    conditions: ["ckd-3a", "htn", "gout"],
     provider: "Dr. Patel",
     careManager: "Jennifer Smith",
     location: "North Clinic",
@@ -673,7 +738,7 @@ export const CCM_PATIENTS: CcmPatient[] = [
     mrn: LINKED_MEMBER.mrn,
     name: LINKED_MEMBER.name,
     dob: "1968-05-14",
-    conditions: ["CKD 4", "HTN"],
+    conditions: ["ckd-4", "htn", "proteinuria"],
     provider: "Dr. Chen",
     careManager: "Jennifer Smith",
     location: "Main Office",
@@ -923,7 +988,7 @@ export function seedCcmState(now: number): CcmState {
               date: enrolled,
               detail:
                 id === "eligibility"
-                  ? patient.conditions.join(", ")
+                  ? conditionLabels(patient.conditions).join(", ")
                   : (REQUIREMENT_DETAILS[id] ?? ""),
             },
       ]),

@@ -5,14 +5,27 @@
    into the code. This file derives them from what the member actually
    records instead:
 
-     Patient message    their latest message to the care team, while it
-                        waits for a reply
-     Lab alert          a lab value they entered that is outside the range
-     Side effect        a medication side effect they logged
-     Missed doses       two or more doses marked missed in a week
-     Check-in alert     a check-in day they chose to send to the clinic
-     Check-ins          their between-treatment check-ins, At Risk when the
-                        day earns a notice, Missed after a week of silence
+     Patient message     their latest message to the care team, while it
+                         waits for a reply
+     Lab alert           a lab value they entered that is outside the range
+     Side effect         a medication side effect they logged
+     Missed doses        two or more doses marked missed in a week
+     Blood pressure      one reading of 180/110 or more (or a top number
+                         under 90), or two High readings in 7 days
+     BP symptoms         a symptom logged with a reading, or the BP
+                         medicine not taken
+     Weight change       2 kg (about 5 lb) up or down within 7 days
+     Access appointment  a vascular access visit booked in the next 14 days
+     Access concern      a problem with the access the patient reported
+     Missed appointment  one they said they missed, one left unanswered for
+                         2 days, or an access visit that never happened
+     Check-ins           their between-treatment check-ins, At Risk when the
+                         day earns a notice, Missed after a week of silence
+
+   The client's rule (2026-09-30): CCM does not manage dialysis, so nothing
+   from the dialysis treatment itself raises a CCM alert — not the
+   between-treatment check-in notices, not home-treatment vitals. Check-ins
+   still show on the Check-Ins tab; they just never reach the inbox.
 
    Pure functions over the member's data, so the rules are tested once and
    survive the backend: today the data comes from this browser's storage
@@ -35,10 +48,14 @@ import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
 import { DEMO_MEMBER_MRN } from "@/lib/data/demoIdentity";
 import type { Conversation } from "@/features/messaging/messaging.types";
 import { shouldSuggestNotice } from "@/features/personal-log/check-in/clinicNotice.rules";
-import type {
-  ClinicNotice,
-  ClinicNoticeReason,
-} from "@/features/personal-log/check-in/clinicNotice.types";
+import type { ClinicNotice } from "@/features/personal-log/check-in/clinicNotice.types";
+import {
+  statusOf,
+  type BpReading,
+} from "@/features/personal-log/blood-pressure/bloodPressure";
+import type { Appointment } from "@/features/personal-log/appointments/appointments";
+import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
+import type { AccessRecord } from "@/features/vascular-access/vascularAccess.data";
 import type { BetweenTreatmentCheckIn } from "@/features/personal-log/check-in/checkIn.types";
 import type { CheckInRow } from "./checkIns.data";
 
@@ -55,7 +72,12 @@ export type FeedKind =
   | "Lab alert"
   | "Side effect"
   | "Missed doses"
-  | "Check-in alert";
+  | "Blood pressure"
+  | "BP symptoms"
+  | "Weight change"
+  | "Access appointment"
+  | "Access concern"
+  | "Missed appointment";
 
 export type FeedItem = {
   /** Stable, and specific to what raised it: a new message or a new lab
@@ -75,6 +97,11 @@ export type MemberData = {
   doses: DoseRecord[];
   notices: ClinicNotice[];
   checkIns: BetweenTreatmentCheckIn[];
+  bloodPressure: BpReading[];
+  weights: WeightFluidEntry[];
+  appointments: Appointment[];
+  /** The member's vascular access record, when they have one. */
+  access: AccessRecord | null;
 };
 
 /* ------------------------------------------------------------------ dates */
@@ -249,31 +276,255 @@ export function missedDoseAlerts(
   ];
 }
 
-/* --------------------------------------------------------------- check-ins */
+/* ---------------------------------------------------------- blood pressure */
 
-const REASON_LABEL: Record<ClinicNoticeReason, string> = {
-  "missed-treatment": "missed a treatment",
-  "severe-symptoms": "severe symptoms",
-  "rough-day": "a rough day",
-  "member-requested": "asked the clinic to look",
-};
+function bp(r: Pick<BpReading, "systolic" | "diastolic">) {
+  return `${r.systolic}/${r.diastolic}`;
+}
 
-/** A check-in day the member sent to the clinic, once it has been sent. */
-export function noticeAlerts(
-  notices: ClinicNotice[],
+/** At a reading, as ISO: its day and time. */
+function readingIso(r: Pick<BpReading, "date" | "time">) {
+  const [y, m, d] = r.date.split("-").map(Number);
+  const [h, min] = r.time.split(":").map(Number);
+  return new Date(y, m - 1, d, h || 0, min || 0).toISOString();
+}
+
+/** 180/110 or more, or a top number under 90: acted on at once. */
+export function isSevereBp(r: Pick<BpReading, "systolic" | "diastolic">) {
+  return r.systolic >= 180 || r.diastolic >= 110 || r.systolic < 90;
+}
+
+/**
+ * Blood pressure worth a call: every severe reading on its own, and two or
+ * more other High readings (140/90 and up) in the last seven days as one
+ * item. The common home-monitoring thresholds; the practice can tune them.
+ */
+export function bpAlerts(
+  readings: BpReading[],
   mrn: string,
   today: string,
 ): FeedItem[] {
-  return notices
-    .filter((n) => n.deliverOn <= today)
-    .map((n) => ({
-      id: `feed:notice:${n.checkInDate}`,
-      mrn,
-      receivedAt: n.raisedAt,
-      kind: "Check-in alert" as const,
-      text: `Check-in for ${shortDate(n.checkInDate)}: ${n.reasons.map((r) => REASON_LABEL[r]).join(", ")}`,
-    }));
+  const since = daysBefore(today, 6);
+  const recent = readings
+    .filter((r) => r.date >= since && r.date <= today)
+    .sort((a, b) => readingIso(b).localeCompare(readingIso(a)));
+
+  const severe: FeedItem[] = recent.filter(isSevereBp).map((r) => ({
+    id: `feed:bp:severe:${r.id}`,
+    mrn,
+    receivedAt: readingIso(r),
+    kind: "Blood pressure",
+    text: `${r.systolic < 90 ? "Low" : "Very high"} reading ${bp(r)} on ${shortDate(r.date)}`,
+  }));
+
+  const high = recent.filter((r) => !isSevereBp(r) && statusOf(r) === "High");
+  const repeated: FeedItem[] =
+    high.length >= 2
+      ? [
+          {
+            id: `feed:bp:high:${high[0].id}:${high.length}`,
+            mrn,
+            receivedAt: readingIso(high[0]),
+            kind: "Blood pressure",
+            text: `${high.length} high readings in 7 days (latest ${bp(high[0])} on ${shortDate(high[0].date)})`,
+          },
+        ]
+      : [];
+
+  return [...severe, ...repeated];
 }
+
+/** A reading logged with a symptom, or with the BP medicine not taken, in
+ *  the last two weeks. */
+export function bpSymptomAlerts(
+  readings: BpReading[],
+  mrn: string,
+  today: string,
+): FeedItem[] {
+  const since = daysBefore(today, 13);
+  return readings
+    .filter((r) => r.date >= since && r.date <= today)
+    .flatMap((r) => {
+      const symptom =
+        r.symptoms.trim() && r.symptoms.trim() !== "None"
+          ? r.symptoms.trim()
+          : "";
+      const medicine = r.medication === "Not taken";
+      if (!symptom && !medicine) return [];
+      const parts = [
+        symptom ? `${symptom} with BP ${bp(r)}` : `BP ${bp(r)}`,
+        medicine ? "BP medicine not taken" : "",
+      ].filter(Boolean);
+      return [
+        {
+          id: `feed:bp-symptom:${r.id}`,
+          mrn,
+          receivedAt: readingIso(r),
+          kind: "BP symptoms" as const,
+          text: `${parts.join(", ")} (${shortDate(r.date)})`,
+        },
+      ];
+    });
+}
+
+/* ------------------------------------------------------------------ weight */
+
+const KG_TO_LB = 2.20462;
+
+/**
+ * A change of 2 kg (about 5 lb) or more within seven days of the latest
+ * weight: the usual home-monitoring threshold for fluid gain or loss. The
+ * latest weight is compared with each earlier one in that week, and the
+ * biggest swing wins. Symptoms logged with the latest weight ride along.
+ */
+export function weightAlerts(
+  entries: WeightFluidEntry[],
+  mrn: string,
+  today: string,
+): FeedItem[] {
+  const weighed = entries
+    .filter(
+      (e): e is WeightFluidEntry & { date: string; weightKg: number } =>
+        typeof e.date === "string" &&
+        typeof e.weightKg === "number" &&
+        e.date <= today,
+    )
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const latest = weighed[0];
+  if (!latest || latest.date < daysBefore(today, 13)) return [];
+
+  const windowStart = daysBefore(latest.date, 7);
+  const earlier = weighed.filter(
+    (e) => e !== latest && e.date >= windowStart && e.date <= latest.date,
+  );
+  let swing: (typeof earlier)[number] | null = null;
+  for (const e of earlier) {
+    if (
+      !swing ||
+      Math.abs(latest.weightKg - e.weightKg) >
+        Math.abs(latest.weightKg - swing.weightKg)
+    )
+      swing = e;
+  }
+  if (!swing) return [];
+  const change = latest.weightKg - swing.weightKg;
+  if (Math.abs(change) < 2) return [];
+
+  const symptoms = [
+    latest.swelling === "YES" ? "swelling" : "",
+    latest.sob === "YES" ? "short of breath" : "",
+    latest.rapidGain === "YES" ? "rapid gain" : "",
+    latest.dizziness === "YES" ? "dizzy" : "",
+  ].filter(Boolean);
+  const kg = Math.abs(change).toFixed(1);
+  const lb = (Math.abs(change) * KG_TO_LB).toFixed(1);
+  return [
+    {
+      id: `feed:weight:${latest.id}:${swing.id}`,
+      mrn,
+      receivedAt: middayIso(latest.date),
+      kind: "Weight change",
+      text:
+        `Weight ${change > 0 ? "up" : "down"} ${kg} kg (${lb} lb) since ${shortDate(swing.date)}: ` +
+        `${latest.weightKg} kg on ${shortDate(latest.date)}` +
+        (symptoms.length > 0 ? `, ${symptoms.join(", ")}` : ""),
+    },
+  ];
+}
+
+/* ------------------------------------------------------------- appointments */
+
+/** "14:30" → "2:30 PM". */
+function clock(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h)) return hhmm;
+  return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+/**
+ * Appointments the member kept in their own list that went wrong: one they
+ * said they missed, or one two days gone with no answer to "did you go?".
+ * Only the last 30 days — an old unanswered visit is history, not an alert.
+ */
+export function missedAppointmentAlerts(
+  appointments: Appointment[],
+  mrn: string,
+  today: string,
+): FeedItem[] {
+  const since = daysBefore(today, 30);
+  const silentBefore = daysBefore(today, 1);
+  return appointments
+    .filter((a) => a.date >= since && a.date < today)
+    .flatMap((a) => {
+      if (a.attendance === "attended") return [];
+      const said = a.attendance === "missed";
+      if (!said && a.date >= silentBefore) return [];
+      return [
+        {
+          id: `feed:appt:${a.id}:${a.attendance ?? "silent"}`,
+          mrn,
+          receivedAt: middayIso(a.date),
+          kind: "Missed appointment" as const,
+          text: `${a.title} with ${a.doctor} on ${shortDate(a.date)}: ${
+            said ? "patient says they missed it" : "not confirmed as attended"
+          }`,
+        },
+      ];
+    });
+}
+
+/**
+ * The vascular access record: visits booked in the next two weeks (so
+ * the care team can help the patient get there), visits whose day passed
+ * without being marked done, and concerns the patient reported that
+ * nobody has reviewed yet.
+ */
+export function accessAlerts(
+  record: AccessRecord | null,
+  mrn: string,
+  today: string,
+): FeedItem[] {
+  if (!record) return [];
+  const ahead = daysBefore(today, -14);
+  const since = daysBefore(today, 30);
+
+  const upcoming: FeedItem[] = record.appointments
+    .filter((a) => !a.completed && a.date >= today && a.date <= ahead)
+    .map((a) => ({
+      id: `feed:access-appt:${a.id}:${a.date}`,
+      mrn,
+      /* The day it came within two weeks: when it became worth a look. */
+      receivedAt: middayIso(daysBefore(a.date, 14)),
+      kind: "Access appointment",
+      text: `${a.title} on ${shortDate(a.date)} at ${clock(a.time)}, ${a.place}`,
+    }));
+
+  const missed: FeedItem[] = record.appointments
+    .filter((a) => !a.completed && a.date < today && a.date >= since)
+    .map((a) => ({
+      id: `feed:access-missed:${a.id}:${a.date}`,
+      mrn,
+      receivedAt: middayIso(a.date),
+      kind: "Missed appointment",
+      text: `Access: ${a.title} on ${shortDate(a.date)} was not marked as done`,
+    }));
+
+  const concerns: FeedItem[] = record.concerns
+    .filter((c) => c.status === "Open")
+    .map((c) => ({
+      id: `feed:access-concern:${c.id}`,
+      mrn,
+      receivedAt: c.reportedAt,
+      kind: "Access concern",
+      text: clip(
+        `Reported ${c.kinds.join(", ").toLowerCase() || "a problem"}${c.detail ? `: ${c.detail}` : ""}`,
+      ),
+    }));
+
+  return [...upcoming, ...missed, ...concerns];
+}
+
+/* --------------------------------------------------------------- check-ins */
 
 /** Everything the member's app raises for the clinic, newest first. */
 export function memberInbox(
@@ -287,7 +538,11 @@ export function memberInbox(
     ...labAlerts(data.labResult, mrn, now),
     ...sideEffectAlerts(data.sideEffects, mrn, today),
     ...missedDoseAlerts(data.doses, mrn, today),
-    ...noticeAlerts(data.notices, mrn, today),
+    ...bpAlerts(data.bloodPressure, mrn, today),
+    ...bpSymptomAlerts(data.bloodPressure, mrn, today),
+    ...weightAlerts(data.weights, mrn, today),
+    ...missedAppointmentAlerts(data.appointments, mrn, today),
+    ...accessAlerts(data.access, mrn, today),
   ].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
 }
 

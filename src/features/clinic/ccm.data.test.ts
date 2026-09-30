@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ACTIVITY_TYPES,
+  ALERT_ACTIVITY,
   CCM_PATIENTS,
   CCM_REQUIREMENTS,
   CCM_THRESHOLD_MINUTES,
@@ -226,5 +227,20 @@ describe("activity types", () => {
     expect(
       seedCcmState(NOW).activities.every((a) => types.includes(a.type)),
     ).toBe(true);
+  });
+});
+
+describe("alerts and the activity they are logged under", () => {
+  it("points every alert kind at a type from the client's dropdown", () => {
+    for (const type of Object.values(ALERT_ACTIVITY)) {
+      expect(ACTIVITY_TYPES).toContain(type);
+    }
+    expect(ALERT_ACTIVITY["Blood pressure"]).toBe("BP Review & Follow-Up");
+    expect(ALERT_ACTIVITY["Weight change"]).toBe(
+      "Weight / Fluid Review & Follow-Up",
+    );
+    expect(ALERT_ACTIVITY["Missed appointment"]).toBe(
+      "Appointment Coordination",
+    );
   });
 });

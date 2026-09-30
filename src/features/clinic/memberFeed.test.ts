@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { seedConversations } from "@/features/messaging/messaging.seed";
 import type { Conversation } from "@/features/messaging/messaging.types";
 import type { BetweenTreatmentCheckIn } from "@/features/personal-log/check-in/checkIn.types";
+import type { BpReading } from "@/features/personal-log/blood-pressure/bloodPressure";
+import type { Appointment } from "@/features/personal-log/appointments/appointments";
+import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
+import type { AccessRecord } from "@/features/vascular-access/vascularAccess.data";
 import {
   CCM_PATIENTS,
   openInbox,
@@ -15,9 +19,13 @@ import {
   memberCheckInRows,
   memberInbox,
   messageAlerts,
+  accessAlerts,
+  bpAlerts,
+  bpSymptomAlerts,
+  missedAppointmentAlerts,
   missedDoseAlerts,
-  noticeAlerts,
   parseRange,
+  weightAlerts,
   sideEffectAlerts,
   type MemberData,
 } from "./memberFeed";
@@ -33,6 +41,10 @@ const empty: MemberData = {
   doses: [],
   notices: [],
   checkIns: [],
+  bloodPressure: [],
+  weights: [],
+  appointments: [],
+  access: null,
 };
 
 function checkIn(
@@ -174,8 +186,10 @@ describe("medication alerts", () => {
   });
 });
 
-describe("check-in notices", () => {
-  it("reach the inbox once delivered, not while held for a closed day", () => {
+describe("dialysis treatment data", () => {
+  it("never reaches the CCM inbox, even a check-in sent to the clinic", () => {
+    // Client, 2026-09-30: CCM does not manage dialysis, so treatment data
+    // must not alert the CCM dashboard.
     const notice = {
       checkInDate: "2026-09-28",
       raisedOn: "2026-09-28",
@@ -183,9 +197,263 @@ describe("check-in notices", () => {
       deliverOn: "2026-09-29",
       reasons: ["missed-treatment" as const],
     };
-    expect(noticeAlerts([notice], MRN, "2026-09-28")).toEqual([]);
-    const [alert] = noticeAlerts([notice], MRN, TODAY);
-    expect(alert.text).toBe("Check-in for Sep 28, 2026: missed a treatment");
+    const inbox = memberInbox(
+      {
+        ...empty,
+        notices: [notice],
+        checkIns: [checkIn("2026-09-28", { missedTreatment: true })],
+      },
+      NOW,
+      TODAY,
+    );
+    expect(inbox).toEqual([]);
+  });
+});
+
+function reading(
+  id: string,
+  date: string,
+  systolic: number,
+  diastolic: number,
+  change: Partial<BpReading> = {},
+): BpReading {
+  return {
+    id,
+    date,
+    time: "08:00",
+    systolic,
+    diastolic,
+    pulse: 70,
+    position: "Sitting",
+    symptoms: "None",
+    medication: "Taken",
+    notes: "",
+    ...change,
+  };
+}
+
+describe("blood pressure alerts", () => {
+  it("raise every severe reading on its own", () => {
+    const alerts = bpAlerts(
+      [reading("a", "2026-09-29", 184, 96), reading("b", "2026-09-28", 86, 50)],
+      MRN,
+      TODAY,
+    );
+    expect(alerts.map((a) => a.text)).toEqual([
+      "Very high reading 184/96 on Sep 29, 2026",
+      "Low reading 86/50 on Sep 28, 2026",
+    ]);
+  });
+
+  it("raise one item for two High readings in a week, not for one", () => {
+    const one = [reading("a", "2026-09-29", 146, 88)];
+    expect(bpAlerts(one, MRN, TODAY)).toEqual([]);
+    const two = [...one, reading("b", "2026-09-26", 150, 92)];
+    const [alert] = bpAlerts(two, MRN, TODAY);
+    expect(alert.kind).toBe("Blood pressure");
+    expect(alert.text).toBe(
+      "2 high readings in 7 days (latest 146/88 on Sep 29, 2026)",
+    );
+  });
+
+  it("ignore readings older than a week", () => {
+    const old = [
+      reading("a", "2026-09-20", 190, 100),
+      reading("b", "2026-09-19", 150, 95),
+      reading("c", "2026-09-18", 150, 95),
+    ];
+    expect(bpAlerts(old, MRN, TODAY)).toEqual([]);
+  });
+});
+
+describe("symptoms reported with blood pressure", () => {
+  it("raise a symptom or a missed BP medicine, not a quiet reading", () => {
+    const alerts = bpSymptomAlerts(
+      [
+        reading("a", "2026-09-29", 150, 92, { symptoms: "Dizzy" }),
+        reading("b", "2026-09-28", 128, 80, { medication: "Not taken" }),
+        reading("c", "2026-09-27", 120, 78),
+      ],
+      MRN,
+      TODAY,
+    );
+    expect(alerts.map((a) => a.text)).toEqual([
+      "Dizzy with BP 150/92 (Sep 29, 2026)",
+      "BP 128/80, BP medicine not taken (Sep 28, 2026)",
+    ]);
+  });
+});
+
+function weighed(
+  id: string,
+  date: string,
+  weightKg: number,
+  change: Partial<WeightFluidEntry> = {},
+): WeightFluidEntry {
+  return {
+    id,
+    date,
+    weightKg,
+    dateEn: date,
+    dateEs: date,
+    morning: String(weightKg),
+    evening: "--",
+    uo: "Moderate",
+    intake: "0",
+    goal: "Goal Met",
+    swelling: "NO",
+    sob: "NO",
+    weakness: "NO",
+    notes: "--",
+    noteKey: null,
+    ...change,
+  };
+}
+
+describe("weight change", () => {
+  it("raises 2 kg or more within a week, with the symptoms logged", () => {
+    const [alert] = weightAlerts(
+      [
+        weighed("a", "2026-09-29", 74.6, { swelling: "YES" }),
+        weighed("b", "2026-09-26", 72.4),
+      ],
+      MRN,
+      TODAY,
+    );
+    expect(alert.kind).toBe("Weight change");
+    expect(alert.text).toBe(
+      "Weight up 2.2 kg (4.9 lb) since Sep 26, 2026: 74.6 kg on Sep 29, 2026, swelling",
+    );
+  });
+
+  it("stays quiet under 2 kg, beyond a week, or without a dated weight", () => {
+    expect(
+      weightAlerts(
+        [weighed("a", "2026-09-29", 73.5), weighed("b", "2026-09-26", 72.4)],
+        MRN,
+        TODAY,
+      ),
+    ).toEqual([]);
+    expect(
+      weightAlerts(
+        [weighed("a", "2026-09-29", 76), weighed("b", "2026-09-15", 72)],
+        MRN,
+        TODAY,
+      ),
+    ).toEqual([]);
+    expect(
+      weightAlerts(
+        [{ ...weighed("a", "2026-09-29", 76), date: undefined }],
+        MRN,
+        TODAY,
+      ),
+    ).toEqual([]);
+  });
+});
+
+function appointment(
+  id: string,
+  date: string,
+  attendance?: Appointment["attendance"],
+): Appointment {
+  return {
+    id,
+    date,
+    start: "10:30",
+    end: "",
+    title: "Nephrology",
+    doctor: "Dr. Carter",
+    location: "",
+    address: "",
+    notes: "",
+    ...(attendance ? { attendance } : {}),
+  };
+}
+
+describe("missed appointments", () => {
+  it("raise one the patient missed, or left unanswered for two days", () => {
+    const alerts = missedAppointmentAlerts(
+      [
+        appointment("said", "2026-09-29", "missed"),
+        appointment("silent", "2026-09-27"),
+        appointment("recent", "2026-09-29"),
+        appointment("went", "2026-09-20", "attended"),
+        appointment("ahead", "2026-10-03"),
+      ],
+      MRN,
+      TODAY,
+    );
+    expect(alerts.map((a) => a.text)).toEqual([
+      "Nephrology with Dr. Carter on Sep 29, 2026: patient says they missed it",
+      "Nephrology with Dr. Carter on Sep 27, 2026: not confirmed as attended",
+    ]);
+  });
+});
+
+describe("vascular access", () => {
+  const record = {
+    appointments: [
+      {
+        id: "soon",
+        date: "2026-10-05",
+        time: "09:00",
+        title: "Fistulogram",
+        place: "Metro Vascular Access Center",
+        team: "access",
+      },
+      {
+        id: "gone",
+        date: "2026-09-25",
+        time: "09:00",
+        title: "Access Check",
+        place: "Metro",
+        team: "access",
+      },
+      {
+        id: "done",
+        date: "2026-09-20",
+        time: "09:00",
+        title: "Access Check",
+        place: "Metro",
+        team: "access",
+        completed: { result: "Fine", performedBy: "Dr. Patel" },
+      },
+    ],
+    concerns: [
+      {
+        id: "c1",
+        reportedAt: "2026-09-29T10:00:00Z",
+        kinds: ["Bleeding"],
+        detail: "After dialysis",
+        status: "Open",
+      },
+      {
+        id: "c2",
+        reportedAt: "2026-09-10T10:00:00Z",
+        kinds: ["Pain"],
+        detail: "",
+        status: "Reviewed",
+      },
+    ],
+  } as unknown as AccessRecord;
+
+  it("raise upcoming visits, visits never marked done and open concerns", () => {
+    const alerts = accessAlerts(record, MRN, TODAY);
+    expect(alerts.map((a) => [a.kind, a.text])).toEqual([
+      [
+        "Access appointment",
+        "Fistulogram on Oct 5, 2026 at 9:00 AM, Metro Vascular Access Center",
+      ],
+      [
+        "Missed appointment",
+        "Access: Access Check on Sep 25, 2026 was not marked as done",
+      ],
+      ["Access concern", "Reported bleeding: After dialysis"],
+    ]);
+  });
+
+  it("raise nothing without a record", () => {
+    expect(accessAlerts(null, MRN, TODAY)).toEqual([]);
   });
 });
 

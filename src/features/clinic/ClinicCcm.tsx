@@ -61,6 +61,7 @@ import { useNow } from "@/lib/utils/useNow";
 import * as messaging from "@/features/messaging/messaging.rules";
 import {
   ACTIVITY_TYPES,
+  ALERT_ACTIVITY,
   ALL,
   CARE_MANAGERS,
   CCM_PATIENTS,
@@ -110,6 +111,16 @@ import { useCcm, type CcmStore } from "./useCcm";
 import { useMemberFeed } from "./useMemberFeed";
 import { useClinicData } from "./useClinicData";
 import { useCan } from "@/features/staff/useStaffAccounts";
+import { ConditionSelect } from "./ConditionSelect";
+import { ConditionLibraryModal } from "./ConditionLibraryModal";
+import { useConditionLibrary } from "./useConditionLibrary";
+import {
+  CONDITION_GROUPS,
+  chronicCount,
+  conditionSummary,
+  sortedConditions,
+  type CcmCondition,
+} from "./ccmConditions";
 
 /* ==========================================================================
    Chronic Care Management
@@ -255,11 +266,16 @@ function WorklistFiltersBar({
   onChange,
   onExport,
   canExport,
+  library,
+  onManageLibrary,
 }: {
   filters: WorklistFilters;
   onChange: (change: Partial<WorklistFilters>) => void;
   onExport: () => void;
   canExport: boolean;
+  library: CcmCondition[];
+  /** Absent unless the signed-in role manages the clinic's settings. */
+  onManageLibrary?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-inline-md px-card pb-stack-lg lg:flex-row lg:flex-wrap lg:items-center">
@@ -314,28 +330,90 @@ function WorklistFiltersBar({
           <option key={option}>{option}</option>
         ))}
       </Select>
-      <Button
-        size="small"
-        variant="neutral"
-        appearance="fill-stroke"
-        className="lg:ml-auto"
-        disabled={!canExport}
-        onClick={onExport}
-        leadingIcon={<Download aria-hidden="true" />}
+      <Select
+        selectSize="small"
+        aria-label="Condition"
+        value={filters.condition ?? ALL}
+        onChange={(e) => onChange({ condition: e.target.value })}
       >
-        Export
-      </Button>
+        <option value={ALL}>All Conditions</option>
+        {CONDITION_GROUPS.map((group) => (
+          <optgroup key={group} label={group}>
+            {library
+              .filter((c) => c.group === group && c.active)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+          </optgroup>
+        ))}
+      </Select>
+      <span className="flex flex-wrap items-center gap-inline-md lg:ml-auto">
+        {onManageLibrary ? (
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="ghost"
+            onClick={onManageLibrary}
+            leadingIcon={<ListChecks aria-hidden="true" />}
+          >
+            Condition Library
+          </Button>
+        ) : null}
+        <Button
+          size="small"
+          variant="neutral"
+          appearance="fill-stroke"
+          disabled={!canExport}
+          onClick={onExport}
+          leadingIcon={<Download aria-hidden="true" />}
+        >
+          Export
+        </Button>
+      </span>
     </div>
+  );
+}
+
+/** "CKD 4 · HTN +2": the two that matter most, and how many more. The full
+ *  list is in the patient's record, and on hover here. */
+function ConditionsCell({
+  values,
+  library,
+}: {
+  values: string[];
+  library: CcmCondition[];
+}) {
+  const summary = conditionSummary(values, library);
+  if (!summary.text) return <span className="text-fg-muted">—</span>;
+  return (
+    <span
+      title={summary.full}
+      className="inline-flex items-center gap-inline-sm"
+    >
+      <span>{summary.text}</span>
+      {summary.more > 0 ? (
+        <Badge tone="neutral">
+          +{summary.more}
+          <span className="sr-only"> more: {summary.full}</span>
+        </Badge>
+      ) : null}
+    </span>
   );
 }
 
 function Worklist({
   rows,
   month,
+  library,
+  onManageLibrary,
   onOpen,
 }: {
   rows: WorklistRow[];
   month: string;
+  library: CcmCondition[];
+  onManageLibrary?: () => void;
   onOpen: (mrn: string) => void;
 }) {
   const [filters, setFilters] = useState<WorklistFilters>({
@@ -344,14 +422,15 @@ function Worklist({
     location: ALL,
     careManager: ALL,
     status: ALL,
+    condition: ALL,
   });
   const [sort, setSort] = useState<WorklistSort>({
     key: "name",
     direction: "asc",
   });
   const shown = useMemo(
-    () => sortWorklist(filterWorklist(rows, filters), sort),
-    [rows, filters, sort],
+    () => sortWorklist(filterWorklist(rows, filters, library), sort),
+    [rows, filters, sort, library],
   );
   const onSort = (key: WorklistSort["key"]) =>
     setSort((current) => ({
@@ -369,8 +448,13 @@ function Worklist({
         }
         canExport={shown.length > 0}
         onExport={() =>
-          downloadCsv(`ccm-worklist-${month}.csv`, worklistCsv(shown, month))
+          downloadCsv(
+            `ccm-worklist-${month}.csv`,
+            worklistCsv(shown, month, library),
+          )
         }
+        library={library}
+        onManageLibrary={onManageLibrary}
       />
 
       <Table minWidth={1080}>
@@ -414,7 +498,7 @@ function Worklist({
                 </TableCell>
                 <TableCell className="tabular-nums">{row.mrn}</TableCell>
                 <TableCell className="whitespace-nowrap">
-                  {row.conditions.join(", ")}
+                  <ConditionsCell values={row.conditions} library={library} />
                 </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-inline-md">
@@ -752,18 +836,23 @@ function clock(seconds: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** What an alert fills in when staff log time against it. */
+type ActivityPrefill = { type: string; note: string };
+
 function ActivityForm({
   mrn,
   store,
   today,
+  prefill,
   onDone,
 }: {
   mrn: string;
   store: CcmStore;
   today: string;
+  prefill?: ActivityPrefill;
   onDone: () => void;
 }) {
-  const [type, setType] = useState("");
+  const [type, setType] = useState(prefill?.type ?? "");
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<EntryMode>("minutes");
   const [start, setStart] = useState("");
@@ -771,7 +860,7 @@ function ActivityForm({
   const [typedMinutes, setTypedMinutes] = useState("");
   const [counts, setCounts] = useState<CountsToward>("yes");
   const [ehr, setEhr] = useState<YesNo>("no");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(prefill?.note ?? "");
   const [outcome, setOutcome] = useState<string>(OUTCOMES[0]);
   const [staff, setStaff] = useState<string>(STAFF[0]);
   const [needsFollowUp, setNeedsFollowUp] = useState<YesNo>("no");
@@ -1475,10 +1564,13 @@ function AttentionPanel({
   alerts,
   overdue,
   store,
+  onLog,
 }: {
   alerts: ReturnType<typeof openInbox>;
   overdue: ReturnType<typeof openFollowUps>;
   store: CcmStore;
+  /** Absent when the signed-in role may not log time. */
+  onLog?: (alert: ReturnType<typeof openInbox>[number]) => void;
 }) {
   if (alerts.length === 0 && overdue.length === 0) return null;
   const item =
@@ -1488,18 +1580,34 @@ function AttentionPanel({
       <ul className="mt-stack-sm divide-y divide-danger-line">
         {alerts.map((alert) => (
           <li key={alert.id} className={item}>
-            <span>
+            <span className="min-w-0 flex-1">
               <span className="text-label-md">{alert.kind}:</span> {alert.text}
+              <span className="block text-caption text-fg-muted">
+                {ALERT_ACTIVITY[alert.kind]}
+              </span>
             </span>
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => store.resolveInbox(alert.id)}
-              leadingIcon={<Check aria-hidden="true" />}
-            >
-              Resolve
-            </Button>
+            <span className="flex flex-wrap gap-inline-sm">
+              {onLog ? (
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => onLog(alert)}
+                  leadingIcon={<Plus aria-hidden="true" />}
+                >
+                  Log Time
+                </Button>
+              ) : null}
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => store.resolveInbox(alert.id)}
+                leadingIcon={<Check aria-hidden="true" />}
+              >
+                Resolve
+              </Button>
+            </span>
           </li>
         ))}
         {overdue.map(({ activity, followUp }) => (
@@ -1524,6 +1632,97 @@ function AttentionPanel({
   );
 }
 
+/** The patient's full condition list, editable by staff who log CCM. */
+function ConditionsSection({
+  values,
+  library,
+  canEdit,
+  onSave,
+}: {
+  values: string[];
+  library: CcmCondition[];
+  canEdit: boolean;
+  onSave: (next: string[]) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(values);
+  const [tried, setTried] = useState(false);
+  const tooFew = chronicCount(draft, library) < 2;
+  const sorted = sortedConditions(values, library);
+
+  return (
+    <section>
+      <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
+        <h3 className="text-heading-5 text-fg">
+          Chronic Conditions ({sorted.length})
+        </h3>
+        {canEdit && !editing ? (
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            leadingIcon={<Pencil aria-hidden="true" />}
+            onClick={() => {
+              setDraft(values);
+              setTried(false);
+              setEditing(true);
+            }}
+          >
+            Edit Conditions
+          </Button>
+        ) : null}
+      </div>
+      {editing ? (
+        <div className="space-y-stack-md rounded-card-nested border border-line p-inset-md">
+          <ConditionSelect
+            library={library}
+            value={draft}
+            onChange={setDraft}
+            invalid={tried && tooFew}
+          />
+          {tried && tooFew ? (
+            <p role="alert" className="text-caption text-danger">
+              CCM needs two or more chronic conditions.
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-inline-md">
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                setTried(true);
+                if (tooFew) return;
+                onSave(draft);
+                setEditing(false);
+              }}
+            >
+              Save Conditions
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <ul className="flex flex-wrap gap-inline-sm">
+          {sorted.map((condition) => (
+            <li key={condition.value}>
+              <Badge tone={condition.other ? "neutral" : "info"}>
+                {condition.label}
+                {condition.other ? " (Other)" : ""}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function PatientModal({
   row,
   store,
@@ -1531,6 +1730,7 @@ function PatientModal({
   today,
   checkInRows,
   canLog,
+  library,
   onClose,
 }: {
   row: WorklistRow;
@@ -1538,12 +1738,14 @@ function PatientModal({
   month: string;
   today: string;
   checkInRows: CheckInRow[];
+  library: CcmCondition[];
   /** The signed-in role may log time and update the checklist. */
   canLog: boolean;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<PatientTab>("overview");
   const [adding, setAdding] = useState(false);
+  const [prefill, setPrefill] = useState<ActivityPrefill | undefined>();
   const activities = activitiesFor(store.state, row.mrn, month);
   const followUps = openFollowUps(store.state, row.mrn);
   const alerts = openInbox(store.state, row.mrn);
@@ -1561,7 +1763,7 @@ function PatientModal({
       onClose={onClose}
       placement="bottom"
       title={row.name}
-      description={`MRN ${row.mrn} · ${ageOn(row.dob, today)} y/o (DOB ${usDate(row.dob)}) · ${row.conditions.join(", ")} · ${row.provider} · ${row.location}`}
+      description={`MRN ${row.mrn} · ${ageOn(row.dob, today)} y/o (DOB ${usDate(row.dob)}) · ${row.provider} · ${row.location}`}
     >
       <PatientSummary
         row={row}
@@ -1594,6 +1796,7 @@ function PatientModal({
           <Button
             size="small"
             onClick={() => {
+              setPrefill(undefined);
               setTab("activity");
               setAdding(true);
             }}
@@ -1611,6 +1814,25 @@ function PatientModal({
           alerts={alerts}
           overdue={followUps.filter((f) => f.followUp.date < today)}
           store={store}
+          onLog={
+            canLog
+              ? (alert) => {
+                  setPrefill({
+                    type: ALERT_ACTIVITY[alert.kind],
+                    note: `${alert.kind}: ${alert.text}`,
+                  });
+                  setTab("activity");
+                  setAdding(true);
+                }
+              : undefined
+          }
+        />
+
+        <ConditionsSection
+          values={row.conditions}
+          library={library}
+          canEdit={canLog}
+          onSave={(next) => store.setConditions(row.mrn, next)}
         />
 
         <section>
@@ -1660,16 +1882,21 @@ function PatientModal({
       <TabPanel id="activity" value={tab}>
         {adding ? (
           <ActivityForm
+            key={prefill ? `${prefill.type}|${prefill.note}` : "blank"}
             mrn={row.mrn}
             store={store}
             today={today}
+            prefill={prefill}
             onDone={() => setAdding(false)}
           />
         ) : canLog ? (
           <div className="mb-stack-md flex justify-end">
             <Button
               size="small"
-              onClick={() => setAdding(true)}
+              onClick={() => {
+                setPrefill(undefined);
+                setAdding(true);
+              }}
               leadingIcon={<Plus aria-hidden="true" />}
             >
               Add Activity
@@ -1819,29 +2046,29 @@ function PatientModal({
  *  the conditions that qualify them and who looks after them. */
 function AddToCcmModal({
   candidates,
+  library,
   onAdd,
   onClose,
 }: {
   candidates: Array<{ name: string; mrn: string }>;
+  library: CcmCondition[];
   onAdd: (patient: CcmPatient) => void;
   onClose: () => void;
 }) {
   const today = dayKey(useNow());
   const [mrn, setMrn] = useState(candidates[0]?.mrn ?? "");
   const [dob, setDob] = useState("");
-  const [conditions, setConditions] = useState("");
+  const [conditions, setConditions] = useState<string[]>([]);
   const [provider, setProvider] = useState<string>(PROVIDERS[0]);
   const [careManager, setCareManager] = useState<string>(CARE_MANAGERS[0]);
   const [location, setLocation] = useState<string>(LOCATIONS[0]);
   const [tried, setTried] = useState(false);
-  const list = conditions
-    .split(",")
-    .map((c) => c.trim())
-    .filter(Boolean);
   const errors = {
     dob: dob ? undefined : "Enter the date of birth",
     conditions:
-      list.length >= 2 ? undefined : "CCM needs two or more chronic conditions",
+      chronicCount(conditions, library) >= 2
+        ? undefined
+        : "CCM needs two or more chronic conditions",
   };
 
   return (
@@ -1866,7 +2093,7 @@ function AddToCcmModal({
                 mrn,
                 name: patient.name,
                 dob,
-                conditions: list,
+                conditions,
                 provider,
                 careManager,
                 location,
@@ -1919,14 +2146,16 @@ function AddToCcmModal({
           <FormField
             label="Chronic conditions"
             required
-            hint="Separate with commas, e.g. CKD 4, HTN, DM"
+            hint="Choose every condition that applies. Use Other for anything not listed."
             error={tried ? errors.conditions : undefined}
           >
             {(field) => (
-              <Input
-                {...field}
+              <ConditionSelect
+                library={library}
                 value={conditions}
-                onChange={(e) => setConditions(e.target.value)}
+                onChange={setConditions}
+                invalid={Boolean(tried && errors.conditions)}
+                describedBy={field["aria-describedby"]}
               />
             )}
           </FormField>
@@ -1998,6 +2227,10 @@ function PageSkeleton() {
 export default function ClinicCcm() {
   const rawStore = useCcm();
   const canLog = useCan("ccm.log");
+  const canManageLibrary = useCan("settings.manage");
+  const conditionLibrary = useConditionLibrary();
+  const library = conditionLibrary.library;
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   /* The clinic's whole patient list, newly enrolled ones included. */
   const clinicData = useClinicData();
@@ -2108,7 +2341,15 @@ export default function ClinicCcm() {
             </div>
           </div>
           <TabPanel id="worklist" value={tab}>
-            <Worklist rows={rows} month={month} onOpen={setOpenMrn} />
+            <Worklist
+              rows={rows}
+              month={month}
+              library={library}
+              onManageLibrary={
+                canManageLibrary ? () => setLibraryOpen(true) : undefined
+              }
+              onOpen={setOpenMrn}
+            />
           </TabPanel>
           <TabPanel id="checkins" value={tab}>
             <CheckInsTable
@@ -2138,6 +2379,7 @@ export default function ClinicCcm() {
             today={today}
             checkInRows={checkInRows}
             canLog={canLog}
+            library={library}
             onClose={() => setOpenMrn(null)}
           />
         ) : null}
@@ -2188,9 +2430,13 @@ export default function ClinicCcm() {
           candidates={(clinicData.data?.patients ?? []).filter(
             (p) => !ccmPatientsOf(state).some((c) => c.mrn === p.mrn),
           )}
+          library={library}
           onAdd={rawStore.enroll}
           onClose={() => setAdding(false)}
         />
+      ) : null}
+      {libraryOpen ? (
+        <ConditionLibraryModal onClose={() => setLibraryOpen(false)} />
       ) : null}
     </div>
   );

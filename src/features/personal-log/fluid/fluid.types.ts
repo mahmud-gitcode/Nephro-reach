@@ -9,6 +9,11 @@
 
 export interface WeightFluidEntry {
   id: string;
+  /** yyyy-mm-dd. Absent on entries saved before it was recorded. */
+  date?: string;
+  /** The morning weight in kg, whatever unit it was typed in — the one
+   *  number the care team's weight-change alert compares. */
+  weightKg?: number;
   dateEn: string;
   dateEs: string;
   morning: string;

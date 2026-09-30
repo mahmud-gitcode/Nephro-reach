@@ -81,6 +81,7 @@ const MEMBER_OWNED = new Set([
   "dialysis-treatment-vitals",
   "dialysis-urine-output",
   "exercise-log",
+  "weight-fluid-log",
   "journey-notes",
   "journey-progress",
   "library-saved",

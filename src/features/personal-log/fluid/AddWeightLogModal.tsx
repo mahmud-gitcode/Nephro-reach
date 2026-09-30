@@ -158,8 +158,16 @@ export function AddWeightLogModal({
       }
     }
 
+    const typed = parseFloat(formMorning.replace(",", "."));
+    const weightKg =
+      Number.isFinite(typed) && typed > 0
+        ? Math.round((unit === "kg" ? typed : typed / 2.20462) * 10) / 10
+        : undefined;
+
     const newEntry: WeightFluidEntry = {
       id: Date.now().toString(),
+      ...(formDate ? { date: formDate } : {}),
+      ...(weightKg !== undefined ? { weightKg } : {}),
       dateEn,
       dateEs,
       morning: formMorning.trim() || "--",
