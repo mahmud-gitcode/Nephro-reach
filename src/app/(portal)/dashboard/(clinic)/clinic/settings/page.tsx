@@ -1,6 +1,11 @@
 import React from "react";
 import ClinicSettings from "@/features/clinic/ClinicSettings";
+import { RequirePermission } from "@/features/staff/RequirePermission";
 
 export default function Page() {
-  return <ClinicSettings />;
+  return (
+    <RequirePermission permission="settings.manage">
+      <ClinicSettings />
+    </RequirePermission>
+  );
 }

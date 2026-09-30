@@ -90,6 +90,7 @@ import {
   sortWorklist,
   usDate,
   worklist,
+  withFeed,
   worklistCsv,
   type CcmStatus,
   type CountsToward,
@@ -101,8 +102,11 @@ import {
 import { checkInTone, recentCheckIns, type CheckInRow } from "./checkIns.data";
 import { patients as roster } from "./enrollment.data";
 import { defaultClinicSettings } from "./settings.data";
+import { LINKED_MEMBER } from "./memberFeed";
 import { UpdatedBar } from "./UpdatedBar";
 import { useCcm, type CcmStore } from "./useCcm";
+import { useMemberFeed } from "./useMemberFeed";
+import { useCan } from "@/features/staff/useStaffAccounts";
 
 /* ==========================================================================
    Chronic Care Management
@@ -181,11 +185,13 @@ function downloadCsv(filename: string, text: string) {
 }
 
 /** A check-in row's patient, matched on "John D." → "John D. Smith". */
-function checkInsFor(name: string): CheckInRow[] {
-  return recentCheckIns.filter((row) => name.startsWith(row.name));
+function checkInsFor(rows: CheckInRow[], name: string): CheckInRow[] {
+  return rows.filter((row) => name.startsWith(row.name));
 }
 
-const ccmCheckIns = recentCheckIns.filter((row) =>
+/* The demo patients' check-ins, fixed; the linked member's come from their
+   own app (useMemberFeed) and are added in the page. */
+const demoCheckIns = recentCheckIns.filter((row) =>
   CCM_PATIENTS.some((patient) => patient.name.startsWith(row.name)),
 );
 
@@ -486,7 +492,13 @@ function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
   );
 }
 
-function CheckInsTable({ onOpen }: { onOpen: (mrn: string) => void }) {
+function CheckInsTable({
+  rows: ccmCheckIns,
+  onOpen,
+}: {
+  rows: CheckInRow[];
+  onOpen: (mrn: string) => void;
+}) {
   return (
     <Table minWidth={820}>
       <TableHead>
@@ -1102,12 +1114,15 @@ function RequirementRow({
   id,
   label,
   today,
+  readOnly = false,
 }: {
   store: CcmStore;
   mrn: string;
   id: (typeof CCM_REQUIREMENTS)[number]["id"];
   label: string;
   today: string;
+  /** The signed-in role may not update the checklist. */
+  readOnly?: boolean;
 }) {
   const current = requirementFor(store.state, mrn, id);
   const status = requirementStatus(current);
@@ -1171,6 +1186,7 @@ function RequirementRow({
             current.detail ? `Edit note: ${label}` : `Add note: ${label}`
           }
           onClick={() => setEditing(true)}
+          disabled={readOnly}
         >
           <Pencil />
         </Button>
@@ -1180,6 +1196,7 @@ function RequirementRow({
             selectSize="small"
             aria-label={`Status: ${label}`}
             value={status}
+            disabled={readOnly}
             className="w-full"
             onChange={(e) => {
               const next = e.target.value as RequirementStatus;
@@ -1504,12 +1521,17 @@ function PatientModal({
   store,
   month,
   today,
+  checkInRows,
+  canLog,
   onClose,
 }: {
   row: WorklistRow;
   store: CcmStore;
   month: string;
   today: string;
+  checkInRows: CheckInRow[];
+  /** The signed-in role may log time and update the checklist. */
+  canLog: boolean;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<PatientTab>("overview");
@@ -1518,7 +1540,7 @@ function PatientModal({
   const followUps = openFollowUps(store.state, row.mrn);
   const alerts = openInbox(store.state, row.mrn);
   const pending = pendingMinutesFor(store.state, row.mrn, month);
-  const checkIns = checkInsFor(row.name);
+  const checkIns = checkInsFor(checkInRows, row.name);
   const enrolment = roster.find((p) => p.mrn === row.mrn);
   const undocumentedCount = activities.filter((a) => !a.ehrDocumented).length;
 
@@ -1560,16 +1582,18 @@ function PatientModal({
             ]}
           />
         </div>
-        <Button
-          size="small"
-          onClick={() => {
-            setTab("activity");
-            setAdding(true);
-          }}
-          leadingIcon={<Plus aria-hidden="true" />}
-        >
-          Log Activity
-        </Button>
+        {canLog ? (
+          <Button
+            size="small"
+            onClick={() => {
+              setTab("activity");
+              setAdding(true);
+            }}
+            leadingIcon={<Plus aria-hidden="true" />}
+          >
+            Log Activity
+          </Button>
+        ) : null}
       </div>
 
       <TabPanel id="overview" value={tab} className="space-y-stack-lg">
@@ -1600,6 +1624,7 @@ function PatientModal({
                 id={requirement.id}
                 label={requirement.label}
                 today={today}
+                readOnly={!canLog}
               />
             ))}
           </ul>
@@ -1632,7 +1657,7 @@ function PatientModal({
             today={today}
             onDone={() => setAdding(false)}
           />
-        ) : (
+        ) : canLog ? (
           <div className="mb-stack-md flex justify-end">
             <Button
               size="small"
@@ -1642,7 +1667,7 @@ function PatientModal({
               Add Activity
             </Button>
           </div>
-        )}
+        ) : null}
         <ActivityTable
           activities={activities}
           month={month}
@@ -1799,21 +1824,34 @@ function PageSkeleton() {
 }
 
 export default function ClinicCcm() {
-  const store = useCcm();
+  const rawStore = useCcm();
+  const canLog = useCan("ccm.log");
   const now = useNow();
   const today = dayKey(now);
+  /* What the linked member's own app has raised, folded into the inbox and
+     the check-ins so every count, status and tab reads it like the rest. */
+  const feed = useMemberFeed(now, today, LINKED_MEMBER.program);
+  const state = useMemo(
+    () => withFeed(rawStore.state, feed.inbox),
+    [rawStore.state, feed.inbox],
+  );
+  const store: CcmStore = { ...rawStore, state };
+  const checkInRows = useMemo(
+    () => [...(feed.isPending ? [] : feed.checkInRows), ...demoCheckIns],
+    [feed.isPending, feed.checkInRows],
+  );
   const months = recentMonths(now);
   const [month, setMonth] = useState(months[0]);
   const [tab, setTab] = useState<PageTab>("worklist");
   const [openMrn, setOpenMrn] = useState<string | null>(null);
 
   const rows = useMemo(
-    () => worklist(store.state, CCM_PATIENTS, month, today),
-    [store.state, month, today],
+    () => worklist(state, CCM_PATIENTS, month, today),
+    [state, month, today],
   );
   const inboxCount = openInbox(store.state).length;
   const dueCount = followUpsDue(store.state, today).length;
-  const checkInCount = ccmCheckIns.filter(
+  const checkInCount = checkInRows.filter(
     (row) => row.status !== "Completed",
   ).length;
   const openRow = rows.find((row) => row.mrn === openMrn) ?? null;
@@ -1898,7 +1936,7 @@ export default function ClinicCcm() {
             <Worklist rows={rows} month={month} onOpen={setOpenMrn} />
           </TabPanel>
           <TabPanel id="checkins" value={tab}>
-            <CheckInsTable onOpen={setOpenMrn} />
+            <CheckInsTable rows={checkInRows} onOpen={setOpenMrn} />
           </TabPanel>
           <TabPanel id="inbox" value={tab}>
             <InboxTable store={store} onOpen={setOpenMrn} />
@@ -1919,6 +1957,8 @@ export default function ClinicCcm() {
             store={store}
             month={month}
             today={today}
+            checkInRows={checkInRows}
+            canLog={canLog}
             onClose={() => setOpenMrn(null)}
           />
         ) : null}

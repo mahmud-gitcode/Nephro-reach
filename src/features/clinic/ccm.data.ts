@@ -13,6 +13,7 @@
    ========================================================================== */
 
 import { patients as roster } from "./enrollment.data";
+import { LINKED_MEMBER, type FeedItem, type FeedKind } from "./memberFeed";
 
 /** Minutes of care in a month before it can be billed. Client: 30, not 20. */
 export const CCM_THRESHOLD_MINUTES = 30;
@@ -161,11 +162,11 @@ export type InboxItem = {
   mrn: string;
   /** ISO 8601 */
   receivedAt: string;
-  kind:
-    | "Lab alert"
-    | "Patient message"
-    | "Hospital discharge"
-    | "Medication change";
+  /* The member's app raises the FeedKinds (memberFeed.ts). Hospital
+     discharge and medication change have no source in the app yet: they
+     appear only on the demo patients, pending the client's decision on
+     outside feeds. */
+  kind: FeedKind | "Hospital discharge" | "Medication change";
   text: string;
   resolved: boolean;
 };
@@ -177,7 +178,24 @@ export type CcmState = {
     Partial<Record<RequirementId, RequirementState>>
   >;
   inbox: InboxItem[];
+  /** Ids of member-feed items the clinic has resolved. The items
+   *  themselves are derived from the member's data, never stored here. */
+  resolvedFeed?: string[];
 };
+
+/** The stored state with the member's feed folded into its inbox, so every
+ *  count and status below reads both alike. */
+export function withFeed(state: CcmState, feed: FeedItem[]): CcmState {
+  if (feed.length === 0) return state;
+  const resolved = new Set(state.resolvedFeed ?? []);
+  return {
+    ...state,
+    inbox: [
+      ...state.inbox,
+      ...feed.map((item) => ({ ...item, resolved: resolved.has(item.id) })),
+    ],
+  };
+}
 
 /* ------------------------------------------------------------------ dates */
 
@@ -536,6 +554,13 @@ export function completeFollowUp(
 }
 
 export function resolveInbox(state: CcmState, itemId: string): CcmState {
+  /* A feed item is not in the stored inbox: remember its id instead. */
+  if (!state.inbox.some((item) => item.id === itemId)) {
+    return {
+      ...state,
+      resolvedFeed: [...new Set([...(state.resolvedFeed ?? []), itemId])],
+    };
+  }
   return {
     ...state,
     inbox: state.inbox.map((item) =>
@@ -617,10 +642,24 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   },
 ];
 
-export const CCM_PATIENTS: CcmPatient[] = PROFILES.map((profile) => ({
-  ...profile,
-  name: roster.find((p) => p.mrn === profile.mrn)?.name ?? `MRN ${profile.mrn}`,
-}));
+export const CCM_PATIENTS: CcmPatient[] = [
+  ...PROFILES.map((profile) => ({
+    ...profile,
+    name:
+      roster.find((p) => p.mrn === profile.mrn)?.name ?? `MRN ${profile.mrn}`,
+  })),
+  /* The member the demo signs in as: their own app feeds this row's inbox
+     and check-ins (memberFeed.ts). DOB as in the messaging chart. */
+  {
+    mrn: LINKED_MEMBER.mrn,
+    name: LINKED_MEMBER.name,
+    dob: "1968-05-14",
+    conditions: ["CKD 4", "HTN"],
+    provider: "Dr. Chen",
+    careManager: "Jennifer Smith",
+    location: "Main Office",
+  },
+];
 
 const ALL_MET: RequirementId[] = CCM_REQUIREMENTS.map((r) => r.id);
 
@@ -844,6 +883,7 @@ export function seedCcmState(now: number): CcmState {
     "901234": ["consent", "care-plan", "ehr", "transitions"],
     "234567": ["care-plan"],
     "890123": ["transitions"],
+    [LINKED_MEMBER.mrn]: ["care-plan", "transitions"],
   };
   /* Started, not finished: coordination under way this month. */
   const started: Record<string, RequirementId[]> = {

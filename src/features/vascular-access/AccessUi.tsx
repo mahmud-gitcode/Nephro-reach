@@ -1,10 +1,22 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { CheckCircle2, CircleDot, Clock3, MapPin, Send } from "lucide-react";
 import {
+  CheckCircle2,
+  CircleDot,
+  Clock3,
+  Lock,
+  LockOpen,
+  MapPin,
+  Send,
+  Users,
+} from "lucide-react";
+import {
+  Alert,
   Badge,
   Button,
+  Switch,
+  SwitchRow,
   Table,
   TableBody,
   TableCell,
@@ -19,16 +31,23 @@ import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import * as messaging from "@/features/messaging/messaging.rules";
 import {
-  TEAM_LABEL,
   dayParts,
   formatDay,
   formatTime,
   type AccessAppointment,
   type AccessHistoryEntry,
-  type AccessMessage,
+  MOBILITY_LEVELS,
+  PARTY_LABEL,
+  canManagePrivacy,
+  canPost,
+  canRead,
+  type AccessParty,
+  type AccessRecord,
   type AccessStatus,
-  type AccessThread,
   type AccessUpdate,
+  type TransportConfirmation,
+  type TransportRequest,
+  type TransportStatus,
   type UpdateKind,
 } from "./vascularAccess.data";
 
@@ -224,24 +243,222 @@ export function HistoryTable({
   );
 }
 
+/* ------------------------------------------------------------ transport */
+
+export const transportTone: Record<TransportStatus, BadgeTone> = {
+  Requested: "warning",
+  Acknowledged: "info",
+  Confirmed: "success",
+  Cancelled: "neutral",
+};
+
+const TRANSPORT_ES: Record<TransportStatus, string> = {
+  Requested: "Solicitado",
+  Acknowledged: "Recibido",
+  Confirmed: "Confirmado",
+  Cancelled: "Cancelado",
+};
+
+export function TransportStatusBadge({
+  status,
+  isEs = false,
+}: {
+  status: TransportStatus;
+  isEs?: boolean;
+}) {
+  return (
+    <Badge tone={transportTone[status]}>
+      {isEs ? TRANSPORT_ES[status] : status}
+    </Badge>
+  );
+}
+
+/** Where the request is, as three steps: sent, received, booked. */
+export function TransportSteps({
+  request,
+  isEs = false,
+}: {
+  request: TransportRequest;
+  isEs?: boolean;
+}) {
+  const steps = [
+    { label: isEs ? "Enviado" : "Requested", at: request.requestedAt },
+    { label: isEs ? "Recibido" : "Acknowledged", at: request.acknowledgedAt },
+    { label: isEs ? "Confirmado" : "Confirmed", at: request.confirmedAt },
+  ];
+  return (
+    <ol
+      aria-label={isEs ? "Estado del transporte" : "Transportation progress"}
+      className="grid grid-cols-3 gap-inline-xs"
+    >
+      {steps.map((step) => (
+        <li key={step.label} className="min-w-0">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "block h-1.5 rounded-pill",
+              step.at ? "bg-chart-success" : "bg-line",
+            )}
+          />
+          <span
+            className={cn(
+              "mt-stack-xs block truncate text-caption",
+              step.at ? "text-fg" : "text-fg-muted",
+            )}
+          >
+            {step.label}
+            <span className="sr-only">
+              {step.at
+                ? isEs
+                  ? ", hecho"
+                  : ", done"
+                : isEs
+                  ? ", pendiente"
+                  : ", pending"}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** What the patient asked for: address, trip, mobility, note. */
+export function TransportAsk({
+  request,
+  isEs = false,
+}: {
+  request: TransportRequest;
+  isEs?: boolean;
+}) {
+  const mobility = MOBILITY_LEVELS.find((m) => m.id === request.mobility);
+  return (
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-inline-lg gap-y-stack-xs text-body-sm">
+      <dt className="text-fg-muted">{isEs ? "Recoger en" : "Pickup at"}</dt>
+      <dd className="text-fg">{request.pickupAddress}</dd>
+      <dt className="text-fg-muted">{isEs ? "Viaje" : "Trip"}</dt>
+      <dd className="text-fg">
+        {request.returnTrip
+          ? isEs
+            ? "Ida y vuelta"
+            : "Round trip"
+          : isEs
+            ? "Solo ida"
+            : "One way"}
+      </dd>
+      <dt className="text-fg-muted">{isEs ? "Movilidad" : "Mobility"}</dt>
+      <dd className="text-fg">
+        {mobility ? (isEs ? mobility.es : mobility.en) : "—"}
+      </dd>
+      {request.memberNote ? (
+        <>
+          <dt className="text-fg-muted">{isEs ? "Nota" : "Note"}</dt>
+          <dd className="text-fg">{request.memberNote}</dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
+
+/** The booked ride, as the patient needs it on the day. */
+export function TransportConfirmationView({
+  confirmation,
+  confirmedBy,
+  isEs = false,
+}: {
+  confirmation: TransportConfirmation;
+  confirmedBy?: string;
+  isEs?: boolean;
+}) {
+  return (
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-inline-lg gap-y-stack-xs rounded-card-nested bg-success-surface p-inset-sm text-body-sm">
+      <dt className="text-fg-secondary">{isEs ? "Recogida" : "Pickup"}</dt>
+      <dd className="text-label-md text-fg">
+        {formatTime(confirmation.pickupTime)}
+      </dd>
+      {confirmation.returnPickupTime ? (
+        <>
+          <dt className="text-fg-secondary">{isEs ? "Regreso" : "Return"}</dt>
+          <dd className="text-label-md text-fg">
+            {formatTime(confirmation.returnPickupTime)}
+          </dd>
+        </>
+      ) : null}
+      <dt className="text-fg-secondary">{isEs ? "Compañía" : "Company"}</dt>
+      <dd className="text-fg">{confirmation.provider}</dd>
+      <dt className="text-fg-secondary">{isEs ? "Teléfono" : "Phone"}</dt>
+      <dd>
+        <a
+          href={`tel:${confirmation.phone.replace(/[^\d+]/g, "")}`}
+          className="rounded-control-small text-fg-brand underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {confirmation.phone}
+        </a>
+      </dd>
+      <dt className="text-fg-secondary">
+        {isEs ? "Confirmación" : "Confirmation #"}
+      </dt>
+      <dd className="text-fg tabular-nums">
+        {confirmation.confirmationNumber}
+      </dd>
+      {confirmation.note ? (
+        <>
+          <dt className="text-fg-secondary">{isEs ? "Nota" : "Note"}</dt>
+          <dd className="text-fg">{confirmation.note}</dd>
+        </>
+      ) : null}
+      {confirmedBy ? (
+        <>
+          <dt className="text-fg-secondary">
+            {isEs ? "Reservado por" : "Booked by"}
+          </dt>
+          <dd className="text-fg">{confirmedBy}</dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
+
+/* --------------------------------------------------------- conversation */
+
+const PARTY_ES: Record<AccessParty, string> = {
+  member: "Paciente",
+  access: "Centro de Acceso Vascular",
+  dialysis: "Centro de Diálisis",
+};
+
 /**
- * One access thread: the messages, then a composer.
+ * The three-way access conversation, from one party's side.
  *
- * `me` decides which bubbles are ours. `attach` is an optional slot above
- * the composer (the member's photo picker); `attachedUrl` is what it chose.
+ * Everyone reads what is shared. A private message (patient ↔ access
+ * center) reaches the dialysis center only as a placeholder. The patient
+ * and the access center can make a message private or share it again, and
+ * decide whether the dialysis center may post; the dialysis center reads
+ * until they do. `attach` is an optional slot above the composer (the
+ * member's photo picker); `attachedUrl` is what it chose.
  */
-export function ThreadView({
-  thread,
-  me,
+export function AccessConversationView({
+  record,
+  party,
+  myName,
   onSend,
+  onSetPrivate,
+  onSetDialysisCanPost,
   attach,
   attachedUrl,
   sending,
+  readOnlyReason,
   isEs = false,
 }: {
-  thread: AccessThread;
-  me: AccessMessage["author"];
-  onSend: (body: string) => void;
+  record: AccessRecord;
+  party: AccessParty;
+  /** Set when this person's role may not post; shown instead of the
+   *  composer, and they cannot change privacy either. */
+  readOnlyReason?: string;
+  myName: string;
+  onSend: (body: string, isPrivate: boolean) => void;
+  onSetPrivate: (messageId: string, isPrivate: boolean) => void;
+  onSetDialysisCanPost: (allowed: boolean) => void;
   attach?: React.ReactNode;
   attachedUrl?: string;
   sending?: boolean;
@@ -249,70 +466,138 @@ export function ThreadView({
 }) {
   const now = useNow();
   const [draft, setDraft] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
-  const count = thread.messages.length;
+  const conversation = record.conversation;
+  const count = conversation.messages.length;
+  const manages = canManagePrivacy(party) && !readOnlyReason;
+  const mayPost = canPost(conversation, party) && !readOnlyReason;
+  const partyLabel = (p: AccessParty) =>
+    p === "member" ? record.memberName : isEs ? PARTY_ES[p] : PARTY_LABEL[p];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [count]);
 
   const canSend = draft.trim().length > 0 || !!attachedUrl;
-  const other = me === "member" ? thread.contact : "Patient";
 
   function submit() {
-    if (!canSend || sending) return;
-    onSend(draft);
+    if (!canSend || sending || !mayPost) return;
+    onSend(draft, manages && isPrivate);
     setDraft("");
+    setIsPrivate(false);
   }
 
   return (
     <div className="flex flex-col gap-stack-md">
-      <div className="max-h-96 min-h-40 overflow-y-auto rounded-control border border-line bg-surface p-inset-sm">
+      {/* Who is in the conversation, so nobody writes thinking it is
+          one-to-one. */}
+      <div className="flex flex-wrap items-center gap-inline-sm text-caption text-fg-muted">
+        <Users aria-hidden="true" className="size-4" />
+        {(["member", "access", "dialysis"] as const).map((p) => (
+          <Badge key={p} tone={p === party ? "info" : "neutral"}>
+            {partyLabel(p)}
+            {p === party ? (isEs ? " (tú)" : " (you)") : ""}
+          </Badge>
+        ))}
+      </div>
+
+      <div className="max-h-96 min-h-40 overflow-y-auto rounded-card-nested border border-line bg-surface p-inset-sm">
         {count === 0 ? (
           <p className="text-body-sm text-fg-muted">
             {isEs ? "Aún no hay mensajes." : "No messages yet."}
           </p>
         ) : (
           <ol className="space-y-stack-sm">
-            {thread.messages.map((message) => {
-              const mine = message.author === me;
+            {conversation.messages.map((message) => {
+              const mine = message.author === party;
+              const readable = canRead(message, party);
+              const who = mine
+                ? isEs
+                  ? "Tú"
+                  : "You"
+                : message.author === "member"
+                  ? message.authorName
+                  : `${message.authorName} · ${partyLabel(message.author)}`;
               return (
                 <li
                   key={message.id}
-                  className={cn("flex", mine ? "justify-end" : "justify-start")}
+                  className={cn(
+                    "flex flex-col",
+                    mine ? "items-end" : "items-start",
+                  )}
                 >
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-card px-inset-sm py-inset-xs",
-                      mine
-                        ? "bg-brand-600 text-white"
-                        : "bg-surface-sunken text-fg",
-                    )}
-                  >
-                    <p
+                  {readable ? (
+                    <div
                       className={cn(
-                        "text-caption",
-                        mine ? "text-white/75" : "text-fg-muted",
+                        "max-w-[85%] rounded-card px-inset-sm py-inset-xs",
+                        mine
+                          ? "bg-brand-600 text-white"
+                          : "bg-surface-sunken text-fg",
                       )}
                     >
-                      {mine ? (isEs ? "Tú" : "You") : other} ·{" "}
-                      {messaging.dayLabel(message.sentAt, now)}{" "}
-                      {messaging.timeLabel(message.sentAt)}
-                    </p>
-                    {message.body ? (
-                      <p className="mt-0.5 text-body-sm whitespace-pre-wrap">
-                        {message.body}
+                      <p
+                        className={cn(
+                          "flex flex-wrap items-center gap-inline-xs text-caption",
+                          mine ? "text-white/75" : "text-fg-muted",
+                        )}
+                      >
+                        {message.private ? (
+                          <Lock aria-hidden="true" className="size-3" />
+                        ) : null}
+                        <span>
+                          {who} · {messaging.dayLabel(message.sentAt, now)}{" "}
+                          {messaging.timeLabel(message.sentAt)}
+                          {message.private
+                            ? isEs
+                              ? " · Privado"
+                              : " · Private"
+                            : ""}
+                        </span>
                       </p>
-                    ) : null}
-                    {message.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                      <img
-                        src={message.imageUrl}
-                        alt={isEs ? "Foto adjunta" : "Attached photo"}
-                        className="mt-stack-sm block max-h-56 w-full max-w-xs rounded-control object-cover"
-                      />
-                    ) : null}
-                  </div>
+                      {message.body ? (
+                        <p className="mt-0.5 text-body-sm whitespace-pre-wrap">
+                          {message.body}
+                        </p>
+                      ) : null}
+                      {message.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+                        <img
+                          src={message.imageUrl}
+                          alt={isEs ? "Foto adjunta" : "Attached photo"}
+                          className="mt-stack-sm block max-h-56 w-full max-w-xs rounded-control object-cover"
+                        />
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="flex max-w-[85%] items-center gap-inline-xs rounded-card border border-dashed border-line px-inset-sm py-inset-xs text-caption text-fg-muted">
+                      <Lock aria-hidden="true" className="size-3 shrink-0" />
+                      {isEs
+                        ? "Mensaje privado entre el paciente y el centro de acceso"
+                        : "Private message between the patient and the access center"}{" "}
+                      · {messaging.dayLabel(message.sentAt, now)}
+                    </p>
+                  )}
+                  {manages && readable && message.author !== "dialysis" ? (
+                    <button
+                      type="button"
+                      onClick={() => onSetPrivate(message.id, !message.private)}
+                      className="mt-0.5 inline-flex min-h-8 cursor-pointer items-center gap-inline-xs rounded-control-small px-1 text-caption text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {message.private ? (
+                        <LockOpen aria-hidden="true" className="size-3" />
+                      ) : (
+                        <Lock aria-hidden="true" className="size-3" />
+                      )}
+                      {message.private
+                        ? isEs
+                          ? "Compartir con el centro de diálisis"
+                          : "Share with dialysis center"
+                        : isEs
+                          ? "Hacer privado"
+                          : "Make private"}
+                    </button>
+                  ) : null}
                 </li>
               );
             })}
@@ -321,34 +606,86 @@ export function ThreadView({
         <div ref={endRef} />
       </div>
 
-      {attach}
+      {manages ? (
+        <SwitchRow
+          checked={conversation.dialysisCanPost}
+          onChange={onSetDialysisCanPost}
+          title={
+            isEs
+              ? "El centro de diálisis puede escribir"
+              : "Dialysis center can reply"
+          }
+          description={
+            isEs
+              ? "Siempre puede leer lo que no es privado."
+              : "It can always read what is not private."
+          }
+        />
+      ) : null}
 
-      <form
-        className="flex items-end gap-inline-md"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit();
-        }}
-      >
-        <Textarea
-          rows={2}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
+      {mayPost ? (
+        <>
+          {attach}
+          <form
+            className="flex flex-col gap-stack-sm"
+            onSubmit={(event) => {
               event.preventDefault();
               submit();
-            }
-          }}
-          placeholder={isEs ? "Escribe tu mensaje..." : "Type your message..."}
-          aria-label={`${isEs ? "Mensaje para" : "Message"} ${me === "member" ? TEAM_LABEL[thread.team] : other}`}
-          className="flex-1 resize-none"
-        />
-        <Button type="submit" size="small" disabled={!canSend || sending}>
-          <Send aria-hidden="true" />
-          {isEs ? "Enviar" : "Send"}
-        </Button>
-      </form>
+            }}
+          >
+            <Textarea
+              rows={2}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  submit();
+                }
+              }}
+              placeholder={
+                isEs ? "Escribe tu mensaje..." : "Type your message..."
+              }
+              aria-label={isEs ? "Mensaje" : `Message as ${myName}`}
+              className="resize-none"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-inline-md">
+              {manages ? (
+                <label className="flex cursor-pointer items-center gap-inline-sm text-body-sm text-fg-secondary">
+                  <Switch
+                    size="small"
+                    checked={isPrivate}
+                    onChange={setIsPrivate}
+                    label={isEs ? "Mensaje privado" : "Private message"}
+                  />
+                  <span aria-hidden="true">
+                    {isEs
+                      ? "Privado (oculto al centro de diálisis)"
+                      : "Private (hidden from the dialysis center)"}
+                  </span>
+                </label>
+              ) : (
+                <span />
+              )}
+              <Button
+                type="submit"
+                size="small"
+                disabled={!canSend || sending}
+                leadingIcon={<Send aria-hidden="true" />}
+              >
+                {isEs ? "Enviar" : "Send"}
+              </Button>
+            </div>
+          </form>
+        </>
+      ) : (
+        <Alert tone="info">
+          {readOnlyReason ??
+            (isEs
+              ? "Solo lectura. El paciente o el centro de acceso pueden permitir que el centro de diálisis escriba."
+              : "Read-only. The patient or the access center can let the dialysis center reply.")}
+        </Alert>
+      )}
     </div>
   );
 }

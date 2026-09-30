@@ -17,8 +17,9 @@ const KEY = storageKey("clinic-ccm");
  * Version 2: the placeholder activity types gave way to the client's list.
  * Version 3: activities say whether they count and whether the EHR has
  * them; patients have a location; requirements carry a date.
+ * Version 4: the linked member (memberFeed.ts) joins the roster.
  */
-const VERSION = 3;
+const VERSION = 4;
 
 type StoredEnvelope = { version: number; state: unknown };
 

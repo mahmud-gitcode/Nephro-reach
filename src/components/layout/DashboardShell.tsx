@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
+import { userCan } from "@/features/staff/staff";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Button,
@@ -46,10 +47,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const { language } = useLanguage();
   const role = user?.role ?? "user";
-  const visibleItems = sidebarItems.filter((item) => item.roles.includes(role));
-  const visibleSupport = supportItems.filter((item) =>
-    item.roles.includes(role),
-  );
+  /* A staff member's role can take a page away too (billing, settings). */
+  const shows = (item: (typeof sidebarItems)[number]) =>
+    item.roles.includes(role) &&
+    (!item.permission || userCan(user, item.permission));
+  const visibleItems = sidebarItems.filter(shows);
+  const visibleSupport = supportItems.filter(shows);
 
   return (
     <aside className="flex h-full w-[272px] shrink-0 flex-col overflow-hidden bg-surface-nav px-inset-md py-inset-md text-fg-on-nav print:hidden">
@@ -500,8 +503,10 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
   const wrapRef = useDismiss<HTMLDivElement>(open, close);
 
   const name = user?.name ?? (isEs ? "Invitado" : "Guest");
-  const roleLabel =
-    user?.role === "admin"
+  /* A staff member is shown by their role at their organisation. */
+  const roleLabel = user?.staffRole
+    ? `${user.staffRole}${user.org ? ` · ${user.org}` : ""}`
+    : user?.role === "admin"
       ? isEs
         ? "Administrador"
         : "Admin"
@@ -509,9 +514,13 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
         ? isEs
           ? "Clínica"
           : "Clinic"
-        : isEs
-          ? "Usuario"
-          : "User";
+        : user?.role === "access"
+          ? isEs
+            ? "Centro de Acceso"
+            : "Access Center"
+          : isEs
+            ? "Usuario"
+            : "User";
 
   /* Settings is a member route, so an admin is not offered a link that
      would bounce them straight back out of it. */

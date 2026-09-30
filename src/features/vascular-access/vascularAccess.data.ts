@@ -10,6 +10,24 @@
    asked for access communication to stand on its own for compliance, so it
    has its own store rather than a category inside Messages.
 
+   Three parties work each record (client, 2026-09-30), following common
+   US practice:
+     · the patient
+     · the Vascular Access Center: a separate organisation that creates and
+       repairs the access, with its own login
+     · the Dialysis Center: sees the access every treatment, refers
+       problems, and (its social worker) arranges rides
+
+   Messages are one three-way conversation. The dialysis center reads what
+   is shared and may post once the patient or the access center allows it;
+   either of those two can mark a message private, which the dialysis
+   center then sees only as a placeholder.
+
+   A ride request goes to the dialysis center's social worker and moves
+   Requested → Acknowledged → Confirmed (pickup time, company, phone,
+   confirmation number), and the confirmation posts back to the patient's
+   updates. Either side can cancel.
+
    Pure: state in, state out. Storage lives in useVascularAccess.ts.
    ========================================================================== */
 
@@ -112,30 +130,95 @@ export type AccessConcern = {
   status: "Open" | "Reviewed";
 };
 
+/** Who arranges rides: the dialysis center's social worker, as is usual
+ *  for dialysis patients' non-emergency transport. */
+export const TRANSPORT_COORDINATOR = "Social Worker, Riverside Dialysis Center";
+
+/** The standard non-emergency transport levels. */
+export const MOBILITY_LEVELS = [
+  { id: "ambulatory", en: "Can walk", es: "Puede caminar" },
+  { id: "wheelchair", en: "Wheelchair", es: "Silla de ruedas" },
+  { id: "stretcher", en: "Stretcher", es: "Camilla" },
+] as const;
+export type MobilityLevel = (typeof MOBILITY_LEVELS)[number]["id"];
+
+export type TransportStatus =
+  "Requested" | "Acknowledged" | "Confirmed" | "Cancelled";
+
+export type TransportConfirmation = {
+  /** HH:MM, 24-hour. */
+  pickupTime: string;
+  /** HH:MM, when a return trip was asked for. */
+  returnPickupTime?: string;
+  /** The transport company or driver. */
+  provider: string;
+  phone: string;
+  confirmationNumber: string;
+  note?: string;
+};
+
 export type TransportRequest = {
   id: string;
   /** ISO 8601 */
   requestedAt: string;
   appointmentId: string;
-  status: "Requested" | "Arranged";
+  status: TransportStatus;
+  /** Who the request went to. */
+  handledBy: string;
+  pickupAddress: string;
+  returnTrip: boolean;
+  mobility: MobilityLevel;
+  /** Anything else the driver should know, from the patient. */
+  memberNote: string;
+  /** ISO 8601 */
+  acknowledgedAt?: string;
+  /** ISO 8601 */
+  confirmedAt?: string;
+  confirmation?: TransportConfirmation;
+  /** Who booked it, when a staff member signed in as themselves. */
+  confirmedBy?: string;
+  /** ISO 8601 */
+  cancelledAt?: string;
+  cancelledBy?: "member" | "dialysis";
 };
+
+export type TransportDetails = Pick<
+  TransportRequest,
+  "appointmentId" | "pickupAddress" | "returnTrip" | "mobility" | "memberNote"
+>;
+
+/* ------------------------------------------------------------ messages */
+
+export type AccessParty = "member" | "access" | "dialysis";
+
+export const PARTY_LABEL: Record<AccessParty, string> = {
+  member: "Patient",
+  access: "Vascular Access Center",
+  dialysis: "Dialysis Center",
+};
+
+/** The access center the demo's access login belongs to. */
+export const ACCESS_CENTER_NAME = "Metro Vascular Access Center";
+export const DIALYSIS_CENTER_NAME = "Riverside Dialysis Center";
 
 export type AccessMessage = {
   id: string;
-  author: "member" | "team";
+  author: AccessParty;
+  /** Who wrote it on that side: "Dr. Patel", "Nurse Wilson". */
+  authorName: string;
   body: string;
   /** ISO 8601 */
   sentAt: string;
   imageUrl?: string;
+  /** Between the patient and the access center only. */
+  private?: boolean;
 };
 
-export type AccessThread = {
-  team: AccessTeam;
-  /** Who answers on that side: "Dr. Patel (Vascular Surgeon)". */
-  contact: string;
+export type AccessConversation = {
   messages: AccessMessage[];
-  unreadByMember: number;
-  unreadByTeam: number;
+  /** The dialysis center may post. Reading shared messages is always on. */
+  dialysisCanPost: boolean;
+  unread: Record<AccessParty, number>;
 };
 
 export type AccessRecord = {
@@ -147,7 +230,7 @@ export type AccessRecord = {
   history: AccessHistoryEntry[];
   concerns: AccessConcern[];
   transport: TransportRequest[];
-  threads: AccessThread[];
+  conversation: AccessConversation;
 };
 
 export type AccessState = { records: AccessRecord[] };
@@ -241,20 +324,66 @@ export function openConcerns(record: AccessRecord): AccessConcern[] {
     .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
 }
 
+/** Requests the coordinator still has to work: not yet confirmed. */
 export function pendingTransport(record: AccessRecord): TransportRequest[] {
-  return record.transport.filter((entry) => entry.status === "Requested");
+  return record.transport.filter(
+    (entry) => entry.status === "Requested" || entry.status === "Acknowledged",
+  );
 }
 
-export function unreadForTeam(record: AccessRecord): number {
-  return record.threads.reduce((sum, thread) => sum + thread.unreadByTeam, 0);
+/** Every request not cancelled, for an appointment still ahead. */
+export function activeTransport(record: AccessRecord): TransportRequest[] {
+  return record.transport.filter((entry) => {
+    if (entry.status === "Cancelled") return false;
+    const appointment = record.appointments.find(
+      (a) => a.id === entry.appointmentId,
+    );
+    return !!appointment && !appointment.completed;
+  });
 }
 
-export function unreadForMember(record: AccessRecord): number {
-  return record.threads.reduce((sum, thread) => sum + thread.unreadByMember, 0);
+/** The live request for an appointment, if any. */
+export function transportFor(
+  record: AccessRecord,
+  appointmentId: string,
+): TransportRequest | null {
+  return (
+    record.transport.find(
+      (entry) =>
+        entry.appointmentId === appointmentId && entry.status !== "Cancelled",
+    ) ?? null
+  );
 }
 
-export function lastMessage(thread: AccessThread): AccessMessage | null {
-  return thread.messages[thread.messages.length - 1] ?? null;
+/** Whether a party may read a message's content. */
+export function canRead(message: AccessMessage, party: AccessParty): boolean {
+  return !message.private || party !== "dialysis";
+}
+
+/** Whether a party may post. The dialysis center needs permission. */
+export function canPost(
+  conversation: AccessConversation,
+  party: AccessParty,
+): boolean {
+  return party !== "dialysis" || conversation.dialysisCanPost;
+}
+
+/** The patient and the access center decide what is private and who may
+ *  post; the dialysis center does not. */
+export function canManagePrivacy(party: AccessParty): boolean {
+  return party === "member" || party === "access";
+}
+
+export function unreadFor(record: AccessRecord, party: AccessParty): number {
+  return record.conversation.unread[party] ?? 0;
+}
+
+export function lastMessage(
+  conversation: AccessConversation,
+  party: AccessParty,
+): AccessMessage | null {
+  const shown = conversation.messages.filter((m) => canRead(m, party));
+  return shown[shown.length - 1] ?? null;
 }
 
 export function recordFor(
@@ -429,15 +558,38 @@ export function reviewConcern(
   });
 }
 
+function post(
+  record: AccessRecord,
+  now: number,
+  title: string,
+  detail: string,
+  kind: UpdateKind,
+): AccessRecord {
+  return {
+    ...record,
+    updates: [
+      ...record.updates,
+      { id: `upd-${now}`, date: dayKey(now), title, detail, kind },
+    ],
+  };
+}
+
+function appointmentLabel(record: AccessRecord, appointmentId: string) {
+  const appointment = record.appointments.find((a) => a.id === appointmentId);
+  return appointment
+    ? `${appointment.title} – ${formatDay(appointment.date)}`
+    : "Appointment";
+}
+
+/** One live request per appointment; a cancelled one can be asked again. */
 export function requestTransport(
   state: AccessState,
   mrn: string,
-  appointmentId: string,
+  details: TransportDetails,
   now: number,
 ): AccessState {
   return updateRecord(state, mrn, (record) => {
-    if (record.transport.some((entry) => entry.appointmentId === appointmentId))
-      return record;
+    if (transportFor(record, details.appointmentId)) return record;
     return {
       ...record,
       transport: [
@@ -445,79 +597,216 @@ export function requestTransport(
         {
           id: `ride-${now}`,
           requestedAt: new Date(now).toISOString(),
-          appointmentId,
           status: "Requested",
+          handledBy: TRANSPORT_COORDINATOR,
+          ...details,
+          pickupAddress: details.pickupAddress.trim(),
+          memberNote: details.memberNote.trim(),
         },
       ],
     };
   });
 }
 
-export function arrangeTransport(
+function changeRequest(
   state: AccessState,
   mrn: string,
   requestId: string,
+  change: (entry: TransportRequest, record: AccessRecord) => AccessRecord,
 ): AccessState {
-  return updateRecord(state, mrn, (record) => ({
-    ...record,
-    transport: record.transport.map((entry) =>
-      entry.id === requestId ? { ...entry, status: "Arranged" } : entry,
-    ),
-  }));
+  return updateRecord(state, mrn, (record) => {
+    const entry = record.transport.find((t) => t.id === requestId);
+    if (!entry || entry.status === "Cancelled") return record;
+    return change(entry, record);
+  });
 }
 
-/** Nothing at all is not a message; a photo alone is. */
+function replaceRequest(record: AccessRecord, next: TransportRequest) {
+  return {
+    ...record,
+    transport: record.transport.map((t) => (t.id === next.id ? next : t)),
+  };
+}
+
+/** The coordinator has it and is working on it. */
+export function acknowledgeTransport(
+  state: AccessState,
+  mrn: string,
+  requestId: string,
+  now: number,
+): AccessState {
+  return changeRequest(state, mrn, requestId, (entry, record) =>
+    entry.status !== "Requested"
+      ? record
+      : replaceRequest(record, {
+          ...entry,
+          status: "Acknowledged",
+          acknowledgedAt: new Date(now).toISOString(),
+        }),
+  );
+}
+
+/** Booked: the details go to the patient, and into their updates. Also
+ *  used to correct a confirmed ride. */
+export function confirmTransport(
+  state: AccessState,
+  mrn: string,
+  requestId: string,
+  confirmation: TransportConfirmation,
+  now: number,
+  confirmedBy?: string,
+): AccessState {
+  return changeRequest(state, mrn, requestId, (entry, record) => {
+    const clean: TransportConfirmation = {
+      pickupTime: confirmation.pickupTime,
+      provider: confirmation.provider.trim(),
+      phone: confirmation.phone.trim(),
+      confirmationNumber: confirmation.confirmationNumber.trim(),
+      ...(entry.returnTrip && confirmation.returnPickupTime
+        ? { returnPickupTime: confirmation.returnPickupTime }
+        : {}),
+      ...(confirmation.note?.trim() ? { note: confirmation.note.trim() } : {}),
+    };
+    const next = replaceRequest(record, {
+      ...entry,
+      status: "Confirmed",
+      acknowledgedAt: entry.acknowledgedAt ?? new Date(now).toISOString(),
+      confirmedAt: new Date(now).toISOString(),
+      confirmation: clean,
+      ...(confirmedBy ? { confirmedBy } : {}),
+    });
+    return post(
+      next,
+      now,
+      entry.status === "Confirmed"
+        ? "Transportation Updated"
+        : "Transportation Confirmed",
+      `${appointmentLabel(record, entry.appointmentId)} · pickup ${formatTime(clean.pickupTime)} · ${clean.provider}`,
+      "scheduled",
+    );
+  });
+}
+
+export function cancelTransport(
+  state: AccessState,
+  mrn: string,
+  requestId: string,
+  by: "member" | "dialysis",
+  now: number,
+): AccessState {
+  return changeRequest(state, mrn, requestId, (entry, record) => {
+    const next = replaceRequest(record, {
+      ...entry,
+      status: "Cancelled",
+      cancelledAt: new Date(now).toISOString(),
+      cancelledBy: by,
+    });
+    return post(
+      next,
+      now,
+      "Transportation Cancelled",
+      `${appointmentLabel(record, entry.appointmentId)} · by ${by === "member" ? "the patient" : "the dialysis center"}`,
+      "received",
+    );
+  });
+}
+
+/**
+ * Nothing at all is not a message; a photo alone is. The dialysis center
+ * posts only with permission, and cannot mark anything private. Each party
+ * that can read the message counts it unread, except its author.
+ */
 export function sendAccessMessage(
   state: AccessState,
   mrn: string,
-  team: AccessTeam,
-  author: AccessMessage["author"],
+  author: AccessParty,
+  authorName: string,
   body: string,
   now: number,
-  imageUrl?: string,
+  options: { imageUrl?: string; private?: boolean } = {},
 ): AccessState {
   const text = body.trim();
-  if (!text && !imageUrl) return state;
+  if (!text && !options.imageUrl) return state;
+  return updateRecord(state, mrn, (record) => {
+    const conversation = record.conversation;
+    if (!canPost(conversation, author)) return record;
+    const message: AccessMessage = {
+      id: `${mrn}-msg-${now}`,
+      author,
+      authorName,
+      body: text,
+      sentAt: new Date(now).toISOString(),
+      ...(options.imageUrl ? { imageUrl: options.imageUrl } : {}),
+      ...(options.private && canManagePrivacy(author) ? { private: true } : {}),
+    };
+    const unread = { ...conversation.unread };
+    for (const party of Object.keys(unread) as AccessParty[]) {
+      if (party !== author && canRead(message, party)) unread[party] += 1;
+    }
+    return {
+      ...record,
+      conversation: {
+        ...conversation,
+        messages: [...conversation.messages, message],
+        unread,
+      },
+    };
+  });
+}
+
+/** The patient or the access center hides a message from the dialysis
+ *  center, or shares it again. Not the dialysis center's own messages. */
+export function setMessagePrivate(
+  state: AccessState,
+  mrn: string,
+  messageId: string,
+  isPrivate: boolean,
+  by: AccessParty,
+): AccessState {
+  if (!canManagePrivacy(by)) return state;
   return updateRecord(state, mrn, (record) => ({
     ...record,
-    threads: record.threads.map((thread) =>
-      thread.team === team
-        ? {
-            ...thread,
-            unreadByMember: author === "team" ? thread.unreadByMember + 1 : 0,
-            unreadByTeam: author === "member" ? thread.unreadByTeam + 1 : 0,
-            messages: [
-              ...thread.messages,
-              {
-                id: `${mrn}-${team}-${now}`,
-                author,
-                body: text,
-                sentAt: new Date(now).toISOString(),
-                ...(imageUrl ? { imageUrl } : {}),
-              },
-            ],
-          }
-        : thread,
-    ),
+    conversation: {
+      ...record.conversation,
+      messages: record.conversation.messages.map((m) =>
+        m.id === messageId && m.author !== "dialysis"
+          ? { ...m, private: isPrivate }
+          : m,
+      ),
+    },
   }));
 }
 
-export function markThreadRead(
+/** The patient or the access center lets the dialysis center post. */
+export function setDialysisCanPost(
   state: AccessState,
   mrn: string,
-  team: AccessTeam,
-  reader: AccessMessage["author"],
+  allowed: boolean,
+  by: AccessParty,
 ): AccessState {
+  if (!canManagePrivacy(by)) return state;
   return updateRecord(state, mrn, (record) => ({
     ...record,
-    threads: record.threads.map((thread) =>
-      thread.team !== team
-        ? thread
-        : reader === "member"
-          ? { ...thread, unreadByMember: 0 }
-          : { ...thread, unreadByTeam: 0 },
-    ),
+    conversation: { ...record.conversation, dialysisCanPost: allowed },
   }));
+}
+
+export function markConversationRead(
+  state: AccessState,
+  mrn: string,
+  reader: AccessParty,
+): AccessState {
+  return updateRecord(state, mrn, (record) =>
+    record.conversation.unread[reader] === 0
+      ? record
+      : {
+          ...record,
+          conversation: {
+            ...record.conversation,
+            unread: { ...record.conversation.unread, [reader]: 0 },
+          },
+        },
+  );
 }
 
 /* ------------------------------------------------------------------- seed
@@ -525,45 +814,38 @@ export function markThreadRead(
    Dates are laid out around today so the demo always has visits ahead and a
    history behind, whatever day it is opened. */
 
-function threads(
+type SeedMessage = [AccessParty, string, string, number, boolean?];
+
+/** [author, author name, body, days ago, private?]. Unread counts follow
+ *  from the last message each party did not write. */
+function conversation(
   mrn: string,
-  surgeon: string,
   now: number,
-  vascular: Array<[AccessMessage["author"], string, number]>,
-  dialysis: Array<[AccessMessage["author"], string, number]>,
-): AccessThread[] {
-  const build = (
-    team: AccessTeam,
-    rows: Array<[AccessMessage["author"], string, number]>,
-  ) =>
-    rows.map(([author, body, daysAgo], index) => ({
-      id: `${mrn}-${team}-seed-${index}`,
+  rows: SeedMessage[],
+  dialysisCanPost: boolean,
+): AccessConversation {
+  const messages: AccessMessage[] = rows.map(
+    ([author, authorName, body, daysAgo, isPrivate], index) => ({
+      id: `${mrn}-seed-${index}`,
       author,
+      authorName,
       body,
       sentAt: new Date(now - daysAgo * 86_400_000).toISOString(),
-    }));
-  const vascularMessages = build("vascular", vascular);
-  const dialysisMessages = build("dialysis", dialysis);
-  const lastIsTeam = (rows: AccessMessage[]) =>
-    rows.length > 0 && rows[rows.length - 1].author === "team" ? 1 : 0;
-  const lastIsMember = (rows: AccessMessage[]) =>
-    rows.length > 0 && rows[rows.length - 1].author === "member" ? 1 : 0;
-  return [
-    {
-      team: "vascular",
-      contact: surgeon,
-      messages: vascularMessages,
-      unreadByMember: lastIsTeam(vascularMessages),
-      unreadByTeam: lastIsMember(vascularMessages),
-    },
-    {
-      team: "dialysis",
-      contact: "Riverside Dialysis Center",
-      messages: dialysisMessages,
-      unreadByMember: lastIsTeam(dialysisMessages),
-      unreadByTeam: lastIsMember(dialysisMessages),
-    },
-  ];
+      ...(isPrivate ? { private: true } : {}),
+    }),
+  );
+  const last = messages[messages.length - 1];
+  const unread: Record<AccessParty, number> = {
+    member: 0,
+    access: 0,
+    dialysis: 0,
+  };
+  if (last) {
+    for (const party of Object.keys(unread) as AccessParty[]) {
+      if (party !== last.author && canRead(last, party)) unread[party] = 1;
+    }
+  }
+  return { messages, dialysisCanPost, unread };
 }
 
 export function seedAccessState(now: number): AccessState {
@@ -676,23 +958,30 @@ export function seedAccessState(now: number): AccessState {
     ],
     concerns: [],
     transport: [],
-    threads: threads(
+    conversation: conversation(
       "448120",
-      "Dr. Patel (Vascular Surgeon)",
       now,
       [
         [
-          "team",
+          "access",
+          "Dr. Patel",
           "Your fistulogram went well. Keep checking your thrill every day.",
           30,
         ],
         [
-          "team",
+          "dialysis",
+          "Nurse Wilson",
+          "We will check your access during your next treatment.",
+          29,
+        ],
+        [
+          "access",
+          "Dr. Patel",
           "Your ultrasound results are available. Flow looks normal.",
           26,
         ],
       ],
-      [["team", "We will check your access during your next treatment.", 29]],
+      true,
     ),
   };
 
@@ -736,17 +1025,31 @@ export function seedAccessState(now: number): AccessState {
           requestedAt: new Date(now - 86_400_000).toISOString(),
           appointmentId: "seed-b1",
           status: "Requested",
+          handledBy: TRANSPORT_COORDINATOR,
+          pickupAddress: "418 Oak Street, Columbia, SC",
+          returnTrip: true,
+          mobility: "ambulatory",
+          memberNote: "Sedation, so I cannot drive home.",
         },
       ],
-      threads: threads(
+      conversation: conversation(
         "123456",
-        "Dr. Patel (Vascular Surgeon)",
         now,
         [
-          ["team", "We booked a fistulogram to look at the narrowing.", 2],
-          ["member", "Thank you. Do I need someone to drive me home?", 1],
+          [
+            "access",
+            "Dr. Patel",
+            "We booked a fistulogram to look at the narrowing.",
+            2,
+          ],
+          [
+            "member",
+            "John D. Smith",
+            "Thank you. Do I need someone to drive me home?",
+            1,
+          ],
         ],
-        [],
+        false,
       ),
     },
     {
@@ -781,12 +1084,25 @@ export function seedAccessState(now: number): AccessState {
         },
       ],
       transport: [],
-      threads: threads(
+      conversation: conversation(
         "789012",
-        "Dr. Nguyen (Vascular Surgeon)",
         now,
-        [],
-        [["member", "My dressing came loose last night.", 0.3]],
+        [
+          [
+            "member",
+            "Mary S. Johnson",
+            "My dressing came loose last night.",
+            0.4,
+          ],
+          [
+            "member",
+            "Mary S. Johnson",
+            "Also, I have been very worried about paying for the surgery.",
+            0.3,
+            true,
+          ],
+        ],
+        true,
       ),
     },
     {
@@ -813,7 +1129,7 @@ export function seedAccessState(now: number): AccessState {
       history: [],
       concerns: [],
       transport: [],
-      threads: threads("567890", "Dr. Lee (Vascular Surgeon)", now, [], []),
+      conversation: conversation("567890", now, [], false),
     },
     {
       memberName: "Angela T. Brown",
@@ -830,7 +1146,7 @@ export function seedAccessState(now: number): AccessState {
       history: [],
       concerns: [],
       transport: [],
-      threads: threads("901234", "Dr. Patel (Vascular Surgeon)", now, [], []),
+      conversation: conversation("901234", now, [], false),
     },
   ];
 

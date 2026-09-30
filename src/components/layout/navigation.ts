@@ -28,10 +28,12 @@ import {
   Star,
   Stethoscope,
   UserPlus,
+  UserCog,
   Users,
   Video,
 } from "lucide-react";
 import { UserRole } from "@/features/auth/auth";
+import type { Permission } from "@/features/staff/staff";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 
 /* ==========================================================================
@@ -53,6 +55,8 @@ export type NavItem = {
   href: string;
   icon: IconType;
   roles: UserRole[];
+  /** For staff: the role permission the page needs (features/staff). */
+  permission?: Permission;
 };
 
 export const sidebarItems: NavItem[] = [
@@ -290,6 +294,16 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/clinic/billing",
     icon: FileText,
     roles: ["clinic"],
+    permission: "billing.view",
+  },
+
+  /* Vascular Access Center portal (2026-09-30): its own organisation, one
+     page — the access patients it shares with the dialysis clinic. */
+  {
+    label: "Access Patients",
+    href: "/dashboard/access-center",
+    icon: Activity,
+    roles: ["access"],
   },
 ];
 
@@ -306,17 +320,33 @@ export const supportItems: NavItem[] = [
     icon: Settings,
     roles: ["user"],
   },
+  /* Each organisation manages its own people (2026-09-30). */
+  {
+    label: "Staff & Roles",
+    href: "/dashboard/clinic/team",
+    icon: UserCog,
+    roles: ["clinic"],
+    permission: "staff.manage",
+  },
   {
     label: "Settings",
     href: "/dashboard/clinic/settings",
     icon: Settings,
     roles: ["clinic"],
+    permission: "settings.manage",
   },
   {
     label: "Help & Support",
     href: "/dashboard/clinic/support",
     icon: HelpCircle,
     roles: ["clinic"],
+  },
+  {
+    label: "Staff & Roles",
+    href: "/dashboard/access-center/team",
+    icon: UserCog,
+    roles: ["access"],
+    permission: "staff.manage",
   },
 ];
 
@@ -325,8 +355,14 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/design-system"))
     return language === "ES" ? "Sistema de Diseño" : "Design System";
+  if (pathname.startsWith("/dashboard/access-center/team"))
+    return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/access-center"))
+    return language === "ES" ? "Pacientes de Acceso" : "Access Patients";
   /* Clinic routes are matched before the member and admin rules below,
      which would otherwise swallow names the two roles share. */
+  if (pathname.startsWith("/dashboard/clinic/team"))
+    return language === "ES" ? "Personal y Roles" : "Staff & Roles";
   if (pathname.startsWith("/dashboard/clinic/members"))
     return language === "ES" ? "Miembros" : "Member";
   if (pathname.startsWith("/dashboard/clinic/enroll-patients"))
@@ -560,6 +596,9 @@ export function getNavLabel(
     "/dashboard/clinic/messages": "Mensajes",
     "/dashboard/clinic/reports": "Informes",
     "/dashboard/clinic/billing": "Contrato y Facturación",
+    "/dashboard/access-center": "Pacientes de Acceso",
+    "/dashboard/access-center/team": "Personal y Roles",
+    "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",
     "/dashboard/clinic/support": "Ayuda y Soporte",
   };

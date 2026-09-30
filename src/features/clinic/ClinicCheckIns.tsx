@@ -45,7 +45,11 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { useNow } from "@/lib/utils/useNow";
+import { dayKey } from "./ccm.data";
+import { LINKED_MEMBER } from "./memberFeed";
 import { tableIconButton } from "./tableButton";
+import { useMemberFeed } from "./useMemberFeed";
 
 /* Reminders and follow-ups go out through clinic Messages. The check-in
    rows carry a short name and no MRN, so the link opens Messages rather
@@ -270,8 +274,18 @@ function QuickActions() {
   );
 }
 
-function RecentCheckIns({ program }: { program: string }) {
-  const rows = useMemo(() => byProgram(recentCheckIns, program), [program]);
+function RecentCheckIns({
+  program,
+  liveRows,
+}: {
+  program: string;
+  /** The linked member's own check-ins, ahead of the demo rows. */
+  liveRows: CheckInRow[];
+}) {
+  const rows = useMemo(
+    () => byProgram([...liveRows, ...recentCheckIns], program),
+    [liveRows, program],
+  );
   /* The row whose full note is open, or null. Holding the row rather than
      an index keeps the dialog correct when the program filter changes the
      list underneath it. */
@@ -564,6 +578,9 @@ export default function ClinicCheckIns() {
      empty states all answer to it, so the screen never shows one program's
      numbers above another program's rows. */
   const [program, setProgram] = useState(ALL_PROGRAMS);
+  const now = useNow();
+  /* What the linked member submitted in their own app (useMemberFeed). */
+  const feed = useMemberFeed(now, dayKey(now), LINKED_MEMBER.program);
 
   return (
     <div className="space-y-4">
@@ -583,7 +600,10 @@ export default function ClinicCheckIns() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,1fr)]">
         <div className="space-y-4">
           <WeeklySummary program={program} onProgramChange={setProgram} />
-          <RecentCheckIns program={program} />
+          <RecentCheckIns
+            program={program}
+            liveRows={feed.isPending ? [] : feed.checkInRows}
+          />
           <MemberFeedback />
         </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertTriangle, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Car, MessagesSquare, Pencil, Plus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
@@ -16,13 +16,10 @@ import {
   FormField,
   Input,
   Modal,
-  RadioCard,
-  RadioGroup,
   SectionTitle,
   SegmentedChoice,
   Select,
   Skeleton,
-  Tabs,
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
@@ -35,24 +32,32 @@ import { useAccessPhotos } from "@/features/personal-log/dialysis/useAccessPhoto
 import {
   ACCESS_TYPES,
   CONCERN_KINDS,
-  TEAM_LABEL,
+  MOBILITY_LEVELS,
+  TRANSPORT_COORDINATOR,
+  activeTransport,
   dayKey,
   formatDay,
+  formatTime,
   lastMessage,
   nextAppointment,
   openConcerns,
   recordForMember,
   sortedHistory,
   sortedUpdates,
+  transportFor,
+  unreadFor,
   upcomingAppointments,
   type AccessRecord,
-  type AccessTeam,
+  type MobilityLevel,
 } from "./vascularAccess.data";
 import {
+  AccessConversationView,
   AccessStatusBadge,
   AppointmentRow,
   HistoryTable,
-  ThreadView,
+  TransportConfirmationView,
+  TransportStatusBadge,
+  TransportSteps,
   UpdatesTimeline,
 } from "./AccessUi";
 import {
@@ -64,8 +69,9 @@ import {
    Vascular Access — the member's tab
    --------------------------------------------------------------------------
    Everything about the access in one place: what it is, the visits ahead,
-   reporting a problem with a photo, asking for a ride, and talking to the
-   vascular team and the dialysis center. The clinic works the same record
+   reporting a problem with a photo, asking for a ride and seeing it
+   confirmed, and one conversation with the access center and the dialysis
+   center. The clinic works the same record
    from its own Vascular Access tab.
    ========================================================================== */
 
@@ -450,156 +456,262 @@ function ConcernModal({
 
 /* -------------------------------------------------------------- transport */
 
-function TransportCard({ record, store, isEs, today }: Props) {
-  const upcoming = upcomingAppointments(record, today);
-  const open = upcoming.filter(
-    (appointment) =>
-      !record.transport.some((entry) => entry.appointmentId === appointment.id),
+function RideRequestModal({
+  record,
+  store,
+  isEs,
+  today,
+  onClose,
+}: Props & { onClose: () => void }) {
+  const open = upcomingAppointments(record, today).filter(
+    (appointment) => !transportFor(record, appointment.id),
   );
-  const [need, setNeed] = useState("yes");
-  const [appointmentId, setAppointmentId] = useState("");
-  const [done, setDone] = useState<string | null>(null);
-  const chosen = appointmentId || open[0]?.id || "";
+  const [appointmentId, setAppointmentId] = useState(open[0]?.id ?? "");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [returnTrip, setReturnTrip] = useState<"yes" | "no">("yes");
+  const [mobility, setMobility] = useState<MobilityLevel>("ambulatory");
+  const [memberNote, setMemberNote] = useState("");
+  const [tried, setTried] = useState(false);
+  const addressError =
+    pickupAddress.trim().length < 5
+      ? isEs
+        ? "Escribe la dirección de recogida"
+        : "Enter the pickup address"
+      : undefined;
 
-  const requests = record.transport
-    .map((entry) => ({
-      entry,
-      appointment: record.appointments.find(
-        (a) => a.id === entry.appointmentId,
-      ),
-    }))
-    .filter((row) => row.appointment && !row.appointment.completed);
+  function submit() {
+    setTried(true);
+    if (addressError || !appointmentId) return;
+    store.requestTransport(record.mrn, {
+      appointmentId,
+      pickupAddress,
+      returnTrip: returnTrip === "yes",
+      mobility,
+      memberNote,
+    });
+    onClose();
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="big"
+      title={isEs ? "Solicitar transporte" : "Request a Ride"}
+      description={
+        isEs
+          ? `Se envía a: ${TRANSPORT_COORDINATOR}`
+          : `Goes to: ${TRANSPORT_COORDINATOR}`
+      }
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            {isEs ? "Cancelar" : "Cancel"}
+          </Button>
+          <Button onClick={submit} disabled={store.isSaving}>
+            {isEs ? "Enviar solicitud" : "Submit Request"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-stack-md">
+        <FormField label={isEs ? "Cita" : "Appointment"} required>
+          {(field) => (
+            <Select
+              {...field}
+              value={appointmentId}
+              onChange={(e) => setAppointmentId(e.target.value)}
+            >
+              {open.map((appointment) => (
+                <option key={appointment.id} value={appointment.id}>
+                  {appointment.title} · {formatDay(appointment.date)},{" "}
+                  {formatTime(appointment.time)}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        <FormField
+          label={isEs ? "Dirección de recogida" : "Pickup address"}
+          required
+          error={tried ? addressError : undefined}
+        >
+          {(field) => (
+            <Input
+              {...field}
+              autoComplete="street-address"
+              value={pickupAddress}
+              onChange={(e) => setPickupAddress(e.target.value)}
+              placeholder={isEs ? "Calle, ciudad" : "Street, city"}
+            />
+          )}
+        </FormField>
+        <SegmentedChoice
+          label={
+            isEs ? "¿Necesitas regreso a casa?" : "Do you need a ride home?"
+          }
+          value={returnTrip}
+          onChange={(next: "yes" | "no") => setReturnTrip(next)}
+          options={[
+            {
+              value: "yes",
+              label: isEs ? "Sí, ida y vuelta" : "Yes, round trip",
+            },
+            { value: "no", label: isEs ? "No, solo ida" : "No, one way" },
+          ]}
+        />
+        <SegmentedChoice
+          label={isEs ? "¿Cómo te movilizas?" : "How do you get around?"}
+          value={mobility}
+          onChange={(next: MobilityLevel) => setMobility(next)}
+          options={MOBILITY_LEVELS.map((level) => ({
+            value: level.id,
+            label: isEs ? level.es : level.en,
+          }))}
+        />
+        <FormField
+          label={
+            isEs
+              ? "Algo más para el conductor"
+              : "Anything the driver should know"
+          }
+        >
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={2}
+              maxLength={200}
+              value={memberNote}
+              onChange={(e) => setMemberNote(e.target.value)}
+              placeholder={
+                isEs
+                  ? "Ej.: sedación, no puedo manejar de regreso"
+                  : "E.g. sedation, I cannot drive home"
+              }
+            />
+          )}
+        </FormField>
+      </div>
+    </Modal>
+  );
+}
+
+function TransportCard({ record, store, isEs, today }: Props) {
+  const [asking, setAsking] = useState(false);
+  const requests = activeTransport(record).sort((a, b) =>
+    a.requestedAt.localeCompare(b.requestedAt),
+  );
+  const canAsk = upcomingAppointments(record, today).some(
+    (appointment) => !transportFor(record, appointment.id),
+  );
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <SectionTitle title={isEs ? "Transporte" : "Transportation"} />
-      <div className="space-y-stack-md">
-        {open.length === 0 ? (
-          <p className="text-body-sm text-fg-muted">
-            {isEs
+      <SectionTitle
+        title={isEs ? "Transporte" : "Transportation"}
+        action={
+          canAsk ? (
+            <Button
+              size="small"
+              onClick={() => setAsking(true)}
+              leadingIcon={<Car aria-hidden="true" />}
+            >
+              {isEs ? "Solicitar" : "Request a Ride"}
+            </Button>
+          ) : null
+        }
+      />
+      {requests.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">
+          {canAsk
+            ? isEs
+              ? "¿Necesitas que te lleven a una cita? Solicítalo aquí."
+              : "Need a ride to an appointment? Request it here."
+            : isEs
               ? "No hay citas que necesiten transporte."
               : "No appointments need a ride."}
-          </p>
-        ) : (
-          <>
-            <RadioGroup
-              label={
-                isEs ? "¿Necesitas transporte?" : "Do you need transportation?"
-              }
-              value={need}
-              onChange={(value) => {
-                setNeed(value);
-                setDone(null);
-              }}
-            >
-              <RadioCard
-                value="yes"
-                title={
-                  isEs
-                    ? "Sí, necesito transporte"
-                    : "Yes, I need transportation"
-                }
-              />
-              <RadioCard
-                value="no"
-                title={
-                  isEs ? "No, tengo mi propio transporte" : "No, I have my own"
-                }
-              />
-            </RadioGroup>
-            {need === "yes" ? (
-              <Select
-                selectSize="small"
-                aria-label={isEs ? "Cita" : "Appointment"}
-                value={chosen}
-                onChange={(e) => setAppointmentId(e.target.value)}
-              >
-                {open.map((appointment) => (
-                  <option key={appointment.id} value={appointment.id}>
-                    {appointment.title} · {formatDay(appointment.date)}
-                  </option>
-                ))}
-              </Select>
-            ) : null}
-            <Button
-              className="w-full"
-              onClick={() => {
-                if (need === "yes" && chosen) {
-                  store.requestTransport(record.mrn, chosen);
-                  setAppointmentId("");
-                  setDone(isEs ? "Solicitud enviada." : "Request sent.");
-                } else {
-                  setDone(isEs ? "Anotado." : "Noted.");
-                }
-              }}
-            >
-              {isEs ? "Enviar solicitud" : "Submit Request"}
-            </Button>
-          </>
-        )}
-
-        {done ? (
-          <Alert tone="success" onDismiss={() => setDone(null)}>
-            {done}
-          </Alert>
-        ) : null}
-
-        {requests.length > 0 ? (
-          <ul className="space-y-stack-xs">
-            {requests.map(({ entry, appointment }) => (
+        </p>
+      ) : (
+        <ul className="space-y-stack-md">
+          {requests.map((request) => {
+            const appointment = record.appointments.find(
+              (a) => a.id === request.appointmentId,
+            )!;
+            return (
               <li
-                key={entry.id}
-                className="flex items-center justify-between gap-inline-md text-body-sm text-fg"
+                key={request.id}
+                className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
               >
-                <span className="min-w-0 truncate">
-                  {appointment!.title} · {formatDay(appointment!.date)}
-                </span>
-                <Badge
-                  tone={entry.status === "Arranged" ? "success" : "warning"}
+                <div className="flex items-start justify-between gap-inline-md">
+                  <div className="min-w-0">
+                    <p className="text-label-md text-fg">{appointment.title}</p>
+                    <p className="text-caption text-fg-muted">
+                      {formatDay(appointment.date)} ·{" "}
+                      {formatTime(appointment.time)} · {appointment.place}
+                    </p>
+                  </div>
+                  <TransportStatusBadge status={request.status} isEs={isEs} />
+                </div>
+                <TransportSteps request={request} isEs={isEs} />
+                {request.confirmation ? (
+                  <TransportConfirmationView
+                    confirmation={request.confirmation}
+                    confirmedBy={request.confirmedBy}
+                    isEs={isEs}
+                  />
+                ) : (
+                  <p className="text-caption text-fg-muted">
+                    {request.status === "Acknowledged"
+                      ? isEs
+                        ? "Recibido. Te enviaremos los detalles al confirmar."
+                        : "Received. You will get the details here once it is booked."
+                      : isEs
+                        ? `Enviado a ${request.handledBy}.`
+                        : `Sent to ${request.handledBy}.`}
+                  </p>
+                )}
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="ghost"
+                  onClick={() =>
+                    store.cancelTransport(record.mrn, request.id, "member")
+                  }
                 >
-                  {entry.status === "Arranged"
-                    ? isEs
-                      ? "Confirmado"
-                      : "Arranged"
-                    : isEs
-                      ? "Solicitado"
-                      : "Requested"}
-                </Badge>
+                  {isEs ? "Cancelar transporte" : "Cancel ride"}
+                </Button>
               </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+            );
+          })}
+        </ul>
+      )}
+
+      {asking ? (
+        <RideRequestModal
+          record={record}
+          store={store}
+          isEs={isEs}
+          today={today}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
     </Card>
   );
 }
 
 /* --------------------------------------------------------------- messages */
 
-type MessageFilter = "all" | AccessTeam;
-
+/* One conversation with both teams (client, 2026-09-30), so the card is a
+   preview of it and a way in. */
 function MessagesCard({ record, store, isEs }: Props) {
   const now = useNow();
-  const [filter, setFilter] = useState<MessageFilter>("all");
-  const [openTeam, setOpenTeam] = useState<AccessTeam | null>(null);
-  const [composing, setComposing] = useState(false);
+  const [open, setOpen] = useState(false);
+  const last = lastMessage(record.conversation, "member");
+  const unread = unreadFor(record, "member");
 
-  const threads = record.threads.filter(
-    (thread) => filter === "all" || thread.team === filter,
-  );
-
-  const teamLabel = (team: AccessTeam) =>
-    team === "vascular"
-      ? isEs
-        ? "Equipo vascular"
-        : "Vascular Team"
-      : isEs
-        ? "Centro de diálisis"
-        : "Dialysis Center";
-
-  function openThread(team: AccessTeam) {
-    setOpenTeam(team);
-    store.markThreadRead(record.mrn, team, "member");
+  function openConversation() {
+    setOpen(true);
+    store.markConversationRead(record.mrn, "member");
   }
 
   return (
@@ -611,168 +723,129 @@ function MessagesCard({ record, store, isEs }: Props) {
             variant="neutral"
             appearance="fill-stroke"
             size="small"
-            onClick={() => setComposing(true)}
+            onClick={openConversation}
+            leadingIcon={<Plus aria-hidden="true" />}
           >
-            <Plus aria-hidden="true" />
             {isEs ? "Nuevo mensaje" : "New Message"}
           </Button>
         }
       />
-      <Tabs
-        label={isEs ? "Filtrar mensajes" : "Filter messages"}
-        value={filter}
-        onChange={setFilter}
-        className="mb-stack-md"
-        items={[
-          { id: "all", label: isEs ? "Todos" : "All" },
-          { id: "vascular", label: teamLabel("vascular") },
-          { id: "dialysis", label: teamLabel("dialysis") },
-        ]}
-      />
-      <ul className="divide-y divide-line-subtle">
-        {threads.map((thread) => {
-          const last = lastMessage(thread);
-          return (
-            <li key={thread.team}>
-              <button
-                type="button"
-                onClick={() => openThread(thread.team)}
-                className="flex w-full cursor-pointer items-start gap-inline-lg rounded-control px-inset-xs py-inset-xs text-left hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-surface-brand-subtle text-label-md text-brand-600"
-                >
-                  {messaging.initials(thread.contact)}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-inline-sm">
-                    <span className="truncate text-label-lg text-fg">
-                      {thread.contact}
-                    </span>
-                    {thread.unreadByMember > 0 ? (
-                      <Badge tone="danger" variant="solid">
-                        {thread.unreadByMember}
-                      </Badge>
-                    ) : null}
-                  </span>
-                  <span className="block text-caption text-fg-muted">
-                    {teamLabel(thread.team)}
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-0.5 block truncate text-body-sm",
-                      thread.unreadByMember > 0
-                        ? "text-fg"
-                        : "text-fg-secondary",
-                    )}
-                  >
-                    {last
-                      ? last.body || (isEs ? "Foto" : "Photo")
-                      : isEs
-                        ? "Sin mensajes"
-                        : "No messages yet"}
-                  </span>
-                </span>
-                {last ? (
-                  <span className="shrink-0 text-caption text-fg-muted">
-                    {messaging.inboxTimeLabel(last.sentAt, now)}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <p className="mb-stack-md text-body-sm text-fg-secondary">
+        {isEs
+          ? "Una conversación con tu centro de acceso y tu centro de diálisis."
+          : "One conversation with your access center and your dialysis center."}
+      </p>
+      <button
+        type="button"
+        onClick={openConversation}
+        className="flex w-full cursor-pointer items-start gap-inline-lg rounded-card-nested border border-line p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-surface-brand-subtle text-fg-brand"
+        >
+          <MessagesSquare className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-inline-sm">
+            <span className="truncate text-label-lg text-fg">
+              {isEs ? "Equipo de acceso" : "Access care team"}
+            </span>
+            {unread > 0 ? (
+              <Badge tone="danger" variant="solid">
+                {unread}
+              </Badge>
+            ) : null}
+          </span>
+          <span
+            className={cn(
+              "mt-0.5 block truncate text-body-sm",
+              unread > 0 ? "text-fg" : "text-fg-secondary",
+            )}
+          >
+            {last
+              ? `${last.author === "member" ? (isEs ? "Tú" : "You") : last.authorName}: ${last.body || (isEs ? "Foto" : "Photo")}`
+              : isEs
+                ? "Sin mensajes"
+                : "No messages yet"}
+          </span>
+        </span>
+        {last ? (
+          <span className="shrink-0 text-caption text-fg-muted">
+            {messaging.inboxTimeLabel(last.sentAt, now)}
+          </span>
+        ) : null}
+      </button>
 
-      {openTeam || composing ? (
-        <ThreadModal
+      {open ? (
+        <ConversationModal
           record={record}
           store={store}
           isEs={isEs}
-          initialTeam={openTeam ?? "vascular"}
-          choosable={composing}
-          onClose={() => {
-            setOpenTeam(null);
-            setComposing(false);
-          }}
+          onClose={() => setOpen(false)}
         />
       ) : null}
     </Card>
   );
 }
 
-function ThreadModal({
+function ConversationModal({
   record,
   store,
   isEs,
-  initialTeam,
-  choosable,
   onClose,
 }: {
   record: AccessRecord;
   store: VascularAccessStore;
   isEs: boolean;
-  initialTeam: AccessTeam;
-  choosable: boolean;
   onClose: () => void;
 }) {
   const photoLog = useAccessPhotos();
-  const [team, setTeam] = useState<AccessTeam>(initialTeam);
   const [photoId, setPhotoId] = useState<string | null>(null);
   const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
-  const thread = record.threads.find((entry) => entry.team === team);
 
   return (
     <Modal
       open
       onClose={onClose}
       size="wide"
-      title={thread?.contact ?? TEAM_LABEL[team]}
-      description={TEAM_LABEL[team]}
+      title={isEs ? "Equipo de acceso" : "Access care team"}
+      description={
+        isEs
+          ? "Tu centro de acceso vascular y tu centro de diálisis ven esta conversación, salvo lo que marques como privado."
+          : "Your vascular access center and your dialysis center see this conversation, except what you mark private."
+      }
     >
-      <div className="space-y-stack-md">
-        {choosable ? (
-          <SegmentedChoice
-            label={isEs ? "Para" : "To"}
-            value={team}
-            onChange={(next: AccessTeam) => setTeam(next)}
-            options={[
-              { value: "vascular", label: TEAM_LABEL.vascular },
-              { value: "dialysis", label: TEAM_LABEL.dialysis },
-            ]}
-          />
-        ) : null}
-        {thread ? (
-          <ThreadView
-            key={team}
-            thread={thread}
-            me="member"
+      <AccessConversationView
+        record={record}
+        party="member"
+        myName={record.memberName}
+        isEs={isEs}
+        sending={store.isSaving}
+        attachedUrl={photo?.dataUrl}
+        attach={
+          <PhotoPicker
+            photos={photoLog.photos}
+            value={photoId}
+            onChange={setPhotoId}
             isEs={isEs}
-            sending={store.isSaving}
-            attachedUrl={photo?.dataUrl}
-            attach={
-              <PhotoPicker
-                photos={photoLog.photos}
-                value={photoId}
-                onChange={setPhotoId}
-                isEs={isEs}
-              />
-            }
-            onSend={(body) => {
-              store.sendMessage(
-                record.mrn,
-                team,
-                "member",
-                body,
-                photo?.dataUrl,
-              );
-              if (photo) photoLog.markSent(photo.id);
-              setPhotoId(null);
-            }}
           />
-        ) : null}
-      </div>
+        }
+        onSend={(body, isPrivate) => {
+          store.sendMessage(record.mrn, "member", record.memberName, body, {
+            imageUrl: photo?.dataUrl,
+            private: isPrivate,
+          });
+          if (photo) photoLog.markSent(photo.id);
+          setPhotoId(null);
+        }}
+        onSetPrivate={(messageId, isPrivate) =>
+          store.setMessagePrivate(record.mrn, messageId, isPrivate, "member")
+        }
+        onSetDialysisCanPost={(allowed) =>
+          store.setDialysisCanPost(record.mrn, allowed, "member")
+        }
+      />
     </Modal>
   );
 }

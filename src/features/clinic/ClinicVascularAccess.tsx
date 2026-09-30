@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import {
   CalendarPlus,
+  Car,
   Check,
   Eye,
   MessageSquareText,
@@ -43,10 +44,13 @@ import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import * as messaging from "@/features/messaging/messaging.rules";
 import {
+  ACCESS_CENTER_NAME,
   ACCESS_STATUSES,
   APPOINTMENT_TYPES,
   CONCERN_KINDS,
+  DIALYSIS_CENTER_NAME,
   TEAM_LABEL,
+  activeTransport,
   addDays,
   dayKey,
   formatDay,
@@ -56,35 +60,65 @@ import {
   pendingTransport,
   sortedHistory,
   sortedUpdates,
-  unreadForTeam,
+  unreadFor,
   upcomingAppointments,
   type AccessRecord,
   type AccessStatus,
   type AccessTeam,
+  type TransportConfirmation,
+  type TransportRequest,
 } from "@/features/vascular-access/vascularAccess.data";
 import {
+  AccessConversationView,
   AccessStatusBadge,
   AppointmentRow,
   HistoryTable,
-  ThreadView,
+  TransportAsk,
+  TransportConfirmationView,
+  TransportStatusBadge,
+  TransportSteps,
   UpdatesTimeline,
 } from "@/features/vascular-access/AccessUi";
 import {
   useVascularAccess,
   type VascularAccessStore,
 } from "@/features/vascular-access/useVascularAccess";
+import { useAuth } from "@/features/auth/AuthContext";
+import { userCan } from "@/features/staff/staff";
 import { tableIconButton } from "./tableButton";
 import { UpdatedBar } from "./UpdatedBar";
 
 /* ==========================================================================
-   Vascular Access — the clinic's tab
+   Vascular Access — the staff side
    --------------------------------------------------------------------------
-   The access team's side of the member's Vascular Access tab: book visits
-   that land on the patient's screen, review reported concerns and photos,
-   arrange rides, and answer access messages. Same records, same store.
+   The other end of the member's Vascular Access tab, for both
+   organisations that care for the access, each from its own login:
+
+     dialysis   the Dialysis Center (clinic role): arranges rides, and
+                joins the conversation when allowed
+     access     the Vascular Access Center (access role): its own
+                organisation; manages privacy and who may post
+
+   Both book visits that land on the patient's screen, review reported
+   concerns and photos, and read the three-way conversation. Same records,
+   same store.
    ========================================================================== */
 
-const HREF = "/dashboard/clinic/vascular-access";
+export type StaffParty = "dialysis" | "access";
+
+const STAFF: Record<StaffParty, { href: string; org: string; person: string }> =
+  {
+    dialysis: {
+      href: "/dashboard/clinic/vascular-access",
+      org: DIALYSIS_CENTER_NAME,
+      person: "Nurse Wilson",
+    },
+    access: {
+      href: "/dashboard/access-center",
+      org: ACCESS_CENTER_NAME,
+      person: "Dr. Patel",
+    },
+  };
 
 const iconControl = cn(
   buttonStyles({
@@ -119,6 +153,17 @@ function concernLabel(ids: string[]) {
     .map((id) => CONCERN_KINDS.find((kind) => kind.id === id)?.en ?? id)
     .join(", ");
 }
+
+/** What the signed-in person may do here, from their staff role. */
+type Perms = {
+  /** Their name, on what they write and book. */
+  me: string;
+  /** Their role, for the read-only notice. */
+  role: string;
+  reply: boolean;
+  schedule: boolean;
+  rides: boolean;
+};
 
 /* -------------------------------------------------------- schedule form */
 
@@ -310,12 +355,16 @@ function CompleteForm({
 function PatientModal({
   record,
   store,
+  party,
+  perms,
   initialTab,
   onSchedule,
   onClose,
 }: {
   record: AccessRecord;
   store: VascularAccessStore;
+  party: StaffParty;
+  perms: Perms;
   initialTab: PatientTab;
   onSchedule: () => void;
   onClose: () => void;
@@ -323,19 +372,14 @@ function PatientModal({
   const now = useNow();
   const today = dayKey(now);
   const [tab, setTab] = useState<PatientTab>(initialTab);
-  const [team, setTeam] = useState<AccessTeam>(
-    record.threads.find((thread) => thread.unreadByTeam > 0)?.team ??
-      "vascular",
-  );
   const [completing, setCompleting] = useState<string | null>(null);
   const upcoming = upcomingAppointments(record, today);
   const concerns = openConcerns(record);
-  const thread = record.threads.find((entry) => entry.team === team);
-  const unread = unreadForTeam(record);
+  const unread = unreadFor(record, party);
 
   function showTab(next: PatientTab) {
     setTab(next);
-    if (next === "messages") store.markThreadRead(record.mrn, team, "team");
+    if (next === "messages") store.markConversationRead(record.mrn, party);
   }
 
   return (
@@ -370,6 +414,7 @@ function PatientModal({
                 {...field}
                 selectSize="small"
                 className="w-52"
+                disabled={!perms.schedule}
                 value={record.overview.status}
                 onChange={(e) =>
                   store.editOverview(record.mrn, {
@@ -456,12 +501,14 @@ function PatientModal({
       </TabPanel>
 
       <TabPanel id="appointments" value={tab}>
-        <div className="mb-stack-md flex justify-end">
-          <Button size="small" onClick={onSchedule}>
-            <CalendarPlus aria-hidden="true" />
-            Schedule Appointment
-          </Button>
-        </div>
+        {perms.schedule ? (
+          <div className="mb-stack-md flex justify-end">
+            <Button size="small" onClick={onSchedule}>
+              <CalendarPlus aria-hidden="true" />
+              Schedule Appointment
+            </Button>
+          </div>
+        ) : null}
         {upcoming.length === 0 ? (
           <EmptyState variant="bare" title="No upcoming appointments" />
         ) : (
@@ -474,7 +521,7 @@ function PatientModal({
                 <AppointmentRow
                   appointment={appointment}
                   action={
-                    completing === appointment.id ? null : (
+                    completing === appointment.id || !perms.schedule ? null : (
                       <Button
                         size="small"
                         variant="neutral"
@@ -506,37 +553,356 @@ function PatientModal({
         )}
       </TabPanel>
 
-      <TabPanel id="messages" value={tab} className="space-y-stack-md">
-        <SegmentedChoice
-          label="Thread"
-          value={team}
-          onChange={(next: AccessTeam) => {
-            setTeam(next);
-            store.markThreadRead(record.mrn, next, "team");
-          }}
-          options={record.threads.map((entry) => ({
-            value: entry.team,
-            label:
-              entry.unreadByTeam > 0
-                ? `${TEAM_LABEL[entry.team]} (${entry.unreadByTeam})`
-                : TEAM_LABEL[entry.team],
-          }))}
+      <TabPanel id="messages" value={tab}>
+        <AccessConversationView
+          record={record}
+          party={party}
+          myName={perms.me}
+          readOnlyReason={
+            perms.reply
+              ? undefined
+              : `${perms.role} accounts can read this conversation but not reply.`
+          }
+          sending={store.isSaving}
+          onSend={(body, isPrivate) =>
+            store.sendMessage(record.mrn, party, perms.me, body, {
+              private: isPrivate,
+            })
+          }
+          onSetPrivate={(messageId, isPrivate) =>
+            store.setMessagePrivate(record.mrn, messageId, isPrivate, party)
+          }
+          onSetDialysisCanPost={(allowed) =>
+            store.setDialysisCanPost(record.mrn, allowed, party)
+          }
         />
-        {thread ? (
-          <ThreadView
-            key={team}
-            thread={thread}
-            me="team"
-            sending={store.isSaving}
-            onSend={(body) => store.sendMessage(record.mrn, team, "team", body)}
-          />
-        ) : null}
       </TabPanel>
 
       <TabPanel id="history" value={tab}>
         <HistoryTable history={sortedHistory(record)} />
       </TabPanel>
     </Modal>
+  );
+}
+
+/* ----------------------------------------------------------- ride booking */
+
+/** The coordinator books the ride: the details go to the patient. Also
+ *  used to correct a confirmed ride. */
+function ConfirmRideModal({
+  record,
+  request,
+  store,
+  by,
+  onClose,
+}: {
+  record: AccessRecord;
+  request: TransportRequest;
+  store: VascularAccessStore;
+  /** Who is booking it. */
+  by: string;
+  onClose: () => void;
+}) {
+  const appointment = record.appointments.find(
+    (a) => a.id === request.appointmentId,
+  );
+  const current = request.confirmation;
+  const [form, setForm] = useState<TransportConfirmation>({
+    pickupTime: current?.pickupTime ?? "",
+    returnPickupTime: current?.returnPickupTime ?? "",
+    provider: current?.provider ?? "",
+    phone: current?.phone ?? "",
+    confirmationNumber: current?.confirmationNumber ?? "",
+    note: current?.note ?? "",
+  });
+  const [tried, setTried] = useState(false);
+  const set = (change: Partial<TransportConfirmation>) =>
+    setForm((f) => ({ ...f, ...change }));
+
+  const errors = {
+    pickupTime: form.pickupTime ? undefined : "Set the pickup time",
+    provider: form.provider.trim() ? undefined : "Who is driving?",
+    phone:
+      form.phone.replace(/\D/g, "").length >= 7
+        ? undefined
+        : "Enter a phone number",
+    confirmationNumber: form.confirmationNumber.trim()
+      ? undefined
+      : "Enter the confirmation number",
+  };
+  const valid = Object.values(errors).every((e) => !e);
+  const show = (e?: string) => (tried ? e : undefined);
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="wide"
+      title={current ? "Edit Ride" : "Confirm Ride"}
+      description={`${record.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date)} at ${formatTime(appointment.time)}` : "Appointment removed"}`}
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              setTried(true);
+              if (!valid) return;
+              store.confirmTransport(record.mrn, request.id, form, by);
+              onClose();
+            }}
+          >
+            {current ? "Save Changes" : "Confirm & Notify Patient"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-stack-lg">
+        <section className="rounded-card-nested border border-line p-inset-sm">
+          <h3 className="mb-stack-sm text-heading-5 text-fg">
+            What the patient asked for
+          </h3>
+          <TransportAsk request={request} />
+        </section>
+        <div className="grid gap-stack-md sm:grid-cols-2">
+          <FormField
+            label="Pickup time"
+            required
+            error={show(errors.pickupTime)}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                type="time"
+                value={form.pickupTime}
+                onChange={(e) => set({ pickupTime: e.target.value })}
+              />
+            )}
+          </FormField>
+          {request.returnTrip ? (
+            <FormField
+              label="Return pickup time"
+              hint="Or leave blank for will-call."
+            >
+              {(field) => (
+                <Input
+                  {...field}
+                  type="time"
+                  value={form.returnPickupTime}
+                  onChange={(e) => set({ returnPickupTime: e.target.value })}
+                />
+              )}
+            </FormField>
+          ) : null}
+          <FormField
+            label="Transport company or driver"
+            required
+            error={show(errors.provider)}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={form.provider}
+                onChange={(e) => set({ provider: e.target.value })}
+              />
+            )}
+          </FormField>
+          <FormField label="Phone" required error={show(errors.phone)}>
+            {(field) => (
+              <Input
+                {...field}
+                type="tel"
+                value={form.phone}
+                onChange={(e) => set({ phone: e.target.value })}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="Confirmation number"
+            required
+            error={show(errors.confirmationNumber)}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={form.confirmationNumber}
+                onChange={(e) => set({ confirmationNumber: e.target.value })}
+              />
+            )}
+          </FormField>
+        </div>
+        <FormField label="Note for the patient">
+          {(field) => (
+            <Input
+              {...field}
+              value={form.note}
+              onChange={(e) => set({ note: e.target.value })}
+              placeholder="E.g. driver will call 10 minutes before"
+            />
+          )}
+        </FormField>
+      </div>
+    </Modal>
+  );
+}
+
+/** Every live ride request. The dialysis center works them; the access
+ *  center sees where each one is. */
+function TransportPanel({
+  records,
+  store,
+  party,
+  perms,
+  onOpen,
+}: {
+  records: AccessRecord[];
+  store: VascularAccessStore;
+  party: StaffParty;
+  perms: Perms;
+  onOpen: (mrn: string) => void;
+}) {
+  const [editing, setEditing] = useState<{
+    mrn: string;
+    id: string;
+  } | null>(null);
+  const rides = records
+    .flatMap((record) =>
+      activeTransport(record).map((request) => ({ record, request })),
+    )
+    .sort((a, b) => {
+      /* The ones still to book first, oldest first. */
+      const rank = (r: TransportRequest) => (r.status === "Confirmed" ? 1 : 0);
+      return (
+        rank(a.request) - rank(b.request) ||
+        a.request.requestedAt.localeCompare(b.request.requestedAt)
+      );
+    });
+  const works = party === "dialysis" && perms.rides;
+  const selected = editing
+    ? rides.find(
+        (ride) =>
+          ride.record.mrn === editing.mrn && ride.request.id === editing.id,
+      )
+    : null;
+
+  return (
+    <Card as="section" padding="small" className="h-full">
+      <PanelHeading title="Transportation" />
+      <p className="mb-stack-md text-caption text-fg-muted">
+        {works
+          ? "Requests come to your social worker. Confirming sends the details to the patient."
+          : party === "dialysis"
+            ? "Your social worker or care coordinator arranges these rides."
+            : `Arranged by ${DIALYSIS_CENTER_NAME}.`}
+      </p>
+      {rides.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">No ride requests.</p>
+      ) : (
+        <ul className="space-y-stack-md">
+          {rides.map(({ record, request }) => {
+            const appointment = record.appointments.find(
+              (a) => a.id === request.appointmentId,
+            );
+            return (
+              <li
+                key={request.id}
+                className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
+              >
+                <div className="flex items-start justify-between gap-inline-md">
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(record.mrn)}
+                      className={cn(
+                        "cursor-pointer rounded-control-small text-label-lg text-fg hover:text-fg-brand hover:underline",
+                        focusRing,
+                      )}
+                    >
+                      {record.memberName}
+                    </button>
+                    <p className="text-caption text-fg-muted">
+                      {appointment
+                        ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)} · ${appointment.place}`
+                        : "Appointment removed"}
+                    </p>
+                  </div>
+                  <TransportStatusBadge status={request.status} />
+                </div>
+                <TransportSteps request={request} />
+                {request.confirmation ? (
+                  <TransportConfirmationView
+                    confirmation={request.confirmation}
+                    confirmedBy={request.confirmedBy}
+                  />
+                ) : (
+                  <TransportAsk request={request} />
+                )}
+                {works ? (
+                  <div className="flex flex-wrap gap-inline-sm">
+                    {request.status === "Requested" ? (
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() =>
+                          store.acknowledgeTransport(record.mrn, request.id)
+                        }
+                        leadingIcon={<Check aria-hidden="true" />}
+                      >
+                        Acknowledge
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="small"
+                      variant={
+                        request.status === "Confirmed" ? "neutral" : "primary"
+                      }
+                      appearance={
+                        request.status === "Confirmed" ? "fill-stroke" : "fill"
+                      }
+                      onClick={() =>
+                        setEditing({ mrn: record.mrn, id: request.id })
+                      }
+                      leadingIcon={<Car aria-hidden="true" />}
+                    >
+                      {request.status === "Confirmed"
+                        ? "Edit Ride"
+                        : "Confirm Ride"}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="ghost"
+                      onClick={() =>
+                        store.cancelTransport(
+                          record.mrn,
+                          request.id,
+                          "dialysis",
+                        )
+                      }
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {selected ? (
+        <ConfirmRideModal
+          key={selected.request.id}
+          record={selected.record}
+          request={selected.request}
+          store={store}
+          by={perms.me}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
+    </Card>
   );
 }
 
@@ -555,7 +921,22 @@ function PageSkeleton() {
   );
 }
 
-export default function ClinicVascularAccess() {
+export default function ClinicVascularAccess({
+  party = "dialysis",
+}: {
+  party?: StaffParty;
+}) {
+  const HREF = STAFF[party].href;
+  const { user } = useAuth();
+  /* A staff login writes and books under its own name; the organisation's
+     demo login stands in as its default person. */
+  const perms: Perms = {
+    me: user?.staffRole ? user.name : STAFF[party].person,
+    role: user?.staffRole ?? "Administrator",
+    reply: userCan(user, "access.reply"),
+    schedule: userCan(user, "access.schedule"),
+    rides: userCan(user, "rides.manage"),
+  };
   const now = useNow();
   const store = useVascularAccess();
   const records = store.records;
@@ -582,14 +963,9 @@ export default function ClinicVascularAccess() {
   const concerns = records.flatMap((record) =>
     openConcerns(record).map((concern) => ({ record, concern })),
   );
-  const rides = records.flatMap((record) =>
-    pendingTransport(record).map((request) => ({
-      record,
-      request,
-      appointment: record.appointments.find(
-        (a) => a.id === request.appointmentId,
-      ),
-    })),
+  const ridesToBook = records.reduce(
+    (sum, record) => sum + pendingTransport(record).length,
+    0,
   );
   const nextMonth = addDays(today, 30);
   const upcomingCount = records.reduce(
@@ -648,8 +1024,8 @@ export default function ClinicVascularAccess() {
           <KeyCard
             tone="warning"
             icon={<ClockSolid />}
-            value={rides.length}
-            label="Ride Requests"
+            value={ridesToBook}
+            label="Rides to Confirm"
           />
         </section>
 
@@ -702,7 +1078,7 @@ export default function ClinicVascularAccess() {
                   rows.map((record) => {
                     const next = nextAppointment(record, today);
                     const openCount = openConcerns(record).length;
-                    const unread = unreadForTeam(record);
+                    const unread = unreadFor(record, party);
                     return (
                       <TableRow key={record.mrn}>
                         <TableCell emphasis className="whitespace-nowrap">
@@ -767,10 +1143,7 @@ export default function ClinicVascularAccess() {
                               type="button"
                               onClick={() => {
                                 setOpen({ mrn: record.mrn, tab: "messages" });
-                                const team =
-                                  record.threads.find((t) => t.unreadByTeam > 0)
-                                    ?.team ?? "vascular";
-                                store.markThreadRead(record.mrn, team, "team");
+                                store.markConversationRead(record.mrn, party);
                               }}
                               className={cn(iconControl, "relative")}
                               aria-label={
@@ -788,15 +1161,17 @@ export default function ClinicVascularAccess() {
                                 />
                               ) : null}
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setScheduling(record.mrn)}
-                              className={iconControl}
-                              aria-label={`Schedule for ${record.memberName}`}
-                              title="Schedule appointment"
-                            >
-                              <CalendarPlus aria-hidden="true" />
-                            </button>
+                            {perms.schedule ? (
+                              <button
+                                type="button"
+                                onClick={() => setScheduling(record.mrn)}
+                                className={iconControl}
+                                aria-label={`Schedule for ${record.memberName}`}
+                                title="Schedule appointment"
+                              >
+                                <CalendarPlus aria-hidden="true" />
+                              </button>
+                            ) : null}
                           </span>
                         </TableCell>
                       </TableRow>
@@ -854,43 +1229,13 @@ export default function ClinicVascularAccess() {
             )}
           </Card>
 
-          <Card as="section" padding="small" className="h-full">
-            <PanelHeading title="Ride Requests" />
-            {rides.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">No ride requests.</p>
-            ) : (
-              <ul className="divide-y divide-line-subtle">
-                {rides.map(({ record, request, appointment }) => (
-                  <li
-                    key={request.id}
-                    className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-label-lg text-fg">
-                        {record.memberName}
-                      </p>
-                      <p className="text-body-sm text-fg-secondary">
-                        {appointment
-                          ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)}`
-                          : "Appointment removed"}
-                      </p>
-                    </div>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() =>
-                        store.arrangeTransport(record.mrn, request.id)
-                      }
-                    >
-                      <Check aria-hidden="true" />
-                      Mark arranged
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          <TransportPanel
+            records={records}
+            store={store}
+            party={party}
+            perms={perms}
+            onOpen={(mrn) => setOpen({ mrn, tab: "overview" })}
+          />
         </section>
 
         {selected && open ? (
@@ -898,6 +1243,8 @@ export default function ClinicVascularAccess() {
             key={`${selected.mrn}-${open.tab}`}
             record={selected}
             store={store}
+            party={party}
+            perms={perms}
             initialTab={open.tab}
             onSchedule={() => {
               setScheduling(selected.mrn);
@@ -930,14 +1277,16 @@ export default function ClinicVascularAccess() {
               isFetching={store.isFetching}
               refetch={store.refetch}
             />
-            <Button
-              size="small"
-              onClick={() => setScheduling("")}
-              disabled={records.length === 0}
-            >
-              <CalendarPlus aria-hidden="true" />
-              Schedule Appointment
-            </Button>
+            {perms.schedule ? (
+              <Button
+                size="small"
+                onClick={() => setScheduling("")}
+                disabled={records.length === 0}
+              >
+                <CalendarPlus aria-hidden="true" />
+                Schedule Appointment
+              </Button>
+            ) : null}
           </div>
         }
       />

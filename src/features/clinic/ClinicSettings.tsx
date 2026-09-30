@@ -8,13 +8,11 @@ import {
   FileLock2,
   KeyRound,
   Laptop,
-  Plus,
   Share2,
   ShieldCheck,
   Smartphone,
   Upload,
 } from "lucide-react";
-import { MoreSolid } from "@/components/icons/solid";
 
 import { PageTitle } from "@/components/layout/PageTitle";
 import { sidebarItems } from "@/components/layout/navigation";
@@ -27,23 +25,14 @@ import {
   Input,
   Select,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TablePagination,
-  TableRow,
 } from "@/components/ui";
 import { useLanguage, type LanguageCode } from "@/context/LanguageContext";
-import { tableIconButton } from "./tableButton";
 import {
   DATE_FORMATS,
   initials,
   ITEMS_PER_PAGE,
   NOTIFICATIONS,
   TIME_ZONES,
-  userStatusTone,
   validateProfile,
   type ClinicSettings,
   type OfficePreferences,
@@ -51,20 +40,14 @@ import {
 } from "./settings.data";
 import { useClinicSettings } from "./useClinicSettings";
 import { useSettingsActions } from "./useSettingsActions";
+import { exportDocument, exportFilename } from "./settings.actions";
 import {
-  exportDocument,
-  exportFilename,
-  type ManagedUser,
-} from "./settings.actions";
-import {
-  AddUserModal,
   ChangePasswordModal,
   DataSharingModal,
   HipaaModal,
   LoginActivityModal,
   SessionsModal,
   TwoFactorModal,
-  UserActionsModal,
 } from "./SettingsModals";
 
 type Update = (change: Partial<ClinicSettings>) => void;
@@ -344,79 +327,6 @@ function OrganizationProfileCard({
           </p>
         </div>
       </form>
-    </Card>
-  );
-}
-
-function UserManagementCard({
-  users,
-  onAdd,
-  onSelect,
-}: {
-  users: ManagedUser[];
-  onAdd: () => void;
-  onSelect: (user: ManagedUser) => void;
-}) {
-  return (
-    <Card as="section" padding="small" className="h-full">
-      <SectionHeading
-        title="User Management"
-        action={
-          <Button size="small" onClick={onAdd}>
-            <Plus className="h-4 w-4" />
-            Add User
-          </Button>
-        }
-      />
-
-      <div className="overflow-hidden rounded-control border border-line">
-        <Table minWidth={640}>
-          <TableHead className="bg-surface-sunken">
-            <TableRow>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell>Role</TableHeaderCell>
-              <TableHeaderCell>Email</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.email}>
-                <TableCell emphasis className="whitespace-nowrap">
-                  {user.name}
-                </TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell className="break-all">{user.email}</TableCell>
-                <TableCell>
-                  <Badge tone={userStatusTone[user.status]}>
-                    {user.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    onClick={() => onSelect(user)}
-                    variant="neutral"
-                    appearance="fill-stroke"
-                    size="small"
-                    iconOnly
-                    className={tableIconButton}
-                    aria-label={`Actions for ${user.name}`}
-                  >
-                    <MoreSolid />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          page={1}
-          pageCount={1}
-          onPageChange={() => {}}
-          summary={`Showing 1–${users.length} of ${users.length} users`}
-        />
-      </div>
     </Card>
   );
 }
@@ -729,8 +639,6 @@ export default function ClinicSettings() {
      office's address. */
   const actions = useSettingsActions();
 
-  const [addUserOpen, setAddUserOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -786,23 +694,15 @@ export default function ClinicSettings() {
         </Alert>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      {/* Staff moved to its own menu, Staff & Roles (2026-09-30), so the
+          settings are three to a row. */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <OrganizationProfileCard
           saved={settings.profile}
           update={update}
           emailRef={emailRef}
           ready={!isPending}
         />
-        <div className="xl:col-span-2">
-          <UserManagementCard
-            users={actions.users}
-            onAdd={() => setAddUserOpen(true)}
-            onSelect={setSelectedUser}
-          />
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <NotificationCard
           settings={settings}
           update={update}
@@ -816,34 +716,21 @@ export default function ClinicSettings() {
           onSessions={() => setSessionsOpen(true)}
           onActivity={() => setActivityOpen(true)}
         />
-        <OfficePreferencesCard office={settings.office} update={update} />
       </section>
 
-      <DataPrivacyCard
-        onDownload={downloadData}
-        onSharing={() => setSharingOpen(true)}
-        onHipaa={() => setHipaaOpen(true)}
-      />
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <OfficePreferencesCard office={settings.office} update={update} />
+        <div className="xl:col-span-2">
+          <DataPrivacyCard
+            onDownload={downloadData}
+            onSharing={() => setSharingOpen(true)}
+            onHipaa={() => setHipaaOpen(true)}
+          />
+        </div>
+      </section>
 
       {/* The dialogs behind the actions above. Keyed on open where they hold
           a draft, so a reopened form starts clean. */}
-      <AddUserModal
-        key={`add-user-${addUserOpen}`}
-        open={addUserOpen}
-        onClose={() => setAddUserOpen(false)}
-        users={actions.users}
-        onAdd={actions.addUser}
-      />
-
-      <UserActionsModal
-        user={selectedUser}
-        users={actions.users}
-        onClose={() => setSelectedUser(null)}
-        onStatus={actions.setUserStatus}
-        onResend={actions.resendInvite}
-        onRemove={actions.removeUser}
-      />
-
       <ChangePasswordModal
         key={`password-${passwordOpen}`}
         open={passwordOpen}
