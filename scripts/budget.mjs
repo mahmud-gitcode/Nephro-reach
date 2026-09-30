@@ -37,8 +37,16 @@ import path from "node:path";
  * Raised to 1120 against a measured 1018 (2026-09-26). No dependency was
  * added; the growth is clinic treatment types, additional views, and
  * management pages each adding their own chunk. Same ~10% headroom rule.
+ *
+ * Raised to 1280 against a measured 1165 (2026-09-30). No dependency was
+ * added; the largest chunks are still React/Next, the shared icons and
+ * nav, and the course content. The growth is new frontend flows, each with
+ * its own chunk: staff accounts and roles, CCM, messaging (attachments,
+ * notifications, shared UI), reports, blood pressure, medications,
+ * appointments and the live-class schedule. No single app chunk passes
+ * 23 KB. Same ~10% headroom rule.
  */
-const BUDGET_KB = 1120;
+const BUDGET_KB = 1280;
 
 const ROOT = ".next/static";
 
