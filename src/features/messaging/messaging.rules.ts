@@ -1,5 +1,6 @@
 import { seedConversations } from "./messaging.seed";
 import type {
+  CareTeamContact,
   Attachment,
   Conversation,
   InboxFilter,
@@ -7,6 +8,8 @@ import type {
   Message,
   MessageAuthor,
   MessagingState,
+  PatientProfile,
+  MessageCategory,
 } from "./messaging.types";
 
 /* ==========================================================================
@@ -120,6 +123,79 @@ export function appendMessage(
         : conversation,
     ),
   };
+}
+
+/** A thread's id from who it is between, so starting one twice finds the
+ *  first instead of opening a duplicate. */
+export function conversationIdFor(memberName: string, contactName: string) {
+  const slug = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  return `${slug(memberName)}--${slug(contactName)}`;
+}
+
+export type NewConversation = {
+  memberName: string;
+  contact: CareTeamContact;
+  category: MessageCategory;
+  /** The chart, for a thread the clinic holds. */
+  patient?: PatientProfile;
+  body: string;
+  author: MessageAuthor;
+  attachment?: Attachment;
+};
+
+/**
+ * "New Message": writes into the member's existing thread with that
+ * contact if there is one (bringing it back from the archive), otherwise
+ * opens a new thread. Either way the message lands where both sides
+ * already look. Nothing at all is not a message.
+ */
+export function startConversation(
+  state: MessagingState,
+  input: NewConversation,
+  now: number,
+): MessagingState {
+  if (!input.body.trim() && !input.attachment) return state;
+  const existing = state.conversations.find(
+    (c) =>
+      c.memberName === input.memberName &&
+      c.contact.name === input.contact.name,
+  );
+  const id =
+    existing?.id ?? conversationIdFor(input.memberName, input.contact.name);
+  const withThread: MessagingState = existing
+    ? {
+        conversations: state.conversations.map((c) =>
+          c.id === id ? { ...c, archived: false } : c,
+        ),
+      }
+    : {
+        conversations: [
+          ...state.conversations,
+          {
+            id,
+            memberName: input.memberName,
+            contact: input.contact,
+            category: input.category,
+            unread: 0,
+            flagged: false,
+            archived: false,
+            ...(input.patient ? { patient: input.patient } : {}),
+            messages: [],
+          },
+        ],
+      };
+  return appendMessage(
+    withThread,
+    id,
+    input.body,
+    input.author,
+    now,
+    input.attachment,
+  );
 }
 
 /** Opening a thread clears its unread count. */
@@ -322,6 +398,18 @@ export function setArchived(
   archived: boolean,
 ): MessagingState {
   return updateConversation(state, conversationId, (c) => ({ ...c, archived }));
+}
+
+/** The clinic's private note on the patient, shown in the rail. Never sent
+ *  to the member. */
+export function setPatientNotes(
+  state: MessagingState,
+  conversationId: string,
+  notes: string,
+): MessagingState {
+  return updateConversation(state, conversationId, (c) =>
+    c.patient ? { ...c, patient: { ...c.patient, notes: notes.trim() } } : c,
+  );
 }
 
 /**

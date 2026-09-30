@@ -69,24 +69,39 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const PERMISSIONS = [
   {
+    id: "patients.enroll",
+    label: "Enroll patients",
+    detail: "Add patients to the clinic and its programs",
+  },
+  {
+    id: "messages.reply",
+    label: "Message patients",
+    detail: "Write to patients and reply in their conversations",
+  },
+  {
     id: "rides.manage",
     label: "Arrange rides",
     detail: "Acknowledge, confirm and cancel ride requests",
   },
   {
-    id: "access.reply",
-    label: "Reply in access conversations",
-    detail: "Post in the patient's access conversation",
+    id: "travel.manage",
+    label: "Arrange travel dialysis",
+    detail: "Place patients at a dialysis center while they travel",
   },
   {
     id: "access.schedule",
     label: "Schedule access visits",
-    detail: "Book and complete appointments, set access status",
+    detail: "Book and complete appointments, add access patients",
   },
   {
     id: "ccm.log",
     label: "Log CCM time",
-    detail: "Add CCM activities and update the checklist",
+    detail: "Add CCM activities, patients and checklist updates",
+  },
+  {
+    id: "reports.view",
+    label: "See reports",
+    detail: "Program outcomes and exports",
   },
   {
     id: "billing.view",
@@ -106,30 +121,26 @@ export const PERMISSIONS = [
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number]["id"];
 
-/* Who may do what. Rides belong to the social worker (and whoever
-   coordinates care); clinical replies to clinicians and those who handle
-   patients' questions; money and settings to administrators. */
+/* Who may do what. Rides and travel placements belong to the social
+   worker (and whoever coordinates care); messages to clinicians and those
+   who handle patients' questions; enrolling to the front office; money,
+   settings and staff to administrators. Everyone can read the records. */
 export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
-  Administrator: [
-    "rides.manage",
-    "access.reply",
-    "access.schedule",
-    "ccm.log",
-    "billing.view",
-    "settings.manage",
-    "staff.manage",
-  ],
-  Physician: ["access.reply", "access.schedule", "ccm.log"],
-  Nurse: ["access.reply", "access.schedule", "ccm.log"],
-  "Social Worker": ["rides.manage", "access.reply"],
+  Administrator: PERMISSIONS.map((p) => p.id),
+  Physician: ["messages.reply", "access.schedule", "ccm.log", "reports.view"],
+  Nurse: ["messages.reply", "access.schedule", "ccm.log"],
+  "Social Worker": ["messages.reply", "rides.manage", "travel.manage"],
   "Care Coordinator": [
+    "patients.enroll",
+    "messages.reply",
     "rides.manage",
-    "access.reply",
+    "travel.manage",
     "access.schedule",
     "ccm.log",
+    "reports.view",
   ],
-  "Medical Assistant": ["access.schedule", "ccm.log"],
-  "Front Desk": ["access.schedule"],
+  "Medical Assistant": ["patients.enroll", "access.schedule", "ccm.log"],
+  "Front Desk": ["patients.enroll", "access.schedule"],
 };
 
 export function roleCan(role: StaffRole, permission: Permission): boolean {

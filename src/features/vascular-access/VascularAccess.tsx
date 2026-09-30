@@ -24,7 +24,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
-import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
+import { useMemberName } from "@/features/auth/useMemberName";
 import * as messaging from "@/features/messaging/messaging.rules";
 import AccessPhotosSection from "@/features/personal-log/dialysis/AccessPhotosSection";
 import { PhotoPicker } from "@/features/personal-log/dialysis/PhotoPicker";
@@ -873,7 +873,8 @@ export default function VascularAccess() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const store = useVascularAccess();
-  const record = recordForMember(store.state, DEMO_MEMBER);
+  const memberName = useMemberName();
+  const record = recordForMember(store.state, memberName);
   const today = dayKey(now);
 
   let body: React.ReactNode;

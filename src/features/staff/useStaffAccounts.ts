@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
 import * as rules from "./staff";
 import { listStaff, saveStaff } from "./staff.repository";
 
@@ -44,8 +44,11 @@ export function useStaffAccounts() {
   };
 }
 
-/** Whether the signed-in user's role allows something. */
+/** Whether the signed-in user's role allows something. Outside a session
+ *  provider (a screen rendered on its own in a test) nothing is withheld:
+ *  the app itself always has one. */
 export function useCan(permission: rules.Permission): boolean {
-  const { user } = useAuth();
-  return rules.userCan(user, permission);
+  const auth = useOptionalAuth();
+  if (!auth) return true;
+  return rules.userCan(auth.user, permission);
 }

@@ -4,6 +4,7 @@ import {
   type StaffRole,
 } from "@/features/staff/staff";
 import { readStaffForLogin } from "@/features/staff/staff.repository";
+import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 
 /* "access" is a Vascular Access Center: its own organisation, which shares
    each patient's access record with the dialysis clinic (2026-09-30). */
@@ -55,9 +56,9 @@ export const DEMO_ACCOUNTS = [
     role: "admin" as const,
   },
   {
-    email: "user@nephroreach.com",
+    email: DEMO_MEMBER_EMAIL,
     password: "user123",
-    name: "Charles Xavier",
+    name: DEMO_MEMBER_NAME,
     role: "user" as const,
   },
   {

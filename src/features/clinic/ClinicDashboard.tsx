@@ -48,6 +48,7 @@ import { tableIconButton } from "./tableButton";
 import { statusIconSolid, statusKeyTone } from "./StatusIconsSolid";
 import { UsersSolid } from "@/components/icons/solid";
 import { EnrollPatientModal } from "./EnrollPatientModal";
+import { useCan } from "@/features/staff/useStaffAccounts";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { UpdatedBar } from "./UpdatedBar";
 import {
@@ -300,12 +301,15 @@ const QUICK_ACTIONS = [
 const quickActionClass =
   "flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-function QuickActions({ onEnroll }: { onEnroll: () => void }) {
+function QuickActions({ onEnroll }: { onEnroll?: () => void }) {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Quick Actions" />
       <ul className="grid gap-inline-md sm:grid-cols-2 xl:grid-cols-1">
-        {QUICK_ACTIONS.map((action) => (
+        {QUICK_ACTIONS.filter(
+          /* No "Enroll Patient" for a role that cannot enroll. */
+          (action) => onEnroll || !("opensEnroll" in action),
+        ).map((action) => (
           <li key={action.label}>
             <QuickActionTarget
               href={action.href}
@@ -779,6 +783,7 @@ function ToolUsagePanel() {
 export default function ClinicDashboard() {
   const dashboard = useClinicData();
   const [enrolling, setEnrolling] = useState(false);
+  const canEnroll = useCan("patients.enroll");
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
     mrn: string;
@@ -798,10 +803,12 @@ export default function ClinicDashboard() {
               isFetching={dashboard.isFetching}
               refetch={dashboard.refetch}
             />
-            <Button size="small" onClick={() => setEnrolling(true)}>
-              <UserPlus />
-              Enroll Patient
-            </Button>
+            {canEnroll ? (
+              <Button size="small" onClick={() => setEnrolling(true)}>
+                <UserPlus />
+                Enroll Patient
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -853,7 +860,9 @@ export default function ClinicDashboard() {
         <div className="xl:col-span-2">
           <NeedsAttention dashboard={dashboard} />
         </div>
-        <QuickActions onEnroll={() => setEnrolling(true)} />
+        <QuickActions
+          onEnroll={canEnroll ? () => setEnrolling(true) : undefined}
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">

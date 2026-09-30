@@ -1,36 +1,20 @@
 import type { BadgeTone, SeriesTone } from "@/components/ui";
+import type { RosterMember } from "./members.data";
 
 /* ==========================================================================
-   Clinic reports — demo data
+   Clinic reports
    --------------------------------------------------------------------------
-   The client's figures from their mockup, copied as given, for the signed-in
-   clinic only: the mockup's Organization dropdown is a fixed label here, the
-   same tenant rule Contract & Billing follows.
+   For the signed-in clinic only: the Organization filter is a fixed label,
+   the same tenant rule Contract & Billing follows.
 
-   Two things do not reconcile and are left for the client:
-
-   - 248 members, against the 23 enrolled of 30 contracted seats that Enroll
-     Patients, Curriculum Progress and Contract & Billing all show for the
-     same clinic.
-   - The date range is August, but the recent activity is dated September.
-
-   The outcome changes are computed from this month and last, not typed —
-   they land on the client's percentages, which `reports.data.test.ts`
-   checks. The engagement lines were read off the mockup's chart, which
-   gave no numbers, so they are approximate.
+   Member counts, splits, completion, attendance and open questions come
+   from the clinic's roster (bottom of this file), so the report agrees
+   with Members, Enroll Patients and Curriculum Progress. The engagement
+   trend, module and check-in rates, topics, outcomes and activity feed are
+   the client's sample figures (labelled as samples on the page) until
+   reporting data exists; the outcome changes are computed from this month
+   and last, not typed.
    ========================================================================== */
-
-export const filters = {
-  dateRange: "Aug 1, 2026 – Aug 31, 2026",
-  programs: [
-    "All Programs",
-    "Journey to Dialysis",
-    "Crash Dialysis",
-    "CKD Education",
-    "Transplant Prep",
-  ],
-  memberTypes: ["All Members", "Active", "At Risk", "Inactive"],
-};
 
 export type Kpi = {
   id: string;
@@ -41,25 +25,6 @@ export type Kpi = {
   /** Whether a fall is the good outcome, as with ER visits. */
   lowerIsBetter?: boolean;
 };
-
-export const kpis: Kpi[] = [
-  { id: "members", label: "Total Members", value: "248", change: 12 },
-  {
-    id: "completion",
-    label: "Program Completion Rate",
-    value: "84%",
-    change: 8,
-  },
-  { id: "attendees", label: "Live Class Attendees", value: "326", change: 26 },
-  { id: "active", label: "Active This Month", value: "92%", change: 10 },
-  {
-    id: "er",
-    label: "Members with ER Visits",
-    value: "3",
-    change: -40,
-    lowerIsBetter: true,
-  },
-];
 
 export const engagementMonths = ["Mar", "Apr", "May", "Jun", "Jul", "Aug"];
 
@@ -93,32 +58,6 @@ export const engagementSeries: {
     tone: "cat-2",
     points: [60, 88, 100, 108, 118, 145],
   },
-];
-
-export const membersTotal = 248;
-
-/* Programs are identities: the categorical ramp, in a fixed order. */
-export const membersByProgram: {
-  label: string;
-  pct: number;
-  tone: SeriesTone;
-}[] = [
-  { label: "Journey to Dialysis", pct: 38, tone: "cat-6" },
-  { label: "Crash Dialysis", pct: 24, tone: "cat-4" },
-  { label: "CKD Education", pct: 20, tone: "cat-7" },
-  { label: "Transplant Prep", pct: 10, tone: "cat-2" },
-  { label: "Other", pct: 8, tone: "neutral" },
-];
-
-/* States, not series: the status tones. */
-export const memberStatus: {
-  label: string;
-  pct: number;
-  tone: SeriesTone;
-}[] = [
-  { label: "Active", pct: 92, tone: "success" },
-  { label: "At Risk", pct: 5, tone: "warning" },
-  { label: "Inactive", pct: 3, tone: "danger" },
 ];
 
 export const moduleCompletion = [
@@ -235,11 +174,166 @@ export const recentActivity: {
   },
 ];
 
-export const customReports = [
-  { id: "engagement", label: "Member Engagement Report" },
-  { id: "completion", label: "Program Completion Report" },
-  { id: "checkins", label: "Check-In Compliance Report" },
-  { id: "er", label: "ER & Hospitalization Report" },
-  { id: "attendance", label: "Live Class Attendance Report" },
-  { id: "export", label: "Member Activity Export (CSV)" },
-] as const;
+/* --------------------------------------------------------------------------
+   From the clinic's own roster (2026-09-30)
+   --------------------------------------------------------------------------
+   The member counts, program and status splits, completion, attendance and
+   open questions are read from the same roster Members, Enroll Patients and
+   Curriculum Progress show, and follow the Program and Member Type filters.
+   The client's mockup counted 248 members against a 23-patient roster; the
+   report now agrees with the rest of the portal. The engagement trend,
+   topics, outcomes and activity feed have no source in the app yet and are
+   labelled as samples on the page.
+   -------------------------------------------------------------------------- */
+
+export const ALL_PROGRAMS_LABEL = "All Programs";
+export const ALL_MEMBERS_LABEL = "All Members";
+
+export type ReportFilters = { program: string; status: string };
+
+const PROGRAM_TONES: SeriesTone[] = ["cat-6", "cat-4", "cat-7", "cat-2"];
+const STATUS_TONES: Record<string, SeriesTone> = {
+  "On Track": "success",
+  "Need Follow-Up": "warning",
+  "Attention Needed": "danger",
+  "Not Started": "neutral",
+};
+
+/** Whole-percent shares of `count` that add to 100 (largest remainder). */
+function shares(counts: number[]): number[] {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total === 0) return counts.map(() => 0);
+  const raw = counts.map((c) => (c / total) * 100);
+  const floors = raw.map(Math.floor);
+  let left = 100 - floors.reduce((a, b) => a + b, 0);
+  const order = raw
+    .map((r, i) => ({ i, rest: r - Math.floor(r) }))
+    .sort((a, b) => b.rest - a.rest);
+  for (const { i } of order) {
+    if (left <= 0) break;
+    floors[i] += 1;
+    left -= 1;
+  }
+  return floors;
+}
+
+export function reportRows(
+  roster: RosterMember[],
+  filters: ReportFilters,
+): RosterMember[] {
+  return roster.filter(
+    (m) =>
+      (filters.program === ALL_PROGRAMS_LABEL ||
+        m.program === filters.program) &&
+      (filters.status === ALL_MEMBERS_LABEL || m.status === filters.status),
+  );
+}
+
+export function rosterReport(rows: RosterMember[]) {
+  const programs = [...new Set(rows.map((m) => m.program))].sort();
+  const programCounts = programs.map(
+    (p) => rows.filter((m) => m.program === p).length,
+  );
+  const programPct = shares(programCounts);
+  const statuses = Object.keys(STATUS_TONES).filter((s) =>
+    rows.some((m) => m.status === s),
+  );
+  const statusCounts = statuses.map(
+    (s) => rows.filter((m) => m.status === s).length,
+  );
+  const statusPct = shares(statusCounts);
+  const completed = rows.filter((m) => m.progress >= 100).length;
+  const started = rows.filter((m) => m.status !== "Not Started").length;
+  const attended = rows.reduce((sum, m) => sum + m.liveClasses[0], 0);
+  const openQuestions = rows.reduce((sum, m) => sum + m.questions.open, 0);
+  const pct = (n: number) =>
+    rows.length === 0 ? "0%" : `${Math.round((n / rows.length) * 100)}%`;
+
+  const reportKpis: Array<Omit<Kpi, "change"> & { note: string }> = [
+    {
+      id: "members",
+      label: "Total Members",
+      value: String(rows.length),
+      note: "On the clinic's roster",
+    },
+    {
+      id: "completion",
+      label: "Program Completion Rate",
+      value: pct(completed),
+      note: `${completed} finished their program`,
+    },
+    {
+      id: "attendees",
+      label: "Live Class Attendances",
+      value: String(attended),
+      note: "Classes attended, all members",
+    },
+    {
+      id: "active",
+      label: "Active Members",
+      value: pct(started),
+      note: `${started} have started`,
+    },
+    {
+      id: "questions",
+      label: "Open Questions",
+      value: String(openQuestions),
+      note: "Waiting on the care team",
+    },
+  ];
+
+  return {
+    total: rows.length,
+    kpis: reportKpis,
+    byProgram: programs.map((label, i) => ({
+      label,
+      pct: programPct[i],
+      tone: PROGRAM_TONES[i % PROGRAM_TONES.length],
+    })),
+    byStatus: statuses.map((label, i) => ({
+      label,
+      pct: statusPct[i],
+      tone: STATUS_TONES[label],
+    })),
+  };
+}
+
+/** One CSV row per member, with every column the reports draw on. */
+export function memberActivityCsv(
+  rows: RosterMember[],
+): Array<Array<string | number>> {
+  return [
+    [
+      "Name",
+      "MRN",
+      "Program",
+      "Enrolled",
+      "Status",
+      "Progress %",
+      "Current module",
+      "Last activity",
+      "Live classes attended",
+      "Live classes offered",
+      "Check-ins done",
+      "Check-ins expected",
+      "Questions",
+      "Open questions",
+    ],
+    ...rows.map((m) => [
+      m.name,
+      m.mrn,
+      m.program,
+      m.enrolledOn,
+      m.status,
+      m.progress,
+      m.currentModule,
+      m.lastActivity,
+      m.liveClasses[0],
+      m.liveClasses[1],
+      m.checkIns[0],
+      m.checkIns[1],
+      m.questions.total,
+      m.questions.open,
+    ]),
+  ];
+}

@@ -22,6 +22,8 @@
    their entry silently not save.
    ========================================================================== */
 
+import { DEMO_MEMBER_EMAIL } from "./demoIdentity";
+
 /** Thrown for anything the caller could reasonably show a message about. */
 export class StorageError extends Error {
   constructor(
@@ -46,9 +48,107 @@ function assertBrowser() {
   }
 }
 
+/* --------------------------------------------------------------------------
+   Whose data
+   --------------------------------------------------------------------------
+   A member's own records (their logs, check-ins, labs, medications…) are
+   theirs alone. The browser has one storage for everyone who signs in on
+   it, so without this two members on one device read each other's logs,
+   and a newly registered member opened on the demo patient's.
+
+   So a member-owned key is filed under the signed-in member. The demo
+   patient keeps the plain key, which is also what the clinic reads for its
+   linked patient (clinic/useMemberFeed), and staff and admin sessions read
+   the plain key too. Shared records (messaging, vascular access, travel,
+   the clinic's own stores) are one key for every role, as before.
+
+   With a server, the member's id travels with the request instead.
+   -------------------------------------------------------------------------- */
+
+const MEMBER_OWNED = new Set([
+  "between-treatment-check-ins",
+  "care-team-questions",
+  "classroom-learner",
+  "clinic-notices",
+  "custom-lab-results",
+  "dialysis-access-photos",
+  "dialysis-clinic",
+  "dialysis-home-system",
+  "dialysis-home-visits",
+  "dialysis-modality",
+  "dialysis-pd-exchanges",
+  "dialysis-supplies",
+  "dialysis-treatment-vitals",
+  "dialysis-urine-output",
+  "exercise-log",
+  "journey-notes",
+  "journey-progress",
+  "library-saved",
+  "medication-doses",
+  "medication-mood",
+  "medication-refills",
+  "medication-reminders",
+  "medication-side-effects",
+  "nutrition-fluids",
+  "nutrition-foods",
+  "nutrition-goals",
+  "profile-emergency-contact",
+  "provider-orders",
+  "rides",
+  "table-talk-favorites",
+  "table-talk-questions",
+  "travel-reflections",
+  "travel-treatments",
+  "treatment-medications",
+  "blood-pressure-readings",
+  "member-medications",
+  "member-appointments",
+]);
+
+/** The signed-in session's role and email, read from the cookie. */
+function sessionOf(): { role?: string; email?: string } | null {
+  if (typeof document === "undefined") return null;
+  const row = document.cookie
+    .split("; ")
+    .find((part) => part.startsWith("nr-session="));
+  if (!row) return null;
+  try {
+    return JSON.parse(decodeURIComponent(row.slice("nr-session=".length)));
+  } catch {
+    return null;
+  }
+}
+
+/** The key a read or write actually uses: a member-owned key is filed
+ *  under the signed-in member, unless that member is the demo patient. */
+export function resolveKey(key: string): string {
+  const name = key.startsWith("nr:") ? key.slice(3) : key;
+  if (!MEMBER_OWNED.has(name)) return key;
+  const session = sessionOf();
+  if (
+    !session ||
+    session.role !== "user" ||
+    !session.email ||
+    session.email === DEMO_MEMBER_EMAIL
+  )
+    return key;
+  return `nr:member:${session.email}:${name}`;
+}
+
+/**
+ * What an empty member store shows: its sample data for the demo patient
+ * (and any shared screen), nothing for a member who registered themselves.
+ * A new member seeing sample medications they never entered would read
+ * them as their own.
+ */
+export function sampleOr<T>(key: string, sample: T, empty: T): T {
+  return resolveKey(key) === key ? sample : empty;
+}
+
 export async function readJson<T>(key: string, fallback: T): Promise<T> {
   await tick();
   assertBrowser();
+  key = resolveKey(key);
 
   let raw: string | null;
   try {
@@ -75,6 +175,7 @@ export async function readJson<T>(key: string, fallback: T): Promise<T> {
 export async function writeJson<T>(key: string, value: T): Promise<T> {
   await tick();
   assertBrowser();
+  key = resolveKey(key);
 
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
@@ -98,6 +199,7 @@ export async function writeJson<T>(key: string, value: T): Promise<T> {
 export async function removeKey(key: string): Promise<void> {
   await tick();
   assertBrowser();
+  key = resolveKey(key);
   try {
     window.localStorage.removeItem(key);
   } catch (cause) {

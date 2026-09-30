@@ -1,96 +1,75 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import {
+  Calendar,
   ChevronRight,
   Clock3,
-  LocateFixed,
   MapPin,
   Plus,
-  Calendar,
+  Trash2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { Button, Card, FormField, Input, Modal } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  FormField,
+  Input,
+  Modal,
+  Skeleton,
+  Textarea,
+} from "@/components/ui";
+import {
+  appointmentError,
+  directionsUrl,
+  past,
+  timeRange,
+  upcoming,
+  type Appointment,
+  type AppointmentDraft,
+  type AppointmentError,
+} from "@/features/personal-log/appointments/appointments";
+import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import { useNow } from "@/lib/utils/useNow";
 
-interface AppointmentItem {
-  id: string;
-  monthEn: string;
-  monthEs: string;
-  day: string;
-  weekdayEn: string;
-  weekdayEs: string;
-  titleKey?: string;
-  customTitle?: string;
-  doctor: string;
-  time: string;
-  locationKey?: string;
-  customLocation?: string;
-  reminderTime: string;
-  reminderPlace: string;
+/* ==========================================================================
+   Appointments
+   --------------------------------------------------------------------------
+   The member's own list, stored (useAppointments): what is coming up, the
+   next one with directions, the details of any one, and the full list with
+   past visits.
+   ========================================================================== */
+
+function dateParts(iso: string, isEs: boolean) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const locale = isEs ? "es-US" : "en-US";
+  const cap = (text: string) =>
+    text.charAt(0).toUpperCase() + text.slice(1).replace(".", "");
+  return {
+    month: cap(date.toLocaleDateString(locale, { month: "short" })),
+    day: String(d),
+    weekday: cap(date.toLocaleDateString(locale, { weekday: "short" })),
+    long: date.toLocaleDateString(locale, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+  };
 }
 
-const INITIAL_APPOINTMENTS: AppointmentItem[] = [
-  {
-    id: "1",
-    monthEn: "May",
-    monthEs: "May",
-    day: "12",
-    weekdayEn: "Fri",
-    weekdayEs: "Vie",
-    titleKey: "sampleSpecialty",
-    doctor: "Dr. Niro mia",
-    time: "10:30 AM - 11:15 AM",
-    locationKey: "sampleCenter",
-    reminderTime: "10:00 AM",
-    reminderPlace: "Zik Center",
-  },
-  {
-    id: "2",
-    monthEn: "May",
-    monthEs: "May",
-    day: "19",
-    weekdayEn: "Fri",
-    weekdayEs: "Vie",
-    titleKey: "sampleSpecialty",
-    doctor: "Dr. Niro mia",
-    time: "10:30 AM - 11:15 AM",
-    locationKey: "sampleCenter",
-    reminderTime: "10:00 AM",
-    reminderPlace: "Zik Center",
-  },
-  {
-    id: "3",
-    monthEn: "May",
-    monthEs: "May",
-    day: "26",
-    weekdayEn: "Fri",
-    weekdayEs: "Vie",
-    titleKey: "sampleSpecialty",
-    doctor: "Dr. Niro mia",
-    time: "10:30 AM - 11:15 AM",
-    locationKey: "sampleCenter",
-    reminderTime: "10:00 AM",
-    reminderPlace: "Zik Center",
-  },
-];
-
-function DateBadge({
-  month,
-  day,
-  weekday,
-}: {
-  month: string;
-  day: string;
-  weekday: string;
-}) {
+function DateBadge({ iso, isEs }: { iso: string; isEs: boolean }) {
+  const parts = dateParts(iso, isEs);
   return (
     <div className="flex w-[78px] shrink-0 flex-col items-center gap-stack-sm rounded-card border border-line bg-surface-sunken px-inset-md py-inset-md text-center text-fg-secondary">
-      <p className="text-overline">{month}</p>
-      <p className="text-metric-md text-fg">{day}</p>
-      <p className="text-label-md">{weekday}</p>
+      <p className="text-overline">{parts.month}</p>
+      <p className="text-metric-md text-fg">{parts.day}</p>
+      <p className="text-label-md">{parts.weekday}</p>
     </div>
   );
 }
@@ -117,59 +96,43 @@ function IconText({
   );
 }
 
-function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
-  const { language, t } = useLanguage();
-
-  const month = language === "ES" ? appointment.monthEs : appointment.monthEn;
-  const weekday =
-    language === "ES" ? appointment.weekdayEs : appointment.weekdayEn;
-  const title = appointment.titleKey
-    ? t(`appointments.${appointment.titleKey}`)
-    : appointment.customTitle || "Nephrology";
-  const location = appointment.locationKey
-    ? t(`appointments.${appointment.locationKey}`)
-    : appointment.customLocation || "Zik Center";
-
+function AppointmentRow({
+  appointment,
+  isEs,
+  onOpen,
+}: {
+  appointment: Appointment;
+  isEs: boolean;
+  onOpen: () => void;
+}) {
+  const { t } = useLanguage();
   return (
     <article className="flex flex-col gap-inline-lg border-b border-line-subtle bg-surface p-inset-sm last:border-b-0 sm:flex-row sm:items-center">
-      <DateBadge month={month} day={appointment.day} weekday={weekday} />
-
-      <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <h3 className="text-heading-4 text-fg">{title}</h3>
-          <p className="mt-0.5 text-body-md text-fg-muted">
-            {appointment.doctor}
-          </p>
-          <div className="mt-6 space-y-stack-xs">
-            <IconText icon={<Clock3 className="h-5 w-5" />}>
-              {appointment.time}
+      <DateBadge iso={appointment.date} isEs={isEs} />
+      <div className="min-w-0 flex-1">
+        <h3 className="text-heading-4 text-fg">{appointment.title}</h3>
+        <p className="mt-0.5 text-body-md text-fg-muted">
+          {appointment.doctor}
+        </p>
+        <div className="mt-stack-md space-y-stack-xs">
+          <IconText icon={<Clock3 />}>{timeRange(appointment)}</IconText>
+          {appointment.location ? (
+            <IconText icon={<MapPin />} primary>
+              {appointment.location}
             </IconText>
-            <IconText icon={<MapPin className="h-5 w-5" />} primary>
-              {location}
-            </IconText>
-          </div>
-        </div>
-
-        <div className="shrink-0">
-          <p className="text-heading-5 text-fg">{t("appointments.reminder")}</p>
-          <div className="mt-stack-sm space-y-stack-xs">
-            <IconText icon={<Clock3 className="h-5 w-5" />}>
-              {appointment.reminderTime}
-            </IconText>
-            <IconText icon={<MapPin className="h-5 w-5" />}>
-              {appointment.reminderPlace}
-            </IconText>
-          </div>
+          ) : null}
         </div>
       </div>
-
       <Button
-        {...notBuiltYet("Appointment details")}
         iconOnly
         size="small"
         variant="neutral"
         appearance="stroke"
-        aria-label={t("appointments.openDetails").replace("{title}", title)}
+        onClick={onOpen}
+        aria-label={t("appointments.openDetails").replace(
+          "{title}",
+          appointment.title,
+        )}
       >
         <ChevronRight />
       </Button>
@@ -177,210 +140,330 @@ function AppointmentRow({ appointment }: { appointment: AppointmentItem }) {
   );
 }
 
-function UpcomingAppointments({ items }: { items: AppointmentItem[] }) {
+function DetailsModal({
+  appointment,
+  isEs,
+  onDelete,
+  onClose,
+}: {
+  appointment: Appointment;
+  isEs: boolean;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
   const { t } = useLanguage();
-
+  const [confirming, setConfirming] = useState(false);
   return (
-    <Card
-      as="section"
-      tone="default"
-      padding="small"
-      className="border border-line bg-white shadow-card"
+    <Modal
+      open
+      onClose={onClose}
+      size="big"
+      title={appointment.title}
+      description={dateParts(appointment.date, isEs).long}
+      footer={
+        confirming ? (
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setConfirming(false)}
+            >
+              {t("appointments.cancel")}
+            </Button>
+            <Button variant="danger" onClick={onDelete}>
+              {isEs ? "Sí, eliminar" : "Yes, delete"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="danger"
+              appearance="fill-stroke"
+              className="mr-auto"
+              leadingIcon={<Trash2 />}
+              onClick={() => setConfirming(true)}
+            >
+              {isEs ? "Eliminar" : "Delete"}
+            </Button>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={onClose}
+            >
+              {t("appointments.close")}
+            </Button>
+            {appointment.location || appointment.address ? (
+              <Button
+                onClick={() =>
+                  window.open(directionsUrl(appointment), "_blank", "noopener")
+                }
+              >
+                {t("appointments.getDirections")}
+              </Button>
+            ) : null}
+          </>
+        )
+      }
     >
-      <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
-        {t("appointments.upcomingTitle")}
-      </h2>
-      <Card padding="none" className="mt-6 overflow-hidden">
-        {items.map((appointment) => (
-          <AppointmentRow key={appointment.id} appointment={appointment} />
-        ))}
-      </Card>
-      <div className="mt-stack-md">
-        <Button
-          {...notBuiltYet("The full appointment list")}
-          variant="primary"
-          appearance="stroke"
-          fullWidth
-        >
-          {t("appointments.viewAll")}
-        </Button>
+      <div className="space-y-stack-md">
+        {confirming ? (
+          <Alert tone="warning">
+            {isEs
+              ? "¿Eliminar esta cita? No se puede deshacer."
+              : "Delete this appointment? This cannot be undone."}
+          </Alert>
+        ) : null}
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-inline-lg gap-y-stack-sm text-body-md">
+          <dt className="text-fg-muted">{t("appointments.doctorLabel")}</dt>
+          <dd className="text-fg">{appointment.doctor}</dd>
+          <dt className="text-fg-muted">{t("appointments.timeLabel")}</dt>
+          <dd className="text-fg">{timeRange(appointment)}</dd>
+          {appointment.location ? (
+            <>
+              <dt className="text-fg-muted">
+                {t("appointments.locationLabel")}
+              </dt>
+              <dd className="text-fg">{appointment.location}</dd>
+            </>
+          ) : null}
+          {appointment.address ? (
+            <>
+              <dt className="text-fg-muted">
+                {isEs ? "Dirección" : "Address"}
+              </dt>
+              <dd className="text-fg">{appointment.address}</dd>
+            </>
+          ) : null}
+          {appointment.notes ? (
+            <>
+              <dt className="text-fg-muted">{isEs ? "Notas" : "Notes"}</dt>
+              <dd className="whitespace-pre-wrap text-fg">
+                {appointment.notes}
+              </dd>
+            </>
+          ) : null}
+        </dl>
       </div>
-    </Card>
+    </Modal>
   );
 }
 
-function NextAppointment() {
-  const { language, t } = useLanguage();
-
+function NextAppointment({
+  next,
+  isEs,
+}: {
+  next: Appointment | undefined;
+  isEs: boolean;
+}) {
+  const { t } = useLanguage();
   return (
-    <Card
-      as="section"
-      tone="default"
-      padding="small"
-      className="border border-line bg-white shadow-card"
-    >
+    <Card as="section" padding="small" className="h-full">
       <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
         {t("appointments.nextTitle")}
       </h2>
-
-      <Card padding="small" className="mt-6">
-        <div className="flex flex-col gap-inline-lg sm:flex-row sm:items-start">
-          <div className="flex shrink-0 items-center gap-inline-md px-inset-md py-inset-md text-fg-secondary">
-            <p className="text-metric-xl text-fg">12</p>
-            <div className="text-label-lg">
-              <p>{language === "ES" ? "MAY" : "MAY"}</p>
-              <p>{language === "ES" ? "Vie" : "Fri"}</p>
+      {!next ? (
+        <EmptyState
+          variant="bare"
+          icon={<Calendar />}
+          title={isEs ? "Nada programado" : "Nothing scheduled"}
+        />
+      ) : (
+        <Card padding="small" className="mt-stack-lg">
+          <div className="flex items-start gap-inline-lg">
+            <DateBadge iso={next.date} isEs={isEs} />
+            <div className="min-w-0">
+              <h3 className="text-heading-4 text-fg">{next.title}</h3>
+              <p className="mt-0.5 text-body-md text-fg-muted">{next.doctor}</p>
+              <div className="mt-stack-md space-y-stack-xs">
+                <IconText icon={<Clock3 />}>{timeRange(next)}</IconText>
+                {next.location ? (
+                  <IconText icon={<MapPin />} primary>
+                    {next.location}
+                  </IconText>
+                ) : null}
+              </div>
             </div>
           </div>
-
-          <div className="min-w-0">
-            <h3 className="text-heading-4 text-fg">
-              {t("appointments.sampleSpecialty")}
-            </h3>
-            <p className="mt-0.5 text-body-md text-fg-muted">Dr. Niro mia</p>
-            <IconText icon={<Clock3 className="h-5 w-5" />}>
-              10:30 AM - 11:15 AM
-            </IconText>
-            <IconText icon={<MapPin className="h-5 w-5" />} primary>
-              {t("appointments.sampleCenter")}
-            </IconText>
-          </div>
-        </div>
-
-        <div className="mt-stack-md space-y-stack-md">
-          <IconText icon={<Clock3 />}>10:30 AM - 11:15 AM</IconText>
-          <div className="flex items-start gap-inline-md">
-            <MapPin
-              aria-hidden="true"
-              className="mt-0.5 h-icon-big w-icon-big shrink-0 text-fg-brand"
-            />
-            <div>
-              <p className="text-label-lg text-fg-brand">
-                {t("appointments.kidneyCareCenter")}
-              </p>
-              <p className="mt-stack-sm text-body-md text-fg-secondary">
-                {t("appointments.addressLine1")}
-                <br />
-                {t("appointments.addressLine2")}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-stack-lg">
-          <Button
-            fullWidth
-            onClick={() => {
-              window.open(
-                "https://www.google.com/maps/search/?api=1&query=123+Health+way+suite+400+Atlanta+GA",
-                "_blank",
-              );
-            }}
-          >
-            {t("appointments.getDirections")}
-          </Button>
-        </div>
-
-        <div className="relative mt-stack-lg h-[247px] overflow-hidden rounded-panel border border-line-strong bg-surface-sunken">
-          <Image
-            src="/images/appointment-map.png"
-            alt={t("appointments.mapAlt")}
-            fill
-            className="object-cover opacity-75"
-            sizes="(min-width: 1280px) 395px, 100vw"
-          />
-          <LocateFixed
-            aria-hidden="true"
-            className="absolute top-[43%] left-[22%] h-8 w-8 text-danger"
-          />
-        </div>
-      </Card>
+          {next.address ? (
+            <p className="mt-stack-md text-body-md text-fg-secondary">
+              {next.address}
+            </p>
+          ) : null}
+          {next.location || next.address ? (
+            <Button
+              fullWidth
+              className="mt-stack-lg"
+              onClick={() =>
+                window.open(directionsUrl(next), "_blank", "noopener")
+              }
+            >
+              {t("appointments.getDirections")}
+            </Button>
+          ) : null}
+        </Card>
+      )}
     </Card>
   );
 }
 
+const EMPTY: AppointmentDraft = {
+  date: "",
+  start: "",
+  end: "",
+  title: "",
+  doctor: "",
+  location: "",
+  address: "",
+  notes: "",
+};
+
 export default function AppointmentsPage() {
-  const { t } = useLanguage();
-  const [appointments, setAppointments] =
-    useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
+  const { t, language } = useLanguage();
+  const isEs = language === "ES";
+  const store = useAppointments();
+  const now = new Date(useNow());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const ahead = upcoming(store.appointments, today);
+  const before = past(store.appointments, today);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [draft, setDraft] = useState<AppointmentDraft>(EMPTY);
+  const [tried, setTried] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const opened = store.appointments.find((a) => a.id === openId) ?? null;
+  const error = appointmentError(draft);
+  const set = (key: keyof AppointmentDraft, value: string) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+  const show = (field: AppointmentError) =>
+    tried && error === field
+      ? isEs
+        ? "Revisa este campo"
+        : field === "end"
+          ? "The end time should be after the start"
+          : "This is needed"
+      : undefined;
 
-  // Form state
-  const [specialty, setSpecialty] = useState("");
-  const [doctor, setDoctor] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [location, setLocation] = useState("");
-
-  function handleSaveAppointment(e: React.FormEvent) {
+  function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!specialty.trim() || !doctor.trim()) return;
-
-    let monthEn = "May";
-    let monthEs = "May";
-    let day = "15";
-    let weekdayEn = "Mon";
-    let weekdayEs = "Lun";
-
-    if (date) {
-      const parsed = new Date(date + "T00:00:00");
-      if (!isNaN(parsed.getTime())) {
-        /* "Sep", not "SEP": the app never sets text in capitals. */
-        const title = (text: string) =>
-          text.charAt(0).toUpperCase() + text.slice(1);
-        monthEn = title(parsed.toLocaleString("en-US", { month: "short" }));
-        monthEs = title(
-          parsed.toLocaleString("es-ES", { month: "short" }).replace(".", ""),
-        );
-        day = String(parsed.getDate());
-        weekdayEn = parsed.toLocaleString("en-US", { weekday: "short" });
-        weekdayEs = parsed
-          .toLocaleString("es-ES", { weekday: "short" })
-          .replace(".", "");
-      }
-    }
-
-    const newItem: AppointmentItem = {
-      id: Date.now().toString(),
-      monthEn,
-      monthEs,
-      day,
-      weekdayEn,
-      weekdayEs,
-      customTitle: specialty,
-      doctor,
-      time: time.trim() || "10:30 AM - 11:15 AM",
-      customLocation: location.trim() || "Kidney Care Center",
-      reminderTime: "10:00 AM",
-      reminderPlace: location.trim() || "Kidney Care Center",
-    };
-
-    setAppointments((prev) => [newItem, ...prev]);
+    setTried(true);
+    if (error) return;
+    store.add(draft);
     setIsModalOpen(false);
-    setSpecialty("");
-    setDoctor("");
-    setDate("");
-    setTime("");
-    setLocation("");
+    setDraft(EMPTY);
+    setTried(false);
   }
+
+  const shown = showAll ? ahead : ahead.slice(0, 3);
 
   return (
     <div className="space-y-stack-2xl">
       <PersonalLogDisclaimer />
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
-        </div>
+        <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
         <Button onClick={() => setIsModalOpen(true)} leadingIcon={<Plus />}>
           {t("appointments.addAppointment")}
         </Button>
       </header>
 
-      <section className="grid grid-cols-1 gap-inline-lg lg:grid-cols-[minmax(0,1fr)_minmax(360px,447px)]">
-        <UpcomingAppointments items={appointments} />
-        <NextAppointment />
-      </section>
+      {store.error ? (
+        <ErrorState
+          title={
+            isEs
+              ? "No se pudieron cargar tus citas"
+              : "Your appointments could not be loaded"
+          }
+          error={store.error}
+          onRetry={store.refetch}
+        />
+      ) : store.isPending ? (
+        <Skeleton height={420} className="rounded-card" />
+      ) : (
+        <section className="grid grid-cols-1 gap-inline-lg lg:grid-cols-[minmax(0,1fr)_minmax(360px,447px)]">
+          <Card as="section" padding="small">
+            <h2 className="px-inset-xs pt-inset-xs text-heading-4 text-fg">
+              {t("appointments.upcomingTitle")}
+            </h2>
+            {ahead.length === 0 ? (
+              <EmptyState
+                variant="bare"
+                icon={<Calendar />}
+                title={
+                  isEs ? "No hay citas próximas" : "No upcoming appointments"
+                }
+                description={
+                  isEs
+                    ? "Agrega una para recibir un recordatorio."
+                    : "Add one to be reminded of it."
+                }
+              />
+            ) : (
+              <Card padding="none" className="mt-stack-lg overflow-hidden">
+                {shown.map((appointment) => (
+                  <AppointmentRow
+                    key={appointment.id}
+                    appointment={appointment}
+                    isEs={isEs}
+                    onOpen={() => setOpenId(appointment.id)}
+                  />
+                ))}
+              </Card>
+            )}
+
+            {showAll && before.length > 0 ? (
+              <>
+                <h3 className="mt-stack-xl px-inset-xs text-heading-5 text-fg">
+                  {isEs ? "Citas pasadas" : "Past Appointments"}
+                </h3>
+                <Card padding="none" className="mt-stack-md overflow-hidden">
+                  {before.map((appointment) => (
+                    <AppointmentRow
+                      key={appointment.id}
+                      appointment={appointment}
+                      isEs={isEs}
+                      onOpen={() => setOpenId(appointment.id)}
+                    />
+                  ))}
+                </Card>
+              </>
+            ) : null}
+
+            {ahead.length > 3 || before.length > 0 ? (
+              <div className="mt-stack-md">
+                <Button
+                  variant="primary"
+                  appearance="stroke"
+                  fullWidth
+                  aria-expanded={showAll}
+                  onClick={() => setShowAll((v) => !v)}
+                >
+                  {showAll
+                    ? isEs
+                      ? "Mostrar menos"
+                      : "Show Less"
+                    : t("appointments.viewAll")}
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+          <NextAppointment next={ahead[0]} isEs={isEs} />
+        </section>
+      )}
+
+      {opened ? (
+        <DetailsModal
+          key={opened.id}
+          appointment={opened}
+          isEs={isEs}
+          onClose={() => setOpenId(null)}
+          onDelete={() => {
+            store.remove(opened.id);
+            setOpenId(null);
+          }}
+        />
+      ) : null}
 
       <Modal
         open={isModalOpen}
@@ -411,62 +494,106 @@ export default function AppointmentsPage() {
       >
         <form
           id="appointment-form"
-          onSubmit={handleSaveAppointment}
+          onSubmit={save}
+          noValidate
           className="space-y-stack-lg"
         >
-          <FormField label={t("appointments.specialtyLabel")} required>
+          <FormField
+            label={t("appointments.specialtyLabel")}
+            required
+            error={show("title")}
+          >
             {(props) => (
               <Input
                 {...props}
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
+                value={draft.title}
+                onChange={(e) => set("title", e.target.value)}
                 placeholder={t("appointments.specialtyPlaceholder")}
               />
             )}
           </FormField>
-
-          <FormField label={t("appointments.doctorLabel")} required>
+          <FormField
+            label={t("appointments.doctorLabel")}
+            required
+            error={show("doctor")}
+          >
             {(props) => (
               <Input
                 {...props}
-                value={doctor}
-                onChange={(e) => setDoctor(e.target.value)}
+                value={draft.doctor}
+                onChange={(e) => set("doctor", e.target.value)}
                 placeholder={t("appointments.doctorPlaceholder")}
               />
             )}
           </FormField>
-
-          <div className="grid grid-cols-1 gap-stack-lg sm:grid-cols-2">
-            <FormField label={t("appointments.dateLabel")}>
+          <div className="grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
+            <FormField
+              label={t("appointments.dateLabel")}
+              required
+              error={show("date")}
+            >
               {(props) => (
                 <Input
                   {...props}
                   type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={draft.date}
+                  onChange={(e) => set("date", e.target.value)}
                 />
               )}
             </FormField>
-
-            <FormField label={t("appointments.timeLabel")}>
+            <FormField
+              label={isEs ? "Empieza" : "Starts"}
+              required
+              error={show("start")}
+            >
               {(props) => (
                 <Input
                   {...props}
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  placeholder={t("appointments.timePlaceholder")}
+                  type="time"
+                  value={draft.start}
+                  onChange={(e) => set("start", e.target.value)}
+                />
+              )}
+            </FormField>
+            <FormField label={isEs ? "Termina" : "Ends"} error={show("end")}>
+              {(props) => (
+                <Input
+                  {...props}
+                  type="time"
+                  value={draft.end}
+                  onChange={(e) => set("end", e.target.value)}
                 />
               )}
             </FormField>
           </div>
-
           <FormField label={t("appointments.locationLabel")}>
             {(props) => (
               <Input
                 {...props}
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                value={draft.location}
+                onChange={(e) => set("location", e.target.value)}
                 placeholder={t("appointments.locationPlaceholder")}
+              />
+            )}
+          </FormField>
+          <FormField label={isEs ? "Dirección" : "Address"}>
+            {(props) => (
+              <Input
+                {...props}
+                value={draft.address}
+                onChange={(e) => set("address", e.target.value)}
+                placeholder={isEs ? "Para indicaciones" : "For directions"}
+              />
+            )}
+          </FormField>
+          <FormField label={isEs ? "Notas" : "Notes"}>
+            {(props) => (
+              <Textarea
+                {...props}
+                rows={3}
+                maxLength={500}
+                value={draft.notes}
+                onChange={(e) => set("notes", e.target.value)}
               />
             )}
           </FormField>

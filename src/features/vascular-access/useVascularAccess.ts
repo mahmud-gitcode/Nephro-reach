@@ -17,8 +17,9 @@ const KEY = storageKey("vascular-access");
 
 /** Bump when AccessRecord changes shape, so old data re-seeds.
  *  Version 2: one three-way conversation per record, and ride requests
- *  with a confirm step. */
-const VERSION = 2;
+ *  with a confirm step. Version 3: the demo patient's record carries the
+ *  one MRN they have everywhere (lib/data/demoIdentity). */
+const VERSION = 4;
 
 type StoredEnvelope = { version: number; records: unknown };
 
@@ -92,6 +93,10 @@ export function useVascularAccess() {
     isSaving: write.isPending,
     clearWriteError: write.reset,
 
+    addRecord: (
+      patient: { memberName: string; mrn: string },
+      overview: rules.AccessOverview,
+    ) => run((s) => rules.addAccessRecord(s, patient, overview)),
     editOverview: (mrn: string, overview: Partial<rules.AccessOverview>) =>
       run((s) => rules.editOverview(s, mrn, overview)),
     scheduleAppointment: (

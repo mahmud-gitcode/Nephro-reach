@@ -45,7 +45,6 @@ import {
   type SeriesTone,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { tableIconButton } from "./tableButton";
 import { shortProgram } from "./clinicIcons";
 import { memberLink } from "./clinicDashboard.data";
@@ -70,6 +69,7 @@ import {
 import { EnrollPatientModal } from "./EnrollPatientModal";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData } from "./useClinicData";
+import { downloadText, toCsv } from "@/lib/utils/download";
 
 const MESSAGES = "/dashboard/clinic/messages";
 const BILLING = "/dashboard/clinic/billing";
@@ -330,10 +330,37 @@ function PatientTable({
             table already carries it, and the two sat on screen together. */}
         <div className="flex gap-inline-md lg:ml-auto">
           <Button
-            {...notBuiltYet("Exporting the patient list")}
             variant="neutral"
             appearance="fill-stroke"
             size="small"
+            disabled={filtered.length === 0}
+            onClick={() =>
+              downloadText(
+                "enrolled-patients.csv",
+                toCsv([
+                  [
+                    "Name",
+                    "MRN",
+                    "Program",
+                    "Enrolled",
+                    "Status",
+                    "Start",
+                    "Progress %",
+                    "Source",
+                  ],
+                  ...filtered.map((p) => [
+                    p.name,
+                    p.mrn,
+                    p.program,
+                    p.enrolledOn,
+                    p.status,
+                    p.startDate,
+                    p.progress,
+                    p.source,
+                  ]),
+                ]),
+              )
+            }
           >
             <Download className="h-4 w-4" />
             Export

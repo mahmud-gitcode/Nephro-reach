@@ -1,4 +1,4 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
 import { SEED_REMINDERS } from "./reminders.seed";
 import type { MedicationReminder } from "./reminders.types";
 
@@ -9,7 +9,7 @@ export async function listReminders(): Promise<MedicationReminder[]> {
      stay different answers. The old version handed the demo reminders back
      to anyone who deleted the last one. */
   const stored = await readJson<MedicationReminder[] | null>(KEY, null);
-  return Array.isArray(stored) ? stored : SEED_REMINDERS;
+  return Array.isArray(stored) ? stored : sampleOr(KEY, SEED_REMINDERS, []);
 }
 
 export async function saveReminders(

@@ -8,6 +8,7 @@ import {
   Eye,
   MessageSquareText,
   Search,
+  UserPlus,
 } from "lucide-react";
 import {
   AlertTriangleSolid,
@@ -46,6 +47,7 @@ import * as messaging from "@/features/messaging/messaging.rules";
 import {
   ACCESS_CENTER_NAME,
   ACCESS_STATUSES,
+  ACCESS_TYPES,
   APPOINTMENT_TYPES,
   CONCERN_KINDS,
   DIALYSIS_CENTER_NAME,
@@ -86,6 +88,7 @@ import {
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { tableIconButton } from "./tableButton";
+import { useClinicData } from "./useClinicData";
 import { UpdatedBar } from "./UpdatedBar";
 
 /* ==========================================================================
@@ -906,6 +909,154 @@ function TransportPanel({
   );
 }
 
+/* ----------------------------------------------------- add access patient */
+
+/** Starts the access record for one of the clinic's patients who has no
+ *  record yet: what the access is, where, and how it is doing. */
+function AddAccessModal({
+  candidates,
+  onAdd,
+  onClose,
+}: {
+  candidates: Array<{ name: string; mrn: string }>;
+  onAdd: (
+    patient: { memberName: string; mrn: string },
+    overview: {
+      type: string;
+      location: string;
+      createdOn: string;
+      status: AccessStatus;
+      lastAssessment: string;
+    },
+  ) => void;
+  onClose: () => void;
+}) {
+  const today = dayKey(useNow());
+  const [mrn, setMrn] = useState(candidates[0]?.mrn ?? "");
+  const [type, setType] = useState<string>(ACCESS_TYPES[0]);
+  const [location, setLocation] = useState("");
+  const [createdOn, setCreatedOn] = useState(today);
+  const [status, setStatus] = useState<AccessStatus>("Needs Review");
+  const [tried, setTried] = useState(false);
+  const locationError = location.trim() ? undefined : "Where is the access?";
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="big"
+      title="Add Access Patient"
+      description="Starts the access record the patient and both centers share."
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={candidates.length === 0}
+            onClick={() => {
+              setTried(true);
+              const patient = candidates.find((c) => c.mrn === mrn);
+              if (!patient || locationError) return;
+              onAdd(
+                { memberName: patient.name, mrn },
+                {
+                  type,
+                  location: location.trim(),
+                  createdOn,
+                  status,
+                  lastAssessment: "",
+                },
+              );
+              onClose();
+            }}
+          >
+            Add Patient
+          </Button>
+        </>
+      }
+    >
+      {candidates.length === 0 ? (
+        <EmptyState
+          variant="bare"
+          title="Every clinic patient already has an access record"
+        />
+      ) : (
+        <div className="space-y-stack-md">
+          <FormField label="Patient" required>
+            {(field) => (
+              <Select
+                {...field}
+                value={mrn}
+                onChange={(e) => setMrn(e.target.value)}
+              >
+                {candidates.map((c) => (
+                  <option key={c.mrn} value={c.mrn}>
+                    {c.name} · MRN {c.mrn}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <div className="grid gap-stack-md sm:grid-cols-2">
+            <FormField label="Access type" required>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  {ACCESS_TYPES.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
+            <FormField
+              label="Location"
+              required
+              error={tried ? locationError : undefined}
+            >
+              {(field) => (
+                <Input
+                  {...field}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="E.g. Left Forearm"
+                />
+              )}
+            </FormField>
+            <FormField label="Created on" required>
+              {(field) => (
+                <Input
+                  {...field}
+                  type="date"
+                  max={today}
+                  value={createdOn}
+                  onChange={(e) => setCreatedOn(e.target.value)}
+                />
+              )}
+            </FormField>
+            <FormField label="Status" required>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as AccessStatus)}
+                >
+                  {ACCESS_STATUSES.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /* ------------------------------------------------------------------ page */
 
 function PageSkeleton() {
@@ -933,7 +1084,7 @@ export default function ClinicVascularAccess({
   const perms: Perms = {
     me: user?.staffRole ? user.name : STAFF[party].person,
     role: user?.staffRole ?? "Administrator",
-    reply: userCan(user, "access.reply"),
+    reply: userCan(user, "messages.reply"),
     schedule: userCan(user, "access.schedule"),
     rides: userCan(user, "rides.manage"),
   };
@@ -948,6 +1099,9 @@ export default function ClinicVascularAccess({
     null,
   );
   const [scheduling, setScheduling] = useState<string | null>(null);
+  const [addingPatient, setAddingPatient] = useState(false);
+  /* The clinic's whole patient list, newly enrolled ones included. */
+  const clinicData = useClinicData();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1280,6 +1434,17 @@ export default function ClinicVascularAccess({
             {perms.schedule ? (
               <Button
                 size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setAddingPatient(true)}
+              >
+                <UserPlus aria-hidden="true" />
+                Add Access Patient
+              </Button>
+            ) : null}
+            {perms.schedule ? (
+              <Button
+                size="small"
                 onClick={() => setScheduling("")}
                 disabled={records.length === 0}
               >
@@ -1291,6 +1456,15 @@ export default function ClinicVascularAccess({
         }
       />
       {body}
+      {addingPatient ? (
+        <AddAccessModal
+          candidates={(clinicData.data?.patients ?? []).filter(
+            (p) => !records.some((record) => record.mrn === p.mrn),
+          )}
+          onAdd={store.addRecord}
+          onClose={() => setAddingPatient(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -92,6 +92,8 @@ import {
   worklist,
   withFeed,
   worklistCsv,
+  ccmPatientsOf,
+  type CcmPatient,
   type CcmStatus,
   type CountsToward,
   type RequirementStatus,
@@ -106,6 +108,7 @@ import { LINKED_MEMBER } from "./memberFeed";
 import { UpdatedBar } from "./UpdatedBar";
 import { useCcm, type CcmStore } from "./useCcm";
 import { useMemberFeed } from "./useMemberFeed";
+import { useClinicData } from "./useClinicData";
 import { useCan } from "@/features/staff/useStaffAccounts";
 
 /* ==========================================================================
@@ -125,13 +128,13 @@ const HREF = "/dashboard/clinic/ccm";
 const PRACTICE = defaultClinicSettings().profile.name;
 
 const statusTone: Record<CcmStatus, BadgeTone> = {
-  "Needs Attention": "danger",
+  "Action Needed": "danger",
   "Below Threshold": "warning",
   "Ready for Review": "success",
 };
 
 const statusBar: Record<CcmStatus, ProgressTone> = {
-  "Needs Attention": "danger",
+  "Action Needed": "danger",
   "Below Threshold": "warning",
   "Ready for Review": "success",
 };
@@ -139,7 +142,7 @@ const statusBar: Record<CcmStatus, ProgressTone> = {
 const statusChart: Record<CcmStatus, SeriesTone> = {
   "Ready for Review": "success",
   "Below Threshold": "warning",
-  "Needs Attention": "danger",
+  "Action Needed": "danger",
 };
 
 const requirementLabel: Record<RequirementStatus, string> = {
@@ -203,7 +206,7 @@ function StatusSplit({ rows }: { rows: WorklistRow[] }) {
   const order: CcmStatus[] = [
     "Ready for Review",
     "Below Threshold",
-    "Needs Attention",
+    "Action Needed",
   ];
   return (
     <Card as="section" padding="small">
@@ -494,9 +497,11 @@ function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
 
 function CheckInsTable({
   rows: ccmCheckIns,
+  patients,
   onOpen,
 }: {
   rows: CheckInRow[];
+  patients: CcmPatient[];
   onOpen: (mrn: string) => void;
 }) {
   return (
@@ -517,9 +522,8 @@ function CheckInsTable({
           <TableEmptyRow colSpan={5}>No check-ins this week.</TableEmptyRow>
         ) : (
           ccmCheckIns.map((row) => {
-            const patient = CCM_PATIENTS.find((p) =>
-              p.name.startsWith(row.name),
-            )!;
+            const patient = patients.find((p) => p.name.startsWith(row.name));
+            if (!patient) return null;
             return (
               <TableRow key={`${row.name}-${row.date}`}>
                 <TableCell emphasis className="whitespace-nowrap">
@@ -574,7 +578,9 @@ function InboxTable({
           <TableEmptyRow colSpan={5}>The inbox is clear.</TableEmptyRow>
         ) : (
           items.map((item) => {
-            const patient = CCM_PATIENTS.find((p) => p.mrn === item.mrn);
+            const patient = ccmPatientsOf(store.state).find(
+              (p) => p.mrn === item.mrn,
+            );
             const name = patient?.name ?? `MRN ${item.mrn}`;
             return (
               <TableRow key={item.id}>
@@ -647,7 +653,9 @@ function FollowUpTable({
           </TableEmptyRow>
         ) : (
           rows.map(({ activity, followUp }) => {
-            const patient = CCM_PATIENTS.find((p) => p.mrn === activity.mrn);
+            const patient = ccmPatientsOf(store.state).find(
+              (p) => p.mrn === activity.mrn,
+            );
             const name = patient?.name ?? `MRN ${activity.mrn}`;
             return (
               <TableRow key={activity.id}>
@@ -1322,7 +1330,7 @@ const tileTone: Record<TileTone, string> = {
 };
 
 const statusTile: Record<CcmStatus, TileTone> = {
-  "Needs Attention": "danger",
+  "Action Needed": "danger",
   "Below Threshold": "warning",
   "Ready for Review": "success",
 };
@@ -1384,7 +1392,7 @@ function PatientSummary({
   const plural = (n: number, word: string) =>
     `${n} ${word}${n === 1 ? "" : "s"}`;
   const reason =
-    row.status === "Needs Attention"
+    row.status === "Action Needed"
       ? [
           row.openAlerts > 0 ? plural(row.openAlerts, "open alert") : null,
           row.overdue > 0 ? plural(row.overdue, "overdue follow-up") : null,
@@ -1476,7 +1484,7 @@ function AttentionPanel({
   const item =
     "flex flex-wrap items-center justify-between gap-inline-md py-inset-xs first:pt-0 last:pb-0";
   return (
-    <Alert tone="danger" title="Needs attention">
+    <Alert tone="danger" title="Action needed">
       <ul className="mt-stack-sm divide-y divide-danger-line">
         {alerts.map((alert) => (
           <li key={alert.id} className={item}>
@@ -1805,6 +1813,170 @@ function PatientModal({
   );
 }
 
+/* ------------------------------------------------------------ add to CCM */
+
+/** Enrols one of the clinic's patients in CCM, once they have consented:
+ *  the conditions that qualify them and who looks after them. */
+function AddToCcmModal({
+  candidates,
+  onAdd,
+  onClose,
+}: {
+  candidates: Array<{ name: string; mrn: string }>;
+  onAdd: (patient: CcmPatient) => void;
+  onClose: () => void;
+}) {
+  const today = dayKey(useNow());
+  const [mrn, setMrn] = useState(candidates[0]?.mrn ?? "");
+  const [dob, setDob] = useState("");
+  const [conditions, setConditions] = useState("");
+  const [provider, setProvider] = useState<string>(PROVIDERS[0]);
+  const [careManager, setCareManager] = useState<string>(CARE_MANAGERS[0]);
+  const [location, setLocation] = useState<string>(LOCATIONS[0]);
+  const [tried, setTried] = useState(false);
+  const list = conditions
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const errors = {
+    dob: dob ? undefined : "Enter the date of birth",
+    conditions:
+      list.length >= 2 ? undefined : "CCM needs two or more chronic conditions",
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="big"
+      title="Add to CCM"
+      description="For a patient who has consented to Chronic Care Management."
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={candidates.length === 0}
+            onClick={() => {
+              setTried(true);
+              const patient = candidates.find((c) => c.mrn === mrn);
+              if (!patient || errors.dob || errors.conditions) return;
+              onAdd({
+                mrn,
+                name: patient.name,
+                dob,
+                conditions: list,
+                provider,
+                careManager,
+                location,
+              });
+              onClose();
+            }}
+          >
+            Add to CCM
+          </Button>
+        </>
+      }
+    >
+      {candidates.length === 0 ? (
+        <EmptyState
+          variant="bare"
+          title="Every clinic patient is already in CCM"
+        />
+      ) : (
+        <div className="space-y-stack-md">
+          <FormField label="Patient" required>
+            {(field) => (
+              <Select
+                {...field}
+                value={mrn}
+                onChange={(e) => setMrn(e.target.value)}
+              >
+                {candidates.map((c) => (
+                  <option key={c.mrn} value={c.mrn}>
+                    {c.name} · MRN {c.mrn}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <FormField
+            label="Date of birth"
+            required
+            error={tried ? errors.dob : undefined}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                type="date"
+                max={today}
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="Chronic conditions"
+            required
+            hint="Separate with commas, e.g. CKD 4, HTN, DM"
+            error={tried ? errors.conditions : undefined}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={conditions}
+                onChange={(e) => setConditions(e.target.value)}
+              />
+            )}
+          </FormField>
+          <div className="grid gap-stack-md sm:grid-cols-3">
+            <FormField label="Provider" required>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                >
+                  {PROVIDERS.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
+            <FormField label="Care manager" required>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={careManager}
+                  onChange={(e) => setCareManager(e.target.value)}
+                >
+                  {CARE_MANAGERS.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
+            <FormField label="Location" required>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                >
+                  {LOCATIONS.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /* ------------------------------------------------------------------ page */
 
 type PageTab = "worklist" | "checkins" | "inbox" | "followups";
@@ -1826,6 +1998,9 @@ function PageSkeleton() {
 export default function ClinicCcm() {
   const rawStore = useCcm();
   const canLog = useCan("ccm.log");
+  const [adding, setAdding] = useState(false);
+  /* The clinic's whole patient list, newly enrolled ones included. */
+  const clinicData = useClinicData();
   const now = useNow();
   const today = dayKey(now);
   /* What the linked member's own app has raised, folded into the inbox and
@@ -1846,7 +2021,7 @@ export default function ClinicCcm() {
   const [openMrn, setOpenMrn] = useState<string | null>(null);
 
   const rows = useMemo(
-    () => worklist(state, CCM_PATIENTS, month, today),
+    () => worklist(state, ccmPatientsOf(state), month, today),
     [state, month, today],
   );
   const inboxCount = openInbox(store.state).length;
@@ -1892,8 +2067,8 @@ export default function ClinicCcm() {
           <KeyCard
             tone="danger"
             icon={<AlertTriangleSolid />}
-            value={countStatus(rows, "Needs Attention")}
-            label="Needs Attention"
+            value={countStatus(rows, "Action Needed")}
+            label="Action Needed"
             note="Open alert or overdue follow-up"
           />
           <KeyCard
@@ -1936,7 +2111,11 @@ export default function ClinicCcm() {
             <Worklist rows={rows} month={month} onOpen={setOpenMrn} />
           </TabPanel>
           <TabPanel id="checkins" value={tab}>
-            <CheckInsTable rows={checkInRows} onOpen={setOpenMrn} />
+            <CheckInsTable
+              rows={checkInRows}
+              patients={ccmPatientsOf(state)}
+              onOpen={setOpenMrn}
+            />
           </TabPanel>
           <TabPanel id="inbox" value={tab}>
             <InboxTable store={store} onOpen={setOpenMrn} />
@@ -1978,6 +2157,15 @@ export default function ClinicCcm() {
               isFetching={store.isFetching}
               refetch={store.refetch}
             />
+            {canLog ? (
+              <Button
+                size="small"
+                onClick={() => setAdding(true)}
+                leadingIcon={<Plus aria-hidden="true" />}
+              >
+                Add to CCM
+              </Button>
+            ) : null}
             <Select
               selectSize="small"
               aria-label="Month"
@@ -1995,6 +2183,15 @@ export default function ClinicCcm() {
         }
       />
       {body}
+      {adding ? (
+        <AddToCcmModal
+          candidates={(clinicData.data?.patients ?? []).filter(
+            (p) => !ccmPatientsOf(state).some((c) => c.mrn === p.mrn),
+          )}
+          onAdd={rawStore.enroll}
+          onClose={() => setAdding(false)}
+        />
+      ) : null}
     </div>
   );
 }

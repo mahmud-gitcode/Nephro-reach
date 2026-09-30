@@ -84,9 +84,9 @@ export const CARE_MANAGERS = ["Jennifer Smith", "Nurse Lisa"] as const;
 /* "Ready for Review", not "billable": the threshold is met, and the
    practice decides whether the month is billed. */
 export type CcmStatus =
-  "Needs Attention" | "Below Threshold" | "Ready for Review";
+  "Action Needed" | "Below Threshold" | "Ready for Review";
 export const CCM_STATUSES: CcmStatus[] = [
-  "Needs Attention",
+  "Action Needed",
   "Below Threshold",
   "Ready for Review",
 ];
@@ -181,7 +181,26 @@ export type CcmState = {
   /** Ids of member-feed items the clinic has resolved. The items
    *  themselves are derived from the member's data, never stored here. */
   resolvedFeed?: string[];
+  /** Patients the clinic enrolled in CCM itself (Add to CCM), beyond the
+   *  seeded ones. CCM needs the patient's consent, so a clinic patient is
+   *  not in CCM until someone adds them. */
+  enrolled?: CcmPatient[];
 };
+
+/** Everyone in CCM: the seeded patients and those added since. */
+export function ccmPatientsOf(state: CcmState): CcmPatient[] {
+  return [...CCM_PATIENTS, ...(state.enrolled ?? [])];
+}
+
+/** Adds a clinic patient to CCM, with every requirement still to do. */
+export function enrollInCcm(state: CcmState, patient: CcmPatient): CcmState {
+  if (ccmPatientsOf(state).some((p) => p.mrn === patient.mrn)) return state;
+  return {
+    ...state,
+    enrolled: [...(state.enrolled ?? []), patient],
+    requirements: { ...state.requirements, [patient.mrn]: {} },
+  };
+}
 
 /** The stored state with the member's feed folded into its inbox, so every
  *  count and status below reads both alike. */
@@ -350,12 +369,12 @@ export function openInbox(state: CcmState, mrn?: string): InboxItem[] {
 }
 
 /**
- * Needs Attention outranks the minutes: an unresolved alert or an overdue
+ * Action Needed outranks the minutes: an unresolved alert or an overdue
  * follow-up is something to act on today, whatever the clock says. It only
  * applies to the current month — a past month is judged on its minutes.
  */
 export function statusFor(minutes: number, needsAttention: boolean): CcmStatus {
-  if (needsAttention) return "Needs Attention";
+  if (needsAttention) return "Action Needed";
   return minutes >= CCM_THRESHOLD_MINUTES
     ? "Ready for Review"
     : "Below Threshold";

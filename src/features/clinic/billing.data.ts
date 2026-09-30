@@ -12,7 +12,7 @@ import { CONTRACT_SLOTS, enrolledCount } from "./enrollment.data";
    (2026-09-21). The all-organizations view belongs to a NephroReach admin
    page, when there is one.
 
-   Sunshine's row and details panel are taken from the mockup as given. The
+   The clinic's row and details panel are taken from the mockup as given. The
    seat count is not retyped: it is the Enroll Patients roster, so the two
    pages cannot disagree. Invoices are derived from the contract — one per
    month since the start date, at the monthly fee.
@@ -28,7 +28,7 @@ export const contractTone: Record<ContractStatus, BadgeTone> = {
 
 export const contract = {
   number: "NR-2026-0125",
-  type: "Nephrology Office",
+  type: "Dialysis Center",
   status: "Active" as ContractStatus,
   /** ISO dates, parsed locally by `localDate`. */
   start: "2026-01-01",

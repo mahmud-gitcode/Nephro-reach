@@ -33,6 +33,9 @@ export type Attachment = {
    * it after the member deletes the original from their log.
    */
   imageUrl?: string;
+  /** Any other file, as a data URL (messaging/attachments.ts). Absent on
+   *  the demo's sample attachments, which were never stored. */
+  dataUrl?: string;
 };
 
 export type Message = {
@@ -77,7 +80,9 @@ export type MessageCategory = "care-team" | "appointments";
 /** The chart-side facts shown in the right rail while a thread is open. */
 export type PatientProfile = {
   dob: string;
-  age: number;
+  /** Unknown for a patient the clinic writes to before their chart is
+   *  filled in. */
+  age?: number;
   mrn: string;
   phone: string;
   email: string;

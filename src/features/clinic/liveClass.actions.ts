@@ -34,6 +34,9 @@ export type ClassStatus = RegistrationStatus | "Cancelled";
 export interface ManagedClass extends Omit<UpcomingClass, "status"> {
   id: string;
   status: ClassStatus;
+  /** Where members join the live session (Zoom, Teams…). Empty until the
+   *  clinic pastes one; the member's Join button waits for it. */
+  joinUrl?: string;
 }
 
 export interface ClassDraft {
@@ -44,6 +47,7 @@ export interface ClassDraft {
   program: string;
   capacity: number;
   status: ClassStatus;
+  joinUrl: string;
 }
 
 export const CLASS_STATUSES: ClassStatus[] = [
@@ -77,6 +81,7 @@ export function emptyClassDraft(date: string): ClassDraft {
     program: "All Programs",
     capacity: 50,
     status: "Not Yet Open",
+    joinUrl: "",
   };
 }
 
@@ -89,6 +94,7 @@ export function toDraft(item: ManagedClass): ClassDraft {
     program: item.program,
     capacity: item.capacity,
     status: item.status,
+    joinUrl: item.joinUrl ?? "",
   };
 }
 
@@ -109,6 +115,8 @@ export function classError(
   if (!Number.isFinite(draft.capacity) || draft.capacity < 1) {
     return "Capacity must be at least 1.";
   }
+  const linkError = recordingLinkError(draft.joinUrl ?? "");
+  if (linkError) return `Meeting link: ${linkError}`;
 
   const clash = existing.some(
     (item) =>
@@ -159,6 +167,7 @@ export function addClass(
       ...draft,
       topic: draft.topic.trim(),
       educator: draft.educator.trim(),
+      joinUrl: draft.joinUrl.trim(),
       /* A class nobody has been told about yet has nobody registered. */
       registered: 0,
       id: `class-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -178,6 +187,7 @@ export function updateClass(
           ...draft,
           topic: draft.topic.trim(),
           educator: draft.educator.trim(),
+          joinUrl: draft.joinUrl.trim(),
           /* Capacity can be cut below what is already booked, but the
              registration count is a fact and is never trimmed to fit. */
           registered: item.registered,
@@ -489,6 +499,11 @@ export function normaliseLiveClassActions(stored: unknown): LiveClassActions {
             status: CLASS_STATUSES.includes(item.status as ClassStatus)
               ? (item.status as ClassStatus)
               : "Not Yet Open",
+            ...(typeof item.joinUrl === "string" &&
+            item.joinUrl &&
+            recordingLinkError(item.joinUrl) === null
+              ? { joinUrl: item.joinUrl }
+              : {}),
           } satisfies ManagedClass,
         ];
       })

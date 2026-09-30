@@ -4,6 +4,7 @@ import type {
   TravelReflection,
   TravelTreatment,
 } from "./travelTreatment.types";
+import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 
 /* ==========================================================================
    Travel dialysis — example data
@@ -51,7 +52,7 @@ export function sampleTrip(now = new Date()): TripRequest {
     id: `${SAMPLE_PREFIX}orlando`,
     /* The demo member (user@nephroreach.com), so the clinic's Travel
        Requests page can say whose trip this is. */
-    patient: { name: "Charles Xavier", email: "user@nephroreach.com" },
+    patient: { name: DEMO_MEMBER_NAME, email: DEMO_MEMBER_EMAIL },
 
     destination: {
       street: "820 Sunbridge Parkway, Apt 4B",

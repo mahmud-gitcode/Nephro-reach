@@ -320,3 +320,35 @@ describe("reading the stored record back", () => {
     expect(read.settings.reminders.lead).toBe("1 day before");
   });
 });
+
+describe("the meeting link members join by", () => {
+  const draft = { ...emptyClassDraft("2026-10-20"), topic: "Fluid Basics" };
+
+  it("is optional, but must be a real web link when given", () => {
+    expect(classError(draft, [])).toBeNull();
+    expect(
+      classError({ ...draft, joinUrl: "javascript:alert(1)" }, []),
+    ).toMatch(/Meeting link/);
+    expect(
+      classError({ ...draft, joinUrl: "https://zoom.us/j/123" }, []),
+    ).toBeNull();
+  });
+
+  it("is saved with the class and survives a reload", () => {
+    const [added] = addClass([], {
+      ...draft,
+      joinUrl: "  https://zoom.us/j/123  ",
+    });
+    expect(added.joinUrl).toBe("https://zoom.us/j/123");
+    const read = normaliseLiveClassActions({ classes: [added] });
+    expect(read.classes[0].joinUrl).toBe("https://zoom.us/j/123");
+    expect(toDraft(added).joinUrl).toBe("https://zoom.us/j/123");
+  });
+
+  it("drops a stored link that is not http(s)", () => {
+    const read = normaliseLiveClassActions({
+      classes: [{ id: "x", date: "2026-10-20", joinUrl: "javascript:x" }],
+    });
+    expect(read.classes[0].joinUrl).toBeUndefined();
+  });
+});

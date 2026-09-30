@@ -61,7 +61,55 @@ export const overview: Array<{
   },
 ];
 
-export const CURRENT_WEEK = "Sep 6 – Sep 12, 2026";
+/** "Sep 27 – Oct 3, 2026": the Sunday-to-Saturday week holding `today`
+ *  (yyyy-mm-dd). Computed, so the page is always about this week. */
+export function weekLabel(today: string): string {
+  const [y, m, d] = today.split("-").map(Number);
+  const start = new Date(y, m - 1, d - new Date(y, m - 1, d).getDay());
+  const end = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + 6,
+  );
+  const fmt = (date: Date, year: boolean) =>
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      ...(year ? { year: "numeric" } : {}),
+    });
+  return `${fmt(start, false)} – ${fmt(end, true)}`;
+}
+
+/**
+ * The overview cards with the linked member's own check-ins this week added
+ * to the clinic's figures, so the numbers include the rows the table shows.
+ * `live` are that member's rows (memberFeed), dated "Sep 29, 2026".
+ */
+export function overviewWithLive(
+  live: CheckInRow[],
+  weekStart: Date,
+): typeof overview {
+  const thisWeek = live.filter((row) => new Date(row.date) >= weekStart);
+  const submitted = thisWeek.filter((row) => row.status !== "Missed").length;
+  const missed = thisWeek.filter((row) => row.status === "Missed").length;
+  const atRisk = thisWeek.some((row) => row.status === "At Risk") ? 1 : 0;
+  const add = (value: string, extra: number) => String(Number(value) + extra);
+  return overview.map((card) => {
+    if (card.label === "Check-Ins This Week")
+      return { ...card, value: add(card.value, submitted) };
+    if (card.label === "Missed Check-Ins")
+      return { ...card, value: add(card.value, missed) };
+    if (card.label === "At Risk Members")
+      return { ...card, value: add(card.value, atRisk) };
+    return card;
+  });
+}
+
+/** Sunday at midnight of the week holding `today`. */
+export function weekStartOf(today: string): Date {
+  const [y, m, d] = today.split("-").map(Number);
+  return new Date(y, m - 1, d - new Date(y, m - 1, d).getDay());
+}
 
 export const ALL_PROGRAMS = "All Programs";
 
@@ -185,7 +233,7 @@ export const followUps: FollowUpRow[] = [
     lastCheckIn: "Sep 11, 2026",
   },
   {
-    name: "Denise H.",
+    name: "Sandra P.",
     program: "Crash Dialysis (5-Day)",
     issue: "BP elevated",
     lastCheckIn: "Sep 11, 2026",

@@ -40,6 +40,9 @@ import {
 } from "./settings.data";
 import { useClinicSettings } from "./useClinicSettings";
 import { useSettingsActions } from "./useSettingsActions";
+import { useStaffAccounts } from "@/features/staff/useStaffAccounts";
+import { organizationFor } from "@/features/staff/staff";
+import { useAuth } from "@/features/auth/AuthContext";
 import { exportDocument, exportFilename } from "./settings.actions";
 import {
   ChangePasswordModal,
@@ -638,6 +641,9 @@ export default function ClinicSettings() {
      from the settings above so that adding a user does not rewrite the
      office's address. */
   const actions = useSettingsActions();
+  const staff = useStaffAccounts();
+  const { user } = useAuth();
+  const org = organizationFor(user);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
@@ -649,9 +655,19 @@ export default function ClinicSettings() {
   /* A real file, built from what the browser already holds — the one action
      on this page that needs nothing from a server. */
   function downloadData() {
-    const blob = new Blob([exportDocument(settings, actions.actions)], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [
+        exportDocument(
+          settings,
+          actions.actions,
+          new Date(),
+          staff.accounts.filter((account) => account.orgId === org?.id),
+        ),
+      ],
+      {
+        type: "application/json",
+      },
+    );
     const url = URL.createObjectURL(blob);
 
     const anchor = document.createElement("a");

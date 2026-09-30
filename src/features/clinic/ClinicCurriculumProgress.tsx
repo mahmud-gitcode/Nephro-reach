@@ -51,7 +51,7 @@ import {
   toneVar,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { JOURNEY_DAYS } from "@/features/education/dialysisJourneyData";
 import { tableIconButton } from "./tableButton";
 import { initials } from "./clinicIcons";
 import { memberLink } from "./clinicDashboard.data";
@@ -78,6 +78,7 @@ import {
 } from "./curriculumProgress.data";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData } from "./useClinicData";
+import { downloadText, toCsv } from "@/lib/utils/download";
 
 const MESSAGES = "/dashboard/clinic/messages";
 
@@ -396,11 +397,38 @@ function MemberTable({
           ))}
         </Select>
         <Button
-          {...notBuiltYet("Exporting member progress")}
           variant="neutral"
           appearance="fill-stroke"
           size="small"
           className="lg:ml-auto"
+          disabled={filtered.length === 0}
+          onClick={() =>
+            downloadText(
+              "member-progress.csv",
+              toCsv([
+                [
+                  "Name",
+                  "MRN",
+                  "Program",
+                  "Module",
+                  "Step",
+                  "Of",
+                  "Progress %",
+                  "Status",
+                ],
+                ...filtered.map((m) => [
+                  m.name,
+                  m.mrn,
+                  m.program,
+                  m.module,
+                  m.step,
+                  m.length,
+                  m.progress,
+                  m.status,
+                ]),
+              ]),
+            )
+          }
         >
           <Download className="h-4 w-4" />
           Export
@@ -687,7 +715,41 @@ function ProgressModal({
 
    The lower panels filter too, and show the client's figures as given. */
 
+/** The curriculum as members see it: every day's lesson, in order. */
+function CurriculumModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="wide"
+      title={journeyDetails.name}
+      description={`${JOURNEY_DAYS.length} days · the lessons members work through`}
+    >
+      <ol className="divide-y divide-line-subtle">
+        {JOURNEY_DAYS.map((day) => (
+          <li key={day.slug} className="flex gap-inline-lg py-inset-xs">
+            <span className="w-14 shrink-0 text-label-md text-fg-muted tabular-nums">
+              Day {day.day}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-label-md text-fg">{day.titleEn}</span>
+              <span className="block text-caption text-fg-muted">
+                {day.kind === "video" ? "Video" : "Reading"} ·{" "}
+                {day.durationMinutes} min
+              </span>
+              <span className="mt-stack-xs block text-body-sm text-fg-secondary">
+                {day.summaryEn}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </Modal>
+  );
+}
+
 function ProgramDetails() {
+  const [open, setOpen] = useState(false);
   return (
     <Card as="section" padding="small" className="flex h-full flex-col">
       <PanelHeading title="Program Details" />
@@ -712,15 +774,16 @@ function ProgramDetails() {
       </ul>
       <div className="mt-auto pt-inset-md">
         <Button
-          {...notBuiltYet("Viewing the curriculum")}
           variant="neutral"
           appearance="fill-stroke"
           size="small"
           fullWidth
+          onClick={() => setOpen(true)}
         >
           View Curriculum
         </Button>
       </div>
+      {open ? <CurriculumModal onClose={() => setOpen(false)} /> : null}
     </Card>
   );
 }

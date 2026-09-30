@@ -3,7 +3,6 @@ import {
   defaultClinicSettings,
   initials,
   NOTIFICATIONS,
-  officeUsers,
   readClinicSettings,
   validateProfile,
   writeClinicSettings,
@@ -18,11 +17,6 @@ describe("the defaults match what the client specified", () => {
     const { notifications } = defaultClinicSettings();
     const off = NOTIFICATIONS.filter((item) => !notifications[item.id]);
     expect(off.map((item) => item.id)).toEqual(["sms"]);
-  });
-
-  it("lists five users, one of them pending", () => {
-    expect(officeUsers).toHaveLength(5);
-    expect(officeUsers.filter((u) => u.status === "Pending")).toHaveLength(1);
   });
 });
 
@@ -43,7 +37,7 @@ describe("validating the organization profile", () => {
 
 describe("the stand-in logo", () => {
   it("takes the first two words", () => {
-    expect(initials("Sunshine Nephrology Associates")).toBe("SN");
+    expect(initials("Riverside Dialysis Center")).toBe("RD");
   });
 
   it("skips words that do not start with a letter", () => {

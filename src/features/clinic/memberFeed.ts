@@ -32,6 +32,7 @@ import type {
   SideEffectRecord,
 } from "@/features/medications/medicationLog.types";
 import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
+import { DEMO_MEMBER_MRN } from "@/lib/data/demoIdentity";
 import type { Conversation } from "@/features/messaging/messaging.types";
 import { shouldSuggestNotice } from "@/features/personal-log/check-in/clinicNotice.rules";
 import type {
@@ -45,7 +46,7 @@ import type { CheckInRow } from "./checkIns.data";
  *  in the messaging seed's chart for the same person. */
 export const LINKED_MEMBER = {
   name: DEMO_MEMBER,
-  mrn: "100245",
+  mrn: DEMO_MEMBER_MRN,
   program: "CKD Education",
 } as const;
 

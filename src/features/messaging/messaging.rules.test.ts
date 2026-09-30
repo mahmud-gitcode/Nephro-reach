@@ -676,3 +676,15 @@ describe("searchConversations, from the member's end", () => {
     expect(() => rules.searchConversations(chartless, "100245")).not.toThrow();
   });
 });
+
+describe("the clinic's private patient note", () => {
+  it("is saved on the thread's chart, trimmed", () => {
+    const state = rules.seedState(Date.now());
+    const thread = state.conversations.find((c) => c.patient);
+    if (!thread) throw new Error("seed has a charted thread");
+    const next = rules.setPatientNotes(state, thread.id, "  Prefers mornings ");
+    expect(
+      next.conversations.find((c) => c.id === thread.id)?.patient?.notes,
+    ).toBe("Prefers mornings");
+  });
+});

@@ -87,3 +87,9 @@ export function useAuth() {
   }
   return context;
 }
+
+/** The session if an AuthProvider is present, else null. For checks that
+ *  must not break a screen rendered on its own (a component test). */
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}

@@ -40,7 +40,7 @@ export default function UserReviewsPage() {
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
   const userEmail = user?.email || "user@nephroreach.com";
-  const userName = user?.name || "Charles Xavier";
+  const userName = user?.name || "Member";
 
   const { reviews, isPending, error, refetch, submit, isSaving, saveError } =
     useReviews();

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -8,7 +8,6 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   Download,
   FileBarChart,
 } from "lucide-react";
@@ -35,26 +34,31 @@ import {
   Select,
   type SeriesTone,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { downloadText, toCsv } from "@/lib/utils/download";
+import { useNow } from "@/lib/utils/useNow";
 import {
   activityTone,
   checkInCompletion,
-  customReports,
   engagementMonths,
   engagementSeries,
-  filters,
+  ALL_MEMBERS_LABEL,
+  ALL_PROGRAMS_LABEL,
   isImprovement,
-  kpis,
-  memberStatus,
-  membersByProgram,
-  membersTotal,
+  memberActivityCsv,
   moduleCompletion,
+  reportRows,
+  rosterReport,
+  type ReportFilters,
   outcomes,
   percentChange,
   recentActivity,
   topTopics,
 } from "./reports.data";
 import { useClinicSettings } from "./useClinicSettings";
+import { useClinicData } from "./useClinicData";
+import { MEMBER_STATUSES, type RosterMember } from "./members.data";
+
+type Report = ReturnType<typeof rosterReport>;
 
 const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
   {
@@ -62,7 +66,7 @@ const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
     completion: { icon: <GraduationCapSolid />, tone: "success" },
     attendees: { icon: <VideoSolid />, tone: "brand" },
     active: { icon: <ActivitySolid />, tone: "success" },
-    er: { icon: <HeartPulseSolid />, tone: "danger" },
+    questions: { icon: <HeartPulseSolid />, tone: "warning" },
   };
 
 function PanelHeading({
@@ -112,24 +116,35 @@ function Change({
   );
 }
 
-function FilterBar() {
+function FilterBar({
+  filters: value,
+  programs,
+  onChange,
+}: {
+  filters: ReportFilters;
+  programs: string[];
+  onChange: (next: ReportFilters) => void;
+}) {
   /* The client's view is one clinic, so the organization is a label, not a
-     choice — a clinic must never be able to pick another. The other
-     filters are drawn but not wired: the demo figures are not broken down
-     by program or member type, so they could only pretend to filter. */
+     choice — a clinic must never be able to pick another. */
   const { settings } = useClinicSettings();
+  const now = useNow();
+  const month = new Date(now).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <Card as="section" padding="small" aria-label="Report filters">
       <div className="grid gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
         <div>
-          <p className="text-label-md text-fg-secondary">Date Range</p>
+          <p className="text-label-md text-fg-secondary">Period</p>
           <p className="mt-stack-xs flex h-control-small items-center gap-inline-md rounded-control-small border border-line bg-surface-sunken px-control-x-small text-body-sm text-fg">
             <CalendarDays
               aria-hidden="true"
               className="h-4 w-4 shrink-0 text-fg-muted"
             />
-            {filters.dateRange}
+            {month}
           </p>
         </div>
         <div>
@@ -145,12 +160,12 @@ function FilterBar() {
         <label className="block">
           <span className="text-label-md text-fg-secondary">Program</span>
           <Select
-            {...notBuiltYet("Filtering reports by program")}
             selectSize="small"
             className="mt-stack-xs"
-            defaultValue={filters.programs[0]}
+            value={value.program}
+            onChange={(e) => onChange({ ...value, program: e.target.value })}
           >
-            {filters.programs.map((option) => (
+            {[ALL_PROGRAMS_LABEL, ...programs].map((option) => (
               <option key={option}>{option}</option>
             ))}
           </Select>
@@ -158,12 +173,12 @@ function FilterBar() {
         <label className="block">
           <span className="text-label-md text-fg-secondary">Member Type</span>
           <Select
-            {...notBuiltYet("Filtering reports by member type")}
             selectSize="small"
             className="mt-stack-xs"
-            defaultValue={filters.memberTypes[0]}
+            value={value.status}
+            onChange={(e) => onChange({ ...value, status: e.target.value })}
           >
-            {filters.memberTypes.map((option) => (
+            {[ALL_MEMBERS_LABEL, ...MEMBER_STATUSES].map((option) => (
               <option key={option}>{option}</option>
             ))}
           </Select>
@@ -173,7 +188,7 @@ function FilterBar() {
   );
 }
 
-function KpiCards() {
+function KpiCards({ kpis }: { kpis: Report["kpis"] }) {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {kpis.map((kpi) => (
@@ -183,17 +198,19 @@ function KpiCards() {
           icon={KPI_ICONS[kpi.id].icon}
           value={kpi.value}
           label={kpi.label}
-          // The card's own trend chip, so these read like every other stat
-          // card: the movement beside the figure, the comparison under it.
-          trend={{
-            direction: kpi.change < 0 ? "down" : "up",
-            value: `${Math.abs(kpi.change)}%`,
-            suffix: "vs. last month",
-            good: isImprovement(kpi.change, kpi.lowerIsBetter),
-          }}
+          note={kpi.note}
         />
       ))}
     </section>
+  );
+}
+
+/** A panel whose figures have no source in the app yet. */
+function SampleNote() {
+  return (
+    <p className="mt-stack-xs text-caption text-fg-muted">
+      Sample figures until reporting data is connected.
+    </p>
   );
 }
 
@@ -201,6 +218,7 @@ function EngagementTrend() {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Member Engagement Trend" />
+      <SampleNote />
       <LineChart
         series={engagementSeries}
         xLabels={engagementMonths}
@@ -218,7 +236,9 @@ function ShareDonut({
   title,
   label,
   rows,
+  total,
 }: {
+  total: number;
   title: string;
   label: string;
   rows: {
@@ -239,7 +259,7 @@ function ShareDonut({
         label={label}
         size={168}
         thickness={30}
-        centerValue={membersTotal}
+        centerValue={total}
         centerLabel="Members"
         className="mx-auto"
       />
@@ -269,6 +289,7 @@ function RateBars({
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title={title} />
+      <SampleNote />
       <BarChart
         bars={bars}
         label={label}
@@ -287,6 +308,7 @@ function ModuleCompletion() {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Module Completion Rate" />
+      <SampleNote />
       <ul className="space-y-stack-md">
         {moduleCompletion.map((row) => (
           <li key={row.label}>
@@ -316,6 +338,7 @@ function TopTopics() {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Top Education Topics" />
+      <SampleNote />
       <ul className="space-y-stack-md">
         {topTopics.map((topic) => (
           <li key={topic.label}>
@@ -345,6 +368,7 @@ function MemberOutcomes() {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Member Outcomes" />
+      <SampleNote />
       <ul className="divide-y divide-line-subtle">
         {outcomes.map((row) => (
           <li
@@ -373,6 +397,7 @@ function RecentActivity() {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Recent Activity" />
+      <SampleNote />
       <ul className="divide-y divide-line-subtle">
         {recentActivity.map((entry) => (
           <li
@@ -405,19 +430,112 @@ function RecentActivity() {
   );
 }
 
-function CustomReports() {
+/* Each report is a CSV of the rows on screen, built in the browser. */
+function CustomReports({ rows }: { rows: RosterMember[] }) {
+  const reports: Array<{
+    id: string;
+    label: string;
+    table: () => Array<Array<string | number>>;
+  }> = [
+    {
+      id: "engagement",
+      label: "Member Engagement Report",
+      table: () => [
+        [
+          "Name",
+          "Program",
+          "Status",
+          "Last activity",
+          "Live classes",
+          "Check-ins",
+        ],
+        ...rows.map((m) => [
+          m.name,
+          m.program,
+          m.status,
+          m.lastActivity,
+          `${m.liveClasses[0]}/${m.liveClasses[1]}`,
+          `${m.checkIns[0]}/${m.checkIns[1]}`,
+        ]),
+      ],
+    },
+    {
+      id: "completion",
+      label: "Program Completion Report",
+      table: () => [
+        ["Name", "Program", "Progress %", "Current module", "Status"],
+        ...rows.map((m) => [
+          m.name,
+          m.program,
+          m.progress,
+          m.currentModule,
+          m.status,
+        ]),
+      ],
+    },
+    {
+      id: "checkins",
+      label: "Check-In Compliance Report",
+      table: () => [
+        ["Name", "Program", "Check-ins done", "Expected", "Compliance %"],
+        ...rows.map((m) => [
+          m.name,
+          m.program,
+          m.checkIns[0],
+          m.checkIns[1],
+          m.checkIns[1] ? Math.round((m.checkIns[0] / m.checkIns[1]) * 100) : 0,
+        ]),
+      ],
+    },
+    {
+      id: "questions",
+      label: "Open Questions Report",
+      table: () => [
+        ["Name", "Program", "Questions", "Open"],
+        ...rows.map((m) => [
+          m.name,
+          m.program,
+          m.questions.total,
+          m.questions.open,
+        ]),
+      ],
+    },
+    {
+      id: "attendance",
+      label: "Live Class Attendance Report",
+      table: () => [
+        ["Name", "Program", "Attended", "Offered"],
+        ...rows.map((m) => [
+          m.name,
+          m.program,
+          m.liveClasses[0],
+          m.liveClasses[1],
+        ]),
+      ],
+    },
+    {
+      id: "export",
+      label: "Member Activity Export (CSV)",
+      table: () => memberActivityCsv(rows),
+    },
+  ];
+
   return (
     <Card as="section" padding="small">
       <PanelHeading title="Custom Reports" />
+      <p className="-mt-stack-md mb-stack-md text-caption text-fg-muted">
+        Downloads the members shown by the filters above, as a CSV file.
+      </p>
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {customReports.map((report) => (
+        {reports.map((report) => (
           <li key={report.id}>
-            {/* The whole tile is the control, so it is one button — the
-                chevron only says it goes somewhere. */}
             <button
               type="button"
-              {...notBuiltYet(report.label)}
-              className="flex w-full items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={rows.length === 0}
+              onClick={() =>
+                downloadText(`${report.id}-report.csv`, toCsv(report.table()))
+              }
+              className="flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span
                 aria-hidden="true"
@@ -432,7 +550,7 @@ function CustomReports() {
               <span className="min-w-0 flex-1 text-label-lg text-fg">
                 {report.label}
               </span>
-              <ChevronRight
+              <Download
                 aria-hidden="true"
                 className="h-4 w-4 shrink-0 text-fg-muted"
               />
@@ -445,21 +563,53 @@ function CustomReports() {
 }
 
 export default function ClinicReports() {
+  const clinic = useClinicData();
+  const roster = clinic.data?.roster ?? [];
+  const [filters, setFilters] = useState<ReportFilters>({
+    program: ALL_PROGRAMS_LABEL,
+    status: ALL_MEMBERS_LABEL,
+  });
+  const rows = reportRows(roster, filters);
+  const report = rosterReport(rows);
+  const programs = [...new Set(roster.map((m) => m.program))].sort();
+
+  function exportReport() {
+    downloadText(
+      "clinic-report.csv",
+      toCsv([
+        ["Measure", "Value"],
+        ...report.kpis.map((k) => [k.label, k.value]),
+        [],
+        ["Program", "Share %"],
+        ...report.byProgram.map((p) => [p.label, p.pct]),
+        [],
+        ["Status", "Share %"],
+        ...report.byStatus.map((p) => [p.label, p.pct]),
+        [],
+        ...memberActivityCsv(rows),
+      ]),
+    );
+  }
+
   return (
     <div className="space-y-4">
       <PageTitle
         href="/dashboard/clinic/reports"
         action={
-          <Button {...notBuiltYet("Exporting the report")} size="small">
+          <Button
+            size="small"
+            onClick={exportReport}
+            disabled={rows.length === 0}
+          >
             <Download className="h-4 w-4" />
             Export Report
           </Button>
         }
       />
 
-      <FilterBar />
+      <FilterBar filters={filters} programs={programs} onChange={setFilters} />
 
-      <KpiCards />
+      <KpiCards kpis={report.kpis} />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
@@ -468,7 +618,8 @@ export default function ClinicReports() {
         <ShareDonut
           title="Members by Program"
           label="Members by program"
-          rows={membersByProgram}
+          rows={report.byProgram}
+          total={report.total}
         />
       </section>
 
@@ -476,7 +627,8 @@ export default function ClinicReports() {
         <ShareDonut
           title="Member Status"
           label="Members by status"
-          rows={memberStatus}
+          rows={report.byStatus}
+          total={report.total}
         />
         <ModuleCompletion />
         <RateBars
@@ -492,7 +644,7 @@ export default function ClinicReports() {
         <RecentActivity />
       </section>
 
-      <CustomReports />
+      <CustomReports rows={rows} />
     </div>
   );
 }

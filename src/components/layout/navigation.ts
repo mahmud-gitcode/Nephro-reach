@@ -288,6 +288,7 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/clinic/reports",
     icon: BarChart3,
     roles: ["clinic"],
+    permission: "reports.view",
   },
   {
     label: "Contract & Billing",
@@ -425,10 +426,6 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Antes de Urgencias" : "Before-the-ER";
   if (pathname.startsWith("/dashboard/my-health"))
     return language === "ES" ? "Mi Salud" : "MyHealth";
-  if (pathname.startsWith("/dashboard/personal-log/blood-results/add"))
-    return "Add Blood Results";
-  if (pathname.startsWith("/dashboard/personal-log/blood-results"))
-    return "Blood Results";
   if (pathname.startsWith("/dashboard/my-rides"))
     return language === "ES" ? "¿Dónde está mi conductor?" : "Where's My Ride";
   if (pathname.startsWith("/dashboard/personal-log/blood-pressure/add"))

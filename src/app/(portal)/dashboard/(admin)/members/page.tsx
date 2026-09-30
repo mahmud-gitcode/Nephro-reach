@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Input,
+  Modal,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +16,6 @@ import {
   TablePagination,
   TableRow,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -179,6 +179,7 @@ function MembersTable() {
      handlers and the count was the literal string "1-10 of 20". */
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [viewing, setViewing] = useState<(typeof members)[number] | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -273,7 +274,7 @@ function MembersTable() {
                 </TableCell>
                 <TableCell className="text-center">
                   <Button
-                    {...notBuiltYet("Member details")}
+                    onClick={() => setViewing(member)}
                     variant="neutral"
                     appearance="stroke"
                     size="small"
@@ -299,6 +300,35 @@ function MembersTable() {
             : `${start + 1}–${start + visible.length} of ${filtered.length}`
         }
       />
+
+      {viewing ? (
+        <Modal
+          open
+          onClose={() => setViewing(null)}
+          title={viewing.name}
+          description={viewing.id}
+        >
+          <dl className="grid grid-cols-1 gap-stack-md sm:grid-cols-2">
+            {[
+              ["Email", viewing.email],
+              ["Phone", viewing.phone],
+              ["Subscription", viewing.subscription],
+              ["Joined", viewing.joined],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-caption text-fg-muted">{label}</dt>
+                <dd className="text-body-sm text-fg">{value}</dd>
+              </div>
+            ))}
+            <div>
+              <dt className="text-caption text-fg-muted">Status</dt>
+              <dd>
+                <StatusPill status={viewing.status} />
+              </dd>
+            </div>
+          </dl>
+        </Modal>
+      ) : null}
     </Card>
   );
 }

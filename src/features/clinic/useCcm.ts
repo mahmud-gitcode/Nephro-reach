@@ -19,7 +19,8 @@ const KEY = storageKey("clinic-ccm");
  * them; patients have a location; requirements carry a date.
  * Version 4: the linked member (memberFeed.ts) joins the roster.
  */
-const VERSION = 4;
+/* Version 5: the demo patient carries the roster MRN. */
+const VERSION = 5;
 
 type StoredEnvelope = { version: number; state: unknown };
 
@@ -77,6 +78,10 @@ export function useCcm() {
     ) => mutate((s) => rules.setRequirement(s, mrn, id, change)),
     [mutate],
   );
+  const enroll = useCallback(
+    (patient: rules.CcmPatient) => mutate((s) => rules.enrollInCcm(s, patient)),
+    [mutate],
+  );
   const setEhrDocumented = useCallback(
     (activityId: string, documented: boolean) =>
       mutate((s) => rules.setEhrDocumented(s, activityId, documented)),
@@ -105,6 +110,7 @@ export function useCcm() {
     addActivity,
     setRequirement,
     setEhrDocumented,
+    enroll,
     completeFollowUp,
     resolveInbox,
   };

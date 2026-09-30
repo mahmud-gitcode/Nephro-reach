@@ -33,7 +33,7 @@ describe("roles", () => {
     expect(roleCan("Nurse", "rides.manage")).toBe(false);
     expect(roleCan("Administrator", "billing.view")).toBe(true);
     expect(roleCan("Physician", "billing.view")).toBe(false);
-    expect(roleCan("Front Desk", "access.reply")).toBe(false);
+    expect(roleCan("Front Desk", "messages.reply")).toBe(false);
   });
 
   it("an organisation login is its administrator; members are not governed", () => {

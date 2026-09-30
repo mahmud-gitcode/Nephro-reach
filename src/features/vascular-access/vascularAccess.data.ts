@@ -32,6 +32,7 @@
    ========================================================================== */
 
 import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
+import { DEMO_MEMBER_MRN } from "@/lib/data/demoIdentity";
 
 export type AccessTeam = "vascular" | "dialysis";
 
@@ -413,6 +414,35 @@ function updateRecord(
     records: state.records.map((record) =>
       record.mrn === mrn ? change(record) : record,
     ),
+  };
+}
+
+/** Starts an access record for one of the clinic's patients: an access
+ *  that is already in place, or one being planned. */
+export function addAccessRecord(
+  state: AccessState,
+  patient: { memberName: string; mrn: string },
+  overview: AccessOverview,
+): AccessState {
+  if (state.records.some((record) => record.mrn === patient.mrn)) return state;
+  return {
+    records: [
+      ...state.records,
+      {
+        ...patient,
+        overview,
+        appointments: [],
+        updates: [],
+        history: [],
+        concerns: [],
+        transport: [],
+        conversation: {
+          messages: [],
+          dialysisCanPost: false,
+          unread: { member: 0, access: 0, dialysis: 0 },
+        },
+      },
+    ],
   };
 }
 
@@ -854,7 +884,7 @@ export function seedAccessState(now: number): AccessState {
 
   const member: AccessRecord = {
     memberName: DEMO_MEMBER,
-    mrn: "448120",
+    mrn: DEMO_MEMBER_MRN,
     overview: {
       type: "AV Fistula",
       location: "Left Forearm",
@@ -959,7 +989,7 @@ export function seedAccessState(now: number): AccessState {
     concerns: [],
     transport: [],
     conversation: conversation(
-      "448120",
+      DEMO_MEMBER_MRN,
       now,
       [
         [

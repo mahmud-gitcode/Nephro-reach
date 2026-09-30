@@ -47,7 +47,6 @@ import {
   type ProgressTone,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { tableIconButton } from "./tableButton";
 import {
   activityIcon,
@@ -547,9 +546,14 @@ function MemberDetailsModal({
             <MessageSquareText className="h-4 w-4" />
             Send Message
           </Link>
-          <Button {...notBuiltYet("The full member profile")} size="small">
-            View Full Profile
-          </Button>
+          {/* The popup is the profile; the detail behind it is the patient's
+              progress, which Curriculum Progress opens from the MRN. */}
+          <Link
+            href={`/dashboard/clinic/curriculum-progress?mrn=${member.mrn}`}
+            className={buttonStyles({ size: "small" })}
+          >
+            View Progress
+          </Link>
         </>
       }
     >
@@ -762,19 +766,8 @@ function RecentMemberActivity({
 }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Recent Member Activity"
-        action={
-          <Button
-            {...notBuiltYet("The full activity log")}
-            variant="neutral"
-            appearance="fill-stroke"
-            size="small"
-          >
-            View All
-          </Button>
-        }
-      />
+      {/* Every entry is already listed, so there is no "View All". */}
+      <PanelHeading title="Recent Member Activity" />
       {activity.length === 0 ? (
         <p className="text-body-sm text-fg-muted">No activity yet.</p>
       ) : (
