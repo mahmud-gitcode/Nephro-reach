@@ -1,4 +1,4 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
 import { SEED_RIDES } from "./rides.seed";
 import type { RideContact, RideDraft } from "./rides.types";
 
@@ -45,7 +45,7 @@ export async function listRides(): Promise<RideContact[]> {
      "saved, then emptied" stay different answers. Conflating them hands a
      member back a demo contact they deliberately deleted. */
   const stored = await readJson<RideContact[] | null>(KEY, null);
-  if (!Array.isArray(stored)) return SEED_RIDES;
+  if (!Array.isArray(stored)) return sampleOr(KEY, SEED_RIDES, []);
   return withSinglePrimary(stored.map(migrate));
 }
 

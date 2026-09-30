@@ -236,6 +236,26 @@ export function ScheduleClassModal({
           </div>
         </div>
 
+        <div className="space-y-1.5">
+          <label
+            htmlFor="class-link"
+            className="block text-label-md text-fg-secondary"
+          >
+            Meeting Link (optional)
+          </label>
+          <Input
+            id="class-link"
+            type="url"
+            inputSize="small"
+            value={draft.joinUrl}
+            onChange={(event) => set({ joinUrl: event.target.value })}
+            placeholder="https://zoom.us/j/…"
+          />
+          <p className="text-caption text-fg-muted">
+            Members get a Join button on their dashboard once this is set.
+          </p>
+        </div>
+
         {editing && draft.capacity < editing.registered ? (
           <Alert tone="warning">
             {editing.registered} people are already registered. Their places are

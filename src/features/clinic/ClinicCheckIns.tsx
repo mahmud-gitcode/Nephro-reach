@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   AlertTriangle,
   BellRing,
-  CalendarPlus,
   CheckCircle2,
   Download,
   Eye,
@@ -44,8 +43,16 @@ import {
   TableRow,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { downloadText, toCsv } from "@/lib/utils/download";
+import { FACILITY } from "@/features/messaging/messaging.seed";
+import { NewMessageModal } from "@/features/messaging/NewMessageModal";
+import { useMessages } from "@/features/messaging/useMessages";
+import { useClinicData } from "./useClinicData";
+import { useNow } from "@/lib/utils/useNow";
+import { dayKey } from "./ccm.data";
+import { LINKED_MEMBER } from "./memberFeed";
 import { tableIconButton } from "./tableButton";
+import { useMemberFeed } from "./useMemberFeed";
 
 /* Reminders and follow-ups go out through clinic Messages. The check-in
    rows carry a short name and no MRN, so the link opens Messages rather
@@ -69,7 +76,9 @@ import {
   checkInTone,
   completionPct,
   completionTrend,
-  CURRENT_WEEK,
+  overviewWithLive,
+  weekLabel,
+  weekStartOf,
   followUps,
   memberFeedback,
   overview,
@@ -144,9 +153,12 @@ function OverviewCard({ card }: { card: (typeof overview)[number] }) {
 function WeeklySummary({
   program,
   onProgramChange,
+  today,
 }: {
   program: string;
   onProgramChange: (next: string) => void;
+  /** yyyy-mm-dd, for the week's label. */
+  today: string;
 }) {
   return (
     <Card as="section" padding="small">
@@ -160,13 +172,11 @@ function WeeklySummary({
         {/* Filters sit in one row above what they filter, so it is obvious
             which numbers they change. */}
         <div className="flex flex-col gap-inline-md sm:flex-row">
-          <Select
-            selectSize="small"
-            aria-label="Week"
-            {...notBuiltYet("Choosing a different week")}
-          >
-            <option>This Week ({CURRENT_WEEK})</option>
-          </Select>
+          {/* The figures are this week's; there is no earlier week to pick,
+              so the week is stated rather than offered as a choice. */}
+          <p className="flex h-control-small items-center rounded-pill border border-line bg-surface-sunken px-control-x-small text-body-sm whitespace-nowrap text-fg">
+            This Week ({weekLabel(today)})
+          </p>
           <Select
             selectSize="small"
             aria-label="Program"
@@ -211,54 +221,64 @@ function WeeklySummary({
   );
 }
 
-function QuickActions() {
-  /* Two columns in a ~340px card leaves each button about 150px, and a
-     Button is `whitespace-nowrap` — it cannot wrap its way out of a label
-     that does not fit. So the visible label is the short form and the full
-     phrase stays as the accessible name. */
+function QuickActions({
+  rows,
+  onRemind,
+}: {
+  /** The check-ins on screen, for the export. */
+  rows: CheckInRow[];
+  onRemind: () => void;
+}) {
   const actions: Array<{
     label: string;
     fullLabel: string;
     icon: IconType;
-    feature: string;
+    onClick: () => void;
+    disabled?: boolean;
   }> = [
     {
       label: "Send Reminder",
-      fullLabel: "Send Reminder",
+      fullLabel: "Send a check-in reminder",
       icon: BellRing,
-      feature: "Sending a reminder",
+      onClick: onRemind,
     },
     {
       label: "Follow-Ups",
       fullLabel: "View Members Needing Follow-Up",
       icon: UserRoundSearch,
-      feature: "The follow-up list",
+      onClick: () =>
+        document
+          .getElementById("follow-ups")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
     },
     {
       label: "Export Report",
       fullLabel: "Export Check-In Report",
       icon: Download,
-      feature: "Exporting the check-in report",
-    },
-    {
-      label: "Schedule Tasks",
-      fullLabel: "Schedule Follow-Up Tasks",
-      icon: CalendarPlus,
-      feature: "Scheduling follow-up tasks",
+      disabled: rows.length === 0,
+      onClick: () =>
+        downloadText(
+          "check-in-report.csv",
+          toCsv([
+            ["Member", "Program", "Date", "Status", "Notes"],
+            ...rows.map((r) => [r.name, r.program, r.date, r.status, r.notes]),
+          ]),
+        ),
     },
   ];
 
   return (
     <Card as="section" padding="small">
       <h2 className="mb-stack-lg text-heading-4 text-fg">Quick Actions</h2>
-      <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
         {actions.map((action) => (
           <Button
             key={action.fullLabel}
-            {...notBuiltYet(action.feature)}
             variant="neutral"
             appearance="fill-stroke"
             fullWidth
+            disabled={action.disabled}
+            onClick={action.onClick}
             aria-label={action.fullLabel}
           >
             <action.icon className="h-4 w-4 shrink-0" />
@@ -270,8 +290,18 @@ function QuickActions() {
   );
 }
 
-function RecentCheckIns({ program }: { program: string }) {
-  const rows = useMemo(() => byProgram(recentCheckIns, program), [program]);
+function RecentCheckIns({
+  program,
+  liveRows,
+}: {
+  program: string;
+  /** The linked member's own check-ins, ahead of the demo rows. */
+  liveRows: CheckInRow[];
+}) {
+  const rows = useMemo(
+    () => byProgram([...liveRows, ...recentCheckIns], program),
+    [liveRows, program],
+  );
   /* The row whose full note is open, or null. Holding the row rather than
      an index keeps the dialog correct when the program filter changes the
      list underneath it. */
@@ -455,7 +485,7 @@ function FollowUpPanel({ program }: { program: string }) {
   const rows = useMemo(() => byProgram(followUps, program), [program]);
 
   return (
-    <Card as="section" padding="small">
+    <Card as="section" padding="small" id="follow-ups" className="scroll-mt-24">
       <h2 className="text-heading-4 text-fg">Members Needing Follow-Up</h2>
       <p className="mt-stack-xs mb-stack-lg text-body-sm text-fg-muted">
         Members who missed a check-in or reported concerning symptoms.
@@ -564,6 +594,22 @@ export default function ClinicCheckIns() {
      empty states all answer to it, so the screen never shows one program's
      numbers above another program's rows. */
   const [program, setProgram] = useState(ALL_PROGRAMS);
+  const now = useNow();
+  /* What the linked member submitted in their own app (useMemberFeed). */
+  const feed = useMemberFeed(now, dayKey(now), LINKED_MEMBER.program);
+  /* "Send Reminder": a message to whoever is behind on check-ins, from the
+     clinic's own roster. */
+  const [reminding, setReminding] = useState(false);
+  const clinicData = useClinicData();
+  const { conversations, startConversation } = useMessages();
+  const patients = clinicData.data?.patients ?? [];
+  const behind = [
+    ...(feed.isPending ? [] : feed.checkInRows),
+    ...recentCheckIns,
+  ].filter((row) => row.status !== "Completed");
+  const reminderTargets = patients.filter((p) =>
+    behind.some((row) => p.name.startsWith(row.name)),
+  );
 
   return (
     <div className="space-y-4">
@@ -571,7 +617,10 @@ export default function ClinicCheckIns() {
 
       {/* The key figures run full width across the top, above the split. */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {overview.map((card) => (
+        {overviewWithLive(
+          feed.isPending ? [] : feed.checkInRows,
+          weekStartOf(dayKey(now)),
+        ).map((card) => (
           <OverviewCard key={card.label} card={card} />
         ))}
       </section>
@@ -582,17 +631,68 @@ export default function ClinicCheckIns() {
           into one and the left column's panels come first. */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,1fr)]">
         <div className="space-y-4">
-          <WeeklySummary program={program} onProgramChange={setProgram} />
-          <RecentCheckIns program={program} />
+          <WeeklySummary
+            program={program}
+            onProgramChange={setProgram}
+            today={dayKey(now)}
+          />
+          <RecentCheckIns
+            program={program}
+            liveRows={feed.isPending ? [] : feed.checkInRows}
+          />
           <MemberFeedback />
         </div>
 
         <div className="space-y-4">
-          <QuickActions />
+          <QuickActions
+            rows={byProgram(
+              [...(feed.isPending ? [] : feed.checkInRows), ...recentCheckIns],
+              program,
+            )}
+            onRemind={() => setReminding(true)}
+          />
           <CompletionTrend />
           <FollowUpPanel program={program} />
         </div>
       </section>
+      {reminding ? (
+        <NewMessageModal
+          title="Send a Check-In Reminder"
+          recipientLabel="Patient"
+          recipients={(reminderTargets.length > 0
+            ? reminderTargets
+            : patients
+          ).map((p) => ({ value: p.mrn, label: `${p.name} · MRN ${p.mrn}` }))}
+          initialBody="Hi, this is your care team. We haven't seen your check-in this week. Please take a minute to complete it in NephroReach, or reply here if anything is wrong."
+          onSend={(mrn, body) => {
+            const patient = patients.find((p) => p.mrn === mrn);
+            if (!patient) return;
+            startConversation({
+              memberName: patient.name,
+              contact: FACILITY,
+              category: "care-team",
+              body,
+              author: "clinic",
+              ...(conversations.some((c) => c.memberName === patient.name)
+                ? {}
+                : {
+                    patient: {
+                      dob: "—",
+                      mrn: patient.mrn,
+                      phone: "—",
+                      email: "—",
+                      program: patient.program,
+                      enrolledOn: patient.enrolledOn,
+                      status: patient.status,
+                      careTeam: "—",
+                      notes: "",
+                    },
+                  }),
+            });
+          }}
+          onClose={() => setReminding(false)}
+        />
+      ) : null}
     </div>
   );
 }

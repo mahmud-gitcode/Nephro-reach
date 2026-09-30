@@ -60,6 +60,7 @@ import {
   ClockSolid,
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useCan } from "@/features/staff/useStaffAccounts";
 
 /* ==========================================================================
    Travel Requests — the clinic's side of travel dialysis
@@ -204,6 +205,9 @@ function ManageModal({
   }) => void;
   onResolveTimeChange: (reply: string) => void;
 }) {
+  /* Placing a traveller is the social worker's or coordinator's; anyone
+     else on staff can see the arrangement but not change it. */
+  const canEdit = useCan("travel.manage");
   const [status, setStatus] = useState<TripStatus>(trip.status);
   const [placement, setPlacement] = useState<TripPlacement>(
     () => trip.placement ?? emptyPlacement(),
@@ -236,15 +240,23 @@ function ManageModal({
       footer={
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {canEdit ? "Cancel" : "Close"}
           </Button>
-          <Button onClick={() => onSave({ status, placement, note })}>
-            Save changes
-          </Button>
+          {canEdit ? (
+            <Button onClick={() => onSave({ status, placement, note })}>
+              Save changes
+            </Button>
+          ) : null}
         </div>
       }
     >
       <div className="space-y-stack-lg">
+        {!canEdit ? (
+          <Alert tone="info">
+            Your role can see this arrangement but not change it. A social
+            worker, care coordinator or administrator arranges travel dialysis.
+          </Alert>
+        ) : null}
         {hasOpenTimeChange(trip) && trip.timeChange ? (
           <Alert
             tone="warning"
@@ -260,25 +272,27 @@ function ManageModal({
                   ? ` · ${formatDays(trip.timeChange.preferredDays, false)}`
                   : null}
               </p>
-              <div className="flex flex-wrap items-end gap-inline-md">
-                <Input
-                  value={timeReply}
-                  onChange={(event) => setTimeReply(event.target.value)}
-                  placeholder="What you did about it"
-                  aria-label="Reply about the time change"
-                  className="sm:w-[320px]"
-                />
-                <Button
-                  size="small"
-                  disabled={!timeReply.trim()}
-                  onClick={() => {
-                    onResolveTimeChange(timeReply.trim());
-                    setTimeReply("");
-                  }}
-                >
-                  Answer
-                </Button>
-              </div>
+              {canEdit ? (
+                <div className="flex flex-wrap items-end gap-inline-md">
+                  <Input
+                    value={timeReply}
+                    onChange={(event) => setTimeReply(event.target.value)}
+                    placeholder="What you did about it"
+                    aria-label="Reply about the time change"
+                    className="sm:w-[320px]"
+                  />
+                  <Button
+                    size="small"
+                    disabled={!timeReply.trim()}
+                    onClick={() => {
+                      onResolveTimeChange(timeReply.trim());
+                      setTimeReply("");
+                    }}
+                  >
+                    Answer
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </Alert>
         ) : null}

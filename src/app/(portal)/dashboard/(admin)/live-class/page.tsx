@@ -1,106 +1,49 @@
-import React from "react";
-import { Badge, Button, Card } from "@/components/ui";
+"use client";
+
+import React, { useState } from "react";
 import {
   CalendarDays,
   Clock3,
-  Eye,
   Plus,
-  Radio,
-  Send,
   UserRoundCheck,
   Users,
-  Video,
 } from "lucide-react";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  KeyCard,
+  type KeyCardTone,
+} from "@/components/ui";
+import {
+  ClockSolid,
+  StarSolid,
+  UsersSolid,
+  VideoSolid,
+} from "@/components/icons/solid";
+import { PageTitle } from "@/components/layout/PageTitle";
+import { useLiveClasses } from "@/features/clinic/useLiveClasses";
+import {
+  formatClassDate,
+  recentClasses,
+  summary,
+} from "@/features/clinic/liveClass.data";
+import type { ManagedClass } from "@/features/clinic/liveClass.actions";
+import {
+  ScheduleClassModal,
+  classTone,
+} from "@/features/clinic/LiveClassModals";
+
+/* ==========================================================================
+   Live Class (admin)
+   --------------------------------------------------------------------------
+   The same schedule the clinic's Live Class page edits and the member's
+   dashboard reads: a class scheduled here shows up on both, and its
+   meeting link becomes the member's Join button.
+   ========================================================================== */
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
-const summaryCards: Array<{
-  title: string;
-  value: string;
-  icon: IconType;
-  tone: string;
-  iconTone: string;
-}> = [
-  {
-    title: "Total Classes",
-    value: "147",
-    icon: Video,
-    tone: "bg-brand-100",
-    iconTone: "text-fg-brand",
-  },
-  {
-    title: "Upcoming",
-    value: "01",
-    icon: Radio,
-    tone: "bg-success-100",
-    iconTone: "text-success",
-  },
-  {
-    title: "Completed",
-    value: "146",
-    icon: UserRoundCheck,
-    tone: "bg-cat-3-soft",
-    iconTone: "text-cat-3",
-  },
-  {
-    title: "Total Enrollments",
-    value: "13",
-    icon: Users,
-    tone: "bg-danger-100",
-    iconTone: "text-danger",
-  },
-];
-
-const classColumns = [
-  {
-    title: "Next Upcoming",
-    class: {
-      status: "Active",
-      statusClass: "bg-warning-100 text-warning",
-      title: "Communication in Relationships",
-      description:
-        "As a translator, I want integrate Crowdin webhook to notify translators about changed strings",
-      date: "Tuesday, July 7, 2026",
-      time: "7:00 PM (75 min)",
-      enrollment: "12/50 enrolled",
-      instructor: "Dr. Emily Thompson",
-      isComplete: false,
-    },
-  },
-  {
-    title: "Past Classes",
-    class: {
-      status: "Complete",
-      statusClass: "bg-success-surface text-success",
-      title: "Communication in Relationships",
-      description:
-        "As a translator, I want integrate Crowdin webhook to notify translators about changed strings",
-      date: "Tuesday, July 7, 2026",
-      time: "7:00 PM (75 min)",
-      enrollment: "12/50 enrolled",
-      instructor: "Dr. Emily Thompson",
-      isComplete: true,
-    },
-  },
-];
-
-function SummaryCard({ card }: { card: (typeof summaryCards)[number] }) {
-  return (
-    <Card as="article" padding="none" className="min-h-[114px] p-inset-lg">
-      <div className="mb-stack-xl flex items-start justify-between gap-inline-lg">
-        <p className="text-body-md text-fg-muted">{card.title}</p>
-        <span
-          aria-hidden="true"
-          className={`flex h-10 w-10 items-center justify-center rounded-control ${card.tone}`}
-        >
-          <card.icon className={`h-5 w-5 ${card.iconTone}`} />
-        </span>
-      </div>
-      <p className="text-metric-sm text-fg">{card.value}</p>
-    </Card>
-  );
-}
 
 function DetailRow({
   icon: Icon,
@@ -117,97 +60,149 @@ function DetailRow({
   );
 }
 
-function ClassCard({ item }: { item: (typeof classColumns)[number]["class"] }) {
+function NextClassCard({ item }: { item: ManagedClass | undefined }) {
+  if (!item) {
+    return (
+      <EmptyState
+        variant="bare"
+        title="Nothing scheduled"
+        description="Schedule a class and it appears here and on every member's dashboard."
+      />
+    );
+  }
   return (
     <Card as="article" padding="small">
-      <Badge tone={item.isComplete ? "neutral" : "success"}>
-        {item.status}
-      </Badge>
-
-      <div className="mt-stack-xl">
-        <h3 className="text-heading-4 text-fg">{item.title}</h3>
-        <p className="mt-0.5 text-body-md text-fg-muted">{item.description}</p>
-      </div>
-
-      <ul className="mt-stack-xl space-y-stack-md">
-        <DetailRow icon={CalendarDays}>{item.date}</DetailRow>
+      <Badge tone={classTone[item.status]}>{item.status}</Badge>
+      <h3 className="mt-stack-md text-heading-4 text-fg">{item.topic}</h3>
+      <p className="mt-0.5 text-body-sm text-fg-muted">{item.program}</p>
+      <ul className="mt-stack-lg space-y-stack-md">
+        <DetailRow icon={CalendarDays}>{formatClassDate(item.date)}</DetailRow>
         <DetailRow icon={Clock3}>{item.time}</DetailRow>
-        <DetailRow icon={Users}>{item.enrollment}</DetailRow>
-        <DetailRow icon={UserRoundCheck}>
-          Instructor: {item.instructor}
+        <DetailRow icon={Users}>
+          {item.registered}/{item.capacity} registered
         </DetailRow>
+        {item.educator ? (
+          <DetailRow icon={UserRoundCheck}>Educator: {item.educator}</DetailRow>
+        ) : null}
       </ul>
-
-      <div className="mt-stack-xl space-y-stack-md">
-        <Button size="small" disabled={item.isComplete} className="w-full">
-          Join in
-        </Button>
-
-        <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
-          <Button
-            variant="neutral"
-            appearance="fill-stroke"
-            size="small"
-            disabled={item.isComplete}
-          >
-            <Eye aria-hidden="true" />
-            View Enrollment
-          </Button>
-          <Button
-            variant="neutral"
-            appearance="fill"
-            size="small"
-            disabled={item.isComplete}
-          >
-            <Send aria-hidden="true" />
-            Send Reminder
-          </Button>
-        </div>
-      </div>
+      <Button
+        size="small"
+        fullWidth
+        className="mt-stack-lg"
+        disabled={!item.joinUrl}
+        title={item.joinUrl ? undefined : "No meeting link added yet"}
+        onClick={() =>
+          item.joinUrl &&
+          window.open(item.joinUrl, "_blank", "noopener,noreferrer")
+        }
+      >
+        Join in
+      </Button>
     </Card>
   );
 }
 
-function ClassRegistrations() {
+function PastClassCard() {
+  const last = [...recentClasses].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  )[0];
+  if (!last) return null;
   return (
-    <Card as="section" padding="small">
-      <div className="mb-stack-lg flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-heading-4 text-fg">Class Registrations</h1>
-        <Button {...notBuiltYet("Scheduling a class")} size="small">
-          <Plus aria-hidden="true" />
-          Schedule Class
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-control border border-line bg-surface-sunken">
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          {classColumns.map((column) => (
-            <section
-              key={column.title}
-              className="min-h-[540px] border-b border-line p-inset-md last:border-b-0 lg:border-b-0 lg:border-l lg:first:border-l-0"
-            >
-              <h2 className="mb-6 text-heading-4 text-fg">{column.title}</h2>
-              <ClassCard item={column.class} />
-            </section>
-          ))}
-        </div>
-      </div>
+    <Card as="article" padding="small">
+      <Badge tone="neutral">Complete</Badge>
+      <h3 className="mt-stack-md text-heading-4 text-fg">{last.title}</h3>
+      <ul className="mt-stack-lg space-y-stack-md">
+        <DetailRow icon={CalendarDays}>{formatClassDate(last.date)}</DetailRow>
+        <DetailRow icon={Users}>{last.attended} attended</DetailRow>
+      </ul>
     </Card>
   );
 }
 
 export default function LiveClassPage() {
+  const { classes, upcoming, today, addClass, isPending } = useLiveClasses();
+  const [scheduling, setScheduling] = useState(false);
+
+  const stats: Array<{
+    label: string;
+    value: React.ReactNode;
+    icon: React.ReactNode;
+    tone: KeyCardTone;
+  }> = [
+    {
+      label: "Upcoming Classes",
+      value: upcoming.length,
+      icon: <VideoSolid />,
+      tone: "brand",
+    },
+    {
+      label: "Total Registrations",
+      value: upcoming.reduce((sum, item) => sum + item.registered, 0),
+      icon: <UsersSolid />,
+      tone: "success",
+    },
+    {
+      label: "Average Attendance",
+      value: `${summary.averageAttendancePct}%`,
+      icon: <ClockSolid />,
+      tone: "accent",
+    },
+    {
+      label: "Average Rating",
+      value: summary.averageRating,
+      icon: <StarSolid />,
+      tone: "warning",
+    },
+  ];
+
   return (
-    <>
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.title} card={card} />
+    <div className="space-y-stack-lg">
+      <PageTitle
+        href="/dashboard/live-class"
+        action={
+          <Button
+            leadingIcon={<Plus aria-hidden="true" />}
+            onClick={() => setScheduling(true)}
+            disabled={isPending}
+          >
+            Schedule Class
+          </Button>
+        }
+      />
+
+      <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <KeyCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            icon={stat.icon}
+            tone={stat.tone}
+          />
         ))}
       </section>
 
-      <div className="mt-stack-lg">
-        <ClassRegistrations />
+      <div className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2">
+        <Card as="section" padding="small">
+          <h2 className="mb-stack-lg text-heading-4 text-fg">Next Upcoming</h2>
+          <NextClassCard item={upcoming[0]} />
+        </Card>
+        <Card as="section" padding="small">
+          <h2 className="mb-stack-lg text-heading-4 text-fg">Past Classes</h2>
+          <PastClassCard />
+        </Card>
       </div>
-    </>
+
+      {scheduling ? (
+        <ScheduleClassModal
+          open
+          onClose={() => setScheduling(false)}
+          classes={classes}
+          editing={null}
+          today={today}
+          onSave={(draft) => addClass(draft)}
+        />
+      ) : null}
+    </div>
   );
 }

@@ -16,7 +16,8 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { useLiveClasses } from "@/features/clinic/useLiveClasses";
+import { formatClassDate } from "@/features/clinic/liveClass.data";
 import {
   approvedTestimonials as onlyApproved,
   testimonialsByAuthor,
@@ -132,10 +133,22 @@ function getGreeting(dh?: GreetingStrings) {
   return dh?.greetingEvening || "Good evening";
 }
 
+/** "18:00" from the scheduler → "6:00 PM"; seeded "6:00 PM" passes through. */
+function clockLabel(time: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!match) return time;
+  const hour = Number(match[1]);
+  return `${hour % 12 || 12}:${match[2]} ${hour < 12 ? "AM" : "PM"}`;
+}
+
 export default function UserDashboard() {
   const { user } = useAuth();
   const { language, dictionary } = useLanguage();
   const dh = dictionary?.dashboardHome;
+  /* The next class the clinic has on its schedule — the same record the
+     clinic's Live Class page edits. */
+  const { upcoming } = useLiveClasses();
+  const nextClass = upcoming[0];
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => getGreeting(dh), [dh]);
   const [isRideModalOpen, setIsRideModalOpen] = useState(false);
@@ -356,13 +369,20 @@ export default function UserDashboard() {
               </div>
 
               <h3 className="text-heading-4 text-fg">
-                {dh?.upcomingClass?.title || "Managing Dialysis Symptoms"}
+                {nextClass?.topic ??
+                  (language === "ES"
+                    ? "Aún no hay clase programada"
+                    : "No class scheduled yet")}
               </h3>
 
               <div className="flex flex-wrap items-center gap-inline-lg text-body-sm text-fg-muted">
                 <span className="flex items-center gap-inline-sm text-fg-secondary">
                   <Calendar className="size-4 shrink-0 text-brand-600" />
-                  {dh?.upcomingClass?.datetime || "May 5, 2026 at 2:00 PM EST"}
+                  {nextClass
+                    ? `${formatClassDate(nextClass.date)} · ${clockLabel(nextClass.time)}`
+                    : language === "ES"
+                      ? "Tu clínica publicará la próxima aquí"
+                      : "Your clinic will post the next one here"}
                 </span>
                 <span className="hidden text-line sm:inline">•</span>
                 <span className="flex items-center gap-inline-sm text-fg-muted">
@@ -381,7 +401,16 @@ export default function UserDashboard() {
               size="big"
               leadingIcon={<Video className="size-5" />}
               className="w-full sm:w-auto"
-              {...notBuiltYet("Joining a class")}
+              disabled={!nextClass?.joinUrl}
+              title={
+                nextClass?.joinUrl
+                  ? undefined
+                  : "The join link appears here once your clinic adds it"
+              }
+              onClick={() =>
+                nextClass?.joinUrl &&
+                window.open(nextClass.joinUrl, "_blank", "noopener,noreferrer")
+              }
             >
               {dh?.upcomingClass?.joinButton || "Join Class"}
             </Button>

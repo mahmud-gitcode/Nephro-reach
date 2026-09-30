@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthContext";
+import { DEMO_MEMBER_EMAIL } from "@/lib/data/demoIdentity";
 import { listTrips, saveTrips } from "./trip.repository";
 import * as rules from "./trip.rules";
 import type {
@@ -36,8 +37,18 @@ export function useTrips() {
   });
 
   const { mutate, reset } = write;
-  const trips = useMemo(() => query.data ?? [], [query.data]);
   const { user } = useAuth();
+  /* A member sees their own requests only; the clinic sees everyone's.
+     A request from before trips carried a patient is the demo patient's. */
+  const trips = useMemo(() => {
+    const all = query.data ?? [];
+    if (user?.role !== "user") return all;
+    return all.filter((trip) =>
+      trip.patient
+        ? trip.patient.email === user.email
+        : user.email === DEMO_MEMBER_EMAIL,
+    );
+  }, [query.data, user]);
 
   /* The request carries who sent it, so the clinic — which handles many
      patients' trips — can see whose trip it is. */

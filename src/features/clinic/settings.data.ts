@@ -1,4 +1,3 @@
-import type { BadgeTone } from "@/components/ui";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 
 /* ==========================================================================
@@ -62,10 +61,10 @@ export type ClinicSettings = {
 
 export const defaultClinicSettings = (): ClinicSettings => ({
   profile: {
-    name: "Sunshine Nephrology Associates",
+    name: "Riverside Dialysis Center",
     address: "123 Kidney Care Way, Columbia, SC 29201",
     phone: "(803) 555-0187",
-    email: "mcarter@sunshinekidney.com",
+    email: "mcarter@riversidedialysis.com",
     timeZone: "(GMT-05:00) Eastern Time (ET)",
   },
   /* Everything on except SMS, which the client marks optional — a text
@@ -100,7 +99,7 @@ export function validateProfile(profile: OrganizationProfile): ProfileErrors {
   return errors;
 }
 
-/** "SN" for Sunshine Nephrology Associates — the stand-in logo. */
+/** "RD" for Riverside Dialysis Center — the stand-in logo. */
 export function initials(name: string): string {
   return name
     .split(/\s+/)
@@ -109,53 +108,6 @@ export function initials(name: string): string {
     .map((word) => word[0].toUpperCase())
     .join("");
 }
-
-export type UserStatus = "Active" | "Pending";
-
-export const userStatusTone: Record<UserStatus, BadgeTone> = {
-  Active: "success",
-  Pending: "warning",
-};
-
-export type OfficeUser = {
-  name: string;
-  role: "Admin" | "Staff" | "Coordinator" | "MA" | "Provider";
-  email: string;
-  status: UserStatus;
-};
-
-export const officeUsers: OfficeUser[] = [
-  {
-    name: "Dr. Melissa Carter",
-    role: "Admin",
-    email: "mcarter@sunshinekidney.com",
-    status: "Active",
-  },
-  {
-    name: "James Wilson, RN",
-    role: "Staff",
-    email: "jwilson@sunshinekidney.com",
-    status: "Active",
-  },
-  {
-    name: "Tiffany Moore",
-    role: "Coordinator",
-    email: "tmoore@sunshinekidney.com",
-    status: "Active",
-  },
-  {
-    name: "Angela Brooks",
-    role: "MA",
-    email: "abrooks@sunshinekidney.com",
-    status: "Active",
-  },
-  {
-    name: "Robert Hayes",
-    role: "Provider",
-    email: "rhayes@sunshinekidney.com",
-    status: "Pending",
-  },
-];
 
 const KEY = storageKey("clinic-settings");
 

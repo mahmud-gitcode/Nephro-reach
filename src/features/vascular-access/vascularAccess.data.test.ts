@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
 import {
+  TRANSPORT_COORDINATOR,
+  acknowledgeTransport,
+  activeTransport,
   addDays,
-  arrangeTransport,
+  canPost,
+  canRead,
+  cancelTransport,
   completeAppointment,
+  confirmTransport,
   dayKey,
   formatDay,
   formatTime,
-  markThreadRead,
+  markConversationRead,
   openConcerns,
   pendingTransport,
   recordFor,
@@ -18,6 +24,8 @@ import {
   scheduleAppointment,
   seedAccessState,
   sendAccessMessage,
+  setDialysisCanPost,
+  setMessagePrivate,
   upcomingAppointments,
 } from "./vascularAccess.data";
 
@@ -100,50 +108,165 @@ describe("concerns", () => {
 });
 
 describe("transport", () => {
-  it("one request per appointment, and the clinic can arrange it", () => {
-    const appointment = upcomingAppointments(member, TODAY)[0];
-    let next = requestTransport(seed, MRN, appointment.id, NOW);
-    next = requestTransport(next, MRN, appointment.id, NOW + 1);
+  const appointment = upcomingAppointments(member, TODAY)[0];
+  const ask = {
+    appointmentId: appointment.id,
+    pickupAddress: "  12 Elm St, Columbia  ",
+    returnTrip: true,
+    mobility: "wheelchair" as const,
+    memberNote: "",
+  };
+
+  it("goes to the dialysis center's social worker, one per appointment", () => {
+    let next = requestTransport(seed, MRN, ask, NOW);
+    next = requestTransport(next, MRN, ask, NOW + 1);
     const record = recordFor(next, MRN)!;
     expect(pendingTransport(record)).toHaveLength(1);
+    expect(record.transport[0]).toMatchObject({
+      status: "Requested",
+      handledBy: TRANSPORT_COORDINATOR,
+      pickupAddress: "12 Elm St, Columbia",
+    });
+  });
 
-    const arranged = arrangeTransport(next, MRN, record.transport[0].id);
-    expect(pendingTransport(recordFor(arranged, MRN)!)).toHaveLength(0);
+  it("is acknowledged, then confirmed with details the patient sees", () => {
+    const requested = requestTransport(seed, MRN, ask, NOW);
+    const id = recordFor(requested, MRN)!.transport[0].id;
+    const acknowledged = acknowledgeTransport(requested, MRN, id, NOW + 1);
+    expect(recordFor(acknowledged, MRN)!.transport[0].status).toBe(
+      "Acknowledged",
+    );
+
+    const confirmed = confirmTransport(
+      acknowledged,
+      MRN,
+      id,
+      {
+        pickupTime: "08:15",
+        returnPickupTime: "11:30",
+        provider: " MetroRide ",
+        phone: "(803) 555-0100",
+        confirmationNumber: "MR-4471",
+      },
+      NOW + 2,
+    );
+    const record = recordFor(confirmed, MRN)!;
+    expect(record.transport[0].status).toBe("Confirmed");
+    expect(record.transport[0].confirmation).toMatchObject({
+      provider: "MetroRide",
+      returnPickupTime: "11:30",
+    });
+    expect(pendingTransport(record)).toHaveLength(0);
+    expect(record.updates.at(-1)).toMatchObject({
+      title: "Transportation Confirmed",
+    });
+    expect(record.updates.at(-1)?.detail).toContain("pickup 8:15 AM");
+  });
+
+  it("once cancelled, can be asked for again", () => {
+    const requested = requestTransport(seed, MRN, ask, NOW);
+    const id = recordFor(requested, MRN)!.transport[0].id;
+    const cancelled = cancelTransport(requested, MRN, id, "member", NOW + 1);
+    const record = recordFor(cancelled, MRN)!;
+    expect(activeTransport(record)).toHaveLength(0);
+    expect(record.transport[0].cancelledBy).toBe("member");
+
+    const again = requestTransport(cancelled, MRN, ask, NOW + 2);
+    expect(activeTransport(recordFor(again, MRN)!)).toHaveLength(1);
   });
 });
 
-describe("messages", () => {
-  it("a member message is unread for the team until the team opens it", () => {
-    const sent = sendAccessMessage(seed, MRN, "dialysis", "member", "Hi", NOW);
-    const thread = recordFor(sent, MRN)!.threads.find(
-      (t) => t.team === "dialysis",
-    )!;
-    expect(thread.unreadByTeam).toBe(1);
-    expect(thread.messages.at(-1)?.body).toBe("Hi");
+describe("the three-way conversation", () => {
+  const conversationOf = (state: typeof seed) =>
+    recordFor(state, MRN)!.conversation;
 
-    const read = markThreadRead(sent, MRN, "dialysis", "team");
-    expect(
-      recordFor(read, MRN)!.threads.find((t) => t.team === "dialysis")!
-        .unreadByTeam,
-    ).toBe(0);
+  it("a patient message is unread for both centers until each opens it", () => {
+    const base = markConversationRead(
+      markConversationRead(seed, MRN, "access"),
+      MRN,
+      "dialysis",
+    );
+    const sent = sendAccessMessage(base, MRN, "member", DEMO_MEMBER, "Hi", NOW);
+    expect(conversationOf(sent).unread).toMatchObject({
+      access: 1,
+      dialysis: 1,
+    });
+    const read = markConversationRead(sent, MRN, "dialysis");
+    expect(conversationOf(read).unread).toMatchObject({
+      access: 1,
+      dialysis: 0,
+    });
+  });
+
+  it("a private message never reaches the dialysis center", () => {
+    const base = markConversationRead(seed, MRN, "dialysis");
+    const sent = sendAccessMessage(
+      base,
+      MRN,
+      "member",
+      DEMO_MEMBER,
+      "Just between us",
+      NOW,
+      { private: true },
+    );
+    const message = conversationOf(sent).messages.at(-1)!;
+    expect(canRead(message, "access")).toBe(true);
+    expect(canRead(message, "dialysis")).toBe(false);
+    expect(conversationOf(sent).unread.dialysis).toBe(0);
+  });
+
+  it("only the patient and the access center manage privacy and posting", () => {
+    const id = conversationOf(seed).messages[0].id;
+    expect(setMessagePrivate(seed, MRN, id, true, "dialysis")).toBe(seed);
+    const hidden = setMessagePrivate(seed, MRN, id, true, "access");
+    expect(conversationOf(hidden).messages[0].private).toBe(true);
+
+    expect(setDialysisCanPost(seed, MRN, false, "dialysis")).toBe(seed);
+    const closed = setDialysisCanPost(seed, MRN, false, "member");
+    expect(canPost(conversationOf(closed), "dialysis")).toBe(false);
+    const ignored = sendAccessMessage(
+      closed,
+      MRN,
+      "dialysis",
+      "Nurse Wilson",
+      "Hello",
+      NOW,
+    );
+    expect(conversationOf(ignored).messages).toHaveLength(
+      conversationOf(closed).messages.length,
+    );
+  });
+
+  it("the dialysis center cannot send a private message", () => {
+    const sent = sendAccessMessage(
+      seed,
+      MRN,
+      "dialysis",
+      "Nurse Wilson",
+      "Noted",
+      NOW,
+      { private: true },
+    );
+    expect(conversationOf(sent).messages.at(-1)?.private).toBeUndefined();
   });
 
   it("a photo alone is a message; nothing at all is not", () => {
-    expect(sendAccessMessage(seed, MRN, "vascular", "member", "  ", NOW)).toBe(
+    expect(sendAccessMessage(seed, MRN, "member", DEMO_MEMBER, "  ", NOW)).toBe(
       seed,
     );
     const withPhoto = sendAccessMessage(
       seed,
       MRN,
-      "vascular",
       "member",
+      DEMO_MEMBER,
       "",
       NOW,
-      "data:image/jpeg;base64,AAAA",
+      {
+        imageUrl: "data:image/jpeg;base64,AAAA",
+      },
     );
-    const thread = recordFor(withPhoto, MRN)!.threads.find(
-      (t) => t.team === "vascular",
-    )!;
-    expect(thread.messages.at(-1)?.imageUrl).toContain("data:image/jpeg");
+    expect(conversationOf(withPhoto).messages.at(-1)?.imageUrl).toContain(
+      "data:image/jpeg",
+    );
   });
 });

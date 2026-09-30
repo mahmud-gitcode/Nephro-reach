@@ -40,12 +40,8 @@ import { SIDE_EFFECT_OPTIONS } from "./medicationLog.options";
 import type { DoseStatus, SideEffect } from "./medicationLog.types";
 import type { MedicationLog } from "./useMedicationLog";
 import type { MedicationReminder } from "@/features/medications/useReminders";
-import {
-  alertsData,
-  doseScheduleData,
-  medicationsData,
-  statusTone,
-} from "./medications.seed";
+import { alertsData, statusTone } from "./medications.seed";
+import type { DoseRow, Medication } from "./medicationList";
 
 /* The five read-only sections of the medication log. */
 
@@ -76,10 +72,13 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function MedicationMasterList({
+  medications,
   reminders,
   onOpenReminderModal,
   log,
 }: {
+  /** The member's stored list (useMedications). */
+  medications: Medication[];
   reminders: MedicationReminder[];
   onOpenReminderModal: (medName?: string) => void;
   log: MedicationLog;
@@ -140,7 +139,7 @@ export function MedicationMasterList({
             </TableRow>
           </TableHead>
           <TableBody>
-            {medicationsData.map((medication) => {
+            {medications.map((medication) => {
               const rem = reminders.find(
                 (r) =>
                   r.medicationName.toLowerCase() ===
@@ -244,9 +243,12 @@ export function MedicationMasterList({
 }
 
 export function DoseSchedule({
+  rows,
   reminders,
   log,
 }: {
+  /** Today's doses (medicationList doseRows). */
+  rows: DoseRow[];
   reminders: MedicationReminder[];
   log: MedicationLog;
 }) {
@@ -329,7 +331,7 @@ export function DoseSchedule({
             </TableRow>
           </TableHead>
           <TableBody>
-            {doseScheduleData.map((dose, idx) => {
+            {rows.map((dose, idx) => {
               const rem = reminders.find(
                 (r) =>
                   r.medicationName.toLowerCase() ===
@@ -500,14 +502,20 @@ export function DoseSchedule({
   );
 }
 
-export function AdherenceChart({ log }: { log: MedicationLog }) {
+export function AdherenceChart({
+  log,
+  dosesPerDay,
+}: {
+  log: MedicationLog;
+  /** How many doses a day the schedule holds. */
+  dosesPerDay: number;
+}) {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
 
   /* Everything below reads the dose statuses tapped in section 2. It used
      to be a fixed 86% next to a fixed 50/30/20 ring and a hand-drawn line,
      which is what Joni meant by the tracker tracking nothing. */
-  const dosesPerDay = doseScheduleData.length;
   const week = rules.adherenceByDay(log.doses, dosesPerDay, 7);
   const overall = rules.summariseAdherence(
     log.doses.filter((dose) => week.some((day) => day.date === dose.date)),
@@ -700,7 +708,10 @@ export function AlertsAndMood({
   reminders,
   onOpenReminderModal,
   log,
+  showSampleAlerts,
 }: {
+  /** The sample alerts belong to the sample list: shown only with it. */
+  showSampleAlerts: boolean;
   reminders: MedicationReminder[];
   onOpenReminderModal: (medName?: string) => void;
   log: MedicationLog;
@@ -770,7 +781,7 @@ export function AlertsAndMood({
         )}
 
         <div className="mt-stack-md max-h-[290px] space-y-stack-xs overflow-y-auto pr-1">
-          {alertsData.map((alert, idx) => (
+          {(showSampleAlerts ? alertsData : []).map((alert, idx) => (
             <article
               key={idx}
               className="rounded-control border border-transparent px-inset-sm py-inset-xs transition-colors duration-150 ease-standard hover:border-line-subtle hover:bg-surface-sunken"

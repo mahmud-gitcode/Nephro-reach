@@ -78,7 +78,7 @@ describe("filtering", () => {
     const rows = filterRoster(roster, { status: "Attention Needed" });
     expect(rows.map((m) => m.name)).toEqual([
       "James K. Wilson",
-      "Sandra L. Boyd",
+      "Robert Turner",
     ]);
   });
 });

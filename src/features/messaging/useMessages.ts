@@ -45,7 +45,9 @@ const KEY = storageKey("messaging");
  * no `contact`, so the member inbox would have rendered a column of blank
  * names off it.
  */
-const VERSION = 3;
+/* Version 4: the threads' members are the clinic's roster patients
+   (one list across the portal; lib/data/demoIdentity). */
+const VERSION = 4;
 
 /** What actually sits in storage: the state plus its shape number. */
 type StoredEnvelope = { version: number; conversations: unknown };
@@ -144,6 +146,12 @@ export function useMessages() {
     [mutate],
   );
 
+  const startConversation = useCallback(
+    (input: rules.NewConversation) =>
+      mutate((current) => rules.startConversation(current, input, Date.now())),
+    [mutate],
+  );
+
   const markRead = useCallback(
     (conversationId: string) =>
       mutate((current) => rules.markRead(current, conversationId)),
@@ -168,6 +176,14 @@ export function useMessages() {
     [mutate],
   );
 
+  const setPatientNotes = useCallback(
+    (conversationId: string, notes: string) =>
+      mutate((current) =>
+        rules.setPatientNotes(current, conversationId, notes),
+      ),
+    [mutate],
+  );
+
   return {
     conversations: state.conversations,
     isLoading: query.isPending,
@@ -177,9 +193,11 @@ export function useMessages() {
     isSending: write.isPending,
     clearWriteError: write.reset,
     sendMessage,
+    startConversation,
     markRead,
     markUnread,
     toggleFlag,
     setArchived,
+    setPatientNotes,
   };
 }

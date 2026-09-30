@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Download, Edit3, HeartPulse, Plus, Trash2 } from "lucide-react";
-import { MoreSolid } from "@/components/icons/solid";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -11,7 +10,10 @@ import {
   Button,
   buttonStyles,
   Card,
+  EmptyState,
+  ErrorState,
   LineChart,
+  Modal,
   Table,
   TableBody,
   TableCell,
@@ -19,134 +21,21 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import {
+  byDay,
+  readingsCsv,
+  statusOf,
+  trend,
+  type BpReading,
+} from "@/features/personal-log/blood-pressure/bloodPressure";
+import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
+import { downloadText } from "@/lib/utils/download";
 
 const statusTone = {
   High: "danger",
   Elevated: "warning",
   Normal: "success",
 } as const;
-
-const readingGroupsData = [
-  {
-    dateEn: "May 5, 2026",
-    dateEs: "5 de mayo de 2026",
-    readings: [
-      {
-        time: "12:00 AM",
-        systolic: 123,
-        diastolic: 78,
-        pulse: 72,
-        position: "Sitting",
-        symptoms: "None",
-        medication: "Taken",
-        status: "Normal",
-      },
-      {
-        time: "08:15 AM",
-        systolic: 132,
-        diastolic: 84,
-        pulse: 76,
-        position: "Standing",
-        symptoms: "Mild headache",
-        medication: "Taken",
-        status: "Elevated",
-      },
-      {
-        time: "09:30 PM",
-        systolic: 118,
-        diastolic: 74,
-        pulse: 70,
-        position: "Sitting",
-        symptoms: "None",
-        medication: "Taken",
-        status: "Normal",
-      },
-    ],
-  },
-  {
-    dateEn: "May 4, 2026",
-    dateEs: "4 de mayo de 2026",
-    readings: [
-      {
-        time: "07:45 AM",
-        systolic: 145,
-        diastolic: 92,
-        pulse: 81,
-        position: "Sitting",
-        symptoms: "Dizzy",
-        medication: "Late",
-        status: "High",
-      },
-      {
-        time: "01:20 PM",
-        systolic: 138,
-        diastolic: 86,
-        pulse: 78,
-        position: "Standing",
-        symptoms: "Tired",
-        medication: "Taken",
-        status: "Elevated",
-      },
-      {
-        time: "10:10 PM",
-        systolic: 129,
-        diastolic: 80,
-        pulse: 74,
-        position: "Sitting",
-        symptoms: "None",
-        medication: "Taken",
-        status: "Normal",
-      },
-    ],
-  },
-  {
-    dateEn: "May 3, 2026",
-    dateEs: "3 de mayo de 2026",
-    readings: [
-      {
-        time: "06:55 AM",
-        systolic: 126,
-        diastolic: 79,
-        pulse: 73,
-        position: "Sitting",
-        symptoms: "None",
-        medication: "Taken",
-        status: "Normal",
-      },
-      {
-        time: "03:00 PM",
-        systolic: 141,
-        diastolic: 89,
-        pulse: 82,
-        position: "Standing",
-        symptoms: "Short breath",
-        medication: "Taken",
-        status: "High",
-      },
-      {
-        time: "09:05 PM",
-        systolic: 122,
-        diastolic: 77,
-        pulse: 71,
-        position: "Sitting",
-        symptoms: "None",
-        medication: "Taken",
-        status: "Normal",
-      },
-    ],
-  },
-];
-
-const trendPointsBase = [
-  { dayEn: "Sun", dayEs: "Dom", systolic: 146, diastolic: 92 },
-  { dayEn: "Mon", dayEs: "Lun", systolic: 112, diastolic: 74 },
-  { dayEn: "Tue", dayEs: "Mar", systolic: 101, diastolic: 70 },
-  { dayEn: "Wed", dayEs: "Mié", systolic: 108, diastolic: 78 },
-  { dayEn: "Thu", dayEs: "Jue", systolic: 148, diastolic: 88 },
-  { dayEn: "Fri", dayEs: "Vie", systolic: 154, diastolic: 91 },
-  { dayEn: "Sat", dayEs: "Sáb", systolic: 130, diastolic: 82 },
-];
 
 function ReadingStatus({ status }: { status: string }) {
   const { t } = useLanguage();
@@ -157,8 +46,26 @@ function ReadingStatus({ status }: { status: string }) {
   return <Badge tone={tone}>{label}</Badge>;
 }
 
+function formatDay(iso: string, isEs: boolean) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-US" : "en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatClock(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${String(h % 12 === 0 ? 12 : h % 12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 function DailyBloodPressureList() {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
+  const bp = useBloodPressure();
+  const [deleting, setDeleting] = useState<BpReading | null>(null);
+  const groups = byDay(bp.readings);
 
   return (
     <Card as="section" padding="small">
@@ -175,135 +82,195 @@ function DailyBloodPressureList() {
             {t("bloodPressure.addReading")}
           </Link>
           <Button
-            {...notBuiltYet("Exporting readings")}
             variant="neutral"
             appearance="fill-stroke"
             leadingIcon={<Download />}
+            disabled={bp.readings.length === 0}
+            onClick={() =>
+              downloadText(
+                "blood-pressure-readings.csv",
+                readingsCsv(bp.readings),
+              )
+            }
           >
             {t("bloodPressure.export")}
           </Button>
         </div>
       </div>
 
-      <Card padding="none" className="mt-stack-md overflow-hidden">
-        <Table minWidth={1080}>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.date")}
-              </TableHeaderCell>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.time")}
-              </TableHeaderCell>
-              <TableHeaderCell numeric>
-                {t("bloodPressure.tableHeaders.systolic")}
-              </TableHeaderCell>
-              <TableHeaderCell numeric>
-                {t("bloodPressure.tableHeaders.diastolic")}
-              </TableHeaderCell>
-              <TableHeaderCell numeric>
-                {t("bloodPressure.tableHeaders.pulse")}
-              </TableHeaderCell>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.position")}
-              </TableHeaderCell>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.symptoms")}
-              </TableHeaderCell>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.medication")}
-              </TableHeaderCell>
-              <TableHeaderCell>
-                {t("bloodPressure.tableHeaders.action")}
-              </TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {readingGroupsData.map((group) => {
-              const dateLabel = language === "ES" ? group.dateEs : group.dateEn;
-              return group.readings.map((reading, index) => {
-                const positionLabel =
-                  t(`bloodPressure.positions.${reading.position}`) ||
-                  reading.position;
-                const symptomsLabel =
-                  t(`bloodPressure.symptoms.${reading.symptoms}`) ||
-                  reading.symptoms;
-                const medicationLabel =
-                  t(`bloodPressure.medications.${reading.medication}`) ||
-                  reading.medication;
+      {bp.error ? (
+        <ErrorState
+          title={
+            isEs
+              ? "No se pudieron cargar tus lecturas"
+              : "Your readings could not be loaded"
+          }
+          error={bp.error}
+          onRetry={bp.refetch}
+        />
+      ) : !bp.isPending && bp.readings.length === 0 ? (
+        <EmptyState
+          icon={<HeartPulse />}
+          title={isEs ? "Aún no hay lecturas" : "No readings yet"}
+          description={
+            isEs
+              ? "Agrega tu primera lectura de presión arterial."
+              : "Add your first blood pressure reading."
+          }
+        />
+      ) : (
+        <Card padding="none" className="mt-stack-md overflow-hidden">
+          <Table minWidth={1080}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.date")}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.time")}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {t("bloodPressure.tableHeaders.systolic")}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {t("bloodPressure.tableHeaders.diastolic")}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {t("bloodPressure.tableHeaders.pulse")}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.position")}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.symptoms")}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.medication")}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {t("bloodPressure.tableHeaders.action")}
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {groups.map((group) => {
+                const dateLabel = formatDay(group.date, isEs);
+                return group.readings.map((reading, index) => {
+                  const positionLabel =
+                    t(`bloodPressure.positions.${reading.position}`) ||
+                    reading.position;
+                  const symptomsLabel =
+                    t(`bloodPressure.symptoms.${reading.symptoms}`) ||
+                    reading.symptoms;
+                  const medicationLabel =
+                    t(`bloodPressure.medications.${reading.medication}`) ||
+                    reading.medication;
+                  const time = formatClock(reading.time);
 
-                return (
-                  <TableRow key={`${dateLabel}-${reading.time}`}>
-                    {index === 0 && (
-                      <TableCell
-                        rowSpan={group.readings.length}
-                        emphasis
-                        className="border-r border-line align-top"
-                      >
-                        {dateLabel}
-                      </TableCell>
-                    )}
-                    <TableCell>{reading.time}</TableCell>
-                    <TableCell numeric>{reading.systolic}</TableCell>
-                    <TableCell numeric>{reading.diastolic}</TableCell>
-                    <TableCell numeric>{reading.pulse}</TableCell>
-                    <TableCell>{positionLabel}</TableCell>
-                    <TableCell>{symptomsLabel}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-inline-md">
-                        <ReadingStatus status={reading.status} />
-                        <span className="text-body-sm text-fg-secondary">
-                          {medicationLabel}
+                  return (
+                    <TableRow key={reading.id}>
+                      {index === 0 && (
+                        <TableCell
+                          rowSpan={group.readings.length}
+                          emphasis
+                          className="border-r border-line align-top"
+                        >
+                          {dateLabel}
+                        </TableCell>
+                      )}
+                      <TableCell>{time}</TableCell>
+                      <TableCell numeric>{reading.systolic}</TableCell>
+                      <TableCell numeric>{reading.diastolic}</TableCell>
+                      <TableCell numeric>{reading.pulse}</TableCell>
+                      <TableCell>{positionLabel}</TableCell>
+                      <TableCell>{symptomsLabel}</TableCell>
+                      <TableCell>
+                        <span className="flex items-center gap-inline-md">
+                          <ReadingStatus status={statusOf(reading)} />
+                          <span className="text-body-sm text-fg-secondary">
+                            {medicationLabel}
+                          </span>
                         </span>
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-inline-md">
-                        <Button
-                          {...notBuiltYet("Editing a reading")}
-                          iconOnly
-                          size="small"
-                          variant="neutral"
-                          appearance="fill-stroke"
-                          aria-label={`Edit reading from ${dateLabel} at ${reading.time}`}
-                        >
-                          <Edit3 />
-                        </Button>
-                        <Button
-                          {...notBuiltYet("Deleting a reading")}
-                          iconOnly
-                          size="small"
-                          variant="danger"
-                          appearance="fill-stroke"
-                          aria-label={`Delete reading from ${dateLabel} at ${reading.time}`}
-                        >
-                          <Trash2 />
-                        </Button>
-                        <Button
-                          {...notBuiltYet("More actions")}
-                          iconOnly
-                          size="small"
-                          variant="neutral"
-                          appearance="fill-stroke"
-                          aria-label={`More actions for ${dateLabel} at ${reading.time}`}
-                        >
-                          <MoreSolid />
-                        </Button>
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              });
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex items-center gap-inline-md">
+                          <Link
+                            href={`/dashboard/personal-log/blood-pressure/add?id=${reading.id}`}
+                            className={buttonStyles({
+                              iconOnly: true,
+                              size: "small",
+                              variant: "neutral",
+                              appearance: "fill-stroke",
+                            })}
+                            aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                          >
+                            <Edit3 />
+                          </Link>
+                          <Button
+                            iconOnly
+                            size="small"
+                            variant="danger"
+                            appearance="fill-stroke"
+                            aria-label={`Delete reading from ${dateLabel} at ${time}`}
+                            onClick={() => setDeleting(reading)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                });
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      <Modal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        size="small"
+        title={isEs ? "¿Eliminar esta lectura?" : "Delete this reading?"}
+        description={
+          deleting
+            ? `${formatDay(deleting.date, isEs)} · ${formatClock(deleting.time)} · ${deleting.systolic}/${deleting.diastolic}`
+            : undefined
+        }
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setDeleting(null)}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (deleting) bp.remove(deleting.id);
+                setDeleting(null);
+              }}
+            >
+              {isEs ? "Eliminar" : "Delete"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-sm text-fg-secondary">
+          {isEs ? "No se puede deshacer." : "This cannot be undone."}
+        </p>
+      </Modal>
     </Card>
   );
 }
 
 function TrendChart() {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
+  const bp = useBloodPressure();
+  const points = trend(bp.readings);
 
   return (
     <Card as="section">
@@ -312,30 +279,39 @@ function TrendChart() {
       </h2>
 
       <div className="mt-stack-xl">
-        <LineChart
-          label={t("bloodPressure.trendsTitle")}
-          unit="mmHg"
-          yMin={80}
-          yMax={160}
-          height={206}
-          xLabels={trendPointsBase.map((point) =>
-            language === "ES" ? point.dayEs : point.dayEn,
-          )}
-          series={[
-            {
-              id: "systolic",
-              label: t("bloodPressure.systolicLegend"),
-              tone: "accent",
-              points: trendPointsBase.map((p) => p.systolic),
-            },
-            {
-              id: "diastolic",
-              label: t("bloodPressure.diastolicLegend"),
-              tone: "danger",
-              points: trendPointsBase.map((p) => p.diastolic),
-            },
-          ]}
-        />
+        {points.length < 2 ? (
+          <p className="text-body-sm text-fg-muted">
+            {isEs
+              ? "La tendencia aparece con dos o más lecturas."
+              : "The trend appears once you have two or more readings."}
+          </p>
+        ) : (
+          <LineChart
+            label={t("bloodPressure.trendsTitle")}
+            unit="mmHg"
+            yMin={60}
+            yMax={180}
+            height={206}
+            xLabels={points.map((p) => {
+              const [, m, d] = p.date.split("-").map(Number);
+              return `${m}/${d}`;
+            })}
+            series={[
+              {
+                id: "systolic",
+                label: t("bloodPressure.systolicLegend"),
+                tone: "accent",
+                points: points.map((p) => p.systolic),
+              },
+              {
+                id: "diastolic",
+                label: t("bloodPressure.diastolicLegend"),
+                tone: "danger",
+                points: points.map((p) => p.diastolic),
+              },
+            ]}
+          />
+        )}
       </div>
     </Card>
   );

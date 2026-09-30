@@ -54,6 +54,9 @@ export interface CourseDocument {
   kind: CourseDocumentKind;
   metaEn: string;
   metaEs: string;
+  /** The file itself, once supplied (e.g. /docs/welcome.pdf). Until then
+   *  the member sees the row but cannot open it. */
+  href?: string;
 }
 
 export interface CourseClass {

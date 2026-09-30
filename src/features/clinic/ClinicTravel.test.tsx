@@ -98,7 +98,7 @@ describe("Travel Requests", () => {
     await user.click(screen.getByRole("tab", { name: /Past/ }));
     // The seeded past trips belong to the demo member.
     expect(
-      within(screen.getByRole("table")).getAllByText("Charles Xavier").length,
+      within(screen.getByRole("table")).getAllByText("John Taylor").length,
     ).toBe(3);
   });
 

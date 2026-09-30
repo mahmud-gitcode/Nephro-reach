@@ -22,9 +22,22 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui";
-import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { useRouter } from "next/navigation";
+import {
+  FREQUENCIES,
+  ROUTES,
+  medicationError,
+  reminderClock,
+  type MedicationDraft,
+} from "@/features/medications/medicationList";
+import { useMedications } from "@/features/medications/useMedications";
+import { useReminders } from "@/features/medications/useReminders";
+import { useNow } from "@/lib/utils/useNow";
 
 interface FieldConfig {
+  /** Which part of the draft the field edits. */
+  key: keyof MedicationDraft;
+  required?: boolean;
   labelKey: string;
   placeholderKey: string;
   helperKey?: string;
@@ -37,33 +50,64 @@ interface FieldConfig {
 
 const FIELD_CONFIGS: FieldConfig[] = [
   {
+    key: "name",
+    required: true,
     labelKey: "nameLabel",
     placeholderKey: "namePlaceholder",
     helperKey: "nameHelper",
     full: true,
     search: true,
   },
-  { labelKey: "doseLabel", placeholderKey: "dosePlaceholder" },
-  { labelKey: "routeLabel", placeholderKey: "routePlaceholder", select: true },
   {
+    key: "dose",
+    required: true,
+    labelKey: "doseLabel",
+    placeholderKey: "dosePlaceholder",
+  },
+  {
+    key: "route",
+    required: true,
+    labelKey: "routeLabel",
+    placeholderKey: "routePlaceholder",
+    select: true,
+  },
+  {
+    key: "frequency",
+    required: true,
     labelKey: "frequencyLabel",
     placeholderKey: "frequencyPlaceholder",
     select: true,
   },
-  { labelKey: "purposeLabel", placeholderKey: "purposePlaceholder" },
   {
+    key: "purpose",
+    labelKey: "purposeLabel",
+    placeholderKey: "purposePlaceholder",
+  },
+  {
+    key: "startDate",
+    required: true,
     labelKey: "startDateLabel",
     placeholderKey: "startDatePlaceholder",
     type: "date",
   },
   {
+    key: "endDate",
     labelKey: "endDateLabel",
     placeholderKey: "endDatePlaceholder",
     type: "date",
   },
-  { labelKey: "providerLabel", placeholderKey: "providerPlaceholder" },
-  { labelKey: "pharmacyLabel", placeholderKey: "pharmacyPlaceholder" },
   {
+    key: "provider",
+    labelKey: "providerLabel",
+    placeholderKey: "providerPlaceholder",
+  },
+  {
+    key: "pharmacy",
+    labelKey: "pharmacyLabel",
+    placeholderKey: "pharmacyPlaceholder",
+  },
+  {
+    key: "instructions",
     labelKey: "instructionsLabel",
     placeholderKey: "instructionsPlaceholder",
     full: true,
@@ -73,8 +117,40 @@ const FIELD_CONFIGS: FieldConfig[] = [
 
 export default function AddMedicationPage() {
   const { language, t } = useLanguage();
+  const isEs = language === "ES";
+  const router = useRouter();
+  const meds = useMedications();
+  const reminders = useReminders();
+  const now = new Date(useNow());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const [enableReminder, setEnableReminder] = useState(true);
   const [reminderTime, setReminderTime] = useState("08:00");
+  const [draft, setDraft] = useState<MedicationDraft>({
+    name: "",
+    dose: "",
+    route: "",
+    frequency: "",
+    purpose: "",
+    startDate: today,
+    endDate: "",
+    provider: "",
+    pharmacy: "",
+    instructions: "",
+  });
+  const [tried, setTried] = useState(false);
+  const error = medicationError(draft);
+  const set = (key: keyof MedicationDraft, value: string) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+
+  async function save() {
+    setTried(true);
+    if (error) return;
+    await meds.add(draft, today);
+    if (enableReminder)
+      await reminders.setTime(draft.name.trim(), reminderClock(reminderTime));
+    router.push("/dashboard/personal-log/medications");
+  }
 
   return (
     <div className="mx-auto max-w-[672px] space-y-stack-lg">
@@ -138,16 +214,47 @@ export default function AddMedicationPage() {
                   key={field.labelKey}
                   label={label}
                   hint={hint}
+                  required={field.required}
+                  error={
+                    tried && error === field.key
+                      ? isEs
+                        ? "Revisa este campo"
+                        : field.key === "endDate"
+                          ? "The end date is before the start date"
+                          : "This is needed"
+                      : undefined
+                  }
                   className={field.full ? "md:col-span-2" : undefined}
                 >
                   {(props) =>
                     field.textarea ? (
-                      <Textarea {...props} rows={4} placeholder={placeholder} />
+                      <Textarea
+                        {...props}
+                        rows={4}
+                        placeholder={placeholder}
+                        value={draft[field.key]}
+                        onChange={(e) => set(field.key, e.target.value)}
+                      />
                     ) : field.select ? (
-                      <Select {...props} defaultValue="">
+                      <Select
+                        {...props}
+                        value={draft[field.key]}
+                        onChange={(e) => set(field.key, e.target.value)}
+                      >
                         <option value="" disabled>
                           {placeholder}
                         </option>
+                        {field.key === "route"
+                          ? ROUTES.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {isEs ? o.es : o.en}
+                              </option>
+                            ))
+                          : FREQUENCIES.map((o) => (
+                              <option key={o.en} value={o.en}>
+                                {isEs ? o.es : o.en}
+                              </option>
+                            ))}
                       </Select>
                     ) : (
                       <Input
@@ -155,6 +262,8 @@ export default function AddMedicationPage() {
                         type={field.type}
                         placeholder={placeholder}
                         leadingIcon={field.search ? <Search /> : undefined}
+                        value={draft[field.key]}
+                        onChange={(e) => set(field.key, e.target.value)}
                       />
                     )
                   }
@@ -221,9 +330,10 @@ export default function AddMedicationPage() {
             {t("medicationsLog.cancel")}
           </Link>
           <Button
-            {...notBuiltYet("Adding a medication")}
             fullWidth
             leadingIcon={<Plus />}
+            onClick={save}
+            loading={meds.isSaving}
           >
             {t("medicationsLog.addMedication")}
           </Button>

@@ -18,6 +18,7 @@ import {
   type EnrollmentDraft,
 } from "./enrollment.store";
 import { useEnrollPatient } from "./useClinicData";
+import { useCan } from "@/features/staff/useStaffAccounts";
 
 /* Enrolling is one form wherever it is started — Enroll Patients, the
    Member page's Add Member, the dashboard — so it lives here once and
@@ -41,6 +42,7 @@ export function EnrollPatientModal({
   const [draft, setDraft] = useState<EnrollmentDraft>(emptyDraft);
   const [attempted, setAttempted] = useState(false);
   const enroll = useEnrollPatient();
+  const canEnroll = useCan("patients.enroll");
 
   const errors = attempted ? validateEnrollment(draft, list) : {};
   const set = (field: keyof EnrollmentDraft, value: string) =>
@@ -48,6 +50,7 @@ export function EnrollPatientModal({
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!canEnroll) return;
     setAttempted(true);
     if (Object.keys(validateEnrollment(draft, list)).length > 0) return;
     enroll.mutate(draft, {
@@ -76,7 +79,7 @@ export function EnrollPatientModal({
             type="submit"
             form="enroll-form"
             size="small"
-            disabled={enroll.isPending}
+            disabled={enroll.isPending || !canEnroll}
           >
             {enroll.isPending ? "Enrolling…" : "Enroll Patient"}
           </Button>
@@ -84,6 +87,12 @@ export function EnrollPatientModal({
       }
     >
       <form id="enroll-form" onSubmit={submit} noValidate>
+        {!canEnroll ? (
+          <Alert tone="info" className="mb-stack-lg">
+            Your role cannot enroll patients. A care coordinator, the front desk
+            or an administrator can.
+          </Alert>
+        ) : null}
         {enroll.error ? (
           <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
             {enroll.error.message}

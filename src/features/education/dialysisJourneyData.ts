@@ -41,6 +41,9 @@ export interface JourneyDocument {
   kind: JourneyDocumentKind;
   metaEn: string;
   metaEs: string;
+  /** The file itself, once the client supplies it (e.g. /docs/welcome.pdf).
+   *  Until then the row stays visible but closed. */
+  href?: string;
 }
 
 export interface JourneyDay {

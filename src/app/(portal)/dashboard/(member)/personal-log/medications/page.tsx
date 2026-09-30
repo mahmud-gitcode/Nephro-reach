@@ -14,7 +14,8 @@ import {
   MedicationMasterList,
 } from "@/features/medications/MedicationPanels";
 import { SimpleTimeReminderModal } from "@/features/medications/SimpleTimeReminderModal";
-import { medicationsData } from "@/features/medications/medications.seed";
+import { doseRows } from "@/features/medications/medicationList";
+import { useMedications } from "@/features/medications/useMedications";
 
 export default function MedicationLogPage() {
   const { t } = useLanguage();
@@ -26,6 +27,12 @@ export default function MedicationLogPage() {
      what section 3 counts, so they have to come from one cache or the
      adherence figure lags the taps that produced it. */
   const log = useMedicationLog();
+  /* The member's own list, and today's doses built from it. */
+  const meds = useMedications();
+  const rows = doseRows(meds.medications, reminders);
+  const showSampleAlerts = meds.medications.some((m) =>
+    m.id.startsWith("seed-"),
+  );
 
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [selectedMedForReminder, setSelectedMedForReminder] = useState<
@@ -33,9 +40,7 @@ export default function MedicationLogPage() {
   >(undefined);
 
   const handleOpenReminderModal = (medName?: string) => {
-    setSelectedMedForReminder(
-      medName || medicationsData[0]?.name || "Potassium",
-    );
+    setSelectedMedForReminder(medName || meds.medications[0]?.name || "");
     setIsReminderModalOpen(true);
   };
 
@@ -64,11 +69,12 @@ export default function MedicationLogPage() {
       ) : null}
 
       <AsyncSection
-        pending={isPending || log.isPending}
-        error={error ?? log.error}
+        pending={isPending || log.isPending || meds.isPending}
+        error={error ?? log.error ?? meds.error}
         onRetry={() => {
           refetch();
           log.refetch();
+          meds.refetch();
         }}
         errorTitle={t("medicationsLog.title")}
         errorMessage="Your reminders could not be read from this device. Nothing has been changed."
@@ -81,13 +87,15 @@ export default function MedicationLogPage() {
       >
         <div className="space-y-6">
           <MedicationMasterList
+            medications={meds.medications}
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
             log={log}
           />
-          <DoseSchedule reminders={reminders} log={log} />
-          <AdherenceChart log={log} />
+          <DoseSchedule rows={rows} reminders={reminders} log={log} />
+          <AdherenceChart log={log} dosesPerDay={Math.max(rows.length, 1)} />
           <AlertsAndMood
+            showSampleAlerts={showSampleAlerts}
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
             log={log}

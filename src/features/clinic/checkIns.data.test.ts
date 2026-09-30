@@ -141,3 +141,38 @@ describe("truncateWords", () => {
     }
   });
 });
+
+describe("this week, with the linked member", () => {
+  it("labels the Sunday-to-Saturday week holding today", async () => {
+    const { weekLabel } = await import("./checkIns.data");
+    expect(weekLabel("2026-09-30")).toBe("Sep 27 – Oct 3, 2026");
+  });
+
+  it("adds the member's own check-ins this week to the clinic's totals", async () => {
+    const { overviewWithLive, overview, weekStartOf } =
+      await import("./checkIns.data");
+    const live = [
+      {
+        name: "John Taylor",
+        program: "x",
+        date: "Sep 29, 2026",
+        status: "At Risk" as const,
+        notes: "",
+      },
+      {
+        name: "John Taylor",
+        program: "x",
+        date: "Sep 20, 2026",
+        status: "Completed" as const,
+        notes: "",
+      },
+    ];
+    const cards = overviewWithLive(live, weekStartOf("2026-09-30"));
+    const value = (label: string) =>
+      Number(cards.find((c) => c.label === label)!.value);
+    const base = (label: string) =>
+      Number(overview.find((c) => c.label === label)!.value);
+    expect(value("Check-Ins This Week")).toBe(base("Check-Ins This Week") + 1);
+    expect(value("At Risk Members")).toBe(base("At Risk Members") + 1);
+  });
+});

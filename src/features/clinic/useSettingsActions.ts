@@ -4,13 +4,8 @@ import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import {
-  addUser,
   defaultSettingsActions,
   normaliseSettingsActions,
-  removeUser,
-  resendInvite,
-  setUserStatus,
-  type OfficeRole,
   type SettingsActions,
   type SharingId,
   type TwoFactorMethod,
@@ -19,7 +14,7 @@ import {
 /* ==========================================================================
    Clinic Settings — local state for the page's actions
    --------------------------------------------------------------------------
-   One key for the roster, the security record and the sharing choices. They
+   One key for the security record and the sharing choices. They
    are all the same record — how this office is set up — and splitting them
    would mean three reads to render one page.
 
@@ -61,42 +56,8 @@ export function useSettingsActions() {
 
   return {
     actions,
-    users: actions.users,
     security: actions.security,
     sharing: actions.sharing,
-
-    addUser: useCallback(
-      (draft: { name: string; email: string; role: OfficeRole }) =>
-        mutate((current) => ({
-          ...current,
-          users: addUser(current.users, draft),
-        })),
-      [mutate],
-    ),
-    setUserStatus: useCallback(
-      (email: string, status: "Active" | "Pending") =>
-        mutate((current) => ({
-          ...current,
-          users: setUserStatus(current.users, email, status),
-        })),
-      [mutate],
-    ),
-    resendInvite: useCallback(
-      (email: string) =>
-        mutate((current) => ({
-          ...current,
-          users: resendInvite(current.users, email),
-        })),
-      [mutate],
-    ),
-    removeUser: useCallback(
-      (email: string) =>
-        mutate((current) => ({
-          ...current,
-          users: removeUser(current.users, email),
-        })),
-      [mutate],
-    ),
 
     changePassword: useCallback(
       () =>

@@ -1,9 +1,23 @@
-export type UserRole = "admin" | "user" | "clinic";
+import {
+  findLogin,
+  organization,
+  type StaffRole,
+} from "@/features/staff/staff";
+import { readStaffForLogin } from "@/features/staff/staff.repository";
+import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
+
+/* "access" is a Vascular Access Center: its own organisation, which shares
+   each patient's access record with the dialysis clinic (2026-09-30). */
+export type UserRole = "admin" | "user" | "clinic" | "access";
 
 export type AuthUser = {
   email: string;
   name: string;
   role: UserRole;
+  /** Staff only: the organisation they work for, and their role there,
+   *  which decides what they may do (features/staff/staff.ts). */
+  org?: string;
+  staffRole?: StaffRole;
 };
 
 export const AUTH_COOKIE = "nr-session";
@@ -14,6 +28,8 @@ export const USER_HOME = "/dashboard";
 /* A clinic never sees the shared /dashboard page — every one of its routes,
    its own dashboard included, lives under this prefix. */
 export const CLINIC_HOME = "/dashboard/clinic";
+/* Likewise for an access center, under its own prefix. */
+export const ACCESS_HOME = "/dashboard/access-center";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -30,6 +46,7 @@ const ADMIN_PREFIXES = [
 ];
 
 export const CLINIC_PREFIX = "/dashboard/clinic";
+export const ACCESS_PREFIX = "/dashboard/access-center";
 
 export const DEMO_ACCOUNTS = [
   {
@@ -39,9 +56,9 @@ export const DEMO_ACCOUNTS = [
     role: "admin" as const,
   },
   {
-    email: "user@nephroreach.com",
+    email: DEMO_MEMBER_EMAIL,
     password: "user123",
-    name: "Charles Xavier",
+    name: DEMO_MEMBER_NAME,
     role: "user" as const,
   },
   {
@@ -50,10 +67,17 @@ export const DEMO_ACCOUNTS = [
     name: "Riverside Dialysis Center",
     role: "clinic" as const,
   },
+  {
+    email: "access@nephroreach.com",
+    password: "access123",
+    name: "Metro Vascular Access Center",
+    role: "access" as const,
+  },
 ];
 
 export function homeForRole(role: UserRole) {
   if (role === "clinic") return CLINIC_HOME;
+  if (role === "access") return ACCESS_HOME;
   return role === "admin" ? ADMIN_HOME : USER_HOME;
 }
 
@@ -67,8 +91,15 @@ export function isClinicRoute(pathname: string) {
   return pathname === CLINIC_PREFIX || pathname.startsWith(`${CLINIC_PREFIX}/`);
 }
 
+export function isAccessCenterRoute(pathname: string) {
+  return pathname === ACCESS_PREFIX || pathname.startsWith(`${ACCESS_PREFIX}/`);
+}
+
 export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
+  /* An access center sees its own routes and nothing else. */
+  if (isAccessCenterRoute(pathname)) return role === "access";
+  if (role === "access") return false;
   /* Checked first: the clinic prefix sits under /dashboard, so the shared
      and admin rules below would otherwise claim it. */
   if (isClinicRoute(pathname)) return role === "clinic";
@@ -95,7 +126,8 @@ export function parseSession(
       typeof parsed.name === "string" &&
       (parsed.role === "admin" ||
         parsed.role === "user" ||
-        parsed.role === "clinic")
+        parsed.role === "clinic" ||
+        parsed.role === "access")
     ) {
       return parsed;
     }
@@ -145,6 +177,15 @@ function writeRegisteredUsers(users: StoredAccount[]) {
   localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
 }
 
+/** Emails already used by a demo login or a member account, which a new
+ *  staff account may not take. */
+export function nonStaffEmailsInUse(): string[] {
+  return [
+    ...DEMO_ACCOUNTS.map((account) => account.email),
+    ...readRegisteredUsers().map((account) => account.email.toLowerCase()),
+  ];
+}
+
 export function authenticate(email: string, password: string): AuthUser | null {
   const normalized = email.trim().toLowerCase();
   const demo = DEMO_ACCOUNTS.find(
@@ -152,6 +193,19 @@ export function authenticate(email: string, password: string): AuthUser | null {
   );
   if (demo) {
     return { email: demo.email, name: demo.name, role: demo.role };
+  }
+
+  /* A staff member signs into their organisation's portal as themselves. */
+  const staff = findLogin(readStaffForLogin(), normalized, password);
+  const org = staff ? organization(staff.orgId) : undefined;
+  if (staff && org) {
+    return {
+      email: staff.email,
+      name: staff.name,
+      role: org.portal,
+      org: org.name,
+      staffRole: staff.role,
+    };
   }
 
   const registered = readRegisteredUsers().find(
@@ -178,6 +232,7 @@ export function registerUser(input: {
   const email = input.email.trim().toLowerCase();
   const exists =
     DEMO_ACCOUNTS.some((account) => account.email === email) ||
+    readStaffForLogin().some((account) => account.email === email) ||
     readRegisteredUsers().some(
       (account) => account.email.toLowerCase() === email,
     );

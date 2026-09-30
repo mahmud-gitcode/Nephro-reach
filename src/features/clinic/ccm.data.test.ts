@@ -47,7 +47,7 @@ describe("the threshold is 30 minutes", () => {
   });
 
   it("needs attention outranks the minutes", () => {
-    expect(statusFor(45, true)).toBe("Needs Attention");
+    expect(statusFor(45, true)).toBe("Action Needed");
   });
 });
 
@@ -115,7 +115,7 @@ describe("the seeded worklist", () => {
   it("lists every CCM patient, and the statuses add up to the total", () => {
     expect(rows).toHaveLength(CCM_PATIENTS.length);
     expect(
-      countStatus(rows, "Needs Attention") +
+      countStatus(rows, "Action Needed") +
         countStatus(rows, "Below Threshold") +
         countStatus(rows, "Ready for Review"),
     ).toBe(rows.length);
@@ -128,16 +128,16 @@ describe("the seeded worklist", () => {
   it("flags an open alert and an overdue follow-up as needing attention", () => {
     const angela = rows.find((row) => row.mrn === "901234")!;
     expect(angela.openAlerts).toBeGreaterThan(0);
-    expect(angela.status).toBe("Needs Attention");
+    expect(angela.status).toBe("Action Needed");
 
     const david = rows.find((row) => row.mrn === "890123")!;
     expect(david.overdue).toBe(1);
-    expect(david.status).toBe("Needs Attention");
+    expect(david.status).toBe("Action Needed");
   });
 
   it("judges a past month on its minutes alone", () => {
     const past = worklist(state, CCM_PATIENTS, "2026-08", TODAY);
-    expect(past.some((row) => row.status === "Needs Attention")).toBe(false);
+    expect(past.some((row) => row.status === "Action Needed")).toBe(false);
   });
 
   it("shows what is left under the threshold", () => {
@@ -164,7 +164,7 @@ describe("the seeded worklist", () => {
       worklist(cleared, CCM_PATIENTS, MONTH, TODAY).find(
         (r) => r.mrn === "901234",
       )!.status,
-    ).not.toBe("Needs Attention");
+    ).not.toBe("Action Needed");
   });
 
   it("lists follow-ups due within a week, overdue first", () => {

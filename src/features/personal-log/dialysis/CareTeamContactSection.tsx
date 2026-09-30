@@ -15,7 +15,7 @@ import {
 } from "@/components/ui";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as rules from "@/features/messaging/messaging.rules";
-import { DEMO_MEMBER } from "@/features/messaging/messaging.seed";
+import { useMemberName } from "@/features/auth/useMemberName";
 import { useAccessPhotos } from "./useAccessPhotos";
 import { photoAttachment } from "./accessPhotos";
 import { PhotoPicker } from "./PhotoPicker";
@@ -86,9 +86,10 @@ export default function CareTeamContactSection({
   const photoLog = useAccessPhotos();
 
   const messaging = useMessages();
+  const memberName = useMemberName();
   const threads = useMemo(
-    () => rules.memberConversations(messaging.conversations, DEMO_MEMBER),
-    [messaging.conversations],
+    () => rules.memberConversations(messaging.conversations, memberName),
+    [messaging.conversations, memberName],
   );
 
   const [threadId, setThreadId] = useState("");

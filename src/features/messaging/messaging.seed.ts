@@ -4,6 +4,7 @@ import type {
   Message,
   MessageAuthor,
 } from "./messaging.types";
+import { DEMO_MEMBER_MRN, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 
 /* ==========================================================================
    Messaging — the demo inbox
@@ -51,7 +52,7 @@ function msg(
  * `auth.ts`, so signing in as the clinic and as the member shows two ends
  * of the same conversation rather than two unrelated centres.
  */
-const FACILITY: CareTeamContact = {
+export const FACILITY: CareTeamContact = {
   name: "Riverside Dialysis Center",
   role: "Your Dialysis Care Team",
   kind: "facility",
@@ -66,7 +67,7 @@ const FACILITY: CareTeamContact = {
  * becomes the signed-in user's id and `memberConversations` stops needing a
  * constant at all.
  */
-export const DEMO_MEMBER = "John Taylor";
+export const DEMO_MEMBER = DEMO_MEMBER_NAME;
 
 const CARE_TEAM = {
   provider: {
@@ -114,11 +115,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "05/14/1968",
         age: 58,
-        mrn: "100245",
+        mrn: DEMO_MEMBER_MRN,
         phone: "(803) 555-2214",
         email: "jtaylor@email.com",
-        program: "CKD Education",
-        enrolledOn: "Jan 15, 2026",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 13, 2026",
         status: "Active",
         careTeam: "Dr. Carter, RN Wilson",
         notes: "Prefers morning communications",
@@ -180,11 +181,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "11/02/1955",
         age: 70,
-        mrn: "100312",
+        mrn: "112233",
         phone: "(803) 555-8890",
         email: "sphillips@email.com",
-        program: "Journey to Dialysis",
-        enrolledOn: "Feb 03, 2026",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 11, 2026",
         status: "Active",
         careTeam: "Dr. Carter, RN Wilson",
         notes: "Hypertension — flag BP reports to the nurse",
@@ -210,11 +211,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "07/22/1979",
         age: 46,
-        mrn: "100188",
+        mrn: "334455",
         phone: "(803) 555-4417",
         email: "mwhite@email.com",
-        program: "CKD Education",
-        enrolledOn: "Jan 28, 2026",
+        program: "Crash Dialysis (5-Day)",
+        enrolledOn: "Aug 16, 2026",
         status: "Active",
         careTeam: "RN Wilson",
         notes: "Works nights — evening classes preferred",
@@ -247,11 +248,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "03/09/1962",
         age: 63,
-        mrn: "100407",
+        mrn: "445566",
         phone: "(803) 555-7726",
         email: "lreynolds@email.com",
-        program: "Journey to Dialysis",
-        enrolledOn: "Dec 11, 2025",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 17, 2026",
         status: "Active",
         careTeam: "Dr. Carter",
         notes: "Sends labs monthly without prompting",
@@ -278,11 +279,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "09/30/1971",
         age: 54,
-        mrn: "100221",
+        mrn: "556677",
         phone: "(803) 555-3308",
         email: "dbrooks@email.com",
-        program: "CKD Education",
-        enrolledOn: "Feb 19, 2026",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 19, 2026",
         status: "Active",
         careTeam: "RN Wilson",
         notes: "",
@@ -309,11 +310,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "01/17/1984",
         age: 41,
-        mrn: "100355",
+        mrn: "667788",
         phone: "(803) 555-9902",
         email: "mclark@email.com",
-        program: "Journey to Dialysis",
-        enrolledOn: "Mar 02, 2026",
+        program: "Crash Dialysis (5-Day)",
+        enrolledOn: "Aug 21, 2026",
         status: "Active",
         careTeam: "Dietitian Ruiz",
         notes: "Dietitian follow-up requested",
@@ -339,11 +340,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "06/25/1959",
         age: 66,
-        mrn: "100290",
+        mrn: "778899",
         phone: "(803) 555-1145",
         email: "rturner@email.com",
-        program: "CKD Education",
-        enrolledOn: "Jan 22, 2026",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 23, 2026",
         status: "Active",
         careTeam: "Dietitian Ruiz",
         notes: "",
@@ -376,11 +377,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "12/05/1947",
         age: 78,
-        mrn: "100163",
+        mrn: "889900",
         phone: "(803) 555-6634",
         email: "egreen@email.com",
-        program: "Journey to Dialysis",
-        enrolledOn: "Nov 30, 2025",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 24, 2026",
         status: "Active",
         careTeam: "Dr. Carter, RN Wilson",
         notes: "Daughter is an authorised caregiver",
@@ -406,11 +407,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "04/11/1990",
         age: 35,
-        mrn: "100433",
+        mrn: "990011",
         phone: "(803) 555-2278",
         email: "kwalker@email.com",
-        program: "CKD Education",
-        enrolledOn: "Mar 14, 2026",
+        program: "Crash Dialysis (5-Day)",
+        enrolledOn: "Aug 26, 2026",
         status: "Active",
         careTeam: "RN Wilson",
         notes: "",
@@ -436,11 +437,11 @@ export function seedConversations(now: number): Conversation[] {
       patient: {
         dob: "08/19/1975",
         age: 50,
-        mrn: "100376",
+        mrn: "101112",
         phone: "(803) 555-5521",
         email: "tmoore@email.com",
-        program: "CKD Education",
-        enrolledOn: "Feb 27, 2026",
+        program: "Journey to Dialysis (21-Day)",
+        enrolledOn: "Aug 27, 2026",
         status: "Active",
         careTeam: "RN Wilson",
         notes: "",

@@ -15,8 +15,11 @@ import type { AccessState } from "./vascularAccess.data";
 
 const KEY = storageKey("vascular-access");
 
-/** Bump when AccessRecord changes shape, so old data re-seeds. */
-const VERSION = 1;
+/** Bump when AccessRecord changes shape, so old data re-seeds.
+ *  Version 2: one three-way conversation per record, and ride requests
+ *  with a confirm step. Version 3: the demo patient's record carries the
+ *  one MRN they have everywhere (lib/data/demoIdentity). */
+const VERSION = 4;
 
 type StoredEnvelope = { version: number; records: unknown };
 
@@ -32,7 +35,8 @@ function isRecord(value: unknown): value is rules.AccessRecord {
     Array.isArray(r.history) &&
     Array.isArray(r.concerns) &&
     Array.isArray(r.transport) &&
-    Array.isArray(r.threads)
+    !!r.conversation &&
+    Array.isArray(r.conversation.messages)
   );
 }
 
@@ -89,6 +93,10 @@ export function useVascularAccess() {
     isSaving: write.isPending,
     clearWriteError: write.reset,
 
+    addRecord: (
+      patient: { memberName: string; mrn: string },
+      overview: rules.AccessOverview,
+    ) => run((s) => rules.addAccessRecord(s, patient, overview)),
     editOverview: (mrn: string, overview: Partial<rules.AccessOverview>) =>
       run((s) => rules.editOverview(s, mrn, overview)),
     scheduleAppointment: (
@@ -117,33 +125,62 @@ export function useVascularAccess() {
     ) => run((s) => rules.reportConcern(s, mrn, concern, Date.now())),
     reviewConcern: (mrn: string, concernId: string) =>
       run((s) => rules.reviewConcern(s, mrn, concernId)),
-    requestTransport: (mrn: string, appointmentId: string) =>
-      run((s) => rules.requestTransport(s, mrn, appointmentId, Date.now())),
-    arrangeTransport: (mrn: string, requestId: string) =>
-      run((s) => rules.arrangeTransport(s, mrn, requestId)),
+    requestTransport: (mrn: string, details: rules.TransportDetails) =>
+      run((s) => rules.requestTransport(s, mrn, details, Date.now())),
+    acknowledgeTransport: (mrn: string, requestId: string) =>
+      run((s) => rules.acknowledgeTransport(s, mrn, requestId, Date.now())),
+    confirmTransport: (
+      mrn: string,
+      requestId: string,
+      confirmation: rules.TransportConfirmation,
+      confirmedBy?: string,
+    ) =>
+      run((s) =>
+        rules.confirmTransport(
+          s,
+          mrn,
+          requestId,
+          confirmation,
+          Date.now(),
+          confirmedBy,
+        ),
+      ),
+    cancelTransport: (
+      mrn: string,
+      requestId: string,
+      by: "member" | "dialysis",
+    ) => run((s) => rules.cancelTransport(s, mrn, requestId, by, Date.now())),
     sendMessage: (
       mrn: string,
-      team: rules.AccessTeam,
-      author: rules.AccessMessage["author"],
+      author: rules.AccessParty,
+      authorName: string,
       body: string,
-      imageUrl?: string,
+      options?: { imageUrl?: string; private?: boolean },
     ) =>
       run((s) =>
         rules.sendAccessMessage(
           s,
           mrn,
-          team,
           author,
+          authorName,
           body,
           Date.now(),
-          imageUrl,
+          options,
         ),
       ),
-    markThreadRead: (
+    setMessagePrivate: (
       mrn: string,
-      team: rules.AccessTeam,
-      reader: rules.AccessMessage["author"],
-    ) => run((s) => rules.markThreadRead(s, mrn, team, reader)),
+      messageId: string,
+      isPrivate: boolean,
+      by: rules.AccessParty,
+    ) => run((s) => rules.setMessagePrivate(s, mrn, messageId, isPrivate, by)),
+    setDialysisCanPost: (
+      mrn: string,
+      allowed: boolean,
+      by: rules.AccessParty,
+    ) => run((s) => rules.setDialysisCanPost(s, mrn, allowed, by)),
+    markConversationRead: (mrn: string, reader: rules.AccessParty) =>
+      run((s) => rules.markConversationRead(s, mrn, reader)),
   };
 }
 

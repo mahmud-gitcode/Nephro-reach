@@ -1,4 +1,4 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
 import { SEED_CLINIC } from "./clinic.seed";
 import type { DialysisClinic } from "./clinic.types";
 
@@ -23,7 +23,9 @@ function parse(value: unknown): DialysisClinic {
 
 export async function getClinic(): Promise<DialysisClinic> {
   const stored = await readJson<unknown>(KEY, null);
-  return stored === null ? SEED_CLINIC : parse(stored);
+  return stored === null
+    ? sampleOr(KEY, SEED_CLINIC, { name: "", phone: "", address: "" })
+    : parse(stored);
 }
 
 export async function saveClinic(

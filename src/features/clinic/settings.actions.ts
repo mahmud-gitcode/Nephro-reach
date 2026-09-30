@@ -1,5 +1,3 @@
-import { officeUsers, type OfficeUser, type UserStatus } from "./settings.data";
-
 /* ==========================================================================
    Clinic Settings — what the buttons actually do
    --------------------------------------------------------------------------
@@ -13,110 +11,6 @@ import { officeUsers, type OfficeUser, type UserStatus } from "./settings.data";
    complete without a server are the data export — a file built in the
    browser is a real file — and every preference toggle.
    ========================================================================== */
-
-export type OfficeRole = OfficeUser["role"];
-
-export const OFFICE_ROLES: OfficeRole[] = [
-  "Admin",
-  "Provider",
-  "Staff",
-  "Coordinator",
-  "MA",
-];
-
-/**
- * A user the clinic can act on.
- *
- * `id` is the email, because that is what actually identifies a person in
- * an office portal and what an invite is sent to. Two rows cannot share one.
- */
-export interface ManagedUser extends OfficeUser {
-  /** ISO 8601, set when the row was added here rather than seeded. */
-  addedAt?: string;
-  /** ISO 8601, set when an invite was last sent again. */
-  invitedAt?: string;
-}
-
-export type UserAction = "activate" | "suspend" | "resend" | "remove";
-
-/** The seeded roster, as the starting point for a clinic's own edits. */
-export function seedUsers(): ManagedUser[] {
-  return officeUsers.map((user) => ({ ...user }));
-}
-
-/** Why a new user cannot be added, or null when they can. */
-export function userError(
-  draft: { name: string; email: string },
-  existing: ManagedUser[],
-): string | null {
-  if (draft.name.trim().length < 2) return "Enter the person's name.";
-
-  const email = draft.email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return "Enter a valid email address.";
-  }
-  if (existing.some((user) => user.email.toLowerCase() === email)) {
-    return "Someone with that email is already on the list.";
-  }
-  return null;
-}
-
-export function addUser(
-  users: ManagedUser[],
-  draft: { name: string; email: string; role: OfficeRole },
-): ManagedUser[] {
-  /* Pending, not Active. An invited person has not accepted yet, and a
-     roster that says Active before they have logged in once is a roster
-     nobody can audit. */
-  return [
-    ...users,
-    {
-      name: draft.name.trim(),
-      email: draft.email.trim(),
-      role: draft.role,
-      status: "Pending" as UserStatus,
-      addedAt: new Date().toISOString(),
-    },
-  ];
-}
-
-export function setUserStatus(
-  users: ManagedUser[],
-  email: string,
-  status: UserStatus,
-): ManagedUser[] {
-  return users.map((user) =>
-    user.email === email ? { ...user, status } : user,
-  );
-}
-
-export function resendInvite(
-  users: ManagedUser[],
-  email: string,
-): ManagedUser[] {
-  return users.map((user) =>
-    user.email === email
-      ? { ...user, invitedAt: new Date().toISOString() }
-      : user,
-  );
-}
-
-export function removeUser(users: ManagedUser[], email: string): ManagedUser[] {
-  return users.filter((user) => user.email !== email);
-}
-
-/**
- * Whether the roster would still have an admin after a change.
- *
- * An office that removes or suspends its last admin locks itself out of its
- * own portal, and no one left can undo it. The dialog refuses rather than
- * asking the person to be careful.
- */
-export function keepsAnAdmin(users: ManagedUser[]): boolean {
-  return users.some(
-    (user) => user.role === "Admin" && user.status === "Active",
-  );
-}
 
 /* --------------------------------------------------------------------------
    Security
@@ -304,7 +198,6 @@ export const DEFAULT_SHARING: SharingState = {
 
 /** Everything this page records locally. One record, one key. */
 export interface SettingsActions {
-  users: ManagedUser[];
   security: SecurityState;
   sharing: SharingState;
   updatedAt: string;
@@ -312,7 +205,6 @@ export interface SettingsActions {
 
 export function defaultSettingsActions(): SettingsActions {
   return {
-    users: seedUsers(),
     security: { ...EMPTY_SECURITY },
     sharing: { ...DEFAULT_SHARING },
     updatedAt: "",
@@ -326,38 +218,10 @@ export function normaliseSettingsActions(stored: unknown): SettingsActions {
 
   const raw = stored as Partial<SettingsActions>;
 
-  const users = Array.isArray(raw.users)
-    ? raw.users.flatMap((value) => {
-        if (!value || typeof value !== "object") return [];
-        const user = value as Partial<ManagedUser>;
-        if (typeof user.email !== "string" || typeof user.name !== "string") {
-          return [];
-        }
-
-        return [
-          {
-            name: user.name,
-            email: user.email,
-            role: OFFICE_ROLES.includes(user.role as OfficeRole)
-              ? (user.role as OfficeRole)
-              : "Staff",
-            status: user.status === "Pending" ? "Pending" : "Active",
-            addedAt:
-              typeof user.addedAt === "string" ? user.addedAt : undefined,
-            invitedAt:
-              typeof user.invitedAt === "string" ? user.invitedAt : undefined,
-          } satisfies ManagedUser,
-        ];
-      })
-    : base.users;
-
   const security = raw.security as Partial<SecurityState> | undefined;
   const sharing = raw.sharing as Partial<SharingState> | undefined;
 
   return {
-    /* An empty stored roster is a roster somebody emptied, not a broken
-       record, so it is kept rather than re-seeded. */
-    users,
     security: {
       passwordChangedAt:
         typeof security?.passwordChangedAt === "string"
@@ -397,13 +261,25 @@ export function exportDocument(
   settings: unknown,
   actions: SettingsActions,
   exportedAt = new Date(),
+  /** The office's staff accounts (Staff & Roles). Never their passwords. */
+  staff: Array<{
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+  }> = [],
 ): string {
   return JSON.stringify(
     {
       exportedAt: exportedAt.toISOString(),
       source: "NephroReach clinic portal",
       settings,
-      users: actions.users,
+      staff: staff.map(({ name, email, role, status }) => ({
+        name,
+        email,
+        role,
+        status,
+      })),
       security: {
         /* The record of WHEN, never a password or a secret — neither is
            held here, and an export is exactly where one would leak. */
