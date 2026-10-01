@@ -2,7 +2,7 @@
 
 import React, { useId, useMemo, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
-import { Button, Chip, Input, SearchField } from "@/components/ui";
+import { Button, Chip, Input } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import {
   CONDITION_GROUPS,
@@ -15,9 +15,10 @@ import {
    Condition select — a patient's chronic conditions
    --------------------------------------------------------------------------
    Multi-select, because a CCM patient is rarely one diagnosis: CKD + HTN +
-   diabetes + CHF is the usual shape. The list opens under the field rather
-   than floating over it, so it is never clipped inside a dialog, and it is
-   searchable, grouped the way the client listed it.
+   diabetes + CHF is the usual shape. A dropdown, not a search (client,
+   2026-10-01): it opens under the field rather than floating over it, so
+   it is never clipped inside a dialog, and shows the whole library grouped
+   the way the client listed it.
 
    "Other" takes anything the library does not have; it is kept on the
    patient as typed. What is chosen shows as chips under the field, each
@@ -40,7 +41,6 @@ export function ConditionSelect({
 }) {
   const panelId = useId();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [other, setOther] = useState("");
 
   const selected = useMemo(
@@ -51,13 +51,8 @@ export function ConditionSelect({
     selected.filter((c) => !c.other).map((c) => library[c.rank]?.id),
   );
 
-  const q = query.trim().toLowerCase();
   const offered = library.filter(
-    (condition) =>
-      (condition.active || chosenIds.has(condition.id)) &&
-      (q === "" ||
-        condition.label.toLowerCase().includes(q) ||
-        condition.short.toLowerCase().includes(q)),
+    (condition) => condition.active || chosenIds.has(condition.id),
   );
 
   function toggle(condition: CcmCondition) {
@@ -83,7 +78,6 @@ export function ConditionSelect({
       onChange([...value, next]);
     }
     setOther("");
-    setQuery("");
   }
 
   return (
@@ -143,13 +137,7 @@ export function ConditionSelect({
           id={panelId}
           className="rounded-card-nested border border-line bg-surface p-inset-sm"
         >
-          <SearchField
-            label="Search conditions"
-            placeholder="Search conditions…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="mt-stack-sm max-h-72 space-y-stack-md overflow-y-auto pr-1">
+          <div className="max-h-72 space-y-stack-md overflow-y-auto pr-1">
             {CONDITION_GROUPS.map((group) => {
               const items = offered.filter((c) => c.group === group);
               if (items.length === 0) return null;
@@ -196,11 +184,6 @@ export function ConditionSelect({
                 </fieldset>
               );
             })}
-            {offered.length === 0 && q ? (
-              <p className="px-inset-xs text-body-sm text-fg-muted">
-                Nothing in the library matches “{query.trim()}”.
-              </p>
-            ) : null}
           </div>
 
           {/* "Other": anything the library does not hold, kept as typed. */}
@@ -210,13 +193,13 @@ export function ConditionSelect({
               <Input
                 inputSize="small"
                 aria-label="Other condition"
-                placeholder={q ? query.trim() : "Type a diagnosis"}
+                placeholder="Type a diagnosis"
                 value={other}
                 onChange={(e) => setOther(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    addOther(other || query);
+                    addOther(other);
                   }
                 }}
                 className="flex-1"
@@ -225,8 +208,8 @@ export function ConditionSelect({
                 size="small"
                 variant="neutral"
                 appearance="fill-stroke"
-                disabled={!(other.trim() || q)}
-                onClick={() => addOther(other || query)}
+                disabled={!other.trim()}
+                onClick={() => addOther(other)}
                 leadingIcon={<Plus aria-hidden="true" />}
               >
                 Add

@@ -56,15 +56,21 @@ import {
    ========================================================================== */
 
 export const accessStatusTone: Record<AccessStatus, BadgeTone> = {
-  "Working Well": "success",
-  "Needs Review": "warning",
-  "Problem Reported": "danger",
+  "No Active Concern": "success",
+  "Review Requested": "warning",
+  "Concern Reported": "danger",
+  "Appointment Scheduled": "info",
+  "Follow-Up Needed": "accent",
+  Closed: "neutral",
 };
 
 const STATUS_ES: Record<AccessStatus, string> = {
-  "Working Well": "Funciona bien",
-  "Needs Review": "Requiere revisión",
-  "Problem Reported": "Problema reportado",
+  "No Active Concern": "Sin inquietudes activas",
+  "Review Requested": "Revisión solicitada",
+  "Concern Reported": "Inquietud reportada",
+  "Appointment Scheduled": "Cita programada",
+  "Follow-Up Needed": "Requiere seguimiento",
+  Closed: "Cerrado",
 };
 
 export function AccessStatusBadge({

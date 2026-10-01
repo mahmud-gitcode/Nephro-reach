@@ -306,6 +306,14 @@ export const sidebarItems: NavItem[] = [
     icon: Activity,
     roles: ["access"],
   },
+  /* Its line to the dialysis center and the nephrology office (client,
+     2026-10-01). */
+  {
+    label: "Messages",
+    href: "/dashboard/access-center/messages",
+    icon: MessageSquareText,
+    roles: ["access"],
+  },
 ];
 
 export const supportItems: NavItem[] = [
@@ -358,6 +366,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Sistema de Diseño" : "Design System";
   if (pathname.startsWith("/dashboard/access-center/team"))
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/access-center/messages"))
+    return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/access-center"))
     return language === "ES" ? "Pacientes de Acceso" : "Access Patients";
   /* Clinic routes are matched before the member and admin rules below,
@@ -595,6 +605,7 @@ export function getNavLabel(
     "/dashboard/clinic/billing": "Contrato y Facturación",
     "/dashboard/access-center": "Pacientes de Acceso",
     "/dashboard/access-center/team": "Personal y Roles",
+    "/dashboard/access-center/messages": "Mensajes",
     "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",
     "/dashboard/clinic/support": "Ayuda y Soporte",

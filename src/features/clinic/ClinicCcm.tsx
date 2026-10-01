@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
   Check,
+  ChevronDown,
   Circle,
   CircleCheck,
   CircleAlert,
@@ -35,6 +36,7 @@ import {
   Input,
   KeyCard,
   Modal,
+  menuStyles,
   Progress,
   SearchField,
   SegmentedChoice,
@@ -58,6 +60,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
+import { useDismiss } from "@/lib/utils/useDismiss";
 import * as messaging from "@/features/messaging/messaging.rules";
 import {
   ACTIVITY_TYPES,
@@ -376,30 +379,94 @@ function WorklistFiltersBar({
   );
 }
 
-/** "CKD 4 · HTN +2": the two that matter most, and how many more. The full
- *  list is in the patient's record, and on hover here. */
+/** "CKD 4 · HTN +2 ▾": the two that matter most and how many more, as a
+ *  dropdown that opens the patient's whole list (client, 2026-10-01:
+ *  conditions are a dropdown per patient). The list is fixed to the
+ *  viewport so the table's scroll box never clips it. */
 function ConditionsCell({
   values,
   library,
+  patient,
 }: {
   values: string[];
   library: CcmCondition[];
+  patient: string;
 }) {
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
+  const close = useCallback(() => setAt(null), []);
+  const wrapRef = useDismiss<HTMLDivElement>(at !== null, close);
+  useEffect(() => {
+    if (!at) return;
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [at, close]);
+
   const summary = conditionSummary(values, library);
   if (!summary.text) return <span className="text-fg-muted">—</span>;
+  const all = sortedConditions(values, library);
   return (
-    <span
-      title={summary.full}
-      className="inline-flex items-center gap-inline-sm"
-    >
-      <span>{summary.text}</span>
-      {summary.more > 0 ? (
-        <Badge tone="neutral">
-          +{summary.more}
-          <span className="sr-only"> more: {summary.full}</span>
-        </Badge>
+    <div ref={wrapRef} className="inline-block">
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={at !== null}
+        aria-label={`${patient}'s conditions: ${summary.full}`}
+        onClick={(e) => {
+          if (at) return close();
+          const box = e.currentTarget.getBoundingClientRect();
+          setAt({ top: box.bottom + 4, left: box.left });
+        }}
+        className={cn(
+          "inline-flex min-h-10 cursor-pointer items-center gap-inline-sm rounded-control px-inset-xs text-left",
+          "transition-colors duration-150 ease-standard hover:bg-surface-sunken",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        )}
+      >
+        <span>{summary.text}</span>
+        {summary.more > 0 ? (
+          <Badge tone="neutral">+{summary.more}</Badge>
+        ) : null}
+        <ChevronDown
+          aria-hidden="true"
+          className={cn(
+            "size-4 shrink-0 text-fg-muted transition-transform duration-150 ease-standard",
+            at && "rotate-180",
+          )}
+        />
+      </button>
+      {at ? (
+        <div
+          className={cn(menuStyles, "fixed mt-0 w-72 max-w-[calc(100vw-2rem)]")}
+          style={{ top: at.top, left: at.left }}
+        >
+          <p className="px-3 pt-1 pb-2 text-label-sm text-fg-muted">
+            Chronic Conditions ({all.length})
+          </p>
+          <ul className="max-h-72 overflow-y-auto">
+            {all.map((condition) => (
+              <li
+                key={condition.value}
+                className="flex items-center justify-between gap-inline-md rounded-control px-3 py-2 text-body-sm text-fg"
+              >
+                <span>
+                  {condition.label}
+                  {condition.other ? " (Other)" : ""}
+                </span>
+                {condition.other ? null : (
+                  <span className="shrink-0 text-caption text-fg-muted">
+                    {condition.short}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
-    </span>
+    </div>
   );
 }
 
@@ -498,7 +565,11 @@ function Worklist({
                 </TableCell>
                 <TableCell className="tabular-nums">{row.mrn}</TableCell>
                 <TableCell className="whitespace-nowrap">
-                  <ConditionsCell values={row.conditions} library={library} />
+                  <ConditionsCell
+                    values={row.conditions}
+                    library={library}
+                    patient={row.name}
+                  />
                 </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-inline-md">
@@ -1889,20 +1960,9 @@ function PatientModal({
             prefill={prefill}
             onDone={() => setAdding(false)}
           />
-        ) : canLog ? (
-          <div className="mb-stack-md flex justify-end">
-            <Button
-              size="small"
-              onClick={() => {
-                setPrefill(undefined);
-                setAdding(true);
-              }}
-              leadingIcon={<Plus aria-hidden="true" />}
-            >
-              Add Activity
-            </Button>
-          </div>
         ) : null}
+        {/* One way in (client, 2026-10-01): the header's Log Activity,
+            which opens this form from any tab. */}
         <ActivityTable
           activities={activities}
           month={month}

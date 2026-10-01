@@ -2,12 +2,13 @@
 
 import React, { useMemo, useState } from "react";
 import {
+  BellRing,
   CalendarPlus,
-  Car,
   Check,
   Eye,
   MessageSquareText,
   Search,
+  Send,
   UserPlus,
 } from "lucide-react";
 import {
@@ -52,14 +53,12 @@ import {
   CONCERN_KINDS,
   DIALYSIS_CENTER_NAME,
   TEAM_LABEL,
-  activeTransport,
   addDays,
   dayKey,
   formatDay,
   formatTime,
   nextAppointment,
   openConcerns,
-  pendingTransport,
   sortedHistory,
   sortedUpdates,
   unreadFor,
@@ -67,18 +66,13 @@ import {
   type AccessRecord,
   type AccessStatus,
   type AccessTeam,
-  type TransportConfirmation,
-  type TransportRequest,
+  type ReferralKind,
 } from "@/features/vascular-access/vascularAccess.data";
 import {
   AccessConversationView,
   AccessStatusBadge,
   AppointmentRow,
   HistoryTable,
-  TransportAsk,
-  TransportConfirmationView,
-  TransportStatusBadge,
-  TransportSteps,
   UpdatesTimeline,
 } from "@/features/vascular-access/AccessUi";
 import {
@@ -90,6 +84,11 @@ import { userCan } from "@/features/staff/staff";
 import { tableIconButton } from "./tableButton";
 import { useClinicData } from "./useClinicData";
 import { UpdatedBar } from "./UpdatedBar";
+import {
+  ReferralModal,
+  ReferralsPanel,
+  SendReferralModal,
+} from "./AccessReferrals";
 
 /* ==========================================================================
    Vascular Access — the staff side
@@ -97,8 +96,9 @@ import { UpdatedBar } from "./UpdatedBar";
    The other end of the member's Vascular Access tab, for both
    organisations that care for the access, each from its own login:
 
-     dialysis   the Dialysis Center (clinic role): arranges rides, and
-                joins the conversation when allowed
+     dialysis   the Dialysis Center (clinic role): refers concerns to the
+                access center directly, and joins the conversation when
+                allowed. Its rides live on its Messages page.
      access     the Vascular Access Center (access role): its own
                 organisation; manages privacy and who may post
 
@@ -165,7 +165,6 @@ type Perms = {
   role: string;
   reply: boolean;
   schedule: boolean;
-  rides: boolean;
 };
 
 /* -------------------------------------------------------- schedule form */
@@ -174,11 +173,14 @@ function ScheduleModal({
   records,
   store,
   initialMrn,
+  onScheduled,
   onClose,
 }: {
   records: AccessRecord[];
   store: VascularAccessStore;
   initialMrn: string;
+  /** After booking, e.g. to mark the referral that asked for it. */
+  onScheduled?: () => void;
   onClose: () => void;
 }) {
   const now = useNow();
@@ -218,6 +220,7 @@ function ScheduleModal({
                 place: place.trim(),
                 team,
               });
+              onScheduled?.();
               onClose();
             }}
           >
@@ -362,6 +365,7 @@ function PatientModal({
   perms,
   initialTab,
   onSchedule,
+  onRefer,
   onClose,
 }: {
   record: AccessRecord;
@@ -370,6 +374,8 @@ function PatientModal({
   perms: Perms;
   initialTab: PatientTab;
   onSchedule: () => void;
+  /** The dialysis side's straight line to the access center. */
+  onRefer?: () => void;
   onClose: () => void;
 }) {
   const now = useNow();
@@ -447,6 +453,16 @@ function PatientModal({
               </dd>
             </div>
           </dl>
+          {onRefer ? (
+            <Button
+              size="small"
+              className="sm:ml-auto"
+              onClick={onRefer}
+              leadingIcon={<BellRing aria-hidden="true" />}
+            >
+              Alert Access Center
+            </Button>
+          ) : null}
         </div>
 
         <section>
@@ -588,327 +604,6 @@ function PatientModal({
   );
 }
 
-/* ----------------------------------------------------------- ride booking */
-
-/** The coordinator books the ride: the details go to the patient. Also
- *  used to correct a confirmed ride. */
-function ConfirmRideModal({
-  record,
-  request,
-  store,
-  by,
-  onClose,
-}: {
-  record: AccessRecord;
-  request: TransportRequest;
-  store: VascularAccessStore;
-  /** Who is booking it. */
-  by: string;
-  onClose: () => void;
-}) {
-  const appointment = record.appointments.find(
-    (a) => a.id === request.appointmentId,
-  );
-  const current = request.confirmation;
-  const [form, setForm] = useState<TransportConfirmation>({
-    pickupTime: current?.pickupTime ?? "",
-    returnPickupTime: current?.returnPickupTime ?? "",
-    provider: current?.provider ?? "",
-    phone: current?.phone ?? "",
-    confirmationNumber: current?.confirmationNumber ?? "",
-    note: current?.note ?? "",
-  });
-  const [tried, setTried] = useState(false);
-  const set = (change: Partial<TransportConfirmation>) =>
-    setForm((f) => ({ ...f, ...change }));
-
-  const errors = {
-    pickupTime: form.pickupTime ? undefined : "Set the pickup time",
-    provider: form.provider.trim() ? undefined : "Who is driving?",
-    phone:
-      form.phone.replace(/\D/g, "").length >= 7
-        ? undefined
-        : "Enter a phone number",
-    confirmationNumber: form.confirmationNumber.trim()
-      ? undefined
-      : "Enter the confirmation number",
-  };
-  const valid = Object.values(errors).every((e) => !e);
-  const show = (e?: string) => (tried ? e : undefined);
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="wide"
-      title={current ? "Edit Ride" : "Confirm Ride"}
-      description={`${record.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date)} at ${formatTime(appointment.time)}` : "Appointment removed"}`}
-      footer={
-        <>
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              setTried(true);
-              if (!valid) return;
-              store.confirmTransport(record.mrn, request.id, form, by);
-              onClose();
-            }}
-          >
-            {current ? "Save Changes" : "Confirm & Notify Patient"}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-stack-lg">
-        <section className="rounded-card-nested border border-line p-inset-sm">
-          <h3 className="mb-stack-sm text-heading-5 text-fg">
-            What the patient asked for
-          </h3>
-          <TransportAsk request={request} />
-        </section>
-        <div className="grid gap-stack-md sm:grid-cols-2">
-          <FormField
-            label="Pickup time"
-            required
-            error={show(errors.pickupTime)}
-          >
-            {(field) => (
-              <Input
-                {...field}
-                type="time"
-                value={form.pickupTime}
-                onChange={(e) => set({ pickupTime: e.target.value })}
-              />
-            )}
-          </FormField>
-          {request.returnTrip ? (
-            <FormField
-              label="Return pickup time"
-              hint="Or leave blank for will-call."
-            >
-              {(field) => (
-                <Input
-                  {...field}
-                  type="time"
-                  value={form.returnPickupTime}
-                  onChange={(e) => set({ returnPickupTime: e.target.value })}
-                />
-              )}
-            </FormField>
-          ) : null}
-          <FormField
-            label="Transport company or driver"
-            required
-            error={show(errors.provider)}
-          >
-            {(field) => (
-              <Input
-                {...field}
-                value={form.provider}
-                onChange={(e) => set({ provider: e.target.value })}
-              />
-            )}
-          </FormField>
-          <FormField label="Phone" required error={show(errors.phone)}>
-            {(field) => (
-              <Input
-                {...field}
-                type="tel"
-                value={form.phone}
-                onChange={(e) => set({ phone: e.target.value })}
-              />
-            )}
-          </FormField>
-          <FormField
-            label="Confirmation number"
-            required
-            error={show(errors.confirmationNumber)}
-          >
-            {(field) => (
-              <Input
-                {...field}
-                value={form.confirmationNumber}
-                onChange={(e) => set({ confirmationNumber: e.target.value })}
-              />
-            )}
-          </FormField>
-        </div>
-        <FormField label="Note for the patient">
-          {(field) => (
-            <Input
-              {...field}
-              value={form.note}
-              onChange={(e) => set({ note: e.target.value })}
-              placeholder="E.g. driver will call 10 minutes before"
-            />
-          )}
-        </FormField>
-      </div>
-    </Modal>
-  );
-}
-
-/** Every live ride request. The dialysis center works them; the access
- *  center sees where each one is. */
-function TransportPanel({
-  records,
-  store,
-  party,
-  perms,
-  onOpen,
-}: {
-  records: AccessRecord[];
-  store: VascularAccessStore;
-  party: StaffParty;
-  perms: Perms;
-  onOpen: (mrn: string) => void;
-}) {
-  const [editing, setEditing] = useState<{
-    mrn: string;
-    id: string;
-  } | null>(null);
-  const rides = records
-    .flatMap((record) =>
-      activeTransport(record).map((request) => ({ record, request })),
-    )
-    .sort((a, b) => {
-      /* The ones still to book first, oldest first. */
-      const rank = (r: TransportRequest) => (r.status === "Confirmed" ? 1 : 0);
-      return (
-        rank(a.request) - rank(b.request) ||
-        a.request.requestedAt.localeCompare(b.request.requestedAt)
-      );
-    });
-  const works = party === "dialysis" && perms.rides;
-  const selected = editing
-    ? rides.find(
-        (ride) =>
-          ride.record.mrn === editing.mrn && ride.request.id === editing.id,
-      )
-    : null;
-
-  return (
-    <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Transportation" />
-      <p className="mb-stack-md text-caption text-fg-muted">
-        {works
-          ? "Requests come to your social worker. Confirming sends the details to the patient."
-          : party === "dialysis"
-            ? "Your social worker or care coordinator arranges these rides."
-            : `Arranged by ${DIALYSIS_CENTER_NAME}.`}
-      </p>
-      {rides.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">No ride requests.</p>
-      ) : (
-        <ul className="space-y-stack-md">
-          {rides.map(({ record, request }) => {
-            const appointment = record.appointments.find(
-              (a) => a.id === request.appointmentId,
-            );
-            return (
-              <li
-                key={request.id}
-                className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
-              >
-                <div className="flex items-start justify-between gap-inline-md">
-                  <div className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => onOpen(record.mrn)}
-                      className={cn(
-                        "cursor-pointer rounded-control-small text-label-lg text-fg hover:text-fg-brand hover:underline",
-                        focusRing,
-                      )}
-                    >
-                      {record.memberName}
-                    </button>
-                    <p className="text-caption text-fg-muted">
-                      {appointment
-                        ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)} · ${appointment.place}`
-                        : "Appointment removed"}
-                    </p>
-                  </div>
-                  <TransportStatusBadge status={request.status} />
-                </div>
-                <TransportSteps request={request} />
-                {request.confirmation ? (
-                  <TransportConfirmationView
-                    confirmation={request.confirmation}
-                    confirmedBy={request.confirmedBy}
-                  />
-                ) : (
-                  <TransportAsk request={request} />
-                )}
-                {works ? (
-                  <div className="flex flex-wrap gap-inline-sm">
-                    {request.status === "Requested" ? (
-                      <Button
-                        size="small"
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        onClick={() =>
-                          store.acknowledgeTransport(record.mrn, request.id)
-                        }
-                        leadingIcon={<Check aria-hidden="true" />}
-                      >
-                        Acknowledge
-                      </Button>
-                    ) : null}
-                    <Button
-                      size="small"
-                      variant={
-                        request.status === "Confirmed" ? "neutral" : "primary"
-                      }
-                      appearance={
-                        request.status === "Confirmed" ? "fill-stroke" : "fill"
-                      }
-                      onClick={() =>
-                        setEditing({ mrn: record.mrn, id: request.id })
-                      }
-                      leadingIcon={<Car aria-hidden="true" />}
-                    >
-                      {request.status === "Confirmed"
-                        ? "Edit Ride"
-                        : "Confirm Ride"}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="ghost"
-                      onClick={() =>
-                        store.cancelTransport(
-                          record.mrn,
-                          request.id,
-                          "dialysis",
-                        )
-                      }
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {selected ? (
-        <ConfirmRideModal
-          key={selected.request.id}
-          record={selected.record}
-          request={selected.request}
-          store={store}
-          by={perms.me}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
-    </Card>
-  );
-}
-
 /* ----------------------------------------------------- add access patient */
 
 /** Starts the access record for one of the clinic's patients who has no
@@ -936,7 +631,7 @@ function AddAccessModal({
   const [type, setType] = useState<string>(ACCESS_TYPES[0]);
   const [location, setLocation] = useState("");
   const [createdOn, setCreatedOn] = useState(today);
-  const [status, setStatus] = useState<AccessStatus>("Needs Review");
+  const [status, setStatus] = useState<AccessStatus>("Review Requested");
   const [tried, setTried] = useState(false);
   const locationError = location.trim() ? undefined : "Where is the access?";
 
@@ -1086,7 +781,6 @@ export default function ClinicVascularAccess({
     role: user?.staffRole ?? "Administrator",
     reply: userCan(user, "messages.reply"),
     schedule: userCan(user, "access.schedule"),
-    rides: userCan(user, "rides.manage"),
   };
   const now = useNow();
   const store = useVascularAccess();
@@ -1099,7 +793,16 @@ export default function ClinicVascularAccess({
     null,
   );
   const [scheduling, setScheduling] = useState<string | null>(null);
-  const [addingPatient, setAddingPatient] = useState(false);
+  /* true for any patient; an MRN when a referral starts the record. */
+  const [addingPatient, setAddingPatient] = useState<string | boolean>(false);
+  /* Referral popups: one being read, one being written. */
+  const [openReferral, setOpenReferral] = useState<string | null>(null);
+  const [referring, setReferring] = useState<{
+    mrn?: string;
+    kind?: ReferralKind;
+  } | null>(null);
+  /* The referral a booking answers, so scheduling marks it. */
+  const [schedulingFor, setSchedulingFor] = useState<string | null>(null);
   /* The clinic's whole patient list, newly enrolled ones included. */
   const clinicData = useClinicData();
 
@@ -1117,10 +820,21 @@ export default function ClinicVascularAccess({
   const concerns = records.flatMap((record) =>
     openConcerns(record).map((concern) => ({ record, concern })),
   );
-  const ridesToBook = records.reduce(
-    (sum, record) => sum + pendingTransport(record).length,
-    0,
-  );
+  const referrals = store.referrals;
+  const openReferralCount = referrals.filter((r) =>
+    party === "access" ? r.status === "New" : r.status !== "Closed",
+  ).length;
+  const readingReferral = openReferral
+    ? referrals.find((r) => r.id === openReferral)
+    : undefined;
+  /* Anyone the clinic can refer: access patients, then the rest of its
+     roster (a new-access referral is for someone with no record yet). */
+  const referable = [
+    ...records.map((r) => ({ name: r.memberName, mrn: r.mrn })),
+    ...(clinicData.data?.patients ?? [])
+      .filter((p) => !records.some((r) => r.mrn === p.mrn))
+      .map((p) => ({ name: p.name, mrn: p.mrn })),
+  ];
   const nextMonth = addDays(today, 30);
   const upcomingCount = records.reduce(
     (sum, record) =>
@@ -1177,9 +891,9 @@ export default function ClinicVascularAccess({
           />
           <KeyCard
             tone="warning"
-            icon={<ClockSolid />}
-            value={ridesToBook}
-            label="Rides to Confirm"
+            icon={<BellRing />}
+            value={openReferralCount}
+            label={party === "access" ? "New Referrals" : "Open Referrals"}
           />
         </section>
 
@@ -1383,12 +1097,12 @@ export default function ClinicVascularAccess({
             )}
           </Card>
 
-          <TransportPanel
-            records={records}
-            store={store}
-            party={party}
-            perms={perms}
-            onOpen={(mrn) => setOpen({ mrn, tab: "overview" })}
+          <ReferralsPanel
+            referrals={referrals}
+            side={party === "access" ? "access" : "clinic"}
+            canSend={perms.reply && party === "dialysis"}
+            onSend={() => setReferring({})}
+            onOpen={setOpenReferral}
           />
         </section>
 
@@ -1404,6 +1118,17 @@ export default function ClinicVascularAccess({
               setScheduling(selected.mrn);
               setOpen(null);
             }}
+            onRefer={
+              party === "dialysis" && perms.reply
+                ? () => {
+                    setReferring({
+                      mrn: selected.mrn,
+                      kind: "Access Concern",
+                    });
+                    setOpen(null);
+                  }
+                : undefined
+            }
             onClose={() => setOpen(null)}
           />
         ) : null}
@@ -1413,7 +1138,55 @@ export default function ClinicVascularAccess({
             records={records}
             store={store}
             initialMrn={scheduling || records[0]?.mrn || ""}
-            onClose={() => setScheduling(null)}
+            onScheduled={
+              schedulingFor
+                ? () =>
+                    store.setReferralStatus(
+                      schedulingFor,
+                      "Scheduled",
+                      perms.me,
+                    )
+                : undefined
+            }
+            onClose={() => {
+              setScheduling(null);
+              setSchedulingFor(null);
+            }}
+          />
+        ) : null}
+
+        {readingReferral ? (
+          <ReferralModal
+            key={readingReferral.id}
+            referral={readingReferral}
+            record={records.find((r) => r.mrn === readingReferral.mrn)}
+            side={party === "access" ? "access" : "clinic"}
+            me={perms.me}
+            canReply={perms.reply}
+            canAct={perms.schedule}
+            store={store}
+            onSchedule={() => {
+              setSchedulingFor(readingReferral.id);
+              setScheduling(readingReferral.mrn);
+              setOpenReferral(null);
+            }}
+            onStartRecord={() => {
+              setAddingPatient(readingReferral.mrn);
+              setOpenReferral(null);
+            }}
+            onClose={() => setOpenReferral(null)}
+          />
+        ) : null}
+
+        {referring ? (
+          <SendReferralModal
+            side={party === "access" ? "access" : "clinic"}
+            patients={referable}
+            initialMrn={referring.mrn}
+            initialKind={referring.kind}
+            me={perms.me}
+            onSend={store.sendReferral}
+            onClose={() => setReferring(null)}
           />
         ) : null}
       </>
@@ -1431,6 +1204,17 @@ export default function ClinicVascularAccess({
               isFetching={store.isFetching}
               refetch={store.refetch}
             />
+            {party === "dialysis" && perms.reply ? (
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setReferring({})}
+              >
+                <Send aria-hidden="true" />
+                Message Access Center
+              </Button>
+            ) : null}
             {perms.schedule ? (
               <Button
                 size="small"
@@ -1459,7 +1243,9 @@ export default function ClinicVascularAccess({
       {addingPatient ? (
         <AddAccessModal
           candidates={(clinicData.data?.patients ?? []).filter(
-            (p) => !records.some((record) => record.mrn === p.mrn),
+            (p) =>
+              !records.some((record) => record.mrn === p.mrn) &&
+              (addingPatient === true || p.mrn === addingPatient),
           )}
           onAdd={store.addRecord}
           onClose={() => setAddingPatient(false)}

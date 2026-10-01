@@ -23,6 +23,14 @@
    either of those two can mark a message private, which the dialysis
    center then sees only as a placeholder.
 
+   Staff refer to the access center directly, without the patient: the
+   dialysis center (a nurse who finds no thrill or bruit) and the
+   nephrology office (a patient who needs an access placed) send a
+   referral, and the two sides talk it through on the referral itself
+   (client, 2026-10-01). The access center acknowledges, schedules or
+   closes it. The same threads are the access center's Messages page, and
+   it can start one with either office too.
+
    A ride request goes to the dialysis center's social worker and moves
    Requested → Acknowledged → Confirmed (pickup time, company, phone,
    confirmation number), and the confirmation posts back to the patient's
@@ -41,10 +49,16 @@ export const TEAM_LABEL: Record<AccessTeam, string> = {
   dialysis: "Dialysis Center",
 };
 
+/** Workflow states, not a clinical verdict (client, 2026-10-01): "No
+ *  Active Concern" says nothing is open, without implying the access was
+ *  assessed as working. */
 export const ACCESS_STATUSES = [
-  "Working Well",
-  "Needs Review",
-  "Problem Reported",
+  "No Active Concern",
+  "Review Requested",
+  "Concern Reported",
+  "Appointment Scheduled",
+  "Follow-Up Needed",
+  "Closed",
 ] as const;
 export type AccessStatus = (typeof ACCESS_STATUSES)[number];
 
@@ -234,7 +248,83 @@ export type AccessRecord = {
   conversation: AccessConversation;
 };
 
-export type AccessState = { records: AccessRecord[] };
+/* ------------------------------------------------------------ referrals */
+
+/** Who refers to the access center. The nephrology office has no login of
+ *  its own yet, so the clinic portal sends on its behalf. */
+export type ReferralSource = "dialysis" | "nephrology";
+
+export const NEPHROLOGY_OFFICE_NAME = "Riverside Nephrology Associates";
+
+export const REFERRAL_KINDS = [
+  "Access Concern",
+  "New Access Referral",
+  "Appointment Request",
+  "General Message",
+] as const;
+export type ReferralKind = (typeof REFERRAL_KINDS)[number];
+
+export type ReferralStatus = "New" | "Acknowledged" | "Scheduled" | "Closed";
+
+export type ReferralReply = {
+  id: string;
+  /** Which side wrote it. */
+  author: "access" | ReferralSource;
+  authorName: string;
+  body: string;
+  /** ISO 8601 */
+  sentAt: string;
+};
+
+export type AccessReferral = {
+  id: string;
+  /** ISO 8601 */
+  sentAt: string;
+  /** The office on the other side of the thread from the access center. */
+  source: ReferralSource;
+  /** Set when the access center wrote first, to `source`. */
+  startedBy?: "access";
+  /** The person who wrote first: "Nurse Wilson". */
+  sentBy: string;
+  /** Both "" for a general message about no one patient. */
+  memberName: string;
+  mrn: string;
+  kind: ReferralKind;
+  /** CONCERN_KINDS ids, for an access concern. */
+  findings: string[];
+  detail: string;
+  urgent: boolean;
+  status: ReferralStatus;
+  /** Who at the access center last moved it on. */
+  handledBy?: string;
+  /** ISO 8601 */
+  handledAt?: string;
+  replies: ReferralReply[];
+};
+
+export type ReferralInput = Pick<
+  AccessReferral,
+  | "source"
+  | "startedBy"
+  | "sentBy"
+  | "memberName"
+  | "mrn"
+  | "kind"
+  | "findings"
+  | "detail"
+  | "urgent"
+>;
+
+export const SOURCE_LABEL: Record<ReferralSource, string> = {
+  dialysis: "Riverside Dialysis Center",
+  nephrology: NEPHROLOGY_OFFICE_NAME,
+};
+
+export type AccessState = {
+  records: AccessRecord[];
+  /** Staff-to-staff referrals. Optional so older shapes still read. */
+  referrals?: AccessReferral[];
+};
 
 /* ------------------------------------------------------------------ dates */
 
@@ -411,6 +501,7 @@ function updateRecord(
   change: (record: AccessRecord) => AccessRecord,
 ): AccessState {
   return {
+    ...state,
     records: state.records.map((record) =>
       record.mrn === mrn ? change(record) : record,
     ),
@@ -426,6 +517,7 @@ export function addAccessRecord(
 ): AccessState {
   if (state.records.some((record) => record.mrn === patient.mrn)) return state;
   return {
+    ...state,
     records: [
       ...state.records,
       {
@@ -457,7 +549,8 @@ export function editOverview(
   }));
 }
 
-/** Booking a visit also posts it to the member's updates timeline. */
+/** Booking a visit also posts it to the member's updates timeline, and
+ *  moves the access to "Appointment Scheduled". */
 export function scheduleAppointment(
   state: AccessState,
   mrn: string,
@@ -467,6 +560,7 @@ export function scheduleAppointment(
   const id = `appt-${now}`;
   return updateRecord(state, mrn, (record) => ({
     ...record,
+    overview: { ...record.overview, status: "Appointment Scheduled" },
     appointments: [...record.appointments, { ...appointment, id }],
     updates: [
       ...record.updates,
@@ -505,9 +599,24 @@ export function completeAppointment(
       (entry) => entry.id === appointmentId,
     );
     if (!appointment || appointment.completed) return record;
+    /* What is still open decides the status the visit leaves behind. */
+    const othersBooked = record.appointments.some(
+      (entry) => entry.id !== appointmentId && !entry.completed,
+    );
+    const status: AccessStatus = record.concerns.some(
+      (concern) => concern.status === "Open",
+    )
+      ? "Concern Reported"
+      : othersBooked
+        ? "Appointment Scheduled"
+        : "No Active Concern";
     return {
       ...record,
-      overview: { ...record.overview, lastAssessment: appointment.date },
+      overview: {
+        ...record.overview,
+        status,
+        lastAssessment: appointment.date,
+      },
       appointments: record.appointments.map((entry) =>
         entry.id === appointmentId
           ? { ...entry, completed: { result, performedBy } }
@@ -548,7 +657,7 @@ export function reportConcern(
 ): AccessState {
   return updateRecord(state, mrn, (record) => ({
     ...record,
-    overview: { ...record.overview, status: "Problem Reported" },
+    overview: { ...record.overview, status: "Concern Reported" },
     concerns: [
       ...record.concerns,
       {
@@ -561,7 +670,8 @@ export function reportConcern(
   }));
 }
 
-/** Reviewing the last open concern returns the access to "Needs Review". */
+/** Reviewing the last open concern moves the access to "Follow-Up
+ *  Needed": someone has looked, and the next step is still to come. */
 export function reviewConcern(
   state: AccessState,
   mrn: string,
@@ -580,8 +690,8 @@ export function reviewConcern(
       overview: {
         ...record.overview,
         status:
-          !stillOpen && record.overview.status === "Problem Reported"
-            ? "Needs Review"
+          !stillOpen && record.overview.status === "Concern Reported"
+            ? "Follow-Up Needed"
             : record.overview.status,
       },
     };
@@ -889,7 +999,7 @@ export function seedAccessState(now: number): AccessState {
       type: "AV Fistula",
       location: "Left Forearm",
       createdOn: day(-560),
-      status: "Working Well",
+      status: "No Active Concern",
       lastAssessment: day(-38),
     },
     appointments: [
@@ -1023,7 +1133,7 @@ export function seedAccessState(now: number): AccessState {
         type: "AV Graft",
         location: "Right Upper Arm",
         createdOn: day(-400),
-        status: "Needs Review",
+        status: "Appointment Scheduled",
         lastAssessment: day(-12),
       },
       appointments: [
@@ -1089,7 +1199,7 @@ export function seedAccessState(now: number): AccessState {
         type: "Tunneled Catheter",
         location: "Right Chest",
         createdOn: day(-45),
-        status: "Problem Reported",
+        status: "Concern Reported",
         lastAssessment: day(-20),
       },
       appointments: [
@@ -1142,7 +1252,7 @@ export function seedAccessState(now: number): AccessState {
         type: "AV Fistula",
         location: "Left Upper Arm",
         createdOn: day(-900),
-        status: "Working Well",
+        status: "No Active Concern",
         lastAssessment: day(-60),
       },
       appointments: [
@@ -1168,7 +1278,7 @@ export function seedAccessState(now: number): AccessState {
         type: "AV Fistula",
         location: "Left Forearm",
         createdOn: day(-70),
-        status: "Needs Review",
+        status: "Review Requested",
         lastAssessment: day(-7),
       },
       appointments: [],
@@ -1180,5 +1290,183 @@ export function seedAccessState(now: number): AccessState {
     },
   ];
 
-  return { records: [member, ...others] };
+  /* One referral from each office: the dialysis nurse's no-thrill finding
+     on a record the access center already has, and the nephrology
+     office's referral for a patient with no access yet. */
+  const at = (hoursAgo: number) =>
+    new Date(now - hoursAgo * 3_600_000).toISOString();
+  const referrals: AccessReferral[] = [
+    {
+      id: "seed-ref-1",
+      sentAt: at(3),
+      source: "dialysis",
+      sentBy: "Nurse Wilson",
+      memberName: "Angela T. Brown",
+      mrn: "901234",
+      kind: "Access Concern",
+      findings: ["thrill"],
+      detail:
+        "No palpable thrill and a faint bruit at cannulation this morning. Cannulated with difficulty. Please evaluate and schedule.",
+      urgent: true,
+      status: "New",
+      replies: [],
+    },
+    {
+      id: "seed-ref-2",
+      sentAt: at(26),
+      source: "nephrology",
+      sentBy: "Dr. Carter",
+      memberName: "Robert L. Davis",
+      mrn: "345678",
+      kind: "New Access Referral",
+      findings: [],
+      detail:
+        "CKD stage 5, eGFR 12. Expected to start hemodialysis within 3–6 months. Referred for vein mapping and AV fistula placement.",
+      urgent: false,
+      status: "Acknowledged",
+      handledBy: "Dr. Patel",
+      handledAt: at(20),
+      replies: [
+        {
+          id: "seed-ref-2-r1",
+          author: "access",
+          authorName: "Dr. Patel",
+          body: "Received. We will call the patient to book vein mapping this week.",
+          sentAt: at(20),
+        },
+      ],
+    },
+  ];
+
+  return { records: [member, ...others], referrals };
+}
+
+/* ------------------------------------------------------ referral rules */
+
+/** Still to work first, urgent first, newest first. */
+export function referralsOf(state: AccessState): AccessReferral[] {
+  const rank = (r: AccessReferral) =>
+    r.status === "New" ? 0 : r.status === "Closed" ? 2 : 1;
+  return [...(state.referrals ?? [])].sort(
+    (a, b) =>
+      rank(a) - rank(b) ||
+      Number(b.urgent) - Number(a.urgent) ||
+      b.sentAt.localeCompare(a.sentAt),
+  );
+}
+
+/** Who answers a thread: the access center, or the office it wrote to. */
+export function receiverOf(
+  referral: AccessReferral,
+): "access" | ReferralSource {
+  return referral.startedBy === "access" ? referral.source : "access";
+}
+
+/** New threads waiting on the access center. */
+export function newReferralCount(state: AccessState): number {
+  return (state.referrals ?? []).filter(
+    (r) => r.status === "New" && receiverOf(r) === "access",
+  ).length;
+}
+
+function updateReferral(
+  state: AccessState,
+  id: string,
+  change: (referral: AccessReferral) => AccessReferral,
+): AccessState {
+  return {
+    ...state,
+    referrals: (state.referrals ?? []).map((referral) =>
+      referral.id === id ? change(referral) : referral,
+    ),
+  };
+}
+
+/**
+ * A referral goes straight to the access center. When the patient already
+ * has an access record it is flagged there too: a concern as "Concern
+ * Reported", a referral or request as "Review Requested". A general
+ * message, or one the access center starts, flags nothing. It is
+ * staff-to-staff, so nothing is posted to the patient.
+ */
+export function sendReferral(
+  state: AccessState,
+  input: ReferralInput,
+  now: number,
+): AccessState {
+  const referral: AccessReferral = {
+    ...input,
+    findings: input.kind === "Access Concern" ? input.findings : [],
+    detail: input.detail.trim(),
+    id: `ref-${now}`,
+    sentAt: new Date(now).toISOString(),
+    status: "New",
+    replies: [],
+  };
+  const flags =
+    input.startedBy !== "access" && input.kind !== "General Message";
+  const flagged = !flags
+    ? state
+    : updateRecord(state, input.mrn, (record) => ({
+        ...record,
+        overview: {
+          ...record.overview,
+          status:
+            input.kind === "Access Concern"
+              ? "Concern Reported"
+              : "Review Requested",
+        },
+      }));
+  return { ...flagged, referrals: [...(state.referrals ?? []), referral] };
+}
+
+/** The access center moves a referral on. The access record keeps its own
+ *  status; scheduling sets that separately. */
+export function setReferralStatus(
+  state: AccessState,
+  id: string,
+  status: Exclude<ReferralStatus, "New">,
+  by: string,
+  now: number,
+): AccessState {
+  return updateReferral(state, id, (referral) => ({
+    ...referral,
+    status,
+    handledBy: by,
+    handledAt: new Date(now).toISOString(),
+  }));
+}
+
+/** Either side writes on the thread. The receiving side's first reply
+ *  acknowledges a new one. */
+export function replyToReferral(
+  state: AccessState,
+  id: string,
+  author: ReferralReply["author"],
+  authorName: string,
+  body: string,
+  now: number,
+): AccessState {
+  const clean = body.trim();
+  if (!clean) return state;
+  return updateReferral(state, id, (referral) => ({
+    ...referral,
+    ...(author === receiverOf(referral) && referral.status === "New"
+      ? {
+          status: "Acknowledged" as const,
+          handledBy: authorName,
+          handledAt: new Date(now).toISOString(),
+        }
+      : {}),
+    replies: [
+      ...referral.replies,
+      {
+        id: `${referral.id}-r${now}`,
+        author,
+        authorName,
+        body: clean,
+        sentAt: new Date(now).toISOString(),
+      },
+    ],
+  }));
 }

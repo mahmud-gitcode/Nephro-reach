@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils/cn";
 import { FACILITY } from "@/features/messaging/messaging.seed";
 import { NewMessageModal } from "@/features/messaging/NewMessageModal";
 import { useClinicData } from "./useClinicData";
+import { ClinicRideRequests } from "./RideRequests";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import * as rules from "@/features/messaging/messaging.rules";
 import { useMessages } from "@/features/messaging/useMessages";
@@ -580,6 +581,9 @@ export default function ClinicMessages() {
           </div>
         </Card>
       </AsyncSection>
+      {/* Rides to access appointments: the social worker books them from
+          here, beside the patients' messages (client, 2026-10-01). */}
+      <ClinicRideRequests />
       {composing ? (
         <NewMessageModal
           title="New Message"

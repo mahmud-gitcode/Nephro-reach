@@ -81,7 +81,7 @@ describe("Add Access Patient", () => {
       type: "AV Fistula",
       location: "Left Forearm",
       createdOn: "2026-09-01",
-      status: "Needs Review" as const,
+      status: "Review Requested" as const,
       lastAssessment: "",
     };
     const patient = { memberName: "Ana Ruiz", mrn: "777001" };

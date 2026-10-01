@@ -18,10 +18,12 @@ const KEY = storageKey("vascular-access");
 /** Bump when AccessRecord changes shape, so old data re-seeds.
  *  Version 2: one three-way conversation per record, and ride requests
  *  with a confirm step. Version 3: the demo patient's record carries the
- *  one MRN they have everywhere (lib/data/demoIdentity). */
-const VERSION = 4;
+ *  one MRN they have everywhere (lib/data/demoIdentity). Version 5: the
+ *  workflow status set (No Active Concern ... Closed) and staff
+ *  referrals. */
+const VERSION = 5;
 
-type StoredEnvelope = { version: number; records: unknown };
+type StoredEnvelope = { version: number; records: unknown; referrals: unknown };
 
 function isRecord(value: unknown): value is rules.AccessRecord {
   if (!value || typeof value !== "object") return false;
@@ -46,9 +48,13 @@ async function readState(): Promise<AccessState> {
     stored &&
     stored.version === VERSION &&
     Array.isArray(stored.records) &&
-    stored.records.every(isRecord)
+    stored.records.every(isRecord) &&
+    Array.isArray(stored.referrals)
   ) {
-    return { records: stored.records };
+    return {
+      records: stored.records,
+      referrals: stored.referrals as rules.AccessReferral[],
+    };
   }
   const seeded = rules.seedAccessState(Date.now());
   await writeJson(KEY, { version: VERSION, ...seeded });
@@ -57,7 +63,7 @@ async function readState(): Promise<AccessState> {
 
 export const vascularAccessKey = ["vascular-access"] as const;
 
-const EMPTY: AccessState = { records: [] };
+const EMPTY: AccessState = { records: [], referrals: [] };
 
 export function useVascularAccess() {
   const queryClient = useQueryClient();
@@ -83,6 +89,7 @@ export function useVascularAccess() {
   return {
     state,
     records: state.records,
+    referrals: rules.referralsOf(state),
     isPending: query.isPending,
     isFetching: query.isFetching,
     error: query.error,
@@ -181,6 +188,22 @@ export function useVascularAccess() {
     ) => run((s) => rules.setDialysisCanPost(s, mrn, allowed, by)),
     markConversationRead: (mrn: string, reader: rules.AccessParty) =>
       run((s) => rules.markConversationRead(s, mrn, reader)),
+    sendReferral: (input: rules.ReferralInput) =>
+      run((s) => rules.sendReferral(s, input, Date.now())),
+    setReferralStatus: (
+      id: string,
+      status: Exclude<rules.ReferralStatus, "New">,
+      by: string,
+    ) => run((s) => rules.setReferralStatus(s, id, status, by, Date.now())),
+    replyToReferral: (
+      id: string,
+      author: rules.ReferralReply["author"],
+      authorName: string,
+      body: string,
+    ) =>
+      run((s) =>
+        rules.replyToReferral(s, id, author, authorName, body, Date.now()),
+      ),
   };
 }
 

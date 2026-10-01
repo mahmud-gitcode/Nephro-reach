@@ -15,7 +15,11 @@ import {
   formatTime,
   markConversationRead,
   openConcerns,
+  newReferralCount,
   pendingTransport,
+  receiverOf,
+  referralsOf,
+  replyToReferral,
   recordFor,
   recordForMember,
   reportConcern,
@@ -24,6 +28,8 @@ import {
   scheduleAppointment,
   seedAccessState,
   sendAccessMessage,
+  sendReferral,
+  setReferralStatus,
   setDialysisCanPost,
   setMessagePrivate,
   upcomingAppointments,
@@ -97,13 +103,13 @@ describe("concerns", () => {
       NOW,
     );
     const record = recordFor(reported, MRN)!;
-    expect(record.overview.status).toBe("Problem Reported");
+    expect(record.overview.status).toBe("Concern Reported");
     expect(openConcerns(record)).toHaveLength(1);
 
     const reviewed = reviewConcern(reported, MRN, openConcerns(record)[0].id);
     const after = recordFor(reviewed, MRN)!;
     expect(openConcerns(after)).toHaveLength(0);
-    expect(after.overview.status).toBe("Needs Review");
+    expect(after.overview.status).toBe("Follow-Up Needed");
   });
 });
 
@@ -267,6 +273,132 @@ describe("the three-way conversation", () => {
     );
     expect(conversationOf(withPhoto).messages.at(-1)?.imageUrl).toContain(
       "data:image/jpeg",
+    );
+  });
+});
+
+describe("referrals", () => {
+  const ask = {
+    source: "dialysis" as const,
+    sentBy: "Nurse Wilson",
+    memberName: member.memberName,
+    mrn: MRN,
+    kind: "Access Concern" as const,
+    findings: ["thrill"],
+    detail: "  No thrill at cannulation.  ",
+    urgent: true,
+  };
+
+  it("goes straight to the access center and flags the record", () => {
+    const sent = sendReferral(seed, ask, NOW);
+    expect(newReferralCount(sent)).toBe(newReferralCount(seed) + 1);
+    const mine = referralsOf(sent).find((r) => r.id === `ref-${NOW}`)!;
+    expect(mine).toMatchObject({
+      status: "New",
+      detail: "No thrill at cannulation.",
+    });
+    expect(recordFor(sent, MRN)!.overview.status).toBe("Concern Reported");
+    /* Staff-to-staff: nothing lands on the patient's timeline. */
+    expect(recordFor(sent, MRN)!.updates).toEqual(member.updates);
+  });
+
+  it("a request that is not a concern asks for review", () => {
+    const sent = sendReferral(
+      seed,
+      { ...ask, kind: "Appointment Request", findings: ["thrill"] },
+      NOW,
+    );
+    expect(recordFor(sent, MRN)!.overview.status).toBe("Review Requested");
+    expect(
+      referralsOf(sent).find((r) => r.id === `ref-${NOW}`)!.findings,
+    ).toEqual([]);
+  });
+
+  it("the access center's first reply acknowledges it", () => {
+    const sent = sendReferral(seed, ask, NOW);
+    const id = `ref-${NOW}`;
+    const replied = replyToReferral(
+      sent,
+      id,
+      "access",
+      "Dr. Patel",
+      "On it",
+      NOW + 1,
+    );
+    const ref = referralsOf(replied).find((r) => r.id === id)!;
+    expect(ref.status).toBe("Acknowledged");
+    expect(ref.handledBy).toBe("Dr. Patel");
+    expect(ref.replies).toHaveLength(1);
+    expect(replyToReferral(sent, id, "access", "Dr. Patel", "  ", NOW)).toBe(
+      sent,
+    );
+  });
+
+  it("closing and scheduling are recorded; writes keep the referrals", () => {
+    const sent = sendReferral(seed, ask, NOW);
+    const id = `ref-${NOW}`;
+    const done = setReferralStatus(sent, id, "Scheduled", "Dr. Patel", NOW + 1);
+    expect(referralsOf(done).find((r) => r.id === id)!.status).toBe(
+      "Scheduled",
+    );
+    const booked = scheduleAppointment(
+      done,
+      MRN,
+      {
+        date: addDays(TODAY, 3),
+        time: "09:00",
+        title: "Fistulogram",
+        place: "Metro",
+        team: "vascular",
+      },
+      NOW + 2,
+    );
+    expect(booked.referrals).toHaveLength(done.referrals!.length);
+    expect(recordFor(booked, MRN)!.overview.status).toBe(
+      "Appointment Scheduled",
+    );
+  });
+
+  it("the access center can write first; the office's reply acknowledges", () => {
+    const sent = sendReferral(
+      seed,
+      {
+        ...ask,
+        source: "nephrology",
+        startedBy: "access",
+        sentBy: "Dr. Patel",
+        kind: "General Message",
+        memberName: "",
+        mrn: "",
+        detail: "New clinic hours from Monday.",
+      },
+      NOW,
+    );
+    const id = `ref-${NOW}`;
+    const ref = referralsOf(sent).find((r) => r.id === id)!;
+    expect(receiverOf(ref)).toBe("nephrology");
+    /* Not waiting on the access center, and no record is flagged. */
+    expect(newReferralCount(sent)).toBe(newReferralCount(seed));
+    expect(sent.records).toEqual(seed.records);
+    const own = replyToReferral(
+      sent,
+      id,
+      "access",
+      "Dr. Patel",
+      "Also",
+      NOW + 1,
+    );
+    expect(referralsOf(own).find((r) => r.id === id)!.status).toBe("New");
+    const answered = replyToReferral(
+      sent,
+      id,
+      "nephrology",
+      "Dr. Carter",
+      "Thanks",
+      NOW + 2,
+    );
+    expect(referralsOf(answered).find((r) => r.id === id)!.status).toBe(
+      "Acknowledged",
     );
   });
 });
