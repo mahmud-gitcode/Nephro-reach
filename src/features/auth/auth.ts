@@ -7,8 +7,10 @@ import { readStaffForLogin } from "@/features/staff/staff.repository";
 import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 
 /* "access" is a Vascular Access Center: its own organisation, which shares
-   each patient's access record with the dialysis clinic (2026-09-30). */
-export type UserRole = "admin" | "user" | "clinic" | "access";
+   each patient's access record with the dialysis clinic (2026-09-30).
+   "nephrology" is a nephrology office (client, 2026-10-03: each office has
+   its own login): CCM, and its messages with the access center. */
+export type UserRole = "admin" | "user" | "clinic" | "access" | "nephrology";
 
 export type AuthUser = {
   email: string;
@@ -30,6 +32,8 @@ export const USER_HOME = "/dashboard";
 export const CLINIC_HOME = "/dashboard/clinic";
 /* Likewise for an access center, under its own prefix. */
 export const ACCESS_HOME = "/dashboard/access-center";
+/* And for a nephrology office. */
+export const NEPHROLOGY_HOME = "/dashboard/nephrology";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -47,6 +51,7 @@ const ADMIN_PREFIXES = [
 
 export const CLINIC_PREFIX = "/dashboard/clinic";
 export const ACCESS_PREFIX = "/dashboard/access-center";
+export const NEPHROLOGY_PREFIX = "/dashboard/nephrology";
 
 export const DEMO_ACCOUNTS = [
   {
@@ -73,11 +78,18 @@ export const DEMO_ACCOUNTS = [
     name: "Metro Vascular Access Center",
     role: "access" as const,
   },
+  {
+    email: "nephrology@nephroreach.com",
+    password: "nephrology123",
+    name: "Riverside Nephrology Associates",
+    role: "nephrology" as const,
+  },
 ];
 
 export function homeForRole(role: UserRole) {
   if (role === "clinic") return CLINIC_HOME;
   if (role === "access") return ACCESS_HOME;
+  if (role === "nephrology") return NEPHROLOGY_HOME;
   return role === "admin" ? ADMIN_HOME : USER_HOME;
 }
 
@@ -95,11 +107,21 @@ export function isAccessCenterRoute(pathname: string) {
   return pathname === ACCESS_PREFIX || pathname.startsWith(`${ACCESS_PREFIX}/`);
 }
 
+export function isNephrologyRoute(pathname: string) {
+  return (
+    pathname === NEPHROLOGY_PREFIX ||
+    pathname.startsWith(`${NEPHROLOGY_PREFIX}/`)
+  );
+}
+
 export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
   /* An access center sees its own routes and nothing else. */
   if (isAccessCenterRoute(pathname)) return role === "access";
   if (role === "access") return false;
+  /* Likewise a nephrology office. */
+  if (isNephrologyRoute(pathname)) return role === "nephrology";
+  if (role === "nephrology") return false;
   /* Checked first: the clinic prefix sits under /dashboard, so the shared
      and admin rules below would otherwise claim it. */
   if (isClinicRoute(pathname)) return role === "clinic";
@@ -127,7 +149,8 @@ export function parseSession(
       (parsed.role === "admin" ||
         parsed.role === "user" ||
         parsed.role === "clinic" ||
-        parsed.role === "access")
+        parsed.role === "access" ||
+        parsed.role === "nephrology")
     ) {
       return parsed;
     }

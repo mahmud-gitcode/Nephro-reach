@@ -28,15 +28,38 @@ const draft: StaffDraft = {
 };
 
 describe("roles", () => {
-  it("rides belong to the social worker, money to the administrator", () => {
+  it("the dialysis center follows the client's list (2026-10-01)", () => {
+    /* Social worker: travel, rides, messages, enrolling, the dashboard. */
     expect(roleCan("Social Worker", "rides.manage")).toBe(true);
+    expect(roleCan("Social Worker", "travel.manage")).toBe(true);
+    expect(roleCan("Social Worker", "dashboard.view")).toBe(true);
+    expect(roleCan("Social Worker", "access.view")).toBe(false);
+    /* Administrator: the same plus vascular access and lab uploads, but no
+       reports or billing. */
+    expect(roleCan("Administrator", "access.view")).toBe(true);
+    expect(roleCan("Administrator", "labs.upload")).toBe(true);
+    expect(roleCan("Administrator", "billing.view")).toBe(false);
+    expect(roleCan("Administrator", "reports.view")).toBe(false);
+    /* Dietitian: messages and labs only. */
+    expect(roleCan("Dietitian", "labs.view")).toBe(true);
+    expect(roleCan("Dietitian", "dashboard.view")).toBe(false);
+    /* Nurse: messages, vascular access, check-ins, labs. */
+    expect(roleCan("Nurse", "checkins.view")).toBe(true);
     expect(roleCan("Nurse", "rides.manage")).toBe(false);
-    expect(roleCan("Administrator", "billing.view")).toBe(true);
-    expect(roleCan("Physician", "billing.view")).toBe(false);
-    expect(roleCan("Front Desk", "messages.reply")).toBe(false);
+    /* Office manager: the whole panel, reports and billing, no messages. */
+    expect(roleCan("Office Manager", "billing.view")).toBe(true);
+    expect(roleCan("Office Manager", "reports.view")).toBe(true);
+    expect(roleCan("Office Manager", "programs.view")).toBe(true);
+    expect(roleCan("Office Manager", "messages.view")).toBe(false);
   });
 
-  it("an organisation login is its administrator; members are not governed", () => {
+  it("the other offices keep the general matrix", () => {
+    expect(roleCan("Administrator", "billing.view", "access")).toBe(true);
+    expect(roleCan("Physician", "ccm.log", "nephrology")).toBe(true);
+    expect(roleCan("Front Desk", "messages.reply", "access")).toBe(false);
+  });
+
+  it("an organisation login is its owner; members are not governed", () => {
     expect(userCan({ role: "clinic" }, "billing.view")).toBe(true);
     expect(
       userCan({ role: "clinic", staffRole: "Nurse" }, "billing.view"),
@@ -47,14 +70,15 @@ describe("roles", () => {
 });
 
 describe("whose staff", () => {
-  it("each organisation manages its own; only its administrator may", () => {
+  it("each organisation manages its own; only its managers may", () => {
     expect(organizationFor({ role: "clinic" })?.id).toBe("riverside");
     expect(organizationFor({ role: "access" })?.id).toBe("metro-access");
     expect(
       organizationFor({ role: "clinic", org: "Riverside Dialysis Center" })?.id,
     ).toBe("riverside");
     expect(organizationFor({ role: "admin" })).toBeUndefined();
-    expect(roleCan("Administrator", "staff.manage")).toBe(true);
+    expect(roleCan("Office Manager", "staff.manage")).toBe(true);
+    expect(roleCan("Administrator", "staff.manage", "access")).toBe(true);
     expect(roleCan("Nurse", "staff.manage")).toBe(false);
   });
 });
@@ -121,6 +145,39 @@ describe("signing in as staff", () => {
     expect(user?.role).toBe("access");
     expect(canAccessPath("access", "/dashboard/access-center")).toBe(true);
     expect(canAccessPath("access", "/dashboard/clinic")).toBe(false);
+  });
+
+  it("a nephrology office has its own login and portal, and nothing else", () => {
+    expect(
+      authenticate("nephrology@nephroreach.com", "nephrology123"),
+    ).toMatchObject({ role: "nephrology" });
+    const user = authenticate(
+      "nephrologist@nephroreach.com",
+      DEMO_STAFF_PASSWORD,
+    );
+    expect(user).toMatchObject({
+      role: "nephrology",
+      org: "Riverside Nephrology Associates",
+      staffRole: "Physician",
+    });
+    expect(canAccessPath("nephrology", "/dashboard/nephrology")).toBe(true);
+    expect(canAccessPath("nephrology", "/dashboard/nephrology/messages")).toBe(
+      true,
+    );
+    expect(canAccessPath("nephrology", "/dashboard/clinic")).toBe(false);
+    expect(canAccessPath("nephrology", "/dashboard/access-center")).toBe(false);
+    expect(canAccessPath("nephrology", "/dashboard")).toBe(false);
+    expect(canAccessPath("clinic", "/dashboard/nephrology")).toBe(false);
+    expect(canAccessPath("access", "/dashboard/nephrology")).toBe(false);
+    expect(canAccessPath("user", "/dashboard/nephrology")).toBe(false);
+  });
+
+  it("a list saved before the nephrology office existed still lets its staff in", () => {
+    const old = seed.filter((a) => a.orgId !== "riverside-nephrology");
+    window.localStorage.setItem(STAFF_KEY, JSON.stringify(old));
+    expect(authenticate("ccm@nephroreach.com", DEMO_STAFF_PASSWORD)?.role).toBe(
+      "nephrology",
+    );
   });
 
   it("uses the accounts the admin saved, including a deactivation", () => {

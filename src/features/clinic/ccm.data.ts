@@ -12,6 +12,11 @@
    a status typed in by hand would drift from the time behind it.
    ========================================================================== */
 
+import {
+  updatePlan,
+  type KidneyCareChange,
+  type KidneyCarePlan,
+} from "./kidneyCare";
 import { patients as roster } from "./enrollment.data";
 import { LINKED_MEMBER, type FeedItem, type FeedKind } from "./memberFeed";
 import {
@@ -216,7 +221,32 @@ export type CcmState = {
   /** A patient's conditions as edited on their CCM record, by MRN. Wins
    *  over the list they were enrolled with. */
   conditions?: Record<string, string[]>;
+  /** CKD access / KRT planning, by MRN (kidneyCare.ts). */
+  kidneyCare?: Record<string, KidneyCarePlan>;
 };
+
+export function kidneyCareFor(
+  state: CcmState,
+  mrn: string,
+): KidneyCarePlan | undefined {
+  return state.kidneyCare?.[mrn];
+}
+
+export function setKidneyCare(
+  state: CcmState,
+  mrn: string,
+  change: KidneyCareChange,
+  today: string,
+  by: string,
+): CcmState {
+  return {
+    ...state,
+    kidneyCare: {
+      ...state.kidneyCare,
+      [mrn]: updatePlan(state.kidneyCare?.[mrn], change, today, by),
+    },
+  };
+}
 
 /** Everyone in CCM: the seeded patients and those added since. */
 export function ccmPatientsOf(state: CcmState): CcmPatient[] {
@@ -1031,5 +1061,32 @@ export function seedCcmState(now: number): CcmState {
     },
   ];
 
-  return { activities, requirements, inbox };
+  /* Two patients part-way through planning: one referred for a fistula,
+     one only just educated. */
+  const kidneyCare: Record<string, KidneyCarePlan> = {
+    "345678": {
+      answers: {
+        krtEducation: "Yes",
+        modalityDiscussion: "Yes",
+        accessPlanning: "Yes",
+        accessReferral: "Yes",
+        accessAppointment: "No",
+        planningCompleted: "No",
+        transplantReferral: "No",
+      },
+      accessType: "AV fistula",
+      ehrDocumented: true,
+      updatedOn: addDays(today, -1),
+      updatedBy: "Maria Lopez, RN",
+    },
+    "123456": {
+      answers: { krtEducation: "Yes", modalityDiscussion: "No" },
+      accessType: "Not determined",
+      ehrDocumented: false,
+      updatedOn: addDays(today, -6),
+      updatedBy: "Dr. Samuel Reed",
+    },
+  };
+
+  return { activities, requirements, inbox, kidneyCare };
 }

@@ -226,42 +226,49 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/clinic",
     icon: LayoutDashboard,
     roles: ["clinic"],
+    permission: "dashboard.view",
   },
   {
     label: "Member",
     href: "/dashboard/clinic/members",
     icon: Users,
     roles: ["clinic"],
+    permission: "dashboard.view",
   },
   {
     label: "Enroll Patients",
     href: "/dashboard/clinic/enroll-patients",
     icon: UserPlus,
     roles: ["clinic"],
+    permission: "patients.enroll",
   },
   {
     label: "Curriculum Progress",
     href: "/dashboard/clinic/curriculum-progress",
     icon: GraduationCap,
     roles: ["clinic"],
+    permission: "programs.view",
   },
   {
     label: "Live Class",
     href: "/dashboard/clinic/live-class",
     icon: Video,
     roles: ["clinic"],
+    permission: "programs.view",
   },
   {
     label: "Check-ins",
     href: "/dashboard/clinic/checkins",
     icon: ClipboardCheck,
     roles: ["clinic"],
+    permission: "checkins.view",
   },
   {
     label: "Vascular Access",
     href: "/dashboard/clinic/vascular-access",
     icon: Activity,
     roles: ["clinic"],
+    permission: "access.view",
   },
   /* Patients' travel dialysis requests. Moved here from the admin menu
      (2026-09-29): arranging the chair away from home is the clinic's job. */
@@ -270,18 +277,22 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/clinic/travel",
     icon: Plane,
     roles: ["clinic"],
+    permission: "travel.view",
   },
+  /* Patients' lab charts; the administrator uploads by CSV (2026-10-01). */
   {
-    label: "Chronic Care Management",
-    href: "/dashboard/clinic/ccm",
-    icon: Stethoscope,
+    label: "Labs",
+    href: "/dashboard/clinic/labs",
+    icon: FlaskConical,
     roles: ["clinic"],
+    permission: "labs.view",
   },
   {
     label: "Messages",
     href: "/dashboard/clinic/messages",
     icon: MessageSquareText,
     roles: ["clinic"],
+    permission: "messages.view",
   },
   {
     label: "Reports",
@@ -305,6 +316,7 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/access-center",
     icon: Activity,
     roles: ["access"],
+    permission: "access.view",
   },
   /* Its line to the dialysis center and the nephrology office (client,
      2026-10-01). */
@@ -313,6 +325,24 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/access-center/messages",
     icon: MessageSquareText,
     roles: ["access"],
+    permission: "messages.view",
+  },
+
+  /* Nephrology office portal (client, 2026-10-03: each office its own
+     login). CCM moved here from the clinic: it is the nephrology
+     practice's care-management and billing work. */
+  {
+    label: "Chronic Care Management",
+    href: "/dashboard/nephrology",
+    icon: Stethoscope,
+    roles: ["nephrology"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/nephrology/messages",
+    icon: MessageSquareText,
+    roles: ["nephrology"],
+    permission: "messages.view",
   },
 ];
 
@@ -357,6 +387,13 @@ export const supportItems: NavItem[] = [
     roles: ["access"],
     permission: "staff.manage",
   },
+  {
+    label: "Staff & Roles",
+    href: "/dashboard/nephrology/team",
+    icon: UserCog,
+    roles: ["nephrology"],
+    permission: "staff.manage",
+  },
 ];
 
 export function getBreadcrumb(pathname: string, language?: string) {
@@ -368,6 +405,14 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
   if (pathname.startsWith("/dashboard/access-center/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
+  if (pathname.startsWith("/dashboard/nephrology/team"))
+    return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/nephrology/messages"))
+    return language === "ES" ? "Mensajes" : "Messages";
+  if (pathname.startsWith("/dashboard/nephrology"))
+    return language === "ES"
+      ? "Gestión de Atención Crónica"
+      : "Chronic Care Management";
   if (pathname.startsWith("/dashboard/access-center"))
     return language === "ES" ? "Pacientes de Acceso" : "Access Patients";
   /* Clinic routes are matched before the member and admin rules below,
@@ -390,10 +435,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Acceso Vascular" : "Vascular Access";
   if (pathname.startsWith("/dashboard/clinic/travel"))
     return language === "ES" ? "Solicitudes de Viaje" : "Travel Requests";
-  if (pathname.startsWith("/dashboard/clinic/ccm"))
-    return language === "ES"
-      ? "Gestión de Atención Crónica"
-      : "Chronic Care Management";
+  if (pathname.startsWith("/dashboard/clinic/labs"))
+    return language === "ES" ? "Laboratorios" : "Labs";
   if (pathname.startsWith("/dashboard/clinic/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/clinic/reports"))
@@ -599,13 +642,16 @@ export function getNavLabel(
     "/dashboard/clinic/checkins": "Registros",
     "/dashboard/clinic/vascular-access": "Acceso Vascular",
     "/dashboard/clinic/travel": "Solicitudes de Viaje",
-    "/dashboard/clinic/ccm": "Gestión de Atención Crónica",
     "/dashboard/clinic/messages": "Mensajes",
+    "/dashboard/clinic/labs": "Laboratorios",
     "/dashboard/clinic/reports": "Informes",
     "/dashboard/clinic/billing": "Contrato y Facturación",
     "/dashboard/access-center": "Pacientes de Acceso",
     "/dashboard/access-center/team": "Personal y Roles",
     "/dashboard/access-center/messages": "Mensajes",
+    "/dashboard/nephrology": "Gestión de Atención Crónica",
+    "/dashboard/nephrology/messages": "Mensajes",
+    "/dashboard/nephrology/team": "Personal y Roles",
     "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",
     "/dashboard/clinic/support": "Ayuda y Soporte",
@@ -672,4 +718,23 @@ export function isActiveRoute(href: string, pathname: string) {
     );
   }
   return href !== "#" && pathname.startsWith(href);
+}
+
+/**
+ * Where a signed-in user should land: their role's home, or — when their
+ * staff role cannot see that page (a dietitian has no dashboard) — the
+ * first menu entry they can. Null when the page they asked for is fine.
+ */
+export function redirectFor(
+  role: UserRole,
+  pathname: string,
+  can: (permission: Permission) => boolean,
+): string | null {
+  const items = [...sidebarItems, ...supportItems].filter(
+    (item) => item.roles.includes(role) && item.href !== "#",
+  );
+  const here = items.find((item) => item.href === pathname);
+  if (!here?.permission || can(here.permission)) return null;
+  const first = items.find((item) => !item.permission || can(item.permission));
+  return first && first.href !== pathname ? first.href : null;
 }

@@ -8,9 +8,11 @@
    Each organisation manages its own people (2026-09-30): its
    administrator adds staff, sets their role and turns sign-in off, from
    the organisation's own portal. Each account belongs to one organisation
-   (a dialysis center or a vascular access center, each its own portal)
+   (a dialysis center, a vascular access center or a nephrology office,
+   each its own portal)
    and has one role, and the role decides what they may do.
-   The organisation logins from the demo (clinic@, access@) stand for that
+   The organisation logins from the demo (clinic@, access@, nephrology@)
+   stand for that
    organisation's administrator and may do everything.
 
    Pure: state in, state out. Storage lives in staff.repository.ts.
@@ -22,7 +24,7 @@ export type Organization = {
   id: string;
   name: string;
   /** Which portal its staff sign into. */
-  portal: Extract<UserRole, "clinic" | "access">;
+  portal: Extract<UserRole, "clinic" | "access" | "nephrology">;
   kind: string;
 };
 
@@ -39,7 +41,18 @@ export const ORGANIZATIONS: Organization[] = [
     portal: "access",
     kind: "Vascular Access Center",
   },
+  {
+    id: "riverside-nephrology",
+    name: "Riverside Nephrology Associates",
+    portal: "nephrology",
+    kind: "Nephrology Office",
+  },
 ];
+
+/** The portals staff sign into: everyone else is a member or the admin. */
+export function isStaffPortal(role: UserRole): boolean {
+  return ORGANIZATIONS.some((org) => org.portal === role);
+}
 
 export function organization(id: string): Organization | undefined {
   return ORGANIZATIONS.find((org) => org.id === id);
@@ -55,12 +68,14 @@ export function organizationFor(
   return ORGANIZATIONS.find((org) => org.portal === user.role);
 }
 
-/** The usual roles in a dialysis or access practice. */
+/** The usual roles in a dialysis, access or nephrology practice. */
 export const STAFF_ROLES = [
+  "Office Manager",
   "Administrator",
   "Physician",
   "Nurse",
   "Social Worker",
+  "Dietitian",
   "Care Coordinator",
   "Medical Assistant",
   "Front Desk",
@@ -68,6 +83,48 @@ export const STAFF_ROLES = [
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const PERMISSIONS = [
+  /* Seeing a page. Each menu entry names the one it needs. */
+  {
+    id: "dashboard.view",
+    label: "See the dashboard and members",
+    detail: "The clinic dashboard and the members list",
+  },
+  {
+    id: "programs.view",
+    label: "See programs",
+    detail: "Curriculum progress and live classes",
+  },
+  {
+    id: "checkins.view",
+    label: "See check-ins",
+    detail: "Patients' check-ins and what they report",
+  },
+  {
+    id: "access.view",
+    label: "See vascular access",
+    detail: "Access records and the access center",
+  },
+  {
+    id: "travel.view",
+    label: "See travel requests",
+    detail: "Patients' travel dialysis requests",
+  },
+  {
+    id: "messages.view",
+    label: "Read messages",
+    detail: "Patients' conversations and messages with other offices",
+  },
+  {
+    id: "labs.view",
+    label: "See labs",
+    detail: "Patients' lab results",
+  },
+  {
+    id: "labs.upload",
+    label: "Upload labs",
+    detail: "Import lab results by CSV into patient charts",
+  },
+  /* Doing something. */
   {
     id: "patients.enroll",
     label: "Enroll patients",
@@ -121,44 +178,156 @@ export const PERMISSIONS = [
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number]["id"];
 
-/* Who may do what. Rides and travel placements belong to the social
-   worker (and whoever coordinates care); messages to clinicians and those
-   who handle patients' questions; enrolling to the front office; money,
-   settings and staff to administrators. Everyone can read the records. */
+const EVERY: Permission[] = PERMISSIONS.map((p) => p.id);
+
+/* Who may do what at an access center or a nephrology office. Messages to
+   clinicians and those who handle questions; scheduling and CCM time to
+   the clinical team; money, settings and staff to the managers. */
 export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
-  Administrator: PERMISSIONS.map((p) => p.id),
-  Physician: ["messages.reply", "access.schedule", "ccm.log", "reports.view"],
-  Nurse: ["messages.reply", "access.schedule", "ccm.log"],
-  "Social Worker": ["messages.reply", "rides.manage", "travel.manage"],
-  "Care Coordinator": [
-    "patients.enroll",
+  "Office Manager": EVERY.filter(
+    (p) => p !== "messages.view" && p !== "messages.reply",
+  ),
+  Administrator: EVERY,
+  Physician: [
+    "messages.view",
     "messages.reply",
-    "rides.manage",
-    "travel.manage",
+    "access.view",
     "access.schedule",
     "ccm.log",
     "reports.view",
   ],
-  "Medical Assistant": ["patients.enroll", "access.schedule", "ccm.log"],
-  "Front Desk": ["patients.enroll", "access.schedule"],
+  Nurse: [
+    "messages.view",
+    "messages.reply",
+    "access.view",
+    "access.schedule",
+    "ccm.log",
+  ],
+  "Social Worker": ["messages.view", "messages.reply", "access.view"],
+  Dietitian: ["messages.view", "messages.reply", "labs.view"],
+  "Care Coordinator": [
+    "messages.view",
+    "messages.reply",
+    "access.view",
+    "access.schedule",
+    "ccm.log",
+    "reports.view",
+  ],
+  "Medical Assistant": ["access.view", "access.schedule", "ccm.log"],
+  "Front Desk": ["access.view", "access.schedule"],
 };
 
-export function roleCan(role: StaffRole, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role].includes(permission);
+/* The dialysis center, as the client set it out (2026-10-01): each person
+   sees what their job needs, and only the office manager sees reports and
+   billing — the whole clinic panel, but not other people's messages. */
+export const DIALYSIS_ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
+  "Office Manager": [
+    "dashboard.view",
+    "programs.view",
+    "checkins.view",
+    "access.view",
+    "travel.view",
+    "labs.view",
+    "patients.enroll",
+    "reports.view",
+    "billing.view",
+    "settings.manage",
+    "staff.manage",
+  ],
+  Administrator: [
+    "dashboard.view",
+    "patients.enroll",
+    "travel.view",
+    "travel.manage",
+    "rides.manage",
+    "access.view",
+    "access.schedule",
+    "messages.view",
+    "messages.reply",
+    "labs.view",
+    "labs.upload",
+  ],
+  "Social Worker": [
+    "dashboard.view",
+    "patients.enroll",
+    "travel.view",
+    "travel.manage",
+    "rides.manage",
+    "messages.view",
+    "messages.reply",
+  ],
+  Nurse: [
+    "messages.view",
+    "messages.reply",
+    "access.view",
+    "access.schedule",
+    "checkins.view",
+    "labs.view",
+  ],
+  Dietitian: ["messages.view", "messages.reply", "labs.view"],
+  /* Not in the client's list: set from their jobs, to confirm. */
+  Physician: [
+    "dashboard.view",
+    "checkins.view",
+    "access.view",
+    "access.schedule",
+    "messages.view",
+    "messages.reply",
+    "labs.view",
+  ],
+  "Care Coordinator": [
+    "dashboard.view",
+    "programs.view",
+    "patients.enroll",
+    "checkins.view",
+    "travel.view",
+    "travel.manage",
+    "rides.manage",
+    "access.view",
+    "access.schedule",
+    "messages.view",
+    "messages.reply",
+  ],
+  "Medical Assistant": [
+    "checkins.view",
+    "access.view",
+    "access.schedule",
+    "labs.view",
+  ],
+  "Front Desk": [
+    "dashboard.view",
+    "patients.enroll",
+    "access.view",
+    "access.schedule",
+  ],
+};
+
+type StaffPortal = Organization["portal"];
+
+/** What a role may do in one kind of portal: the dialysis center has its
+ *  own matrix; the access center and nephrology office share one. */
+export function roleCan(
+  role: StaffRole,
+  permission: Permission,
+  portal: StaffPortal = "clinic",
+): boolean {
+  const matrix =
+    portal === "clinic" ? DIALYSIS_ROLE_PERMISSIONS : ROLE_PERMISSIONS;
+  return matrix[role].includes(permission);
 }
 
 /**
  * What a signed-in user may do. Members and the platform admin are not
- * governed by staff roles; an organisation login without a staff role is
- * that organisation's administrator.
+ * governed by staff roles; an organisation's own login (no staff role) is
+ * its account owner and may do everything.
  */
 export function userCan(
   user: { role: UserRole; staffRole?: StaffRole } | null | undefined,
   permission: Permission,
 ): boolean {
   if (!user) return false;
-  if (user.role !== "clinic" && user.role !== "access") return true;
-  return roleCan(user.staffRole ?? "Administrator", permission);
+  if (!isStaffPortal(user.role) || !user.staffRole) return true;
+  return roleCan(user.staffRole, permission, user.role as StaffPortal);
 }
 
 /* -------------------------------------------------------------- accounts */
@@ -333,6 +502,27 @@ export function seedStaff(now: number): StaffAccount[] {
       "Physician",
     ),
     person(
+      "seed-s8",
+      "Karen Hughes",
+      "officemanager@nephroreach.com",
+      "riverside",
+      "Office Manager",
+    ),
+    person(
+      "seed-s9",
+      "Priya Shah, RD",
+      "dietitian@nephroreach.com",
+      "riverside",
+      "Dietitian",
+    ),
+    person(
+      "seed-s10",
+      "Tom Becker",
+      "administrator@nephroreach.com",
+      "riverside",
+      "Administrator",
+    ),
+    person(
       "seed-s4",
       "Dr. Raj Patel",
       "surgeon@nephroreach.com",
@@ -345,6 +535,20 @@ export function seedStaff(now: number): StaffAccount[] {
       "frontdesk@nephroreach.com",
       "metro-access",
       "Front Desk",
+    ),
+    person(
+      "seed-s6",
+      "Dr. Samuel Reed",
+      "nephrologist@nephroreach.com",
+      "riverside-nephrology",
+      "Physician",
+    ),
+    person(
+      "seed-s7",
+      "Maria Lopez, RN",
+      "ccm@nephroreach.com",
+      "riverside-nephrology",
+      "Care Coordinator",
     ),
   ];
 }

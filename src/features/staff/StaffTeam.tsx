@@ -78,8 +78,9 @@ function formatDate(iso: string) {
 }
 
 /** What a role may do, in plain words. */
-function RoleSummary({ role }: { role: StaffRole }) {
-  const allowed = PERMISSIONS.filter((p) => roleCan(role, p.id));
+function RoleSummary({ role, orgId }: { role: StaffRole; orgId: string }) {
+  const portal = organization(orgId)?.portal;
+  const allowed = PERMISSIONS.filter((p) => roleCan(role, p.id, portal));
   return (
     <section className="rounded-card-nested border border-line p-inset-sm">
       <h3 className="text-label-md text-fg">A {role} can</h3>
@@ -221,7 +222,7 @@ function AddStaffModal({
             </div>
           )}
         </FormField>
-        <RoleSummary role={draft.role} />
+        <RoleSummary role={draft.role} orgId={orgId} />
       </div>
     </Modal>
   );
@@ -344,7 +345,7 @@ function EditStaffModal({
             />
           )}
         </FormField>
-        <RoleSummary role={role} />
+        <RoleSummary role={role} orgId={account.orgId} />
       </div>
     </Modal>
   );
@@ -352,7 +353,14 @@ function EditStaffModal({
 
 /* ----------------------------------------------------------- permissions */
 
-function PermissionsModal({ onClose }: { onClose: () => void }) {
+function PermissionsModal({
+  orgId,
+  onClose,
+}: {
+  orgId: string;
+  onClose: () => void;
+}) {
+  const portal = organization(orgId)?.portal;
   return (
     <Modal
       open
@@ -377,7 +385,7 @@ function PermissionsModal({ onClose }: { onClose: () => void }) {
                 </TableCell>
                 <TableCell>
                   <span className="flex flex-wrap gap-inline-xs">
-                    {PERMISSIONS.filter((p) => roleCan(role, p.id)).map(
+                    {PERMISSIONS.filter((p) => roleCan(role, p.id, portal)).map(
                       (permission) => (
                         <Badge key={permission.id} tone="neutral">
                           {permission.label}
@@ -596,7 +604,7 @@ export function StaffTeamCard({
         />
       ) : null}
       {showRoles ? (
-        <PermissionsModal onClose={() => setShowRoles(false)} />
+        <PermissionsModal orgId={orgId} onClose={() => setShowRoles(false)} />
       ) : null}
     </Card>
   );

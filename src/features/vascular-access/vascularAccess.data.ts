@@ -99,6 +99,8 @@ export const APPOINTMENT_TYPES = [
   "Access Check",
   "Catheter Exchange",
   "Surgical Consult",
+  "Access Placement Surgery",
+  "PD Catheter Placement",
 ] as const;
 
 export type UpdateKind = "done" | "scheduled" | "received";
@@ -250,8 +252,7 @@ export type AccessRecord = {
 
 /* ------------------------------------------------------------ referrals */
 
-/** Who refers to the access center. The nephrology office has no login of
- *  its own yet, so the clinic portal sends on its behalf. */
+/** Who refers to the access center: each office from its own portal. */
 export type ReferralSource = "dialysis" | "nephrology";
 
 export const NEPHROLOGY_OFFICE_NAME = "Riverside Nephrology Associates";
@@ -580,6 +581,8 @@ const HISTORY_TYPE: Record<string, HistoryType> = {
   Fistulogram: "Procedure",
   "Catheter Exchange": "Procedure",
   "Surgical Consult": "Consult",
+  "Access Placement Surgery": "Surgery",
+  "PD Catheter Placement": "Surgery",
 };
 
 /**
@@ -1315,7 +1318,7 @@ export function seedAccessState(now: number): AccessState {
       id: "seed-ref-2",
       sentAt: at(26),
       source: "nephrology",
-      sentBy: "Dr. Carter",
+      sentBy: "Dr. Samuel Reed",
       memberName: "Robert L. Davis",
       mrn: "345678",
       kind: "New Access Referral",

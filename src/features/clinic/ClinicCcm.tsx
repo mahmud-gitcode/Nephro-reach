@@ -115,6 +115,7 @@ import { useMemberFeed } from "./useMemberFeed";
 import { useClinicData } from "./useClinicData";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { ConditionSelect } from "./ConditionSelect";
+import { KidneyCareSection } from "./KidneyCareSection";
 import { ConditionLibraryModal } from "./ConditionLibraryModal";
 import { useConditionLibrary } from "./useConditionLibrary";
 import {
@@ -138,7 +139,9 @@ import {
    records time and makes no medical decisions.
    ========================================================================== */
 
-const HREF = "/dashboard/clinic/ccm";
+/* The nephrology office's home (client, 2026-10-03), moved from the
+   dialysis clinic's portal. */
+const HREF = "/dashboard/nephrology";
 const PRACTICE = defaultClinicSettings().profile.name;
 
 const statusTone: Record<CcmStatus, BadgeTone> = {
@@ -1930,6 +1933,13 @@ function PatientModal({
             ))}
           </ul>
         </section>
+
+        <KidneyCareSection
+          patient={{ name: row.name, mrn: row.mrn }}
+          store={store}
+          today={today}
+          canEdit={canLog}
+        />
         <section>
           <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
             <h3 className="text-heading-5 text-fg">

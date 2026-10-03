@@ -46,6 +46,7 @@ import {
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { UpdatedBar } from "./UpdatedBar";
+import { useClinicData } from "./useClinicData";
 
 /* ==========================================================================
    Referrals and office messages — staff to staff, without the patient
@@ -59,8 +60,9 @@ import { UpdatedBar } from "./UpdatedBar";
    Every one is a thread: who wrote first, about which patient (or none,
    for a general message), and the replies. The patient never sees them.
 
-   Clinic portal: writes as the dialysis center or the nephrology office
-   (which has no login of its own yet).
+   Each office signs into its own portal (client, 2026-10-03): the
+   dialysis center (clinic portal) and the nephrology office (nephrology
+   portal) each see only their own threads with the access center.
    Access center: acknowledges, schedules or closes; can write first.
    ========================================================================== */
 
@@ -71,7 +73,8 @@ export const referralTone: Record<ReferralStatus, BadgeTone> = {
   Closed: "neutral",
 };
 
-type Side = "access" | "clinic";
+/** Whose screen this is: the access center, or one office. */
+type Side = "access" | ReferralSource;
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -96,13 +99,21 @@ function orgName(party: "access" | ReferralSource) {
   return party === "access" ? ACCESS_CENTER_NAME : SOURCE_LABEL[party];
 }
 
+/** The threads a side may see: all of them for the access center, its
+ *  own for an office. */
+export function threadsFor(
+  referrals: AccessReferral[],
+  side: Side,
+): AccessReferral[] {
+  return side === "access"
+    ? referrals
+    : referrals.filter((r) => r.source === side);
+}
+
 /** Waiting on this side: new, and addressed to it. */
 function waitingOn(referral: AccessReferral, side: Side) {
   const receiver = receiverOf(referral);
-  return (
-    referral.status === "New" &&
-    (side === "access" ? receiver === "access" : receiver !== "access")
-  );
+  return referral.status === "New" && receiver === side;
 }
 
 /* ------------------------------------------------------------------ list */
@@ -162,8 +173,8 @@ function ReferralList({
                       ? `To ${SOURCE_LABEL[referral.source]}`
                       : `${SOURCE_LABEL[referral.source]} · ${referral.sentBy}`
                     : opener === "access"
-                      ? `From ${ACCESS_CENTER_NAME} to ${SOURCE_LABEL[referral.source]}`
-                      : `From ${SOURCE_LABEL[referral.source]}`}
+                      ? `From ${ACCESS_CENTER_NAME}`
+                      : `Sent by ${referral.sentBy}`}
                   {" · "}
                   {messaging.relativeLabel(
                     last?.sentAt ?? referral.sentAt,
@@ -195,7 +206,7 @@ export function ReferralsPanel({
   onOpen,
 }: {
   referrals: AccessReferral[];
-  /** "access" receives; "clinic" is the dialysis center / nephrology office. */
+  /** "access" sees every office; an office only its own threads. */
   side: Side;
   canSend: boolean;
   onSend: () => void;
@@ -264,7 +275,10 @@ export function SendReferralModal({
     side === "access"
       ? (["General Message", "Appointment Request"] as ReferralKind[])
       : [...REFERRAL_KINDS];
-  const [office, setOffice] = useState<ReferralSource>("dialysis");
+  /* An office always writes as itself; the access center picks one. */
+  const [office, setOffice] = useState<ReferralSource>(
+    side === "access" ? "dialysis" : side,
+  );
   const [kind, setKind] = useState<ReferralKind>(initialKind ?? kinds[0]);
   const [mrn, setMrn] = useState(
     initialMrn ?? (kind === "General Message" ? "" : (patients[0]?.mrn ?? "")),
@@ -325,15 +339,17 @@ export function SendReferralModal({
       }
     >
       <div className="space-y-stack-md">
-        <SegmentedChoice
-          label={side === "access" ? "Send to" : "Sending from"}
-          value={office}
-          onChange={(next: ReferralSource) => setOffice(next)}
-          options={[
-            { value: "dialysis", label: "Dialysis Center" },
-            { value: "nephrology", label: "Nephrology Office" },
-          ]}
-        />
+        {side === "access" ? (
+          <SegmentedChoice
+            label="Send to"
+            value={office}
+            onChange={(next: ReferralSource) => setOffice(next)}
+            options={[
+              { value: "dialysis", label: "Dialysis Center" },
+              { value: "nephrology", label: "Nephrology Office" },
+            ]}
+          />
+        ) : null}
         <div className="grid gap-stack-md sm:grid-cols-2">
           <FormField label="Type" required>
             {(field) => (
@@ -629,24 +645,39 @@ export function ReferralModal({
   );
 }
 
-/* ----------------------------------------------- access center: Messages */
+/* ------------------------------------------------------------ Messages */
 
 type Folder = "all" | ReferralSource | "closed";
 
-/** The access center's Messages page: every thread with the dialysis
- *  center and the nephrology office, and a way to start one. Booking
- *  stays on Access Patients. */
-export function AccessCenterMessages() {
+/** Who an organisation's own demo login writes as. */
+const DEFAULT_PERSON: Record<Side, string> = {
+  access: "Dr. Patel",
+  dialysis: "Nurse Wilson",
+  nephrology: "Dr. Samuel Reed",
+};
+
+const MESSAGES_HREF: Record<Side, string> = {
+  access: "/dashboard/access-center/messages",
+  dialysis: "/dashboard/clinic/vascular-access",
+  nephrology: "/dashboard/nephrology/messages",
+};
+
+/** A Messages page for staff-to-staff threads. The access center sees
+ *  every office, in folders, and books from Access Patients; an office
+ *  sees only its own threads with the access center. */
+export function OfficeMessages({ side }: { side: Side }) {
   const { user } = useAuth();
   const store = useVascularAccess();
-  const me = user?.staffRole ? user.name : "Dr. Patel";
+  const clinicData = useClinicData();
+  const me = user?.staffRole ? user.name : DEFAULT_PERSON[side];
   const canReply = userCan(user, "messages.reply");
   const canAct = userCan(user, "access.schedule");
   const [folder, setFolder] = useState<Folder>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
 
-  const referrals = store.referrals;
+  /* Tenant isolation: an office never sees another office's threads. */
+  const referrals = threadsFor(store.referrals, side);
   const count = (f: Folder) =>
     referrals.filter((r) =>
       f === "closed"
@@ -659,9 +690,13 @@ export function AccessCenterMessages() {
       : r.status !== "Closed" && (folder === "all" || r.source === folder),
   );
   const reading = openId ? referrals.find((r) => r.id === openId) : undefined;
-  /* Its own patients, and anyone an office has written about. */
+  /* Access patients, the office's roster, and anyone already written
+     about. */
   const patients = [
     ...store.records.map((r) => ({ name: r.memberName, mrn: r.mrn })),
+    ...(side === "access" ? [] : (clinicData.data?.patients ?? [])).map(
+      (p) => ({ name: p.name, mrn: p.mrn }),
+    ),
     ...referrals
       .filter(
         (r) => r.mrn && !store.records.some((record) => record.mrn === r.mrn),
@@ -690,20 +725,24 @@ export function AccessCenterMessages() {
           className="mb-stack-lg"
           items={[
             { id: "all", label: `All Open (${count("all")})` },
-            {
-              id: "dialysis",
-              label: `Dialysis Center (${count("dialysis")})`,
-            },
-            {
-              id: "nephrology",
-              label: `Nephrology Office (${count("nephrology")})`,
-            },
+            ...(side === "access"
+              ? [
+                  {
+                    id: "dialysis" as const,
+                    label: `Dialysis Center (${count("dialysis")})`,
+                  },
+                  {
+                    id: "nephrology" as const,
+                    label: `Nephrology Office (${count("nephrology")})`,
+                  },
+                ]
+              : []),
             { id: "closed", label: `Closed (${count("closed")})` },
           ]}
         />
         <ReferralList
           referrals={shown}
-          side="access"
+          side={side}
           onOpen={setOpenId}
           empty={
             folder === "closed" ? "No closed threads." : "No open messages."
@@ -716,7 +755,7 @@ export function AccessCenterMessages() {
   return (
     <div className="space-y-4">
       <PageTitle
-        href="/dashboard/access-center/messages"
+        href={MESSAGES_HREF[side]}
         action={
           <div className="flex flex-wrap items-center gap-inline-md">
             <UpdatedBar
@@ -747,7 +786,7 @@ export function AccessCenterMessages() {
           key={reading.id}
           referral={reading}
           record={store.records.find((r) => r.mrn === reading.mrn)}
-          side="access"
+          side={side}
           me={me}
           canReply={canReply}
           canAct={canAct}
@@ -757,7 +796,7 @@ export function AccessCenterMessages() {
       ) : null}
       {composing ? (
         <SendReferralModal
-          side="access"
+          side={side}
           patients={patients}
           me={me}
           onSend={store.sendReferral}

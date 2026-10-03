@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import * as rules from "./ccm.data";
 import type { CcmState } from "./ccm.data";
+import type { KidneyCareChange } from "./kidneyCare";
 
 /* ==========================================================================
    CCM — storage
@@ -19,8 +20,9 @@ const KEY = storageKey("clinic-ccm");
  * them; patients have a location; requirements carry a date.
  * Version 4: the linked member (memberFeed.ts) joins the roster.
  */
-/* Version 5: the demo patient carries the roster MRN. */
-const VERSION = 5;
+/* Version 5: the demo patient carries the roster MRN.
+   Version 6: CKD access / KRT planning (kidneyCare.ts). */
+const VERSION = 6;
 
 type StoredEnvelope = { version: number; state: unknown };
 
@@ -97,6 +99,11 @@ export function useCcm() {
       mutate((s) => rules.completeFollowUp(s, activityId)),
     [mutate],
   );
+  const setKidneyCare = useCallback(
+    (mrn: string, change: KidneyCareChange, today: string, by: string) =>
+      mutate((s) => rules.setKidneyCare(s, mrn, change, today, by)),
+    [mutate],
+  );
   const resolveInbox = useCallback(
     (itemId: string) => mutate((s) => rules.resolveInbox(s, itemId)),
     [mutate],
@@ -119,6 +126,7 @@ export function useCcm() {
     setConditions,
     completeFollowUp,
     resolveInbox,
+    setKidneyCare,
   };
 }
 

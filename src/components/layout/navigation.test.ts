@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getBreadcrumbTrail,
   isActiveRoute,
+  redirectFor,
   sidebarItems,
   supportItems,
 } from "./navigation";
@@ -148,5 +149,25 @@ describe("every nav destination is reachable by the role it is shown to", () => 
     ),
   )("a member cannot open $label", (item) => {
     expect(canAccessPath("user", item.href)).toBe(false);
+  });
+});
+
+describe("a staff role lands on a page it can see", () => {
+  const dietitian = (p: string) => ["messages.view", "labs.view"].includes(p);
+
+  it("sends a dietitian from the dashboard to their first page", () => {
+    expect(redirectFor("clinic", "/dashboard/clinic", dietitian)).toBe(
+      "/dashboard/clinic/labs",
+    );
+    expect(redirectFor("clinic", "/dashboard/clinic/billing", dietitian)).toBe(
+      "/dashboard/clinic/labs",
+    );
+  });
+
+  it("leaves a page alone when the role has it", () => {
+    expect(
+      redirectFor("clinic", "/dashboard/clinic/labs", dietitian),
+    ).toBeNull();
+    expect(redirectFor("clinic", "/dashboard/clinic", () => true)).toBeNull();
   });
 });

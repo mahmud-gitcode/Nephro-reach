@@ -88,6 +88,7 @@ import {
   ReferralModal,
   ReferralsPanel,
   SendReferralModal,
+  threadsFor,
 } from "./AccessReferrals";
 
 /* ==========================================================================
@@ -820,7 +821,8 @@ export default function ClinicVascularAccess({
   const concerns = records.flatMap((record) =>
     openConcerns(record).map((concern) => ({ record, concern })),
   );
-  const referrals = store.referrals;
+  /* The dialysis center sees only its own threads. */
+  const referrals = threadsFor(store.referrals, party);
   const openReferralCount = referrals.filter((r) =>
     party === "access" ? r.status === "New" : r.status !== "Closed",
   ).length;
@@ -1099,7 +1101,7 @@ export default function ClinicVascularAccess({
 
           <ReferralsPanel
             referrals={referrals}
-            side={party === "access" ? "access" : "clinic"}
+            side={party}
             canSend={perms.reply && party === "dialysis"}
             onSend={() => setReferring({})}
             onOpen={setOpenReferral}
@@ -1160,7 +1162,7 @@ export default function ClinicVascularAccess({
             key={readingReferral.id}
             referral={readingReferral}
             record={records.find((r) => r.mrn === readingReferral.mrn)}
-            side={party === "access" ? "access" : "clinic"}
+            side={party}
             me={perms.me}
             canReply={perms.reply}
             canAct={perms.schedule}
@@ -1180,7 +1182,7 @@ export default function ClinicVascularAccess({
 
         {referring ? (
           <SendReferralModal
-            side={party === "access" ? "access" : "clinic"}
+            side={party}
             patients={referable}
             initialMrn={referring.mrn}
             initialKind={referring.kind}

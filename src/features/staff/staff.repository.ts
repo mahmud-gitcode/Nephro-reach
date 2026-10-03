@@ -1,5 +1,5 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import { seedStaff, type StaffAccount } from "./staff";
+import { ORGANIZATIONS, seedStaff, type StaffAccount } from "./staff";
 
 /* ==========================================================================
    Staff accounts — storage
@@ -24,9 +24,28 @@ function isAccounts(value: unknown): value is StaffAccount[] {
   );
 }
 
+/** A list saved before a demo account existed (a new office, a new role)
+ *  gets that account, so it can sign in without wiping anyone's edits.
+ *  Seed accounts are matched by id: one the admin edited stays as edited. */
+function withNewOrganizations(stored: StaffAccount[]): StaffAccount[] {
+  const ids = new Set(stored.map((account) => account.id));
+  const emails = new Set(stored.map((account) => account.email));
+  const added = seedStaff(Date.now()).filter(
+    (account) =>
+      !ids.has(account.id) &&
+      !emails.has(account.email) &&
+      ORGANIZATIONS.some((org) => org.id === account.orgId),
+  );
+  return added.length === 0 ? stored : [...stored, ...added];
+}
+
 export async function listStaff(): Promise<StaffAccount[]> {
   const stored = await readJson<unknown>(STAFF_KEY, null);
-  if (isAccounts(stored)) return stored;
+  if (isAccounts(stored)) {
+    const full = withNewOrganizations(stored);
+    if (full !== stored) await writeJson(STAFF_KEY, full);
+    return full;
+  }
   const seeded = seedStaff(Date.now());
   await writeJson(STAFF_KEY, seeded);
   return seeded;
@@ -49,7 +68,9 @@ export function readStaffForLogin(): StaffAccount[] {
     const stored: unknown = JSON.parse(
       window.localStorage.getItem(STAFF_KEY) ?? "null",
     );
-    return isAccounts(stored) ? stored : seedStaff(Date.now());
+    return isAccounts(stored)
+      ? withNewOrganizations(stored)
+      : seedStaff(Date.now());
   } catch {
     return seedStaff(Date.now());
   }
