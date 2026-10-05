@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "../LogMediaBar";
 import React, { useState } from "react";
 import {
   ArrowDown,
@@ -380,17 +381,9 @@ export function AddWeightLogModal({
             </p>
           </div>
 
-          {/* Subsection 1: Possible Fluid Overload */}
+          {/* Group 1. Its "Possible Fluid Overload" title was removed (client,
+              2026-10-05): the app does not name a fluid status. */}
           <div className="space-y-2 border-t border-line-subtle pt-1">
-            <div className="flex items-center gap-inline-sm">
-              <span className="h-2 w-2 rounded-full bg-primary-solid" />
-              <h4 className="text-label-md text-fg">
-                {language === "ES"
-                  ? "Posible Sobrecarga de Líquidos"
-                  : "Possible Fluid Overload"}
-              </h4>
-            </div>
-
             <div className="space-y-1.5">
               <YesNoChoice
                 label={language === "ES" ? "Hinchazón" : "Swelling"}
@@ -418,17 +411,9 @@ export function AddWeightLogModal({
             </div>
           </div>
 
-          {/* Subsection 2: Possible Too Much Fluid Removed */}
+          {/* Group 2. Its "Possible Too Much Fluid Removed" title was removed
+              for the same reason. */}
           <div className="space-y-2 border-t border-line-subtle pt-2">
-            <div className="flex items-center gap-inline-sm">
-              <span className="h-2 w-2 rounded-full bg-brand-500" />
-              <h4 className="text-label-md text-fg">
-                {language === "ES"
-                  ? "Posible Exceso de Líquido Eliminado"
-                  : "Possible Too Much Fluid Removed"}
-              </h4>
-            </div>
-
             <div className="space-y-1.5">
               <YesNoChoice
                 label={language === "ES" ? "Mareos" : "Dizziness"}
@@ -569,6 +554,13 @@ export function AddWeightLogModal({
               language === "ES"
                 ? "ej. Tomé todos los medicamentos después de la sesión."
                 : "e.g. Took all meds after session."
+            }
+          />
+          <LogMediaBar
+            logName="Weight & fluid log"
+            isEs={language === "ES"}
+            onDictated={(text) =>
+              setFormNotes((current) => appendText(current, text))
             }
           />
         </div>

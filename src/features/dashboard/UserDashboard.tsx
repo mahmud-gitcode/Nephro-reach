@@ -6,6 +6,7 @@ import { Calendar, Users, Video, Play, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
+import { QuickActionsSection } from "./QuickActionsSection";
 import {
   AsyncSection,
   Badge,
@@ -66,32 +67,6 @@ function Icon({ src, className }: { src: string; className?: string }) {
 /* Eight tints, all categories rather than states, so they come off the
    categorical ramp. They briefly borrowed the status surfaces, which made
    "Community" look like a success and "Classes Attended" like one too. */
-const quickActions = [
-  {
-    label: "Where's My Ride",
-    href: "/dashboard/my-rides",
-    icon: "quick-car.svg",
-    tone: "bg-cat-6-soft",
-  },
-  {
-    label: "My Classroom",
-    href: "/dashboard/my-classroom",
-    icon: "quick-book.svg",
-    tone: "bg-cat-7-soft",
-  },
-  {
-    label: "Community",
-    href: "/dashboard/community",
-    icon: "quick-messages.svg",
-    tone: "bg-cat-4-soft",
-  },
-  {
-    label: "Before the ER™",
-    href: "/dashboard/before-the-er",
-    icon: "quick-info.svg",
-    tone: "bg-cat-1-soft",
-  },
-];
 
 const stats = [
   {
@@ -179,21 +154,6 @@ export default function UserDashboard() {
   const [pendingDeleteStory, setPendingDeleteStory] =
     useState<Testimonial | null>(null);
 
-  const getQuickActionLabel = (action: (typeof quickActions)[0]) => {
-    switch (action.href) {
-      case "/dashboard/my-rides":
-        return dh?.quickActions?.wheresMyRide || action.label;
-      case "/dashboard/my-classroom":
-        return dh?.quickActions?.educationCenter || action.label;
-      case "/dashboard/community":
-        return dh?.quickActions?.community || action.label;
-      case "/dashboard/before-the-er":
-        return dh?.quickActions?.beforeTheEr || action.label;
-      default:
-        return action.label;
-    }
-  };
-
   const getStatLabel = (statKey: string, fallback: string) => {
     switch (statKey) {
       case "Journal Entries":
@@ -216,35 +176,13 @@ export default function UserDashboard() {
         {greeting}, {firstName}
       </h1>
 
-      <section className="space-y-stack-md">
-        <SectionHeading
-          title={
-            dh?.quickActionTitle ||
-            (language === "ES" ? "Acción Rápida" : "Quick Action")
-          }
-        />
-        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map((action) => {
-            const label = getQuickActionLabel(action);
-
-            return (
-              <Link
-                key={action.label}
-                href={action.href}
-                className="flex min-h-[134px] flex-col gap-inline-lg rounded-card border border-line bg-surface p-inset-lg transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`flex size-12 items-center justify-center rounded-card ${action.tone}`}
-                >
-                  <Icon src={asset(action.icon)} />
-                </span>
-                <p className="text-body-md text-fg">{label}</p>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      <QuickActionsSection
+        isEs={language === "ES"}
+        title={
+          dh?.quickActionTitle ||
+          (language === "ES" ? "Acción Rápida" : "Quick Action")
+        }
+      />
 
       <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
         <Card as="article" padding="small">

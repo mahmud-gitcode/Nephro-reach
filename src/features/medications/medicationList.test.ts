@@ -5,6 +5,8 @@ import {
   doseRows,
   medicationError,
   reminderClock,
+  setMedicationStatus,
+  type Medication,
   type MedicationDraft,
 } from "./medicationList";
 import type { MedicationReminder } from "./reminders.types";
@@ -78,5 +80,38 @@ describe("the medication list", () => {
   it("keeps the sample schedule only for the sample list", () => {
     expect(doseRows(SEED_MEDICATIONS, []).length).toBeGreaterThan(0);
     expect(doseRows([], [])).toEqual([]);
+  });
+});
+
+describe("status and the dose schedule (client, 2026-10-05)", () => {
+  const added = (status: string): Medication => ({
+    ...SEED_MEDICATIONS[0],
+    id: "med-1",
+    name: "Losartan",
+    status,
+  });
+  const reminder = {
+    id: "r1",
+    medicationName: "Losartan",
+    time: "08:00 AM",
+    extraTimes: ["08:00 PM"],
+    frequency: "Daily",
+    channels: ["in_app" as const],
+    enabled: true,
+  };
+
+  it("gives a twice-a-day medication two rows", () => {
+    const rows = doseRows([added("Active")], [reminder]);
+    expect(rows.map((r) => r.time)).toEqual(["08:00 am", "08:00 pm"]);
+  });
+
+  it("takes paused and stopped medications off the schedule", () => {
+    expect(doseRows([added("Paused")], [reminder])).toEqual([]);
+    expect(doseRows([added("Stopped")], [reminder])).toEqual([]);
+  });
+
+  it("sets a status by id", () => {
+    const list = setMedicationStatus([added("Active")], "med-1", "PRN");
+    expect(list[0].status).toBe("PRN");
   });
 });

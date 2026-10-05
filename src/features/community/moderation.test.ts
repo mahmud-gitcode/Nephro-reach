@@ -289,3 +289,18 @@ describe("personal information typed out", () => {
     expect(detectsPersonalInfo("")).toBe(false);
   });
 });
+
+describe("reinforced flag words (client, 2026-10-05)", () => {
+  it("catches profanity, money and cure claims as whole words", () => {
+    expect(flagCategory("this is bullshit")).toBe("conduct");
+    expect(flagCategory("pay me on venmo")).toBe("scam");
+    expect(flagCategory("this tea can reverse kidney failure")).toBe(
+      "medical-advice",
+    );
+    expect(flagCategory("my medicare number is")).toBe("privacy");
+  });
+
+  it("does not trip on a word that only contains one", () => {
+    expect(flagCategory("I saved some scrap paper for the kids")).toBeNull();
+  });
+});

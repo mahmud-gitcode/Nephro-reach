@@ -69,6 +69,14 @@ export const ACTIVITY_TYPES = [
   /* The care plan itself stays in the practice EHR; reviewing it is still
      CCM time. */
   "Care Plan Review / Monitoring",
+  /* CKD access / kidney replacement therapy planning (client, 2026-10-01
+     and 2026-10-05), the same steps as the Kidney Care checklist. */
+  "KRT Education",
+  "Modality Discussion",
+  "Vascular Access Planning",
+  "Vascular Access Referral",
+  "Access Appointment Coordination",
+  "Transplant Referral / Discussion",
   "Other CCM Activity",
 ] as const;
 

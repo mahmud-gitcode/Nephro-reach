@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Download, Edit3, HeartPulse, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
+import { BpReminderCard } from "@/features/personal-log/blood-pressure/BpReminderCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Badge,
@@ -366,6 +368,50 @@ function ReadingGuide() {
   );
 }
 
+/* Check reminders (client, 2026-10-05). */
+function BpReminderGate() {
+  const { language } = useLanguage();
+  return <BpReminderCard isEs={language === "ES"} />;
+}
+
+/* Export to share, as on the medication log (client, 2026-10-05). */
+function ShareReadings() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const bp = useBloodPressure();
+  return (
+    <ShareLogCard
+      isEs={isEs}
+      title={isEs ? "Mi registro de presión arterial" : "My blood pressure log"}
+      fileName="blood-pressure-log"
+      table={{
+        header: [
+          "Date",
+          "Time",
+          "Systolic",
+          "Diastolic",
+          "Pulse",
+          "Position",
+          "Notes",
+        ],
+        rows: [...bp.readings]
+          .sort((a, b) =>
+            `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`),
+          )
+          .map((r) => [
+            r.date,
+            r.time,
+            r.systolic,
+            r.diastolic,
+            r.pulse,
+            r.position,
+            r.notes,
+          ]),
+      }}
+    />
+  );
+}
+
 export default function BloodPressureLogPage() {
   return (
     <div className="space-y-stack-lg">
@@ -377,6 +423,10 @@ export default function BloodPressureLogPage() {
         <TrendChart />
         <ReadingGuide />
       </section>
+
+      <BpReminderGate />
+
+      <ShareReadings />
     </div>
   );
 }

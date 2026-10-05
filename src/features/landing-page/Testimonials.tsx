@@ -10,7 +10,6 @@ import {
 
 export default function Testimonials() {
   const { t } = useLanguage();
-  const [index, setIndex] = useState(0);
   const [approvedList, setApprovedList] = useState<Review[]>([]);
 
   useEffect(() => {
@@ -74,111 +73,56 @@ export default function Testimonials() {
     return defaultReviews;
   }, [approvedList, defaultReviews]);
 
-  const len = reviews.length;
-  const visible =
-    len <= 3
-      ? reviews
-      : [
-          reviews[index % len],
-          reviews[(index + 1) % len],
-          reviews[(index + 2) % len],
-        ];
+  /* A banner, not a section (client, 2026-10-05): the reviews run past in
+     one row. The row is drawn twice so the loop has no seam; the second
+     copy is hidden from screen readers. */
+  const card = (review: (typeof reviews)[number], copy: number) => (
+    <article
+      key={`${review.id}-${copy}`}
+      aria-hidden={copy > 0 || undefined}
+      className="font-manrope flex w-[340px] shrink-0 flex-col gap-3 rounded-[20px] border border-[#E5E7EB] bg-white p-4"
+    >
+      <div className="flex items-center gap-2">
+        <div className="flex">
+          {[0, 1, 2, 3, 4].map((star) => (
+            <img
+              key={star}
+              src="/images/home/star.svg"
+              alt=""
+              className={`size-4 ${
+                star < Math.round(Number(review.rating))
+                  ? "opacity-100"
+                  : "opacity-25 grayscale"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-sm leading-5 font-semibold text-[#6B7280]">
+          {review.rating}
+        </span>
+        <span className="ml-auto inline-flex rounded-md bg-[#EEFBF4] px-2 py-0.5 text-xs leading-5 font-medium text-[#3F9A61]">
+          {review.badge}
+        </span>
+      </div>
+      <p className="line-clamp-3 text-sm leading-6 font-medium text-[#23262F]">
+        {review.quote}
+      </p>
+      <p className="text-sm leading-5 font-semibold text-[#23262F]">
+        {review.name}
+        <span className="font-normal text-[#6B7280]"> · {review.location}</span>
+      </p>
+    </article>
+  );
 
   return (
-    <section className="w-full bg-white py-16 lg:py-20">
-      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-8 px-5 min-[1344px]:px-0 sm:px-8 lg:px-12">
-        <div className="landing-reveal flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="w-full space-y-4">
-            <h2 className="text-[28px] leading-10 font-semibold tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
-              {t("testimonials.title")}
-            </h2>
-            <p className="text-lg leading-7 font-medium tracking-[0.1px] text-[#344056] sm:text-xl">
-              {t("testimonials.subtitle")}
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              aria-label="Previous testimonials"
-              onClick={() =>
-                setIndex(
-                  (value) => (value - 1 + reviews.length) % reviews.length,
-                )
-              }
-              className="flex size-12 cursor-pointer items-center justify-center rounded-full bg-[#1D4ED8] shadow-sm transition-transform hover:scale-105 hover:shadow-md active:scale-95"
-            >
-              <img
-                src="/images/home/arrow-left.svg"
-                alt=""
-                className="size-6"
-              />
-            </button>
-            <button
-              type="button"
-              aria-label="Next testimonials"
-              onClick={() => setIndex((value) => (value + 1) % reviews.length)}
-              className="flex size-12 cursor-pointer items-center justify-center rounded-full bg-[#1D4ED8] shadow-sm transition-transform hover:scale-105 hover:shadow-md active:scale-95"
-            >
-              <img
-                src="/images/home/arrow-right.svg"
-                alt=""
-                className="size-6"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((review, cardIndex) => {
-            const delays = ["delay-75", "delay-150", "delay-225"];
-            return (
-              <article
-                key={`${review.name}-${cardIndex}-${index}`}
-                className={`font-manrope landing-reveal card-smooth-hover flex flex-col items-start gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-5 hover:border-blue-300 hover:shadow-lg ${delays[cardIndex] || ""}`}
-              >
-                <span className="inline-flex w-fit rounded-md bg-[#EEFBF4] px-2 py-1 text-sm leading-5 font-medium text-[#58BD7D]">
-                  {review.badge}
-                </span>
-                <p className="text-base leading-6 font-medium text-[#23262F]">
-                  {review.quote}
-                </p>
-                <div className="flex h-7 w-[152px] items-center gap-2 py-0.5">
-                  <div className="flex flex-1 items-start">
-                    {[0, 1, 2, 3, 4].map((star) => (
-                      <img
-                        key={star}
-                        src="/images/home/star.svg"
-                        alt=""
-                        className={`size-6 ${
-                          star < Math.round(Number(review.rating))
-                            ? "opacity-100"
-                            : "opacity-25 grayscale"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-base leading-6 font-semibold text-[#6B7280]">
-                    {review.rating}
-                  </span>
-                </div>
-                <div className="mt-auto flex w-full items-center gap-4">
-                  <img
-                    src="/images/home/testimonial-avatar.png"
-                    alt=""
-                    className="size-12 shrink-0 rounded-full object-cover"
-                  />
-                  <div className="flex flex-1 flex-col gap-2">
-                    <p className="text-sm leading-5 font-semibold text-[#23262F]">
-                      {review.name}, {review.location}
-                    </p>
-                    <p className="font-inter text-sm leading-6 font-normal text-[#777E90]">
-                      {review.role}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+    <section
+      aria-label={t("testimonials.title")}
+      className="w-full border-y border-[#E2E8F0] bg-[#F8FAFF] py-6"
+    >
+      <div className="landing-marquee-wrap w-full overflow-hidden">
+        <div className="landing-marquee flex w-max gap-4 px-4">
+          {reviews.map((review) => card(review, 0))}
+          {reviews.map((review) => card(review, 1))}
         </div>
       </div>
     </section>

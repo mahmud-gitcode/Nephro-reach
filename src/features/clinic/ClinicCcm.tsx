@@ -114,6 +114,7 @@ import { useCcm, type CcmStore } from "./useCcm";
 import { useMemberFeed } from "./useMemberFeed";
 import { useClinicData } from "./useClinicData";
 import { useCan } from "@/features/staff/useStaffAccounts";
+import { ORGANIZATIONS } from "@/features/staff/staff";
 import { ConditionSelect } from "./ConditionSelect";
 import { KidneyCareSection } from "./KidneyCareSection";
 import { ConditionLibraryModal } from "./ConditionLibraryModal";
@@ -142,7 +143,10 @@ import {
 /* The nephrology office's home (client, 2026-10-03), moved from the
    dialysis clinic's portal. */
 const HREF = "/dashboard/nephrology";
-const PRACTICE = defaultClinicSettings().profile.name;
+/* CCM is the nephrology office's (moved 2026-10-03). */
+const PRACTICE =
+  ORGANIZATIONS.find((org) => org.portal === "nephrology")?.name ??
+  defaultClinicSettings().profile.name;
 
 const statusTone: Record<CcmStatus, BadgeTone> = {
   "Action Needed": "danger",

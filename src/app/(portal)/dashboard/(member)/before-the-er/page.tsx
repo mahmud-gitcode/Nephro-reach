@@ -2,395 +2,109 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AlertCircle, Bell, Check, Eye, Phone } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Alert, Button, buttonStyles, Card, Modal } from "@/components/ui";
+import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
+import { Card, SearchField } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import {
+  BEFORE_THE_ER_INTRO,
+  BEFORE_THE_ER_SUBTITLE,
+  searchTopics,
+} from "@/features/emergency/beforeTheEr.topics";
+import { EmergencyInformationCard } from "@/features/emergency/BeforeTheErParts";
+import { ErVisitsCard } from "@/features/emergency/ErVisitsCard";
 
-interface ActionConfig {
-  key: "callClinic" | "seekMedical" | "monitorSymptoms" | "call911";
-  colorTheme: "blue" | "yellow" | "orange" | "red";
-  callActionHref: string;
-  isCallLink?: boolean;
-  secondaryActionHref?: string;
-  secondaryActionKey?:
-    "findSchedule" | "urgentEducation" | "learnMoreEducation";
-}
-
-const ACTION_CONFIGS: ActionConfig[] = [
-  {
-    key: "callClinic",
-    colorTheme: "blue",
-    callActionHref: "tel:5550100",
-    isCallLink: true,
-    secondaryActionHref: "/dashboard/personal-log/dialysis-management",
-    secondaryActionKey: "findSchedule",
-  },
-  {
-    key: "seekMedical",
-    colorTheme: "orange",
-    callActionHref: "tel:5550199",
-    isCallLink: true,
-    secondaryActionHref: "/dashboard/my-library",
-    secondaryActionKey: "urgentEducation",
-  },
-  {
-    key: "monitorSymptoms",
-    colorTheme: "yellow",
-    callActionHref: "/dashboard/personal-log/dialysis-journal",
-    isCallLink: false,
-    secondaryActionHref: "/dashboard/my-library",
-    secondaryActionKey: "learnMoreEducation",
-  },
-  {
-    key: "call911",
-    colorTheme: "red",
-    callActionHref: "tel:911",
-    isCallLink: true,
-  },
-];
-
-interface SymptomConfig {
-  id: string;
-  key:
-    | "chestPain"
-    | "severeFluidOverload"
-    | "signsOfStroke"
-    | "lossOfConsciousness"
-    | "severeAllergicReactions"
-    | "severeShortnessOfBreath"
-    | "seizures"
-    | "dialysisAccessEmergencies"
-    | "severeBleeding"
-    | "severeHyperkalemia"
-    | "feverDialysisCatheter"
-    | "confusionMentalStatus";
-  urgent: boolean;
-}
-
-const SYMPTOMS: SymptomConfig[] = [
-  { id: "chest-pain", key: "chestPain", urgent: true },
-  { id: "severe-fluid-overload", key: "severeFluidOverload", urgent: false },
-  { id: "signs-of-stroke", key: "signsOfStroke", urgent: true },
-  { id: "loss-of-consciousness", key: "lossOfConsciousness", urgent: false },
-  {
-    id: "severe-allergic-reactions",
-    key: "severeAllergicReactions",
-    urgent: true,
-  },
-  {
-    id: "severe-shortness-of-breath",
-    key: "severeShortnessOfBreath",
-    urgent: false,
-  },
-  { id: "seizures", key: "seizures", urgent: true },
-  {
-    id: "dialysis-access-emergencies",
-    key: "dialysisAccessEmergencies",
-    urgent: false,
-  },
-  { id: "severe-bleeding", key: "severeBleeding", urgent: true },
-  {
-    id: "severe-hyperkalemia-symptoms",
-    key: "severeHyperkalemia",
-    urgent: false,
-  },
-  {
-    id: "fever-with-dialysis-catheter",
-    key: "feverDialysisCatheter",
-    urgent: false,
-  },
-  {
-    id: "confusion-or-mental-status-changes",
-    key: "confusionMentalStatus",
-    urgent: false,
-  },
-];
-
-/* The four themes the content author can pick collapse onto the palette's
-   own meanings: "orange" and "yellow" are both a warning. */
-const ACTION_TONE: Record<string, "primary" | "danger" | "accent"> = {
-  red: "danger",
-  orange: "primary",
-  yellow: "primary",
-  blue: "primary",
-};
-
-const ACTION_ALERT_TONE: Record<
-  string,
-  "info" | "danger" | "warning" | "success"
-> = {
-  red: "danger",
-  orange: "warning",
-  yellow: "warning",
-  blue: "info",
-};
-
-type ActionCopy = {
-  title: string;
-  purpose: string;
-  reminder: string;
-  callAction: string;
-  symptoms: string[];
-};
+/* ==========================================================================
+   Before the ER — a retrieval-only education library
+   --------------------------------------------------------------------------
+   Rebuilt for the client's legal rule (2026-10-05): no symptom checker, no
+   urgency levels, no advice about where to go. A search over a fixed list
+   of approved topics, the emergency information apart from it, and the
+   member's own ER visit log. See features/emergency/beforeTheEr.topics.ts.
+   ========================================================================== */
 
 export default function BeforeTheErPage() {
-  const router = useRouter();
-  const { t, dictionary } = useLanguage();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const [query, setQuery] = useState("");
+  const topics = searchTopics(query);
+  const searching = query.trim() !== "";
 
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [activeModalKey, setActiveModalKey] = useState<
-    ActionConfig["key"] | null
-  >(null);
-
-  const selectedCount = selectedSymptoms.length;
-
-  function toggleSymptom(id: string) {
-    setSelectedSymptoms((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
-  }
-
-  function handleGetGuidance() {
-    if (selectedSymptoms.length > 0) {
-      const slug = selectedSymptoms[0];
-      const query =
-        selectedSymptoms.length > 1
-          ? `?selected=${encodeURIComponent(selectedSymptoms.join(","))}`
-          : "";
-      router.push(`/dashboard/before-the-er/${slug}${query}`);
-    }
-  }
-
-  const activeConfig = activeModalKey
-    ? ACTION_CONFIGS.find((c) => c.key === activeModalKey)
-    : null;
-
-  /* The copy for each action is looked up by key, so the dictionary is read
-     as a map here rather than through its generated property names. */
-  const beforeTheEr = dictionary?.beforeTheEr as unknown as
-    Record<string, ActionCopy | undefined> | undefined;
-
-  const modalData =
-    activeModalKey && beforeTheEr?.[activeModalKey]
-      ? (beforeTheEr[activeModalKey] as ActionCopy)
-      : null;
-
+  /* The emergency information sits in the right-hand column, apart from
+     the search and its results (above them on a phone). */
   return (
-    <div className="mx-auto w-full max-w-[900px] space-y-4">
-      <PageTitle href="/dashboard/before-the-er" />
+    <NoticeRailLayout
+      title={
+        <div className="space-y-stack-xs">
+          <PageTitle href="/dashboard/before-the-er" />
+          <p className="text-body-lg text-fg-secondary">
+            {isEs ? BEFORE_THE_ER_SUBTITLE.es : BEFORE_THE_ER_SUBTITLE.en}
+          </p>
+        </div>
+      }
+      notices={<EmergencyInformationCard isEs={isEs} />}
+    >
+      <div className="space-y-4">
+        <Card as="section" padding="small">
+          <p className="text-body-md text-fg-secondary">
+            {isEs ? BEFORE_THE_ER_INTRO.es : BEFORE_THE_ER_INTRO.en}
+          </p>
+        </Card>
 
-      {/* Disclaimer Box */}
-      {/* Kept as a section with a real <h1> rather than an <Alert>: this is
-          the page heading, not a notice that appeared in response to
-          something. It borrows the danger surface only for weight. */}
-      <section className="rounded-card border border-danger-line bg-danger-surface p-inset-lg">
-        <div className="flex gap-inline-lg">
-          <AlertCircle
-            aria-hidden="true"
-            className="mt-0.5 h-icon-big w-icon-big shrink-0 text-danger"
+        <Card as="section" padding="small" className="space-y-stack-md">
+          <SearchField
+            label={isEs ? "Buscar temas de diálisis" : "Search dialysis topics"}
+            placeholder={
+              isEs ? "Buscar temas de diálisis" : "Search dialysis topics"
+            }
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <div>
-            <h2 className="text-heading-5 text-fg">
-              {t("beforeTheEr.disclaimerTitle")}
-            </h2>
-            <p className="mt-stack-sm text-body-md text-fg-secondary">
-              {t("beforeTheEr.disclaimerText")}
+          <h2 className="text-heading-4 text-fg" aria-live="polite">
+            {searching
+              ? isEs
+                ? `${topics.length} tema${topics.length === 1 ? "" : "s"} encontrado${topics.length === 1 ? "" : "s"}`
+                : `${topics.length} topic${topics.length === 1 ? "" : "s"} found`
+              : isEs
+                ? "Temas de diálisis"
+                : "Dialysis topics"}
+          </h2>
+          {topics.length === 0 ? (
+            <p className="text-body-sm text-fg-muted">
+              {isEs
+                ? "Ningún tema coincide con su búsqueda. Borre la búsqueda para ver todos los temas."
+                : "No topics match your search. Clear the search to see every topic."}
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Action Items Grid with Eye Icon Trigger */}
-      <Card as="section" padding="none" className="p-6">
-        <h2 className="mb-6 text-heading-4 text-fg">
-          {t("beforeTheEr.sectionTitle")}
-        </h2>
-
-        <div>
-          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {ACTION_CONFIGS.map((item) => {
-              const itemTitle = t(`beforeTheEr.${item.key}.title`);
-              return (
-                <li
-                  key={item.key}
-                  className="flex min-h-[60px] items-center justify-between gap-inline-md rounded-card bg-surface-sunken p-inset-sm"
-                >
-                  <span className="truncate text-body-md text-fg">
-                    {itemTitle}
-                  </span>
-                  {/* title= is a tooltip, not a name. aria-label is. */}
-                  <Button
-                    variant="neutral"
-                    appearance="fill-stroke"
-                    className="shrink-0 px-inset-xs"
-                    onClick={() => setActiveModalKey(item.key)}
-                    aria-label={t("beforeTheEr.viewDetailsFor").replace(
-                      "{item}",
-                      itemTitle,
-                    )}
-                  >
-                    <Eye aria-hidden="true" />
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </Card>
-
-      {/* Symptoms Checkbox List */}
-      <Card as="section" padding="none" className="p-6">
-        <div className="mb-6 flex flex-col gap-inset-md md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-heading-4 text-fg">
-              {t("beforeTheEr.notFeelingBestTitle")}
-            </h2>
-          </div>
-          <Button
-            disabled={selectedCount === 0}
-            onClick={handleGetGuidance}
-            className="shrink-0"
-          >
-            {t("beforeTheEr.getGuidance")}
-          </Button>
-        </div>
-
-        <div>
-          {/* These were plain buttons drawing a checkbox. A screen reader
-              heard "button" and never whether the symptom was ticked. */}
-          <div
-            role="group"
-            aria-label={t("beforeTheEr.notFeelingBestTitle")}
-            className="grid grid-cols-1 gap-4 md:grid-cols-2"
-          >
-            {SYMPTOMS.map((symptom) => {
-              const checked = selectedSymptoms.includes(symptom.id);
-              const label = t(`beforeTheEr.symptomsList.${symptom.key}`);
-
-              return (
-                <button
-                  key={symptom.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={checked}
-                  onClick={() => toggleSymptom(symptom.id)}
-                  className={`flex min-h-16 cursor-pointer items-center gap-inline-lg rounded-card p-inset-md text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                    /* A tint, not a border: red for the ones that mean the
-                       ER, grey for the rest. */
-                    symptom.urgent
-                      ? "bg-danger-surface hover:bg-danger-100"
-                      : "bg-surface-sunken hover:bg-primary-soft"
-                  } ${checked ? "ring-2 ring-ring" : ""}`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control-small border-2 ${
-                      checked
-                        ? "border-primary-solid bg-primary-solid text-primary-on-solid"
-                        : "border-[var(--color-gray-400)] bg-surface"
-                    }`}
-                  >
-                    {checked && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                  <span className="text-body-md text-fg">{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </Card>
-
-      {/* EYE BUTTON DETAILS POPUP MODAL */}
-      {activeConfig && modalData && (
-        <Modal
-          open
-          onClose={() => setActiveModalKey(null)}
-          size="wide"
-          title={modalData.title}
-          description={modalData.purpose}
-          footer={
-            <>
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setActiveModalKey(null)}
-              >
-                {t("beforeTheEr.close")}
-              </Button>
-
-              {activeConfig.secondaryActionHref &&
-                activeConfig.secondaryActionKey && (
+          ) : (
+            <ul className="divide-y divide-line-subtle">
+              {topics.map((topic) => (
+                <li key={topic.slug}>
                   <Link
-                    href={activeConfig.secondaryActionHref}
-                    className={buttonStyles({
-                      variant: "neutral",
-                      appearance: "fill-stroke",
-                    })}
+                    href={`/dashboard/before-the-er/${topic.slug}`}
+                    className="group flex items-center gap-inline-md rounded-control py-inset-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
-                    {t(`beforeTheEr.${activeConfig.secondaryActionKey}`)}
-                  </Link>
-                )}
-
-              {activeConfig.isCallLink ? (
-                <a
-                  href={activeConfig.callActionHref}
-                  className={buttonStyles({
-                    variant: ACTION_TONE[activeConfig.colorTheme],
-                  })}
-                >
-                  <Phone aria-hidden="true" />
-                  {modalData.callAction}
-                </a>
-              ) : (
-                <Link
-                  href={activeConfig.callActionHref}
-                  className={buttonStyles({
-                    variant: ACTION_TONE[activeConfig.colorTheme],
-                  })}
-                >
-                  {modalData.callAction}
-                </Link>
-              )}
-            </>
-          }
-        >
-          <div className="space-y-stack-xl">
-            {/* Reminder Banner */}
-            <Alert
-              tone={ACTION_ALERT_TONE[activeConfig.colorTheme]}
-              live={false}
-              icon={<Bell />}
-            >
-              {modalData.reminder}
-            </Alert>
-
-            {/* Symptoms Bullet List */}
-            <div className="space-y-stack-md">
-              <h4 className="text-overline text-fg-muted">
-                {t("beforeTheEr.suggestedTopics")}
-              </h4>
-              <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
-                {Array.isArray(modalData.symptoms) &&
-                  modalData.symptoms.map((symptomName, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-inline-md rounded-control border border-line bg-surface-sunken p-inset-sm text-body-sm break-words text-fg-secondary"
-                    >
-                      <span aria-hidden="true" className="text-fg-brand">
-                        •
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-label-lg text-fg group-hover:text-fg-brand">
+                        {isEs ? topic.titleEs : topic.titleEn}
                       </span>
-                      <span>{symptomName}</span>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
+                      <span className="block text-body-sm text-fg-muted">
+                        {topic.summaryEn}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="size-5 shrink-0 text-fg-subtle group-hover:text-fg-brand"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <ErVisitsCard isEs={isEs} />
+      </div>
+    </NoticeRailLayout>
   );
 }

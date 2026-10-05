@@ -38,3 +38,9 @@ export function formatTo24Hour(time12: string): string {
   const hFormatted = h < 10 ? `0${h}` : `${h}`;
   return `${hFormatted}:${m}`;
 }
+
+/** "08:30 PM" (or "08:30 pm") → minutes after midnight. */
+export function minutesOf(time12: string): number {
+  const [h, m] = formatTo24Hour(time12).split(":").map(Number);
+  return h * 60 + m;
+}

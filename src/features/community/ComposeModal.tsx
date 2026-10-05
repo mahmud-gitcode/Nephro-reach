@@ -10,7 +10,8 @@ import {
   ChipGroup,
   Modal,
 } from "@/components/ui";
-import { FileText, Phone, Send } from "lucide-react";
+import { FileText, ImagePlus, Phone, Send } from "lucide-react";
+import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
 import {
   autoReplyForText,
   detectsPersonalInfo,
@@ -35,6 +36,11 @@ export const COMPOSE_CATEGORIES = [
     labelEn: "Caregiver Support",
     labelEs: "Apoyo al Cuidador",
   },
+  {
+    id: "recipes",
+    labelEn: "Recipes",
+    labelEs: "Recetas",
+  },
 ];
 
 export function ComposeModal({
@@ -45,13 +51,16 @@ export function ComposeModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onPost: (body: string, categoryId: string) => void;
+  /** With a photo when the member added one (client, 2026-10-05). */
+  onPost: (body: string, categoryId: string, imageUrl?: string) => void;
   initialCategory?: string;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
   const [body, setBody] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(
     initialCategory === "all" ? "general" : initialCategory,
   );
@@ -69,8 +78,9 @@ export function ComposeModal({
 
   const handleSubmit = () => {
     if (!canPost) return;
-    onPost(body.trim(), selectedCategory);
+    onPost(body.trim(), selectedCategory, photo ?? undefined);
     setBody("");
+    setPhoto(null);
     onClose();
   };
 
@@ -150,6 +160,74 @@ export function ComposeModal({
             <span>{body.length}/200</span>
           </p>
         </div>
+
+        {/* A photo — a meal, a recipe (client, 2026-10-05). Shrunk to a
+            small JPEG before it is kept, like every photo in the app. */}
+        <div className="flex flex-wrap items-center gap-inline-md">
+          {photo ? (
+            <span className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+              <img
+                src={photo}
+                alt={isEs ? "Foto para la publicación" : "Photo for the post"}
+                className="h-20 w-20 rounded-control object-cover"
+              />
+            </span>
+          ) : null}
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept="image/*"
+              className="peer sr-only"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                setPhotoError(null);
+                try {
+                  setPhoto(await downscaleToDataUrl(file));
+                } catch {
+                  setPhotoError(
+                    isEs
+                      ? "No se pudo usar esa foto."
+                      : "That photo could not be used.",
+                  );
+                }
+              }}
+            />
+            <span className="inline-flex min-h-10 cursor-pointer items-center gap-inline-sm rounded-button border border-line bg-surface px-inset-sm text-label-md text-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring hover:bg-surface-sunken">
+              <ImagePlus aria-hidden="true" className="size-4" />
+              {photo
+                ? isEs
+                  ? "Cambiar foto"
+                  : "Change photo"
+                : isEs
+                  ? "Agregar foto"
+                  : "Add photo"}
+            </span>
+          </label>
+          {photo ? (
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="ghost"
+              onClick={() => setPhoto(null)}
+            >
+              {isEs ? "Quitar" : "Remove"}
+            </Button>
+          ) : null}
+          {photoError ? (
+            <p role="alert" className="text-caption text-danger">
+              {photoError}
+            </p>
+          ) : null}
+        </div>
+
+        <p className="text-caption text-fg-muted">
+          {isEs
+            ? "Un moderador revisa cada publicación antes de que aparezca."
+            : "A moderator reviews every post before it appears."}
+        </p>
 
         {/* 4. Auto-flag notice. This one IS a response to what was typed, so
             it keeps the live region <Alert> gives it by default. */}

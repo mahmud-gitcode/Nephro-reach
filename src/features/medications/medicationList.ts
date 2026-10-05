@@ -10,6 +10,7 @@
 
 import { doseScheduleData, medicationsData } from "./medications.seed";
 import type { MedicationReminder } from "./reminders.types";
+import { reminderTimes } from "./reminders.rules";
 
 export type Medication = (typeof medicationsData)[number] & {
   id: string;
@@ -108,6 +109,28 @@ export function addMedication(
   ];
 }
 
+/** The statuses a member can set (client, 2026-10-05). */
+export const MEDICATION_STATUSES = [
+  { value: "Active", en: "Active", es: "Activo" },
+  { value: "PRN", en: "PRN (as needed)", es: "PRN (según necesidad)" },
+  { value: "Paused", en: "Paused", es: "En pausa" },
+  { value: "Stopped", en: "Stopped", es: "Suspendido" },
+] as const;
+export type MedicationStatus = (typeof MEDICATION_STATUSES)[number]["value"];
+
+export function setMedicationStatus(
+  list: Medication[],
+  id: string,
+  status: MedicationStatus,
+): Medication[] {
+  return list.map((m) => (m.id === id ? { ...m, status } : m));
+}
+
+/** Paused and stopped medications have no doses to take. */
+function onSchedule(m: Medication): boolean {
+  return m.status !== "Paused" && m.status !== "Stopped";
+}
+
 export function removeMedication(list: Medication[], id: string): Medication[] {
   return list.filter((m) => m.id !== id);
 }
@@ -128,21 +151,33 @@ export function doseRows(
   medications: Medication[],
   reminders: MedicationReminder[],
 ): DoseRow[] {
-  const names = new Set(medications.map((m) => m.name.toLowerCase()));
+  const scheduled = medications.filter(onSchedule);
+  const names = new Set(scheduled.map((m) => m.name.toLowerCase()));
   const sample = doseScheduleData.filter((row) =>
     names.has(row.medication.toLowerCase()),
   );
-  const added = medications
-    .filter((m) => !m.id.startsWith("seed-") && m.status === "Active")
+  /* One row per reminder time not already in the sample schedule, so a
+     medication taken twice a day has two rows. */
+  const added = scheduled
+    .filter((m) => m.status === "Active")
     .flatMap((m) => {
       const reminder = reminders.find(
         (r) =>
           r.medicationName.toLowerCase() === m.name.toLowerCase() && r.enabled,
       );
       if (!reminder) return [];
-      return [
-        {
-          time: reminder.time.toLowerCase(),
+      return reminderTimes(reminder)
+        .map((t) => t.toLowerCase())
+        .filter(
+          (time) =>
+            !sample.some(
+              (row) =>
+                row.medication.toLowerCase() === m.name.toLowerCase() &&
+                row.time.toLowerCase() === time,
+            ),
+        )
+        .map((time) => ({
+          time,
           medication: m.name,
           generic: m.dose,
           instructionsEn: m.instructions ?? "—",
@@ -151,8 +186,7 @@ export function doseRows(
           stamp: "---",
           sideEffectsEn: "None",
           sideEffectsEs: "Ninguno",
-        },
-      ];
+        }));
     });
   return [...sample, ...added];
 }

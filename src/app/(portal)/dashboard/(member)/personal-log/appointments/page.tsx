@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
+import React, { useEffect, useState } from "react";
 import {
   Calendar,
+  CalendarPlus,
   ChevronRight,
   Clock3,
   MapPin,
@@ -22,13 +24,16 @@ import {
   Input,
   Modal,
   SegmentedChoice,
+  Select,
   Skeleton,
   Textarea,
 } from "@/components/ui";
 import {
   appointmentError,
   awaitingAnswer,
+  REMINDER_LEADS,
   directionsUrl,
+  icsFor,
   past,
   timeRange,
   upcoming,
@@ -38,6 +43,12 @@ import {
   type Attendance,
 } from "@/features/personal-log/appointments/appointments";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
+import {
+  TEAM_LABEL,
+  recordForMember,
+} from "@/features/vascular-access/vascularAccess.data";
+import { useMemberName } from "@/features/auth/useMemberName";
 import { useNow } from "@/lib/utils/useNow";
 
 /* ==========================================================================
@@ -172,7 +183,8 @@ function DetailsModal({
   /** The day has gone by, so "did you go?" can be answered. */
   isPast: boolean;
   onAttendance: (attendance: Attendance) => void;
-  onDelete: () => void;
+  /** Absent for an appointment that belongs to another record. */
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   const { t } = useLanguage();
@@ -200,15 +212,23 @@ function DetailsModal({
           </>
         ) : (
           <>
-            <Button
-              variant="danger"
-              appearance="fill-stroke"
-              className="mr-auto"
-              leadingIcon={<Trash2 />}
-              onClick={() => setConfirming(true)}
-            >
-              {isEs ? "Eliminar" : "Delete"}
-            </Button>
+            {onDelete ? (
+              <Button
+                variant="danger"
+                appearance="fill-stroke"
+                className="mr-auto"
+                leadingIcon={<Trash2 />}
+                onClick={() => setConfirming(true)}
+              >
+                {isEs ? "Eliminar" : "Delete"}
+              </Button>
+            ) : (
+              <p className="mr-auto text-caption text-fg-muted">
+                {isEs
+                  ? "De su registro de Acceso Vascular."
+                  : "From your Vascular Access record."}
+              </p>
+            )}
             <Button
               variant="neutral"
               appearance="fill-stroke"
@@ -216,6 +236,16 @@ function DetailsModal({
             >
               {t("appointments.close")}
             </Button>
+            {!isPast ? (
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                leadingIcon={<CalendarPlus />}
+                onClick={() => addToCalendar(appointment)}
+              >
+                {isEs ? "Agregar al Calendario" : "Add to Calendar"}
+              </Button>
+            ) : null}
             {appointment.location || appointment.address ? (
               <Button
                 onClick={() =>
@@ -357,12 +387,50 @@ const EMPTY: AppointmentDraft = {
   location: "",
   address: "",
   notes: "",
+  reminder: "1d",
 };
+
+/** Downloads the appointment as a calendar file; the phone's calendar
+ *  opens it and keeps the reminder (client, 2026-10-05). */
+function addToCalendar(appointment: Appointment) {
+  const url = URL.createObjectURL(
+    new Blob([icsFor(appointment, Date.now())], { type: "text/calendar" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${appointment.title.replace(/[^\w-]+/g, "-") || "appointment"}.ics`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function AppointmentsPage() {
   const { t, language } = useLanguage();
   const isEs = language === "ES";
   const store = useAppointments();
+  const access = useVascularAccess();
+  const memberName = useMemberName();
+  const accessRecord = recordForMember(access.state, memberName);
+  /* The access center's bookings for this member, as appointments. */
+  const { syncExternal } = store;
+  useEffect(() => {
+    if (!accessRecord) return;
+    syncExternal(
+      accessRecord.appointments
+        .filter((a) => !a.completed)
+        .map((a) => ({
+          id: `va-${a.id}`,
+          date: a.date,
+          start: a.time,
+          end: "",
+          title: a.title,
+          doctor: TEAM_LABEL[a.team],
+          location: a.place,
+          address: "",
+          notes: "",
+          source: "vascular-access" as const,
+        })),
+    );
+  }, [accessRecord, syncExternal]);
   const now = new Date(useNow());
   const pad = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -542,10 +610,14 @@ export default function AppointmentsPage() {
             store.setAttendance(opened.id, attendance)
           }
           onClose={() => setOpenId(null)}
-          onDelete={() => {
-            store.remove(opened.id);
-            setOpenId(null);
-          }}
+          onDelete={
+            opened.source
+              ? undefined
+              : () => {
+                  store.remove(opened.id);
+                  setOpenId(null);
+                }
+          }
         />
       ) : null}
 
@@ -679,6 +751,35 @@ export default function AppointmentsPage() {
                 value={draft.notes}
                 onChange={(e) => set("notes", e.target.value)}
               />
+            )}
+          </FormField>
+          <LogMediaBar
+            logName="Appointment"
+            isEs={isEs}
+            onDictated={(text) =>
+              setDraft((d) => ({ ...d, notes: appendText(d.notes, text) }))
+            }
+          />
+          <FormField
+            label={isEs ? "Recordatorio" : "Reminder"}
+            hint={
+              isEs
+                ? "Le avisamos aquí. Para un aviso en su teléfono, abra la cita y elija Agregar al Calendario."
+                : "We remind you here. For a reminder on your phone, open the appointment and choose Add to Calendar."
+            }
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={draft.reminder ?? "none"}
+                onChange={(e) => set("reminder", e.target.value)}
+              >
+                {REMINDER_LEADS.map((lead) => (
+                  <option key={lead.value} value={lead.value}>
+                    {isEs ? lead.es : lead.en}
+                  </option>
+                ))}
+              </Select>
             )}
           </FormField>
         </form>

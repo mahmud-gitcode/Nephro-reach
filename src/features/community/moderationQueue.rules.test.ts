@@ -266,3 +266,39 @@ describe("approved posts rejoining the feed", () => {
     expect(approvedPosts(items).map((item) => item.id)).toEqual(["a"]);
   });
 });
+
+describe("every post waits for a moderator (client, 2026-10-05)", () => {
+  const draft = {
+    kind: "post" as const,
+    postId: "",
+    author: "John Taylor",
+    content: "Here is my low-potassium chili recipe!",
+    categoryId: "recipes",
+    imageUrl: "data:image/jpeg;base64,AAA",
+  };
+
+  it("holds a clean post as routine, with its photo", () => {
+    expect(buildHeldItem(draft, "h1")).toBeNull();
+    const held = buildHeldItem(draft, "h1", new Date(), { always: true });
+    expect(held).toMatchObject({
+      reason: "routine",
+      level: 4,
+      status: "pending",
+      imageUrl: "data:image/jpeg;base64,AAA",
+    });
+  });
+
+  it("queues routine posts after anything flagged", () => {
+    const routine = buildHeldItem(draft, "h1", new Date(), { always: true })!;
+    const flagged = buildHeldItem(
+      { ...draft, content: "send money to my cash app" },
+      "h2",
+      new Date(),
+      { always: true },
+    )!;
+    expect(pendingItems([routine, flagged]).map((i) => i.id)).toEqual([
+      "h2",
+      "h1",
+    ]);
+  });
+});

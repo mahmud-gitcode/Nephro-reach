@@ -294,194 +294,7 @@
     "confirmDelete": "Are you sure you want to delete \"{name}\" from your rides?"
   },
   "beforeTheEr": {
-    "breadcrumb": "Before-the-ER",
-    "disclaimerTitle": "Important Disclaimer",
-    "disclaimerText": "Before The ER™ is an educational support feature only and does not provide medical advice, diagnosis, emergency services, or clinical triage. Information provided is general education and may not apply to every individual or situation. Always use your judgment and contact emergency services if you believe you are experiencing a medical emergency.",
-    "sectionTitle": "Important Before The ER™",
-    "viewDetailsFor": "View details for {item}",
-    "notFeelingBestTitle": "Not feeling your best?",
-    "notFeelingBestSubtitle": "Select the symptoms you're experiencing:",
-    "getGuidance": "Get Guidance",
-    "suggestedTopics": "Suggested Symptoms / Topics:",
-    "close": "Close",
-    "findSchedule": "Find My Dialysis Schedule",
-    "learnMoreEducation": "Learn More in My Library",
-    "urgentEducation": "Urgent Symptoms in My Library",
-    "callClinic": {
-      "title": "Call Dialysis Clinic First",
-      "purpose": "Educational prompts encouraging members to contact their dialysis team for non-life-threatening dialysis-related concerns that may potentially be addressed by the clinic.",
-      "reminder": "Your dialysis clinic may be able to help guide next steps for dialysis-related concerns.",
-      "callAction": "Tap to Call Clinic",
-      "symptoms": [
-        "Missed or shortened dialysis treatment",
-        "Questions about dry weight",
-        "Mild swelling in feet/legs",
-        "Mild shortness of breath while resting comfortably",
-        "Rapid fluid gain between treatments",
-        "Cramping during or after dialysis",
-        "Access soreness without severe bleeding",
-        "Mild redness near access",
-        "Questions about medications prescribed by dialysis provider",
-        "Feeling “more fluid overloaded than usual”",
-        "Difficulty reaching target weight",
-        "Dialysis machine alarms at home",
-        "Home dialysis supply concerns",
-        "Mild dizziness after treatment",
-        "Fatigue after missed treatments",
-        "Questions about phosphorus binders",
-        "Elevated blood pressure without emergency symptoms",
-        "Problems tolerating dialysis treatment",
-        "Increased thirst/fluid management struggles",
-        "Questions about potassium or diet choices",
-        "Transportation issues causing missed treatments",
-        "Questions about changing dialysis schedule",
-        "Access dressing concerns",
-        "Minor bruising near access",
-        "Increased interdialytic weight gains",
-        "Questions about dialysis-related labs",
-        "Mild nausea after dialysis",
-        "Questions about home dialysis training",
-        "Mild headaches after treatment",
-        "Difficulty completing treatments"
-      ]
-    },
-    "monitorSymptoms": {
-      "title": "Monitor Symptoms",
-      "purpose": "Educational awareness section for mild symptoms that may still require monitoring and communication if worsening.",
-      "reminder": "Monitor symptoms closely and contact your healthcare team if symptoms worsen or concern you.",
-      "callAction": "Log Symptom",
-      "symptoms": [
-        "Mild fatigue",
-        "Trouble sleeping",
-        "Mild itching",
-        "Mild restless legs",
-        "Occasional muscle cramps",
-        "Mild appetite changes",
-        "Mild constipation",
-        "Mild nausea",
-        "Mild dizziness when standing",
-        "Mild headaches",
-        "Feeling tired after dialysis",
-        "Mild swelling",
-        "Mild anxiety about treatments",
-        "Dry mouth",
-        "Mild metallic taste in mouth",
-        "Mild low energy",
-        "Difficulty sticking to fluid restrictions",
-        "Mild sadness/frustration",
-        "Mild cold intolerance",
-        "Mild weakness",
-        "Skin dryness",
-        "Mild access discomfort",
-        "Mild brain fog",
-        "Changes in sleep patterns",
-        "Mild stress related to dialysis"
-      ]
-    },
-    "seekMedical": {
-      "title": "Seek Medical Attention",
-      "purpose": "Educational prompts encouraging members to seek urgent medical evaluation for worsening or concerning symptoms.",
-      "reminder": "Some symptoms may require prompt medical evaluation.",
-      "callAction": "Contact Healthcare Provider",
-      "symptoms": [
-        "Fever or chills",
-        "Vomiting that won’t stop",
-        "Severe nausea",
-        "Increasing shortness of breath",
-        "Rapid swelling",
-        "Sudden large weight gain",
-        "Signs of infection near access",
-        "Access not working properly",
-        "Persistent chest discomfort",
-        "Severe weakness",
-        "Severe dehydration symptoms",
-        "Severe headaches",
-        "Very high or very low blood pressure symptoms",
-        "Confusion",
-        "New irregular heartbeat sensations",
-        "Severe abdominal pain",
-        "Fainting episodes",
-        "Significant bleeding from access",
-        "Oxygen levels dropping (if monitoring at home)",
-        "Unable to complete dialysis repeatedly",
-        "Severe diarrhea",
-        "Signs of severe fluid overload",
-        "Sudden inability to lie flat due to breathing issues",
-        "Worsening symptoms after missed treatments"
-      ]
-    },
-    "call911": {
-      "title": "Call 911 Immediately",
-      "purpose": "Emergency awareness section for potentially life-threatening symptoms.",
-      "reminder": "Call 911 immediately for life-threatening emergencies.",
-      "callAction": "Call 911 Now",
-      "symptoms": [
-        "Severe trouble breathing",
-        "Chest pain",
-        "Blue lips or face",
-        "Severe confusion",
-        "Loss of consciousness",
-        "Seizure",
-        "Signs of stroke",
-        "Severe bleeding that will not stop",
-        "Unresponsiveness",
-        "Severe allergic reaction",
-        "Unable to speak in full sentences due to breathing difficulty",
-        "Sudden collapse",
-        "Severe burns",
-        "Suicidal thoughts/emergency mental health crisis",
-        "Severe trauma or injury",
-        "Severe weakness on one side of body",
-        "Sudden vision loss",
-        "Severe oxygen deprivation symptoms",
-        "Choking",
-        "Cardiac arrest symptoms"
-      ]
-    },
-    "symptomsList": {
-      "chestPain": "Chest Pain",
-      "severeFluidOverload": "Severe Fluid Overload",
-      "signsOfStroke": "Signs of Stroke",
-      "lossOfConsciousness": "Loss of Consciousness",
-      "severeAllergicReactions": "Severe Allergic Reactions",
-      "severeShortnessOfBreath": "Severe Shortness of Breath",
-      "seizures": "Seizures",
-      "dialysisAccessEmergencies": "Dialysis Access Emergencies",
-      "severeBleeding": "Severe Bleeding",
-      "severeHyperkalemia": "High Potassium Warning Signs",
-      "feverDialysisCatheter": "Fever With Dialysis Catheter",
-      "confusionMentalStatus": "Confusion or Mental Status Changes"
-    },
-    "detail": {
-      "urgentNotice": "Seek Emergency Care Immediately",
-      "call911": "Call 911",
-      "findNearestEr": "Find Nearest ER",
-      "callEmergencyFor": "Call emergency services immediately for:",
-      "importantIn": "Especially important in:",
-      "relatedEducation": "Related Education",
-      "video": "Video",
-      "article": "Article",
-      "readTime": "5 min read",
-      "videoTitle": "Managing Symptoms After Dialysis",
-      "articleTitle": "When to Contact Your Dialysis Clinic",
-      "emergencySymptomsList": {
-        "chestPressure": "Chest pressure",
-        "chestTightness": "Chest tightness",
-        "crushingChestPain": "Crushing chest pain",
-        "painSpreading": "Pain spreading to arm, jaw, neck, or back",
-        "chestPainNausea": "Chest pain with sweating or nausea",
-        "severeOnset": "Severe or sudden onset of symptoms",
-        "diffBreathing": "Difficulty breathing or chest discomfort",
-        "unusualWeakness": "Unusual weakness or dizziness",
-        "rapidWorsening": "Rapidly worsening pain or swelling"
-      },
-      "importantInList": {
-        "dialysisPatients": "Dialysis patients",
-        "kidneyFailure": "Kidney failure patients",
-        "diabetesHeart": "Patients with diabetes or heart disease",
-        "highRisk": "Patients with high risk factors"
-      }
-    }
+    "breadcrumb": "Before-the-ER"
   },
   "appointments": {
     "title": "Appointment Reminders",
@@ -853,7 +666,7 @@
       "dailyGoal": {
         "title": "Daily Goal",
         "description": "Stay within your daily nutrient goals",
-        "footer": "View Goals"
+        "footer": "Set Goals"
       },
       "mealsLogged": {
         "title": "Meals Logged",
@@ -926,7 +739,7 @@
     "fluidTracker": {
       "title": "Fluid Tracker",
       "of": "of 1,500 ml",
-      "addWater": "Add Water"
+      "addWater": "Add Fluid"
     },
     "resources": {
       "title": "Resources",
@@ -1447,6 +1260,10 @@
       {
         "id": "nutrition",
         "label": "Nutrition & Wellness"
+      },
+      {
+        "id": "recipes",
+        "label": "Recipes"
       }
     ],
     "postOptionsAria": "Post options",
@@ -1733,22 +1550,11 @@
     }
   },
   "emergencyModal": {
-    "title": "This may be a medical emergency.",
-    "subtitle": "NephroReach does NOT provide emergency care.",
+    "title": "Emergency Information",
+    "subtitle": "NephroReach does not provide emergency care.",
     "call911": "Call 911",
     "findEr": "Find Nearest Emergency Room",
     "emergencyContact": "Emergency contact",
-    "whenToSeekTitle": "When to Seek Emergency Care",
-    "symptoms": [
-      "Chest pain or pressure",
-      "Trouble breathing",
-      "Severe weakness or dizziness",
-      "Bleeding that won't stop",
-      "Fainting or passing out",
-      "Severe swelling or sudden weight gain",
-      "Confusion or inability to stay awake"
-    ],
-    "advisory": "If you feel something is seriously wrong, do not wait. Call 911 or go to the nearest emergency room immediately.",
     "disclaimer": "NephroReach is an education and support platform only. We do not provide medical advice, diagnosis, or emergency services.",
     "closeButton": "Close",
     "addEmergencyContact": "Add an emergency contact"

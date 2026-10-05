@@ -14,6 +14,8 @@ export type PostItem = {
   hashtags: string;
   likes: number;
   categoryId: string;
+  /** A photo with the post — a meal, a recipe (client, 2026-10-05). */
+  imageUrl?: string;
 };
 
 export type ReplyItem = {
@@ -52,10 +54,13 @@ export type HeldItem = {
   author: string;
   content: string;
   /** Which category held it, and the phrase that fired — moderators need
-      to see what the screen caught, not just that it caught something. */
-  reason: FlagCategory;
-  /** 1 emergency · 2 care-team concern · 3 community. Drives queue order. */
-  level: FlagLevel;
+      to see what the screen caught, not just that it caught something.
+      "routine" when nothing was caught: every post waits for approval
+      (client, 2026-10-05). */
+  reason: FlagCategory | "routine";
+  /** 1 emergency · 2 care-team concern · 3 community · 4 routine. Drives
+      queue order. */
+  level: FlagLevel | 4;
   matchedPhrase: string;
   /** True when the wording placed it in the past and the tier was eased. */
   softenedByContext?: boolean;
@@ -70,4 +75,6 @@ export type HeldItem = {
   /** Category chosen in the composer, carried so an approved post lands in
       the tab the member picked. */
   categoryId?: string;
+  /** A photo with the post, as a downscaled JPEG data URL. */
+  imageUrl?: string;
 };

@@ -67,6 +67,7 @@ import {
   type AccessStatus,
   type AccessTeam,
   type ReferralKind,
+  type ReferralSource,
 } from "@/features/vascular-access/vascularAccess.data";
 import {
   AccessConversationView,
@@ -166,6 +167,10 @@ type Perms = {
   role: string;
   reply: boolean;
   schedule: boolean;
+  /** May write in the patient's three-way conversation. */
+  converse: boolean;
+  /** Why not, when they may not. */
+  readOnlyReason?: string;
 };
 
 /* -------------------------------------------------------- schedule form */
@@ -578,11 +583,7 @@ function PatientModal({
           record={record}
           party={party}
           myName={perms.me}
-          readOnlyReason={
-            perms.reply
-              ? undefined
-              : `${perms.role} accounts can read this conversation but not reply.`
-          }
+          readOnlyReason={perms.converse ? undefined : perms.readOnlyReason}
           sending={store.isSaving}
           onSend={(body, isPrivate) =>
             store.sendMessage(record.mrn, party, perms.me, body, {
@@ -775,13 +776,37 @@ export default function ClinicVascularAccess({
 }) {
   const HREF = STAFF[party].href;
   const { user } = useAuth();
+  /* Who refers from this page: the access center itself, or the office
+     signed in — the dialysis center, or the nephrology office, which
+     shares the clinic's pages (client, 2026-10-05). */
+  const office: "access" | ReferralSource =
+    party === "access"
+      ? "access"
+      : user?.role === "nephrology"
+        ? "nephrology"
+        : "dialysis";
+  const reply = userCan(user, "messages.reply");
   /* A staff login writes and books under its own name; the organisation's
      demo login stands in as its default person. */
   const perms: Perms = {
-    me: user?.staffRole ? user.name : STAFF[party].person,
+    me: user?.staffRole
+      ? user.name
+      : office === "nephrology"
+        ? "Dr. Samuel Reed"
+        : STAFF[party].person,
     role: user?.staffRole ?? "Administrator",
-    reply: userCan(user, "messages.reply"),
+    reply,
     schedule: userCan(user, "access.schedule"),
+    /* The patient's conversation is between the patient, the access
+       center and the dialysis center; the nephrology office reads it and
+       writes to the access center on a referral instead. */
+    converse: reply && office !== "nephrology",
+    readOnlyReason:
+      office === "nephrology"
+        ? "The nephrology office reads this conversation. To reach the access center, send a message from Access Center Messages."
+        : reply
+          ? undefined
+          : `${user?.staffRole ?? "Administrator"} accounts can read this conversation but not reply.`,
   };
   const now = useNow();
   const store = useVascularAccess();
@@ -822,7 +847,7 @@ export default function ClinicVascularAccess({
     openConcerns(record).map((concern) => ({ record, concern })),
   );
   /* The dialysis center sees only its own threads. */
-  const referrals = threadsFor(store.referrals, party);
+  const referrals = threadsFor(store.referrals, office);
   const openReferralCount = referrals.filter((r) =>
     party === "access" ? r.status === "New" : r.status !== "Closed",
   ).length;
@@ -1101,8 +1126,8 @@ export default function ClinicVascularAccess({
 
           <ReferralsPanel
             referrals={referrals}
-            side={party}
-            canSend={perms.reply && party === "dialysis"}
+            side={office}
+            canSend={perms.reply && office !== "access"}
             onSend={() => setReferring({})}
             onOpen={setOpenReferral}
           />
@@ -1121,7 +1146,7 @@ export default function ClinicVascularAccess({
               setOpen(null);
             }}
             onRefer={
-              party === "dialysis" && perms.reply
+              office !== "access" && perms.reply
                 ? () => {
                     setReferring({
                       mrn: selected.mrn,
@@ -1162,7 +1187,7 @@ export default function ClinicVascularAccess({
             key={readingReferral.id}
             referral={readingReferral}
             record={records.find((r) => r.mrn === readingReferral.mrn)}
-            side={party}
+            side={office}
             me={perms.me}
             canReply={perms.reply}
             canAct={perms.schedule}
@@ -1182,7 +1207,7 @@ export default function ClinicVascularAccess({
 
         {referring ? (
           <SendReferralModal
-            side={party}
+            side={office}
             patients={referable}
             initialMrn={referring.mrn}
             initialKind={referring.kind}
@@ -1206,7 +1231,7 @@ export default function ClinicVascularAccess({
               isFetching={store.isFetching}
               refetch={store.refetch}
             />
-            {party === "dialysis" && perms.reply ? (
+            {office !== "access" && perms.reply ? (
               <Button
                 size="small"
                 variant="neutral"

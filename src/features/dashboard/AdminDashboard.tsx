@@ -153,7 +153,9 @@ const liveClassLogs: Array<{
     color: "text-cat-5",
   },
   {
-    label: "Before the ER Log",
+    /* Before the ER no longer logs what members look up (retrieval only,
+       2026-10-05); what it logs is the weekly ER visit answer. */
+    label: "ER Visit Log",
     entries: "32,120",
     members: "5,623",
     rate: "85.3%",

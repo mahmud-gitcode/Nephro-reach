@@ -1,10 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertTriangle, Car, MessagesSquare, Pencil, Plus } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  BookOpen,
+  Car,
+  MessagesSquare,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
+  buttonStyles,
   Alert,
   Badge,
   Button,
@@ -957,7 +966,23 @@ export default function VascularAccess() {
 
   return (
     <div className="space-y-6">
-      <PageTitle href={HREF} />
+      <PageTitle
+        href={HREF}
+        action={
+          /* The Library's access-care shelf (client, 2026-10-05). */
+          <Link
+            href="/dashboard/my-library?category=access-care"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              size: "small",
+            })}
+          >
+            <BookOpen aria-hidden="true" />
+            {isEs ? "Qué Hacer y Qué No Hacer" : "Do's and Don'ts"}
+          </Link>
+        }
+      />
       {body}
     </div>
   );

@@ -48,8 +48,8 @@ import CareTeamQuestionsSection from "@/features/care-team/CareTeamQuestionsSect
 import DialysisClinicCard from "@/features/travel/DialysisClinicCard";
 import ProviderOrdersSection from "@/features/personal-log/dialysis/ProviderOrdersSection";
 import HomeVisitsSection from "@/features/personal-log/dialysis/HomeVisitsSection";
-import UrineOutputSection from "@/features/personal-log/dialysis/UrineOutputSection";
 import CareTeamContactSection from "@/features/personal-log/dialysis/CareTeamContactSection";
+import { useClinicEnrollment } from "@/features/profile/useClinicEnrollment";
 import AccessPhotosSection from "@/features/personal-log/dialysis/AccessPhotosSection";
 import SupplyChecklistSection from "@/features/personal-log/dialysis/SupplyChecklistSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
@@ -63,6 +63,7 @@ function DialysisManagementDashboard() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const modalityLog = useDialysisModality();
+  const enrollment = useClinicEnrollment();
 
   // Section 2 State: Dialysis Schedule
   // Dated schedule history. The last period is the one currently in force.
@@ -513,16 +514,21 @@ function DialysisManagementDashboard() {
             section takes itself away for in-center. */}
         <SupplyChecklistSection modalityLog={modalityLog} />
 
-        {/* 5. Recorded across the day rather than during a run, so it
-            belongs here and not in the treatment log. Every modality: a
-            member still making urine is worth watching either way. */}
-        <UrineOutputSection />
-
-        {/* 6. Reaching the nurse, and showing them what the phone cannot
+        {/* 5. Reaching the nurse, and showing them what the phone cannot
             describe. Side by side because a photo is usually sent with a
-            message about it. */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <CareTeamContactSection isHome={modalityLog.isHome} />
+            message about it. Messaging shows only when the member's clinic
+            is on NephroReach (client, 2026-10-05): nobody else would read
+            it. The Urine Output section was removed the same day. */}
+        <div
+          className={
+            enrollment.enrolled
+              ? "grid grid-cols-1 gap-6 xl:grid-cols-2"
+              : "grid grid-cols-1 gap-6"
+          }
+        >
+          {enrollment.enrolled ? (
+            <CareTeamContactSection isHome={modalityLog.isHome} />
+          ) : null}
           <AccessPhotosSection />
         </div>
 

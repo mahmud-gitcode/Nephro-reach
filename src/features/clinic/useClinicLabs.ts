@@ -12,8 +12,9 @@ import type { LabsState } from "./labs.data";
 
 const KEY = storageKey("clinic-labs");
 
-/** Bump when LabsState changes shape, so old data re-seeds. */
-const VERSION = 1;
+/** Bump when LabsState changes shape, so old data re-seeds.
+ *  Version 2: the demo patient's chart has results too. */
+const VERSION = 2;
 
 type StoredEnvelope = { version: number; state: unknown };
 

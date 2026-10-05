@@ -7,7 +7,6 @@ import HowItWorks from "@/features/landing-page/HowItWorks";
 import Engagement from "@/features/landing-page/Engagement";
 import Pricing from "@/features/landing-page/Pricing";
 import Testimonials from "@/features/landing-page/Testimonials";
-import WhatMembersGet from "@/features/landing-page/WhatMembersGet";
 import ContactUs from "@/features/landing-page/ContactUs";
 import Footer from "@/components/layout/Footer";
 import LandingAnimationObserver from "@/features/landing-page/LandingAnimationObserver";
@@ -19,11 +18,13 @@ export default function Home() {
       <Header />
       <main className="flex flex-col">
         <Hero />
-        <HowItWorks />
-        <Engagement />
-        <Pricing eyebrow="Pricing" sideCtaVariant="outline" />
+        {/* Client, 2026-10-05: "Your Health, All in One Place" above How
+            It Works; What Members Get folded into How It Works; reviews as
+            a moving banner rather than a section of their own. */}
         <Testimonials />
-        <WhatMembersGet />
+        <Engagement />
+        <HowItWorks />
+        <Pricing eyebrow="Pricing" sideCtaVariant="outline" />
         <ContactUs />
       </main>
       <Footer />

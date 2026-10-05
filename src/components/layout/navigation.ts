@@ -35,6 +35,7 @@ import {
 import { UserRole } from "@/features/auth/auth";
 import type { Permission } from "@/features/staff/staff";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
+import { topicBySlug } from "@/features/emergency/beforeTheEr.topics";
 
 /* ==========================================================================
    Dashboard navigation — routes, labels and breadcrumbs
@@ -225,49 +226,49 @@ export const sidebarItems: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard/clinic",
     icon: LayoutDashboard,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "dashboard.view",
   },
   {
     label: "Member",
     href: "/dashboard/clinic/members",
     icon: Users,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "dashboard.view",
   },
   {
     label: "Enroll Patients",
     href: "/dashboard/clinic/enroll-patients",
     icon: UserPlus,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "patients.enroll",
   },
   {
     label: "Curriculum Progress",
     href: "/dashboard/clinic/curriculum-progress",
     icon: GraduationCap,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "programs.view",
   },
   {
     label: "Live Class",
     href: "/dashboard/clinic/live-class",
     icon: Video,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "programs.view",
   },
   {
     label: "Check-ins",
     href: "/dashboard/clinic/checkins",
     icon: ClipboardCheck,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "checkins.view",
   },
   {
     label: "Vascular Access",
     href: "/dashboard/clinic/vascular-access",
     icon: Activity,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "access.view",
   },
   /* Patients' travel dialysis requests. Moved here from the admin menu
@@ -279,13 +280,30 @@ export const sidebarItems: NavItem[] = [
     roles: ["clinic"],
     permission: "travel.view",
   },
+  /* The nephrology office (client, 2026-10-05): everything the clinic has
+     except Travel Requests, plus CCM, which is its own. Its Messages are
+     its threads with the access center; patient messaging stays with the
+     dialysis center. */
+  {
+    label: "Chronic Care Management",
+    href: "/dashboard/nephrology",
+    icon: Stethoscope,
+    roles: ["nephrology"],
+  },
   /* Patients' lab charts; the administrator uploads by CSV (2026-10-01). */
   {
     label: "Labs",
     href: "/dashboard/clinic/labs",
     icon: FlaskConical,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "labs.view",
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/nephrology/messages",
+    icon: MessageSquareText,
+    roles: ["nephrology"],
+    permission: "messages.view",
   },
   {
     label: "Messages",
@@ -298,14 +316,14 @@ export const sidebarItems: NavItem[] = [
     label: "Reports",
     href: "/dashboard/clinic/reports",
     icon: BarChart3,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "reports.view",
   },
   {
     label: "Contract & Billing",
     href: "/dashboard/clinic/billing",
     icon: FileText,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
     permission: "billing.view",
   },
 
@@ -325,23 +343,6 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/access-center/messages",
     icon: MessageSquareText,
     roles: ["access"],
-    permission: "messages.view",
-  },
-
-  /* Nephrology office portal (client, 2026-10-03: each office its own
-     login). CCM moved here from the clinic: it is the nephrology
-     practice's care-management and billing work. */
-  {
-    label: "Chronic Care Management",
-    href: "/dashboard/nephrology",
-    icon: Stethoscope,
-    roles: ["nephrology"],
-  },
-  {
-    label: "Messages",
-    href: "/dashboard/nephrology/messages",
-    icon: MessageSquareText,
-    roles: ["nephrology"],
     permission: "messages.view",
   },
 ];
@@ -378,7 +379,7 @@ export const supportItems: NavItem[] = [
     label: "Help & Support",
     href: "/dashboard/clinic/support",
     icon: HelpCircle,
-    roles: ["clinic"],
+    roles: ["clinic", "nephrology"],
   },
   {
     label: "Staff & Roles",
@@ -450,30 +451,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname === "/dashboard/clinic" || pathname === "/dashboard/clinic/")
     return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/before-the-er/")) {
-    const slug = pathname.split("/").pop() || "";
-    if (language === "ES") {
-      const spanishTitles: Record<string, string> = {
-        "chest-pain": "Dolor en el Pecho",
-        "severe-fluid-overload": "Sobrecarga Grave de Líquidos",
-        "signs-of-stroke": "Signos de Accidente Cerebrovascular",
-        "loss-of-consciousness": "Pérdida del Conocimiento",
-        "severe-allergic-reactions": "Reacciones Alérgicas Graves",
-        "severe-shortness-of-breath": "Dificultad Respiratoria Grave",
-        seizures: "Convulsiones",
-        "dialysis-access-emergencies": "Emergencias del Acceso de Diálisis",
-        "severe-bleeding": "Sangrado Intenso",
-        "severe-hyperkalemia-symptoms": "Síntomas de Hiperpotasemia Grave",
-        "fever-with-dialysis-catheter": "Fiebre con Catéter de Diálisis",
-        "confusion-or-mental-status-changes":
-          "Confusión o Cambios en el Estado Mental",
-      };
-      if (spanishTitles[slug]) return spanishTitles[slug];
-    }
-    const formatted = slug
-      .replace(/-/g, " ")
-      .replace(/%20/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-    return formatted || "Symptom Detail";
+    const topic = topicBySlug(pathname.split("/").pop() || "");
+    if (topic) return language === "ES" ? topic.titleEs : topic.titleEn;
   }
   if (pathname.startsWith("/dashboard/before-the-er"))
     return language === "ES" ? "Antes de Urgencias" : "Before-the-ER";

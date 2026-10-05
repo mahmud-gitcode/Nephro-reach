@@ -54,5 +54,16 @@ export function useAppointments() {
       (id: string) => mutate((current) => rules.removeAppointment(current, id)),
       [mutate],
     ),
+    /** Copies in appointments kept on another record. Writes only when
+     *  something is new or has moved. */
+    syncExternal: useCallback(
+      (external: rules.Appointment[]) => {
+        const current = query.data;
+        if (!current) return;
+        if (rules.syncExternal(current, external) === current) return;
+        mutate((stored) => rules.syncExternal(stored, external));
+      },
+      [mutate, query.data],
+    ),
   };
 }

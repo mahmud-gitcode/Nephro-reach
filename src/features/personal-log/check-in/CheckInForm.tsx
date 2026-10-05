@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "../LogMediaBar";
 import React, { useState } from "react";
 import {
   CalendarDays,
@@ -719,6 +720,16 @@ export function CheckInForm({
               />
             )}
           </FormField>
+          <LogMediaBar
+            logName="Check-in"
+            isEs={isEs}
+            onDictated={(text) =>
+              setDraft((current) => ({
+                ...current,
+                notes: appendText(current.notes, text),
+              }))
+            }
+          />
         </Section>
       </div>
     </Modal>

@@ -11,8 +11,11 @@ export type ReminderChannel = "in_app" | "sms";
 export interface MedicationReminder {
   id: string;
   medicationName: string;
-  /** As the member picked it, e.g. "08:00 AM". */
+  /** As the member picked it, e.g. "08:00 AM". The first time of day. */
   time: string;
+  /** More times the same day, for a medication taken more than once
+   *  (client, 2026-10-05). Same form as `time`. */
+  extraTimes?: string[];
   frequency: string;
   channels: ReminderChannel[];
   enabled: boolean;

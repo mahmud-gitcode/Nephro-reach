@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Calendar, CheckCircle2, ChevronDown, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -349,6 +350,37 @@ export default function FluidTrackerPage() {
       <RecentEntries
         entries={entries}
         onOpenAddModal={() => setIsModalOpen(true)}
+      />
+
+      {/* Export and share this log (client, 2026-10-05). */}
+      <ShareLogCard
+        isEs={language === "ES"}
+        title={
+          language === "ES"
+            ? "Mi registro de peso y líquidos"
+            : "My weight & fluid log"
+        }
+        fileName="weight-fluid-log"
+        table={{
+          header: [
+            "Date",
+            "Morning weight",
+            "Evening weight",
+            "Fluid intake",
+            "Fluid goal",
+            "Urine output",
+            "Notes",
+          ],
+          rows: entries.map((e) => [
+            e.date ?? e.dateEn,
+            e.morning,
+            e.evening,
+            e.intake,
+            e.goal,
+            e.uo,
+            e.notes,
+          ]),
+        }}
       />
 
       {/* Entry New Weight Log Modal */}

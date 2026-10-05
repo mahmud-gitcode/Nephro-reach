@@ -17,6 +17,7 @@ import type {
 } from "@/features/community/community.types";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -35,6 +36,7 @@ const defaultTabs: CommunityTab[] = [
   { id: "transplant", label: "Kidney Transplant" },
   { id: "caregiver", label: "Caregiver Support" },
   { id: "nutrition", label: "Nutrition & Wellness" },
+  { id: "recipes", label: "Recipes" },
 ];
 
 const defaultPosts: PostItem[] = [
@@ -126,7 +128,8 @@ export default function CommunityPage() {
   const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>(
     {},
   );
-  const [userPosts, setUserPosts] = useState<PostItem[]>([]);
+  /* Shown after posting: the post waits for a moderator. */
+  const [heldNotice, setHeldNotice] = useState(false);
 
   const dictPosts: PostItem[] =
     comm?.posts && Array.isArray(comm.posts) && comm.posts.length > 0
@@ -151,15 +154,16 @@ export default function CommunityPage() {
         hashtags: "",
         likes: 0,
         categoryId: item.categoryId || "general",
+        imageUrl: item.imageUrl,
       })),
     [queue.items, comm?.compose?.memberBadge, comm?.compose?.justNow, language],
   );
 
   const allCombinedPosts = useMemo(() => {
-    return [...userPosts, ...releasedPosts, ...dictPosts].filter(
+    return [...releasedPosts, ...dictPosts].filter(
       (post) => !hiddenPostIds[post.id],
     );
-  }, [userPosts, releasedPosts, dictPosts, hiddenPostIds]);
+  }, [releasedPosts, dictPosts, hiddenPostIds]);
 
   const posts = useMemo(() => {
     if (activeTabId === "all") return allCombinedPosts;
@@ -169,40 +173,29 @@ export default function CommunityPage() {
     return filtered.length > 0 ? filtered : allCombinedPosts;
   }, [activeTabId, allCombinedPosts]);
 
-  const handleAddPost = (text: string, categoryId?: string) => {
-    /* Same three-way routing as a reply: hostility is parked for a
-       moderator rather than published or silently dropped. */
+  /* Every post waits for a moderator (client, 2026-10-05): nothing goes
+     on the board until someone has approved it. A flagged post is held at
+     its level; a clean one as routine. */
+  const handleAddPost = (
+    text: string,
+    categoryId?: string,
+    imageUrl?: string,
+  ) => {
     const route = routeForCommunity(text);
     if (route === "block") return;
-
-    if (route === "review") {
-      queue.hold({
+    queue.hold(
+      {
         kind: "post",
         postId: "",
         author: authorName,
         content: text,
         categoryId:
           categoryId || (activeTabId === "all" ? "general" : activeTabId),
-      });
-      return;
-    }
-
-    const newPost: PostItem = {
-      id: `user-${Date.now()}`,
-      author: authorName,
-      badge:
-        comm?.compose?.memberBadge ||
-        (language === "ES" ? "Miembro" : "Member"),
-      time:
-        comm?.compose?.justNow ||
-        (language === "ES" ? "Recién publicado" : "Just now"),
-      paragraphs: [text],
-      hashtags: "",
-      likes: 0,
-      categoryId:
-        categoryId || (activeTabId === "all" ? "general" : activeTabId),
-    };
-    setUserPosts((prev) => [newPost, ...prev]);
+        imageUrl,
+      },
+      { always: true },
+    );
+    setHeldNotice(true);
   };
 
   const handleHidePost = (id: string) => {
@@ -213,6 +206,17 @@ export default function CommunityPage() {
   return (
     <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
       <PageTitle href="/dashboard/community" className="mb-stack-lg" />
+      {heldNotice ? (
+        <Alert
+          tone="info"
+          className="mb-stack-lg"
+          onDismiss={() => setHeldNotice(false)}
+        >
+          {language === "ES"
+            ? "¡Gracias! Su publicación fue enviada a un moderador y aparecerá cuando sea aprobada."
+            : "Thank you! Your post was sent to a moderator and will appear once it is approved."}
+        </Alert>
+      ) : null}
 
       {/* Standing notice, above the first post: peer support only, nobody
           watching for emergencies, and what members owe each other. */}
@@ -285,6 +289,18 @@ export default function CommunityPage() {
                 ) : (
                   <p />
                 )}
+                {post.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+                  <img
+                    src={post.imageUrl}
+                    alt={
+                      language === "ES"
+                        ? `Foto de ${post.author}`
+                        : `Photo from ${post.author}`
+                    }
+                    className="mt-stack-md max-h-80 w-full rounded-card-nested object-cover"
+                  />
+                ) : null}
               </div>
 
               {/* Actions Divider */}

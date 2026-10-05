@@ -223,3 +223,49 @@
 .delay-450 {
   transition-delay: 450ms;
 }
+
+/* The topic timer under "Your Health, All in One Place". */
+@keyframes landingProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.landing-progress {
+  transform-origin: left center;
+  animation-name: landingProgress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* The reviews banner: one long row moving left, paused on hover or focus,
+   still for anyone who prefers reduced motion. */
+@keyframes landingMarquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.landing-marquee {
+  animation: landingMarquee 60s linear infinite;
+}
+
+.landing-marquee-wrap:hover .landing-marquee,
+.landing-marquee-wrap:focus-within .landing-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-marquee {
+    animation: none;
+  }
+  .landing-marquee-wrap {
+    overflow-x: auto;
+  }
+}

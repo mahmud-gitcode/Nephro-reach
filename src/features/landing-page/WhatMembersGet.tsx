@@ -3,6 +3,8 @@
 import React from "react";
 import { useLanguage } from "@/context/LanguageContext";
 
+/* Since 2026-10-05 this sits inside How It Works (the client asked for the
+   two sections to be consolidated), as its second half. */
 export default function WhatMembersGet() {
   const { t } = useLanguage();
 
@@ -40,15 +42,12 @@ export default function WhatMembersGet() {
   ];
 
   return (
-    <section
-      id="features"
-      className="w-full scroll-mt-24 bg-[#F8FAFF] py-16 lg:py-20"
-    >
-      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-10 px-5 min-[1344px]:px-0 sm:px-8 lg:px-12">
+    <div id="features" className="w-full scroll-mt-24 pt-6">
+      <div className="flex w-full flex-col gap-10">
         <div className="landing-reveal flex flex-col items-center gap-3 text-center">
-          <h2 className="text-[28px] leading-10 font-semibold tracking-[0.18px] text-[#0F172A] sm:text-[36px]">
+          <h3 className="text-[24px] leading-9 font-semibold tracking-[0.18px] text-[#0F172A] sm:text-[30px]">
             {t("whatMembersGet.title")}
-          </h2>
+          </h3>
           <p className="text-lg leading-8 font-normal tracking-[0.12px] text-[#344056] sm:text-2xl">
             {t("whatMembersGet.subtitle")}
           </p>
@@ -87,6 +86,6 @@ export default function WhatMembersGet() {
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "./LogMediaBar";
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -710,6 +711,15 @@ export default function DialysisDaySymptomLogForm({
                   onChange={(e) => setGeneralNotes(e.target.value)}
                   placeholder="Post-dialysis notes or recovery observations..."
                   className="w-full resize-none rounded-control border border-line bg-surface p-3 text-body-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
+                />
+                <LogMediaBar
+                  logName="Dialysis day log"
+                  isEs={false}
+                  onDictated={(text) =>
+                    setGeneralNotes((current: string) =>
+                      appendText(current, text),
+                    )
+                  }
                 />
               </div>
             </div>

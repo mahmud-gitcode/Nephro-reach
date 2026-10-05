@@ -2,7 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listReminders, saveReminders } from "./reminders.repository";
-import { removeReminderFor, setReminderTime } from "./reminders.rules";
+import {
+  removeReminderFor,
+  setReminderTime,
+  setReminderTimes,
+} from "./reminders.rules";
 import type { MedicationReminder } from "./reminders.types";
 
 export type { MedicationReminder, ReminderChannel } from "./reminders.types";
@@ -35,6 +39,10 @@ export function useReminders() {
     setTime: (medicationName: string, time: string) =>
       write.mutateAsync((current) =>
         setReminderTime(current, medicationName, time),
+      ),
+    setTimes: (medicationName: string, times: string[]) =>
+      write.mutateAsync((current) =>
+        setReminderTimes(current, medicationName, times),
       ),
     remove: (medicationName: string) =>
       write.mutateAsync((current) =>

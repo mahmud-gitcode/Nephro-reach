@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, Button, Input, Modal } from "@/components/ui";
 import { formatTo12Hour, formatTo24Hour } from "./reminders.time";
@@ -10,25 +10,30 @@ export function SimpleTimeReminderModal({
   isOpen,
   onClose,
   medicationName,
-  currentTime,
-  onSaveTime,
+  currentTimes = [],
+  onSaveTimes,
   onDeleteReminder,
 }: {
   isOpen: boolean;
   onClose: () => void;
   medicationName: string;
-  currentTime?: string;
+  /** Every time of day the reminder rings now (empty when there is none). */
+  currentTimes?: string[];
   /* Both return a promise now: "Saved successfully!" is only true once the
      write has landed, and a reminder for a medication is exactly the kind
      of thing a member must not be told was saved when it was not. */
-  onSaveTime: (medicationName: string, newTime: string) => Promise<unknown>;
+  /** One or more times a day (client, 2026-10-05: a medication taken
+   *  several times a day needs several reminders). */
+  onSaveTimes: (medicationName: string, times: string[]) => Promise<unknown>;
   onDeleteReminder?: (medicationName: string) => Promise<unknown>;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const [timeValue, setTimeValue] = useState(
-    currentTime ? formatTo24Hour(currentTime) : "08:00",
+  const [times, setTimes] = useState<string[]>(
+    currentTimes.length > 0 ? currentTimes.map(formatTo24Hour) : ["08:00"],
   );
+  const setAt = (index: number, value: string) =>
+    setTimes((current) => current.map((t, i) => (i === index ? value : t)));
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -46,7 +51,10 @@ export function SimpleTimeReminderModal({
     setBusy(true);
     setFailure(null);
     try {
-      await onSaveTime(medicationName, formatTo12Hour(timeValue));
+      await onSaveTimes(
+        medicationName,
+        times.filter(Boolean).map(formatTo12Hour),
+      );
       setSavedSuccess(true);
       setTimeout(() => {
         setSavedSuccess(false);
@@ -82,7 +90,7 @@ export function SimpleTimeReminderModal({
       description={medicationName}
       footer={
         <>
-          {currentTime && onDeleteReminder ? (
+          {currentTimes.length > 0 && onDeleteReminder ? (
             <Button
               variant="danger"
               appearance="stroke"
@@ -113,15 +121,49 @@ export function SimpleTimeReminderModal({
         onSubmit={handleSave}
         className="space-y-stack-lg"
       >
-        <div className="flex flex-col items-center justify-center rounded-control border border-line bg-surface-sunken p-inset-sm">
-          <Input
-            type="time"
-            value={timeValue}
-            onChange={(e) => setTimeValue(e.target.value)}
-            aria-label={language === "ES" ? "Seleccionar Hora" : "Select Time"}
-            className="h-auto py-inset-xs text-center text-metric-md"
-            required
-          />
+        <div className="space-y-stack-sm">
+          {times.map((time, index) => (
+            <div key={index} className="flex items-center gap-inline-sm">
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => setAt(index, e.target.value)}
+                aria-label={
+                  isEs
+                    ? `Hora del recordatorio ${index + 1}`
+                    : `Reminder time ${index + 1}`
+                }
+                className="flex-1 text-center"
+                required
+              />
+              {times.length > 1 ? (
+                <Button
+                  variant="neutral"
+                  appearance="ghost"
+                  iconOnly
+                  aria-label={
+                    isEs
+                      ? `Quitar hora ${index + 1}`
+                      : `Remove time ${index + 1}`
+                  }
+                  onClick={() =>
+                    setTimes((current) => current.filter((_, i) => i !== index))
+                  }
+                >
+                  <X />
+                </Button>
+              ) : null}
+            </div>
+          ))}
+          <Button
+            variant="neutral"
+            appearance="ghost"
+            size="small"
+            leadingIcon={<Plus aria-hidden="true" />}
+            onClick={() => setTimes((current) => [...current, "20:00"])}
+          >
+            {isEs ? "Agregar otra hora" : "Add another time"}
+          </Button>
         </div>
 
         {failure ? (

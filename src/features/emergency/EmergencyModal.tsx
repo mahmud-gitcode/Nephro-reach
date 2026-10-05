@@ -11,16 +11,12 @@ import {
 } from "@/features/profile/emergencyContact";
 import { useEmergencyContact } from "@/features/profile/useEmergencyContact";
 import { Button, buttonStyles, Card, Modal } from "@/components/ui";
+import { EMERGENCY_INFORMATION } from "./beforeTheEr.topics";
 
-const defaultSymptoms = [
-  "Chest pain or pressure",
-  "Trouble breathing",
-  "Severe weakness or dizziness",
-  "Bleeding that won't stop",
-  "Fainting or passing out",
-  "Severe swelling or sudden weight gain",
-  "Confusion or inability to stay awake",
-];
+/* The client's Emergency Information text (2026-10-05), the same words as
+   on Before the ER. The popup used to open with "This may be a medical
+   emergency" and a "When to Seek Emergency Care" symptom list — an
+   assessment the app must not make. */
 
 type EmergencyModalProps = {
   open: boolean;
@@ -28,14 +24,10 @@ type EmergencyModalProps = {
 };
 
 export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const em = dictionary?.emergencyModal;
+  const isEs = language === "ES";
   const { contact } = useEmergencyContact();
-
-  const symptoms =
-    em?.symptoms && Array.isArray(em.symptoms) && em.symptoms.length > 0
-      ? em.symptoms
-      : defaultSymptoms;
 
   return (
     // Escape and the scroll lock were already here; <Modal> adds the focus
@@ -44,7 +36,7 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
     <Modal
       open={open}
       onClose={onClose}
-      title={em?.title || "This may be a medical emergency."}
+      title={em?.title || EMERGENCY_INFORMATION.titleEn}
       description={
         em?.subtitle || "NephroReach does NOT provide emergency care."
       }
@@ -128,22 +120,15 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
         <Card
           tone="flat"
           padding="small"
-          className="space-y-stack-md border-danger-line bg-danger-surface"
+          className="space-y-stack-sm border-danger-line bg-danger-surface"
         >
-          <h3 className="text-heading-5 text-fg">
-            {em?.whenToSeekTitle || "When to Seek Emergency Care"}
-          </h3>
-          <ul className="flex flex-col gap-stack-xs">
-            {symptoms.map((item) => (
-              <li key={item} className="text-body-sm text-fg-secondary">
-                • {item}
-              </li>
-            ))}
-          </ul>
-          <p className="text-body-sm text-fg">
-            {em?.advisory ||
-              "If you feel something is seriously wrong, do not wait. Call 911 or go to the nearest emergency room immediately."}
-          </p>
+          {(isEs ? EMERGENCY_INFORMATION.es : EMERGENCY_INFORMATION.en).map(
+            (paragraph) => (
+              <p key={paragraph} className="text-body-sm text-fg-secondary">
+                {paragraph}
+              </p>
+            ),
+          )}
         </Card>
 
         <p className="text-center text-body-sm text-fg-muted">

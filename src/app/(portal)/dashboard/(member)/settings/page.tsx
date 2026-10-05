@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bell, KeyRound, Phone, UserCircle } from "lucide-react";
+import { Bell, Building2, KeyRound, Phone, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import EmergencyContactSection from "@/features/profile/EmergencyContactSection";
+import { CareContactsSection } from "@/features/profile/CareContactsSection";
 import {
   Alert,
   Button,
@@ -441,6 +442,19 @@ export default function SettingsPage() {
                 }
               >
                 <EmergencyContactSection />
+              </SettingsSection>
+
+              {/* The member's care offices (client, 2026-10-05). */}
+              <SettingsSection
+                id="care-offices"
+                icon={Building2}
+                title={
+                  language === "ES"
+                    ? "Mis Oficinas de Atención"
+                    : "My Care Offices"
+                }
+              >
+                <CareContactsSection isEs={language === "ES"} />
               </SettingsSection>
             </div>
           </TabPanel>

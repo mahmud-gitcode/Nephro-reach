@@ -411,7 +411,7 @@ export function AddWaterModal({
 
   return (
     <ModalShell
-      title={n?.fluidTracker?.addWater || "Add Water"}
+      title={n?.fluidTracker?.addWater || "Add Fluid"}
       subtitle={
         isEs
           ? `Registra lo que bebiste · ${dayLabel}.`
@@ -459,7 +459,7 @@ export function AddWaterModal({
             type="submit"
             className="cursor-pointer rounded-card-nested bg-action px-5 py-2.5 text-body-sm font-bold text-white shadow-control transition-colors hover:bg-action-hover"
           >
-            {n?.fluidTracker?.addWater || "Add Water"}
+            {n?.fluidTracker?.addWater || "Add Fluid"}
           </button>
         </div>
       </form>

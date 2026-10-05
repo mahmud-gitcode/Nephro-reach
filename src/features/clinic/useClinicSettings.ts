@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   defaultClinicSettings,
@@ -8,6 +8,8 @@ import {
   writeClinicSettings,
   type ClinicSettings,
 } from "./settings.data";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { organizationFor } from "@/features/staff/staff";
 
 export const clinicSettingsKey = ["clinic", "settings"] as const;
 
@@ -27,7 +29,18 @@ export function useClinicSettings() {
   });
 
   const { mutate } = write;
-  const settings = query.data ?? defaultClinicSettings();
+  const user = useOptionalAuth()?.user;
+  /* The stored profile is the dialysis center's. Another office reading
+     the clinic pages it shares (the nephrology office) sees its own name
+     on them — billing, reports — rather than the dialysis center's. */
+  const org = organizationFor(user);
+  const stored = query.data;
+  const settings = useMemo(() => {
+    const base = stored ?? defaultClinicSettings();
+    return org && org.portal !== "clinic"
+      ? { ...base, profile: { ...base.profile, name: org.name } }
+      : base;
+  }, [stored, org]);
 
   return {
     settings,

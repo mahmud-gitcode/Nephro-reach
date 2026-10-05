@@ -221,8 +221,10 @@ describe("requirements", () => {
 });
 
 describe("activity types", () => {
-  it("are the client's sixteen, and every seeded activity uses one", () => {
-    expect(ACTIVITY_TYPES).toHaveLength(16);
+  it("are the client's sixteen plus the six access / KRT planning steps", () => {
+    expect(ACTIVITY_TYPES).toHaveLength(22);
+    expect(ACTIVITY_TYPES).toContain("Vascular Access Referral");
+    expect(ACTIVITY_TYPES.at(-1)).toBe("Other CCM Activity");
     const types: readonly string[] = ACTIVITY_TYPES;
     expect(
       seedCcmState(NOW).activities.every((a) => types.includes(a.type)),

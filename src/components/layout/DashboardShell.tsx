@@ -19,7 +19,6 @@ import EmergencyModal from "@/features/emergency/EmergencyModal";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import {
   ArrowLeft,
-  Bell,
   Check,
   ChevronDown,
   ChevronRight,
@@ -31,9 +30,7 @@ import {
 } from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { useDismiss } from "@/lib/utils/useDismiss";
-import { useMessages } from "@/features/messaging/useMessages";
-import * as messagingRules from "@/features/messaging/messaging.rules";
-import { useMemberName } from "@/features/auth/useMemberName";
+import { NotificationsMenu } from "./NotificationsMenu";
 import {
   getBreadcrumb,
   getBreadcrumbTrail,
@@ -469,137 +466,6 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         onClose={() => setEmergencyOpen(false)}
       />
     </header>
-  );
-}
-
-/* ==========================================================================
-   Notifications
-   --------------------------------------------------------------------------
-   Unread messages in the signed-in person's own inbox slice: a member's
-   threads, or the clinic's patient queue. Each opens the Messages page.
-   Roles with no inbox see the empty state rather than a dead bell.
-   ========================================================================== */
-
-function NotificationsMenu() {
-  const { user } = useAuth();
-  const { language } = useLanguage();
-  const isEs = language === "ES";
-  const memberName = useMemberName();
-  const { conversations } = useMessages();
-
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
-  const wrapRef = useDismiss<HTMLDivElement>(open, close);
-
-  const role = user?.role;
-  const inbox =
-    role === "user"
-      ? {
-          href: "/dashboard/messages",
-          threads: messagingRules.memberConversations(
-            conversations,
-            memberName,
-          ),
-        }
-      : role === "clinic" && userCan(user, "messages.reply")
-        ? {
-            href: "/dashboard/clinic/messages",
-            threads: messagingRules.clinicConversations(conversations),
-          }
-        : null;
-  const unread = inbox
-    ? messagingRules
-        .sortByRecent(inbox.threads)
-        .filter((c) => c.unread > 0 && !c.archived)
-    : [];
-  const count = messagingRules.totalUnread(unread);
-
-  return (
-    <div ref={wrapRef} className="relative shrink-0">
-      <Button
-        variant="neutral"
-        appearance="fill-stroke"
-        size="small"
-        iconOnly
-        onClick={() => setOpen((current) => !current)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={
-          (isEs ? "Notificaciones" : "Notifications") +
-          (count > 0 ? ` (${count} ${isEs ? "sin leer" : "unread"})` : "")
-        }
-      >
-        <Bell aria-hidden="true" />
-      </Button>
-      {count > 0 ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-pill bg-danger-solid px-1 text-caption text-danger-on-solid tabular-nums"
-        >
-          {count > 9 ? "9+" : count}
-        </span>
-      ) : null}
-
-      {open ? (
-        <div
-          role="menu"
-          aria-label={isEs ? "Notificaciones" : "Notifications"}
-          className={`${menuStyles} right-0 w-80 max-w-[calc(100vw-2rem)]`}
-        >
-          <p className="border-b border-line px-3 pt-1.5 pb-2.5 text-label-lg text-fg">
-            {isEs ? "Notificaciones" : "Notifications"}
-          </p>
-          {unread.length === 0 ? (
-            <p className="px-3 py-4 text-body-sm text-fg-muted">
-              {isEs ? "Estás al día." : "You're all caught up."}
-            </p>
-          ) : (
-            <div className="max-h-80 overflow-y-auto pt-1.5">
-              {unread.slice(0, 6).map((conversation) => {
-                const last = messagingRules.lastMessage(conversation);
-                const from =
-                  role === "user"
-                    ? conversation.contact.name
-                    : conversation.memberName;
-                return (
-                  <Link
-                    key={conversation.id}
-                    href={inbox!.href}
-                    role="menuitem"
-                    onClick={close}
-                    className={`${menuItemStyles} items-start text-fg hover:bg-surface-sunken`}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-label-sm text-fg">
-                        {isEs ? "Mensaje de " : "Message from "}
-                        {from}
-                      </span>
-                      {last ? (
-                        <span className="block truncate text-caption text-fg-muted">
-                          {last.body || last.attachment?.name}
-                        </span>
-                      ) : null}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-          {inbox ? (
-            <div className="border-t border-line pt-1.5">
-              <Link
-                href={inbox.href}
-                role="menuitem"
-                onClick={close}
-                className={`${menuItemStyles} text-fg-brand hover:bg-surface-sunken`}
-              >
-                {isEs ? "Ver todos los mensajes" : "View all messages"}
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
   );
 }
 

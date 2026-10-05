@@ -191,6 +191,27 @@ export const MEDICAL_ADVICE_PHRASES: string[] = [
   "double your dose",
   "miracle cure",
   "guaranteed cure",
+
+  /* Reinforced (client, 2026-10-05): advice and cures members trade. */
+  "you should take",
+  "you should stop",
+  "stop your binder",
+  "skip your treatment",
+  "skip a treatment",
+  "skip dialysis",
+  "instead of dialysis",
+  "reverse kidney failure",
+  "reverse kidney disease",
+  "cure ckd",
+  "cure kidney disease",
+  "detox your kidneys",
+  "kidney cleanse",
+  "herbal cure",
+  "natural cure",
+  "try this supplement",
+  "my doctor is wrong",
+  "don't listen to your doctor",
+  "dont listen to your doctor",
 ];
 
 /* ── Level 3 ────────────────────────────────────────────────────────────────
@@ -229,6 +250,28 @@ export const CONDUCT_PHRASES: string[] = [
   "retard",
   "freak",
   "get lost",
+
+  /* Reinforced (client, 2026-10-05): profanity and slurs. Matched as
+     whole words, so "scrap" does not trip "crap". */
+  "fuck",
+  "fucking",
+  "shit",
+  "bullshit",
+  "bitch",
+  "bastard",
+  "asshole",
+  "dumbass",
+  "damn you",
+  "screw you",
+  "piss off",
+  "crap",
+  "dick",
+  "slut",
+  "whore",
+  "ugly",
+  "worthless",
+  "shut your mouth",
+  "nobody likes you",
 ];
 
 export const SCAM_PHRASES: string[] = [
@@ -238,6 +281,30 @@ export const SCAM_PHRASES: string[] = [
   "send me money",
   "buy pills",
   "sell medication",
+
+  /* Reinforced (client, 2026-10-05): money, selling and links off-site. */
+  "venmo",
+  "zelle",
+  "paypal me",
+  "wire transfer",
+  "gift card",
+  "western union",
+  "bitcoin",
+  "crypto",
+  "investment opportunity",
+  "make money from home",
+  "work from home",
+  "click this link",
+  "click the link",
+  "dm me",
+  "message me privately",
+  "whatsapp me",
+  "text me at",
+  "for sale",
+  "selling my",
+  "buy my",
+  "discount code",
+  "free trial",
 ];
 
 /* Asking another member for what should never be posted on a board. The
@@ -250,6 +317,18 @@ export const PRIVACY_PHRASES: string[] = [
   "send me your password",
   "send your medical records",
   "dm me your information",
+
+  /* Reinforced (client, 2026-10-05). */
+  "my address is",
+  "my home address",
+  "date of birth",
+  "my birthday is",
+  "medicare number",
+  "medicaid number",
+  "insurance id",
+  "member id",
+  "my mrn",
+  "routing number",
 ];
 
 /* ── Context guard ──────────────────────────────────────────────────────────

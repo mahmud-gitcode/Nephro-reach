@@ -143,6 +143,25 @@ describe("every nav destination is reachable by the role it is shown to", () => 
     },
   );
 
+  it.each(linkable.filter((item) => item.roles.includes("nephrology")))(
+    "a nephrology office can open $label",
+    (item) => {
+      expect(canAccessPath("nephrology", item.href)).toBe(true);
+    },
+  );
+
+  it("gives the nephrology office the clinic's menu except travel", () => {
+    const hrefs = linkable
+      .filter((item) => item.roles.includes("nephrology"))
+      .map((item) => item.href);
+    expect(hrefs).toContain("/dashboard/clinic/vascular-access");
+    expect(hrefs).toContain("/dashboard/clinic/enroll-patients");
+    expect(hrefs).toContain("/dashboard/clinic/curriculum-progress");
+    expect(hrefs).toContain("/dashboard/clinic/billing");
+    expect(hrefs).toContain("/dashboard/clinic/reports");
+    expect(hrefs).not.toContain("/dashboard/clinic/travel");
+  });
+
   it.each(
     linkable.filter(
       (item) => item.roles.includes("admin") && !item.roles.includes("user"),

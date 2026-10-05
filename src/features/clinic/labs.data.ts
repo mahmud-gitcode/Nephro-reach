@@ -226,6 +226,11 @@ export function seedLabs(now: number): LabsState {
     ["789012", day(-12), "Kt/V", "1.3", "", "1.2-2.0"],
     ["901234", day(-3), "Phosphorus", "5.2", "mg/dL", "2.5-4.5"],
     ["901234", day(-3), "Albumin", "3.3", "g/dL", "3.5-5.0"],
+    /* The demo patient, so their My Labs shows what the clinic uploaded. */
+    ["223344", day(-6), "Potassium", "4.7", "mEq/L", "3.5-5.0"],
+    ["223344", day(-6), "Phosphorus", "5.4", "mg/dL", "2.5-4.5"],
+    ["223344", day(-6), "Albumin", "3.8", "g/dL", "3.5-5.0"],
+    ["223344", day(-6), "Hemoglobin", "10.9", "g/dL", "10.0-12.0"],
   ].map(([mrn, date, test, value, unit, reference]) => ({
     mrn,
     date,

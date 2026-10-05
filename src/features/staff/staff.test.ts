@@ -164,7 +164,18 @@ describe("signing in as staff", () => {
     expect(canAccessPath("nephrology", "/dashboard/nephrology/messages")).toBe(
       true,
     );
-    expect(canAccessPath("nephrology", "/dashboard/clinic")).toBe(false);
+    /* Everything the clinic has, except travel and the dialysis center's
+       own inbox, settings and staff (client, 2026-10-05). */
+    expect(canAccessPath("nephrology", "/dashboard/clinic")).toBe(true);
+    expect(canAccessPath("nephrology", "/dashboard/clinic/billing")).toBe(true);
+    expect(
+      canAccessPath("nephrology", "/dashboard/clinic/vascular-access"),
+    ).toBe(true);
+    expect(canAccessPath("nephrology", "/dashboard/clinic/travel")).toBe(false);
+    expect(canAccessPath("nephrology", "/dashboard/clinic/messages")).toBe(
+      false,
+    );
+    expect(canAccessPath("nephrology", "/dashboard/clinic/team")).toBe(false);
     expect(canAccessPath("nephrology", "/dashboard/access-center")).toBe(false);
     expect(canAccessPath("nephrology", "/dashboard")).toBe(false);
     expect(canAccessPath("clinic", "/dashboard/nephrology")).toBe(false);

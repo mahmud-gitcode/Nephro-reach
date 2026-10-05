@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
 import React, { useState } from "react";
 import { AlertTriangle, BookOpen, Lock, Plus, UserRound } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -137,6 +138,13 @@ function NewEntryModal({
             />
           )}
         </FormField>
+        <LogMediaBar
+          logName="Dialysis journal"
+          isEs={language === "ES"}
+          onDictated={(text) =>
+            setNotes((current) => appendText(current, text))
+          }
+        />
 
         {isFlaggedMedical && (
           <div className="bg-warning-soft text-warning-fg space-y-1 rounded-control border border-warning-line p-3 text-caption">

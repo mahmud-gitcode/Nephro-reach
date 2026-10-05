@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -334,6 +335,13 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
               />
             )}
           </FormField>
+          <LogMediaBar
+            logName="Blood pressure log"
+            isEs={language === "ES"}
+            onDictated={(text) =>
+              setNotes((current) => appendText(current, text))
+            }
+          />
         </div>
       </Card>
 

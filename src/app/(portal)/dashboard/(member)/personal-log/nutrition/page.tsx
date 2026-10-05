@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Apple, Droplet, Dumbbell, Plus, Target, Utensils } from "lucide-react";
+import { Droplet, Dumbbell, Plus, Target, Utensils } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Alert, AsyncSection, Skeleton, TabPanel, Tabs } from "@/components/ui";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
@@ -93,8 +93,6 @@ export default function NutritionPage() {
     return goal > 0 ? totals[key] / goal < 0.95 : true;
   }).length;
 
-  const sodiumPercent =
-    goals.sodium > 0 ? Math.round((totals.sodium / goals.sodium) * 100) : 0;
   const fluidPercent =
     goals.fluid > 0 ? Math.round((fluidMl / goals.fluid) * 100) : 0;
 
@@ -108,7 +106,7 @@ export default function NutritionPage() {
       icon: Target,
       iconClass: "text-fg-brand",
       iconBg: "bg-brand-100",
-      footer: n?.keyMetrics?.dailyGoal?.footer || "View Goals",
+      footer: n?.keyMetrics?.dailyGoal?.footer || "Set Goals",
       onFooterClick: () => setIsGoalsOpen(true),
     },
     {
@@ -132,15 +130,6 @@ export default function NutritionPage() {
       icon: Droplet,
       iconClass: "text-brand-600",
       iconBg: "bg-brand-100",
-    },
-    {
-      title: n?.keyMetrics?.sodium?.title || "Sodium",
-      description: `${formatNumber(totals.sodium)} / ${formatNumber(goals.sodium)} mg`,
-      value: `${sodiumPercent}%`,
-      progress: sodiumPercent,
-      icon: Apple,
-      iconClass: "text-warning",
-      iconBg: "bg-warning-100",
     },
   ];
 
@@ -229,8 +218,8 @@ export default function NutritionPage() {
         }
         skeleton={
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton key={index} height={140} />
               ))}
             </div>
@@ -240,7 +229,7 @@ export default function NutritionPage() {
         }
       >
         <TabPanel id="food" value={tab} className="space-y-6">
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {keyMetrics.map((metric) => (
               <KeyMetricCard key={metric.title} metric={metric} />
             ))}

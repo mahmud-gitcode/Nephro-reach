@@ -32,8 +32,9 @@ export const USER_HOME = "/dashboard";
 export const CLINIC_HOME = "/dashboard/clinic";
 /* Likewise for an access center, under its own prefix. */
 export const ACCESS_HOME = "/dashboard/access-center";
-/* And for a nephrology office. */
-export const NEPHROLOGY_HOME = "/dashboard/nephrology";
+/* A nephrology office opens on the clinic dashboard it shares
+   (client, 2026-10-05: it has everything the clinic has but travel). */
+export const NEPHROLOGY_HOME = "/dashboard/clinic";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -52,6 +53,12 @@ const ADMIN_PREFIXES = [
 export const CLINIC_PREFIX = "/dashboard/clinic";
 export const ACCESS_PREFIX = "/dashboard/access-center";
 export const NEPHROLOGY_PREFIX = "/dashboard/nephrology";
+const NEPHROLOGY_EXCLUDED = [
+  "/dashboard/clinic/travel",
+  "/dashboard/clinic/messages",
+  "/dashboard/clinic/settings",
+  "/dashboard/clinic/team",
+];
 
 export const DEMO_ACCOUNTS = [
   {
@@ -119,9 +126,18 @@ export function canAccessPath(role: UserRole, pathname: string) {
   /* An access center sees its own routes and nothing else. */
   if (isAccessCenterRoute(pathname)) return role === "access";
   if (role === "access") return false;
-  /* Likewise a nephrology office. */
+  /* A nephrology office: its own routes, and the clinic's pages except
+     the dialysis center's own (travel, its patient inbox, its settings and
+     staff — the office has its own staff page). */
   if (isNephrologyRoute(pathname)) return role === "nephrology";
-  if (role === "nephrology") return false;
+  if (role === "nephrology") {
+    return (
+      isClinicRoute(pathname) &&
+      !NEPHROLOGY_EXCLUDED.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+      )
+    );
+  }
   /* Checked first: the clinic prefix sits under /dashboard, so the shared
      and admin rules below would otherwise claim it. */
   if (isClinicRoute(pathname)) return role === "clinic";

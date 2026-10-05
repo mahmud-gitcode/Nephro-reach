@@ -41,5 +41,10 @@ export function useMedications() {
       (id: string) => mutate((current) => rules.removeMedication(current, id)),
       [mutate],
     ),
+    setStatus: useCallback(
+      (id: string, status: rules.MedicationStatus) =>
+        mutate((current) => rules.setMedicationStatus(current, id, status)),
+      [mutate],
+    ),
   };
 }

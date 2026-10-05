@@ -142,7 +142,7 @@ export default function CareTeamContactSection({
   return (
     <Card as="section" padding="small">
       <SectionTitle
-        title={isEs ? "Contactar a tu Equipo" : "Contact Your Care Team"}
+        title={isEs ? "Enviar Mensaje a mi Equipo" : "Message My Care Team"}
         action={
           <Link
             href="/dashboard/messages"

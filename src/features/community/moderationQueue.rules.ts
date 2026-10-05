@@ -17,22 +17,31 @@ export interface HeldDraft {
   author: string;
   content: string;
   categoryId?: string;
+  imageUrl?: string;
 }
 
 /**
  * Park a piece of text for review.
  *
  * Returns null when the text would not have been held at all, so a caller
- * cannot accidentally queue something that was fine — the queue is meant to
- * be short enough that a human actually reads it.
+ * cannot accidentally queue something that was fine. A new post is the
+ * exception: the client (2026-10-05) wants a moderator to approve every
+ * post before it appears, so `always` holds a clean post as "routine".
  */
 export function buildHeldItem(
   draft: HeldDraft,
   id: string,
   now = new Date(),
+  { always = false }: { always?: boolean } = {},
 ): HeldItem | null {
-  const detail = flagDetail(draft.content);
-  if (!detail) return null;
+  const found = flagDetail(draft.content);
+  if (!found && !always) return null;
+  const detail = found ?? {
+    category: "routine" as const,
+    level: 4 as const,
+    phrase: "",
+    softenedByContext: false,
+  };
 
   return {
     id,
@@ -47,6 +56,7 @@ export function buildHeldItem(
     status: "pending",
     submittedAt: now.toISOString(),
     categoryId: draft.categoryId,
+    ...(draft.imageUrl ? { imageUrl: draft.imageUrl } : {}),
   };
 }
 

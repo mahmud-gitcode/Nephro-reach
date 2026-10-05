@@ -182,8 +182,11 @@ export default function CareTeamQuestionsSection({
         return "bg-success-surface text-success hover:bg-success-100";
       case "Discussed":
         return "bg-primary-soft text-fg-brand hover:bg-brand-100";
+      /* Stored as "Submitted"; shown as "To Ask" — members do not submit
+         these (client, 2026-10-05), and a question still to ask is not an
+         alarm, so it is neutral rather than red. */
       case "Submitted":
-        return "bg-danger-surface text-danger hover:bg-danger-100";
+        return "bg-surface-sunken text-fg-secondary";
       default:
         return "bg-surface-sunken text-fg-secondary";
     }
@@ -274,7 +277,7 @@ export default function CareTeamQuestionsSection({
                 {language === "ES" ? "Discutidas" : "Discussed"}
               </option>
               <option value="Submitted">
-                {language === "ES" ? "Pendientes" : "Submitted"}
+                {language === "ES" ? "Por preguntar" : "To Ask"}
               </option>
             </Select>
           </div>
@@ -352,8 +355,8 @@ export default function CareTeamQuestionsSection({
                       onClick={() => cycleStatus(q.id)}
                       title={
                         language === "ES"
-                          ? "Clic para cambiar estado (Pendiente → Discutida → Respondida)"
-                          : "Click to cycle status (Submitted → Discussed → Answered)"
+                          ? "Clic para cambiar estado (Por preguntar → Discutida → Respondida)"
+                          : "Click to cycle status (To Ask → Discussed → Answered)"
                       }
                       className={`cursor-pointer rounded-pill border border-transparent px-3 py-1 text-caption font-bold transition-all select-none active:scale-95 ${getStatusBadgeStyle(
                         q.status,
@@ -368,8 +371,8 @@ export default function CareTeamQuestionsSection({
                             ? "Discutida"
                             : "Discussed"
                           : language === "ES"
-                            ? "Pendiente"
-                            : "Submitted"}
+                            ? "Por preguntar"
+                            : "To Ask"}
                     </button>
 
                     {/* Edit Button beside Status Tag */}
@@ -589,7 +592,7 @@ export default function CareTeamQuestionsSection({
                 {language === "ES" ? "Discutida (Discussed)" : "Discussed"}
               </option>
               <option value="Submitted">
-                {language === "ES" ? "Pendiente (Submitted)" : "Submitted"}
+                {language === "ES" ? "Por preguntar" : "To Ask"}
               </option>
             </Select>
           </div>

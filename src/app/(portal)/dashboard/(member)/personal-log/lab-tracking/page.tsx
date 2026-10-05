@@ -1,5 +1,7 @@
 "use client";
 
+import { ClinicLabsCard } from "@/features/labs/ClinicLabsCard";
+import { LabInfoButton } from "@/features/labs/LabInfoButton";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -216,6 +218,8 @@ export default function MyLabsPage() {
   return (
     <div className="w-full space-y-4" aria-busy={labsPending || undefined}>
       <PersonalLogDisclaimer />
+
+      <ClinicLabsCard isEs={language === "ES"} />
 
       {/* Most of this page is reference data, which renders either way. Only
           the member's own entered draw comes from storage — so a failed read
@@ -460,7 +464,16 @@ export default function MyLabsPage() {
 
                       {category.tests.map((test) => (
                         <TableRow key={test.id}>
-                          <TableCell emphasis>{test.displayName}</TableCell>
+                          <TableCell emphasis>
+                            <span className="inline-flex items-center gap-inline-xs">
+                              {test.displayName}
+                              <LabInfoButton
+                                id={test.id}
+                                name={test.displayName}
+                                isEs={language === "ES"}
+                              />
+                            </span>
+                          </TableCell>
                           <TableCell emphasis>{test.latestResult}</TableCell>
                           <TableCell>{test.previousResult}</TableCell>
                           <TableCell>

@@ -45,10 +45,12 @@ export function useModerationQueue() {
      * member what happened, or null when the text did not need holding —
      * the caller should publish it normally in that case.
      */
-    hold: (draft: HeldDraft) => {
+    hold: (draft: HeldDraft, options?: { always?: boolean }) => {
       const item = buildHeldItem(
         draft,
         `held-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        new Date(),
+        options,
       );
       if (!item) return null;
       mutate((current) => [...current, item]);

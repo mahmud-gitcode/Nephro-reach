@@ -41,7 +41,14 @@ import type { DoseStatus, SideEffect } from "./medicationLog.types";
 import type { MedicationLog } from "./useMedicationLog";
 import type { MedicationReminder } from "@/features/medications/useReminders";
 import { alertsData, statusTone } from "./medications.seed";
-import type { DoseRow, Medication } from "./medicationList";
+import {
+  MEDICATION_STATUSES,
+  type DoseRow,
+  type Medication,
+  type MedicationStatus,
+} from "./medicationList";
+import { minutesOf } from "./reminders.time";
+import { useNow } from "@/lib/utils/useNow";
 
 /* The five read-only sections of the medication log. */
 
@@ -75,8 +82,11 @@ export function MedicationMasterList({
   medications,
   reminders,
   onOpenReminderModal,
+  onStatusChange,
   log,
 }: {
+  /** Active / PRN / Paused / Stopped, set by the member (2026-10-05). */
+  onStatusChange: (id: string, status: MedicationStatus) => void;
   /** The member's stored list (useMedications). */
   medications: Medication[];
   reminders: MedicationReminder[];
@@ -222,7 +232,28 @@ export function MedicationMasterList({
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={medication.status} />
+                    <Select
+                      selectSize="small"
+                      value={medication.status}
+                      aria-label={
+                        isEs
+                          ? `Estado de ${medication.name}`
+                          : `Status of ${medication.name}`
+                      }
+                      onChange={(event) =>
+                        onStatusChange(
+                          medication.id,
+                          event.target.value as MedicationStatus,
+                        )
+                      }
+                      className="min-w-[8.5rem]"
+                    >
+                      {MEDICATION_STATUSES.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {isEs ? option.es : option.en}
+                        </option>
+                      ))}
+                    </Select>
                   </TableCell>
                 </TableRow>
               );
@@ -260,6 +291,8 @@ export function DoseSchedule({
      status below belongs to that date. */
   const [date, setDate] = useState(() => rules.todayIso());
   const onToday = rules.isToday(date);
+  const clock = new Date(useNow());
+  const minutesNow = clock.getHours() * 60 + clock.getMinutes();
 
   const statusOptions: { value: DoseStatus; label: string }[] = [
     { value: "pending", label: isEs ? "Pendiente" : "Not set" },
@@ -339,6 +372,13 @@ export function DoseSchedule({
               );
 
               const status = log.statusOf(date, dose.medication, dose.time);
+              /* Not logged once its time has passed (client, 2026-10-05):
+                 red, so a forgotten entry stands out. Still "pending" in
+                 the record — the member may yet say they took it. */
+              const unlogged =
+                status === "pending" &&
+                (date < rules.todayIso() ||
+                  (onToday && minutesOf(dose.time) <= minutesNow));
               const recordedEffect = log.sideEffectOf(
                 date,
                 dose.medication,
@@ -403,14 +443,18 @@ export function DoseSchedule({
                           ? "text-success"
                           : status === "late"
                             ? "text-warning"
-                            : status === "missed"
-                              ? "text-danger"
+                            : status === "missed" || unlogged
+                              ? "border-danger text-danger"
                               : undefined
                       }
                     >
                       {statusOptions.map((option) => (
                         <option key={option.value} value={option.value}>
-                          {option.label}
+                          {option.value === "pending" && unlogged
+                            ? isEs
+                              ? "No registrado"
+                              : "Not logged"
+                            : option.label}
                         </option>
                       ))}
                     </Select>

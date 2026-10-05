@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -151,7 +152,7 @@ function LibraryGridSkeleton() {
   );
 }
 
-export default function MyLibraryPage() {
+function MyLibraryContent() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const {
@@ -165,12 +166,18 @@ export default function MyLibraryPage() {
     saveError,
   } = useLibrary();
 
-  const [filter, setFilter] = useState<LibraryFilter>({
+  /* A link can open one shelf: /dashboard/my-library?category=access-care
+     (the Vascular Access tab's Do's and Don'ts, 2026-10-05). */
+  const wanted = useSearchParams().get("category");
+  const [filter, setFilter] = useState<LibraryFilter>(() => ({
     search: "",
     kind: "all",
-    category: "all",
+    category:
+      wanted && LIBRARY_CATEGORIES.some((entry) => entry.key === wanted)
+        ? (wanted as LibraryFilter["category"])
+        : "all",
     savedOnly: false,
-  });
+  }));
 
   const visible = useMemo(
     () => sortByNewest(filterResources(resources, filter, saved)),
@@ -285,5 +292,14 @@ export default function MyLibraryPage() {
         </div>
       </AsyncSection>
     </div>
+  );
+}
+
+/* useSearchParams needs a Suspense boundary. */
+export default function MyLibraryPage() {
+  return (
+    <Suspense fallback={<LibraryGridSkeleton />}>
+      <MyLibraryContent />
+    </Suspense>
   );
 }

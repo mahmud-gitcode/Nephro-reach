@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
+import WhatMembersGet from "./WhatMembersGet";
 
 export default function HowItWorks() {
   const { t } = useLanguage();
@@ -84,6 +85,9 @@ export default function HowItWorks() {
             );
           })}
         </div>
+
+        {/* "What Members Get", consolidated here (client, 2026-10-05). */}
+        <WhatMembersGet />
       </div>
     </section>
   );

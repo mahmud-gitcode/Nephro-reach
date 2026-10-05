@@ -425,7 +425,7 @@ export function FluidTracker({
           className="mt-4 flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded bg-action px-4 text-body-sm font-bold text-white transition-colors hover:bg-action-hover"
         >
           <Plus className="h-4 w-4" />
-          {n?.fluidTracker?.addWater || "Add Water"}
+          {n?.fluidTracker?.addWater || "Add Fluid"}
         </button>
       </div>
     </section>

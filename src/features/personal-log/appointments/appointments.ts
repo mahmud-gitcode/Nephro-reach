@@ -4,6 +4,11 @@
    Stored (member-owned, lib/data/storage), so an appointment added today is
    still there tomorrow, and the "Next appointment" card is simply the
    soonest one ahead rather than a fixed date.
+
+   Visits the access center books on the member's Vascular Access record
+   are copied in too (client, 2026-10-05), marked with their source: they
+   get the same reminders and "did you go?" question, follow the access
+   center's changes, and are not deleted here.
    ========================================================================== */
 
 export type Appointment = {
@@ -23,11 +28,135 @@ export type Appointment = {
   /** The member's answer once the day has passed. Unset until they say;
    *  the clinic's CCM dashboard hears about "missed" and about silence. */
   attendance?: Attendance;
+  /** Set when the appointment came from another record, not the member. */
+  source?: "vascular-access";
+  /** How long before to be reminded (client, 2026-10-05). */
+  reminder?: ReminderLead;
 };
+
+export const REMINDER_LEADS = [
+  { value: "none", minutes: 0, en: "No reminder", es: "Sin recordatorio" },
+  {
+    value: "15m",
+    minutes: 15,
+    en: "15 minutes before",
+    es: "15 minutos antes",
+  },
+  { value: "1h", minutes: 60, en: "1 hour before", es: "1 hora antes" },
+  { value: "1d", minutes: 1440, en: "1 day before", es: "1 día antes" },
+] as const;
+export type ReminderLead = (typeof REMINDER_LEADS)[number]["value"];
+
+function leadMinutes(lead: ReminderLead | undefined): number {
+  return REMINDER_LEADS.find((l) => l.value === lead)?.minutes ?? 0;
+}
+
+/** The appointment's start as a local Date. */
+export function startsAt(a: Pick<Appointment, "date" | "start">): Date {
+  const [y, m, d] = a.date.split("-").map(Number);
+  const [h, min] = (a.start || "09:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min);
+}
+
+/** Appointments whose reminder has come and that have not started. */
+export function remindersDue(list: Appointment[], now: number): Appointment[] {
+  return list
+    .filter((a) => {
+      const lead = leadMinutes(a.reminder);
+      if (!lead) return false;
+      const start = startsAt(a).getTime();
+      return now >= start - lead * 60_000 && now < start;
+    })
+    .sort((a, b) => startsAt(a).getTime() - startsAt(b).getTime());
+}
+
+function icsStamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+}
+
+function icsText(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/([,;])/g, "\\$1")
+    .replace(/\n/g, "\\n");
+}
+
+/**
+ * A calendar file for one appointment, with its reminder as an alarm. The
+ * phone's own calendar then reminds the member, app open or not.
+ */
+export function icsFor(a: Appointment, now: number): string {
+  const start = startsAt(a);
+  const end = a.end
+    ? startsAt({ date: a.date, start: a.end })
+    : new Date(start.getTime() + 60 * 60_000);
+  const lead = leadMinutes(a.reminder);
+  const where = [a.location, a.address].filter(Boolean).join(", ");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//NephroReach//Appointments//EN",
+    "BEGIN:VEVENT",
+    `UID:${a.id}@nephroreach`,
+    `DTSTAMP:${icsStamp(new Date(now))}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${icsText(a.title)}`,
+    ...(where ? [`LOCATION:${icsText(where)}`] : []),
+    ...(a.doctor ? [`DESCRIPTION:${icsText(`With ${a.doctor}`)}`] : []),
+    ...(lead
+      ? [
+          "BEGIN:VALARM",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:${icsText(a.title)}`,
+          `TRIGGER:-PT${lead}M`,
+          "END:VALARM",
+        ]
+      : []),
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
 
 export type Attendance = "attended" | "missed";
 
-export type AppointmentDraft = Omit<Appointment, "id" | "attendance">;
+export type AppointmentDraft = Omit<
+  Appointment,
+  "id" | "attendance" | "source"
+>;
+
+/**
+ * Brings in appointments kept elsewhere: adds new ones, follows changes to
+ * the date, time, title or place, and keeps the member's attendance answer.
+ * Returns the same list when nothing changed, so a caller can skip a write.
+ */
+export function syncExternal(
+  list: Appointment[],
+  external: Appointment[],
+): Appointment[] {
+  let changed = false;
+  const next = list.map((appointment) => {
+    const fresh = external.find((e) => e.id === appointment.id);
+    if (!fresh) return appointment;
+    const same =
+      fresh.date === appointment.date &&
+      fresh.start === appointment.start &&
+      fresh.title === appointment.title &&
+      fresh.location === appointment.location &&
+      fresh.doctor === appointment.doctor;
+    if (same) return appointment;
+    changed = true;
+    return { ...fresh, attendance: appointment.attendance };
+  });
+  for (const fresh of external) {
+    if (!list.some((a) => a.id === fresh.id)) {
+      next.push(fresh);
+      changed = true;
+    }
+  }
+  return changed ? next : list;
+}
 
 export type AppointmentError = "title" | "doctor" | "date" | "start" | "end";
 

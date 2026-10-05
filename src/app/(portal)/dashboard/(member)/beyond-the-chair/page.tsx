@@ -1,5 +1,7 @@
 "use client";
 
+import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
+import { useClinicEnrollment } from "@/features/profile/useClinicEnrollment";
 import React, { useState } from "react";
 import {
   CalendarCheck,
@@ -221,6 +223,7 @@ export default function BetweenTreatmentPage() {
   } = useCheckIns();
 
   const notices = useClinicNotices();
+  const enrollment = useClinicEnrollment();
 
   /* The date being written, or null when the form is closed. Holding a date
      rather than a boolean is what makes tapping any day in the strip open
@@ -380,6 +383,41 @@ export default function BetweenTreatmentPage() {
         </AsyncSection>
 
         <RecoveryTrendsCard entries={entries} />
+
+        {/* A clinic not on NephroReach cannot see check-ins in the portal,
+            so the member can email them instead (client, 2026-10-05). */}
+        {enrollment.ready && !enrollment.enrolled ? (
+          <ShareLogCard
+            isEs={isEs}
+            title={isEs ? "Mis registros de bienestar" : "My check-ins"}
+            description={
+              isEs
+                ? "Su clínica de diálisis no está en NephroReach. Envíe sus registros a un correo que usted elija, o descárguelos."
+                : "Your dialysis clinic is not on NephroReach. Send your check-ins to an email you choose, or download them."
+            }
+            fileName="check-ins"
+            table={{
+              header: [
+                "Date",
+                "Treatment day",
+                "Feeling",
+                "Symptoms",
+                "Severity",
+                "Missed treatment",
+                "Notes",
+              ],
+              rows: entries.map((e) => [
+                e.date,
+                e.treatmentDay ? "Yes" : "No",
+                e.feeling,
+                e.symptoms.join("; "),
+                e.severity,
+                e.missedTreatment ? "Yes" : "No",
+                e.notes,
+              ]),
+            }}
+          />
+        ) : null}
 
         {openDate ? (
           /* `key` remounts the form when the day changes, so the fields hold

@@ -62,9 +62,16 @@ function levelBadge(item: HeldItem, isEs: boolean) {
       </Badge>
     );
   }
+  if (item.level === 3) {
+    return (
+      <Badge tone="neutral">
+        {isEs ? "Nivel 3 · Comunidad" : "Level 3 · Community"}
+      </Badge>
+    );
+  }
   return (
-    <Badge tone="neutral">
-      {isEs ? "Nivel 3 · Comunidad" : "Level 3 · Community"}
+    <Badge tone="info">
+      {isEs ? "Aprobación de rutina" : "Routine approval"}
     </Badge>
   );
 }
@@ -78,6 +85,7 @@ const CATEGORY_LABEL: Record<HeldItem["reason"], { en: string; es: string }> = {
   conduct: { en: "Conduct", es: "Conducta" },
   scam: { en: "Scam / money", es: "Estafa / dinero" },
   privacy: { en: "Personal information", es: "Datos personales" },
+  routine: { en: "New post", es: "Publicación nueva" },
 };
 
 function reasonBadge(item: HeldItem, isEs: boolean) {

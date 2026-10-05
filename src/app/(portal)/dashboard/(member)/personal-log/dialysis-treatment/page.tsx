@@ -356,10 +356,13 @@ export default function DialysisTreatmentPage() {
           {/* MONTH PICKER & ADD ENTRY BUTTON */}
           <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
             <div className="flex shrink-0 items-center gap-inline-md">
+              {/* A fixed width: Safari on iPad and iPhone draws a date field
+                  wider than its box and it slid over the Today button
+                  beside it (client screenshot, 2026-10-04). */}
               <Input
                 type="date"
                 inputSize="small"
-                className="w-auto"
+                className="w-44 min-w-0 appearance-none"
                 value={selectedDate ?? ""}
                 aria-label={isEs ? "Elegir fecha" : "Pick a date"}
                 leadingIcon={<Calendar />}

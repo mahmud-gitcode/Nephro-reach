@@ -3,6 +3,8 @@ import {
   reminderFor,
   removeReminderFor,
   setReminderTime,
+  reminderTimes,
+  setReminderTimes,
 } from "./reminders.rules";
 import type { MedicationReminder } from "./reminders.types";
 
@@ -71,5 +73,23 @@ describe("medication reminder rules", () => {
   it("finds a reminder by medication name", () => {
     expect(reminderFor(existing, "potassium")?.id).toBe("r1");
     expect(reminderFor(existing, "Calcitriol")).toBeUndefined();
+  });
+});
+
+describe("several reminder times a day (client, 2026-10-05)", () => {
+  it("keeps them on one reminder, sorted and without repeats", () => {
+    const set = setReminderTimes(
+      [],
+      "Losartan",
+      ["08:00 PM", "08:00 AM", "08:00 pm"],
+      "r1",
+    );
+    expect(set).toHaveLength(1);
+    expect(reminderTimes(set[0])).toEqual(["08:00 AM", "08:00 PM"]);
+  });
+
+  it("removes the reminder when no time is left", () => {
+    const set = setReminderTimes([], "Losartan", ["08:00 AM"], "r1");
+    expect(setReminderTimes(set, "Losartan", [])).toEqual([]);
   });
 });

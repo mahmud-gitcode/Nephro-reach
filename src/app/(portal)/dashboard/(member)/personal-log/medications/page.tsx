@@ -15,12 +15,13 @@ import {
 } from "@/features/medications/MedicationPanels";
 import { SimpleTimeReminderModal } from "@/features/medications/SimpleTimeReminderModal";
 import { doseRows } from "@/features/medications/medicationList";
+import { reminderTimes } from "@/features/medications/reminders.rules";
 import { useMedications } from "@/features/medications/useMedications";
 
 export default function MedicationLogPage() {
   const { t } = useLanguage();
 
-  const { reminders, isPending, error, refetch, setTime, remove } =
+  const { reminders, isPending, error, refetch, setTimes, remove } =
     useReminders();
 
   /* One log for the whole page. The dose statuses tapped in section 2 are
@@ -90,6 +91,7 @@ export default function MedicationLogPage() {
             medications={meds.medications}
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
+            onStatusChange={meds.setStatus}
             log={log}
           />
           <DoseSchedule rows={rows} reminders={reminders} log={log} />
@@ -114,8 +116,10 @@ export default function MedicationLogPage() {
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
         medicationName={selectedMedForReminder || ""}
-        currentTime={activeExistingReminder?.time}
-        onSaveTime={setTime}
+        currentTimes={
+          activeExistingReminder ? reminderTimes(activeExistingReminder) : []
+        }
+        onSaveTimes={setTimes}
         onDeleteReminder={remove}
       />
     </div>
