@@ -83,6 +83,8 @@ import {
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { tableIconButton } from "./tableButton";
+import { RideRequestsPanel } from "./RideRequests";
+import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
 import { useClinicData } from "./useClinicData";
 import { UpdatedBar } from "./UpdatedBar";
 import {
@@ -610,6 +612,34 @@ function PatientModal({
 
       <TabPanel id="history" value={tab}>
         <HistoryTable history={sortedHistory(record)} />
+        {/* Export and share the history (client, 2026-10-06). */}
+        <div className="mt-stack-lg">
+          <ShareLogCard
+            title={`Access history: ${record.memberName}`}
+            description="Download the patient's access history, print it, or email it to another care team."
+            fileName={`access-history-${record.mrn}`}
+            isEs={false}
+            footer="Sent from the NephroReach care team portal."
+            table={{
+              header: [
+                "Date",
+                "Type",
+                "Procedure",
+                "Location",
+                "Performed by",
+                "Result",
+              ],
+              rows: sortedHistory(record).map((h) => [
+                h.date,
+                h.type,
+                h.procedure,
+                h.location,
+                h.performedBy,
+                h.result,
+              ]),
+            }}
+          />
+        </div>
       </TabPanel>
     </Modal>
   );
@@ -644,14 +674,16 @@ function AddAccessModal({
   const [createdOn, setCreatedOn] = useState(today);
   const [status, setStatus] = useState<AccessStatus>("Review Requested");
   const [tried, setTried] = useState(false);
-  const locationError = location.trim() ? undefined : "Where is the access?";
+  /* No location yet while the access type is still to be decided. */
+  const locationError =
+    type === "TBD" || location.trim() ? undefined : "Where is the access?";
 
   return (
     <Modal
       open
       onClose={onClose}
       size="big"
-      title="Add Access Patient"
+      title="Add Patient"
       description="Starts the access record the patient and both centers share."
       footer={
         <>
@@ -720,7 +752,7 @@ function AddAccessModal({
             </FormField>
             <FormField
               label="Location"
-              required
+              required={type !== "TBD"}
               error={tried ? locationError : undefined}
             >
               {(field) => (
@@ -1171,6 +1203,19 @@ export default function ClinicVascularAccess({
           ) : null}
         </section>
 
+        {/* Patients' rides to access appointments, worked by the dialysis
+            center's social worker (client, 2026-10-06: the appointment
+            transportation belongs under vascular access too). */}
+        {party === "dialysis" ? (
+          <RideRequestsPanel
+            records={records}
+            store={store}
+            me={perms.me}
+            canManage={userCan(user, "rides.manage")}
+            onOpen={(mrn) => setOpen({ mrn, tab: "overview" })}
+          />
+        ) : null}
+
         {selected && open ? (
           <PatientModal
             key={`${selected.mrn}-${open.tab}`}
@@ -1298,7 +1343,7 @@ export default function ClinicVascularAccess({
                 onClick={() => setAddingPatient(true)}
               >
                 <UserPlus aria-hidden="true" />
-                Add Access Patient
+                Add Patient
               </Button>
             ) : null}
             {perms.schedule ? (

@@ -2,7 +2,15 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Calendar, Users, Video, Play, Pencil, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Video,
+  Play,
+  PlayCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
@@ -18,7 +26,10 @@ import {
 } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { useLiveClasses } from "@/features/clinic/useLiveClasses";
-import { formatClassDate } from "@/features/clinic/liveClass.data";
+import {
+  formatClassDate,
+  recentClasses,
+} from "@/features/clinic/liveClass.data";
 import {
   approvedTestimonials as onlyApproved,
   testimonialsByAuthor,
@@ -122,8 +133,13 @@ export default function UserDashboard() {
   const dh = dictionary?.dashboardHome;
   /* The next class the clinic has on its schedule — the same record the
      clinic's Live Class page edits. */
-  const { upcoming } = useLiveClasses();
+  const { upcoming, recordings } = useLiveClasses();
   const nextClass = upcoming[0];
+  /* Recordings the admin has posted (client, 2026-10-06), newest first. */
+  const posted = recentClasses
+    .filter((item) => recordings[item.title])
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 3);
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => getGreeting(dh), [dh]);
   const [isRideModalOpen, setIsRideModalOpen] = useState(false);
@@ -319,8 +335,8 @@ export default function UserDashboard() {
                   {nextClass
                     ? `${formatClassDate(nextClass.date)} · ${clockLabel(nextClass.time)}`
                     : language === "ES"
-                      ? "Tu clínica publicará la próxima aquí"
-                      : "Your clinic will post the next one here"}
+                      ? "La próxima clase aparecerá aquí"
+                      : "The next class will be posted here"}
                 </span>
                 <span className="hidden text-line sm:inline">•</span>
                 <span className="flex items-center gap-inline-sm text-fg-muted">
@@ -343,7 +359,7 @@ export default function UserDashboard() {
               title={
                 nextClass?.joinUrl
                   ? undefined
-                  : "The join link appears here once your clinic adds it"
+                  : "The join link appears here once it is added"
               }
               onClick={() =>
                 nextClass?.joinUrl &&
@@ -355,6 +371,52 @@ export default function UserDashboard() {
           </div>
         </div>
       </Card>
+
+      {posted.length > 0 ? (
+        <Card as="section" padding="small">
+          <h2 className="text-heading-4 text-fg">
+            {language === "ES"
+              ? "Grabaciones Recientes de Clases en Vivo"
+              : "Recent Live Recordings"}
+          </h2>
+          <ul className="mt-stack-md divide-y divide-line-subtle">
+            {posted.map((item) => (
+              <li
+                key={item.title}
+                className="flex items-center gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-control bg-surface-brand-subtle text-fg-brand"
+                >
+                  <PlayCircle className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-label-lg text-fg">{item.title}</p>
+                  <p className="text-caption text-fg-muted">
+                    {formatClassDate(item.date)}
+                  </p>
+                </div>
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  size="small"
+                  aria-label={`${language === "ES" ? "Ver" : "Watch"} ${item.title}`}
+                  onClick={() =>
+                    window.open(
+                      recordings[item.title],
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
+                >
+                  {language === "ES" ? "Ver" : "Watch"}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       {/* From Fear to Hope Testimonials Section */}
       <section className="space-y-stack-md">

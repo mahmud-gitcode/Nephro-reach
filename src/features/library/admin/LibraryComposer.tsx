@@ -1,5 +1,6 @@
 "use client";
 
+import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
 import React, { useEffect, useRef, useState } from "react";
 import {
   FileText,
@@ -165,9 +166,18 @@ export function LibraryComposer({
     });
   };
 
-  const attachCover = (file: File) => {
-    setCoverName(file.name);
-    set({ poster: `/images/library/${file.name}` });
+  /* The cover is kept as a shrunken copy (like every photo in the app):
+     a bare file name pointed at an image that was never uploaded, so a
+     PDF post showed no cover (client, 2026-10-06). */
+  const [coverError, setCoverError] = useState(false);
+  const attachCover = async (file: File) => {
+    setCoverError(false);
+    try {
+      set({ poster: await downscaleToDataUrl(file) });
+      setCoverName(file.name);
+    } catch {
+      setCoverError(true);
+    }
   };
 
   const removeAttachment = () => {
@@ -353,9 +363,9 @@ export function LibraryComposer({
             />
             <AttachButton
               icon={ImageIcon}
-              label={coverName ? "Cover added" : "Cover image"}
+              label={coverName ? "Change cover" : "Cover image"}
               accept="image/*"
-              onPick={attachCover}
+              onPick={(file) => void attachCover(file)}
             />
             <Chip
               selected={showTopic || draft.category !== "general"}
@@ -374,6 +384,24 @@ export function LibraryComposer({
               Spanish
             </Chip>
           </ChipGroup>
+          {coverName && draft.poster.startsWith("data:") ? (
+            <div className="mt-stack-md flex items-center gap-inline-md">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+              <img
+                src={draft.poster}
+                alt="Cover preview"
+                className="h-16 w-28 rounded-control object-cover"
+              />
+              <span className="min-w-0 truncate text-body-sm text-fg-secondary">
+                {coverName}
+              </span>
+            </div>
+          ) : null}
+          {coverError ? (
+            <p role="alert" className="mt-stack-sm text-caption text-danger">
+              That image could not be used. Try a JPEG or PNG.
+            </p>
+          ) : null}
         </div>
       </div>
     </Modal>

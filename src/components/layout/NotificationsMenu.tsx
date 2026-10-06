@@ -1,5 +1,6 @@
 "use client";
 
+import { NEPHROLOGY_OFFICE } from "@/features/messaging/messaging.seed";
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
@@ -333,7 +334,15 @@ function StaffNotifications() {
           href: "/dashboard/clinic/messages",
           threads: messagingRules.clinicConversations(conversations),
         }
-      : null;
+      : user?.role === "nephrology" && userCan(user, "messages.reply")
+        ? {
+            href: "/dashboard/nephrology/messages",
+            threads: messagingRules.clinicConversations(
+              conversations,
+              NEPHROLOGY_OFFICE.name,
+            ),
+          }
+        : null;
   const unread = inbox
     ? messagingRules
         .sortByRecent(inbox.threads)

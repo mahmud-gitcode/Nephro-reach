@@ -32,6 +32,7 @@ import {
   REFERRAL_KINDS,
   SOURCE_LABEL,
   receiverOf,
+  unreadFor,
   type AccessRecord,
   type AccessReferral,
   type ReferralInput,
@@ -47,6 +48,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData } from "./useClinicData";
+import { AccessConversationView } from "@/features/vascular-access/AccessUi";
 
 /* ==========================================================================
    Referrals and office messages — staff to staff, without the patient
@@ -645,9 +647,82 @@ export function ReferralModal({
   );
 }
 
+/* ------------------------------------------------- message a patient */
+
+/** The access center starts a message in a patient's access conversation
+ *  (client, 2026-10-06: the access center can message patients too). */
+function MessagePatientModal({
+  patients,
+  onSend,
+  onClose,
+}: {
+  patients: Array<{ name: string; mrn: string }>;
+  onSend: (mrn: string, body: string) => void;
+  onClose: () => void;
+}) {
+  const [mrn, setMrn] = useState(patients[0]?.mrn ?? "");
+  const [body, setBody] = useState("");
+  const [tried, setTried] = useState(false);
+  const error = body.trim() ? undefined : "Write your message.";
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Message a Patient"
+      description="Goes to the patient's access conversation."
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            leadingIcon={<Send aria-hidden="true" />}
+            disabled={!mrn}
+            onClick={() => {
+              setTried(true);
+              if (error) return;
+              onSend(mrn, body.trim());
+            }}
+          >
+            Send
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-stack-md">
+        <FormField label="Patient" required>
+          {(field) => (
+            <Select
+              {...field}
+              value={mrn}
+              onChange={(e) => setMrn(e.target.value)}
+            >
+              {patients.map((p) => (
+                <option key={p.mrn} value={p.mrn}>
+                  {p.name} · MRN {p.mrn}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        <FormField label="Message" required error={tried ? error : undefined}>
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={4}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
+          )}
+        </FormField>
+      </div>
+    </Modal>
+  );
+}
+
 /* ------------------------------------------------------------ Messages */
 
-type Folder = "all" | ReferralSource | "closed";
+type Folder = "all" | ReferralSource | "closed" | "patients";
 
 /** Who an organisation's own demo login writes as. */
 const DEFAULT_PERSON: Record<Side, string> = {
@@ -659,7 +734,7 @@ const DEFAULT_PERSON: Record<Side, string> = {
 const MESSAGES_HREF: Record<Side, string> = {
   access: "/dashboard/access-center/messages",
   dialysis: "/dashboard/clinic/vascular-access",
-  nephrology: "/dashboard/nephrology/messages",
+  nephrology: "/dashboard/nephrology/access-messages",
 };
 
 /** A Messages page for staff-to-staff threads. The access center sees
@@ -670,11 +745,34 @@ export function OfficeMessages({ side }: { side: Side }) {
   const store = useVascularAccess();
   const clinicData = useClinicData();
   const me = user?.staffRole ? user.name : DEFAULT_PERSON[side];
-  const canReply = userCan(user, "messages.reply");
-  const canAct = userCan(user, "access.schedule");
+  /* The access center's own permissions (2026-10-06); the offices keep
+     theirs. */
+  const atAccess = side === "access";
+  const canReply = atAccess
+    ? userCan(user, "access.message.nephrology") ||
+      userCan(user, "access.message.dialysis")
+    : userCan(user, "messages.reply");
+  const canAct = atAccess
+    ? userCan(user, "access.referral.status")
+    : userCan(user, "access.schedule");
+  const canMessagePatients =
+    atAccess && userCan(user, "access.message.patients");
   const [folder, setFolder] = useState<Folder>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
+  const [toPatient, setToPatient] = useState(false);
+  const [patientMrn, setPatientMrn] = useState<string | null>(null);
+  const chatting = patientMrn
+    ? store.records.find((r) => r.mrn === patientMrn)
+    : undefined;
+  /* Patients' conversations with the access center, newest first. */
+  const patientChats = store.records
+    .filter((r) => r.conversation.messages.length > 0)
+    .sort((a, b) =>
+      (b.conversation.messages.at(-1)?.sentAt ?? "").localeCompare(
+        a.conversation.messages.at(-1)?.sentAt ?? "",
+      ),
+    );
 
   /* Tenant isolation: an office never sees another office's threads. */
   const referrals = threadsFor(store.referrals, side);
@@ -738,16 +836,73 @@ export function OfficeMessages({ side }: { side: Side }) {
                 ]
               : []),
             { id: "closed", label: `Closed (${count("closed")})` },
+            /* The access center writes to patients too (client,
+               2026-10-06). */
+            ...(atAccess
+              ? [
+                  {
+                    id: "patients" as const,
+                    label: `Patients (${patientChats.length})`,
+                  },
+                ]
+              : []),
           ]}
         />
-        <ReferralList
-          referrals={shown}
-          side={side}
-          onOpen={setOpenId}
-          empty={
-            folder === "closed" ? "No closed threads." : "No open messages."
-          }
-        />
+        {folder === "patients" ? (
+          patientChats.length === 0 ? (
+            <p className="text-body-sm text-fg-muted">
+              No patient conversations yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-line-subtle">
+              {patientChats.map((record) => {
+                const last = record.conversation.messages.at(-1)!;
+                const unread = unreadFor(record, "access");
+                return (
+                  <li
+                    key={record.mrn}
+                    className="py-inset-xs first:pt-0 last:pb-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPatientMrn(record.mrn);
+                        store.markConversationRead(record.mrn, "access");
+                      }}
+                      className={cn(
+                        "flex w-full cursor-pointer items-start justify-between gap-inline-lg rounded-control-small text-left",
+                        focusRing,
+                      )}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-label-lg text-fg">
+                          {record.memberName}
+                        </span>
+                        <span className="block truncate text-body-sm text-fg-secondary">
+                          {last.private && last.author !== "access"
+                            ? "Private message"
+                            : last.body}
+                        </span>
+                      </span>
+                      {unread > 0 ? (
+                        <Badge tone="danger">{unread} new</Badge>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : (
+          <ReferralList
+            referrals={shown}
+            side={side}
+            onOpen={setOpenId}
+            empty={
+              folder === "closed" ? "No closed threads." : "No open messages."
+            }
+          />
+        )}
       </Card>
     );
   }
@@ -763,13 +918,24 @@ export function OfficeMessages({ side }: { side: Side }) {
               isFetching={store.isFetching}
               refetch={store.refetch}
             />
+            {canMessagePatients ? (
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setToPatient(true)}
+                leadingIcon={<Send aria-hidden="true" />}
+              >
+                Message a Patient
+              </Button>
+            ) : null}
             {canReply ? (
               <Button
                 size="small"
                 onClick={() => setComposing(true)}
                 leadingIcon={<Send aria-hidden="true" />}
               >
-                New Message
+                {atAccess ? "Message an Office" : "New Message"}
               </Button>
             ) : null}
           </div>
@@ -788,11 +954,71 @@ export function OfficeMessages({ side }: { side: Side }) {
           record={store.records.find((r) => r.mrn === reading.mrn)}
           side={side}
           me={me}
-          canReply={canReply}
+          canReply={
+            atAccess
+              ? userCan(
+                  user,
+                  reading.source === "nephrology"
+                    ? "access.message.nephrology"
+                    : "access.message.dialysis",
+                )
+              : canReply
+          }
           canAct={canAct}
           store={store}
           onClose={() => setOpenId(null)}
         />
+      ) : null}
+      {toPatient ? (
+        <MessagePatientModal
+          patients={store.records.map((r) => ({
+            name: r.memberName,
+            mrn: r.mrn,
+          }))}
+          onClose={() => setToPatient(false)}
+          onSend={(mrn, body) => {
+            store.sendMessage(mrn, "access", me, body);
+            setToPatient(false);
+            setFolder("patients");
+          }}
+        />
+      ) : null}
+      {chatting ? (
+        <Modal
+          open
+          size="wide"
+          onClose={() => setPatientMrn(null)}
+          title={chatting.memberName}
+          description={`MRN ${chatting.mrn} · access conversation`}
+        >
+          <AccessConversationView
+            record={chatting}
+            party="access"
+            myName={me}
+            readOnlyReason={
+              canMessagePatients
+                ? undefined
+                : "Your role can read this conversation but not reply."
+            }
+            sending={store.isSaving}
+            onSend={(body, isPrivate) =>
+              store.sendMessage(chatting.mrn, "access", me, body, {
+                private: isPrivate,
+              })
+            }
+            onSetPrivate={(messageId, isPrivate) =>
+              store.setMessagePrivate(
+                chatting.mrn,
+                messageId,
+                isPrivate,
+                "access",
+              )
+            }
+            onSetDialysisCanPost={(allowed) =>
+              store.setDialysisCanPost(chatting.mrn, allowed, "access")
+            }
+          />
+        </Modal>
       ) : null}
       {composing ? (
         <SendReferralModal

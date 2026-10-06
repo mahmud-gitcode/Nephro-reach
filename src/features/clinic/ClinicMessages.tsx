@@ -1,5 +1,6 @@
 "use client";
 
+import type { CareTeamContact } from "@/features/messaging/messaging.types";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
@@ -32,6 +33,7 @@ import { NewMessageModal } from "@/features/messaging/NewMessageModal";
 import { useClinicData } from "./useClinicData";
 import { ClinicRideRequests } from "./RideRequests";
 import { useCan } from "@/features/staff/useStaffAccounts";
+import { TeamMessages } from "@/features/staff/TeamMessages";
 import * as rules from "@/features/messaging/messaging.rules";
 import { useMessages } from "@/features/messaging/useMessages";
 import {
@@ -240,7 +242,14 @@ function PatientRail({
   );
 }
 
-export default function ClinicMessages() {
+export default function ClinicMessages({
+  office = FACILITY,
+  href = "/dashboard/clinic/messages",
+}: {
+  /** Whose inbox: the dialysis center, or the nephrology office. */
+  office?: CareTeamContact;
+  href?: string;
+} = {}) {
   const {
     conversations: allConversations,
     isLoading,
@@ -261,13 +270,14 @@ export default function ClinicMessages() {
      own dietitian lives in the same store and belongs to the member
      portal, not here. */
   const conversations = useMemo(
-    () => rules.clinicConversations(allConversations),
-    [allConversations],
+    () => rules.clinicConversations(allConversations, office.name),
+    [allConversations, office.name],
   );
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [composing, setComposing] = useState(false);
   const canReply = useCan("messages.reply");
+  const canTeam = useCan("messages.team");
   /* Every patient on the clinic's list, newly enrolled ones included. */
   const clinicData = useClinicData();
   const patients = clinicData.data?.patients ?? [];
@@ -372,7 +382,7 @@ export default function ClinicMessages() {
   return (
     <div className="space-y-stack-md">
       <PageTitle
-        href="/dashboard/clinic/messages"
+        href={href}
         action={
           /* Quiet status first, the page's one primary action last. */
           <div className="flex flex-wrap items-center gap-inline-md">
@@ -584,6 +594,10 @@ export default function ClinicMessages() {
       {/* Rides to access appointments: the social worker books them from
           here, beside the patients' messages (client, 2026-10-01). */}
       <ClinicRideRequests />
+      {/* Staff to staff: nurses message the physicians (client,
+          2026-10-06). */}
+      {canTeam ? <TeamMessages /> : null}
+
       {composing ? (
         <NewMessageModal
           title="New Message"
@@ -600,7 +614,7 @@ export default function ClinicMessages() {
             );
             startConversation({
               memberName: patient.name,
-              contact: FACILITY,
+              contact: office,
               category: "care-team",
               body,
               author: "clinic",
@@ -618,7 +632,7 @@ export default function ClinicMessages() {
             });
             setActiveId(
               existing?.id ??
-                rules.conversationIdFor(patient.name, FACILITY.name),
+                rules.conversationIdFor(patient.name, office.name),
             );
           }}
           onClose={() => setComposing(false)}

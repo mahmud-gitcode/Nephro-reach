@@ -211,9 +211,11 @@ function UpcomingClassesTable({
 }: {
   classes: ManagedClass[];
   onViewAll: () => void;
-  onEdit: (item: ManagedClass) => void;
-  onActions: (item: ManagedClass) => void;
+  /** Without these the table is read-only (the clinic's view). */
+  onEdit?: (item: ManagedClass) => void;
+  onActions?: (item: ManagedClass) => void;
 }) {
+  const editable = Boolean(onEdit && onActions);
   return (
     <Card as="section" padding="small">
       <PanelHeading
@@ -240,7 +242,11 @@ function UpcomingClassesTable({
               <TableHeaderCell>Program</TableHeaderCell>
               <TableHeaderCell>Registered</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+              {editable ? (
+                <TableHeaderCell className="text-right">
+                  Actions
+                </TableHeaderCell>
+              ) : null}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -270,32 +276,34 @@ function UpcomingClassesTable({
                 <TableCell>
                   <Badge tone={classTone[item.status]}>{item.status}</Badge>
                 </TableCell>
-                <TableCell>
-                  <span className="flex justify-end gap-inline-xs">
-                    <Button
-                      onClick={() => onEdit(item)}
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      size="small"
-                      iconOnly
-                      className={tableIconButton}
-                      aria-label={`Edit ${item.topic}`}
-                    >
-                      <Pencil aria-hidden="true" />
-                    </Button>
-                    <Button
-                      onClick={() => onActions(item)}
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      size="small"
-                      iconOnly
-                      className={tableIconButton}
-                      aria-label={`Actions for ${item.topic}`}
-                    >
-                      <MoreSolid />
-                    </Button>
-                  </span>
-                </TableCell>
+                {editable ? (
+                  <TableCell>
+                    <span className="flex justify-end gap-inline-xs">
+                      <Button
+                        onClick={() => onEdit?.(item)}
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
+                        iconOnly
+                        className={tableIconButton}
+                        aria-label={`Edit ${item.topic}`}
+                      >
+                        <Pencil aria-hidden="true" />
+                      </Button>
+                      <Button
+                        onClick={() => onActions?.(item)}
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
+                        iconOnly
+                        className={tableIconButton}
+                        aria-label={`Actions for ${item.topic}`}
+                      >
+                        <MoreSolid />
+                      </Button>
+                    </span>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>
@@ -411,8 +419,10 @@ function RecentLiveClasses({
   onViewAll,
 }: {
   recordings: Record<string, string>;
-  onView: (item: RecentClass) => void;
-  onViewAll: () => void;
+  /** Managing: open the recording's link editor. Without it the button
+   *  plays the recording, when one is posted. */
+  onView?: (item: RecentClass) => void;
+  onViewAll?: () => void;
 }) {
   return (
     <Card as="section" padding="small">
@@ -439,28 +449,50 @@ function RecentLiveClasses({
                 <span aria-hidden="true">{item.rating}</span>
               </p>
             </div>
-            <Button
-              onClick={() => onView(item)}
-              variant="neutral"
-              appearance="fill-stroke"
-              size="small"
-              aria-label={`View ${item.title} recording`}
-            >
-              {recordings[item.title] ? "Open" : "View"}
-            </Button>
+            {onView ? (
+              <Button
+                onClick={() => onView(item)}
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                aria-label={`View ${item.title} recording`}
+              >
+                {recordings[item.title] ? "Open" : "View"}
+              </Button>
+            ) : (
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                disabled={!recordings[item.title]}
+                title={recordings[item.title] ? undefined : "Not posted yet"}
+                aria-label={`Watch ${item.title} recording`}
+                onClick={() =>
+                  window.open(
+                    recordings[item.title],
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                Watch
+              </Button>
+            )}
           </li>
         ))}
       </ul>
-      <Button
-        onClick={onViewAll}
-        variant="neutral"
-        appearance="stroke"
-        size="small"
-        fullWidth
-        className="mt-stack-lg"
-      >
-        View All Recordings
-      </Button>
+      {onViewAll ? (
+        <Button
+          onClick={onViewAll}
+          variant="neutral"
+          appearance="stroke"
+          size="small"
+          fullWidth
+          className="mt-stack-lg"
+        >
+          View All Recordings
+        </Button>
+      ) : null}
     </Card>
   );
 }
@@ -556,7 +588,17 @@ function LiveClassSettings({
   );
 }
 
-export default function ClinicLiveClass() {
+/* The client (2026-10-06): NephroReach (Joni) hosts every live class, so
+   scheduling, recordings and the settings live in the admin portal. The
+   admin's Live Class page is this page with `manage`; the clinic sees the
+   same schedule, read-only. */
+export default function ClinicLiveClass({
+  manage = false,
+  href = "/dashboard/clinic/live-class",
+}: {
+  manage?: boolean;
+  href?: string;
+}) {
   const live = useLiveClasses();
   const past = useMemo(() => pastClasses(), []);
 
@@ -579,12 +621,18 @@ export default function ClinicLiveClass() {
   return (
     <div className="space-y-4">
       <PageTitle
-        href="/dashboard/clinic/live-class"
+        href={href}
         action={
-          <Button size="small" onClick={() => openSchedule(null)}>
-            <Plus className="h-4 w-4" />
-            Schedule New Class
-          </Button>
+          manage ? (
+            <Button size="small" onClick={() => openSchedule(null)}>
+              <Plus className="h-4 w-4" />
+              Schedule New Class
+            </Button>
+          ) : (
+            <span className="text-body-sm text-fg-muted">
+              Classes are hosted by NephroReach
+            </span>
+          )
         }
       />
 
@@ -593,8 +641,8 @@ export default function ClinicLiveClass() {
       <UpcomingClassesTable
         classes={live.upcoming}
         onViewAll={() => setAllOpen(true)}
-        onEdit={openSchedule}
-        onActions={setActing}
+        onEdit={manage ? openSchedule : undefined}
+        onActions={manage ? setActing : undefined}
       />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -603,25 +651,29 @@ export default function ClinicLiveClass() {
         </Suspense>
         <RecentLiveClasses
           recordings={live.recordings}
-          onView={setRecording}
-          onViewAll={() => setLibraryOpen(true)}
+          onView={manage ? setRecording : undefined}
+          onViewAll={manage ? () => setLibraryOpen(true) : undefined}
         />
         <RegistrationSources />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      {manage ? (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <AttendanceTrend />
+          <div className="xl:col-span-2">
+            <LiveClassSettings
+              values={live.settings}
+              onManage={(id, title) => setSetting({ id, title })}
+            />
+          </div>
+        </section>
+      ) : (
         <AttendanceTrend />
-        <div className="xl:col-span-2">
-          <LiveClassSettings
-            values={live.settings}
-            onManage={(id, title) => setSetting({ id, title })}
-          />
-        </div>
-      </section>
+      )}
 
       {/* The dialogs behind the actions above. Keyed where they hold a
           draft, so a reopened form starts from what it was given. */}
-      {scheduleOpen ? (
+      {manage && scheduleOpen ? (
         <ScheduleClassModal
           key={`schedule-${editing?.id ?? "new"}`}
           open
@@ -651,7 +703,7 @@ export default function ClinicLiveClass() {
         today={live.today}
         onSelect={(item) => {
           setAllOpen(false);
-          setActing(item);
+          if (manage) setActing(item);
         }}
       />
 

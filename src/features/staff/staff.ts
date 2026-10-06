@@ -312,6 +312,11 @@ export const PERMISSIONS = [
     detail: "Write to patients and reply in their conversations",
   },
   {
+    id: "messages.team",
+    label: "Message physicians",
+    detail: "Write to the office's physicians and colleagues",
+  },
+  {
     id: "rides.manage",
     label: "Arrange rides",
     detail: "Acknowledge, confirm and cancel ride requests",
@@ -376,6 +381,7 @@ export const ROLE_PERMISSIONS: Partial<Record<StaffRole, Permission[]>> = {
   Physician: [
     "messages.view",
     "messages.reply",
+    "messages.team",
     "access.view",
     "access.schedule",
     "ccm.log",
@@ -384,13 +390,16 @@ export const ROLE_PERMISSIONS: Partial<Record<StaffRole, Permission[]>> = {
   Nurse: [
     "messages.view",
     "messages.reply",
+    "messages.team",
     "access.view",
     "access.schedule",
     "ccm.log",
   ],
   "Social Worker": ["messages.view", "messages.reply", "access.view"],
   Dietitian: ["messages.view", "messages.reply", "labs.view"],
+  /* Enrolls patients too (client, 2026-10-06). */
   "Care Coordinator": [
+    "patients.enroll",
     "messages.view",
     "messages.reply",
     "access.view",
@@ -443,9 +452,11 @@ export const DIALYSIS_ROLE_PERMISSIONS: Partial<
     "messages.view",
     "messages.reply",
   ],
+  /* Nurses message the physicians (client, 2026-10-06). */
   Nurse: [
     "messages.view",
     "messages.reply",
+    "messages.team",
     "access.view",
     "access.schedule",
     "checkins.view",
@@ -460,6 +471,7 @@ export const DIALYSIS_ROLE_PERMISSIONS: Partial<
     "access.schedule",
     "messages.view",
     "messages.reply",
+    "messages.team",
     "labs.view",
   ],
   "Care Coordinator": [

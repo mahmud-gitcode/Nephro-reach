@@ -1,4 +1,4 @@
-import { seedConversations } from "./messaging.seed";
+import { FACILITY, seedConversations } from "./messaging.seed";
 import type {
   CareTeamContact,
   Attachment,
@@ -453,8 +453,13 @@ export function hasAttachment(conversation: Conversation): boolean {
  */
 export function clinicConversations(
   conversations: Conversation[],
+  /** Whose queue: the dialysis center by default, or the nephrology
+   *  office (2026-10-06). */
+  officeName: string = FACILITY.name,
 ): Conversation[] {
-  return conversations.filter((c) => c.contact.kind === "facility");
+  return conversations.filter(
+    (c) => c.contact.kind === "facility" && c.contact.name === officeName,
+  );
 }
 
 /** The threads belonging to one member, whichever end they are addressed to. */
@@ -506,6 +511,15 @@ export function memberFilterCounts(conversations: Conversation[]) {
  * reach. The facility itself is left out: it is the header of the thread
  * below, not a person on the team.
  */
+/* The client (2026-10-06): patients do not message physicians directly.
+   They write to the nurse or the care team, who bring the physician in. */
+const PHYSICIAN_ROLE = /(provider|physician|nephrologist|doctor|md|np|app)/i;
+
+/** May a member write to this contact? Not a physician or provider. */
+export function memberCanMessage(contact: Conversation["contact"]): boolean {
+  return contact.kind === "facility" || !PHYSICIAN_ROLE.test(contact.role);
+}
+
 export function careTeamFor(conversations: Conversation[]) {
   const seen = new Map<string, Conversation["contact"]>();
   for (const conversation of conversations) {

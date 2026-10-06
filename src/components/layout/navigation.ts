@@ -298,9 +298,18 @@ export const sidebarItems: NavItem[] = [
     roles: ["clinic", "nephrology"],
     permission: "labs.view",
   },
+  /* Patients' messages, like the clinic's (client, 2026-10-06); the
+     threads with the access center have their own page. */
   {
     label: "Messages",
     href: "/dashboard/nephrology/messages",
+    icon: MessageSquareText,
+    roles: ["nephrology"],
+    permission: "messages.view",
+  },
+  {
+    label: "Access Center Messages",
+    href: "/dashboard/nephrology/access-messages",
     icon: MessageSquareText,
     roles: ["nephrology"],
     permission: "messages.view",
@@ -411,6 +420,10 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
   if (pathname.startsWith("/dashboard/nephrology/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
+  if (pathname.startsWith("/dashboard/nephrology/access-messages"))
+    return language === "ES"
+      ? "Mensajes del Centro de Acceso"
+      : "Access Center Messages";
   if (pathname.startsWith("/dashboard/nephrology"))
     return language === "ES"
       ? "Gestión de Atención Crónica"
@@ -631,6 +644,7 @@ export function getNavLabel(
     "/dashboard/access-center/messages": "Mensajes",
     "/dashboard/nephrology": "Gestión de Atención Crónica",
     "/dashboard/nephrology/messages": "Mensajes",
+    "/dashboard/nephrology/access-messages": "Mensajes del Centro de Acceso",
     "/dashboard/nephrology/team": "Personal y Roles",
     "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",

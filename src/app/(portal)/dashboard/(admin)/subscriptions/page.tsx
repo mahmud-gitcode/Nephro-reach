@@ -1,5 +1,6 @@
 "use client";
 
+import { OrganizationSubscriptions } from "@/features/billing/OrganizationSubscriptions";
 import React, { useState } from "react";
 import { Check, CreditCard, Plus, X, Edit3, ShieldAlert } from "lucide-react";
 import {
@@ -593,6 +594,8 @@ export default function SubscriptionsPage() {
           </Card>
         ))}
       </section>
+
+      <OrganizationSubscriptions />
 
       {editingPlan && (
         <EditPlanModal

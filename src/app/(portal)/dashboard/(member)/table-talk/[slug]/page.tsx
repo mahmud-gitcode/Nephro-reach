@@ -1,5 +1,6 @@
 "use client";
 
+import { youTubeEmbed } from "@/lib/utils/youtube";
 import React, { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -47,6 +48,24 @@ function Player({ episode }: { episode: TableTalkEpisode }) {
 
   const enTrack = useCaptionUrl(episode.captions.en);
   const esTrack = useCaptionUrl(episode.captions.es);
+  const youTube = youTubeEmbed(episode.videoSrc);
+
+  /* A YouTube episode plays in YouTube's own player, embedded here, with
+     YouTube's captions (client, 2026-10-06). */
+  if (youTube) {
+    return (
+      <div className="relative aspect-video w-full overflow-hidden rounded-card bg-surface-inverse">
+        <iframe
+          key={episode.slug}
+          src={`${youTube}${isEs ? "&hl=es&cc_lang_pref=es" : ""}`}
+          title={isEs && episode.titleEs ? episode.titleEs : episode.titleEn}
+          allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="h-full w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-card bg-surface-inverse">

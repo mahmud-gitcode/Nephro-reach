@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -30,6 +31,7 @@ import {
   ChartLegend,
   DonutChart,
   LineChart,
+  Modal,
   Progress,
   Select,
   type SeriesTone,
@@ -188,7 +190,13 @@ function FilterBar({
   );
 }
 
-function KpiCards({ kpis }: { kpis: Report["kpis"] }) {
+function KpiCards({
+  kpis,
+  onOpenQuestions,
+}: {
+  kpis: Report["kpis"];
+  onOpenQuestions: () => void;
+}) {
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {kpis.map((kpi) => (
@@ -199,7 +207,19 @@ function KpiCards({ kpis }: { kpis: Report["kpis"] }) {
           value={kpi.value}
           label={kpi.label}
           note={kpi.note}
-        />
+        >
+          {/* Who is waiting (client, 2026-10-06: "can they open it?"). */}
+          {kpi.id === "questions" && kpi.value !== "0" ? (
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="ghost"
+              onClick={onOpenQuestions}
+            >
+              See who
+            </Button>
+          ) : undefined}
+        </KeyCard>
       ))}
     </section>
   );
@@ -572,6 +592,7 @@ export default function ClinicReports() {
   const rows = reportRows(roster, filters);
   const report = rosterReport(rows);
   const programs = [...new Set(roster.map((m) => m.program))].sort();
+  const [questionsOpen, setQuestionsOpen] = useState(false);
 
   function exportReport() {
     downloadText(
@@ -609,7 +630,44 @@ export default function ClinicReports() {
 
       <FilterBar filters={filters} programs={programs} onChange={setFilters} />
 
-      <KpiCards kpis={report.kpis} />
+      <KpiCards
+        kpis={report.kpis}
+        onOpenQuestions={() => setQuestionsOpen(true)}
+      />
+      <Modal
+        open={questionsOpen}
+        onClose={() => setQuestionsOpen(false)}
+        title="Open Questions"
+        description="Questions members asked their care team that nobody has answered yet."
+      >
+        <ul className="divide-y divide-line-subtle">
+          {rows
+            .filter((m) => m.questions.open > 0)
+            .sort((a, b) => b.questions.open - a.questions.open)
+            .map((m) => (
+              <li
+                key={m.mrn}
+                className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
+              >
+                <span className="min-w-0">
+                  <span className="block text-label-lg text-fg">{m.name}</span>
+                  <span className="block text-caption text-fg-muted">
+                    {m.program} · MRN {m.mrn}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-inline-md">
+                  <Badge tone="warning">{m.questions.open} open</Badge>
+                  <Link
+                    href={`/dashboard/clinic/members?mrn=${m.mrn}`}
+                    className="rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    Open member
+                  </Link>
+                </span>
+              </li>
+            ))}
+        </ul>
+      </Modal>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">

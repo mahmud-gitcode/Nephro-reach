@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils/cn";
 import * as rules from "./messaging.rules";
 import { useMessages } from "./useMessages";
 import { useMemberName } from "@/features/auth/useMemberName";
-import { FACILITY } from "./messaging.seed";
+import { FACILITY, NEPHROLOGY_OFFICE } from "./messaging.seed";
 import { NewMessageModal } from "./NewMessageModal";
 import {
   Composer,
@@ -402,22 +402,29 @@ export default function MemberMessages() {
                     firstUnreadId={firstUnreadIdOf(active, unreadAtOpen)}
                     now={now}
                   />
-                  <Composer
-                    key={active.id}
-                    draft={drafts[active.id] ?? ""}
-                    onDraftChange={(next) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [active.id]: next,
-                      }))
-                    }
-                    sending={isSending}
-                    onSend={(body, attachment) =>
-                      sendMessage(active.id, body, "member", attachment)
-                    }
-                    placeholder={`Message ${active.contact.name.split(",")[0]}...`}
-                    label={`Message ${active.contact.name}`}
-                  />
+                  {!rules.memberCanMessage(active.contact) ? (
+                    <p className="border-t border-line-subtle px-inset-md py-inset-sm text-body-sm text-fg-muted">
+                      Physicians can&apos;t be messaged directly. Message your
+                      nurse or care team and they will bring your physician in.
+                    </p>
+                  ) : (
+                    <Composer
+                      key={active.id}
+                      draft={drafts[active.id] ?? ""}
+                      onDraftChange={(next) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [active.id]: next,
+                        }))
+                      }
+                      sending={isSending}
+                      onSend={(body, attachment) =>
+                        sendMessage(active.id, body, "member", attachment)
+                      }
+                      placeholder={`Message ${active.contact.name.split(",")[0]}...`}
+                      label={`Message ${active.contact.name}`}
+                    />
+                  )}
                 </>
               ) : (
                 <NoThread
@@ -450,17 +457,21 @@ export default function MemberMessages() {
           withCategory
           initialBody={composing.body}
           initialCategory={composing.category}
-          recipients={[FACILITY, ...rules.careTeamFor(conversations)].map(
-            (contact) => ({
-              value: contact.name,
-              label: `${contact.name} · ${contact.role}`,
-            }),
-          )}
+          recipients={[
+            FACILITY,
+            NEPHROLOGY_OFFICE,
+            ...rules.careTeamFor(conversations).filter(rules.memberCanMessage),
+          ].map((contact) => ({
+            value: contact.name,
+            label: `${contact.name} · ${contact.role}`,
+          }))}
           onSend={(to, body, category) => {
             const contact =
-              [FACILITY, ...rules.careTeamFor(conversations)].find(
-                (c) => c.name === to,
-              ) ?? FACILITY;
+              [
+                FACILITY,
+                NEPHROLOGY_OFFICE,
+                ...rules.careTeamFor(conversations),
+              ].find((c) => c.name === to) ?? FACILITY;
             const existing = conversations.find(
               (c) => c.contact.name === contact.name,
             );

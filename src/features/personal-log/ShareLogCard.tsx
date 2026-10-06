@@ -21,6 +21,7 @@ export function ShareLogCard({
   fileName,
   table,
   isEs,
+  footer,
 }: {
   title: string;
   description?: string;
@@ -28,6 +29,8 @@ export function ShareLogCard({
   fileName: string;
   table: LogTable;
   isEs: boolean;
+  /** The email's last line; the member's log by default. */
+  footer?: string;
 }) {
   const [to, setTo] = useState("");
   const [tried, setTried] = useState(false);
@@ -94,7 +97,11 @@ export function ShareLogCard({
           event.preventDefault();
           setTried(true);
           if (emailError || empty) return;
-          window.location.href = mailtoHref(to, title, emailBody(title, table));
+          window.location.href = mailtoHref(
+            to,
+            title,
+            emailBody(title, table, footer),
+          );
         }}
       >
         <FormField

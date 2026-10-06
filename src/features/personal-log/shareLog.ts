@@ -36,7 +36,11 @@ export function isEmail(value: string): boolean {
  *  and says how many more are in the download. */
 const BODY_LIMIT = 1800;
 
-export function emailBody(title: string, table: LogTable): string {
+export function emailBody(
+  title: string,
+  table: LogTable,
+  footer = "Sent from my NephroReach personal log.",
+): string {
   const lines = table.rows.map((row) =>
     table.header.map((h, i) => `${h}: ${row[i] ?? ""}`).join(" | "),
   );
@@ -56,7 +60,7 @@ export function emailBody(title: string, table: LogTable): string {
       ? ["", `…and ${more} more entries in the attached CSV download.`]
       : []),
     "",
-    "Sent from my NephroReach personal log.",
+    footer,
   ].join("\n");
 }
 

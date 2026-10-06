@@ -275,6 +275,8 @@ function InvoiceTable({
              Pay button over a zero balance invites a double payment. */
           <Button
             size="small"
+            variant="neutral"
+            appearance="fill-stroke"
             disabled={owed <= 0}
             onClick={() => onPay(unpaid)}
           >
@@ -530,10 +532,28 @@ export default function ClinicBilling() {
   const [paying, setPaying] = React.useState<Invoice[] | null>(null);
 
   const lastRequest = billing.changeRequests[0];
+  const owedNow = outstanding(invoices);
 
   return (
     <div className="space-y-4">
-      <PageTitle href="/dashboard/clinic/billing" />
+      {/* Pay Now up top, the page's one primary action (client,
+          2026-10-06). It pays everything still owed; Stripe takes the
+          card on the live site. */}
+      <PageTitle
+        href="/dashboard/clinic/billing"
+        action={
+          <Button
+            leadingIcon={<CreditCard aria-hidden="true" />}
+            disabled={owedNow <= 0}
+            title={owedNow > 0 ? undefined : "Nothing is due right now"}
+            onClick={() =>
+              setPaying(invoices.filter((invoice) => invoice.status !== "Paid"))
+            }
+          >
+            {owedNow > 0 ? `Pay Now · ${formatMoney(owedNow)}` : "Pay Now"}
+          </Button>
+        }
+      />
 
       {today === null ? (
         <div className="space-y-4" aria-busy="true">

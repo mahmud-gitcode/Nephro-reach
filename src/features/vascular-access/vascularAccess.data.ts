@@ -67,6 +67,9 @@ export const ACCESS_TYPES = [
   "AV Graft",
   "Tunneled Catheter",
   "PD Catheter",
+  /* Not decided yet — a patient referred before an access is chosen
+     (client, 2026-10-06). */
+  "TBD",
 ] as const;
 
 export type AccessOverview = {

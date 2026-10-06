@@ -59,6 +59,15 @@ export const FACILITY: CareTeamContact = {
   online: true,
 };
 
+/** The nephrology office's end of a member's thread (client, 2026-10-06:
+ *  its Messages work like the clinic's). Matches the nephrology org. */
+export const NEPHROLOGY_OFFICE: CareTeamContact = {
+  name: "Riverside Nephrology Associates",
+  role: "Your Nephrology Office",
+  kind: "facility",
+  online: true,
+};
+
 /**
  * The member whose portal the demo signs into.
  *

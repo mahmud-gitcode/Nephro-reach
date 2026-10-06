@@ -1,5 +1,6 @@
 "use client";
 
+import { youTubeEmbed } from "@/lib/utils/youtube";
 import React, { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Plus, Trash2, Upload } from "lucide-react";
 import { parseCaptions } from "@/features/education/vtt";
@@ -112,9 +113,19 @@ export function EpisodeEditor({
   const [draft, setDraft] = useState<TableTalkEpisode>(
     () => episode ?? emptyEpisode(nextOrder),
   );
-  const [videoName, setVideoName] = useState<string | null>(
-    () => episode?.videoSrc?.split("/").pop() ?? null,
+  const [videoName, setVideoName] = useState<string | null>(() =>
+    youTubeEmbed(episode?.videoSrc)
+      ? null
+      : (episode?.videoSrc?.split("/").pop() ?? null),
   );
+  /* Or a YouTube link, played inside NephroReach (client, 2026-10-06). */
+  const [youTube, setYouTube] = useState(() =>
+    youTubeEmbed(episode?.videoSrc) ? (episode?.videoSrc ?? "") : "",
+  );
+  const youTubeError =
+    youTube.trim() && !youTubeEmbed(youTube)
+      ? "That is not a YouTube video link."
+      : undefined;
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [thumbName, setThumbName] = useState<string | null>(null);
   const [captionNote, setCaptionNote] = useState<string | null>(null);
@@ -138,6 +149,7 @@ export function EpisodeEditor({
     objectUrls.current.push(url);
     setVideoPreview(url);
     setVideoName(file.name);
+    setYouTube("");
     set({ videoSrc: `/videos/${file.name}` });
 
     /* Reading the real length means the runtime on the card is the file's,
@@ -227,6 +239,41 @@ export function EpisodeEditor({
               </span>
             ) : null}
           </div>
+
+          <FormField
+            label="Or paste a YouTube link"
+            hint="The video plays inside NephroReach; members don't leave the site."
+            error={youTubeError}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                type="url"
+                value={youTube}
+                placeholder="https://www.youtube.com/watch?v=…"
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setYouTube(next);
+                  if (youTubeEmbed(next)) {
+                    setVideoName(null);
+                    setVideoPreview(null);
+                    set({ videoSrc: next.trim() });
+                  } else if (youTubeEmbed(draft.videoSrc)) {
+                    set({ videoSrc: undefined });
+                  }
+                }}
+              />
+            )}
+          </FormField>
+          {youTubeEmbed(youTube) ? (
+            <iframe
+              src={youTubeEmbed(youTube)!}
+              title="YouTube preview"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="aspect-video w-full rounded-control bg-surface-inverse"
+            />
+          ) : null}
 
           <Picked name={videoName} />
           <Picked name={thumbName} />
