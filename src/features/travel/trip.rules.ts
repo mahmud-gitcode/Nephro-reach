@@ -1020,10 +1020,13 @@ export function tripPhase(trip: TripRequest, today = todayIso()): TripPhase {
  * itself is still editable, and two ways to change the same unconfirmed
  * times would be one too many.
  */
-export function canRequestTimeChange(trip: TripRequest): boolean {
+export function canRequestTimeChange(
+  trip: TripRequest,
+  today = todayIso(),
+): boolean {
   return (
     Boolean(trip.placement?.treatments.length) &&
-    tripPhase(trip) !== "home" &&
+    tripPhase(trip, today) !== "home" &&
     trip.status !== "closed"
   );
 }

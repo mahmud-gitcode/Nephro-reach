@@ -853,6 +853,9 @@ describe("filtering the trip list", () => {
 
 describe("asking to move the booked times", () => {
   const NOW = new Date(2026, 8, 16, 9, 0, 0);
+  /* Fixed, not the real clock: this trip ends 2026-10-04, and the test
+     must not start failing once that date has passed. */
+  const TODAY_ISO = "2026-09-16";
 
   const booked = (patch = {}): TripRequest => ({
     ...emptyTrip(NOW),
@@ -872,17 +875,18 @@ describe("asking to move the booked times", () => {
   it("is only offered once there is something booked to move", () => {
     // Before that the request itself is still editable, and two ways to
     // change the same unconfirmed times is one too many.
-    expect(canRequestTimeChange(emptyTrip(NOW))).toBe(false);
-    expect(canRequestTimeChange(booked())).toBe(true);
+    expect(canRequestTimeChange(emptyTrip(NOW), TODAY_ISO)).toBe(false);
+    expect(canRequestTimeChange(booked(), TODAY_ISO)).toBe(true);
   });
 
   it("is not offered on a trip that is over", () => {
-    expect(canRequestTimeChange(booked({ status: "closed" as const }))).toBe(
-      false,
-    );
+    expect(
+      canRequestTimeChange(booked({ status: "closed" as const }), TODAY_ISO),
+    ).toBe(false);
     expect(
       canRequestTimeChange(
         booked({ departDate: "2026-08-01", returnDate: "2026-08-07" }),
+        TODAY_ISO,
       ),
     ).toBe(false);
   });
