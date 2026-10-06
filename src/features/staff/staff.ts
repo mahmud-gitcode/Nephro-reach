@@ -68,7 +68,8 @@ export function organizationFor(
   return ORGANIZATIONS.find((org) => org.portal === user.role);
 }
 
-/** The usual roles in a dialysis, access or nephrology practice. */
+/** Every role any organisation uses. Which ones an organisation offers is
+ *  ROLES_BY_PORTAL below. */
 export const STAFF_ROLES = [
   "Office Manager",
   "Administrator",
@@ -79,8 +80,69 @@ export const STAFF_ROLES = [
   "Care Coordinator",
   "Medical Assistant",
   "Front Desk",
+  /* The Vascular Access Center's own set (client, 2026-10-06). */
+  "Access Center Administrator",
+  "Physician / APP",
+  "Access Coordinator",
+  "Scheduler / Front Desk",
+  "Billing / Administrative Staff",
 ] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
+
+type StaffPortal = Organization["portal"];
+
+const PRACTICE_ROLES: StaffRole[] = [
+  "Office Manager",
+  "Administrator",
+  "Physician",
+  "Nurse",
+  "Social Worker",
+  "Dietitian",
+  "Care Coordinator",
+  "Medical Assistant",
+  "Front Desk",
+];
+
+/** The roles each kind of organisation offers, in the order shown. */
+export const ROLES_BY_PORTAL: Record<StaffPortal, StaffRole[]> = {
+  clinic: PRACTICE_ROLES,
+  nephrology: PRACTICE_ROLES,
+  access: [
+    "Access Center Administrator",
+    "Office Manager",
+    "Physician / APP",
+    "Nurse",
+    "Access Coordinator",
+    "Medical Assistant",
+    "Scheduler / Front Desk",
+    "Billing / Administrative Staff",
+  ],
+};
+
+export function rolesFor(portal: StaffPortal | undefined): StaffRole[] {
+  return portal ? ROLES_BY_PORTAL[portal] : PRACTICE_ROLES;
+}
+
+/* An access-center account saved before the access set existed keeps
+   working: its old role reads as the nearest access role. */
+const ACCESS_ALIAS: Partial<Record<StaffRole, StaffRole>> = {
+  Administrator: "Access Center Administrator",
+  Physician: "Physician / APP",
+  "Care Coordinator": "Access Coordinator",
+  "Front Desk": "Scheduler / Front Desk",
+  "Social Worker": "Access Coordinator",
+  Dietitian: "Nurse",
+};
+
+/** A role as an organisation of this kind understands it. */
+export function portalRole(role: StaffRole, portal: StaffPortal): StaffRole {
+  if (rolesFor(portal).includes(role)) return role;
+  if (portal === "access") return ACCESS_ALIAS[role] ?? "Nurse";
+  const back = (Object.keys(ACCESS_ALIAS) as StaffRole[]).find(
+    (k) => ACCESS_ALIAS[k] === role,
+  );
+  return back ?? "Nurse";
+}
 
 export const PERMISSIONS = [
   /* Seeing a page. Each menu entry names the one it needs. */
@@ -123,6 +185,120 @@ export const PERMISSIONS = [
     id: "labs.upload",
     label: "Upload labs",
     detail: "Import lab results by CSV into patient charts",
+  },
+  /* The Vascular Access Center (client, 2026-10-06): specific permissions
+     rather than one "See vascular access", for cleaner role-based access
+     control. With a server they are also organisation-scoped — a center
+     sees only patients and referrals routed to it. */
+  {
+    id: "access.workspace",
+    label: "Open the access center workspace",
+    detail: "The Access Patients page, limited to what the role allows",
+  },
+  {
+    id: "access.dashboard",
+    label: "See dashboard & patient/referral list",
+    detail: "Every patient and referral routed to your center",
+  },
+  {
+    id: "access.referrals",
+    label: "See incoming referrals",
+    detail: "The full referral queue",
+  },
+  {
+    id: "access.referrals.assigned",
+    label: "See assigned referrals",
+    detail: "Referrals assigned to this person",
+  },
+  {
+    id: "access.concerns",
+    label: "View access concerns",
+    detail: "Concerns patients and offices report",
+  },
+  {
+    id: "access.photos",
+    label: "View submitted photos",
+    detail: "Photos sent with concerns and messages",
+  },
+  {
+    id: "access.messages",
+    label: "Read/send messages",
+    detail: "The center's messages",
+  },
+  {
+    id: "access.message.nephrology",
+    label: "Message nephrology offices",
+    detail: "Write to referring nephrology offices",
+  },
+  {
+    id: "access.message.dialysis",
+    label: "Message dialysis centers",
+    detail: "Write to dialysis centers",
+  },
+  {
+    id: "access.message.patients",
+    label: "Message patients",
+    detail: "Write to patients in their access conversation",
+  },
+  {
+    id: "access.scheduling.info",
+    label: "See information needed for scheduling",
+    detail: "Names, contact and appointment details only",
+  },
+  {
+    id: "access.appointments",
+    label: "Manage appointment requests",
+    detail: "Receive and coordinate appointment requests",
+  },
+  {
+    id: "access.appointments.confirm",
+    label: "Schedule, confirm & reschedule appointments",
+    detail: "Book and change access appointments",
+  },
+  {
+    id: "access.appointments.status",
+    label: "Update appointment status",
+    detail: "Mark appointments completed",
+  },
+  {
+    id: "access.appointments.view",
+    label: "See appointment information",
+    detail: "Upcoming and past access appointments",
+  },
+  {
+    id: "access.referral.status",
+    label: "Update referral status",
+    detail: "Acknowledge, schedule or close referrals",
+  },
+  {
+    id: "access.coordination.status",
+    label: "Update access coordination status",
+    detail: "The access status on a patient's record",
+  },
+  {
+    id: "access.transport.view",
+    label: "See transportation requests",
+    detail: "Rides patients requested for access visits",
+  },
+  {
+    id: "access.transport.coordinate",
+    label: "Coordinate transportation",
+    detail: "Transportation information for access visits",
+  },
+  {
+    id: "access.tracking",
+    label: "Track outstanding requests",
+    detail: "Referrals and requests still open",
+  },
+  {
+    id: "access.documentation",
+    label: "Document coordination activity",
+    detail: "Notes on coordination work",
+  },
+  {
+    id: "account.manage",
+    label: "Manage account information",
+    detail: "The organisation's account details",
   },
   /* Doing something. */
   {
@@ -178,12 +354,21 @@ export const PERMISSIONS = [
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number]["id"];
 
-const EVERY: Permission[] = PERMISSIONS.map((p) => p.id);
+/* The access center's own permissions stay out of the other offices'
+   roles, so their Roles & Permissions list does not grow with them. */
+const ACCESS_ONLY = (id: Permission) =>
+  (id.startsWith("access.") &&
+    id !== "access.view" &&
+    id !== "access.schedule") ||
+  id === "account.manage";
+const EVERY: Permission[] = PERMISSIONS.map((p) => p.id).filter(
+  (id) => !ACCESS_ONLY(id),
+);
 
 /* Who may do what at an access center or a nephrology office. Messages to
    clinicians and those who handle questions; scheduling and CCM time to
    the clinical team; money, settings and staff to the managers. */
-export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
+export const ROLE_PERMISSIONS: Partial<Record<StaffRole, Permission[]>> = {
   "Office Manager": EVERY.filter(
     (p) => p !== "messages.view" && p !== "messages.reply",
   ),
@@ -220,7 +405,9 @@ export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
 /* The dialysis center, as the client set it out (2026-10-01): each person
    sees what their job needs, and only the office manager sees reports and
    billing — the whole clinic panel, but not other people's messages. */
-export const DIALYSIS_ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
+export const DIALYSIS_ROLE_PERMISSIONS: Partial<
+  Record<StaffRole, Permission[]>
+> = {
   "Office Manager": [
     "dashboard.view",
     "programs.view",
@@ -302,18 +489,131 @@ export const DIALYSIS_ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
   ],
 };
 
-type StaffPortal = Organization["portal"];
+/* The Vascular Access Center, as the client set it out (2026-10-06): what
+   NephroReach does for the center — receiving referrals, coordinating
+   appointments, communicating with nephrology, dialysis and patients,
+   reviewing submitted information and photos, updating coordination
+   status. Not its EHR, and no CCM time. */
+const ACCESS_CLINICAL: Permission[] = [
+  "access.workspace",
+  "access.concerns",
+  "access.photos",
+  "access.messages",
+];
 
-/** What a role may do in one kind of portal: the dialysis center has its
- *  own matrix; the access center and nephrology office share one. */
+export const ACCESS_ROLE_PERMISSIONS: Partial<Record<StaffRole, Permission[]>> =
+  {
+    "Access Center Administrator": [
+      ...ACCESS_CLINICAL,
+      "access.dashboard",
+      "access.referrals",
+      "access.message.nephrology",
+      "access.message.dialysis",
+      "access.message.patients",
+      "access.appointments",
+      "access.appointments.confirm",
+      "access.appointments.status",
+      "access.appointments.view",
+      "access.referral.status",
+      "access.coordination.status",
+      "access.transport.view",
+      "reports.view",
+      "staff.manage",
+      "settings.manage",
+      "billing.view",
+    ],
+    "Office Manager": [
+      ...ACCESS_CLINICAL,
+      "access.dashboard",
+      "access.referrals",
+      "access.appointments",
+      "access.appointments.confirm",
+      "access.appointments.status",
+      "access.appointments.view",
+      "access.referral.status",
+      "access.coordination.status",
+      "access.transport.coordinate",
+      "reports.view",
+      "staff.manage",
+    ],
+    "Physician / APP": [
+      ...ACCESS_CLINICAL,
+      "access.referrals.assigned",
+      "access.message.nephrology",
+      "access.message.dialysis",
+      "access.message.patients",
+      "access.referral.status",
+      "access.coordination.status",
+      "access.appointments.view",
+    ],
+    Nurse: [
+      ...ACCESS_CLINICAL,
+      "access.referrals.assigned",
+      "access.message.nephrology",
+      "access.message.dialysis",
+      "access.message.patients",
+      "access.appointments",
+      "access.appointments.view",
+      "access.coordination.status",
+    ],
+    "Access Coordinator": [
+      ...ACCESS_CLINICAL,
+      "access.referrals",
+      "access.message.nephrology",
+      "access.message.dialysis",
+      "access.message.patients",
+      "access.appointments",
+      "access.appointments.confirm",
+      "access.appointments.view",
+      "access.referral.status",
+      "access.coordination.status",
+      "access.transport.coordinate",
+      "access.tracking",
+    ],
+    "Medical Assistant": [
+      "access.workspace",
+      "access.referrals.assigned",
+      "access.concerns",
+      "access.photos",
+      "access.messages",
+      "access.appointments.confirm",
+      "access.appointments.status",
+      "access.appointments.view",
+      "access.documentation",
+    ],
+    "Scheduler / Front Desk": [
+      "access.workspace",
+      "access.scheduling.info",
+      "access.appointments",
+      "access.appointments.confirm",
+      "access.appointments.status",
+      "access.appointments.view",
+      "access.message.patients",
+      "access.transport.coordinate",
+    ],
+    /* No clinical or access-photo access by default. */
+    "Billing / Administrative Staff": [
+      "reports.view",
+      "billing.view",
+      "account.manage",
+    ],
+  };
+
+/** What a role may do in one kind of portal: the dialysis center and the
+ *  access center each have their own matrix; the nephrology office uses
+ *  the general one. */
 export function roleCan(
   role: StaffRole,
   permission: Permission,
   portal: StaffPortal = "clinic",
 ): boolean {
   const matrix =
-    portal === "clinic" ? DIALYSIS_ROLE_PERMISSIONS : ROLE_PERMISSIONS;
-  return matrix[role].includes(permission);
+    portal === "clinic"
+      ? DIALYSIS_ROLE_PERMISSIONS
+      : portal === "access"
+        ? ACCESS_ROLE_PERMISSIONS
+        : ROLE_PERMISSIONS;
+  return matrix[portalRole(role, portal)]?.includes(permission) ?? false;
 }
 
 /**
@@ -527,14 +827,28 @@ export function seedStaff(now: number): StaffAccount[] {
       "Dr. Raj Patel",
       "surgeon@nephroreach.com",
       "metro-access",
-      "Physician",
+      "Physician / APP",
     ),
     person(
       "seed-s5",
       "Rachel Kim",
       "frontdesk@nephroreach.com",
       "metro-access",
-      "Front Desk",
+      "Scheduler / Front Desk",
+    ),
+    person(
+      "seed-s11",
+      "Marcus Reed",
+      "accesscoordinator@nephroreach.com",
+      "metro-access",
+      "Access Coordinator",
+    ),
+    person(
+      "seed-s12",
+      "Linda Park",
+      "accessbilling@nephroreach.com",
+      "metro-access",
+      "Billing / Administrative Staff",
     ),
     person(
       "seed-s6",

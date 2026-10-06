@@ -8,6 +8,8 @@ import {
   findLogin,
   organizationFor,
   roleCan,
+  rolesFor,
+  portalRole,
   seedStaff,
   staffError,
   updateStaff,
@@ -197,5 +199,75 @@ describe("signing in as staff", () => {
     expect(
       authenticate("socialworker@nephroreach.com", DEMO_STAFF_PASSWORD),
     ).toBeNull();
+  });
+});
+
+describe("the Vascular Access Center's own roles (client, 2026-10-06)", () => {
+  it("offers its own eight roles, not the practice roles", () => {
+    expect(rolesFor("access")).toEqual([
+      "Access Center Administrator",
+      "Office Manager",
+      "Physician / APP",
+      "Nurse",
+      "Access Coordinator",
+      "Medical Assistant",
+      "Scheduler / Front Desk",
+      "Billing / Administrative Staff",
+    ]);
+    expect(rolesFor("clinic")).not.toContain("Access Coordinator");
+  });
+
+  it("follows the client's table", () => {
+    expect(
+      roleCan("Access Center Administrator", "billing.view", "access"),
+    ).toBe(true);
+    expect(roleCan("Office Manager", "billing.view", "access")).toBe(false);
+    expect(
+      roleCan("Physician / APP", "access.referrals.assigned", "access"),
+    ).toBe(true);
+    expect(roleCan("Physician / APP", "access.referrals", "access")).toBe(
+      false,
+    );
+    expect(roleCan("Access Coordinator", "access.tracking", "access")).toBe(
+      true,
+    );
+    expect(roleCan("Scheduler / Front Desk", "access.photos", "access")).toBe(
+      false,
+    );
+    expect(
+      roleCan(
+        "Scheduler / Front Desk",
+        "access.appointments.confirm",
+        "access",
+      ),
+    ).toBe(true);
+    /* Billing staff: no clinical or access-photo access by default. */
+    expect(
+      roleCan("Billing / Administrative Staff", "access.photos", "access"),
+    ).toBe(false);
+    expect(
+      roleCan("Billing / Administrative Staff", "access.workspace", "access"),
+    ).toBe(false);
+    expect(
+      roleCan("Billing / Administrative Staff", "billing.view", "access"),
+    ).toBe(true);
+  });
+
+  it("gives no access role CCM time", () => {
+    for (const role of rolesFor("access")) {
+      expect(roleCan(role, "ccm.log", "access")).toBe(false);
+    }
+  });
+
+  it("reads an old access role as the nearest new one", () => {
+    expect(portalRole("Physician", "access")).toBe("Physician / APP");
+    expect(portalRole("Front Desk", "access")).toBe("Scheduler / Front Desk");
+    expect(roleCan("Physician", "access.photos", "access")).toBe(true);
+  });
+
+  it("lets billing staff reach reports and billing, not the workspace", () => {
+    expect(canAccessPath("access", "/dashboard/clinic/billing")).toBe(true);
+    expect(canAccessPath("access", "/dashboard/clinic/reports")).toBe(true);
+    expect(canAccessPath("access", "/dashboard/clinic")).toBe(false);
   });
 });

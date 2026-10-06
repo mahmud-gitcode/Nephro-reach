@@ -1,5 +1,6 @@
 "use client";
 
+import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -270,6 +271,28 @@ export default function AddMedicationPage() {
                 </FormField>
               );
             })}
+          </div>
+          {/* Camera and voice (client, 2026-10-06): a photo of the bottle
+              or label stays with this medication; speech goes into the
+              instructions. */}
+          <div className="mt-stack-md border-t border-line-subtle pt-stack-md">
+            <p className="mb-stack-xs text-label-md text-fg">
+              {isEs ? "Foto y voz" : "Photo and voice"}
+            </p>
+            <LogMediaBar
+              logName="Medication log"
+              isEs={isEs}
+              onDictated={(text) =>
+                setDraft((d) => ({
+                  ...d,
+                  instructions: appendText(d.instructions, text),
+                }))
+              }
+              photo={draft.photo ?? null}
+              onPhoto={(photo) =>
+                setDraft((d) => ({ ...d, photo: photo ?? undefined }))
+              }
+            />
           </div>
         </Card>
 

@@ -125,7 +125,13 @@ export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
   /* An access center sees its own routes and nothing else. */
   if (isAccessCenterRoute(pathname)) return role === "access";
-  if (role === "access") return false;
+  /* …and the shared reports and contract pages (2026-10-06). */
+  if (role === "access") {
+    return (
+      pathname === "/dashboard/clinic/reports" ||
+      pathname === "/dashboard/clinic/billing"
+    );
+  }
   /* A nephrology office: its own routes, and the clinic's pages except
      the dialysis center's own (travel, its patient inbox, its settings and
      staff — the office has its own staff page). */

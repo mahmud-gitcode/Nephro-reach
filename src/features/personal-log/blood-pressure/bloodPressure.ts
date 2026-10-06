@@ -35,6 +35,8 @@ export type BpReading = {
   medication: MedicationState;
   mood?: string;
   notes: string;
+  /** A photo taken with the reading, e.g. of the monitor (2026-10-06). */
+  photo?: string;
 };
 
 export type BpDraft = Omit<BpReading, "id">;

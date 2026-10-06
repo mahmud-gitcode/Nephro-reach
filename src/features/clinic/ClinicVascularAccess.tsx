@@ -169,6 +169,15 @@ type Perms = {
   schedule: boolean;
   /** May write in the patient's three-way conversation. */
   converse: boolean;
+  /* The access center's finer permissions (client, 2026-10-06). The other
+     offices have them all. */
+  coordination: boolean;
+  concerns: boolean;
+  photos: boolean;
+  referrals: boolean;
+  referralStatus: boolean;
+  replyNephrology: boolean;
+  replyDialysis: boolean;
   /** Why not, when they may not. */
   readOnlyReason?: string;
 };
@@ -429,7 +438,7 @@ function PatientModal({
                 {...field}
                 selectSize="small"
                 className="w-52"
-                disabled={!perms.schedule}
+                disabled={!perms.coordination}
                 value={record.overview.status}
                 onChange={(e) =>
                   store.editOverview(record.mrn, {
@@ -471,7 +480,7 @@ function PatientModal({
           ) : null}
         </div>
 
-        <section>
+        <section hidden={!perms.concerns}>
           <h3 className="mb-stack-sm text-heading-5 text-fg">Open Concerns</h3>
           {concerns.length === 0 ? (
             <p className="text-body-sm text-fg-muted">No open concerns.</p>
@@ -482,7 +491,7 @@ function PatientModal({
                   key={concern.id}
                   className="flex flex-wrap items-start gap-inline-lg rounded-control border border-line p-inset-sm"
                 >
-                  {concern.imageUrl ? (
+                  {concern.imageUrl && perms.photos ? (
                     // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
                     <img
                       src={concern.imageUrl}
@@ -785,9 +794,14 @@ export default function ClinicVascularAccess({
       : user?.role === "nephrology"
         ? "nephrology"
         : "dialysis";
-  const reply = userCan(user, "messages.reply");
+  const reply =
+    party === "access"
+      ? userCan(user, "access.message.patients")
+      : userCan(user, "messages.reply");
   /* A staff login writes and books under its own name; the organisation's
      demo login stands in as its default person. */
+  const atAccess = office === "access";
+  const can = (p: Parameters<typeof userCan>[1]) => userCan(user, p);
   const perms: Perms = {
     me: user?.staffRole
       ? user.name
@@ -796,7 +810,24 @@ export default function ClinicVascularAccess({
         : STAFF[party].person,
     role: user?.staffRole ?? "Administrator",
     reply,
-    schedule: userCan(user, "access.schedule"),
+    schedule: atAccess
+      ? can("access.appointments.confirm")
+      : can("access.schedule"),
+    coordination: atAccess
+      ? can("access.coordination.status")
+      : can("access.schedule"),
+    concerns: atAccess ? can("access.concerns") : true,
+    photos: atAccess ? can("access.photos") : true,
+    referrals: atAccess
+      ? can("access.dashboard") ||
+        can("access.referrals") ||
+        can("access.referrals.assigned")
+      : true,
+    referralStatus: atAccess
+      ? can("access.referral.status")
+      : can("access.schedule"),
+    replyNephrology: atAccess ? can("access.message.nephrology") : reply,
+    replyDialysis: atAccess ? can("access.message.dialysis") : reply,
     /* The patient's conversation is between the patient, the access
        center and the dialysis center; the nephrology office reads it and
        writes to the access center on a referral instead. */
@@ -1079,7 +1110,12 @@ export default function ClinicVascularAccess({
         </Card>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card as="section" padding="small" className="h-full">
+          <Card
+            as="section"
+            padding="small"
+            className="h-full"
+            hidden={!perms.concerns}
+          >
             <PanelHeading title="Open Concerns" />
             {concerns.length === 0 ? (
               <p className="text-body-sm text-fg-muted">No open concerns.</p>
@@ -1090,7 +1126,7 @@ export default function ClinicVascularAccess({
                     key={concern.id}
                     className="flex items-start gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
                   >
-                    {concern.imageUrl ? (
+                    {concern.imageUrl && perms.photos ? (
                       // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
                       <img
                         src={concern.imageUrl}
@@ -1124,13 +1160,15 @@ export default function ClinicVascularAccess({
             )}
           </Card>
 
-          <ReferralsPanel
-            referrals={referrals}
-            side={office}
-            canSend={perms.reply && office !== "access"}
-            onSend={() => setReferring({})}
-            onOpen={setOpenReferral}
-          />
+          {perms.referrals ? (
+            <ReferralsPanel
+              referrals={referrals}
+              side={office}
+              canSend={perms.reply && office !== "access"}
+              onSend={() => setReferring({})}
+              onOpen={setOpenReferral}
+            />
+          ) : null}
         </section>
 
         {selected && open ? (
@@ -1189,14 +1227,24 @@ export default function ClinicVascularAccess({
             record={records.find((r) => r.mrn === readingReferral.mrn)}
             side={office}
             me={perms.me}
-            canReply={perms.reply}
-            canAct={perms.schedule}
+            canReply={
+              atAccess
+                ? readingReferral.source === "nephrology"
+                  ? perms.replyNephrology
+                  : perms.replyDialysis
+                : perms.reply
+            }
+            canAct={perms.referralStatus}
             store={store}
-            onSchedule={() => {
-              setSchedulingFor(readingReferral.id);
-              setScheduling(readingReferral.mrn);
-              setOpenReferral(null);
-            }}
+            onSchedule={
+              perms.schedule
+                ? () => {
+                    setSchedulingFor(readingReferral.id);
+                    setScheduling(readingReferral.mrn);
+                    setOpenReferral(null);
+                  }
+                : undefined
+            }
             onStartRecord={() => {
               setAddingPatient(readingReferral.mrn);
               setOpenReferral(null);

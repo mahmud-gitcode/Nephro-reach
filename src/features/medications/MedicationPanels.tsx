@@ -158,7 +158,23 @@ export function MedicationMasterList({
 
               return (
                 <TableRow key={`${medication.name}-${medication.startDate}`}>
-                  <TableCell emphasis>{medication.name}</TableCell>
+                  <TableCell emphasis>
+                    <span className="flex items-center gap-inline-sm">
+                      {medication.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+                        <img
+                          src={medication.photo}
+                          alt={
+                            isEs
+                              ? `Foto de ${medication.name}`
+                              : `Photo of ${medication.name}`
+                          }
+                          className="h-8 w-8 shrink-0 rounded-control object-cover"
+                        />
+                      ) : null}
+                      {medication.name}
+                    </span>
+                  </TableCell>
                   <TableCell>{medication.dose}</TableCell>
                   <TableCell>{medication.route}</TableCell>
                   <TableCell>

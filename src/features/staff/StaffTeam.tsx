@@ -29,7 +29,8 @@ import {
   ALL,
   MIN_PASSWORD,
   PERMISSIONS,
-  STAFF_ROLES,
+  rolesFor,
+  portalRole,
   filterStaff,
   normalEmail,
   organization,
@@ -116,11 +117,12 @@ function AddStaffModal({
   onClose: () => void;
 }) {
   const org = organization(orgId);
+  const roles = rolesFor(organization(orgId)?.portal);
   const [draft, setDraft] = useState<StaffDraft>({
     name: "",
     email: "",
     orgId,
-    role: "Nurse",
+    role: roles.includes("Nurse") ? "Nurse" : roles[0],
     password: temporaryPassword(),
   });
   const [tried, setTried] = useState(false);
@@ -192,7 +194,7 @@ function AddStaffModal({
               value={draft.role}
               onChange={(e) => set({ role: e.target.value as StaffRole })}
             >
-              {STAFF_ROLES.map((role) => (
+              {roles.map((role) => (
                 <option key={role}>{role}</option>
               ))}
             </Select>
@@ -247,7 +249,11 @@ function EditStaffModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState(account.name);
-  const [role, setRole] = useState<StaffRole>(account.role);
+  const portal = organization(account.orgId)?.portal;
+  const roles = rolesFor(portal);
+  const [role, setRole] = useState<StaffRole>(
+    portal ? portalRole(account.role, portal) : account.role,
+  );
   const [password, setPassword] = useState("");
   const [tried, setTried] = useState(false);
   const active = account.status === "Active";
@@ -324,7 +330,7 @@ function EditStaffModal({
               disabled={isSelf}
               onChange={(e) => setRole(e.target.value as StaffRole)}
             >
-              {STAFF_ROLES.map((option) => (
+              {roles.map((option) => (
                 <option key={option}>{option}</option>
               ))}
             </Select>
@@ -366,8 +372,16 @@ function PermissionsModal({
       open
       onClose={onClose}
       size="wide"
-      title="Roles & Permissions"
-      description="What each role may do in your organization's portal."
+      title={
+        portal === "access"
+          ? "Vascular Access Center — Roles & Permissions"
+          : "Roles & Permissions"
+      }
+      description={
+        portal === "access"
+          ? "Control what each team member can access and manage within your organization's NephroReach portal."
+          : "What each role may do in your organization's portal."
+      }
     >
       <div className="overflow-hidden rounded-card-nested border border-line">
         <Table minWidth={620}>
@@ -378,7 +392,7 @@ function PermissionsModal({
             </TableRow>
           </TableHead>
           <TableBody>
-            {STAFF_ROLES.map((role) => (
+            {rolesFor(portal).map((role) => (
               <TableRow key={role}>
                 <TableCell emphasis className="align-top whitespace-nowrap">
                   {role}
@@ -498,7 +512,7 @@ export function StaffTeamCard({
             onChange={(e) => setRole(e.target.value)}
           >
             <option value={ALL}>All roles</option>
-            {STAFF_ROLES.map((option) => (
+            {rolesFor(organization(orgId)?.portal).map((option) => (
               <option key={option}>{option}</option>
             ))}
           </Select>

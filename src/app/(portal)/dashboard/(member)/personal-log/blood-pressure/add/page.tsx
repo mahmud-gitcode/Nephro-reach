@@ -92,6 +92,7 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
     reading?.medication ?? "Taken",
   );
   const [notes, setNotes] = useState(reading?.notes ?? "");
+  const [photo, setPhoto] = useState<string | null>(reading?.photo ?? null);
   const [tried, setTried] = useState(false);
 
   const draft: BpDraft = {
@@ -105,6 +106,7 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
     medication,
     mood,
     notes,
+    ...(photo ? { photo } : {}),
   };
   const error = bpError(draft, today);
   const show = (field: BpError) =>
@@ -341,6 +343,8 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
             onDictated={(text) =>
               setNotes((current) => appendText(current, text))
             }
+            photo={photo}
+            onPhoto={setPhoto}
           />
         </div>
       </Card>

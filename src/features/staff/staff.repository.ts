@@ -1,5 +1,11 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import { ORGANIZATIONS, seedStaff, type StaffAccount } from "./staff";
+import {
+  ORGANIZATIONS,
+  organization,
+  portalRole,
+  seedStaff,
+  type StaffAccount,
+} from "./staff";
 
 /* ==========================================================================
    Staff accounts — storage
@@ -36,7 +42,18 @@ function withNewOrganizations(stored: StaffAccount[]): StaffAccount[] {
       !emails.has(account.email) &&
       ORGANIZATIONS.some((org) => org.id === account.orgId),
   );
-  return added.length === 0 ? stored : [...stored, ...added];
+  const all = added.length === 0 ? stored : [...stored, ...added];
+  /* A role saved before its organisation had its own set (the access
+     center, 2026-10-06) reads as the nearest role in that set. */
+  let changed = all !== stored;
+  const normal = all.map((account) => {
+    const portal = organization(account.orgId)?.portal;
+    const role = portal ? portalRole(account.role, portal) : account.role;
+    if (role === account.role) return account;
+    changed = true;
+    return { ...account, role };
+  });
+  return changed ? normal : stored;
 }
 
 export async function listStaff(): Promise<StaffAccount[]> {

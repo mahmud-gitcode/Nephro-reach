@@ -16,6 +16,8 @@ export type Medication = (typeof medicationsData)[number] & {
   id: string;
   provider?: string;
   instructions?: string;
+  /** A photo of the bottle or label (client, 2026-10-06). */
+  photo?: string;
 };
 
 export const ROUTES = [
@@ -52,6 +54,8 @@ export type MedicationDraft = {
   provider: string;
   pharmacy: string;
   instructions: string;
+  /** Data URL of a photo taken with the camera, when there is one. */
+  photo?: string;
 };
 
 export type MedicationError =
@@ -105,6 +109,7 @@ export function addMedication(
       ...(draft.instructions.trim()
         ? { instructions: draft.instructions.trim() }
         : {}),
+      ...(draft.photo ? { photo: draft.photo } : {}),
     },
   ];
 }

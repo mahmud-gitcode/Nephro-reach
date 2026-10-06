@@ -180,7 +180,23 @@ function DailyBloodPressureList() {
                           {dateLabel}
                         </TableCell>
                       )}
-                      <TableCell>{time}</TableCell>
+                      <TableCell>
+                        <span className="flex items-center gap-inline-sm">
+                          {time}
+                          {reading.photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+                            <img
+                              src={reading.photo}
+                              alt={
+                                isEs
+                                  ? `Foto de la lectura de las ${time}`
+                                  : `Photo with the ${time} reading`
+                              }
+                              className="h-8 w-8 rounded-control object-cover"
+                            />
+                          ) : null}
+                        </span>
+                      </TableCell>
                       <TableCell numeric>{reading.systolic}</TableCell>
                       <TableCell numeric>{reading.diastolic}</TableCell>
                       <TableCell numeric>{reading.pulse}</TableCell>

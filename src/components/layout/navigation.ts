@@ -312,29 +312,16 @@ export const sidebarItems: NavItem[] = [
     roles: ["clinic"],
     permission: "messages.view",
   },
-  {
-    label: "Reports",
-    href: "/dashboard/clinic/reports",
-    icon: BarChart3,
-    roles: ["clinic", "nephrology"],
-    permission: "reports.view",
-  },
-  {
-    label: "Contract & Billing",
-    href: "/dashboard/clinic/billing",
-    icon: FileText,
-    roles: ["clinic", "nephrology"],
-    permission: "billing.view",
-  },
-
-  /* Vascular Access Center portal (2026-09-30): its own organisation, one
-     page — the access patients it shares with the dialysis clinic. */
+  /* Vascular Access Center portal (2026-09-30): its own organisation and
+     its access patients. Listed before Reports and Contract & Billing,
+     which it shares with the other offices (2026-10-06), so its own pages
+     come first in its menu. */
   {
     label: "Access Patients",
     href: "/dashboard/access-center",
     icon: Activity,
     roles: ["access"],
-    permission: "access.view",
+    permission: "access.workspace",
   },
   /* Its line to the dialysis center and the nephrology office (client,
      2026-10-01). */
@@ -343,7 +330,21 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/access-center/messages",
     icon: MessageSquareText,
     roles: ["access"],
-    permission: "messages.view",
+    permission: "access.messages",
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/clinic/reports",
+    icon: BarChart3,
+    roles: ["clinic", "nephrology", "access"],
+    permission: "reports.view",
+  },
+  {
+    label: "Contract & Billing",
+    href: "/dashboard/clinic/billing",
+    icon: FileText,
+    roles: ["clinic", "nephrology", "access"],
+    permission: "billing.view",
   },
 ];
 
