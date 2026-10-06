@@ -20,6 +20,11 @@ const state = {
   refetch,
 };
 
+/* The ER visits row reads the patients' weekly answers; none here. */
+vi.mock("@/features/emergency/useErVisits", () => ({
+  useErVisits: () => ({ log: [], isPending: false }),
+}));
+
 vi.mock("./useClinicData", () => ({
   useClinicData: () => state,
   useEnrollPatient: () => ({ mutate: vi.fn(), isPending: false, error: null }),

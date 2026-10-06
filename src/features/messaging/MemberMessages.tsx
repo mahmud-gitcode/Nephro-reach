@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareOutsideCard } from "@/features/secure-messages/ShareOutsideCard";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
@@ -141,6 +142,9 @@ function MemberRail({ onCompose }: { onCompose: (compose: Compose) => void }) {
           />
         </ul>
       </RailSection>
+
+      {/* Offices not on NephroReach (client, 2026-10-05). */}
+      <ShareOutsideCard />
 
       {/* Messaging is not for emergencies and nothing here is watched out
           of hours, so the number sits on the screen rather than a click

@@ -34,6 +34,7 @@ const LABEL: Record<CareContactKind, { en: string; es: string }> = {
   dialysis: { en: "Dialysis Center", es: "Centro de Diálisis" },
   vascular: { en: "Vascular Access Center", es: "Centro de Acceso Vascular" },
   nephrology: { en: "Nephrology Office", es: "Consultorio de Nefrología" },
+  transplant: { en: "Transplant Center", es: "Centro de Trasplantes" },
   primaryCare: {
     en: "Primary Care Office",
     es: "Consultorio de Atención Primaria",
@@ -193,7 +194,8 @@ export function CareContactsSection({ isEs }: { isEs: boolean }) {
   }
 
   const saveOther =
-    (kind: "vascular" | "nephrology" | "primaryCare") => (office: CareOffice) =>
+    (kind: "vascular" | "nephrology" | "transplant" | "primaryCare") =>
+    (office: CareOffice) =>
       care.save({ ...care.contacts, [kind]: office });
 
   return (
@@ -220,6 +222,12 @@ export function CareContactsSection({ isEs }: { isEs: boolean }) {
         isEs={isEs}
         saved={care.contacts.nephrology}
         onSave={saveOther("nephrology")}
+      />
+      <OfficeForm
+        kind="transplant"
+        isEs={isEs}
+        saved={care.contacts.transplant}
+        onSave={saveOther("transplant")}
       />
       <OfficeForm
         kind="primaryCare"

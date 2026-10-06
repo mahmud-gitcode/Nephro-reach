@@ -1,5 +1,6 @@
 "use client";
 
+import { ClinicErVisits } from "./ClinicErVisits";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -871,6 +872,10 @@ export default function ClinicDashboard() {
         </div>
         <UpcomingClasses dashboard={dashboard} />
       </section>
+
+      {/* Patients' weekly ER answers, across the clinic (client,
+          2026-10-05). */}
+      <ClinicErVisits />
 
       <MembersPanel dashboard={dashboard} />
 

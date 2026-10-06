@@ -24,6 +24,8 @@ export type CareOffice = {
 export type CareContacts = {
   vascular: CareOffice;
   nephrology: CareOffice;
+  /** Added 2026-10-06 with secure messages to outside offices. */
+  transplant: CareOffice;
   primaryCare: CareOffice;
 };
 
@@ -34,6 +36,7 @@ const EMPTY_OFFICE: CareOffice = { name: "", phone: "", address: "" };
 export const EMPTY_CONTACTS: CareContacts = {
   vascular: EMPTY_OFFICE,
   nephrology: EMPTY_OFFICE,
+  transplant: EMPTY_OFFICE,
   primaryCare: EMPTY_OFFICE,
 };
 
@@ -64,6 +67,12 @@ const SAMPLE: CareContacts = {
     phone: "(803) 555-0119",
     address: "88 Kidney Court, Columbia, SC 29204",
   },
+  /* Not on NephroReach: the demo's Free Recipient office. */
+  transplant: {
+    name: "Lakeside Transplant Center",
+    phone: "(803) 555-0166",
+    address: "12 Harbor View Drive, Columbia, SC 29205",
+  },
   primaryCare: EMPTY_OFFICE,
 };
 
@@ -84,6 +93,10 @@ export async function readCareContacts(): Promise<CareContacts> {
   return {
     vascular: office(stored.vascular),
     nephrology: office(stored.nephrology),
+    /* Saved before this office existed: the demo patient gets the sample. */
+    transplant: stored.transplant
+      ? office(stored.transplant)
+      : sampleOr(KEY, SAMPLE.transplant, EMPTY_OFFICE),
     primaryCare: office(stored.primaryCare),
   };
 }
@@ -99,6 +112,7 @@ export async function writeCareContacts(
   return writeJson(KEY, {
     vascular: clean(contacts.vascular),
     nephrology: clean(contacts.nephrology),
+    transplant: clean(contacts.transplant),
     primaryCare: clean(contacts.primaryCare),
   });
 }
