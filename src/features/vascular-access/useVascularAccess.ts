@@ -130,6 +130,15 @@ export function useVascularAccess() {
       mrn: string,
       concern: Pick<rules.AccessConcern, "kinds" | "detail" | "imageUrl">,
     ) => run((s) => rules.reportConcern(s, mrn, concern, Date.now())),
+    editConcern: (
+      mrn: string,
+      concernId: string,
+      change: Pick<rules.AccessConcern, "kinds" | "detail" | "imageUrl">,
+    ) => run((s) => rules.editConcern(s, mrn, concernId, change, Date.now())),
+    resendConcern: (mrn: string, concernId: string) =>
+      run((s) => rules.resendConcern(s, mrn, concernId, Date.now())),
+    deleteConcern: (mrn: string, concernId: string) =>
+      run((s) => rules.deleteConcern(s, mrn, concernId)),
     reviewConcern: (mrn: string, concernId: string) =>
       run((s) => rules.reviewConcern(s, mrn, concernId)),
     requestTransport: (mrn: string, details: rules.TransportDetails) =>

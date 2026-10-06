@@ -23,6 +23,9 @@ import {
   recordFor,
   recordForMember,
   reportConcern,
+  editConcern,
+  resendConcern,
+  deleteConcern,
   requestTransport,
   reviewConcern,
   scheduleAppointment,
@@ -400,5 +403,50 @@ describe("referrals", () => {
     expect(referralsOf(answered).find((r) => r.id === id)!.status).toBe(
       "Acknowledged",
     );
+  });
+});
+
+describe("the member's own concern reports (client, 2026-10-06)", () => {
+  const reported = reportConcern(
+    seed,
+    MRN,
+    { kinds: ["swelling"], detail: "Arm is swollen" },
+    NOW,
+  );
+  const id = `concern-${NOW}`;
+
+  it("an edit changes the report and opens it again", () => {
+    const reviewed = reviewConcern(reported, MRN, id);
+    const edited = editConcern(
+      reviewed,
+      MRN,
+      id,
+      { kinds: ["pain"], detail: "Now painful" },
+      NOW + 1,
+    );
+    const concern = recordFor(edited, MRN)!.concerns.find((c) => c.id === id)!;
+    expect(concern).toMatchObject({
+      kinds: ["pain"],
+      detail: "Now painful",
+      status: "Open",
+    });
+    expect(concern.editedAt).toBeDefined();
+    expect(recordFor(edited, MRN)!.overview.status).toBe("Concern Reported");
+  });
+
+  it("a resend opens a reviewed report again", () => {
+    const resent = resendConcern(
+      reviewConcern(reported, MRN, id),
+      MRN,
+      id,
+      NOW + 2,
+    );
+    expect(openConcerns(recordFor(resent, MRN)!)).toHaveLength(1);
+  });
+
+  it("deleting the last open report clears the flag", () => {
+    const gone = deleteConcern(reported, MRN, id);
+    expect(recordFor(gone, MRN)!.concerns.some((c) => c.id === id)).toBe(false);
+    expect(recordFor(gone, MRN)!.overview.status).toBe("No Active Concern");
   });
 });

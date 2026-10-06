@@ -9,6 +9,8 @@ import {
   MessagesSquare,
   Pencil,
   Plus,
+  Send,
+  Trash2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -49,6 +51,7 @@ import {
   formatTime,
   lastMessage,
   nextAppointment,
+  concernsNewestFirst,
   openConcerns,
   recordForMember,
   sortedHistory,
@@ -56,6 +59,7 @@ import {
   transportFor,
   unreadFor,
   upcomingAppointments,
+  type AccessConcern,
   type AccessRecord,
   type MobilityLevel,
 } from "./vascularAccess.data";
@@ -305,10 +309,22 @@ function AppointmentsCard({ record, isEs, today }: Props) {
 
 /* ---------------------------------------------------------------- concern */
 
+function concernDate(iso: string, isEs: boolean) {
+  return new Date(iso).toLocaleDateString(isEs ? "es-US" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/* The member's reports under the button (client, 2026-10-06): they can see
+   what they sent, and edit, delete or resend it. */
 function ConcernCard({ record, store, isEs }: Props) {
-  const [open, setOpen] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [open, setOpen] = useState<AccessConcern | "new" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<AccessConcern | null>(null);
   const pending = openConcerns(record);
+  const reports = concernsNewestFirst(record);
 
   return (
     <Card as="section" padding="small" className="h-full">
@@ -326,32 +342,164 @@ function ConcernCard({ record, store, isEs }: Props) {
           variant="danger"
           className="w-full"
           onClick={() => {
-            setSent(false);
-            setOpen(true);
+            setNotice(null);
+            setOpen("new");
           }}
         >
           <AlertTriangle aria-hidden="true" />
           {isEs ? "Reportar un problema" : "Report a Concern"}
         </Button>
-        {sent ? (
-          <Alert tone="success" onDismiss={() => setSent(false)}>
-            {isEs
-              ? "Enviado a tu equipo de acceso."
-              : "Sent to your access team."}
+        {notice ? (
+          <Alert tone="success" onDismiss={() => setNotice(null)}>
+            {notice}
           </Alert>
+        ) : null}
+
+        {reports.length > 0 ? (
+          <section aria-label={isEs ? "Mis reportes" : "My reports"}>
+            <h3 className="mb-stack-sm text-label-lg text-fg">
+              {isEs ? "Mis Reportes" : "My Reports"}
+            </h3>
+            <ul className="space-y-stack-sm">
+              {reports.map((concern) => (
+                <li
+                  key={concern.id}
+                  className="space-y-stack-xs rounded-card-nested border border-line p-inset-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-inline-sm">
+                    <span className="text-label-md text-fg">
+                      {concern.kinds
+                        .map((id) => {
+                          const kind = CONCERN_KINDS.find((k) => k.id === id);
+                          return kind ? (isEs ? kind.es : kind.en) : id;
+                        })
+                        .join(", ")}
+                    </span>
+                    <Badge
+                      tone={concern.status === "Open" ? "warning" : "success"}
+                    >
+                      {concern.status === "Open"
+                        ? isEs
+                          ? "En revisión"
+                          : "Under review"
+                        : isEs
+                          ? "Revisado"
+                          : "Reviewed"}
+                    </Badge>
+                  </div>
+                  <p className="text-body-sm text-fg-secondary">
+                    {concern.detail}
+                  </p>
+                  <p className="text-caption text-fg-muted">
+                    {isEs ? "Enviado " : "Sent "}
+                    {concernDate(concern.reportedAt, isEs)}
+                    {concern.editedAt
+                      ? ` · ${isEs ? "editado" : "edited"} ${concernDate(concern.editedAt, isEs)}`
+                      : ""}
+                    {concern.resentAt
+                      ? ` · ${isEs ? "reenviado" : "resent"} ${concernDate(concern.resentAt, isEs)}`
+                      : ""}
+                  </p>
+                  <div className="flex flex-wrap gap-inline-xs">
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="ghost"
+                      leadingIcon={<Pencil aria-hidden="true" />}
+                      onClick={() => {
+                        setNotice(null);
+                        setOpen(concern);
+                      }}
+                    >
+                      {isEs ? "Editar" : "Edit"}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="ghost"
+                      leadingIcon={<Send aria-hidden="true" />}
+                      onClick={() => {
+                        store.resendConcern(record.mrn, concern.id);
+                        setNotice(
+                          isEs
+                            ? "Reenviado a tu equipo de acceso."
+                            : "Sent to your access team again.",
+                        );
+                      }}
+                    >
+                      {isEs ? "Reenviar" : "Resend"}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="danger"
+                      appearance="ghost"
+                      leadingIcon={<Trash2 aria-hidden="true" />}
+                      onClick={() => setDeleting(concern)}
+                    >
+                      {isEs ? "Eliminar" : "Delete"}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
       </div>
 
       {open ? (
         <ConcernModal
+          key={open === "new" ? "new" : open.id}
           record={record}
           store={store}
           isEs={isEs}
-          onClose={() => setOpen(false)}
-          onSent={() => {
-            setOpen(false);
-            setSent(true);
+          editing={open === "new" ? undefined : open}
+          onClose={() => setOpen(null)}
+          onSent={(edited) => {
+            setOpen(null);
+            setNotice(
+              edited
+                ? isEs
+                  ? "Cambios enviados a tu equipo de acceso."
+                  : "Your changes were sent to your access team."
+                : isEs
+                  ? "Enviado a tu equipo de acceso."
+                  : "Sent to your access team.",
+            );
           }}
+        />
+      ) : null}
+
+      {deleting ? (
+        <Modal
+          open
+          size="small"
+          onClose={() => setDeleting(null)}
+          title={isEs ? "¿Eliminar este reporte?" : "Delete this report?"}
+          description={
+            isEs
+              ? "Tu equipo de acceso ya no lo verá."
+              : "Your access team will no longer see it."
+          }
+          footer={
+            <>
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={() => setDeleting(null)}
+              >
+                {isEs ? "Cancelar" : "Cancel"}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  store.deleteConcern(record.mrn, deleting.id);
+                  setDeleting(null);
+                }}
+              >
+                {isEs ? "Sí, eliminar" : "Yes, delete"}
+              </Button>
+            </>
+          }
         />
       ) : null}
     </Card>
@@ -362,19 +510,24 @@ function ConcernModal({
   record,
   store,
   isEs,
+  editing,
   onClose,
   onSent,
 }: {
   record: AccessRecord;
   store: VascularAccessStore;
   isEs: boolean;
+  /** A report being changed; absent for a new one. */
+  editing?: AccessConcern;
   onClose: () => void;
-  onSent: () => void;
+  onSent: (edited: boolean) => void;
 }) {
   const photoLog = useAccessPhotos();
-  const [kinds, setKinds] = useState<string[]>([]);
-  const [detail, setDetail] = useState("");
+  const [kinds, setKinds] = useState<string[]>(editing?.kinds ?? []);
+  const [detail, setDetail] = useState(editing?.detail ?? "");
   const [photoId, setPhotoId] = useState<string | null>(null);
+  /* An edit keeps the photo already sent unless a new one is picked. */
+  const [keptImage, setKeptImage] = useState(editing?.imageUrl);
   const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
   const valid = kinds.length > 0 && detail.trim().length > 0;
 
@@ -389,7 +542,15 @@ function ConcernModal({
     <Modal
       open
       onClose={onClose}
-      title={isEs ? "Reportar un problema" : "Report an Access Concern"}
+      title={
+        editing
+          ? isEs
+            ? "Editar reporte"
+            : "Edit Report"
+          : isEs
+            ? "Reportar un problema"
+            : "Report an Access Concern"
+      }
       footer={
         <>
           <Button
@@ -405,16 +566,28 @@ function ConcernModal({
             variant="danger"
             disabled={!valid}
             onClick={() => {
-              store.reportConcern(record.mrn, {
+              const imageUrl = photo ? photo.dataUrl : keptImage;
+              const change = {
                 kinds,
                 detail: detail.trim(),
-                ...(photo ? { imageUrl: photo.dataUrl } : {}),
-              });
+                ...(imageUrl ? { imageUrl } : {}),
+              };
+              if (editing) {
+                store.editConcern(record.mrn, editing.id, change);
+              } else {
+                store.reportConcern(record.mrn, change);
+              }
               if (photo) photoLog.markSent(photo.id);
-              onSent();
+              onSent(Boolean(editing));
             }}
           >
-            {isEs ? "Enviar" : "Send Report"}
+            {editing
+              ? isEs
+                ? "Guardar y enviar"
+                : "Save & Send"
+              : isEs
+                ? "Enviar"
+                : "Send Report"}
           </Button>
         </>
       }
@@ -447,6 +620,24 @@ function ConcernModal({
             />
           )}
         </FormField>
+        {keptImage && !photo ? (
+          <div className="flex items-center gap-inline-md">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+            <img
+              src={keptImage}
+              alt={isEs ? "Foto enviada" : "Photo sent"}
+              className="h-14 w-14 rounded-control object-cover"
+            />
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="ghost"
+              onClick={() => setKeptImage(undefined)}
+            >
+              {isEs ? "Quitar foto" : "Remove photo"}
+            </Button>
+          </div>
+        ) : null}
         <PhotoPicker
           photos={photoLog.photos}
           value={photoId}

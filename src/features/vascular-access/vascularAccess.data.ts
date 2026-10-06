@@ -145,6 +145,10 @@ export type AccessConcern = {
   detail: string;
   imageUrl?: string;
   status: "Open" | "Reviewed";
+  /** ISO 8601. The member changed it after sending. */
+  editedAt?: string;
+  /** ISO 8601. The member sent it to the team again. */
+  resentAt?: string;
 };
 
 /** Who arranges rides: the dialysis center's social worker, as is usual
@@ -671,6 +675,101 @@ export function reportConcern(
       },
     ],
   }));
+}
+
+/* The member's own reports (client, 2026-10-06): they can see what they
+   sent, and edit, delete or resend it. An edit or a resend is new
+   information, so the report opens again for the access team. */
+
+type ConcernChange = Pick<AccessConcern, "kinds" | "detail" | "imageUrl">;
+
+function reopen(record: AccessRecord): AccessRecord {
+  return {
+    ...record,
+    overview: { ...record.overview, status: "Concern Reported" },
+  };
+}
+
+export function editConcern(
+  state: AccessState,
+  mrn: string,
+  concernId: string,
+  change: ConcernChange,
+  now: number,
+): AccessState {
+  return updateRecord(state, mrn, (record) => {
+    if (!record.concerns.some((c) => c.id === concernId)) return record;
+    return reopen({
+      ...record,
+      concerns: record.concerns.map((concern) =>
+        concern.id === concernId
+          ? {
+              ...concern,
+              kinds: change.kinds,
+              detail: change.detail,
+              imageUrl: change.imageUrl,
+              status: "Open" as const,
+              editedAt: new Date(now).toISOString(),
+            }
+          : concern,
+      ),
+    });
+  });
+}
+
+export function resendConcern(
+  state: AccessState,
+  mrn: string,
+  concernId: string,
+  now: number,
+): AccessState {
+  return updateRecord(state, mrn, (record) => {
+    if (!record.concerns.some((c) => c.id === concernId)) return record;
+    return reopen({
+      ...record,
+      concerns: record.concerns.map((concern) =>
+        concern.id === concernId
+          ? {
+              ...concern,
+              status: "Open" as const,
+              resentAt: new Date(now).toISOString(),
+            }
+          : concern,
+      ),
+    });
+  });
+}
+
+/** Removing the last open report clears the "Concern Reported" flag. */
+export function deleteConcern(
+  state: AccessState,
+  mrn: string,
+  concernId: string,
+): AccessState {
+  return updateRecord(state, mrn, (record) => {
+    const concerns = record.concerns.filter((c) => c.id !== concernId);
+    const stillOpen = concerns.some((c) => c.status === "Open");
+    return {
+      ...record,
+      concerns,
+      overview: {
+        ...record.overview,
+        status:
+          !stillOpen && record.overview.status === "Concern Reported"
+            ? "No Active Concern"
+            : record.overview.status,
+      },
+    };
+  });
+}
+
+/** The member's reports, newest activity first. */
+export function concernsNewestFirst(record: AccessRecord): AccessConcern[] {
+  const latest = (c: AccessConcern) =>
+    [c.reportedAt, c.editedAt, c.resentAt].filter(Boolean).sort().at(-1) ?? "";
+  return [...record.concerns].sort((a, b) =>
+    latest(b).localeCompare(latest(a)),
+  );
 }
 
 /** Reviewing the last open concern moves the access to "Follow-Up
