@@ -2,7 +2,7 @@
 
 import { useMedications } from "./useMedications";
 import { outsideShareOf } from "@/features/personal-log/shareLog";
-import { ShareOutsideModal } from "@/features/secure-messages/ShareOutsideCard";
+import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -1093,7 +1093,7 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
         </Button>
         {share.notice}
         {outside ? (
-          <ShareOutsideModal
+          <LazyShareOutsideModal
             isEs={isEs}
             initial={outsideShareOf(
               isEs ? "Mi lista de medicamentos" : "My medication list",

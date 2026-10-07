@@ -48,10 +48,8 @@ import {
 } from "@/components/ui";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { isEmail } from "@/features/personal-log/shareLog";
-import {
-  ShareOutsideModal,
-  type ShareInitial,
-} from "@/features/secure-messages/ShareOutsideCard";
+import type { ShareInitial } from "@/features/secure-messages/ShareOutsideCard";
+import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 import { useDialysisClinic } from "./useDialysisClinic";
 import { clinicOnNephroReach, travelRequestEmail } from "./travelEmail";
 
@@ -436,7 +434,7 @@ export function TravelDialysisSection() {
         component means no state has to be lifted and synced back. */}
       <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
       {outside ? (
-        <ShareOutsideModal
+        <LazyShareOutsideModal
           isEs={isEs}
           initial={outside}
           onShared={shared}

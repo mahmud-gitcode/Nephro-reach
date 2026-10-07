@@ -13,7 +13,7 @@ import {
 } from "./shareLog";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
-import { ShareOutsideModal } from "@/features/secure-messages/ShareOutsideCard";
+import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 
 /* ==========================================================================
    Share this log — download, print, or email to someone the member picks
@@ -161,7 +161,7 @@ export function ShareLogCard({
       </p>
       {share.notice}
       {outside ? (
-        <ShareOutsideModal
+        <LazyShareOutsideModal
           isEs={isEs}
           initial={outsideShareOf(title, fileName, table, isEs)}
           onClose={() => setOutside(false)}

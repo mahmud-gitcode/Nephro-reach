@@ -45,8 +45,21 @@ import path from "node:path";
  * notifications, shared UI), reports, blood pressure, medications,
  * appointments and the live-class schedule. No single app chunk passes
  * 23 KB. Same ~10% headroom rule.
+ *
+ * Raised to 1480 against a measured 1341 (2026-10-07). No dependency was
+ * added. First the weight that was waste: the Share Outside NephroReach
+ * form had been copied into every page that offers it (logs, medications,
+ * travel); it now loads on click (LazyShareOutsideModal), which took 13.5
+ * KB off. The rest is the client's review rounds (2026-10-05 → 10-07):
+ * a Support tab on every dashboard and the admin's Support Inbox, the
+ * secure share page, medication editing, the CCM compliance filter and
+ * checklist, after-hours messaging, safety and sharing notices, clinic
+ * transportation, Before the ER and the vascular access rules. The
+ * largest chunks are still React/Next; no app chunk passes 25 KB. This
+ * total also counts lazy chunks Turbopack emits per route, which only
+ * download when used. Same ~10% headroom rule.
  */
-const BUDGET_KB = 1280;
+const BUDGET_KB = 1480;
 
 const ROOT = ".next/static";
 
