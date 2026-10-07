@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -322,6 +323,8 @@ function MemberTable({
   onFilters: (change: Partial<Filters>) => void;
   onView: (mrn: string) => void;
 }) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -403,36 +406,39 @@ function MemberTable({
           className="lg:ml-auto"
           disabled={filtered.length === 0}
           onClick={() =>
-            downloadText(
-              "member-progress.csv",
-              toCsv([
-                [
-                  "Name",
-                  "MRN",
-                  "Program",
-                  "Module",
-                  "Step",
-                  "Of",
-                  "Progress %",
-                  "Status",
-                ],
-                ...filtered.map((m) => [
-                  m.name,
-                  m.mrn,
-                  m.program,
-                  m.module,
-                  m.step,
-                  m.length,
-                  m.progress,
-                  m.status,
+            share.guard(() =>
+              downloadText(
+                "member-progress.csv",
+                toCsv([
+                  [
+                    "Name",
+                    "MRN",
+                    "Program",
+                    "Module",
+                    "Step",
+                    "Of",
+                    "Progress %",
+                    "Status",
+                  ],
+                  ...filtered.map((m) => [
+                    m.name,
+                    m.mrn,
+                    m.program,
+                    m.module,
+                    m.step,
+                    m.length,
+                    m.progress,
+                    m.status,
+                  ]),
                 ]),
-              ]),
+              ),
             )
           }
         >
           <Download className="h-4 w-4" />
           Export
         </Button>
+        {share.notice}
       </div>
 
       {selected.size > 0 ? (

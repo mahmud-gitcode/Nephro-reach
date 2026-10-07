@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { useDismiss } from "@/lib/utils/useDismiss";
-import { NotificationsMenu } from "./NotificationsMenu";
+import { MessagesMenu, NotificationsMenu } from "./NotificationsMenu";
 import {
   getBreadcrumb,
   getBreadcrumbTrail,
@@ -437,6 +437,8 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         {/* Language Switcher - Compact on mobile, full on desktop */}
         {isUser ? <LanguageSwitcher /> : null}
 
+        {/* Messages beside the bell (client, 2026-10-07). */}
+        <MessagesMenu />
         <NotificationsMenu />
 
         {/* The one loud thing in the bar, and only for members. */}

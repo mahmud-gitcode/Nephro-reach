@@ -10,4 +10,7 @@ export interface DialysisClinic {
    * be stopped by a form over something they already have written down.
    */
   address: string;
+  /** Where a travel request goes when the clinic is not on NephroReach
+   *  (client, 2026-10-07). Optional: most clinics never need it. */
+  email?: string;
 }

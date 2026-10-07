@@ -1,5 +1,8 @@
 "use client";
 
+import { useLanguage } from "@/context/LanguageContext";
+import { useSafetyNotice } from "./useSafetyNotice";
+import { useAfterHoursReply } from "./useAfterHoursReply";
 import { ShareOutsideCard } from "@/features/secure-messages/ShareOutsideCard";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -193,6 +196,11 @@ export default function MemberMessages() {
     clearWriteError,
   } = useMessages();
   const [composing, setComposing] = useState<Compose | null>(null);
+  /* Not an emergency service: the safety notice before every send, and
+     the automatic reply after hours (client, 2026-10-07). */
+  const { language } = useLanguage();
+  const safety = useSafetyNotice(language === "ES");
+  const afterHoursReply = useAfterHoursReply();
 
   /* The member's slice of the one platform-wide store. Their thread with
      the centre is the same record the clinic screen works, so a reply
@@ -285,6 +293,7 @@ export default function MemberMessages() {
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-stack-md">
+      {safety.notice}
       <PageTitle
         href="/dashboard/messages"
         action={
@@ -418,8 +427,15 @@ export default function MemberMessages() {
                         }))
                       }
                       sending={isSending}
+                      confirmSend={safety.guard}
                       onSend={(body, attachment) =>
-                        sendMessage(active.id, body, "member", attachment)
+                        sendMessage(
+                          active.id,
+                          body,
+                          "member",
+                          attachment,
+                          afterHoursReply(),
+                        )
                       }
                       placeholder={`Message ${active.contact.name.split(",")[0]}...`}
                       label={`Message ${active.contact.name}`}
@@ -465,6 +481,7 @@ export default function MemberMessages() {
             value: contact.name,
             label: `${contact.name} · ${contact.role}`,
           }))}
+          confirmSend={safety.guard}
           onSend={(to, body, category) => {
             const contact =
               [
@@ -475,13 +492,16 @@ export default function MemberMessages() {
             const existing = conversations.find(
               (c) => c.contact.name === contact.name,
             );
-            startConversation({
-              memberName,
-              contact,
-              category,
-              body,
-              author: "member",
-            });
+            startConversation(
+              {
+                memberName,
+                contact,
+                category,
+                body,
+                author: "member",
+              },
+              afterHoursReply(),
+            );
             setActiveId(
               existing?.id ?? rules.conversationIdFor(memberName, contact.name),
             );

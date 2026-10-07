@@ -1,13 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import { Car, Check } from "lucide-react";
-import { Button, Card, FormField, Input, Modal } from "@/components/ui";
+import { Car, Check, Plus } from "lucide-react";
+import {
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  Select,
+  SwitchRow,
+} from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import {
   activeTransport,
   formatDay,
   formatTime,
+  MOBILITY_LEVELS,
+  transportFor,
+  upcomingAppointments,
+  type MobilityLevel,
   type AccessRecord,
   type TransportConfirmation,
   type TransportRequest,
@@ -218,10 +230,14 @@ export function RideRequestsPanel({
   /** Opens the patient's access record, where the page has one. */
   onOpen?: (mrn: string) => void;
 }) {
+  /* The ride being booked: by its request, or by the appointment of one
+     just set up by the clinic (its id is made by the store). */
   const [editing, setEditing] = useState<{
     mrn: string;
-    id: string;
+    id?: string;
+    appointmentId?: string;
   } | null>(null);
+  const [settingUp, setSettingUp] = useState(false);
   const rides = records
     .flatMap((record) =>
       activeTransport(record).map((request) => ({ record, request })),
@@ -238,13 +254,28 @@ export function RideRequestsPanel({
   const selected = editing
     ? rides.find(
         (ride) =>
-          ride.record.mrn === editing.mrn && ride.request.id === editing.id,
+          ride.record.mrn === editing.mrn &&
+          (ride.request.id === editing.id ||
+            ride.request.appointmentId === editing.appointmentId),
       )
     : null;
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <h2 className="mb-stack-sm text-heading-4 text-fg">Ride Requests</h2>
+      <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
+        <h2 className="text-heading-4 text-fg">Ride Requests</h2>
+        {/* The clinic arranges rides to access appointments itself, not
+            only when a patient asks (client, 2026-10-07). */}
+        {works ? (
+          <Button
+            size="small"
+            leadingIcon={<Plus aria-hidden="true" />}
+            onClick={() => setSettingUp(true)}
+          >
+            Set Up Transportation
+          </Button>
+        ) : null}
+      </div>
       <p className="mb-stack-md text-caption text-fg-muted">
         {works
           ? "Patients' rides to access appointments come to your social worker. Confirming sends the details to the patient."
@@ -352,6 +383,19 @@ export function RideRequestsPanel({
         </ul>
       )}
 
+      {settingUp ? (
+        <SetUpRideModal
+          records={records}
+          onClose={() => setSettingUp(false)}
+          onSave={(mrn, details) => {
+            store.requestTransport(mrn, details);
+            setSettingUp(false);
+            /* Straight on to booking it. */
+            setEditing({ mrn, appointmentId: details.appointmentId });
+          }}
+        />
+      ) : null}
+
       {selected ? (
         <ConfirmRideModal
           key={selected.request.id}
@@ -366,12 +410,173 @@ export function RideRequestsPanel({
   );
 }
 
+/* ------------------------------------------------- clinic sets up a ride */
+
+/** The dialysis center starts a ride for an upcoming access appointment
+ *  that has none yet; booking it follows (ConfirmRideModal). */
+function SetUpRideModal({
+  records,
+  onSave,
+  onClose,
+}: {
+  records: AccessRecord[];
+  onSave: (
+    mrn: string,
+    details: {
+      appointmentId: string;
+      pickupAddress: string;
+      returnTrip: boolean;
+      mobility: MobilityLevel;
+      memberNote: string;
+    },
+  ) => void;
+  onClose: () => void;
+}) {
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  /* Upcoming appointments with no ride yet, per patient. */
+  const choices = records
+    .map((record) => ({
+      record,
+      open: upcomingAppointments(record, today).filter(
+        (a) => !transportFor(record, a.id),
+      ),
+    }))
+    .filter((c) => c.open.length > 0);
+  const [mrn, setMrn] = useState(choices[0]?.record.mrn ?? "");
+  const chosen = choices.find((c) => c.record.mrn === mrn);
+  const [appointmentId, setAppointmentId] = useState(
+    choices[0]?.open[0]?.id ?? "",
+  );
+  const [pickup, setPickup] = useState("");
+  const [returnTrip, setReturnTrip] = useState(true);
+  const [mobility, setMobility] = useState<MobilityLevel>("ambulatory");
+  const [tried, setTried] = useState(false);
+  const pickupError = pickup.trim() ? undefined : "Enter the pickup address.";
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Set Up Transportation"
+      description="A ride to a vascular access appointment. Next, add the ride details the patient will see."
+      footer={
+        <>
+          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!appointmentId}
+            onClick={() => {
+              setTried(true);
+              if (pickupError || !appointmentId) return;
+              onSave(mrn, {
+                appointmentId,
+                pickupAddress: pickup.trim(),
+                returnTrip,
+                mobility,
+                memberNote: "Arranged by your dialysis center.",
+              });
+            }}
+          >
+            Continue
+          </Button>
+        </>
+      }
+    >
+      {choices.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">
+          Every upcoming access appointment already has a ride.
+        </p>
+      ) : (
+        <div className="space-y-stack-md">
+          <FormField label="Patient" required>
+            {(field) => (
+              <Select
+                {...field}
+                value={mrn}
+                onChange={(e) => {
+                  setMrn(e.target.value);
+                  const next = choices.find(
+                    (c) => c.record.mrn === e.target.value,
+                  );
+                  setAppointmentId(next?.open[0]?.id ?? "");
+                }}
+              >
+                {choices.map(({ record }) => (
+                  <option key={record.mrn} value={record.mrn}>
+                    {record.memberName} · MRN {record.mrn}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <FormField label="Appointment" required>
+            {(field) => (
+              <Select
+                {...field}
+                value={appointmentId}
+                onChange={(e) => setAppointmentId(e.target.value)}
+              >
+                {(chosen?.open ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} · {formatDay(a.date)}, {formatTime(a.time)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <FormField
+            label="Pickup address"
+            required
+            error={tried ? pickupError : undefined}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={pickup}
+                onChange={(e) => setPickup(e.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField label="Mobility">
+            {(field) => (
+              <Select
+                {...field}
+                value={mobility}
+                onChange={(e) => setMobility(e.target.value as MobilityLevel)}
+              >
+                {MOBILITY_LEVELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.en}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <SwitchRow
+            checked={returnTrip}
+            onChange={setReturnTrip}
+            title="Return trip"
+            description="A ride home after the appointment."
+          />
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /** The panel as the clinic's Messages page shows it: only to the people
  *  who book rides, the social worker and the administrator. */
 export function ClinicRideRequests() {
   const { user } = useAuth();
   const store = useVascularAccess();
-  if (!userCan(user, "rides.manage") || store.isPending || store.error) {
+  /* The dialysis center's alone: never on the nephrology office's page. */
+  if (
+    user?.role !== "clinic" ||
+    !userCan(user, "rides.manage") ||
+    store.isPending ||
+    store.error
+  ) {
     return null;
   }
   return (

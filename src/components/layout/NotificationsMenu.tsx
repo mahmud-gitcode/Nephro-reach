@@ -3,7 +3,7 @@
 import { NEPHROLOGY_OFFICE } from "@/features/messaging/messaging.seed";
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, MessageSquareText } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { useLanguage } from "@/context/LanguageContext";
@@ -64,7 +64,11 @@ function BellMenu({
   fromOf,
   children,
   nothingElse,
+  kind = "notifications",
 }: {
+  /** The bell, or the message button beside it (client, 2026-10-07): the
+   *  same menu, its own icon and title. */
+  kind?: "notifications" | "messages";
   count: number;
   inbox: Inbox;
   unread: Conversation[];
@@ -79,6 +83,15 @@ function BellMenu({
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const wrapRef = useDismiss<HTMLDivElement>(open, close);
+  const title =
+    kind === "messages"
+      ? isEs
+        ? "Mensajes"
+        : "Messages"
+      : isEs
+        ? "Notificaciones"
+        : "Notifications";
+  const Icon = kind === "messages" ? MessageSquareText : Bell;
 
   return (
     <div ref={wrapRef} className="relative shrink-0">
@@ -91,11 +104,11 @@ function BellMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={
-          (isEs ? "Notificaciones" : "Notifications") +
+          title +
           (count > 0 ? ` (${count} ${isEs ? "sin leer" : "unread"})` : "")
         }
       >
-        <Bell aria-hidden="true" />
+        <Icon aria-hidden="true" />
       </Button>
       {count > 0 ? (
         <span
@@ -109,16 +122,22 @@ function BellMenu({
       {open ? (
         <div
           role="menu"
-          aria-label={isEs ? "Notificaciones" : "Notifications"}
+          aria-label={title}
           className={`${menuStyles} right-0 w-80 max-w-[calc(100vw-2rem)]`}
         >
           <p className="border-b border-line px-3 pt-1.5 pb-2.5 text-label-lg text-fg">
-            {isEs ? "Notificaciones" : "Notifications"}
+            {title}
           </p>
           {children}
           {unread.length === 0 && nothingElse ? (
             <p className="px-3 py-4 text-body-sm text-fg-muted">
-              {isEs ? "Estás al día." : "You're all caught up."}
+              {kind === "messages"
+                ? isEs
+                  ? "No hay mensajes nuevos."
+                  : "No new messages."
+                : isEs
+                  ? "Estás al día."
+                  : "You're all caught up."}
             </p>
           ) : null}
           {unread.length > 0 ? (
@@ -186,8 +205,6 @@ function AskRow({
 function MemberNotifications() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const memberName = useMemberName();
-  const { conversations } = useMessages();
   const now = useNow();
   const erVisits = useErVisits();
   const meds = useMedications();
@@ -198,11 +215,6 @@ function MemberNotifications() {
   const bpTimes = useBpReminders().times;
   const bp = useBloodPressure();
   const bpDue = dueCheck(bpTimes, bp.readings, new Date(now));
-
-  const threads = messagingRules.memberConversations(conversations, memberName);
-  const unread = messagingRules
-    .sortByRecent(threads)
-    .filter((c) => c.unread > 0 && !c.archived);
 
   /* This week's ER question, until the member answers it. */
   const askEr = !erVisits.isPending && !answerFor(erVisits.log, weekOf(now));
@@ -223,17 +235,13 @@ function MemberNotifications() {
   );
 
   const count =
-    messagingRules.totalUnread(unread) +
-    (askEr ? 1 : 0) +
-    due.length +
-    comingUp.length +
-    (bpDue ? 1 : 0);
+    (askEr ? 1 : 0) + due.length + comingUp.length + (bpDue ? 1 : 0);
 
   return (
     <BellMenu
       count={count}
-      inbox={{ href: "/dashboard/messages", threads }}
-      unread={unread}
+      inbox={null}
+      unread={[]}
       fromOf={(c) => c.contact.name}
       nothingElse={
         !askEr && due.length === 0 && comingUp.length === 0 && !bpDue
@@ -325,35 +333,70 @@ function MemberNotifications() {
   );
 }
 
-function StaffNotifications() {
+/** The signed-in person's own inbox: a member's threads, or their
+ *  office's patient queue. Null for a role with no Messages page. */
+function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
   const { user } = useAuth();
+  const memberName = useMemberName();
   const { conversations } = useMessages();
-  const inbox: Inbox =
-    user?.role === "clinic" && userCan(user, "messages.reply")
-      ? {
-          href: "/dashboard/clinic/messages",
-          threads: messagingRules.clinicConversations(conversations),
-        }
-      : user?.role === "nephrology" && userCan(user, "messages.reply")
-        ? {
-            href: "/dashboard/nephrology/messages",
-            threads: messagingRules.clinicConversations(
-              conversations,
-              NEPHROLOGY_OFFICE.name,
-            ),
-          }
-        : null;
-  const unread = inbox
-    ? messagingRules
-        .sortByRecent(inbox.threads)
-        .filter((c) => c.unread > 0 && !c.archived)
-    : [];
+  if (user?.role === "user") {
+    return {
+      inbox: {
+        href: "/dashboard/messages",
+        threads: messagingRules.memberConversations(conversations, memberName),
+      },
+      fromOf: (c) => c.contact.name,
+    };
+  }
+  const staff = (href: string, threads: Conversation[]) => ({
+    inbox: { href, threads },
+    fromOf: (c: Conversation) => c.memberName,
+  });
+  if (user?.role === "clinic" && userCan(user, "messages.view")) {
+    return staff(
+      "/dashboard/clinic/messages",
+      messagingRules.clinicConversations(conversations),
+    );
+  }
+  if (user?.role === "nephrology" && userCan(user, "messages.view")) {
+    return staff(
+      "/dashboard/nephrology/messages",
+      messagingRules.clinicConversations(conversations, NEPHROLOGY_OFFICE.name),
+    );
+  }
+  /* The access center's threads are with offices, on its own page. */
+  if (user?.role === "access" && userCan(user, "access.messages")) {
+    return staff("/dashboard/access-center/messages", []);
+  }
+  return { inbox: null, fromOf: (c) => c.memberName };
+}
+
+/** The message button beside the bell (client, 2026-10-07). */
+export function MessagesMenu() {
+  const { inbox, fromOf } = useInbox();
+  if (!inbox) return null;
+  const unread = messagingRules
+    .sortByRecent(inbox.threads)
+    .filter((c) => c.unread > 0 && !c.archived);
   return (
     <BellMenu
+      kind="messages"
       count={messagingRules.totalUnread(unread)}
       inbox={inbox}
       unread={unread}
-      fromOf={(c) => c.memberName}
+      fromOf={fromOf}
+      nothingElse
+    />
+  );
+}
+
+function StaffNotifications() {
+  return (
+    <BellMenu
+      count={0}
+      inbox={null}
+      unread={[]}
+      fromOf={() => ""}
       nothingElse
     />
   );

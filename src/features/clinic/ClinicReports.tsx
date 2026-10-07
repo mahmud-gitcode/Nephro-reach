@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -452,6 +453,8 @@ function RecentActivity() {
 
 /* Each report is a CSV of the rows on screen, built in the browser. */
 function CustomReports({ rows }: { rows: RosterMember[] }) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const reports: Array<{
     id: string;
     label: string;
@@ -553,7 +556,12 @@ function CustomReports({ rows }: { rows: RosterMember[] }) {
               type="button"
               disabled={rows.length === 0}
               onClick={() =>
-                downloadText(`${report.id}-report.csv`, toCsv(report.table()))
+                share.guard(() =>
+                  downloadText(
+                    `${report.id}-report.csv`,
+                    toCsv(report.table()),
+                  ),
+                )
               }
               className="flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -578,6 +586,7 @@ function CustomReports({ rows }: { rows: RosterMember[] }) {
           </li>
         ))}
       </ul>
+      {share.notice}
     </Card>
   );
 }
@@ -593,6 +602,7 @@ export default function ClinicReports() {
   const report = rosterReport(rows);
   const programs = [...new Set(roster.map((m) => m.program))].sort();
   const [questionsOpen, setQuestionsOpen] = useState(false);
+  const exportShare = useExternalShare();
 
   function exportReport() {
     downloadText(
@@ -619,7 +629,7 @@ export default function ClinicReports() {
         action={
           <Button
             size="small"
-            onClick={exportReport}
+            onClick={() => exportShare.guard(exportReport)}
             disabled={rows.length === 0}
           >
             <Download className="h-4 w-4" />
@@ -628,6 +638,7 @@ export default function ClinicReports() {
         }
       />
 
+      {exportShare.notice}
       <FilterBar filters={filters} programs={programs} onChange={setFilters} />
 
       <KpiCards

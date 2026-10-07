@@ -688,3 +688,42 @@ describe("the clinic's private patient note", () => {
     ).toBe("Prefers mornings");
   });
 });
+
+describe("after hours", () => {
+  const at = (h: number, m = 0) => new Date(2026, 9, 7, h, m);
+
+  it("is closed before opening and from closing time on", () => {
+    expect(rules.isAfterHours(at(7, 59))).toBe(true);
+    expect(rules.isAfterHours(at(8, 0))).toBe(false);
+    expect(rules.isAfterHours(at(16, 59))).toBe(false);
+    expect(rules.isAfterHours(at(17, 0))).toBe(true);
+    expect(rules.isAfterHours(at(23, 30))).toBe(true);
+  });
+
+  it("follows the office's own hours", () => {
+    const hours = { opensAt: "07:00", closesAt: "19:30" };
+    expect(rules.isAfterHours(at(7, 0), hours)).toBe(false);
+    expect(rules.isAfterHours(at(19, 0), hours)).toBe(false);
+    expect(rules.isAfterHours(at(19, 30), hours)).toBe(true);
+  });
+
+  it("adds the reply without marking the member's message read", () => {
+    const seeded = { conversations: rules.seedConversations(NOW) };
+    const thread = seeded.conversations[0];
+    const sent = rules.appendMessage(seeded, thread.id, "Hello", "member", NOW);
+    const replied = rules.appendAutomatedReply(
+      sent,
+      thread.id,
+      rules.AFTER_HOURS_REPLY,
+      NOW + 1,
+    );
+    const after = replied.conversations.find((c) => c.id === thread.id)!;
+    const before = sent.conversations.find((c) => c.id === thread.id)!;
+    expect(after.unread).toBe(before.unread);
+    expect(after.messages.at(-1)).toMatchObject({
+      author: "clinic",
+      automated: true,
+      body: rules.AFTER_HOURS_REPLY,
+    });
+  });
+});

@@ -89,6 +89,62 @@ export function totalUnread(conversations: Conversation[]): number {
  * because two messages in the same thread in the same millisecond is not a
  * thing a person can do.
  */
+/* --------------------------------------------------------------------------
+   After hours (client, 2026-10-07)
+   --------------------------------------------------------------------------
+   NephroReach is a communication conduit, not an emergency service. A
+   member writing outside office hours gets this back at once, so nobody
+   waits overnight believing someone is reading.
+   -------------------------------------------------------------------------- */
+
+export const AFTER_HOURS_REPLY =
+  "Your secure transmission has been successfully routed and timestamped. Your care coordination team reviews messages during scheduled office hours. If your condition escalates or becomes urgent before your team responds, please call your local clinic's emergency line or contact 911 immediately.";
+
+export const DEFAULT_OFFICE_HOURS = { opensAt: "08:00", closesAt: "17:00" };
+
+const minutesOfDay = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+/** Outside the office's hours, on the office's clock ("HH:MM", 24h). */
+export function isAfterHours(
+  now: Date,
+  hours: { opensAt: string; closesAt: string } = DEFAULT_OFFICE_HOURS,
+): boolean {
+  const t = now.getHours() * 60 + now.getMinutes();
+  return t < minutesOfDay(hours.opensAt) || t >= minutesOfDay(hours.closesAt);
+}
+
+/** Adds NephroReach's automated reply. Unlike a person replying, it does
+ *  not mark the member's message read: nobody has seen it yet. */
+export function appendAutomatedReply(
+  state: MessagingState,
+  conversationId: string,
+  body: string,
+  now: number,
+): MessagingState {
+  return {
+    conversations: state.conversations.map((conversation) =>
+      conversation.id === conversationId
+        ? {
+            ...conversation,
+            messages: [
+              ...conversation.messages,
+              {
+                id: `${conversationId}-auto-${now}`,
+                author: "clinic",
+                body,
+                sentAt: new Date(now).toISOString(),
+                automated: true,
+              },
+            ],
+          }
+        : conversation,
+    ),
+  };
+}
+
 export function appendMessage(
   state: MessagingState,
   conversationId: string,

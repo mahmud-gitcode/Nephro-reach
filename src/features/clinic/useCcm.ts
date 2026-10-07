@@ -104,6 +104,11 @@ export function useCcm() {
       mutate((s) => rules.setKidneyCare(s, mrn, change, today, by)),
     [mutate],
   );
+  const setCompliance = useCallback(
+    (mrn: string, flags: rules.CcmCompliance) =>
+      mutate((s) => rules.setCompliance(s, mrn, flags)),
+    [mutate],
+  );
   const resolveInbox = useCallback(
     (itemId: string) => mutate((s) => rules.resolveInbox(s, itemId)),
     [mutate],
@@ -127,6 +132,7 @@ export function useCcm() {
     completeFollowUp,
     resolveInbox,
     setKidneyCare,
+    setCompliance,
   };
 }
 

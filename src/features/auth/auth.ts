@@ -48,6 +48,7 @@ const ADMIN_PREFIXES = [
   "/dashboard/admin-testimonials",
   "/dashboard/admin-community",
   "/dashboard/design-system",
+  "/dashboard/admin-support",
 ];
 
 export const CLINIC_PREFIX = "/dashboard/clinic";
@@ -125,12 +126,10 @@ export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
   /* An access center sees its own routes and nothing else. */
   if (isAccessCenterRoute(pathname)) return role === "access";
-  /* …and the shared reports and contract pages (2026-10-06). */
+  /* …and the shared contract page (2026-10-06). No reports: the client
+     took them off the access dashboard (2026-10-07). */
   if (role === "access") {
-    return (
-      pathname === "/dashboard/clinic/reports" ||
-      pathname === "/dashboard/clinic/billing"
-    );
+    return pathname === "/dashboard/clinic/billing";
   }
   /* A nephrology office: its own routes, and the clinic's pages except
      the dialysis center's own (travel, its patient inbox, its settings and

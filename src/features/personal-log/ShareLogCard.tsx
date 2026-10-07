@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download, Mail, Printer } from "lucide-react";
+import { Download, Mail, Printer, Share2 } from "lucide-react";
 import { Button, Card, FormField, Input } from "@/components/ui";
 import {
   emailBody,
   isEmail,
   mailtoHref,
+  outsideShareOf,
   toCsv,
   type LogTable,
 } from "./shareLog";
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { ShareOutsideModal } from "@/features/secure-messages/ShareOutsideCard";
 
 /* ==========================================================================
    Share this log — download, print, or email to someone the member picks
@@ -35,6 +39,12 @@ export function ShareLogCard({
   const [to, setTo] = useState("");
   const [tried, setTried] = useState(false);
   const empty = table.rows.length === 0;
+  /* Everything here leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare(isEs);
+  /* Members can also send the log through Share Outside NephroReach, the
+     same secure link as Messages (client, 2026-10-07). */
+  const isMember = useOptionalAuth()?.user?.role === "user";
+  const [outside, setOutside] = useState(false);
   const emailError = isEmail(to)
     ? undefined
     : isEs
@@ -76,16 +86,27 @@ export function ShareLogCard({
           appearance="fill-stroke"
           disabled={empty}
           leadingIcon={<Download aria-hidden="true" />}
-          onClick={download}
+          onClick={() => share.guard(download)}
         >
           {isEs ? "Descargar CSV" : "Download CSV"}
         </Button>
+        {isMember ? (
+          <Button
+            disabled={empty}
+            leadingIcon={<Share2 aria-hidden="true" />}
+            onClick={() => setOutside(true)}
+          >
+            {isEs
+              ? "Compartir Fuera de NephroReach"
+              : "Share Outside NephroReach"}
+          </Button>
+        ) : null}
         <Button
           variant="neutral"
           appearance="fill-stroke"
           disabled={empty}
           leadingIcon={<Printer aria-hidden="true" />}
-          onClick={() => window.print()}
+          onClick={() => share.guard(() => window.print())}
         >
           {isEs ? "Imprimir / PDF" : "Print / PDF"}
         </Button>
@@ -97,11 +118,13 @@ export function ShareLogCard({
           event.preventDefault();
           setTried(true);
           if (emailError || empty) return;
-          window.location.href = mailtoHref(
-            to,
-            title,
-            emailBody(title, table, footer),
-          );
+          share.guard(() => {
+            window.location.href = mailtoHref(
+              to,
+              title,
+              emailBody(title, table, footer),
+            );
+          });
         }}
       >
         <FormField
@@ -136,6 +159,14 @@ export function ShareLogCard({
             ? "Se abre su aplicación de correo con el registro listo para enviar. Adjunte el CSV si lo desea."
             : "Your email app opens with the log ready to send. Attach the CSV if you like."}
       </p>
+      {share.notice}
+      {outside ? (
+        <ShareOutsideModal
+          isEs={isEs}
+          initial={outsideShareOf(title, fileName, table, isEs)}
+          onClose={() => setOutside(false)}
+        />
+      ) : null}
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { LogMediaBar, appendText } from "./LogMediaBar";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -48,6 +49,8 @@ export default function DialysisDaySymptomLogForm({
   onSave,
   isModal = false,
 }: Props) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<number>(1);
@@ -340,9 +343,10 @@ export default function DialysisDaySymptomLogForm({
             </div>
 
             <div className="flex items-center gap-2">
+              {share.notice}
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => share.guard(() => window.print())}
                 className="flex size-9 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand"
                 title="Print"
               >

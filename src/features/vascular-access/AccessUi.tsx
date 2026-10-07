@@ -455,7 +455,11 @@ export function AccessConversationView({
   sending,
   readOnlyReason,
   isEs = false,
+  confirmSend,
 }: {
+  /** Runs before the send, e.g. the safety notice; it calls `send` when
+   *  the member confirms, so a cancel keeps what they typed. */
+  confirmSend?: (send: () => void) => void;
   record: AccessRecord;
   party: AccessParty;
   /** Set when this person's role may not post; shown instead of the
@@ -489,9 +493,15 @@ export function AccessConversationView({
 
   function submit() {
     if (!canSend || sending || !mayPost) return;
-    onSend(draft, manages && isPrivate);
-    setDraft("");
-    setIsPrivate(false);
+    const body = draft;
+    const priv = manages && isPrivate;
+    const send = () => {
+      onSend(body, priv);
+      setDraft("");
+      setIsPrivate(false);
+    };
+    if (confirmSend) confirmSend(send);
+    else send();
   }
 
   return (

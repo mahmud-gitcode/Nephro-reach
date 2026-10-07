@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import { Copy, ExternalLink, Paperclip, Share2 } from "lucide-react";
 import {
@@ -136,17 +137,49 @@ function LinkBox({ token, isEs }: { token: string; isEs: boolean }) {
   );
 }
 
-function ShareModal({ isEs, onClose }: { isEs: boolean; onClose: () => void }) {
+/** What a share starts with when another page opens it: a log, a travel
+ *  request (client, 2026-10-07: anything a member can share goes out the
+ *  same way as Share Outside NephroReach in Messages). */
+export type ShareInitial = {
+  kind?: ShareKind;
+  subject?: string;
+  body?: string;
+  attachment?: ShareAttachment;
+  email?: string;
+  /** The office's name, when it is known. */
+  office?: string;
+};
+
+function ShareModal({
+  isEs,
+  onClose,
+  initial,
+  onShared,
+}: {
+  isEs: boolean;
+  onClose: () => void;
+  initial?: ShareInitial;
+  /** Told once the link is created. */
+  onShared?: () => void;
+}) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare(isEs);
   const me = useMemberName();
   const store = useShares();
   const offices = useOutsideOffices();
-  const [kind, setKind] = useState<ShareKind>("message");
-  const [choice, setChoice] = useState(offices[0]?.name ?? OTHER);
-  const [otherName, setOtherName] = useState("");
-  const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [attachment, setAttachment] = useState<ShareAttachment | null>(null);
+  const [kind, setKind] = useState<ShareKind>(initial?.kind ?? "message");
+  const [choice, setChoice] = useState(() =>
+    initial?.office
+      ? (offices.find((o) => o.name === initial.office)?.name ?? OTHER)
+      : (offices[0]?.name ?? OTHER),
+  );
+  const [otherName, setOtherName] = useState(initial?.office ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [body, setBody] = useState(initial?.body ?? "");
+  const [attachment, setAttachment] = useState<ShareAttachment | null>(
+    initial?.attachment ?? null,
+  );
   const [fileError, setFileError] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -209,26 +242,30 @@ function ShareModal({ isEs, onClose }: { isEs: boolean; onClose: () => void }) {
           <Button
             loading={store.isSaving}
             leadingIcon={<Share2 aria-hidden="true" />}
-            onClick={async () => {
+            onClick={() => {
               setTried(true);
               if (emailError || contentError) return;
-              setToken(
-                await store.create({
-                  patientName: me,
-                  kind,
-                  recipientEmail: email,
-                  recipientOrg,
-                  subject:
-                    subject.trim() ||
-                    SHARE_KINDS.find((k) => k.id === kind)!.en,
-                  body,
-                  ...(attachment ? { attachment } : {}),
-                }),
-              );
+              share.guard(async () => {
+                onShared?.();
+                setToken(
+                  await store.create({
+                    patientName: me,
+                    kind,
+                    recipientEmail: email,
+                    recipientOrg,
+                    subject:
+                      subject.trim() ||
+                      SHARE_KINDS.find((k) => k.id === kind)!.en,
+                    body,
+                    ...(attachment ? { attachment } : {}),
+                  }),
+                );
+              });
             }}
           >
             {isEs ? "Compartir" : "Share"}
           </Button>
+          {share.notice}
         </>
       }
     >
@@ -535,3 +572,6 @@ export function ShareOutsideCard() {
     </section>
   );
 }
+
+/** The Share Outside NephroReach form, for other pages to open. */
+export const ShareOutsideModal = ShareModal;

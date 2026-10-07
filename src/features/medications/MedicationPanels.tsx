@@ -1,11 +1,16 @@
 "use client";
 
+import { useMedications } from "./useMedications";
+import { outsideShareOf } from "@/features/personal-log/shareLog";
+import { ShareOutsideModal } from "@/features/secure-messages/ShareOutsideCard";
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  Pencil,
   Plus,
   Printer,
   Save,
@@ -83,8 +88,11 @@ export function MedicationMasterList({
   reminders,
   onOpenReminderModal,
   onStatusChange,
+  onEdit,
   log,
 }: {
+  /** Opens the edit form for one medication (client, 2026-10-07). */
+  onEdit?: (medication: Medication) => void;
   /** Active / PRN / Paused / Stopped, set by the member (2026-10-05). */
   onStatusChange: (id: string, status: MedicationStatus) => void;
   /** The member's stored list (useMedications). */
@@ -146,6 +154,11 @@ export function MedicationMasterList({
               <TableHeaderCell>
                 {t("medicationsLog.tableHeaders.status")}
               </TableHeaderCell>
+              {onEdit ? (
+                <TableHeaderCell className="text-right">
+                  {isEs ? "Editar" : "Edit"}
+                </TableHeaderCell>
+              ) : null}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -271,6 +284,24 @@ export function MedicationMasterList({
                       ))}
                     </Select>
                   </TableCell>
+                  {onEdit ? (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
+                        leadingIcon={<Pencil aria-hidden="true" />}
+                        aria-label={
+                          isEs
+                            ? `Editar ${medication.name}`
+                            : `Edit ${medication.name}`
+                        }
+                        onClick={() => onEdit(medication)}
+                      >
+                        {isEs ? "Editar" : "Edit"}
+                      </Button>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               );
             })}
@@ -939,9 +970,36 @@ export function AlertsAndMood({
 export function ExportReporting({ log }: { log: MedicationLog }) {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare(isEs);
 
   const [recipient, setRecipient] = useState("nurse");
   const [sent, setSent] = useState(false);
+  /* Share Outside NephroReach, as in Messages (client, 2026-10-07). */
+  const meds = useMedications();
+  const [outside, setOutside] = useState(false);
+  const medicationTable = {
+    header: [
+      "Medication",
+      "Dose",
+      "Route",
+      "Frequency",
+      "Purpose",
+      "Start",
+      "End",
+      "Status",
+    ],
+    rows: meds.medications.map((m) => [
+      m.name,
+      m.dose,
+      m.route,
+      m.frequencyEn,
+      m.purposeEn,
+      m.startDate,
+      m.endDate,
+      m.status,
+    ]),
+  };
 
   /* Three controls, as asked for on the call: Save, Export with a choice of
      recipient, and Download / Print. The three product cards that had grown
@@ -1008,7 +1066,7 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
             )}
           </FormField>
 
-          <Button onClick={() => setSent(true)}>
+          <Button onClick={() => share.guard(() => setSent(true))}>
             <Share2 aria-hidden="true" />
             {isEs ? "Exportar" : "Export"}
           </Button>
@@ -1019,11 +1077,33 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
         <Button
           variant="neutral"
           appearance="fill-stroke"
-          onClick={() => window.print()}
+          onClick={() => share.guard(() => window.print())}
         >
           <Printer aria-hidden="true" />
           {isEs ? "Descargar / Imprimir" : "Download / Print"}
         </Button>
+        <Button
+          disabled={meds.medications.length === 0}
+          onClick={() => setOutside(true)}
+        >
+          <Share2 aria-hidden="true" />
+          {isEs
+            ? "Compartir Fuera de NephroReach"
+            : "Share Outside NephroReach"}
+        </Button>
+        {share.notice}
+        {outside ? (
+          <ShareOutsideModal
+            isEs={isEs}
+            initial={outsideShareOf(
+              isEs ? "Mi lista de medicamentos" : "My medication list",
+              "medication-list",
+              medicationTable,
+              isEs,
+            )}
+            onClose={() => setOutside(false)}
+          />
+        ) : null}
       </div>
 
       {/* Said plainly rather than letting a member believe it was sent. */}

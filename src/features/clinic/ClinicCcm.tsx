@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
@@ -7,6 +8,7 @@ import {
   ChevronDown,
   Circle,
   CircleCheck,
+  CircleMinus,
   CircleAlert,
   Clock,
   Download,
@@ -50,6 +52,7 @@ import {
   TableHeaderCell,
   TableRow,
   TableThumb,
+  SwitchRow,
   Tabs,
   TabPanel,
   Textarea,
@@ -94,6 +97,11 @@ import {
   sortWorklist,
   usDate,
   worklist,
+  CCM_CHECKLIST_DISCLAIMER,
+  REQUIREMENT_STATUS_MEANING,
+  billingQueue,
+  CCM_BILLING_DEACTIVATED,
+  type CcmCompliance,
   withFeed,
   worklistCsv,
   ccmPatientsOf,
@@ -170,6 +178,7 @@ const requirementLabel: Record<RequirementStatus, string> = {
   complete: "Complete",
   "in-progress": "In Progress",
   missing: "Missing",
+  "not-applicable": "Not Applicable",
 };
 
 const REQUIRED = CCM_REQUIREMENTS.length;
@@ -490,6 +499,8 @@ function Worklist({
   onManageLibrary?: () => void;
   onOpen: (mrn: string) => void;
 }) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const [filters, setFilters] = useState<WorklistFilters>({
     query: "",
     provider: ALL,
@@ -522,15 +533,18 @@ function Worklist({
         }
         canExport={shown.length > 0}
         onExport={() =>
-          downloadCsv(
-            `ccm-worklist-${month}.csv`,
-            worklistCsv(shown, month, library),
+          share.guard(() =>
+            downloadCsv(
+              `ccm-worklist-${month}.csv`,
+              worklistCsv(shown, month, library),
+            ),
           )
         }
         library={library}
         onManageLibrary={onManageLibrary}
       />
 
+      {share.notice}
       <Table minWidth={1080}>
         <TableHead>
           <TableRow>
@@ -923,12 +937,15 @@ function ActivityForm({
   today,
   prefill,
   onDone,
+  locked = false,
 }: {
   mrn: string;
   store: CcmStore;
   today: string;
   prefill?: ActivityPrefill;
   onDone: () => void;
+  /** CCM billing is deactivated for this patient: nothing can be saved. */
+  locked?: boolean;
 }) {
   const [type, setType] = useState(prefill?.type ?? "");
   const [date, setDate] = useState(today);
@@ -974,7 +991,7 @@ function ActivityForm({
 
   function save() {
     setTried(true);
-    if (!valid || timer.running) return;
+    if (locked || !valid || timer.running) return;
     store.addActivity({
       mrn,
       type,
@@ -1005,6 +1022,7 @@ function ActivityForm({
       aria-label="Add CCM activity"
       className="mb-stack-lg space-y-stack-md rounded-card-nested border border-line p-inset-md"
     >
+      {locked ? <ComplianceBadge /> : null}
       <div>
         <h3 className="text-heading-5 text-fg">Add CCM Activity</h3>
         <p className="mt-stack-xs text-caption text-fg-muted">
@@ -1122,6 +1140,7 @@ function ActivityForm({
               variant="neutral"
               appearance="fill-stroke"
               onClick={timer.start}
+              disabled={locked}
               leadingIcon={<Play aria-hidden="true" />}
             >
               Start Timer
@@ -1252,9 +1271,59 @@ function ActivityForm({
         >
           Cancel
         </Button>
-        <Button size="small" onClick={save} disabled={timer.running}>
+        <Button size="small" onClick={save} disabled={locked || timer.running}>
           Save Activity
         </Button>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------- compliance filter */
+
+/** The client's soft compliance badge (2026-10-07). */
+function ComplianceBadge() {
+  return (
+    <Alert tone="warning" live={false}>
+      {CCM_BILLING_DEACTIVATED}
+    </Alert>
+  );
+}
+
+/** Whether the patient is on dialysis, or under home health or hospice:
+ *  either takes them out of the CCM billing queue. */
+function ComplianceSection({
+  row,
+  canEdit,
+  onChange,
+}: {
+  row: WorklistRow;
+  canEdit: boolean;
+  onChange: (flags: CcmCompliance) => void;
+}) {
+  const flags: CcmCompliance = {
+    isOnDialysis: Boolean(row.isOnDialysis),
+    isOnHomeHealthOrHospice: Boolean(row.isOnHomeHealthOrHospice),
+  };
+  return (
+    <section className="space-y-stack-sm">
+      <h3 className="text-heading-5 text-fg">CCM Billing Eligibility</h3>
+      {row.billingBlocked ? <ComplianceBadge /> : null}
+      <div className="space-y-stack-xs">
+        <SwitchRow
+          checked={flags.isOnDialysis ?? false}
+          disabled={!canEdit}
+          onChange={(on) => onChange({ ...flags, isOnDialysis: on })}
+          title="On dialysis (ESRD)"
+          description="Receiving maintenance dialysis."
+        />
+        <SwitchRow
+          checked={flags.isOnHomeHealthOrHospice ?? false}
+          disabled={!canEdit}
+          onChange={(on) => onChange({ ...flags, isOnHomeHealthOrHospice: on })}
+          title="Home health or hospice"
+          description="Under a home health or hospice plan of care."
+        />
       </div>
     </section>
   );
@@ -1277,6 +1346,7 @@ const requirementGlyph: Record<
   complete: { icon: CircleCheck, className: "text-success" },
   "in-progress": { icon: Clock, className: "text-warning-glyph" },
   missing: { icon: Circle, className: "text-fg-subtle" },
+  "not-applicable": { icon: CircleMinus, className: "text-fg-muted" },
 };
 
 /* One checklist item: its state at a glance (glyph, then a caption with the
@@ -1310,7 +1380,9 @@ function RequirementRow({
       ? `Completed ${usDate(current.date)}`
       : status === "in-progress"
         ? "Under way"
-        : "Not yet completed";
+        : status === "not-applicable"
+          ? "Does not apply"
+          : "Not yet completed";
 
   const saveNote = (value: string) => {
     const detail = value.trim();
@@ -1378,6 +1450,7 @@ function RequirementRow({
               store.setRequirement(mrn, id, {
                 met: next === "complete",
                 inProgress: next === "in-progress",
+                notApplicable: next === "not-applicable",
                 date: next === "complete" ? (current.date ?? today) : undefined,
               });
             }}
@@ -1906,6 +1979,12 @@ function PatientModal({
           }
         />
 
+        <ComplianceSection
+          row={row}
+          canEdit={canLog}
+          onChange={(flags) => store.setCompliance(row.mrn, flags)}
+        />
+
         <ConditionsSection
           values={row.conditions}
           library={library}
@@ -1919,10 +1998,27 @@ function PatientModal({
               CCM Checklist (Tracking Only)
             </h3>
             <span className="text-caption text-fg-muted">
-              {row.met} of {REQUIRED} complete · documentation remains in the
-              practice EHR
+              {row.met} of {REQUIRED} complete or not applicable
             </span>
           </div>
+          {/* The client's disclaimer and status meanings (2026-10-07). */}
+          <p className="mb-stack-sm text-caption text-fg-muted">
+            {CCM_CHECKLIST_DISCLAIMER}
+          </p>
+          <dl className="mb-stack-sm grid gap-x-inline-lg gap-y-stack-xs text-caption sm:grid-cols-2">
+            {(Object.keys(requirementLabel) as RequirementStatus[]).map(
+              (value) => (
+                <div key={value} className="min-w-0">
+                  <dt className="inline text-label-sm text-fg">
+                    {requirementLabel[value]}:{" "}
+                  </dt>
+                  <dd className="inline text-fg-muted">
+                    {REQUIREMENT_STATUS_MEANING[value]}
+                  </dd>
+                </div>
+              ),
+            )}
+          </dl>
           <ul className="divide-y divide-line-subtle rounded-card-nested border border-line p-inset-md">
             {CCM_REQUIREMENTS.map((requirement) => (
               <RequirementRow
@@ -1972,6 +2068,7 @@ function PatientModal({
             store={store}
             today={today}
             prefill={prefill}
+            locked={row.billingBlocked}
             onDone={() => setAdding(false)}
           />
         ) : null}
@@ -2336,6 +2433,10 @@ export default function ClinicCcm() {
   const checkInCount = checkInRows.filter(
     (row) => row.status !== "Completed",
   ).length;
+  /* Dialysis, home health or hospice charts leave the billing queue
+     (client, 2026-10-07); they are listed apart, still openable. */
+  const queue = useMemo(() => billingQueue(rows), [rows]);
+  const deactivated = rows.filter((row) => row.billingBlocked);
   const openRow = rows.find((row) => row.mrn === openMrn) ?? null;
   const count = (label: string, n: number) =>
     n > 0 ? `${label} (${n})` : label;
@@ -2367,33 +2468,33 @@ export default function ClinicCcm() {
           <KeyCard
             tone="brand"
             icon={<UsersSolid />}
-            value={rows.length}
+            value={queue.length}
             label="Enrolled Patients"
             note={`Active in ${monthLabel(month)}`}
           />
           <KeyCard
             tone="danger"
             icon={<AlertTriangleSolid />}
-            value={countStatus(rows, "Action Needed")}
+            value={countStatus(queue, "Action Needed")}
             label="Action Needed"
             note="Open alert or overdue follow-up"
           />
           <KeyCard
             tone="warning"
             icon={<ClockSolid />}
-            value={countStatus(rows, "Below Threshold")}
+            value={countStatus(queue, "Below Threshold")}
             label={`Below ${CCM_THRESHOLD_MINUTES} Minutes`}
             note={`0–${CCM_THRESHOLD_MINUTES - 1} minutes recorded`}
           />
           <KeyCard
             tone="success"
             icon={<CheckCircleSolid />}
-            value={countStatus(rows, "Ready for Review")}
+            value={countStatus(queue, "Ready for Review")}
             label="Ready for Review"
             note={`${CCM_THRESHOLD_MINUTES}+ minutes · practice review required`}
           />
         </section>
-        <StatusSplit rows={rows} />
+        <StatusSplit rows={queue} />
 
         <Card as="section" padding="none" className="min-w-0 overflow-hidden">
           <div className="p-card pb-stack-lg">
@@ -2416,7 +2517,7 @@ export default function ClinicCcm() {
           </div>
           <TabPanel id="worklist" value={tab}>
             <Worklist
-              rows={rows}
+              rows={queue}
               month={month}
               library={library}
               onManageLibrary={
@@ -2444,6 +2545,50 @@ export default function ClinicCcm() {
             for billing. NephroReach tracks time and makes no medical decisions.
           </p>
         </Card>
+
+        {deactivated.length > 0 ? (
+          <Card as="section" padding="small">
+            <h2 className="text-heading-4 text-fg">
+              CCM Billing Deactivated ({deactivated.length})
+            </h2>
+            <p className="mt-stack-xs text-body-sm text-fg-muted">
+              On dialysis, home health or hospice. Not in the billing queue and
+              no CCM time can be saved.
+            </p>
+            <ul className="mt-stack-md divide-y divide-line-subtle">
+              {deactivated.map((row) => (
+                <li
+                  key={row.mrn}
+                  className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-label-lg text-fg">
+                      {row.name}
+                    </span>
+                    <span className="block text-caption text-fg-muted">
+                      MRN {row.mrn} ·{" "}
+                      {[
+                        row.isOnDialysis ? "On dialysis (ESRD)" : null,
+                        row.isOnHomeHealthOrHospice
+                          ? "Home health or hospice"
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-inline-md">
+                    <Badge tone="warning">Billing deactivated</Badge>
+                    <OpenButton
+                      name={row.name}
+                      onOpen={() => setOpenMrn(row.mrn)}
+                    />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         {openRow ? (
           <PatientModal

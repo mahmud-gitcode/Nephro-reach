@@ -37,6 +37,13 @@ export function useMedications() {
         ),
       [mutateAsync],
     ),
+    update: useCallback(
+      (id: string, change: rules.MedicationChange, today: string) =>
+        mutateAsync((current) =>
+          rules.updateMedication(current, id, change, today),
+        ),
+      [mutateAsync],
+    ),
     remove: useCallback(
       (id: string) => mutate((current) => rules.removeMedication(current, id)),
       [mutate],

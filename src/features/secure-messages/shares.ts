@@ -32,6 +32,13 @@ export const SHARE_KINDS = [
   },
   { id: "appointment", en: "Appointment request", es: "Solicitud de cita" },
   { id: "document", en: "Document or photo", es: "Documento o foto" },
+  /* Anything a member can share goes the same way (client, 2026-10-07). */
+  { id: "log", en: "Health log", es: "Registro de salud" },
+  {
+    id: "travel",
+    en: "Travel dialysis request",
+    es: "Solicitud de diálisis en viaje",
+  },
 ] as const;
 export type ShareKind = (typeof SHARE_KINDS)[number]["id"];
 

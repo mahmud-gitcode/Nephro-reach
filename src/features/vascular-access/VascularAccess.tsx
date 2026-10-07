@@ -1,5 +1,6 @@
 "use client";
 
+import { useSafetyNotice } from "@/features/messaging/useSafetyNotice";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -522,6 +523,7 @@ function ConcernModal({
   onClose: () => void;
   onSent: (edited: boolean) => void;
 }) {
+  const safety = useSafetyNotice(isEs);
   const photoLog = useAccessPhotos();
   const [kinds, setKinds] = useState<string[]>(editing?.kinds ?? []);
   const [detail, setDetail] = useState(editing?.detail ?? "");
@@ -565,21 +567,23 @@ function ConcernModal({
             size="small"
             variant="danger"
             disabled={!valid}
-            onClick={() => {
-              const imageUrl = photo ? photo.dataUrl : keptImage;
-              const change = {
-                kinds,
-                detail: detail.trim(),
-                ...(imageUrl ? { imageUrl } : {}),
-              };
-              if (editing) {
-                store.editConcern(record.mrn, editing.id, change);
-              } else {
-                store.reportConcern(record.mrn, change);
-              }
-              if (photo) photoLog.markSent(photo.id);
-              onSent(Boolean(editing));
-            }}
+            onClick={() =>
+              safety.guard(() => {
+                const imageUrl = photo ? photo.dataUrl : keptImage;
+                const change = {
+                  kinds,
+                  detail: detail.trim(),
+                  ...(imageUrl ? { imageUrl } : {}),
+                };
+                if (editing) {
+                  store.editConcern(record.mrn, editing.id, change);
+                } else {
+                  store.reportConcern(record.mrn, change);
+                }
+                if (photo) photoLog.markSent(photo.id);
+                onSent(Boolean(editing));
+              })
+            }
           >
             {editing
               ? isEs
@@ -592,6 +596,7 @@ function ConcernModal({
         </>
       }
     >
+      {safety.notice}
       <div className="space-y-stack-md">
         <ChipGroup label={isEs ? "¿Qué notas?" : "What are you noticing?"}>
           {CONCERN_KINDS.map((kind) => (
@@ -1000,53 +1005,58 @@ function ConversationModal({
   isEs: boolean;
   onClose: () => void;
 }) {
+  const safety = useSafetyNotice(isEs);
   const photoLog = useAccessPhotos();
   const [photoId, setPhotoId] = useState<string | null>(null);
   const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      size="wide"
-      title={isEs ? "Equipo de acceso" : "Access care team"}
-      description={
-        isEs
-          ? "Tu centro de acceso vascular y tu centro de diálisis ven esta conversación, salvo lo que marques como privado."
-          : "Your vascular access center and your dialysis center see this conversation, except what you mark private."
-      }
-    >
-      <AccessConversationView
-        record={record}
-        party="member"
-        myName={record.memberName}
-        isEs={isEs}
-        sending={store.isSaving}
-        attachedUrl={photo?.dataUrl}
-        attach={
-          <PhotoPicker
-            photos={photoLog.photos}
-            value={photoId}
-            onChange={setPhotoId}
-            isEs={isEs}
-          />
+    <>
+      {safety.notice}
+      <Modal
+        open
+        onClose={onClose}
+        size="wide"
+        title={isEs ? "Equipo de acceso" : "Access care team"}
+        description={
+          isEs
+            ? "Tu centro de acceso vascular y tu centro de diálisis ven esta conversación, salvo lo que marques como privado."
+            : "Your vascular access center and your dialysis center see this conversation, except what you mark private."
         }
-        onSend={(body, isPrivate) => {
-          store.sendMessage(record.mrn, "member", record.memberName, body, {
-            imageUrl: photo?.dataUrl,
-            private: isPrivate,
-          });
-          if (photo) photoLog.markSent(photo.id);
-          setPhotoId(null);
-        }}
-        onSetPrivate={(messageId, isPrivate) =>
-          store.setMessagePrivate(record.mrn, messageId, isPrivate, "member")
-        }
-        onSetDialysisCanPost={(allowed) =>
-          store.setDialysisCanPost(record.mrn, allowed, "member")
-        }
-      />
-    </Modal>
+      >
+        <AccessConversationView
+          record={record}
+          party="member"
+          myName={record.memberName}
+          isEs={isEs}
+          sending={store.isSaving}
+          attachedUrl={photo?.dataUrl}
+          attach={
+            <PhotoPicker
+              photos={photoLog.photos}
+              value={photoId}
+              onChange={setPhotoId}
+              isEs={isEs}
+            />
+          }
+          confirmSend={safety.guard}
+          onSend={(body, isPrivate) => {
+            store.sendMessage(record.mrn, "member", record.memberName, body, {
+              imageUrl: photo?.dataUrl,
+              private: isPrivate,
+            });
+            if (photo) photoLog.markSent(photo.id);
+            setPhotoId(null);
+          }}
+          onSetPrivate={(messageId, isPrivate) =>
+            store.setMessagePrivate(record.mrn, messageId, isPrivate, "member")
+          }
+          onSetDialysisCanPost={(allowed) =>
+            store.setDialysisCanPost(record.mrn, allowed, "member")
+          }
+        />
+      </Modal>
+    </>
   );
 }
 

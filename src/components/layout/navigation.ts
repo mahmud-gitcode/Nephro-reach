@@ -98,7 +98,7 @@ export const sidebarItems: NavItem[] = [
     roles: ["user"],
   },
   {
-    label: "Beyond the Chair",
+    label: "Daily Check-in",
     href: "/dashboard/beyond-the-chair",
     icon: Armchair,
     roles: ["user"],
@@ -345,7 +345,7 @@ export const sidebarItems: NavItem[] = [
     label: "Reports",
     href: "/dashboard/clinic/reports",
     icon: BarChart3,
-    roles: ["clinic", "nephrology", "access"],
+    roles: ["clinic", "nephrology"],
     permission: "reports.view",
   },
   {
@@ -385,11 +385,26 @@ export const supportItems: NavItem[] = [
     roles: ["clinic"],
     permission: "settings.manage",
   },
+  /* A Support tab on every dashboard (client, 2026-10-07). */
   {
-    label: "Help & Support",
+    label: "Support",
     href: "/dashboard/clinic/support",
     icon: HelpCircle,
     roles: ["clinic", "nephrology"],
+  },
+  {
+    label: "Support",
+    href: "/dashboard/access-center/support",
+    icon: HelpCircle,
+    roles: ["access"],
+  },
+  /* Where every dashboard's support requests, and organizations asking
+     about NephroReach from a secure share, arrive. */
+  {
+    label: "Support Inbox",
+    href: "/dashboard/admin-support",
+    icon: HelpCircle,
+    roles: ["admin"],
   },
   {
     label: "Staff & Roles",
@@ -414,6 +429,10 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Sistema de Diseño" : "Design System";
   if (pathname.startsWith("/dashboard/access-center/team"))
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/access-center/support"))
+    return language === "ES" ? "Soporte" : "Support";
+  if (pathname.startsWith("/dashboard/admin-support"))
+    return language === "ES" ? "Bandeja de Soporte" : "Support Inbox";
   if (pathname.startsWith("/dashboard/access-center/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/nephrology/team"))
@@ -461,7 +480,7 @@ export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/clinic/settings"))
     return language === "ES" ? "Configuración" : "Settings";
   if (pathname.startsWith("/dashboard/clinic/support"))
-    return language === "ES" ? "Ayuda y Soporte" : "Help & Support";
+    return language === "ES" ? "Soporte" : "Support";
   if (pathname === "/dashboard/clinic" || pathname === "/dashboard/clinic/")
     return language === "ES" ? "Panel" : "Dashboard";
   if (pathname.startsWith("/dashboard/before-the-er/")) {
@@ -527,7 +546,7 @@ export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/manage-curriculum"))
     return language === "ES" ? "Gestión de Clases" : "Class Management";
   if (pathname.startsWith("/dashboard/beyond-the-chair"))
-    return language === "ES" ? "Más Allá del Sillón" : "Beyond the Chair";
+    return language === "ES" ? "Registro Diario" : "Daily Check-in";
   /* A trip's own page, before the section prefix below can swallow it. */
   if (/^\/dashboard\/travel-log\/[^/]+$/.test(pathname))
     return language === "ES" ? "Viaje" : "Trip";
@@ -613,7 +632,7 @@ export function getNavLabel(
     "/dashboard/table-talk": "Dialysis Table Talk",
     "/dashboard/manage-table-talk": "Gestión de Table Talk",
     "/dashboard/travel-log": "Registro de Diálisis en Viaje",
-    "/dashboard/beyond-the-chair": "Más Allá del Sillón",
+    "/dashboard/beyond-the-chair": "Registro Diario",
     "/dashboard/personal-log/dialysis-management": "Gestión de Diálisis",
     "/dashboard/vascular-access": "Acceso Vascular",
     "/dashboard/live-class": "Clases en Vivo",
@@ -648,7 +667,9 @@ export function getNavLabel(
     "/dashboard/nephrology/team": "Personal y Roles",
     "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",
-    "/dashboard/clinic/support": "Ayuda y Soporte",
+    "/dashboard/clinic/support": "Soporte",
+    "/dashboard/access-center/support": "Soporte",
+    "/dashboard/admin-support": "Bandeja de Soporte",
   };
   return spanishLabels[href] || defaultLabel;
 }

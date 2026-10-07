@@ -18,6 +18,7 @@ function parse(value: unknown): DialysisClinic {
        clinic's address to their name would be a false record of where they
        go three times a week. */
     address: typeof raw.address === "string" ? raw.address : "",
+    email: typeof raw.email === "string" ? raw.email : "",
   };
 }
 
@@ -35,6 +36,7 @@ export async function saveClinic(
     name: clinic.name.trim(),
     phone: clinic.phone.trim(),
     address: clinic.address.trim(),
+    email: (clinic.email ?? "").trim(),
   });
 }
 

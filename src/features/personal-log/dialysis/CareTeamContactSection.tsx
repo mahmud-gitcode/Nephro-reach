@@ -1,5 +1,7 @@
 "use client";
 
+import { useSafetyNotice } from "@/features/messaging/useSafetyNotice";
+import { useAfterHoursReply } from "@/features/messaging/useAfterHoursReply";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Send } from "lucide-react";
@@ -82,6 +84,8 @@ export default function CareTeamContactSection({
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const safety = useSafetyNotice(isEs);
+  const afterHoursReply = useAfterHoursReply();
   const REASONS = reasonsFor(isHome);
   const photoLog = useAccessPhotos();
 
@@ -125,22 +129,26 @@ export default function CareTeamContactSection({
       .join(", ");
 
     const text = body.trim();
-    messaging.sendMessage(
-      activeThread,
-      subject ? `[${subject}] ${text}`.trim() : text,
-      "member",
-      photo ? photoAttachment(photo, isEs) : undefined,
-    );
-    if (photo) photoLog.markSent(photo.id);
+    safety.guard(() => {
+      messaging.sendMessage(
+        activeThread,
+        subject ? `[${subject}] ${text}`.trim() : text,
+        "member",
+        photo ? photoAttachment(photo, isEs) : undefined,
+        afterHoursReply(),
+      );
+      if (photo) photoLog.markSent(photo.id);
 
-    setBody("");
-    setReasons([]);
-    setPhotoId(null);
-    setSent(true);
+      setBody("");
+      setReasons([]);
+      setPhotoId(null);
+      setSent(true);
+    });
   };
 
   return (
     <Card as="section" padding="small">
+      {safety.notice}
       <SectionTitle
         title={isEs ? "Enviar Mensaje a mi Equipo" : "Message My Care Team"}
         action={

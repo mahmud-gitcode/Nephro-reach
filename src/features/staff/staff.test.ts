@@ -267,7 +267,7 @@ describe("the Vascular Access Center's own roles (client, 2026-10-06)", () => {
 
   it("lets billing staff reach reports and billing, not the workspace", () => {
     expect(canAccessPath("access", "/dashboard/clinic/billing")).toBe(true);
-    expect(canAccessPath("access", "/dashboard/clinic/reports")).toBe(true);
+    expect(canAccessPath("access", "/dashboard/clinic/reports")).toBe(false);
     expect(canAccessPath("access", "/dashboard/clinic")).toBe(false);
   });
 });

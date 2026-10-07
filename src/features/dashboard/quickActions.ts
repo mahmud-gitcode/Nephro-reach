@@ -112,8 +112,9 @@ export const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     id: "check-in",
-    en: "Check-In",
-    es: "Registro",
+    /* Renamed from Beyond the Chair (client, 2026-10-07). */
+    en: "Daily Check-in",
+    es: "Registro Diario",
     href: "/dashboard/beyond-the-chair",
   },
 ];

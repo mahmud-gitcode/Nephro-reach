@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   SEED_MEDICATIONS,
+  changeFrom,
+  updateMedication,
   addMedication,
   doseRows,
   medicationError,
@@ -113,5 +115,47 @@ describe("status and the dose schedule (client, 2026-10-05)", () => {
   it("sets a status by id", () => {
     const list = setMedicationStatus([added("Active")], "med-1", "PRN");
     expect(list[0].status).toBe("PRN");
+  });
+});
+
+describe("editing a medication", () => {
+  const first = SEED_MEDICATIONS[0];
+
+  it("changes the dose and frequency and records both", () => {
+    const change = {
+      ...changeFrom(first),
+      dose: "20 mg",
+      frequency: "Twice daily",
+    };
+    const [after] = updateMedication([first], first.id, change, "2026-10-07");
+    expect(after.dose).toBe("20 mg");
+    expect(after.frequencyEn).toBe("Twice daily");
+    expect(after.frequencyEs).toBe("Dos veces al día");
+    expect(after.history).toEqual([
+      { date: "2026-10-07", field: "Dose", from: first.dose, to: "20 mg" },
+      {
+        date: "2026-10-07",
+        field: "Frequency",
+        from: first.frequencyEn,
+        to: "Twice daily",
+      },
+    ]);
+  });
+
+  it("records nothing when nothing changed", () => {
+    const [after] = updateMedication(
+      [first],
+      first.id,
+      changeFrom(first),
+      "2026-10-07",
+    );
+    expect(after).toBe(first);
+  });
+
+  it("stops a medication whose new end date has passed", () => {
+    const change = { ...changeFrom(first), endDate: "2026-10-01" };
+    const [after] = updateMedication([first], first.id, change, "2026-10-07");
+    expect(after.status).toBe("Stopped");
+    expect(after.endDate).toBe("10/01/2026");
   });
 });

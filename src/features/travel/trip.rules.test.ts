@@ -731,12 +731,10 @@ describe("the status timeline", () => {
 
   it("dates a milestone from when it was actually reached", () => {
     const later = new Date(2026, 8, 14, 9, 40, 0);
-    const [trip] = updateTripStatus(
-      [emptyTrip(AT)],
-      emptyTrip(AT).id,
-      "records-sent",
-      later,
-    );
+    /* One trip, not two calls: the id comes from the real clock, and two
+       calls a millisecond apart would not match. */
+    const start = emptyTrip(AT);
+    const [trip] = updateTripStatus([start], start.id, "records-sent", later);
     const milestones = tripMilestones({ ...trip, id: trip.id });
 
     expect(milestones[0].at).toBe(AT.toISOString());
@@ -995,12 +993,8 @@ describe("attaching a document", () => {
   it("ticks the checklist row it belongs to", () => {
     // Attaching a file IS the member saying they have that one, so leaving
     // the tick to a second action would let the two disagree.
-    const [trip] = attachDocumentFile(
-      [emptyTrip(NOW)],
-      emptyTrip(NOW).id,
-      described(),
-      NOW,
-    );
+    const start = emptyTrip(NOW);
+    const [trip] = attachDocumentFile([start], start.id, described(), NOW);
     expect(trip.documentsReady).toContain("recent-labs");
     expect(filesForDocument(trip, "recent-labs")).toHaveLength(1);
   });

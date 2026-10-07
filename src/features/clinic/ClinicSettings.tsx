@@ -562,6 +562,51 @@ function OfficePreferencesCard({
             </Select>
           )}
         </FormField>
+        {/* Office hours and on-call (client, 2026-10-07). */}
+        <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
+          <FormField label="Office Opens">
+            {(props) => (
+              <Input
+                {...props}
+                type="time"
+                inputSize="small"
+                value={office.opensAt ?? "08:00"}
+                onChange={(event) => set("opensAt", event.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField label="Office Closes">
+            {(props) => (
+              <Input
+                {...props}
+                type="time"
+                inputSize="small"
+                value={office.closesAt ?? "17:00"}
+                onChange={(event) => set("closesAt", event.target.value)}
+              />
+            )}
+          </FormField>
+        </div>
+        <p className="text-caption text-fg-muted">
+          Patients who message outside these hours get an automatic reply
+          telling them when the team reviews messages and to call 911 in an
+          emergency.
+        </p>
+        <FormField
+          label="On-Call Nurse Manager Phone"
+          hint="If an after-hours message is still unread after 2 hours, an SMS alert goes to this number (once the server is connected)."
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="tel"
+              inputSize="small"
+              value={office.onCallPhone ?? ""}
+              placeholder="(803) 555-0100"
+              onChange={(event) => set("onCallPhone", event.target.value)}
+            />
+          )}
+        </FormField>
         {/* The app already has a language setting; this is it, not a copy
             that would disagree with the switcher in the header. */}
         <FormField label="Language">

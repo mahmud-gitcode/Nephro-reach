@@ -46,6 +46,14 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { isEmail } from "@/features/personal-log/shareLog";
+import {
+  ShareOutsideModal,
+  type ShareInitial,
+} from "@/features/secure-messages/ShareOutsideCard";
+import { useDialysisClinic } from "./useDialysisClinic";
+import { clinicOnNephroReach, travelRequestEmail } from "./travelEmail";
 
 /* ==========================================================================
    Travel dialysis
@@ -331,6 +339,23 @@ export function TravelDialysisSection() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TripRequest>(() => emptyTrip());
   const [submitted, setSubmitted] = useState(false);
+  /* A clinic not on NephroReach still gets the request, by email
+     (client, 2026-10-07). */
+  const { clinic, save: saveClinic } = useDialysisClinic();
+  const memberName = useOptionalAuth()?.user?.name ?? "";
+  const [outside, setOutside] = useState<ShareInitial | null>(null);
+  /* Decided by the clinic, never asked: on NephroReach it goes there,
+     otherwise to the clinic's email. */
+  const route: "network" | "email" = clinicOnNephroReach(clinic?.name)
+    ? "network"
+    : "email";
+  const [clinicEmail, setClinicEmail] = useState("");
+  const emailError =
+    route === "email" && !isEmail(clinicEmail)
+      ? isEs
+        ? "Escribe el correo de tu clínica."
+        : "Enter your clinic's email address."
+      : undefined;
 
   const set = (patch: Partial<TripRequest>) =>
     setDraft((current) => ({ ...current, ...patch }));
@@ -338,6 +363,7 @@ export function TravelDialysisSection() {
   const invalid = tripError(draft);
 
   const openEdit = (trip: TripRequest) => {
+    setClinicEmail(clinic?.email ?? "");
     setDraft(trip);
     setEditingId(trip.id);
     setSubmitted(false);
@@ -345,18 +371,45 @@ export function TravelDialysisSection() {
   };
 
   const openForm = () => {
+    setClinicEmail(clinic?.email ?? "");
     setDraft(emptyTrip());
     setEditingId(null);
     setSubmitted(false);
     setOpen(true);
   };
 
-  const send = () => {
-    setSubmitted(true);
-    if (!canSubmit(draft)) return;
+  const save = () => {
     if (editingId) update(draft);
     else submit(draft);
     setOpen(false);
+  };
+
+  const send = () => {
+    setSubmitted(true);
+    if (!canSubmit(draft) || emailError) return;
+    if (route === "network") return save();
+    /* Leaves NephroReach: the notice first, then the member's own email
+       app with the request written out. The trip is kept here too, so
+       they can follow it on this page. */
+    /* The same secure link as Share Outside NephroReach in Messages
+       (client, 2026-10-07), filled in with the request and the clinic. */
+    const email = travelRequestEmail(draft, memberName || "Patient");
+    setOutside({
+      kind: "travel",
+      subject: email.subject,
+      body: email.body,
+      email: clinicEmail.trim(),
+      office: clinic?.name,
+    });
+  };
+
+  /* Sent: the trip is kept here too, so they can follow it on this page,
+     and the clinic's email is remembered on My Dialysis Clinic. */
+  const shared = () => {
+    save();
+    if (clinic && clinic.email !== clinicEmail.trim()) {
+      saveClinic.mutate({ ...clinic, email: clinicEmail.trim() });
+    }
   };
 
   return (
@@ -382,6 +435,14 @@ export function TravelDialysisSection() {
         open the form below. Keeping the trigger and the dialog in one
         component means no state has to be lifted and synced back. */}
       <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
+      {outside ? (
+        <ShareOutsideModal
+          isEs={isEs}
+          initial={outside}
+          onShared={shared}
+          onClose={() => setOutside(null)}
+        />
+      ) : null}
 
       {open ? (
         <Modal
@@ -424,14 +485,45 @@ export function TravelDialysisSection() {
                     ? isEs
                       ? "Guardar cambios"
                       : "Save changes"
-                    : isEs
-                      ? "Enviar solicitud"
-                      : "Send request"}
+                    : route === "email"
+                      ? isEs
+                        ? "Enviar de forma segura"
+                        : "Send securely"
+                      : isEs
+                        ? "Enviar solicitud"
+                        : "Send request"}
               </Button>
             </div>
           }
         >
           <div className="space-y-stack-lg">
+            {/* Clinic not on NephroReach: the request goes by email, no
+                choice to make (client, 2026-10-07). */}
+            {route === "email" ? (
+              <section className="space-y-stack-md">
+                <Alert tone="info">
+                  {isEs
+                    ? "Tu clínica no está en NephroReach, así que enviaremos esta solicitud a su correo electrónico."
+                    : "Your clinic is not on NephroReach, so this request will be sent to your clinic's email."}
+                </Alert>
+                <FormField
+                  label={isEs ? "Correo de tu clínica" : "Your clinic's email"}
+                  required
+                  error={submitted ? emailError : undefined}
+                >
+                  {(field) => (
+                    <Input
+                      {...field}
+                      type="email"
+                      value={clinicEmail}
+                      placeholder="clinic@example.com"
+                      onChange={(e) => setClinicEmail(e.target.value)}
+                    />
+                  )}
+                </FormField>
+              </section>
+            ) : null}
+
             {/* ------------------------------------------------ the trip */}
             <section className="space-y-stack-md">
               <h3 className="text-heading-5 text-fg">

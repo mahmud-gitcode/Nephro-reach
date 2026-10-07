@@ -32,7 +32,11 @@ export function NewMessageModal({
   initialCategory = "care-team",
   onSend,
   onClose,
+  confirmSend,
 }: {
+  /** Runs before the send, e.g. the safety notice; it calls `send` when
+   *  the member confirms, so a cancel keeps what they typed. */
+  confirmSend?: (send: () => void) => void;
   /** Pre-filled text, e.g. a check-in reminder. */
   initialBody?: string;
   initialCategory?: MessageCategory;
@@ -58,8 +62,12 @@ export function NewMessageModal({
   function send() {
     setTried(true);
     if (error || !recipient) return;
-    onSend(recipient, body, category);
-    onClose();
+    const send = () => {
+      onSend(recipient, body, category);
+      onClose();
+    };
+    if (confirmSend) confirmSend(send);
+    else send();
   }
 
   return (

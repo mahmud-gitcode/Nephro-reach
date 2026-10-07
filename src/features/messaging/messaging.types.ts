@@ -45,6 +45,9 @@ export type Message = {
   /** ISO 8601, always UTC. */
   sentAt: string;
   attachment?: Attachment;
+  /** Sent by NephroReach itself, not a person: the after-hours
+   *  confirmation (client, 2026-10-07). */
+  automated?: boolean;
 };
 
 /**

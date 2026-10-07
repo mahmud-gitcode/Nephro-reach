@@ -132,23 +132,41 @@ export function useMessages() {
       body: string,
       author: MessageAuthor = "clinic",
       attachment?: Attachment,
+      /** NephroReach's automated reply, written in the same save. */
+      autoReply?: string,
     ) =>
-      mutate((current) =>
-        rules.appendMessage(
+      mutate((current) => {
+        const now = Date.now();
+        const sent = rules.appendMessage(
           current,
           conversationId,
           body,
           author,
-          Date.now(),
+          now,
           attachment,
-        ),
-      ),
+        );
+        return autoReply
+          ? rules.appendAutomatedReply(sent, conversationId, autoReply, now + 1)
+          : sent;
+      }),
     [mutate],
   );
 
   const startConversation = useCallback(
-    (input: rules.NewConversation) =>
-      mutate((current) => rules.startConversation(current, input, Date.now())),
+    (input: rules.NewConversation, autoReply?: string) =>
+      mutate((current) => {
+        const now = Date.now();
+        const started = rules.startConversation(current, input, now);
+        if (!autoReply) return started;
+        const id =
+          started.conversations.find(
+            (c) =>
+              c.memberName === input.memberName &&
+              c.contact.name === input.contact.name,
+          )?.id ??
+          rules.conversationIdFor(input.memberName, input.contact.name);
+        return rules.appendAutomatedReply(started, id, autoReply, now + 1);
+      }),
     [mutate],
   );
 

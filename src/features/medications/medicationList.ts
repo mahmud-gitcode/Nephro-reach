@@ -18,7 +18,106 @@ export type Medication = (typeof medicationsData)[number] & {
   instructions?: string;
   /** A photo of the bottle or label (client, 2026-10-06). */
   photo?: string;
+  /** Every edit, oldest first (client, 2026-10-07: a dose going from
+   *  5 mg to 10 mg is a change to record, not a silent overwrite). */
+  history?: MedicationEdit[];
 };
+
+export type MedicationEdit = {
+  /** yyyy-mm-dd */
+  date: string;
+  field: string;
+  from: string;
+  to: string;
+};
+
+/** What a member can change on a medication already on the list. The name
+ *  stays: reminders and the dose log are kept by it. */
+export type MedicationChange = Pick<
+  MedicationDraft,
+  | "dose"
+  | "route"
+  | "frequency"
+  | "purpose"
+  | "endDate"
+  | "provider"
+  | "pharmacy"
+  | "instructions"
+>;
+
+/** "09/30/2026" → "2026-09-30"; "---" → "". */
+export function isoFromUs(us: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(us);
+  return m ? `${m[3]}-${m[1]}-${m[2]}` : "";
+}
+
+/** The edit form, filled from the medication as it stands. */
+export function changeFrom(m: Medication): MedicationChange {
+  const blank = (v: string | undefined) => (!v || v === "—" ? "" : v);
+  return {
+    dose: m.dose,
+    route: m.route,
+    frequency: m.frequencyEn,
+    purpose: blank(m.purposeEn),
+    endDate: isoFromUs(m.endDate),
+    provider: blank(m.provider),
+    pharmacy: blank(m.pharmacy),
+    instructions: blank(m.instructions),
+  };
+}
+
+/** Applies an edit and records each field that changed. */
+export function updateMedication(
+  list: Medication[],
+  id: string,
+  change: MedicationChange,
+  today: string,
+): Medication[] {
+  return list.map((m) => {
+    if (m.id !== id) return m;
+    const before = changeFrom(m);
+    const labels: Record<keyof MedicationChange, string> = {
+      dose: "Dose",
+      route: "Route",
+      frequency: "Frequency",
+      purpose: "Purpose",
+      endDate: "End date",
+      provider: "Provider",
+      pharmacy: "Pharmacy",
+      instructions: "Instructions",
+    };
+    const edits: MedicationEdit[] = (
+      Object.keys(labels) as Array<keyof MedicationChange>
+    )
+      .filter((k) => before[k].trim() !== change[k].trim())
+      .map((k) => ({
+        date: today,
+        field: labels[k],
+        from: before[k].trim() || "—",
+        to: change[k].trim() || "—",
+      }));
+    if (edits.length === 0) return m;
+    const frequency =
+      FREQUENCIES.find((f) => f.en === change.frequency) ??
+      ({ en: change.frequency, es: change.frequency } as const);
+    const stopped = !!change.endDate && change.endDate < today;
+    return {
+      ...m,
+      dose: change.dose.trim(),
+      route: change.route,
+      frequencyEn: frequency.en,
+      frequencyEs: frequency.es,
+      purposeEn: change.purpose.trim() || "—",
+      purposeEs: change.purpose.trim() || "—",
+      endDate: change.endDate ? usDate(change.endDate) : "---",
+      pharmacy: change.pharmacy.trim() || "—",
+      provider: change.provider.trim() || undefined,
+      instructions: change.instructions.trim() || undefined,
+      ...(stopped ? { status: "Stopped" } : {}),
+      history: [...(m.history ?? []), ...edits],
+    };
+  });
+}
 
 export const ROUTES = [
   { value: "PO", en: "By mouth (PO)", es: "Por boca (PO)" },

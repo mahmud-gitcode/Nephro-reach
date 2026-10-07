@@ -14,12 +14,17 @@ import {
   MedicationMasterList,
 } from "@/features/medications/MedicationPanels";
 import { SimpleTimeReminderModal } from "@/features/medications/SimpleTimeReminderModal";
-import { doseRows } from "@/features/medications/medicationList";
+import {
+  doseRows,
+  type Medication,
+} from "@/features/medications/medicationList";
+import { MedicationEditModal } from "@/features/medications/MedicationEditModal";
+import { todayIso } from "@/features/medications/medicationLog.rules";
 import { reminderTimes } from "@/features/medications/reminders.rules";
 import { useMedications } from "@/features/medications/useMedications";
 
 export default function MedicationLogPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const { reminders, isPending, error, refetch, setTimes, remove } =
     useReminders();
@@ -35,6 +40,7 @@ export default function MedicationLogPage() {
     m.id.startsWith("seed-"),
   );
 
+  const [editing, setEditing] = useState<Medication | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [selectedMedForReminder, setSelectedMedForReminder] = useState<
     string | undefined
@@ -92,6 +98,7 @@ export default function MedicationLogPage() {
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
             onStatusChange={meds.setStatus}
+            onEdit={setEditing}
             log={log}
           />
           <DoseSchedule rows={rows} reminders={reminders} log={log} />
@@ -105,6 +112,20 @@ export default function MedicationLogPage() {
         </div>
       </AsyncSection>
       <ExportReporting log={log} />
+      {editing ? (
+        <MedicationEditModal
+          key={editing.id}
+          medication={editing}
+          isEs={language === "ES"}
+          saving={meds.isSaving}
+          onClose={() => setEditing(null)}
+          onSave={(change) =>
+            void meds
+              .update(editing.id, change, todayIso(new Date()))
+              .then(() => setEditing(null))
+          }
+        />
+      ) : null}
       {/* Keyed on the medication, so opening it for another one starts from
           that medication's stored time without an effect syncing it. */}
       <SimpleTimeReminderModal

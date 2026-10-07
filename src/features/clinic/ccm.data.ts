@@ -141,7 +141,28 @@ export type CcmPatient = {
   provider: string;
   careManager: string;
   location: string;
+  /* The compliance filter (client, 2026-10-07). Either one takes the
+     patient out of the CCM billing queue; see ccmBillingBlocked. */
+  isOnDialysis?: boolean;
+  isOnHomeHealthOrHospice?: boolean;
 };
+
+export type CcmCompliance = Pick<
+  CcmPatient,
+  "isOnDialysis" | "isOnHomeHealthOrHospice"
+>;
+
+/** The client's warning, word for word, shown where billing is locked. */
+export const CCM_BILLING_DEACTIVATED =
+  "CCM Billing Deactivated: This patient is currently marked as receiving concurrent ESRD, Home Health, or Hospice services.";
+
+/** A patient on dialysis (ESRD) or under home health or hospice is not
+ *  billed for CCM: their chart leaves the monthly billing queue and no
+ *  CCM time can be saved, protecting the practice from audit failures and
+ *  claim denials. */
+export function ccmBillingBlocked(patient: CcmCompliance): boolean {
+  return Boolean(patient.isOnDialysis || patient.isOnHomeHealthOrHospice);
+}
 
 export type FollowUp = {
   /** YYYY-MM-DD */
@@ -186,14 +207,33 @@ export type RequirementState = {
   met: boolean;
   /** Started but not complete, e.g. care coordination under way. */
   inProgress?: boolean;
+  /** Does not apply to this patient, e.g. no initiating visit is needed
+   *  in this enrollment (client, 2026-10-07). */
+  notApplicable?: boolean;
   /** YYYY-MM-DD the requirement was completed. */
   date?: string;
   detail: string;
 };
 
-export type RequirementStatus = "complete" | "in-progress" | "missing";
+export type RequirementStatus =
+  "complete" | "in-progress" | "missing" | "not-applicable";
+
+/* What each status means, in the client's words (2026-10-07). */
+export const REQUIREMENT_STATUS_MEANING: Record<RequirementStatus, string> = {
+  complete:
+    "Practice staff have confirmed this requirement has been satisfied and documented where appropriate.",
+  "in-progress":
+    "The practice is actively working on satisfying or documenting the requirement.",
+  missing: "Practice staff have not confirmed completion; follow-up is needed.",
+  "not-applicable":
+    "The requirement does not apply in this particular situation. For example, an initiating visit may not be required in every CCM enrollment scenario.",
+};
+
+export const CCM_CHECKLIST_DISCLAIMER =
+  "Tracking tool only. Statuses are entered by practice staff and do not independently determine Medicare eligibility, compliance, or billability. Supporting clinical documentation remains in the practice EHR.";
 
 export function requirementStatus(state: RequirementState): RequirementStatus {
+  if (state.notApplicable) return "not-applicable";
   if (state.met) return "complete";
   return state.inProgress ? "in-progress" : "missing";
 }
@@ -231,7 +271,21 @@ export type CcmState = {
   conditions?: Record<string, string[]>;
   /** CKD access / KRT planning, by MRN (kidneyCare.ts). */
   kidneyCare?: Record<string, KidneyCarePlan>;
+  /** The compliance flags, by MRN. */
+  compliance?: Record<string, CcmCompliance>;
 };
+
+/** Sets a patient's dialysis / home health or hospice flags. */
+export function setCompliance(
+  state: CcmState,
+  mrn: string,
+  flags: CcmCompliance,
+): CcmState {
+  return {
+    ...state,
+    compliance: { ...(state.compliance ?? {}), [mrn]: { ...flags } },
+  };
+}
 
 export function kidneyCareFor(
   state: CcmState,
@@ -259,11 +313,12 @@ export function setKidneyCare(
 /** Everyone in CCM: the seeded patients and those added since. */
 export function ccmPatientsOf(state: CcmState): CcmPatient[] {
   const edited = state.conditions ?? {};
-  return [...CCM_PATIENTS, ...(state.enrolled ?? [])].map((patient) =>
-    edited[patient.mrn]
-      ? { ...patient, conditions: edited[patient.mrn] }
-      : patient,
-  );
+  const flags = state.compliance ?? {};
+  return [...CCM_PATIENTS, ...(state.enrolled ?? [])].map((patient) => ({
+    ...patient,
+    ...(edited[patient.mrn] ? { conditions: edited[patient.mrn] } : {}),
+    ...(flags[patient.mrn] ?? {}),
+  }));
 }
 
 /** Replaces a patient's conditions on their CCM record. */
@@ -428,9 +483,13 @@ export function requirementFor(
   return state.requirements[mrn]?.[id] ?? { met: false, detail: "" };
 }
 
+/** Requirements taken care of: complete, or not applicable to this
+ *  patient (nothing left to do for those either). */
 export function requirementsMet(state: CcmState, mrn: string): number {
-  return CCM_REQUIREMENTS.filter((r) => requirementFor(state, mrn, r.id).met)
-    .length;
+  return CCM_REQUIREMENTS.filter((r) => {
+    const s = requirementFor(state, mrn, r.id);
+    return s.met || s.notApplicable;
+  }).length;
 }
 
 export type FollowUpRow = { activity: CcmActivity; followUp: FollowUp };
@@ -475,7 +534,14 @@ export type WorklistRow = CcmPatient & {
   nextFollowUp: string | null;
   openAlerts: number;
   overdue: number;
+  /** Out of the billing queue: on dialysis, home health or hospice. */
+  billingBlocked: boolean;
 };
+
+/** The monthly billing queue: everyone whose CCM may be billed. */
+export function billingQueue(rows: WorklistRow[]): WorklistRow[] {
+  return rows.filter((row) => !row.billingBlocked);
+}
 
 export function worklist(
   state: CcmState,
@@ -502,6 +568,7 @@ export function worklist(
       nextFollowUp: followUps[0]?.followUp.date ?? null,
       openAlerts,
       overdue,
+      billingBlocked: ccmBillingBlocked(patient),
     };
   });
 }

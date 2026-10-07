@@ -51,6 +51,14 @@ export type OfficePreferences = {
   landingPage: string;
   itemsPerPage: (typeof ITEMS_PER_PAGE)[number];
   dateFormat: (typeof DATE_FORMATS)[number];
+  /* Office hours and on-call (client, 2026-10-07). Optional so settings
+     saved before them still read; 8:00–17:00 until set. */
+  /** "HH:MM", 24h. Messages outside these hours get the after-hours reply. */
+  opensAt?: string;
+  closesAt?: string;
+  /** The on-call nurse manager's phone: with the server, an after-hours
+   *  message unread for 2 hours sends an SMS alert here. */
+  onCallPhone?: string;
 };
 
 export type ClinicSettings = {
@@ -83,6 +91,9 @@ export const defaultClinicSettings = (): ClinicSettings => ({
     landingPage: "/dashboard/clinic",
     itemsPerPage: 10,
     dateFormat: "MM/DD/YYYY",
+    opensAt: "08:00",
+    closesAt: "17:00",
+    onCallPhone: "",
   },
 });
 

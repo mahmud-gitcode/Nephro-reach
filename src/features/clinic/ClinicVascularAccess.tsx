@@ -68,6 +68,7 @@ import {
   type AccessTeam,
   type ReferralKind,
   type ReferralSource,
+  transportFor,
 } from "@/features/vascular-access/vascularAccess.data";
 import {
   AccessConversationView,
@@ -75,6 +76,7 @@ import {
   AppointmentRow,
   HistoryTable,
   UpdatesTimeline,
+  TransportStatusBadge,
 } from "@/features/vascular-access/AccessUi";
 import {
   useVascularAccess,
@@ -569,6 +571,19 @@ function PatientModal({
                     )
                   }
                 />
+                {/* Whether a ride is arranged. The access center sees it to
+                    confirm the appointment; the dialysis center books it
+                    (client, 2026-10-07). */}
+                <p className="mt-stack-xs flex items-center gap-inline-sm text-caption text-fg-muted">
+                  Transportation:{" "}
+                  {transportFor(record, appointment.id) ? (
+                    <TransportStatusBadge
+                      status={transportFor(record, appointment.id)!.status}
+                    />
+                  ) : (
+                    "None arranged"
+                  )}
+                </p>
                 {completing === appointment.id ? (
                   <CompleteForm
                     onCancel={() => setCompleting(null)}
@@ -842,12 +857,11 @@ export default function ClinicVascularAccess({
         : STAFF[party].person,
     role: user?.staffRole ?? "Administrator",
     reply,
-    schedule: atAccess
-      ? can("access.appointments.confirm")
-      : can("access.schedule"),
-    coordination: atAccess
-      ? can("access.coordination.status")
-      : can("access.schedule"),
+    /* Only the access center schedules access appointments and manages the
+       access; the dialysis center and the nephrology office request
+       appointments and send concerns or referrals (client, 2026-10-07). */
+    schedule: atAccess && can("access.appointments.confirm"),
+    coordination: atAccess && can("access.coordination.status"),
     concerns: atAccess ? can("access.concerns") : true,
     photos: atAccess ? can("access.photos") : true,
     referrals: atAccess
@@ -1206,7 +1220,9 @@ export default function ClinicVascularAccess({
         {/* Patients' rides to access appointments, worked by the dialysis
             center's social worker (client, 2026-10-06: the appointment
             transportation belongs under vascular access too). */}
-        {party === "dialysis" ? (
+        {/* Rides are the dialysis center's (its administrator and social
+            worker); never the nephrology office's (client, 2026-10-07). */}
+        {party === "dialysis" && office === "dialysis" ? (
           <RideRequestsPanel
             records={records}
             store={store}

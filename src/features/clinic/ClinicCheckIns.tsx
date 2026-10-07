@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -229,6 +230,8 @@ function QuickActions({
   rows: CheckInRow[];
   onRemind: () => void;
 }) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const actions: Array<{
     label: string;
     fullLabel: string;
@@ -257,18 +260,27 @@ function QuickActions({
       icon: Download,
       disabled: rows.length === 0,
       onClick: () =>
-        downloadText(
-          "check-in-report.csv",
-          toCsv([
-            ["Member", "Program", "Date", "Status", "Notes"],
-            ...rows.map((r) => [r.name, r.program, r.date, r.status, r.notes]),
-          ]),
+        share.guard(() =>
+          downloadText(
+            "check-in-report.csv",
+            toCsv([
+              ["Member", "Program", "Date", "Status", "Notes"],
+              ...rows.map((r) => [
+                r.name,
+                r.program,
+                r.date,
+                r.status,
+                r.notes,
+              ]),
+            ]),
+          ),
         ),
     },
   ];
 
   return (
     <Card as="section" padding="small">
+      {share.notice}
       <h2 className="mb-stack-lg text-heading-4 text-fg">Quick Actions</h2>
       <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
         {actions.map((action) => (

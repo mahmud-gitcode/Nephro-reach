@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as C from "./ccm.data";
 import {
   ACTIVITY_TYPES,
   ALERT_ACTIVITY,
@@ -244,5 +245,57 @@ describe("alerts and the activity they are logged under", () => {
     expect(ALERT_ACTIVITY["Missed appointment"]).toBe(
       "Appointment Coordination",
     );
+  });
+});
+
+describe("the compliance filter", () => {
+  const state = C.seedCcmState(NOW);
+  const first = C.ccmPatientsOf(state)[0];
+
+  it("blocks billing for dialysis, home health or hospice", () => {
+    expect(C.ccmBillingBlocked({})).toBe(false);
+    expect(C.ccmBillingBlocked({ isOnDialysis: true })).toBe(true);
+    expect(C.ccmBillingBlocked({ isOnHomeHealthOrHospice: true })).toBe(true);
+  });
+
+  it("routes a flagged chart out of the billing queue", () => {
+    const flagged = C.setCompliance(state, first.mrn, { isOnDialysis: true });
+    const rows = C.worklist(flagged, C.ccmPatientsOf(flagged), MONTH, TODAY);
+    expect(rows.find((r) => r.mrn === first.mrn)?.billingBlocked).toBe(true);
+    expect(C.billingQueue(rows).some((r) => r.mrn === first.mrn)).toBe(false);
+    expect(C.billingQueue(rows)).toHaveLength(rows.length - 1);
+  });
+
+  it("returns the chart to the queue once both flags are cleared", () => {
+    const flagged = C.setCompliance(state, first.mrn, { isOnDialysis: true });
+    const cleared = C.setCompliance(flagged, first.mrn, {
+      isOnDialysis: false,
+      isOnHomeHealthOrHospice: false,
+    });
+    const rows = C.worklist(cleared, C.ccmPatientsOf(cleared), MONTH, TODAY);
+    expect(C.billingQueue(rows).some((r) => r.mrn === first.mrn)).toBe(true);
+  });
+});
+
+describe("not applicable requirements", () => {
+  const state = C.seedCcmState(NOW);
+  const mrn = C.ccmPatientsOf(state)[0].mrn;
+  const id = C.CCM_REQUIREMENTS[0].id;
+
+  it("reads as not applicable and counts as taken care of", () => {
+    const before = C.requirementsMet(state, mrn);
+    const cleared = C.setRequirement(state, mrn, id, {
+      met: false,
+      inProgress: false,
+      notApplicable: false,
+    });
+    const na = C.setRequirement(cleared, mrn, id, { notApplicable: true });
+    expect(C.requirementStatus(C.requirementFor(na, mrn, id))).toBe(
+      "not-applicable",
+    );
+    expect(C.requirementsMet(na, mrn)).toBe(
+      C.requirementsMet(cleared, mrn) + 1,
+    );
+    expect(before).toBeGreaterThanOrEqual(C.requirementsMet(cleared, mrn));
   });
 });

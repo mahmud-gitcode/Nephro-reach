@@ -24,6 +24,7 @@ function ClinicModal({
   name,
   phone,
   address,
+  email,
   saving,
   error,
   onClose,
@@ -32,6 +33,7 @@ function ClinicModal({
   name: string;
   phone: string;
   address: string;
+  email: string;
   saving: boolean;
   error: unknown;
   onClose: () => void;
@@ -43,6 +45,7 @@ function ClinicModal({
   const [draftName, setDraftName] = useState(name);
   const [draftPhone, setDraftPhone] = useState(phone);
   const [draftAddress, setDraftAddress] = useState(address);
+  const [draftEmail, setDraftEmail] = useState(email);
 
   return (
     // The hand-rolled version moved focus to the close button on open but
@@ -68,6 +71,7 @@ function ClinicModal({
                 name: draftName.trim(),
                 phone: draftPhone.trim(),
                 address: draftAddress.trim(),
+                email: draftEmail.trim(),
               })
             }
           >
@@ -133,6 +137,25 @@ function ClinicModal({
                   ? "ej. 1420 NW 12th Ave, Miami, FL 33136"
                   : "e.g. 1420 NW 12th Ave, Miami, FL 33136"
               }
+            />
+          )}
+        </FormField>
+
+        <FormField
+          label={isEs ? "Correo electrónico (opcional)" : "Email (optional)"}
+          hint={
+            isEs
+              ? "Si su centro no está en NephroReach, aquí se envían sus solicitudes de diálisis en viaje."
+              : "If your center is not on NephroReach, your travel dialysis requests are emailed here."
+          }
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="email"
+              value={draftEmail}
+              onChange={(event) => setDraftEmail(event.target.value)}
+              placeholder="clinic@example.com"
             />
           )}
         </FormField>
@@ -251,6 +274,7 @@ export default function DialysisClinicCard() {
           name={clinic.name}
           phone={clinic.phone}
           address={clinic.address}
+          email={clinic.email ?? ""}
           saving={isSaving}
           error={saveError}
           onClose={() => setEditing(false)}

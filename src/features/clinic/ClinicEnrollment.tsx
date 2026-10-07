@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -232,6 +233,8 @@ function PatientTable({
   onFilters: (change: Partial<Filters>) => void;
   highlightMrn: string | null;
 }) {
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -335,36 +338,39 @@ function PatientTable({
             size="small"
             disabled={filtered.length === 0}
             onClick={() =>
-              downloadText(
-                "enrolled-patients.csv",
-                toCsv([
-                  [
-                    "Name",
-                    "MRN",
-                    "Program",
-                    "Enrolled",
-                    "Status",
-                    "Start",
-                    "Progress %",
-                    "Source",
-                  ],
-                  ...filtered.map((p) => [
-                    p.name,
-                    p.mrn,
-                    p.program,
-                    p.enrolledOn,
-                    p.status,
-                    p.startDate,
-                    p.progress,
-                    p.source,
+              share.guard(() =>
+                downloadText(
+                  "enrolled-patients.csv",
+                  toCsv([
+                    [
+                      "Name",
+                      "MRN",
+                      "Program",
+                      "Enrolled",
+                      "Status",
+                      "Start",
+                      "Progress %",
+                      "Source",
+                    ],
+                    ...filtered.map((p) => [
+                      p.name,
+                      p.mrn,
+                      p.program,
+                      p.enrolledOn,
+                      p.status,
+                      p.startDate,
+                      p.progress,
+                      p.source,
+                    ]),
                   ]),
-                ]),
+                ),
               )
             }
           >
             <Download className="h-4 w-4" />
             Export
           </Button>
+          {share.notice}
         </div>
       </div>
 

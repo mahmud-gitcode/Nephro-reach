@@ -481,7 +481,8 @@ export const DIALYSIS_ROLE_PERMISSIONS: Partial<
     "checkins.view",
     "travel.view",
     "travel.manage",
-    "rides.manage",
+    /* No rides: only the administrator and the social worker set up
+       transportation (client, 2026-10-07). */
     "access.view",
     "access.schedule",
     "messages.view",

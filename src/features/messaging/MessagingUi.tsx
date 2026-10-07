@@ -500,6 +500,7 @@ export function MessageLog({
                         <span className="sr-only">
                           {isMine ? "You" : otherName},{" "}
                         </span>
+                        {message.automated ? "Automated reply · " : ""}
                         {rules.timeLabel(message.sentAt)}
                       </p>
                     </div>
@@ -542,7 +543,11 @@ export function Composer({
   onSend,
   placeholder,
   label,
+  confirmSend,
 }: {
+  /** Runs before the send, e.g. the safety notice; it calls `send` when
+   *  the member confirms, so a cancel keeps what they typed. */
+  confirmSend?: (send: () => void) => void;
   /** Owned by the parent, so switching threads does not lose what was typed. */
   draft: string;
   onDraftChange: (next: string) => void;
@@ -566,10 +571,16 @@ export function Composer({
 
   function submit() {
     if (!canSend) return;
-    onSend(draft.trim(), pending ?? undefined);
-    onDraftChange("");
-    setPending(null);
-    setAttachError(null);
+    const body = draft.trim();
+    const attachment = pending ?? undefined;
+    const send = () => {
+      onSend(body, attachment);
+      onDraftChange("");
+      setPending(null);
+      setAttachError(null);
+    };
+    if (confirmSend) confirmSend(send);
+    else send();
   }
 
   return (

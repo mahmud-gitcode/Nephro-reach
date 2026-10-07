@@ -64,6 +64,43 @@ export function emailBody(
   ].join("\n");
 }
 
+/** A log as a Share Outside NephroReach item: a short summary in the
+ *  message (the share's message holds 1,500 characters) and the whole log
+ *  attached as a CSV (client, 2026-10-07). */
+export function outsideShareOf(
+  title: string,
+  fileName: string,
+  table: LogTable,
+  isEs: boolean,
+): {
+  kind: "log";
+  subject: string;
+  body: string;
+  attachment: { name: string; type: string; dataUrl: string };
+} {
+  const lines = emailBody(title, table, "").split("\n");
+  const kept: string[] = [];
+  let length = 0;
+  for (const line of lines) {
+    if (length + line.length + 1 > 1300) break;
+    kept.push(line);
+    length += line.length + 1;
+  }
+  const note = isEs
+    ? "El registro completo va adjunto como archivo CSV."
+    : "The full log is attached as a CSV file.";
+  return {
+    kind: "log",
+    subject: title,
+    body: [...kept, note].join("\n").trim(),
+    attachment: {
+      name: `${fileName}.csv`,
+      type: "text/csv",
+      dataUrl: `data:text/csv;charset=utf-8,${encodeURIComponent(toCsv(table))}`,
+    },
+  };
+}
+
 export function mailtoHref(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

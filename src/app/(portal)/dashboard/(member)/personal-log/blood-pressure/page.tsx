@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import Link from "next/link";
 import { Download, Edit3, HeartPulse, Plus, Trash2 } from "lucide-react";
@@ -65,6 +66,8 @@ function formatClock(hhmm: string) {
 function DailyBloodPressureList() {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare(isEs);
   const bp = useBloodPressure();
   const [deleting, setDeleting] = useState<BpReading | null>(null);
   const groups = byDay(bp.readings);
@@ -89,14 +92,17 @@ function DailyBloodPressureList() {
             leadingIcon={<Download />}
             disabled={bp.readings.length === 0}
             onClick={() =>
-              downloadText(
-                "blood-pressure-readings.csv",
-                readingsCsv(bp.readings),
+              share.guard(() =>
+                downloadText(
+                  "blood-pressure-readings.csv",
+                  readingsCsv(bp.readings),
+                ),
               )
             }
           >
             {t("bloodPressure.export")}
           </Button>
+          {share.notice}
         </div>
       </div>
 

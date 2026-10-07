@@ -1,5 +1,6 @@
 "use client";
 
+import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { ClinicLabsCard } from "@/features/labs/ClinicLabsCard";
 import { LabInfoButton } from "@/features/labs/LabInfoButton";
 import React, { useState } from "react";
@@ -53,6 +54,8 @@ import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer
 
 export default function MyLabsPage() {
   const { language, dictionary } = useLanguage();
+  /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const share = useExternalShare(language === "ES");
   const l = dictionary?.labTracking;
 
   const [activeTab, setActiveTab] = useState<"overview" | "trends" | "history">(
@@ -356,11 +359,12 @@ export default function MyLabsPage() {
                 variant="neutral"
                 appearance="fill-stroke"
                 size="small"
-                onClick={() => window.print()}
+                onClick={() => share.guard(() => window.print())}
               >
                 <Download />
                 {l?.actions?.exportPdf || "Export PDF"}
               </Button>
+              {share.notice}
               <Link
                 href="/dashboard/personal-log/lab-tracking/add"
                 className={buttonStyles({ size: "small" })}
