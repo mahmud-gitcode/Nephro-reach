@@ -6,7 +6,7 @@ import type { RideContact } from "./rides.types";
 export const SEED_RIDES: RideContact[] = [
   {
     id: "seed-primary-driver",
-    name: "Bobo boy",
+    name: "Care Transit",
     phone: "(684) 555-0102",
     isPrimary: true,
   },

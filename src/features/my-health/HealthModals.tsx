@@ -72,7 +72,6 @@ export function AllergyModal({
   const { language, dictionary } = useLanguage();
   const h = dictionary?.myHealth;
   const isEs = language === "ES";
-  const sampleName = h?.allergies?.sampleName || "Introduction to Wellness";
   const weekPrefix = h?.allergies?.weekPrefix || "Week";
 
   const getReaction = (key: string, fallback: string) => {
@@ -83,7 +82,7 @@ export function AllergyModal({
     return fallback;
   };
 
-  const initialName = initialData?.name || (initialData ? sampleName : "");
+  const initialName = initialData?.name || "";
   const initialReaction = initialData
     ? initialData.reactionKey
       ? getReaction(initialData.reactionKey, initialData.reactionDefault)
@@ -268,14 +267,15 @@ export function ConditionModal({
     return fallback;
   };
 
-  const parseToDateInput = (ddmmyyyy?: string) => {
-    if (!ddmmyyyy || ddmmyyyy === "—") return "";
-    const parts = ddmmyyyy.split("/");
+  /* MM/DD/YYYY, as everywhere else in the app (2026-10-08). */
+  const parseToDateInput = (mmddyyyy?: string) => {
+    if (!mmddyyyy || mmddyyyy === "—") return "";
+    const parts = mmddyyyy.split("/");
     if (parts.length === 3) {
-      const [day, month, year] = parts;
+      const [month, day, year] = parts;
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
-    return ddmmyyyy;
+    return mmddyyyy;
   };
 
   const initialCondition = initialData
@@ -304,11 +304,11 @@ export function ConditionModal({
       return;
     }
 
-    // The table shows DD/MM/YYYY; the date input hands back YYYY-MM-DD
+    // The table shows MM/DD/YYYY; the date input hands back YYYY-MM-DD
     let diagnosedText = "—";
     if (diagnosed) {
       const [year, month, day] = diagnosed.split("-");
-      diagnosedText = `${day}/${month}/${year}`;
+      diagnosedText = `${month}/${day}/${year}`;
     }
 
     onSave(

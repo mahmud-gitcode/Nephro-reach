@@ -263,7 +263,7 @@
     "addNewRideModal": "Agregar Nuevo Conductor",
     "editRideModal": "Editar Conductor",
     "driverNameLabel": "Nombre del Conductor / Transporte",
-    "driverNamePlaceholder": "ej. Bobo boy, Tío David, Transporte Médico",
+    "driverNamePlaceholder": "ej. Tío David, Transporte Médico",
     "phoneLabel": "Número de Teléfono",
     "phonePlaceholder": "(684) 555-0102",
     "relationshipLabel": "Relación o Etiqueta (Opcional)",

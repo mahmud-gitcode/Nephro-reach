@@ -39,12 +39,7 @@ export default function PersonalLogDisclaimer({
           aria-hidden="true"
           className={cn("h-5 w-5 shrink-0 text-warning", !stacked && "mt-0.5")}
         />
-        <p
-          className={cn(
-            "min-w-0 flex-1 text-body-sm text-fg-secondary",
-            stacked && "text-justify",
-          )}
-        >
+        <p className={cn("min-w-0 flex-1 text-body-sm text-fg-secondary")}>
           {isEs ? (
             <>
               NephroReach es una herramienta educativa de registro y

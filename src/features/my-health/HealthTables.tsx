@@ -86,6 +86,48 @@ export function SectionHeader({
   );
 }
 
+/* On a phone the 1080px table showed only its first column; severity and
+   status sat off-screen behind a sideways scroll nobody would find (client
+   review, 2026-10-08). Below sm each row is a small card instead. */
+function MobileRows({
+  items,
+}: {
+  items: Array<{
+    id: string;
+    title: string;
+    badge: React.ReactNode;
+    details: string[];
+    actions: React.ReactNode;
+  }>;
+}) {
+  return (
+    <ul className="space-y-stack-sm sm:hidden">
+      {items.map((item) => (
+        <li
+          key={item.id}
+          className="rounded-card-nested border border-line bg-surface p-inset-sm"
+        >
+          <div className="flex items-start justify-between gap-inline-md">
+            <div className="min-w-0 space-y-stack-xs">
+              <p className="text-label-lg text-fg">{item.title}</p>
+              {item.badge}
+            </div>
+            <div className="shrink-0">{item.actions}</div>
+          </div>
+          {item.details.filter(Boolean).map((line) => (
+            <p
+              key={line}
+              className="mt-stack-xs text-body-sm text-fg-secondary"
+            >
+              {line}
+            </p>
+          ))}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function AllergiesTable({
   rows,
   onEdit,
@@ -130,64 +172,97 @@ export function AllergiesTable({
     h?.allergies?.headers?.actions || "Actions",
   ];
 
-  const sampleName = h?.allergies?.sampleName || "Introduction to Wellness";
-  const weekPrefix = h?.allergies?.weekPrefix || "Week";
+  const mobileItems = rows.map((row) => {
+    const nameText = row.name || "—";
+    return {
+      id: row.id,
+      title: nameText,
+      badge: (
+        <Badge {...severityBadge[row.severity]}>
+          {getSeverityName(row.severity)}
+        </Badge>
+      ),
+      details: [
+        `${getTypeName(row.type)} · ${
+          row.reactionKey
+            ? getReaction(row.reactionKey, row.reactionDefault)
+            : row.reactionDefault
+        }`,
+        row.notes || "",
+      ],
+      actions: (
+        <RowActions
+          label={nameText}
+          editLabel={h?.actions?.edit}
+          deleteLabel={h?.actions?.delete}
+          onEdit={() => onEdit(row)}
+          onDelete={() => onDelete(row.id)}
+        />
+      ),
+    };
+  });
 
   return (
-    <Card padding="none" className="overflow-hidden">
-      <Table minWidth={1080}>
-        <TableHead className="bg-surface-sunken">
-          <TableRow>
-            {headers.map((header, index) => (
-              <TableHeaderCell
-                key={header}
-                className={`${index === 0 ? "w-[358px]" : ""} ${
-                  index === 5 ? "text-center" : ""
-                }`}
-              >
-                {header}
-              </TableHeaderCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => {
-            const reactionText = row.reactionKey
-              ? getReaction(row.reactionKey, row.reactionDefault)
-              : row.reactionDefault;
-            const notesText = row.notes ?? `${weekPrefix} ${row.week}`;
-            const nameText = row.name || sampleName;
+    <>
+      <MobileRows items={mobileItems} />
+      <Card padding="none" className="hidden overflow-hidden sm:block">
+        <Table minWidth={1080}>
+          <TableHead className="bg-surface-sunken">
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableHeaderCell
+                  key={header}
+                  className={`${index === 0 ? "w-[358px]" : ""} ${
+                    index === 5 ? "text-center" : ""
+                  }`}
+                >
+                  {header}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => {
+              const reactionText = row.reactionKey
+                ? getReaction(row.reactionKey, row.reactionDefault)
+                : row.reactionDefault;
+              const notesText = row.notes || "—";
+              const nameText = row.name || "—";
 
-            return (
-              <TableRow key={row.id}>
-                <TableCell emphasis className="max-w-[358px] truncate">
-                  {nameText}
-                </TableCell>
-                <TableCell>{getTypeName(row.type)}</TableCell>
-                <TableCell className="max-w-[160px] truncate">
-                  {reactionText}
-                </TableCell>
-                <TableCell>
-                  <Badge {...severityBadge[row.severity]} className="w-[92px]">
-                    {getSeverityName(row.severity)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{notesText}</TableCell>
-                <TableCell>
-                  <RowActions
-                    label={nameText}
-                    editLabel={h?.actions?.edit}
-                    deleteLabel={h?.actions?.delete}
-                    onEdit={() => onEdit(row)}
-                    onDelete={() => onDelete(row.id)}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </Card>
+              return (
+                <TableRow key={row.id}>
+                  <TableCell emphasis className="max-w-[358px] truncate">
+                    {nameText}
+                  </TableCell>
+                  <TableCell>{getTypeName(row.type)}</TableCell>
+                  <TableCell className="max-w-[160px] truncate">
+                    {reactionText}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      {...severityBadge[row.severity]}
+                      className="w-[92px]"
+                    >
+                      {getSeverityName(row.severity)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{notesText}</TableCell>
+                  <TableCell>
+                    <RowActions
+                      label={nameText}
+                      editLabel={h?.actions?.edit}
+                      deleteLabel={h?.actions?.delete}
+                      onEdit={() => onEdit(row)}
+                      onDelete={() => onDelete(row.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Card>
+    </>
   );
 }
 
@@ -224,58 +299,87 @@ export function MedicalHistoryTable({
     h?.history?.headers?.actions || "Actions",
   ];
 
-  const weekPrefix = h?.allergies?.weekPrefix || "Week";
+  const mobileItems = rows.map((row) => {
+    const conditionText = row.conditionKey
+      ? getConditionName(row.conditionKey, row.conditionDefault)
+      : row.conditionDefault;
+    return {
+      id: row.id,
+      title: conditionText,
+      badge: (
+        <Badge {...statusBadge[row.status]}>{getStatusName(row.status)}</Badge>
+      ),
+      details: [
+        row.diagnosed && row.diagnosed !== "—"
+          ? `${h?.history?.headers?.diagnosed || "Diagnosed"}: ${row.diagnosed}`
+          : "",
+        row.notes || "",
+      ],
+      actions: (
+        <RowActions
+          label={conditionText}
+          editLabel={h?.actions?.edit}
+          deleteLabel={h?.actions?.delete}
+          onEdit={() => onEdit(row)}
+          onDelete={() => onDelete(row.id)}
+        />
+      ),
+    };
+  });
 
   return (
-    <Card padding="none" className="overflow-hidden">
-      <Table minWidth={1080}>
-        <TableHead className="bg-surface-sunken">
-          <TableRow>
-            {headers.map((header, index) => (
-              <TableHeaderCell
-                key={header}
-                className={`${index === 0 ? "w-[358px]" : ""} ${
-                  index === 4 ? "text-center" : ""
-                }`}
-              >
-                {header}
-              </TableHeaderCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => {
-            const conditionText = row.conditionKey
-              ? getConditionName(row.conditionKey, row.conditionDefault)
-              : row.conditionDefault;
-            const notesText = row.notes ?? `${weekPrefix} ${row.week}`;
+    <>
+      <MobileRows items={mobileItems} />
+      <Card padding="none" className="hidden overflow-hidden sm:block">
+        <Table minWidth={1080}>
+          <TableHead className="bg-surface-sunken">
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableHeaderCell
+                  key={header}
+                  className={`${index === 0 ? "w-[358px]" : ""} ${
+                    index === 4 ? "text-center" : ""
+                  }`}
+                >
+                  {header}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => {
+              const conditionText = row.conditionKey
+                ? getConditionName(row.conditionKey, row.conditionDefault)
+                : row.conditionDefault;
+              const notesText = row.notes || "—";
 
-            return (
-              <TableRow key={row.id}>
-                <TableCell emphasis className="max-w-[358px] truncate">
-                  {conditionText}
-                </TableCell>
-                <TableCell>
-                  <Badge {...statusBadge[row.status]} className="w-[84px]">
-                    {getStatusName(row.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{row.diagnosed}</TableCell>
-                <TableCell>{notesText}</TableCell>
-                <TableCell>
-                  <RowActions
-                    label={conditionText}
-                    editLabel={h?.actions?.edit}
-                    deleteLabel={h?.actions?.delete}
-                    onEdit={() => onEdit(row)}
-                    onDelete={() => onDelete(row.id)}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </Card>
+              return (
+                <TableRow key={row.id}>
+                  <TableCell emphasis className="max-w-[358px] truncate">
+                    {conditionText}
+                  </TableCell>
+                  <TableCell>
+                    <Badge {...statusBadge[row.status]} className="w-[84px]">
+                      {getStatusName(row.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{row.diagnosed}</TableCell>
+                  <TableCell>{notesText}</TableCell>
+                  <TableCell>
+                    <RowActions
+                      label={conditionText}
+                      editLabel={h?.actions?.edit}
+                      deleteLabel={h?.actions?.delete}
+                      onEdit={() => onEdit(row)}
+                      onDelete={() => onDelete(row.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Card>
+    </>
   );
 }

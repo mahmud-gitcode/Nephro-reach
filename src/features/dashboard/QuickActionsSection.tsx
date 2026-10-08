@@ -90,7 +90,9 @@ export function QuickActionsSection({
 
   return (
     <section className="space-y-stack-md">
-      <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
+      {/* "Customize" beside the heading at every width; on a phone it
+          had dropped to a line of its own (client review, 2026-10-08). */}
+      <div className="flex items-center justify-between gap-inline-md">
         <h2 className="text-heading-4 text-fg">{title}</h2>
         <Button
           size="small"
@@ -102,7 +104,9 @@ export function QuickActionsSection({
           {isEs ? "Personalizar" : "Customize"}
         </Button>
       </div>
-      <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two across on a phone: one per row made four tall cards fill the
+          whole screen. */}
+      <div className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md xl:grid-cols-4">
         {actions.map((action, index) => {
           const svg = SVG[action.id];
           const Glyph = LUCIDE[action.id];
@@ -110,7 +114,7 @@ export function QuickActionsSection({
             <Link
               key={action.id}
               href={action.href}
-              className="flex min-h-[134px] flex-col gap-inline-lg rounded-card border border-line bg-surface p-inset-lg transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex min-h-[112px] flex-col gap-inline-md rounded-card border border-line bg-surface p-inset-md transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:min-h-[134px] sm:gap-inline-lg sm:p-inset-lg"
             >
               <span
                 aria-hidden="true"

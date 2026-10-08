@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
-import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import {
   ArrowLeft,
   Check,
@@ -33,6 +32,7 @@ import { LocalSvg } from "@/components/icons/LocalSvg";
 import { useDismiss } from "@/lib/utils/useDismiss";
 import { MessagesMenu, NotificationsMenu } from "./NotificationsMenu";
 import {
+  bottomNavItems,
   getBreadcrumb,
   getBreadcrumbTrail,
   getNavLabel,
@@ -74,7 +74,10 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             width={240}
             height={190}
             priority
-            className="h-auto w-full shrink-0"
+            /* Phone and tablet menu: the full-width logo took a third of
+               the screen, so it is smaller there; the desktop sidebar
+               keeps its full size (client, 2026-10-08). */
+            className="h-auto w-full shrink-0 max-lg:w-28"
           />
         </Link>
         {onClose && (
@@ -201,7 +204,9 @@ function LanguageSwitcher() {
         onClick={() => setLangOpen((open) => !open)}
         aria-haspopup="menu"
         aria-expanded={langOpen}
-        className={topBarControl}
+        /* On a phone, just the flag in a round button: the bar has no room
+           for the chevron (client, 2026-10-08). */
+        className={`${topBarControl} max-sm:px-0`}
         aria-label={language === "ES" ? "Cambiar idioma" : "Change language"}
       >
         <span className="relative size-5 shrink-0 overflow-clip rounded-pill ring-1 ring-line">
@@ -220,7 +225,7 @@ function LanguageSwitcher() {
         </span>
         <ChevronDown
           aria-hidden="true"
-          className={`size-4 shrink-0 text-fg-muted transition-transform duration-150 ease-standard ${
+          className={`hidden size-4 shrink-0 text-fg-muted transition-transform duration-150 ease-standard sm:block ${
             langOpen ? "rotate-180" : ""
           }`}
         />
@@ -454,12 +459,16 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             size="small"
             onClick={() => setEmergencyOpen(true)}
             leadingIcon={<TriangleAlert aria-hidden="true" />}
+            aria-label={language === "ES" ? "Emergencia" : "Emergency"}
             className="shrink-0"
           >
             <span className="hidden min-[440px]:inline">
               {language === "ES" ? "Emergencia" : "Emergency"}
             </span>
-            <span className="min-[440px]:hidden">SOS</span>
+            {/* Under 360px only the icon fits beside the other controls. */}
+            <span className="hidden min-[360px]:inline min-[440px]:hidden">
+              SOS
+            </span>
           </Button>
         ) : null}
 
@@ -612,6 +621,68 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
 }
 
 /** A single journey lesson, e.g. /dashboard/my-classroom/day-03. */
+/**
+ * The phone and tablet navigation: the role's four most-used pages at the
+ * bottom of the screen, within thumb reach, and "More" for the full menu
+ * (client, 2026-10-08). Hidden from lg up, where the sidebar shows.
+ */
+function BottomNav({ onMore }: { onMore: () => void }) {
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const { language } = useLanguage();
+  const role = user?.role ?? "user";
+  const visible = [...sidebarItems, ...supportItems].filter(
+    (item) =>
+      item.roles.includes(role) &&
+      (!item.permission || userCan(user, item.permission)),
+  );
+  const tabs = bottomNavItems(role, visible, language);
+  if (tabs.length === 0) return null;
+
+  const tab =
+    "flex min-h-14 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-control-small px-1 text-caption transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+
+  return (
+    <nav
+      aria-label={
+        language === "ES" ? "Navegación principal" : "Main navigation"
+      }
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] shadow-(--popover-shadow) lg:hidden print:hidden"
+    >
+      <ul className="mx-auto flex max-w-xl items-stretch px-1">
+        {tabs.map((item) => {
+          const active = isActiveRoute(item.href, pathname);
+          const Icon = item.icon;
+          return (
+            <li key={item.href} className="flex min-w-0 flex-1">
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`${tab} ${
+                  active ? "text-fg-brand" : "text-fg-muted hover:text-fg"
+                }`}
+              >
+                <Icon aria-hidden="true" className="size-5 shrink-0" />
+                <span className="max-w-full truncate">{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+        <li className="flex min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onMore}
+            className={`${tab} text-fg-muted hover:text-fg`}
+          >
+            <Menu aria-hidden="true" className="size-5 shrink-0" />
+            <span>{language === "ES" ? "Más" : "More"}</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
+
 function isClassroomRoute(pathname: string) {
   const slug = pathname.split("/").pop() || "";
   return (
@@ -627,7 +698,15 @@ export default function DashboardShell({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rideModalOpen, setRideModalOpen] = useState(false);
+  /* Escape closes the phone menu, as a tap beside it does. */
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sidebarOpen]);
 
   if (isClassroomRoute(pathname)) {
     return (
@@ -655,7 +734,9 @@ export default function DashboardShell({
             onClick={() => setSidebarOpen(false)}
             aria-label="Close dashboard menu overlay"
           />
-          <div className="relative h-full">
+          {/* As wide as the sidebar only: full width, it covered the dim
+              backdrop, so a tap beside the menu did not close it. */}
+          <div className="relative h-full w-fit">
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
@@ -666,13 +747,12 @@ export default function DashboardShell({
           and text colour rather than inheriting the shell's. */}
       <div data-canvas className="min-h-screen bg-canvas text-fg lg:pl-[272px]">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="px-4 py-5 md:px-8 lg:px-8">{children}</main>
+        {/* Room at the bottom for the bottom bar, below lg. */}
+        <main className="px-4 py-5 max-lg:pb-24 md:px-8 lg:px-8">
+          {children}
+        </main>
       </div>
-
-      <WheresMyRideModal
-        isOpen={rideModalOpen}
-        onClose={() => setRideModalOpen(false)}
-      />
+      <BottomNav onMore={() => setSidebarOpen(true)} />
     </div>
   );
 }

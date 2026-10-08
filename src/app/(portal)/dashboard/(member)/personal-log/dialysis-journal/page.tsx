@@ -313,7 +313,7 @@ export default function DialysisJournalPage() {
                     {language === "ES" ? "No monitoreado" : "Unmonitored"}
                   </Badge>
                 </div>
-                <p className="text-justify text-body-sm text-fg-secondary">
+                <p className="text-body-sm text-fg-secondary">
                   {language === "ES" ? (
                     <>
                       <strong className="font-semibold text-fg">
@@ -364,12 +364,12 @@ export default function DialysisJournalPage() {
                   {dj?.introCard?.subtitle ||
                     "A private space to reflect on your dialysis journey."}
                 </p>
-                <p className="mt-6 text-justify text-body-md text-fg-secondary">
+                <p className="mt-6 text-body-md text-fg-secondary">
                   {dj?.introCard?.body ||
                     "Use your journal to keep track of how dialysis is affecting your everyday life. Write about how you felt after treatment, changes you've noticed, challenges you're working through, accomplishments you're proud of, or anything about your dialysis journey you want to remember."}
                 </p>
                 <Card padding="small" className="mt-stack-lg">
-                  <p className="text-justify text-body-sm text-fg-secondary">
+                  <p className="text-body-sm text-fg-secondary">
                     <span className="font-semibold text-fg">
                       {dj?.introCard?.promptsPrefix || "You can write about:"}
                     </span>{" "}

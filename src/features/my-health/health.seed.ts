@@ -1,152 +1,84 @@
 import type { BadgeProps } from "@/components/ui";
-import type { AllergySeverity, ConditionStatus } from "./health.types";
+import type {
+  AllergyRow,
+  AllergySeverity,
+  ConditionStatus,
+  HistoryRow,
+} from "./health.types";
 
 /* The demo rows, and the badge tone each severity and status takes.
    Deletable in one commit when real records arrive. */
 
-export const rawAllergyRows = [
+/* The demo patient's sample record (client review, 2026-10-08: the old
+   rows had no names, so every allergy read "Introduction to Wellness",
+   and the history listed the same conditions as both current and past).
+   A member who registered starts with an empty record. */
+export const rawAllergyRows: Omit<AllergyRow, "id">[] = [
   {
-    type: "Medication" as const,
+    name: "Penicillin",
+    type: "Medication",
     reactionKey: "rashHives",
     reactionDefault: "Rash, Hives",
-    severity: "Severe" as const,
-    week: 1,
+    severity: "Severe",
+    notes: "Reaction as a child. Tell every new provider.",
   },
   {
-    type: "Food" as const,
-    reactionKey: "eczemaSwelling",
-    reactionDefault: "Eczema, Swelling",
-    severity: "Moderate" as const,
-    week: 2,
+    name: "Shellfish",
+    type: "Food",
+    reactionDefault: "Swelling of lips and throat",
+    severity: "Severe",
+    notes: "Carries an EpiPen.",
   },
   {
-    type: "Environmental" as const,
-    reactionKey: "drySkinItching",
-    reactionDefault: "Dry Skin, Itching",
-    severity: "Severe" as const,
-    week: 3,
+    name: "Latex",
+    type: "Environmental",
+    reactionDefault: "Itching, Redness",
+    severity: "Moderate",
+    notes: "Ask for latex-free gloves at dialysis.",
   },
   {
-    type: "Food" as const,
-    reactionKey: "rednessPeeling",
-    reactionDefault: "Redness, Peeling",
-    severity: "Mild" as const,
-    week: 4,
-  },
-  {
-    type: "Environmental" as const,
-    reactionKey: "blisteringSensitivity",
-    reactionDefault: "Blistering, Sensitivity",
-    severity: "Mild" as const,
-    week: 5,
-  },
-  {
-    type: "Medication" as const,
-    reactionKey: "flakingCracking",
-    reactionDefault: "Flaking, Cracking",
-    severity: "Moderate" as const,
-    week: 6,
-  },
-  {
-    type: "Food" as const,
-    reactionKey: "itchingRash",
-    reactionDefault: "Itching, Rash Extension",
-    severity: "Mild" as const,
-    week: 7,
-  },
-  {
-    type: "Medication" as const,
-    reactionKey: "swellingHeat",
-    reactionDefault: "Swelling, Heat",
-    severity: "Moderate" as const,
-    week: 8,
-  },
-  {
-    type: "Environmental" as const,
-    reactionKey: "dryPatches",
-    reactionDefault: "Dry Patches, Red Spots",
-    severity: "Mild" as const,
-    week: 9,
-  },
-  {
-    type: "Environmental" as const,
-    reactionKey: "discomfortTenderness",
-    reactionDefault: "Discomfort, Tenderness",
-    severity: "Mild" as const,
-    week: 10,
+    name: "Sulfa drugs",
+    type: "Medication",
+    reactionDefault: "Rash",
+    severity: "Mild",
+    notes: "",
   },
 ];
 
-export const rawHistoryRows = [
+export const rawHistoryRows: Omit<HistoryRow, "id">[] = [
   {
     conditionKey: "ckd",
     conditionDefault: "Chronic Kidney Disease (CKD)",
-    status: "Current" as const,
-    diagnosed: "07/05/2016",
-    week: 1,
+    status: "Current",
+    diagnosed: "05/07/2016",
+    notes: "Stage 5, on in-center hemodialysis since 2022.",
   },
   {
     conditionKey: "hypertension",
     conditionDefault: "Hypertension (High Blood Pressure)",
-    status: "Current" as const,
-    diagnosed: "18/09/2016",
-    week: 2,
+    status: "Current",
+    diagnosed: "10/28/2012",
+    notes: "",
   },
   {
     conditionKey: "diabetes",
     conditionDefault: "Type 2 Diabetes",
-    status: "Current" as const,
-    diagnosed: "16/08/2013",
-    week: 3,
+    status: "Current",
+    diagnosed: "08/16/2013",
+    notes: "",
+  },
+  {
+    conditionDefault: "Anemia of CKD",
+    status: "Current",
+    diagnosed: "03/14/2019",
+    notes: "Treated at dialysis.",
   },
   {
     conditionKey: "appendectomy",
     conditionDefault: "Appendectomy",
-    status: "Current" as const,
-    diagnosed: "15/08/2017",
-    week: 4,
-  },
-  {
-    conditionKey: "asthma",
-    conditionDefault: "Asthma",
-    status: "Current" as const,
-    diagnosed: "28/10/2012",
-    week: 5,
-  },
-  {
-    conditionKey: "hypertension",
-    conditionDefault: "Hypertension (High Blood Pressure)",
-    status: "Past" as const,
-    diagnosed: "07/05/2016",
-    week: 2,
-  },
-  {
-    conditionKey: "diabetes",
-    conditionDefault: "Type 2 Diabetes",
-    status: "Past" as const,
-    diagnosed: "28/10/2012",
-    week: 3,
-  },
-  {
-    conditionKey: "appendectomy",
-    conditionDefault: "Appendectomy",
-    status: "Past" as const,
-    diagnosed: "16/08/2013",
-    week: 4,
-  },
-  {
-    conditionKey: "ckd",
-    conditionDefault: "Chronic Kidney Disease (CKD)",
-    status: "Past" as const,
-    diagnosed: "12/06/2020",
-    week: 1,
-  },
-  {
-    conditionKey: "hypertension",
-    conditionDefault: "Hypertension (High Blood Pressure)",
-    status: "Past" as const,
-    diagnosed: "28/10/2012",
-    week: 2,
+    status: "Past",
+    diagnosed: "08/15/2009",
+    notes: "",
   },
 ];
 

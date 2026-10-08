@@ -279,7 +279,7 @@
     "addNewRideModal": "Add New Ride",
     "editRideModal": "Edit Ride",
     "driverNameLabel": "Ride / Driver Name",
-    "driverNamePlaceholder": "e.g. Bobo boy, Uncle David, Care Transit",
+    "driverNamePlaceholder": "e.g. Uncle David, Care Transit",
     "phoneLabel": "Phone Number",
     "phonePlaceholder": "(684) 555-0102",
     "relationshipLabel": "Relationship or Label (Optional)",
@@ -1509,7 +1509,7 @@
       "smsAnalytics": "Notification Analytics",
       "subscriptions": "Subscriptions",
       "support": "Support",
-      "setting": "Setting",
+      "setting": "Settings",
       "trash": "Trash"
     }
   },

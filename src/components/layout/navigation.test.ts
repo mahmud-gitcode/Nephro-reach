@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  bottomNavItems,
   getBreadcrumbTrail,
   isActiveRoute,
   redirectFor,
   sidebarItems,
   supportItems,
 } from "./navigation";
-import { canAccessPath } from "@/features/auth/auth";
+import { canAccessPath, type UserRole } from "@/features/auth/auth";
 
 /* Which nav item is lit is how a member knows where they are. It had never
  * been tested, and it has three special cases, which is exactly the number
@@ -188,5 +189,45 @@ describe("a staff role lands on a page it can see", () => {
       redirectFor("clinic", "/dashboard/clinic/labs", dietitian),
     ).toBeNull();
     expect(redirectFor("clinic", "/dashboard/clinic", () => true)).toBeNull();
+  });
+});
+
+describe("bottomNavItems", () => {
+  const visibleFor = (role: UserRole) =>
+    [...sidebarItems, ...supportItems].filter((i) => i.roles.includes(role));
+
+  it("gives a patient Home, Check-in, Messages and Classroom", () => {
+    expect(
+      bottomNavItems("user", visibleFor("user")).map((i) => i.label),
+    ).toEqual(["Home", "Check-in", "Messages", "Classroom"]);
+  });
+
+  it("speaks Spanish", () => {
+    expect(
+      bottomNavItems("user", visibleFor("user"), "ES").map((i) => i.label),
+    ).toEqual(["Inicio", "Registro", "Mensajes", "Clases"]);
+  });
+
+  it("fills a refused tab with the next page the person can see", () => {
+    const visible = visibleFor("clinic").filter(
+      (i) => i.href !== "/dashboard/clinic/checkins",
+    );
+    const tabs = bottomNavItems("clinic", visible);
+    expect(tabs).toHaveLength(4);
+    expect(tabs.map((i) => i.href)).not.toContain("/dashboard/clinic/checkins");
+  });
+
+  it("never shows more than four tabs, for any role", () => {
+    for (const role of [
+      "user",
+      "clinic",
+      "nephrology",
+      "access",
+      "admin",
+    ] as const) {
+      const tabs = bottomNavItems(role, visibleFor(role));
+      expect(tabs.length).toBeLessThanOrEqual(4);
+      expect(tabs.length).toBeGreaterThan(0);
+    }
   });
 });

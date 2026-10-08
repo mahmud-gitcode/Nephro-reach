@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import WheresMyRideModal from "@/features/travel/WheresMyRideModal";
 import { QuickActionsSection } from "./QuickActionsSection";
 import {
   AsyncSection,
@@ -136,7 +135,6 @@ export default function UserDashboard() {
   const posted = past.filter((item) => recordings[item.title]).slice(0, 3);
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => getGreeting(dh), [dh]);
-  const [isRideModalOpen, setIsRideModalOpen] = useState(false);
 
   const [selectedVideo, setSelectedVideo] = useState<Testimonial | null>(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -210,7 +208,7 @@ export default function UserDashboard() {
             </h2>
             <Link
               href="/dashboard/my-classroom"
-              className="flex shrink-0 items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="-my-2.5 flex min-h-11 shrink-0 items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {dh?.curriculum?.weekBadge || "Day 1 of 21"}
               <Icon src={asset("arrow-right.svg")} />
@@ -256,7 +254,7 @@ export default function UserDashboard() {
           </Card>
         </Card>
 
-        <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md">
           {stats.map((stat) => (
             <Card
               as="article"
@@ -658,15 +656,6 @@ export default function UserDashboard() {
         user={user}
         editing={editingStory}
         onSubmitted={refetchTestimonials}
-      />
-
-      {/* Where's My Ride Modal.
-          NOTE: nothing on this page sets isRideModalOpen — the Quick Action
-          tile is a <Link> to /dashboard/my-rides instead. Left wired so the
-          modal can be opened from here once that is decided. */}
-      <WheresMyRideModal
-        isOpen={isRideModalOpen}
-        onClose={() => setIsRideModalOpen(false)}
       />
     </div>
   );

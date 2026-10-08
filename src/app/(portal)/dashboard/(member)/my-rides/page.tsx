@@ -217,7 +217,7 @@ export default function MyRidesPage() {
                   "Third-Party Transportation Disclaimer:"}
               </span>
             </p>
-            <p className="text-justify text-body-sm text-fg-muted">
+            <p className="text-body-sm text-fg-muted">
               {t("myRides.disclaimerText") ||
                 "NephroReach does not provide, arrange, operate, endorse, or guarantee transportation services offered by third-party providers. Transportation availability, eligibility, pricing, scheduling, safety, and services are determined solely by the transportation provider. By selecting a transportation link, you will leave NephroReach and be subject to the third party's terms and privacy practices."}
             </p>

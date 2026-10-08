@@ -72,7 +72,7 @@ function OfficeForm({
 
   return (
     <form
-      className="space-y-stack-md rounded-card-nested border border-line p-inset-md"
+      className="space-y-stack-md rounded-card-nested border border-line p-inset-md max-sm:p-inset-sm"
       onSubmit={async (event) => {
         event.preventDefault();
         setState("saving");

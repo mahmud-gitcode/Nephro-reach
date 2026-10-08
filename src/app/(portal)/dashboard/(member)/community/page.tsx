@@ -342,7 +342,7 @@ export default function CommunityPage() {
       {/* Floating Create Post Button */}
       <Button
         onClick={() => setComposeOpen(true)}
-        className="fixed right-6 bottom-8 z-20 px-inset-md shadow-raised lg:right-10"
+        className="fixed right-6 bottom-8 z-20 px-inset-md shadow-raised max-lg:bottom-24 lg:right-10"
         aria-label={comm?.createPostAria || "Create a new post"}
       >
         <Plus aria-hidden="true" />

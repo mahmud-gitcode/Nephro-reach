@@ -11,10 +11,7 @@ import {
   AllergyModal,
   ConditionModal,
 } from "@/features/my-health/HealthModals";
-import {
-  rawAllergyRows,
-  rawHistoryRows,
-} from "@/features/my-health/health.seed";
+import { useMyHealth } from "@/features/my-health/useMyHealth";
 import type {
   AllergyRow,
   HealthTab,
@@ -29,18 +26,12 @@ export default function MyHealthPage() {
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
-  const [allergyRows, setAllergyRows] = React.useState<AllergyRow[]>(() =>
-    rawAllergyRows.map((row, index) => ({
-      ...row,
-      id: `allergy-seed-${index}`,
-    })),
-  );
-  const [historyRows, setHistoryRows] = React.useState<HistoryRow[]>(() =>
-    rawHistoryRows.map((row, index) => ({
-      ...row,
-      id: `history-seed-${index}`,
-    })),
-  );
+  /* Saved on this device; the demo patient starts with a sample record. */
+  const health = useMyHealth();
+  const allergyRows = health.allergies;
+  const historyRows = health.history;
+  const setAllergyRows = health.setAllergies;
+  const setHistoryRows = health.setHistory;
 
   const [isAllergyModalOpen, setIsAllergyModalOpen] = React.useState(false);
   const [isConditionModalOpen, setIsConditionModalOpen] = React.useState(false);

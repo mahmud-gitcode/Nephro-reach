@@ -74,12 +74,22 @@ function SettingsSection({
   children: React.ReactNode;
 }) {
   return (
-    <Card as="section" id={id} tone="sunken" padding="small">
+    /* Three nested boxes on a phone left the fields cramped (client
+       review, 2026-10-08): lighter padding there, the same from sm up. */
+    <Card
+      as="section"
+      id={id}
+      tone="sunken"
+      padding="small"
+      className="max-sm:p-inset-xs"
+    >
       <div className="mb-stack-lg flex items-center gap-inline-md px-inset-xs pt-inset-xs">
         <Icon className="h-icon-big w-icon-big text-fg-brand" />
         <h2 className="text-heading-4 text-fg">{title}</h2>
       </div>
-      <Card padding="big">{children}</Card>
+      <Card padding="big" className="max-sm:p-inset-sm">
+        {children}
+      </Card>
     </Card>
   );
 }

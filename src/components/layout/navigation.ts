@@ -365,7 +365,7 @@ export const supportItems: NavItem[] = [
     roles: ["user"],
   },
   {
-    label: "Setting",
+    label: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
     roles: ["user"],
@@ -605,7 +605,7 @@ export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname.startsWith("/dashboard/support"))
     return language === "ES" ? "Soporte" : "Support";
   if (pathname.startsWith("/dashboard/settings"))
-    return language === "ES" ? "Configuración" : "Setting";
+    return language === "ES" ? "Configuración" : "Settings";
   return language === "ES" ? "Panel" : "Breadcrumb";
 }
 
@@ -752,4 +752,94 @@ export function redirectFor(
   if (!here?.permission || can(here.permission)) return null;
   const first = items.find((item) => !item.permission || can(item.permission));
   return first && first.href !== pathname ? first.href : null;
+}
+
+/* ==========================================================================
+   Bottom navigation (phone and tablet) — 2026-10-08
+   --------------------------------------------------------------------------
+   Below the lg breakpoint the sidebar is hidden, so the pages people use
+   most sit in a bar at the bottom of the screen, within thumb reach, with
+   "More" opening the full menu. Each role names its own; an entry the
+   signed-in person cannot see is skipped and the next page they can see
+   fills its place, so a staff role never gets a tab it is refused.
+   ========================================================================== */
+
+const BOTTOM_NAV: Record<UserRole, string[]> = {
+  user: [
+    "/dashboard",
+    "/dashboard/beyond-the-chair",
+    "/dashboard/messages",
+    "/dashboard/my-classroom",
+  ],
+  clinic: [
+    "/dashboard/clinic",
+    "/dashboard/clinic/messages",
+    "/dashboard/clinic/checkins",
+    "/dashboard/clinic/vascular-access",
+  ],
+  nephrology: [
+    "/dashboard/clinic",
+    "/dashboard/nephrology",
+    "/dashboard/nephrology/messages",
+    "/dashboard/clinic/labs",
+  ],
+  access: [
+    "/dashboard/access-center",
+    "/dashboard/access-center/messages",
+    "/dashboard/clinic/billing",
+    "/dashboard/access-center/support",
+  ],
+  admin: [
+    "/dashboard",
+    "/dashboard/members",
+    "/dashboard/live-class",
+    "/dashboard/admin-support",
+  ],
+};
+
+/** The short names a tab has room for. */
+const BOTTOM_LABEL: Record<string, { en: string; es: string }> = {
+  "/dashboard": { en: "Home", es: "Inicio" },
+  "/dashboard/clinic": { en: "Home", es: "Inicio" },
+  "/dashboard/beyond-the-chair": { en: "Check-in", es: "Registro" },
+  "/dashboard/my-classroom": { en: "Classroom", es: "Clases" },
+  "/dashboard/clinic/checkins": { en: "Check-ins", es: "Registros" },
+  "/dashboard/clinic/vascular-access": { en: "Access", es: "Acceso" },
+  "/dashboard/nephrology": { en: "CCM", es: "CCM" },
+  "/dashboard/access-center": { en: "Patients", es: "Pacientes" },
+  "/dashboard/clinic/billing": { en: "Billing", es: "Facturación" },
+  "/dashboard/live-class": { en: "Live", es: "En Vivo" },
+  "/dashboard/admin-support": { en: "Support", es: "Soporte" },
+};
+
+export type BottomNavItem = Pick<NavItem, "href" | "icon"> & { label: string };
+
+/** Up to four tabs for the bottom bar, in the role's order. `visible` is
+ *  the menu as the signed-in person sees it (roles and permissions
+ *  already applied). */
+export function bottomNavItems(
+  role: UserRole,
+  visible: NavItem[],
+  language?: string,
+): BottomNavItem[] {
+  const preferred = BOTTOM_NAV[role] ?? [];
+  const chosen = preferred
+    .map((href) => visible.find((item) => item.href === href))
+    .filter((item): item is NavItem => !!item);
+  for (const item of visible) {
+    if (chosen.length >= 4) break;
+    if (!chosen.includes(item)) chosen.push(item);
+  }
+  return chosen.slice(0, 4).map((item) => {
+    const short = BOTTOM_LABEL[item.href];
+    return {
+      href: item.href,
+      icon: item.icon,
+      label: short
+        ? language === "ES"
+          ? short.es
+          : short.en
+        : getNavLabel(item.href, item.label, language),
+    };
+  });
 }

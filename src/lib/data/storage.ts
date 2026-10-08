@@ -108,6 +108,7 @@ const MEMBER_OWNED = new Set([
   "bp-reminders",
   "member-medications",
   "member-appointments",
+  "my-health",
 ]);
 
 /** The signed-in session's role and email, read from the cookie. */
