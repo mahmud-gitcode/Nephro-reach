@@ -229,7 +229,7 @@ function JournalCard({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls={`entry-${entry.id}-details`}
-        className="mt-stack-sm cursor-pointer text-label-md text-fg-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="mt-stack-xs inline-flex min-h-11 cursor-pointer items-center text-label-md text-fg-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {open
           ? isEs

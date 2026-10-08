@@ -1265,55 +1265,55 @@
     "posts": [
       {
         "id": "1",
-        "author": "Charles D. Xavier",
-        "badge": "Hito",
-        "time": "Publicado hace 3m",
+        "author": "Marcus T.",
+        "badge": "Logro",
+        "time": "Hace 2 h",
         "paragraphs": [
-          "¡He estado practicando con el entrenador Sandow AI durante la última semana y me siento mejor!",
-          "¡¡La recomendación personalizada es simplemente increíble!! "
+          "Hoy cumplo un año en diálisis. El primer mes fue el más difícil y se hizo más fácil cuando aprendí mi rutina.",
+          "A quien recién empieza: pregunte todo a sus enfermeras. Ellas quieren que lo haga."
         ],
-        "hashtags": "#glute4eva #letsgetfit 💪🙀",
-        "likes": 215,
-        "categoryId": "all"
+        "hashtags": "#UnAñoFuerte #VidaEnDiálisis",
+        "likes": 128,
+        "categoryId": "dialysis"
       },
       {
         "id": "2",
-        "author": "Charles D. Xavier",
-        "badge": "Hito",
-        "time": "Publicado hace 3m",
+        "author": "Linda R.",
+        "badge": "Ánimo",
+        "time": "Hace 5 h",
         "paragraphs": [
-          "¡He estado practicando con el entrenador Sandow AI durante la última semana y me siento mejor!",
-          "¡¡La recomendación personalizada es simplemente increíble!! "
+          "Mi mamá empezó hemodiálisis en casa el mes pasado. Como cuidadora estaba nerviosa, pero el equipo de capacitación fue paciente con las dos.",
+          "Estamos encontrando nuestro ritmo. Fuerza para todos los cuidadores aquí."
         ],
-        "hashtags": "#glute4eva #letsgetfit 💪🙀",
-        "likes": 215,
+        "hashtags": "#Cuidadores #HDenCasa",
+        "likes": 94,
         "categoryId": "general"
       },
       {
         "id": "3",
-        "author": "Charles D. Xavier",
-        "badge": "Hito",
-        "time": "Publicado hace 3m",
+        "author": "James W.",
+        "badge": "Logro",
+        "time": "Ayer",
         "paragraphs": [
-          "¡He estado practicando con el entrenador Sandow AI durante la última semana y me siento mejor!",
-          "¡¡La recomendación personalizada es simplemente increíble!! "
+          "Terminé mi evaluación para trasplante esta semana y ¡ya estoy oficialmente en la lista de espera!",
+          "Agradecido con mi equipo de atención y con este grupo por darme ánimo."
         ],
-        "hashtags": "#glute4eva #letsgetfit 💪🙀",
-        "likes": 215,
-        "categoryId": "dialysis"
+        "hashtags": "#CaminoAlTrasplante #Esperanza",
+        "likes": 211,
+        "categoryId": "transplant"
       },
       {
         "id": "4",
-        "author": "Charles D. Xavier",
-        "badge": "Hito",
-        "time": "Publicado hace 3m",
+        "author": "Rosa M.",
+        "badge": "Consejo",
+        "time": "Hace 2 días",
         "paragraphs": [
-          "¡He estado practicando con el entrenador Sandow AI durante la última semana y me siento mejor!",
-          "¡¡La recomendación personalizada es simplemente increíble!! "
+          "Pequeño logro: cumplí mi meta de líquidos todos los días esta semana. El hielo y un vaso más pequeño me ayudaron mucho.",
+          "¿Qué les ayuda a ustedes?"
         ],
-        "hashtags": "#glute4eva #letsgetfit 💪🙀",
-        "likes": 215,
-        "categoryId": "transplant"
+        "hashtags": "#MetaDeLíquidos #PequeñosLogros",
+        "likes": 76,
+        "categoryId": "nutrition"
       }
     ]
   },

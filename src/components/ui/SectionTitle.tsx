@@ -13,8 +13,9 @@ export type SectionTitleProps = {
   subtitle?: React.ReactNode;
   /** For `aria-labelledby` on the section. */
   id?: string;
-  /** Heading level. The visual size is the same either way. */
-  as?: "h2" | "h3";
+  /** Heading level. The visual size is the same either way; h1 where the
+   *  section is the page itself (a quiz, the workbook). */
+  as?: "h1" | "h2" | "h3";
   /** Right-aligned controls: a button, a badge, a filter. */
   action?: React.ReactNode;
   className?: string;

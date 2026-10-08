@@ -143,11 +143,11 @@ export function KeyCard({
           figures sit level across a row even when one title wraps and its
           neighbour's does not. */}
       <div className="mt-auto pt-stack-lg">
-        <div className="flex items-center gap-inline-lg">
+        <div className="flex items-center gap-inline-md sm:gap-inline-lg">
           <span
             aria-hidden="true"
             className={cn(
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-card-nested [&_svg]:h-6 [&_svg]:w-6",
+              "flex size-10 shrink-0 items-center justify-center rounded-card-nested sm:size-12 [&_svg]:h-5 [&_svg]:w-5 sm:[&_svg]:h-6 sm:[&_svg]:w-6",
               tiles[tone],
             )}
           >
@@ -156,7 +156,10 @@ export function KeyCard({
           <div className="flex min-w-0 flex-wrap items-center gap-x-inline-md gap-y-stack-xs">
             {/* A figure never breaks ("23 /" over "30"); the tag may wrap
                 under it on a narrow card instead. */}
-            <p className="text-metric-lg leading-none whitespace-nowrap text-fg">
+            {/* A size down on a phone, where two cards share a row and a
+                figure like $1,995 ran past the card (client review,
+                2026-10-08). */}
+            <p className="text-metric-md leading-none whitespace-nowrap text-fg sm:text-metric-lg">
               {value}
             </p>
             {trend ? <TrendTag trend={trend} /> : null}

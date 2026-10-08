@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import Image from "next/image";
 import { EyeOff, Heart, Plus } from "lucide-react";
 import { MoreSolid } from "@/components/icons/solid";
 import { useDismiss } from "@/lib/utils/useDismiss";
@@ -39,58 +38,60 @@ const defaultTabs: CommunityTab[] = [
   { id: "recipes", label: "Recipes" },
 ];
 
+/* Sample posts for the demo (client review, 2026-10-08: the old sample
+   was one fitness post repeated four times). */
 const defaultPosts: PostItem[] = [
   {
     id: "1",
-    author: "Charles D. Xavier",
+    author: "Marcus T.",
     badge: "Milestone",
-    time: "Posted 3m ago",
+    time: "Posted 2h ago",
     paragraphs: [
-      "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
-      "The personalized recommendation is simply a beast!! ",
+      "One year on dialysis today. The first month was the hardest, and it got easier once I learned my routine.",
+      "To anyone just starting: ask your nurses everything. They want you to.",
     ],
-    hashtags: "#glute4eva #letsgetfit 💪🙀",
-    likes: 215,
-    categoryId: "all",
+    hashtags: "#OneYearStrong #DialysisLife",
+    likes: 128,
+    categoryId: "dialysis",
   },
   {
     id: "2",
-    author: "Charles D. Xavier",
-    badge: "Milestone",
-    time: "Posted 3m ago",
+    author: "Linda R.",
+    badge: "Encouragement",
+    time: "Posted 5h ago",
     paragraphs: [
-      "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
-      "The personalized recommendation is simply a beast!! ",
+      "My mom started home hemodialysis last month. As her caregiver I was nervous, but the training team was patient with both of us.",
+      "We are finding our rhythm. Sending strength to every caregiver here.",
     ],
-    hashtags: "#glute4eva #letsgetfit 💪🙀",
-    likes: 215,
+    hashtags: "#Caregivers #HomeHD",
+    likes: 94,
     categoryId: "general",
   },
   {
     id: "3",
-    author: "Charles D. Xavier",
+    author: "James W.",
     badge: "Milestone",
-    time: "Posted 3m ago",
+    time: "Posted yesterday",
     paragraphs: [
-      "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
-      "The personalized recommendation is simply a beast!! ",
+      "I finished my transplant evaluation this week and I am officially on the waiting list!",
+      "Grateful for my care team, and for this group for keeping me going.",
     ],
-    hashtags: "#glute4eva #letsgetfit 💪🙀",
-    likes: 215,
-    categoryId: "dialysis",
+    hashtags: "#TransplantJourney #Hope",
+    likes: 211,
+    categoryId: "transplant",
   },
   {
     id: "4",
-    author: "Charles D. Xavier",
-    badge: "Milestone",
-    time: "Posted 3m ago",
+    author: "Rosa M.",
+    badge: "Tip",
+    time: "Posted 2 days ago",
     paragraphs: [
-      "I’ve been practicing my glutes with coach Sandow AI for the past week, and I feel better!",
-      "The personalized recommendation is simply a beast!! ",
+      "Small win: I hit my fluid goal every day this week. Ice chips and a smaller cup really helped me.",
+      "What helps you stay on track?",
     ],
-    hashtags: "#glute4eva #letsgetfit 💪🙀",
-    likes: 215,
-    categoryId: "transplant",
+    hashtags: "#FluidGoals #SmallWins",
+    likes: 76,
+    categoryId: "nutrition",
   },
 ];
 
@@ -247,13 +248,18 @@ export default function CommunityPage() {
             <Card key={post.id} as="article">
               <div className="flex items-start gap-inline-md">
                 <div className="flex min-w-0 flex-1 items-center gap-inline-md">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill">
-                    <Image
-                      src="/images/community/avatar.png"
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
+                  {/* Initials, not one stock photo shared by every
+                      author. */}
+                  <div
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-surface-brand-subtle text-label-md text-fg-brand"
+                  >
+                    {post.author
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-inline-lg">
@@ -311,7 +317,7 @@ export default function CommunityPage() {
                 {/* Like Button */}
                 <button
                   type="button"
-                  className="group flex cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="group -my-2.5 flex min-h-11 cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   onClick={() =>
                     setLiked((current) => ({
                       ...current,

@@ -122,7 +122,9 @@ function AppointmentRow({
 }) {
   const { t } = useLanguage();
   return (
-    <article className="flex flex-col gap-inline-lg border-b border-line-subtle bg-surface p-inset-sm last:border-b-0 sm:flex-row sm:items-center">
+    /* The date beside the details at every width; stacked on a phone, each
+       appointment took a whole screen (client review, 2026-10-08). */
+    <article className="flex items-start gap-inline-md border-b border-line-subtle bg-surface p-inset-sm last:border-b-0 sm:items-center sm:gap-inline-lg">
       <DateBadge iso={appointment.date} isEs={isEs} />
       <div className="min-w-0 flex-1">
         <h3 className="flex flex-wrap items-center gap-inline-md text-heading-4 text-fg">

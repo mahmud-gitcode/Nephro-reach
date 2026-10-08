@@ -43,7 +43,7 @@ export default function BeforeTheErTopicPage() {
       title={
         <Link
           href="/dashboard/before-the-er"
-          className="inline-flex items-center gap-inline-xs text-body-sm text-fg-brand hover:underline"
+          className="inline-flex min-h-11 items-center gap-inline-xs text-body-sm text-fg-brand hover:underline"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           {isEs ? "Todos los temas" : "All topics"}

@@ -573,7 +573,7 @@ export default function ClinicTravel() {
         </Alert>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         <KeyCard
           icon={<Plane />}
           value={upcoming.length}

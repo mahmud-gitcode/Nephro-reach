@@ -53,7 +53,7 @@ export function PopularTopics({
           <button
             type="button"
             onClick={() => onSelect("all")}
-            className="cursor-pointer rounded-control-small text-label-sm text-fg-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="-my-2.5 inline-flex min-h-10 cursor-pointer items-center rounded-control-small text-label-sm text-fg-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {isEs ? "Ver todos" : "Clear"}
           </button>
@@ -71,7 +71,7 @@ export function PopularTopics({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onSelect(selected ? "all" : category.id)}
-                className={`flex w-full cursor-pointer items-center justify-between gap-inline-md rounded-control-small px-inset-sm py-stack-xs text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                className={`flex min-h-10 w-full cursor-pointer items-center justify-between gap-inline-md rounded-control-small px-inset-sm py-stack-xs text-left transition-colors duration-150 ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                   selected
                     ? "bg-primary-soft text-fg-brand"
                     : "text-fg-secondary hover:bg-surface-sunken"

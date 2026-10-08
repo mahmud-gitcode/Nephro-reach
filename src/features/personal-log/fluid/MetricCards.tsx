@@ -148,7 +148,7 @@ export function MetricCards({
           <button
             type="button"
             onClick={onOpenEdwModal}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-2.5 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
+            className="flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-3 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -179,7 +179,7 @@ export function MetricCards({
           <button
             type="button"
             onClick={onOpenEdwModal}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-2.5 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
+            className="flex min-h-10 shrink-0 cursor-pointer items-center gap-1 rounded-control border border-line bg-surface-sunken px-3 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
           >
             <Pencil className="h-3 w-3" />
             <span>{language === "ES" ? "Editar" : "Edit"}</span>
@@ -212,11 +212,12 @@ export function MetricCards({
       </div>
 
       {/* Supporting Symptom & Fluid Tracking Cards - Identical Font Size & Colors to New Cards */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Two across on a phone (client review, 2026-10-08). */}
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         {secondaryCards.map((card) => (
           <article
             key={card.label}
-            className="group relative flex items-center gap-4 rounded-card border border-line/90 bg-surface p-6 transition-all hover:border-primary-soft-line"
+            className="group relative flex flex-col items-start gap-inline-md rounded-card border border-line/90 bg-surface p-inset-md transition-all hover:border-primary-soft-line sm:flex-row sm:items-center sm:gap-4 sm:p-6"
           >
             <div
               className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-card sm:h-14 sm:w-14 ${card.iconBg} shadow-control transition-transform group-hover:scale-105`}

@@ -154,7 +154,7 @@ export default function CareTeamContactSection({
         action={
           <Link
             href="/dashboard/messages"
-            className="text-body-sm font-semibold text-fg-brand hover:underline"
+            className="-my-2.5 inline-flex min-h-11 items-center text-body-sm font-semibold text-fg-brand hover:underline"
           >
             {isEs ? "Ver mensajes" : "All messages"}
           </Link>

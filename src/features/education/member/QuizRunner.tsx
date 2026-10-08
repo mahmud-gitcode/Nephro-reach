@@ -58,6 +58,7 @@ export function QuizRunner({
   questions,
   backHref,
   backLabel,
+  titleAs = "h2",
   hideBack = false,
   onResult,
 }: {
@@ -67,6 +68,8 @@ export function QuizRunner({
   questions: Question[];
   backHref: string;
   backLabel: string;
+  /** h1 where the quiz is the page (the final exam), h2 inside a lesson. */
+  titleAs?: "h1" | "h2";
   /** Inside a lesson page, which has its own navigation. */
   hideBack?: boolean;
   /** Called with each submitted attempt, e.g. to finish the lesson on a pass. */
@@ -169,6 +172,7 @@ export function QuizRunner({
         <Card as="section" aria-labelledby="quiz-intro">
           <SectionTitle
             id="quiz-intro"
+            as={titleAs}
             title={title}
             subtitle={
               isEs
@@ -261,6 +265,7 @@ export function QuizRunner({
         <Card as="section" aria-labelledby="quiz-taking">
           <SectionTitle
             id="quiz-taking"
+            as={titleAs}
             title={title}
             subtitle={
               isEs

@@ -143,9 +143,16 @@ export function AppointmentRow({
           <MapPin aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{appointment.place}</span>
         </p>
+        {/* Under the details on a phone, where beside them it squeezed
+            the place to a few letters (client review, 2026-10-08). */}
+        <div className="pt-stack-xs sm:hidden">
+          <TeamBadge team={appointment.team} isEs={isEs} />
+        </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-inline-sm">
-        <TeamBadge team={appointment.team} isEs={isEs} />
+        <span className="hidden sm:inline-flex">
+          <TeamBadge team={appointment.team} isEs={isEs} />
+        </span>
         {action}
       </div>
     </div>

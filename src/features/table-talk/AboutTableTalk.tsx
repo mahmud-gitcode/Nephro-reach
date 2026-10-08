@@ -34,7 +34,7 @@ export function AboutTableTalk() {
             {isEs ? "Sobre Dialysis Table Talk" : "About Dialysis Table Talk"}
           </h2>
 
-          <p className="text-justify text-body-sm text-fg-secondary">
+          <p className="text-body-sm text-fg-secondary">
             {isEs
               ? "Conversaciones cortas, reales y honestas sobre la vida con enfermedad renal. Escucha a proveedores, dietistas, trabajadores sociales, pacientes y cuidadores hablar de los temas que más te importan."
               : "Short, real, and honest conversations about life with kidney disease. Hear from providers, dietitians, social workers, patients, and caregivers on the topics that matter most to you."}

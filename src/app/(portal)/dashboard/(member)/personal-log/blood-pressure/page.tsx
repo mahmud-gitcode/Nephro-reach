@@ -127,128 +127,207 @@ function DailyBloodPressureList() {
           }
         />
       ) : (
-        <Card padding="none" className="mt-stack-md overflow-hidden">
-          <Table minWidth={1080}>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.date")}
-                </TableHeaderCell>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.time")}
-                </TableHeaderCell>
-                <TableHeaderCell numeric>
-                  {t("bloodPressure.tableHeaders.systolic")}
-                </TableHeaderCell>
-                <TableHeaderCell numeric>
-                  {t("bloodPressure.tableHeaders.diastolic")}
-                </TableHeaderCell>
-                <TableHeaderCell numeric>
-                  {t("bloodPressure.tableHeaders.pulse")}
-                </TableHeaderCell>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.position")}
-                </TableHeaderCell>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.symptoms")}
-                </TableHeaderCell>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.medication")}
-                </TableHeaderCell>
-                <TableHeaderCell>
-                  {t("bloodPressure.tableHeaders.action")}
-                </TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {groups.map((group) => {
-                const dateLabel = formatDay(group.date, isEs);
-                return group.readings.map((reading, index) => {
-                  const positionLabel =
-                    t(`bloodPressure.positions.${reading.position}`) ||
-                    reading.position;
-                  const symptomsLabel =
-                    t(`bloodPressure.symptoms.${reading.symptoms}`) ||
-                    reading.symptoms;
-                  const medicationLabel =
-                    t(`bloodPressure.medications.${reading.medication}`) ||
-                    reading.medication;
-                  const time = formatClock(reading.time);
-
-                  return (
-                    <TableRow key={reading.id}>
-                      {index === 0 && (
-                        <TableCell
-                          rowSpan={group.readings.length}
-                          emphasis
-                          className="border-r border-line align-top"
+        <>
+          {/* On a phone the 1080px table showed only the date and time; the
+              readings themselves sat off-screen (client review, 2026-10-08).
+              There, each day is a short list instead. */}
+          <div className="mt-stack-md space-y-stack-md sm:hidden">
+            {groups.map((group) => {
+              const dateLabel = formatDay(group.date, isEs);
+              return (
+                <section key={group.date}>
+                  <h3 className="mb-stack-xs text-label-md text-fg-muted">
+                    {dateLabel}
+                  </h3>
+                  <ul className="divide-y divide-line-subtle rounded-card-nested border border-line">
+                    {group.readings.map((reading) => {
+                      const time = formatClock(reading.time);
+                      const details = [
+                        t(`bloodPressure.positions.${reading.position}`) ||
+                          reading.position,
+                        t(`bloodPressure.symptoms.${reading.symptoms}`) ||
+                          reading.symptoms,
+                      ].join(" · ");
+                      return (
+                        <li
+                          key={reading.id}
+                          className="flex items-center gap-inline-md p-inset-sm"
                         >
-                          {dateLabel}
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <span className="flex items-center gap-inline-sm">
-                          {time}
-                          {reading.photo ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                            <img
-                              src={reading.photo}
-                              alt={
-                                isEs
-                                  ? `Foto de la lectura de las ${time}`
-                                  : `Photo with the ${time} reading`
-                              }
-                              className="h-8 w-8 rounded-control object-cover"
-                            />
-                          ) : null}
-                        </span>
-                      </TableCell>
-                      <TableCell numeric>{reading.systolic}</TableCell>
-                      <TableCell numeric>{reading.diastolic}</TableCell>
-                      <TableCell numeric>{reading.pulse}</TableCell>
-                      <TableCell>{positionLabel}</TableCell>
-                      <TableCell>{symptomsLabel}</TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-inline-md">
-                          <ReadingStatus status={statusOf(reading)} />
-                          <span className="text-body-sm text-fg-secondary">
-                            {medicationLabel}
+                          <div className="min-w-0 flex-1">
+                            <p className="flex flex-wrap items-baseline gap-x-inline-sm">
+                              <span className="text-heading-5 text-fg tabular-nums">
+                                {reading.systolic}/{reading.diastolic}
+                              </span>
+                              <span className="text-caption text-fg-muted tabular-nums">
+                                {isEs ? "pulso" : "pulse"} {reading.pulse}
+                              </span>
+                            </p>
+                            <p className="mt-stack-xs flex flex-wrap items-center gap-inline-sm text-caption text-fg-muted">
+                              <span className="tabular-nums">{time}</span>
+                              <ReadingStatus status={statusOf(reading)} />
+                            </p>
+                            <p className="mt-stack-xs truncate text-caption text-fg-secondary">
+                              {details}
+                            </p>
+                          </div>
+                          <span className="flex shrink-0 items-center gap-inline-sm">
+                            <Link
+                              href={`/dashboard/personal-log/blood-pressure/add?id=${reading.id}`}
+                              className={buttonStyles({
+                                iconOnly: true,
+                                size: "small",
+                                variant: "neutral",
+                                appearance: "fill-stroke",
+                              })}
+                              aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                            >
+                              <Edit3 />
+                            </Link>
+                            <Button
+                              iconOnly
+                              size="small"
+                              variant="danger"
+                              appearance="fill-stroke"
+                              aria-label={`Delete reading from ${dateLabel} at ${time}`}
+                              onClick={() => setDeleting(reading)}
+                            >
+                              <Trash2 />
+                            </Button>
                           </span>
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-inline-md">
-                          <Link
-                            href={`/dashboard/personal-log/blood-pressure/add?id=${reading.id}`}
-                            className={buttonStyles({
-                              iconOnly: true,
-                              size: "small",
-                              variant: "neutral",
-                              appearance: "fill-stroke",
-                            })}
-                            aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+          <Card
+            padding="none"
+            className="mt-stack-md hidden overflow-hidden sm:block"
+          >
+            <Table minWidth={1080}>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.date")}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.time")}
+                  </TableHeaderCell>
+                  <TableHeaderCell numeric>
+                    {t("bloodPressure.tableHeaders.systolic")}
+                  </TableHeaderCell>
+                  <TableHeaderCell numeric>
+                    {t("bloodPressure.tableHeaders.diastolic")}
+                  </TableHeaderCell>
+                  <TableHeaderCell numeric>
+                    {t("bloodPressure.tableHeaders.pulse")}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.position")}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.symptoms")}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.medication")}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {t("bloodPressure.tableHeaders.action")}
+                  </TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {groups.map((group) => {
+                  const dateLabel = formatDay(group.date, isEs);
+                  return group.readings.map((reading, index) => {
+                    const positionLabel =
+                      t(`bloodPressure.positions.${reading.position}`) ||
+                      reading.position;
+                    const symptomsLabel =
+                      t(`bloodPressure.symptoms.${reading.symptoms}`) ||
+                      reading.symptoms;
+                    const medicationLabel =
+                      t(`bloodPressure.medications.${reading.medication}`) ||
+                      reading.medication;
+                    const time = formatClock(reading.time);
+
+                    return (
+                      <TableRow key={reading.id}>
+                        {index === 0 && (
+                          <TableCell
+                            rowSpan={group.readings.length}
+                            emphasis
+                            className="border-r border-line align-top"
                           >
-                            <Edit3 />
-                          </Link>
-                          <Button
-                            iconOnly
-                            size="small"
-                            variant="danger"
-                            appearance="fill-stroke"
-                            aria-label={`Delete reading from ${dateLabel} at ${time}`}
-                            onClick={() => setDeleting(reading)}
-                          >
-                            <Trash2 />
-                          </Button>
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                });
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+                            {dateLabel}
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <span className="flex items-center gap-inline-sm">
+                            {time}
+                            {reading.photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+                              <img
+                                src={reading.photo}
+                                alt={
+                                  isEs
+                                    ? `Foto de la lectura de las ${time}`
+                                    : `Photo with the ${time} reading`
+                                }
+                                className="h-8 w-8 rounded-control object-cover"
+                              />
+                            ) : null}
+                          </span>
+                        </TableCell>
+                        <TableCell numeric>{reading.systolic}</TableCell>
+                        <TableCell numeric>{reading.diastolic}</TableCell>
+                        <TableCell numeric>{reading.pulse}</TableCell>
+                        <TableCell>{positionLabel}</TableCell>
+                        <TableCell>{symptomsLabel}</TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-inline-md">
+                            <ReadingStatus status={statusOf(reading)} />
+                            <span className="text-body-sm text-fg-secondary">
+                              {medicationLabel}
+                            </span>
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-inline-md">
+                            <Link
+                              href={`/dashboard/personal-log/blood-pressure/add?id=${reading.id}`}
+                              className={buttonStyles({
+                                iconOnly: true,
+                                size: "small",
+                                variant: "neutral",
+                                appearance: "fill-stroke",
+                              })}
+                              aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                            >
+                              <Edit3 />
+                            </Link>
+                            <Button
+                              iconOnly
+                              size="small"
+                              variant="danger"
+                              appearance="fill-stroke"
+                              aria-label={`Delete reading from ${dateLabel} at ${time}`}
+                              onClick={() => setDeleting(reading)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
 
       <Modal

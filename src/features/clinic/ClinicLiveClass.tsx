@@ -132,7 +132,7 @@ function Rating({ value, size = "h-4 w-4" }: { value: number; size?: string }) {
 
 function SummaryCards() {
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
       <KeyCard
         tone="brand"
         icon={<VideoSolid />}

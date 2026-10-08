@@ -29,8 +29,8 @@ export function ResourceCard() {
       <div className="mt-3 space-y-2">
         {items.map((resource: string) => (
           <button
-            {...notBuiltYet("Opening a resource")}
             key={resource}
+            {...notBuiltYet("Opening a resource")}
             type="button"
             className="flex w-full cursor-pointer items-center gap-3 rounded-card border border-line bg-surface p-3 text-left transition-colors hover:border-primary-soft-line hover:bg-primary-soft"
           >

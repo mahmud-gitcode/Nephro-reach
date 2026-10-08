@@ -1,5 +1,5 @@
-import Link from "next/link";
 import React from "react";
+import { PageTitle } from "@/components/layout/PageTitle";
 import Image from "next/image";
 import {
   Activity,
@@ -20,7 +20,6 @@ import {
 
 import type { DonutSegment } from "@/components/ui";
 import {
-  buttonStyles,
   BarChart,
   Card,
   ChartLegend,
@@ -267,17 +266,10 @@ function LiveClassTable() {
   return (
     <Card as="section" padding="small">
       <div className="mb-stack-lg flex items-center justify-between gap-inset-md">
-        <h2 className="text-heading-4 text-fg">Live Class</h2>
-        <Link
-          href="/dashboard/live-class"
-          className={buttonStyles({
-            variant: "neutral",
-            appearance: "fill-stroke",
-            size: "small",
-          })}
-        >
-          View all
-        </Link>
+        {/* It counts members' health-log entries; it was titled "Live
+            Class" and its View all opened the live-class page (client
+            review, 2026-10-08). */}
+        <h2 className="text-heading-4 text-fg">Health Log Usage</h2>
       </div>
       <div className="overflow-hidden rounded-control border border-line">
         <Table minWidth={610}>
@@ -525,7 +517,10 @@ function EarningsOverview() {
 export default function AdminDashboard() {
   return (
     <>
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      {/* The page named on screen, as on every dashboard (client review,
+          2026-10-08). */}
+      <PageTitle href="/dashboard" className="mb-4" />
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {metricCards.map((card) => (
           <MetricCard key={card.title} card={card} />
         ))}

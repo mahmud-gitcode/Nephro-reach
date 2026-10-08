@@ -1,5 +1,6 @@
 "use client";
 
+import { PageTitle } from "@/components/layout/PageTitle";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { ClinicLabsCard } from "@/features/labs/ClinicLabsCard";
 import { LabInfoButton } from "@/features/labs/LabInfoButton";
@@ -220,6 +221,12 @@ export default function MyLabsPage() {
 
   return (
     <div className="w-full space-y-4" aria-busy={labsPending || undefined}>
+      {/* The page named on screen: on a phone the top bar's breadcrumb is
+          hidden (client review, 2026-10-08). */}
+      <PageTitle
+        href="/dashboard/personal-log/lab-tracking"
+        title={language === "ES" ? "Mis Laboratorios" : "My Labs"}
+      />
       <PersonalLogDisclaimer />
 
       <ClinicLabsCard isEs={language === "ES"} />
@@ -254,8 +261,11 @@ export default function MyLabsPage() {
       ) : null}
 
       {/* 1. Stat cards — the shared KeyCard, as on every dashboard. */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {/* Two across on a phone; the date card spans the row so the five
+          cards leave none alone. */}
+      <section className="grid grid-cols-2 gap-inset-sm sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <KeyCard
+          className="col-span-2 sm:col-span-1"
           icon={<CalendarDays />}
           value={drawDay}
           label={l?.kpis?.latestDate || "Latest Lab Date"}

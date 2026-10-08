@@ -29,6 +29,7 @@ export default function FinalExamPage() {
               isEs ? course.titleEs || course.titleEn : course.titleEn
             }`}
             questions={course.finalExam}
+            titleAs="h1"
             backHref="/dashboard/my-classroom"
             backLabel={isEs ? "Volver a Mi Salón" : "Back to My Classroom"}
           />

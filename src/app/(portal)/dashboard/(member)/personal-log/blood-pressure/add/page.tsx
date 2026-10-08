@@ -166,7 +166,9 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
       ) : null}
 
       <Card padding="small" className="mt-stack-lg">
-        <div className="grid grid-cols-2 gap-inline-md">
+        {/* Stacked on a phone: side by side, both fields cut off the date
+            and the time (client review, 2026-10-08). */}
+        <div className="grid grid-cols-1 gap-inline-md min-[480px]:grid-cols-2">
           <FormField
             label={t("bloodPressure.add.date")}
             required

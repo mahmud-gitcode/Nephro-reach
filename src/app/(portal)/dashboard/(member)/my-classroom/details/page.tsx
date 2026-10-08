@@ -231,7 +231,7 @@ function MyClassroomDetailsContent() {
           <div>
             <Link
               href="/dashboard/my-classroom"
-              className="inline-flex items-center gap-inline-md rounded-control-small text-label-md text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center gap-inline-md rounded-control-small text-label-md text-fg-muted transition-colors duration-150 ease-standard hover:text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <ArrowLeft aria-hidden="true" className="h-4 w-4" />
               <span>

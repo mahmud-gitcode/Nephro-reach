@@ -214,12 +214,14 @@ export default function PersonalLogPage() {
       notices={<PersonalLogDisclaimer spaced={false} stacked />}
     >
       <div className="w-full space-y-stack-xl">
-        <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
+        {/* Two across on a phone: nine full-width tiles were a long
+            scroll (client review, 2026-10-08). */}
+        <section className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4">
           {tileConfigs.map((tile) => (
             <Link
               key={tile.key}
               href={tile.href}
-              className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-md py-inset-lg transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex flex-col items-center justify-center rounded-card border border-line bg-surface px-inset-sm py-inset-md transition-all duration-150 ease-standard hover:-translate-y-0.5 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-inset-md sm:py-inset-lg"
             >
               <span
                 className={`mb-stack-md flex h-12 w-12 items-center justify-center rounded-pill ${tile.iconBg}`}

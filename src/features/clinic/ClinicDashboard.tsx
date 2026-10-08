@@ -845,7 +845,7 @@ export default function ClinicDashboard() {
 
       {/* Three across on a laptop, six only on a wide screen: a sixth of a
           laptop row is too narrow for the icon tile beside "23 / 30". */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         <EnrollmentCard
           enrolled={dashboard.data?.roster.length ?? enrollment.enrolled}
         />

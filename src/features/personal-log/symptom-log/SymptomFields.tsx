@@ -103,7 +103,8 @@ export function CounterField({
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
+          aria-label={`Decrease ${label}`}
+          className="flex size-10 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Minus className="size-3.5" />
         </button>
@@ -113,7 +114,8 @@ export function CounterField({
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
+          aria-label={`Increase ${label}`}
+          className="flex size-10 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Plus className="size-3.5" />
         </button>

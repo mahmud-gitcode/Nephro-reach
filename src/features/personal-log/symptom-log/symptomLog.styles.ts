@@ -41,7 +41,7 @@ export const MOODS = [
 export const SEGMENT_TRACK =
   "flex items-center gap-0.5 rounded-control border border-line bg-surface-sunken p-1";
 export const SEGMENT_ITEM =
-  "flex h-7 items-center justify-center rounded-control-small px-3 text-caption font-bold transition-colors cursor-pointer";
+  "flex h-10 items-center justify-center rounded-control-small px-3 text-caption font-bold transition-colors cursor-pointer";
 export const SEGMENT_ACTIVE =
   "bg-primary-solid text-primary-on-solid shadow-control";
 export const SEGMENT_IDLE = "text-fg-muted hover:text-fg-secondary";

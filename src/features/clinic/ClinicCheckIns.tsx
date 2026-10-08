@@ -401,7 +401,7 @@ function RecentCheckIns({
                           <button
                             type="button"
                             onClick={() => setOpenNote(row)}
-                            className="cursor-pointer rounded-control-small text-label-sm text-primary-edge underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className="-my-3 inline-flex min-h-10 cursor-pointer items-center rounded-control-small text-label-sm text-primary-edge underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           >
                             See more
                             <span className="sr-only"> of {row.name}</span>
@@ -628,7 +628,7 @@ export default function ClinicCheckIns() {
       <PageTitle href="/dashboard/clinic/checkins" />
 
       {/* The key figures run full width across the top, above the split. */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {overviewWithLive(
           feed.isPending ? [] : feed.checkInRows,
           weekStartOf(dayKey(now)),

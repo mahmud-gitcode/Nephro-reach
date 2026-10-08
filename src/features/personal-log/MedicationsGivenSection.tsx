@@ -227,16 +227,14 @@ export default function MedicationsGivenSection() {
           </div>
         </div>
 
-        <button
-          type="button"
+        <Button
+          size="small"
           onClick={handleOpenAddMedModal}
-          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-control bg-primary-solid px-3.5 py-1.5 text-caption font-bold text-primary-on-solid shadow-control transition-all hover:bg-primary-solid-hover active:scale-95"
+          leadingIcon={<Plus aria-hidden="true" />}
+          className="shrink-0"
         >
-          <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-          <span>
-            {language === "ES" ? "Agregar Medicamento" : "Add Medication"}
-          </span>
-        </button>
+          {language === "ES" ? "Agregar Medicamento" : "Add Medication"}
+        </Button>
       </div>
 
       {saveError ? (
@@ -334,18 +332,22 @@ export default function MedicationsGivenSection() {
                           aria-label={toggleLabel}
                           title={toggleLabel}
                           onClick={() => handleToggleGiven(item.id)}
-                          className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-control-small border transition-colors duration-150 ease-standard select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                            item.given
-                              ? "border-primary-edge bg-primary-solid text-primary-on-solid"
-                              : "border-line-strong bg-surface text-transparent"
-                          }`}
+                          /* A 44px tap area around the 20px box (client
+                             review, 2026-10-08). */
+                          className="-my-2.5 inline-flex size-11 cursor-pointer items-center justify-center rounded-control-small select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
-                          {item.given && (
-                            <Check
-                              aria-hidden="true"
-                              className="h-3.5 w-3.5 stroke-3"
-                            />
-                          )}
+                          <span
+                            aria-hidden="true"
+                            className={`inline-flex h-5 w-5 items-center justify-center rounded-control-small border transition-colors duration-150 ease-standard ${
+                              item.given
+                                ? "border-primary-edge bg-primary-solid text-primary-on-solid"
+                                : "border-line-strong bg-surface text-transparent"
+                            }`}
+                          >
+                            {item.given && (
+                              <Check className="h-3.5 w-3.5 stroke-3" />
+                            )}
+                          </span>
                         </button>
                       </TableCell>
                       <TableCell className="text-right">

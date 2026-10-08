@@ -156,7 +156,7 @@ export function TravelIntroBar() {
         what "help" means when your chair is in another state. */}
       <Link
         href="/dashboard/team-questions"
-        className="shrink-0 rounded-control-small text-label-sm text-fg-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex min-h-11 shrink-0 items-center rounded-control-small text-label-sm text-fg-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {isEs ? "Preguntar a tu clínica" : "Ask your clinic"}
       </Link>

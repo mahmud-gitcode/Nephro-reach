@@ -45,7 +45,7 @@ export function TableTalkDisclaimer() {
                 : "Community & Content Disclaimer"}
             </h2>
 
-            <p className="text-justify text-body-sm text-fg-secondary">
+            <p className="text-body-sm text-fg-secondary">
               {isEs
                 ? "Dialysis Table Talk es solo educativo e informativo. Lo que comparten presentadores, invitados y miembros de la comunidad no sustituye el consejo médico, el diagnóstico ni el tratamiento. Habla siempre con tu equipo de diálisis sobre tu salud."
                 : "Dialysis Table Talk is for educational and informational purposes only. The views and experiences shared by hosts, guests, and community members are not a substitute for professional medical advice, diagnosis, or treatment. Always talk with your dialysis care team about your specific health needs."}

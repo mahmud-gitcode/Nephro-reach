@@ -47,6 +47,10 @@ export default function CareTeamQuestionsSection({
   } = useCareTeamQuestions();
   const [selectedRole, setSelectedRole] = useState<CareTeamRole | "All">("All");
   const [searchQuery, setSearchQuery] = useState("");
+  /* On a phone the first four show; twelve open answers made the page
+     7,000px long (client review, 2026-10-08). */
+  const [showAll, setShowAll] = useState(false);
+  const PHONE_PREVIEW = 4;
   const [statusFilter, setStatusFilter] = useState<"All" | QuestionStatus>(
     "All",
   );
@@ -334,10 +338,12 @@ export default function CareTeamQuestionsSection({
               </p>
             </div>
           ) : (
-            filteredQuestions.map((q) => (
+            filteredQuestions.map((q, index) => (
               <div
                 key={q.id}
-                className="space-y-3 rounded-card border border-line bg-surface p-6 transition-shadow sm:p-6"
+                className={`space-y-3 rounded-card border border-line bg-surface p-inset-md transition-shadow sm:p-6 ${
+                  !showAll && index >= PHONE_PREVIEW ? "max-sm:hidden" : ""
+                }`}
               >
                 {/* Question Row with Status Tag, Edit Button, and Delete */}
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -358,7 +364,7 @@ export default function CareTeamQuestionsSection({
                           ? "Clic para cambiar estado (Por preguntar → Discutida → Respondida)"
                           : "Click to cycle status (To Ask → Discussed → Answered)"
                       }
-                      className={`cursor-pointer rounded-pill border border-transparent px-3 py-1 text-caption font-bold transition-all select-none active:scale-95 ${getStatusBadgeStyle(
+                      className={`inline-flex min-h-10 cursor-pointer items-center rounded-pill border border-transparent px-3 py-1 text-caption font-bold transition-all select-none active:scale-95 ${getStatusBadgeStyle(
                         q.status,
                       )}`}
                     >
@@ -379,7 +385,7 @@ export default function CareTeamQuestionsSection({
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal(q)}
-                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
+                      className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1 text-caption font-semibold text-fg-secondary shadow-control transition-all hover:border-primary-soft-line hover:bg-primary-soft hover:text-fg-brand active:scale-95"
                       title={
                         language === "ES"
                           ? "Editar pregunta y respuesta"
@@ -394,7 +400,7 @@ export default function CareTeamQuestionsSection({
                     <button
                       type="button"
                       onClick={() => setPendingDelete(q)}
-                      className="cursor-pointer rounded-control p-1.5 text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
+                      className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
                       title={language === "ES" ? "Eliminar" : "Delete"}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -421,7 +427,7 @@ export default function CareTeamQuestionsSection({
                       <button
                         type="button"
                         onClick={() => handleOpenEditModal(q)}
-                        className="cursor-pointer font-semibold text-fg-brand not-italic hover:underline"
+                        className="inline-flex min-h-10 cursor-pointer items-center font-semibold text-fg-brand not-italic hover:underline"
                       >
                         {language === "ES"
                           ? "+ Agregar Respuesta"
@@ -433,6 +439,19 @@ export default function CareTeamQuestionsSection({
               </div>
             ))
           )}
+          {!showAll && filteredQuestions.length > PHONE_PREVIEW ? (
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              fullWidth
+              className="sm:hidden"
+              onClick={() => setShowAll(true)}
+            >
+              {language === "ES"
+                ? `Ver todas (${filteredQuestions.length})`
+                : `Show all (${filteredQuestions.length})`}
+            </Button>
+          ) : null}
         </div>
       </AsyncSection>
 

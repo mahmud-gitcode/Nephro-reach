@@ -333,7 +333,7 @@ function DialysisManagementDashboard() {
                   onClick={handleUndoNote}
                   disabled={historyIndex <= 0}
                   title={isEs ? "Deshacer (Undo)" : "Undo"}
-                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Undo2 className="h-3.5 w-3.5" />
                 </button>
@@ -343,7 +343,7 @@ function DialysisManagementDashboard() {
                   onClick={handleRedoNote}
                   disabled={historyIndex >= noteHistory.length - 1}
                   title={isEs ? "Rehacer (Redo)" : "Redo"}
-                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Redo2 className="h-3.5 w-3.5" />
                 </button>
@@ -355,7 +355,7 @@ function DialysisManagementDashboard() {
                   onClick={handleCleanNote}
                   disabled={!weeklyNote}
                   title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <Eraser className="h-3.5 w-3.5" />
                 </button>

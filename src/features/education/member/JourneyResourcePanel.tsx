@@ -172,7 +172,7 @@ export function JourneyPanelRail({
   const j = dictionary?.educationJourney;
 
   return (
-    <div className="flex shrink-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-1.5">
+    <div className="flex w-full shrink-0 flex-row gap-1.5 rounded-card border border-line bg-surface p-1.5 sm:w-auto sm:flex-col">
       {tabs.map((tab) => {
         const Icon = TAB_ICON[tab];
         const label = tabLabel(tab, j);
@@ -185,7 +185,7 @@ export function JourneyPanelRail({
             onClick={() => onSelect(tab)}
             aria-pressed={isActive}
             title={label}
-            className={`flex w-[58px] cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2.5 text-caption leading-tight font-semibold transition-colors ${
+            className={`flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2.5 text-caption leading-tight font-semibold transition-colors sm:w-[72px] sm:flex-none ${
               isActive
                 ? "bg-primary-soft text-fg-brand"
                 : "text-fg-muted hover:bg-surface-sunken hover:text-fg-secondary"
@@ -526,6 +526,9 @@ export default function JourneyResourceDrawer({
     <div
       className={`fixed inset-0 z-50 2xl:hidden ${open ? "" : "pointer-events-none"}`}
       aria-hidden={open ? undefined : true}
+      /* Closed, nothing inside can take focus either (client review,
+         2026-10-08): aria-hidden alone left its buttons in the tab order. */
+      inert={!open}
     >
       <button
         type="button"

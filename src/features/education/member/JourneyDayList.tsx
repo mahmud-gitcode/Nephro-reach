@@ -197,7 +197,7 @@ export default function JourneyDayList({
               onClick={onToggleCollapse}
               title={j?.collapseSidebar || "Minimise day list"}
               aria-label={j?.collapseSidebar || "Minimise day list"}
-              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
+              className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
             >
               <PanelLeftClose className="h-4.5 w-4.5" />
             </button>

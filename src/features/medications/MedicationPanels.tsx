@@ -104,6 +104,156 @@ export function MedicationMasterList({
   const { language, t } = useLanguage();
   const isEs = language === "ES";
 
+  /* One medication, as a table row on wide screens and as a card on a
+     phone, where the 1140px table hid the status, refill and Edit
+     controls (client review, 2026-10-08). */
+  const medicationView = (medication: Medication) => {
+    const rem = reminders.find(
+      (r) =>
+        r.medicationName.toLowerCase() === medication.name.toLowerCase() &&
+        r.enabled,
+    );
+
+    const nameNode = (
+      <>
+        <span className="flex items-center gap-inline-sm">
+          {medication.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+            <img
+              src={medication.photo}
+              alt={
+                isEs
+                  ? `Foto de ${medication.name}`
+                  : `Photo of ${medication.name}`
+              }
+              className="h-8 w-8 shrink-0 rounded-control object-cover"
+            />
+          ) : null}
+          {medication.name}
+        </span>
+      </>
+    );
+    const doseNode = <>{medication.dose}</>;
+    const routeNode = <>{medication.route}</>;
+    const frequencyNode = (
+      <>{language === "ES" ? medication.frequencyEs : medication.frequencyEn}</>
+    );
+    const purposeNode = (
+      <>{language === "ES" ? medication.purposeEs : medication.purposeEn}</>
+    );
+    const reminderNode = (
+      <>
+        <Button
+          variant="neutral"
+          appearance={rem ? "fill-stroke" : "stroke"}
+          size="small"
+          onClick={() => onOpenReminderModal(medication.name)}
+          aria-label={
+            rem
+              ? language === "ES"
+                ? `Editar recordatorio de ${medication.name}, ${rem.time}`
+                : `Edit reminder for ${medication.name}, ${rem.time}`
+              : language === "ES"
+                ? `Establecer recordatorio para ${medication.name}`
+                : `Set reminder for ${medication.name}`
+          }
+        >
+          <Bell aria-hidden="true" />
+          {rem ? rem.time : language === "ES" ? "Recordatorio" : "Set Alert"}
+        </Button>
+      </>
+    );
+    const startNode = <>{medication.startDate}</>;
+    const endNode = <>{medication.endDate}</>;
+    const pharmacyNode = <>{medication.pharmacy}</>;
+    const refillNode = (
+      <>
+        <Select
+          selectSize="small"
+          value={log.needsRefill(medication.name) ? "yes" : "no"}
+          aria-label={
+            isEs
+              ? `¿${medication.name} necesita resurtido?`
+              : `Does ${medication.name} need a refill?`
+          }
+          onChange={(event) =>
+            log.setRefill(medication.name, event.target.value === "yes")
+          }
+          /* A floor under the width. The table scrolls
+           horizontally anyway, and a select narrower than its
+           own longest option shows an empty box instead of
+           the answer the member picked. */
+          className={cn(
+            "mx-auto min-w-[5.5rem]",
+            log.needsRefill(medication.name) && "text-warning",
+          )}
+        >
+          <option value="no">{isEs ? "No" : "No"}</option>
+          <option value="yes">{isEs ? "Sí" : "Yes"}</option>
+        </Select>
+      </>
+    );
+    const statusNode = (
+      <>
+        <Select
+          selectSize="small"
+          value={medication.status}
+          aria-label={
+            isEs
+              ? `Estado de ${medication.name}`
+              : `Status of ${medication.name}`
+          }
+          onChange={(event) =>
+            onStatusChange(
+              medication.id,
+              event.target.value as MedicationStatus,
+            )
+          }
+          className="min-w-[8.5rem]"
+        >
+          {MEDICATION_STATUSES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {isEs ? option.es : option.en}
+            </option>
+          ))}
+        </Select>
+      </>
+    );
+    const editNode = onEdit ? (
+      <>
+        <Button
+          variant="neutral"
+          appearance="fill-stroke"
+          size="small"
+          leadingIcon={<Pencil aria-hidden="true" />}
+          aria-label={
+            isEs ? `Editar ${medication.name}` : `Edit ${medication.name}`
+          }
+          onClick={() => onEdit(medication)}
+        >
+          {isEs ? "Editar" : "Edit"}
+        </Button>
+      </>
+    ) : null;
+    return {
+      key: `${medication.name}-${medication.startDate}`,
+      medication,
+      editNode,
+      nameNode,
+      doseNode,
+      routeNode,
+      frequencyNode,
+      purposeNode,
+      reminderNode,
+      startNode,
+      endNode,
+      pharmacyNode,
+      refillNode,
+      statusNode,
+    };
+  };
+  const items = medications.map(medicationView);
+
   return (
     <Card as="section" padding="small">
       <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
@@ -117,7 +267,41 @@ export function MedicationMasterList({
         </Link>
       </div>
 
-      <div className="mt-stack-md overflow-hidden rounded-control border border-line">
+      <ul className="mt-stack-md space-y-stack-sm sm:hidden">
+        {items.map((m) => (
+          <li
+            key={m.key}
+            className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
+          >
+            <div className="flex items-start justify-between gap-inline-md">
+              <div className="min-w-0 text-label-lg text-fg">{m.nameNode}</div>
+              <div className="shrink-0">{m.editNode}</div>
+            </div>
+            <p className="text-body-sm text-fg-secondary">
+              {m.doseNode} · {m.routeNode} · {m.frequencyNode}
+            </p>
+            <p className="text-caption text-fg-muted">
+              {m.purposeNode} · {isEs ? "Desde" : "Since"} {m.startNode}
+            </p>
+            <div className="grid grid-cols-2 items-end gap-inline-sm">
+              <div className="min-w-0 space-y-stack-xs">
+                <p className="text-caption text-fg-muted">
+                  {t("medicationsLog.tableHeaders.status")}
+                </p>
+                {m.statusNode}
+              </div>
+              <div className="min-w-0 space-y-stack-xs">
+                <p className="text-caption text-fg-muted">
+                  {isEs ? "¿Necesita resurtido?" : "Need refill?"}
+                </p>
+                {m.refillNode}
+              </div>
+            </div>
+            <div>{m.reminderNode}</div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-stack-md hidden overflow-hidden rounded-control border border-line sm:block">
         <Table minWidth={1140}>
           <TableHead className="bg-surface-sunken">
             <TableRow>
@@ -162,149 +346,24 @@ export function MedicationMasterList({
             </TableRow>
           </TableHead>
           <TableBody>
-            {medications.map((medication) => {
-              const rem = reminders.find(
-                (r) =>
-                  r.medicationName.toLowerCase() ===
-                    medication.name.toLowerCase() && r.enabled,
-              );
-
-              return (
-                <TableRow key={`${medication.name}-${medication.startDate}`}>
-                  <TableCell emphasis>
-                    <span className="flex items-center gap-inline-sm">
-                      {medication.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                        <img
-                          src={medication.photo}
-                          alt={
-                            isEs
-                              ? `Foto de ${medication.name}`
-                              : `Photo of ${medication.name}`
-                          }
-                          className="h-8 w-8 shrink-0 rounded-control object-cover"
-                        />
-                      ) : null}
-                      {medication.name}
-                    </span>
-                  </TableCell>
-                  <TableCell>{medication.dose}</TableCell>
-                  <TableCell>{medication.route}</TableCell>
-                  <TableCell>
-                    {language === "ES"
-                      ? medication.frequencyEs
-                      : medication.frequencyEn}
-                  </TableCell>
-                  <TableCell>
-                    {language === "ES"
-                      ? medication.purposeEs
-                      : medication.purposeEn}
-                  </TableCell>
-                  {/* The cell itself used to carry the onClick, which a
-                        keyboard can never reach. The button alone now does. */}
-                  <TableCell className="text-center">
-                    <Button
-                      variant="neutral"
-                      appearance={rem ? "fill-stroke" : "stroke"}
-                      size="small"
-                      onClick={() => onOpenReminderModal(medication.name)}
-                      aria-label={
-                        rem
-                          ? language === "ES"
-                            ? `Editar recordatorio de ${medication.name}, ${rem.time}`
-                            : `Edit reminder for ${medication.name}, ${rem.time}`
-                          : language === "ES"
-                            ? `Establecer recordatorio para ${medication.name}`
-                            : `Set reminder for ${medication.name}`
-                      }
-                    >
-                      <Bell aria-hidden="true" />
-                      {rem
-                        ? rem.time
-                        : language === "ES"
-                          ? "Recordatorio"
-                          : "Set Alert"}
-                    </Button>
-                  </TableCell>
-                  <TableCell>{medication.startDate}</TableCell>
-                  <TableCell>{medication.endDate}</TableCell>
-                  <TableCell>{medication.pharmacy}</TableCell>
-                  {/* Yes or no, per medication. Nothing here notifies the
-                      clinic on its own, which the alert below the table
-                      says out loud rather than leaving a member to assume. */}
-                  <TableCell className="text-center">
-                    <Select
-                      selectSize="small"
-                      value={log.needsRefill(medication.name) ? "yes" : "no"}
-                      aria-label={
-                        isEs
-                          ? `¿${medication.name} necesita resurtido?`
-                          : `Does ${medication.name} need a refill?`
-                      }
-                      onChange={(event) =>
-                        log.setRefill(
-                          medication.name,
-                          event.target.value === "yes",
-                        )
-                      }
-                      /* A floor under the width. The table scrolls
-                         horizontally anyway, and a select narrower than its
-                         own longest option shows an empty box instead of
-                         the answer the member picked. */
-                      className={cn(
-                        "mx-auto min-w-[5.5rem]",
-                        log.needsRefill(medication.name) && "text-warning",
-                      )}
-                    >
-                      <option value="no">{isEs ? "No" : "No"}</option>
-                      <option value="yes">{isEs ? "Sí" : "Yes"}</option>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      selectSize="small"
-                      value={medication.status}
-                      aria-label={
-                        isEs
-                          ? `Estado de ${medication.name}`
-                          : `Status of ${medication.name}`
-                      }
-                      onChange={(event) =>
-                        onStatusChange(
-                          medication.id,
-                          event.target.value as MedicationStatus,
-                        )
-                      }
-                      className="min-w-[8.5rem]"
-                    >
-                      {MEDICATION_STATUSES.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {isEs ? option.es : option.en}
-                        </option>
-                      ))}
-                    </Select>
-                  </TableCell>
-                  {onEdit ? (
-                    <TableCell className="text-right">
-                      <Button
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        size="small"
-                        leadingIcon={<Pencil aria-hidden="true" />}
-                        aria-label={
-                          isEs
-                            ? `Editar ${medication.name}`
-                            : `Edit ${medication.name}`
-                        }
-                        onClick={() => onEdit(medication)}
-                      >
-                        {isEs ? "Editar" : "Edit"}
-                      </Button>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              );
-            })}
+            {items.map((m) => (
+              <TableRow key={m.key}>
+                <TableCell emphasis>{m.nameNode}</TableCell>
+                <TableCell>{m.doseNode}</TableCell>
+                <TableCell>{m.routeNode}</TableCell>
+                <TableCell>{m.frequencyNode}</TableCell>
+                <TableCell>{m.purposeNode}</TableCell>
+                <TableCell className="text-center">{m.reminderNode}</TableCell>
+                <TableCell>{m.startNode}</TableCell>
+                <TableCell>{m.endNode}</TableCell>
+                <TableCell>{m.pharmacyNode}</TableCell>
+                <TableCell className="text-center">{m.refillNode}</TableCell>
+                <TableCell>{m.statusNode}</TableCell>
+                {onEdit ? (
+                  <TableCell className="text-right">{m.editNode}</TableCell>
+                ) : null}
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
@@ -348,6 +407,171 @@ export function DoseSchedule({
     { value: "missed", label: isEs ? "Perdido" : "Missed" },
   ];
 
+  /* One dose's controls, drawn as a table row on wide screens and as a
+     card on a phone, where the 980px table hid the status column — the
+     one a member must reach (client review, 2026-10-08). */
+  const doseView = (dose: DoseRow, idx: number) => {
+    const rem = reminders.find(
+      (r) =>
+        r.medicationName.toLowerCase() === dose.medication.toLowerCase() &&
+        r.enabled,
+    );
+
+    const status = log.statusOf(date, dose.medication, dose.time);
+    /* Not logged once its time has passed (client, 2026-10-05):
+       red, so a forgotten entry stands out. Still "pending" in
+       the record — the member may yet say they took it. */
+    const unlogged =
+      status === "pending" &&
+      (date < rules.todayIso() ||
+        (onToday && minutesOf(dose.time) <= minutesNow));
+    const recordedEffect = log.sideEffectOf(date, dose.medication, dose.time);
+    const stamp = rules.formatStamp(
+      log.stampOf(date, dose.medication, dose.time),
+      isEs,
+    );
+
+    const timeNode = (
+      <>
+        <span className="flex items-center gap-inline-sm">
+          {dose.time}
+          {rem && (
+            <Bell
+              className="h-3 w-3 shrink-0 text-fg-brand"
+              aria-label={
+                isEs
+                  ? `Recordatorio a las ${rem.time}`
+                  : `Reminder set for ${rem.time}`
+              }
+            />
+          )}
+        </span>
+      </>
+    );
+    const medNode = (
+      <>
+        <span className="block text-label-md text-fg">{dose.medication}</span>
+        <span className="block text-caption text-fg-muted">{dose.generic}</span>
+      </>
+    );
+    const instructionsNode = (
+      <>{isEs ? dose.instructionsEs : dose.instructionsEn}</>
+    );
+    const statusNode = (
+      <>
+        <Select
+          selectSize="small"
+          value={status}
+          aria-label={
+            isEs
+              ? `Estado de ${dose.medication} a las ${dose.time}`
+              : `Status for ${dose.medication} at ${dose.time}`
+          }
+          onChange={(event) =>
+            log.setDoseStatus(
+              date,
+              dose.medication,
+              dose.time,
+              event.target.value as DoseStatus,
+            )
+          }
+          className={
+            status === "taken"
+              ? "text-success"
+              : status === "late"
+                ? "text-warning"
+                : status === "missed" || unlogged
+                  ? "border-danger text-danger"
+                  : undefined
+          }
+        >
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.value === "pending" && unlogged
+                ? isEs
+                  ? "No registrado"
+                  : "Not logged"
+                : option.label}
+            </option>
+          ))}
+        </Select>
+      </>
+    );
+    const stampNode = (
+      <>
+        {stamp ? (
+          <>
+            <span
+              className={`block text-label-md ${
+                status === "late" ? "text-warning" : "text-fg-secondary"
+              }`}
+            >
+              {stamp}
+            </span>
+            <span className="block text-caption text-fg-muted">
+              {rules.formatDayLabel(date, isEs)}
+            </span>
+          </>
+        ) : (
+          <span className="text-body-sm text-fg-muted">—</span>
+        )}
+      </>
+    );
+    const effectNode = (
+      <>
+        <Select
+          selectSize="small"
+          value={log.sideEffectOf(date, dose.medication, dose.time) ?? ""}
+          aria-label={
+            isEs
+              ? `Efectos secundarios de ${dose.medication} a las ${dose.time}`
+              : `Side effects from ${dose.medication} at ${dose.time}`
+          }
+          onChange={(event) =>
+            log.setSideEffect(
+              date,
+              dose.medication,
+              dose.time,
+              event.target.value === ""
+                ? null
+                : (event.target.value as SideEffect),
+            )
+          }
+          className={cn(
+            "w-full sm:w-auto sm:min-w-[9rem]",
+            recordedEffect && recordedEffect !== "none"
+              ? "text-warning"
+              : undefined,
+          )}
+        >
+          {/* An unanswered dose is not the same as one that went
+                fine, so "not recorded" is its own choice and the
+                member can go back to it. */}
+          <option value="">
+            {isEs ? "— Sin registrar" : "— Not recorded"}
+          </option>
+          {SIDE_EFFECT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {isEs ? option.labelEs : option.labelEn}
+            </option>
+          ))}
+        </Select>
+      </>
+    );
+    return {
+      stamp,
+      key: `${dose.time}-${idx}`,
+      dose,
+      timeNode,
+      medNode,
+      instructionsNode,
+      statusNode,
+      stampNode,
+      effectNode,
+    };
+  };
+  const doses = rows.map(doseView);
+
   return (
     <Card as="section" padding="small">
       <div className="flex flex-col gap-inline-md lg:flex-row lg:items-center lg:justify-between">
@@ -386,7 +610,40 @@ export function DoseSchedule({
         </div>
       </div>
 
-      <div className="mt-stack-md overflow-hidden rounded-control border border-line">
+      <ul className="mt-stack-md space-y-stack-sm sm:hidden">
+        {doses.map((d) => (
+          <li
+            key={d.key}
+            className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
+          >
+            <div className="flex items-start justify-between gap-inline-md">
+              <div className="min-w-0">{d.medNode}</div>
+              <div className="shrink-0 text-label-md text-fg">{d.timeNode}</div>
+            </div>
+            <div className="text-body-sm text-fg-secondary">
+              {d.instructionsNode}
+            </div>
+            <div className="grid grid-cols-2 gap-inline-sm">
+              <div className="min-w-0 space-y-stack-xs">
+                <p className="text-caption text-fg-muted">
+                  {t("medicationsLog.tableHeaders.status")}
+                </p>
+                {d.statusNode}
+              </div>
+              <div className="min-w-0 space-y-stack-xs">
+                <p className="text-caption text-fg-muted">
+                  {t("medicationsLog.tableHeaders.sideEffects")}
+                </p>
+                {d.effectNode}
+              </div>
+            </div>
+            {d.stamp ? (
+              <div className="text-caption text-fg-muted">{d.stampNode}</div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-stack-md hidden overflow-hidden rounded-control border border-line sm:block">
         <Table minWidth={980}>
           <TableHead className="bg-surface-sunken">
             <TableRow>
@@ -411,169 +668,16 @@ export function DoseSchedule({
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((dose, idx) => {
-              const rem = reminders.find(
-                (r) =>
-                  r.medicationName.toLowerCase() ===
-                    dose.medication.toLowerCase() && r.enabled,
-              );
-
-              const status = log.statusOf(date, dose.medication, dose.time);
-              /* Not logged once its time has passed (client, 2026-10-05):
-                 red, so a forgotten entry stands out. Still "pending" in
-                 the record — the member may yet say they took it. */
-              const unlogged =
-                status === "pending" &&
-                (date < rules.todayIso() ||
-                  (onToday && minutesOf(dose.time) <= minutesNow));
-              const recordedEffect = log.sideEffectOf(
-                date,
-                dose.medication,
-                dose.time,
-              );
-              const stamp = rules.formatStamp(
-                log.stampOf(date, dose.medication, dose.time),
-                isEs,
-              );
-
-              return (
-                <TableRow key={`${dose.time}-${idx}`}>
-                  <TableCell>
-                    <span className="flex items-center gap-inline-sm">
-                      {dose.time}
-                      {rem && (
-                        <Bell
-                          className="h-3 w-3 shrink-0 text-fg-brand"
-                          aria-label={
-                            isEs
-                              ? `Recordatorio a las ${rem.time}`
-                              : `Reminder set for ${rem.time}`
-                          }
-                        />
-                      )}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="block text-label-md text-fg">
-                      {dose.medication}
-                    </span>
-                    <span className="block text-caption text-fg-muted">
-                      {dose.generic}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {isEs ? dose.instructionsEs : dose.instructionsEn}
-                  </TableCell>
-
-                  {/* The control this whole section was missing. It writes
-                      the status and the stamp together, and the adherence
-                      tracker at the bottom reads the same records back. */}
-                  <TableCell>
-                    <Select
-                      selectSize="small"
-                      value={status}
-                      aria-label={
-                        isEs
-                          ? `Estado de ${dose.medication} a las ${dose.time}`
-                          : `Status for ${dose.medication} at ${dose.time}`
-                      }
-                      onChange={(event) =>
-                        log.setDoseStatus(
-                          date,
-                          dose.medication,
-                          dose.time,
-                          event.target.value as DoseStatus,
-                        )
-                      }
-                      className={
-                        status === "taken"
-                          ? "text-success"
-                          : status === "late"
-                            ? "text-warning"
-                            : status === "missed" || unlogged
-                              ? "border-danger text-danger"
-                              : undefined
-                      }
-                    >
-                      {statusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.value === "pending" && unlogged
-                            ? isEs
-                              ? "No registrado"
-                              : "Not logged"
-                            : option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </TableCell>
-
-                  <TableCell>
-                    {stamp ? (
-                      <>
-                        <span
-                          className={`block text-label-md ${
-                            status === "late"
-                              ? "text-warning"
-                              : "text-fg-secondary"
-                          }`}
-                        >
-                          {stamp}
-                        </span>
-                        <span className="block text-caption text-fg-muted">
-                          {rules.formatDayLabel(date, isEs)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-body-sm text-fg-muted">—</span>
-                    )}
-                  </TableCell>
-                  {/* Was the seed's own text printed read-only, so the
-                      column showed side effects nobody could have entered
-                      and gave no way to record a real one. */}
-                  <TableCell>
-                    <Select
-                      selectSize="small"
-                      value={
-                        log.sideEffectOf(date, dose.medication, dose.time) ?? ""
-                      }
-                      aria-label={
-                        isEs
-                          ? `Efectos secundarios de ${dose.medication} a las ${dose.time}`
-                          : `Side effects from ${dose.medication} at ${dose.time}`
-                      }
-                      onChange={(event) =>
-                        log.setSideEffect(
-                          date,
-                          dose.medication,
-                          dose.time,
-                          event.target.value === ""
-                            ? null
-                            : (event.target.value as SideEffect),
-                        )
-                      }
-                      className={cn(
-                        "min-w-[9rem]",
-                        recordedEffect && recordedEffect !== "none"
-                          ? "text-warning"
-                          : undefined,
-                      )}
-                    >
-                      {/* An unanswered dose is not the same as one that went
-                          fine, so "not recorded" is its own choice and the
-                          member can go back to it. */}
-                      <option value="">
-                        {isEs ? "— Sin registrar" : "— Not recorded"}
-                      </option>
-                      {SIDE_EFFECT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {isEs ? option.labelEs : option.labelEn}
-                        </option>
-                      ))}
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {doses.map((d) => (
+              <TableRow key={d.key}>
+                <TableCell>{d.timeNode}</TableCell>
+                <TableCell>{d.medNode}</TableCell>
+                <TableCell>{d.instructionsNode}</TableCell>
+                <TableCell>{d.statusNode}</TableCell>
+                <TableCell>{d.stampNode}</TableCell>
+                <TableCell>{d.effectNode}</TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

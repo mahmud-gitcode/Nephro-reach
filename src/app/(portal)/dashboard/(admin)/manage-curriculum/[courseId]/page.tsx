@@ -426,7 +426,7 @@ export default function ManageCoursePage() {
     <>
       <Link
         href="/dashboard/manage-curriculum"
-        className="inline-flex items-center gap-2 text-body-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
+        className="inline-flex min-h-11 items-center gap-2 text-body-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
       >
         <ArrowLeft className="h-4 w-4" />
         All courses

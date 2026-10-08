@@ -1,5 +1,6 @@
 "use client";
 
+import { PageTitle } from "@/components/layout/PageTitle";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -71,15 +72,16 @@ function StatTile({
   unit?: string;
 }) {
   return (
-    <Card className="flex items-center gap-inline-lg">
+    /* Icon above the figure on a phone, where two cards share a row. */
+    <Card className="flex flex-col items-start gap-inline-md max-sm:p-inset-sm sm:flex-row sm:items-center sm:gap-inline-lg">
       <span
         aria-hidden="true"
-        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-panel ${statToneClass[tone]}`}
+        className={`flex size-11 shrink-0 items-center justify-center rounded-panel sm:size-14 ${statToneClass[tone]}`}
       >
         <Icon className="h-icon-big w-icon-big" />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-label-md text-fg">{label}</p>
+        <p className="text-label-md text-fg">{label}</p>
         <p className="mt-stack-xs flex items-baseline gap-inline-xs">
           <span className="text-metric-md text-fg">{value}</span>
           {unit ? (
@@ -122,7 +124,7 @@ function SummaryCards() {
   ];
 
   return (
-    <section className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4">
       {summaryCards.map((card) => (
         <StatTile
           key={card.label}
@@ -179,7 +181,7 @@ function ClinicalMeasurementsCards() {
         </span>
       </h2>
 
-      <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4">
         {clinicalMeasurements.map((card) => (
           <StatTile
             key={card.label}
@@ -338,6 +340,11 @@ export default function DialysisTreatmentPage() {
 
   return (
     <div className="w-full space-y-stack-xl">
+      {/* Named on screen: on a phone the breadcrumb is hidden. */}
+      <PageTitle
+        href="/dashboard/personal-log/dialysis-treatment"
+        title={isEs ? "Tratamiento de Diálisis" : "Dialysis Treatment"}
+      />
       <PersonalLogDisclaimer />
 
       {/* Which kind of dialysis this member is on. Everything below is
@@ -355,7 +362,9 @@ export default function DialysisTreatmentPage() {
         <>
           {/* MONTH PICKER & ADD ENTRY BUTTON */}
           <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
-            <div className="flex shrink-0 items-center gap-inline-md">
+            {/* Wraps on a phone: on one line it pushed Add Treatment off
+                the screen (client review, 2026-10-08). */}
+            <div className="flex flex-wrap items-center gap-inline-md sm:shrink-0 sm:flex-nowrap">
               {/* A fixed width: Safari on iPad and iPhone draws a date field
                   wider than its box and it slid over the Today button
                   beside it (client screenshot, 2026-10-04). */}
@@ -410,7 +419,7 @@ export default function DialysisTreatmentPage() {
               so the log has to ask for what a technician and a nurse would
               otherwise have recorded. Neither belongs on an in-center page. */}
           {modalityLog.modality === "home-hd" ? (
-            <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2">
+            <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2 [&>*]:min-w-0">
               <MachineWaterCard />
               <TreatmentVitalsCard date={selectedDate ?? LATEST_ENTRY_DATE} />
             </section>
@@ -420,7 +429,7 @@ export default function DialysisTreatmentPage() {
           <ClinicalMeasurementsCards />
 
           {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
-          <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12">
+          <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12 [&>*]:min-w-0">
             <div className="xl:col-span-8">
               <MedicationsGivenSection />
             </div>

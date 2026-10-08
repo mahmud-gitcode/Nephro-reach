@@ -110,7 +110,7 @@ export default function WorkbookPage() {
           <Card as="section" aria-labelledby="workbook-title">
             <SectionTitle
               id="workbook-title"
-              as="h2"
+              as="h1"
               title={isEs ? "Mi cuaderno" : "My Workbook"}
               subtitle={
                 isEs

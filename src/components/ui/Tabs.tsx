@@ -50,7 +50,10 @@ export type TabsProps<T extends string = string> = {
 
 const shells: Record<TabsVariant, string> = {
   /* White bar, so the pill reads the same on any page background. */
-  pill: "inline-flex rounded-control border border-line bg-surface p-1 shadow-card",
+  /* Never wider than its container: on a phone five tabs ran off the
+     screen and widened the page; they swipe sideways instead (client
+     review, 2026-10-08). */
+  pill: "inline-flex max-w-full overflow-x-auto rounded-control border border-line bg-surface p-1 shadow-card [scrollbar-width:none]",
   vertical: "flex flex-col gap-stack-sm",
 };
 

@@ -144,7 +144,7 @@ function SummaryCards({ list }: { list: RosterMember[] }) {
   return (
     <section
       aria-label="Member summary"
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
     >
       <KeyCard
         tone="brand"
@@ -820,7 +820,7 @@ function RecentMemberActivity({
 function PageSkeleton() {
   return (
     <div aria-busy="true" className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         {Array.from({ length: 5 }, (_, index) => (
           <Skeleton key={index} height={156} className="rounded-card" />
         ))}

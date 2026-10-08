@@ -166,11 +166,11 @@ export default function FluidTrackerPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           {/* Unit Switcher: kg / lbs */}
-          <div className="flex h-10 items-center rounded-card-nested border border-line bg-[var(--color-gray-100)] p-1 shadow-control sm:h-12">
+          <div className="flex h-12 items-center rounded-card-nested border border-line bg-[var(--color-gray-100)] p-1 shadow-control">
             <button
               type="button"
               onClick={() => setUnit("kg")}
-              className={`h-full cursor-pointer rounded-control px-2.5 text-caption font-bold transition-all sm:px-3 sm:text-body-sm ${
+              className={`h-full min-w-11 cursor-pointer rounded-control px-3 text-body-sm font-bold transition-all ${
                 unit === "kg"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"
@@ -181,7 +181,7 @@ export default function FluidTrackerPage() {
             <button
               type="button"
               onClick={() => setUnit("lbs")}
-              className={`h-full cursor-pointer rounded-control px-2.5 text-caption font-bold transition-all sm:px-3 sm:text-body-sm ${
+              className={`h-full min-w-11 cursor-pointer rounded-control px-3 text-body-sm font-bold transition-all ${
                 unit === "lbs"
                   ? "bg-surface text-fg-brand shadow-control"
                   : "text-fg-muted hover:text-fg"

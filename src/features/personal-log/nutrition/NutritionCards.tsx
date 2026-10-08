@@ -68,7 +68,7 @@ export function KeyMetricCard({ metric }: { metric: MetricItem }) {
         <button
           type="button"
           onClick={metric.onFooterClick}
-          className="mt-3 inline-flex cursor-pointer items-center gap-1 text-body-sm font-semibold text-fg-brand hover:text-fg-brand"
+          className="mt-1 -mb-2 inline-flex min-h-11 cursor-pointer items-center gap-1 text-body-sm font-semibold text-fg-brand hover:text-fg-brand"
         >
           {metric.footer}
           <ChevronRight className="h-4 w-4" />
@@ -139,7 +139,8 @@ export function NutrientOverview({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two across on a phone (client review, 2026-10-08). */}
+      <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {NUTRIENT_ORDER.map((key) => {
           const consumed = totals[key];
           const goal = goals[key];
@@ -240,109 +241,181 @@ export function MealTable({
         </Button>
       </div>
 
-      <Table minWidth={760}>
-        <TableHead>
-          <TableRow>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.food || "Food"}
-            </TableHeaderCell>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.portion || "Portion"}
-            </TableHeaderCell>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.calories || "Calories"}
-            </TableHeaderCell>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.sodium || "Sodium"}
-            </TableHeaderCell>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.potassium || "Potassium"}
-            </TableHeaderCell>
-            <TableHeaderCell>
-              {n?.mealsTable?.headers?.phosphorus || "Phosphorus"}
-            </TableHeaderCell>
-            <TableHeaderCell className="text-right">
-              {n?.mealsTable?.headers?.action || "Action"}
-            </TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {mealsWithFood.length === 0 ? (
-            <TableEmptyRow colSpan={7}>
-              <p className="text-center text-label-md text-fg-muted">
-                {isToday
-                  ? isEs
-                    ? "Aún no hay comidas registradas hoy."
-                    : "No meals logged yet today."
-                  : isEs
-                    ? "No hay comidas registradas este día."
-                    : "No meals logged on this day."}
-              </p>
-              <p className="mt-stack-xs text-center text-body-sm text-fg-muted">
-                {isEs
-                  ? "Usa Agregar Alimento para empezar."
-                  : "Use Add Food to get started."}
-              </p>
-            </TableEmptyRow>
-          ) : (
-            mealsWithFood.map((meal) => {
-              const mealCalories = meal.foods.reduce(
-                (sum, food) => sum + food.calories,
-                0,
-              );
-
-              return (
-                <React.Fragment key={meal.key}>
-                  {/* The meal, as a sub-header row with its total. */}
-                  <TableRow className="bg-surface-sunken">
-                    <TableCell colSpan={7} className="py-inset-xs">
-                      <span className="flex items-center justify-between gap-inline-md">
-                        <span className="inline-flex items-center gap-inline-sm text-label-md text-fg">
-                          <Utensils
-                            aria-hidden="true"
-                            className="h-4 w-4 text-fg-brand"
-                          />
-                          {meal.label}
-                        </span>
-                        <span className="text-body-sm text-fg-muted">
-                          {formatNumber(mealCalories)} kcal
-                        </span>
-                      </span>
-                    </TableCell>
-                  </TableRow>
+      {/* On a phone the 760px table cut off the nutrients, and the empty
+          message mid-word (client review, 2026-10-08): a list there. */}
+      <div className="px-card pb-card sm:hidden">
+        {mealsWithFood.length === 0 ? (
+          <p className="rounded-card-nested bg-surface-sunken p-inset-md text-center text-body-sm text-fg-muted">
+            {isEs
+              ? "Aún no hay comidas. Usa Agregar Alimento para empezar."
+              : "No meals yet. Use Add Food to get started."}
+          </p>
+        ) : (
+          <div className="space-y-stack-md">
+            {mealsWithFood.map((meal) => (
+              <section key={meal.key}>
+                <h3 className="mb-stack-xs flex items-center justify-between gap-inline-md text-label-md text-fg">
+                  <span className="inline-flex items-center gap-inline-sm">
+                    <Utensils
+                      aria-hidden="true"
+                      className="h-4 w-4 text-fg-brand"
+                    />
+                    {meal.label}
+                  </span>
+                  <span className="text-body-sm text-fg-muted">
+                    {formatNumber(
+                      meal.foods.reduce((sum, food) => sum + food.calories, 0),
+                    )}{" "}
+                    kcal
+                  </span>
+                </h3>
+                <ul className="divide-y divide-line-subtle rounded-card-nested border border-line">
                   {meal.foods.map((food) => (
-                    <TableRow key={food.id}>
-                      <TableCell emphasis>{food.name}</TableCell>
-                      <TableCell>{food.portion || "—"}</TableCell>
-                      <TableCell>{formatNumber(food.calories)}</TableCell>
-                      <TableCell>{formatNumber(food.sodium)} mg</TableCell>
-                      <TableCell>{formatNumber(food.potassium)} mg</TableCell>
-                      <TableCell>{formatNumber(food.phosphorus)} mg</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="danger"
-                          appearance="ghost"
-                          size="small"
-                          iconOnly
-                          onClick={() => onRemoveFood(food.id)}
-                          aria-label={
-                            isEs
-                              ? `Eliminar ${food.name}`
-                              : `Remove ${food.name}`
-                          }
-                          title={isEs ? "Eliminar" : "Remove"}
-                        >
-                          <Trash2 />
-                        </Button>
+                    <li
+                      key={food.id}
+                      className="flex items-start gap-inline-md p-inset-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-label-md text-fg">{food.name}</p>
+                        <p className="text-caption text-fg-muted">
+                          {[food.portion, `${formatNumber(food.calories)} kcal`]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                        <p className="mt-stack-xs text-caption text-fg-secondary tabular-nums">
+                          Na {formatNumber(food.sodium)} mg · K{" "}
+                          {formatNumber(food.potassium)} mg · P{" "}
+                          {formatNumber(food.phosphorus)} mg
+                        </p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        appearance="ghost"
+                        size="small"
+                        iconOnly
+                        onClick={() => onRemoveFood(food.id)}
+                        aria-label={
+                          isEs ? `Eliminar ${food.name}` : `Remove ${food.name}`
+                        }
+                      >
+                        <Trash2 />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden sm:block">
+        <Table minWidth={760}>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.food || "Food"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.portion || "Portion"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.calories || "Calories"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.sodium || "Sodium"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.potassium || "Potassium"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {n?.mealsTable?.headers?.phosphorus || "Phosphorus"}
+              </TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                {n?.mealsTable?.headers?.action || "Action"}
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {mealsWithFood.length === 0 ? (
+              <TableEmptyRow colSpan={7}>
+                <p className="text-center text-label-md text-fg-muted">
+                  {isToday
+                    ? isEs
+                      ? "Aún no hay comidas registradas hoy."
+                      : "No meals logged yet today."
+                    : isEs
+                      ? "No hay comidas registradas este día."
+                      : "No meals logged on this day."}
+                </p>
+                <p className="mt-stack-xs text-center text-body-sm text-fg-muted">
+                  {isEs
+                    ? "Usa Agregar Alimento para empezar."
+                    : "Use Add Food to get started."}
+                </p>
+              </TableEmptyRow>
+            ) : (
+              mealsWithFood.map((meal) => {
+                const mealCalories = meal.foods.reduce(
+                  (sum, food) => sum + food.calories,
+                  0,
+                );
+
+                return (
+                  <React.Fragment key={meal.key}>
+                    {/* The meal, as a sub-header row with its total. */}
+                    <TableRow className="bg-surface-sunken">
+                      <TableCell colSpan={7} className="py-inset-xs">
+                        <span className="flex items-center justify-between gap-inline-md">
+                          <span className="inline-flex items-center gap-inline-sm text-label-md text-fg">
+                            <Utensils
+                              aria-hidden="true"
+                              className="h-4 w-4 text-fg-brand"
+                            />
+                            {meal.label}
+                          </span>
+                          <span className="text-body-sm text-fg-muted">
+                            {formatNumber(mealCalories)} kcal
+                          </span>
+                        </span>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </React.Fragment>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+                    {meal.foods.map((food) => (
+                      <TableRow key={food.id}>
+                        <TableCell emphasis>{food.name}</TableCell>
+                        <TableCell>{food.portion || "—"}</TableCell>
+                        <TableCell>{formatNumber(food.calories)}</TableCell>
+                        <TableCell>{formatNumber(food.sodium)} mg</TableCell>
+                        <TableCell>{formatNumber(food.potassium)} mg</TableCell>
+                        <TableCell>
+                          {formatNumber(food.phosphorus)} mg
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="danger"
+                            appearance="ghost"
+                            size="small"
+                            iconOnly
+                            onClick={() => onRemoveFood(food.id)}
+                            aria-label={
+                              isEs
+                                ? `Eliminar ${food.name}`
+                                : `Remove ${food.name}`
+                            }
+                            title={isEs ? "Eliminar" : "Remove"}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="border-t border-line p-card py-inset-md">
         <Button

@@ -162,7 +162,9 @@ function DayStage({
                 sizes="(min-width: 1280px) 560px, 100vw"
                 priority
               />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
+              {/* A dark wash, so the words never sit on the poster's own
+                  lettering. */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-inverse/75 p-6 text-center">
                 {day.kind === "audio" ? (
                   <Headphones
                     aria-hidden="true"
@@ -578,7 +580,10 @@ export default function JourneyDayPage() {
           </div>
         </aside>
 
-        <div className="flex min-w-0 gap-3 sm:gap-inset-md">
+        {/* On a phone the resource rail is a toolbar above the lesson; at
+            its side it took 80px and cut its own labels (client review,
+            2026-10-08). */}
+        <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:gap-inset-md">
           <div className="min-w-0 flex-1">
             {isExam && course ? (
               <QuizRunner
@@ -653,7 +658,7 @@ export default function JourneyDayPage() {
 
           {/* Right side: the panel docks beside the lesson from 2xl up, and
               falls back to the slide-over drawer on narrower screens. */}
-          <div className="sticky top-4 flex shrink-0 items-start gap-3 self-start">
+          <div className="flex shrink-0 items-start gap-3 sm:sticky sm:top-4 sm:self-start">
             <div
               className={`hidden overflow-hidden transition-[width,opacity] duration-300 ease-out 2xl:block ${
                 panelOpen ? "w-[340px] opacity-100" : "w-0 opacity-0"
@@ -693,6 +698,7 @@ export default function JourneyDayPage() {
       <div
         className={`fixed inset-0 z-50 xl:hidden ${dayListOpen ? "" : "pointer-events-none"}`}
         aria-hidden={dayListOpen ? undefined : true}
+        inert={!dayListOpen}
       >
         <button
           type="button"

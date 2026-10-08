@@ -166,6 +166,10 @@ export default function CertificatePage() {
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-stack-lg">
       <style>{PRINT_CSS}</style>
+      {/* Named on screen; on a phone the breadcrumb is hidden. */}
+      <h1 className="text-heading-2 text-fg print:hidden">
+        {isEs ? "Mi certificado" : "My Certificate"}
+      </h1>
 
       <Link
         href="/dashboard/my-classroom"

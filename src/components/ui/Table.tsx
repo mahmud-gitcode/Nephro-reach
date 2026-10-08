@@ -40,7 +40,10 @@ export function Table({
   return (
     // The wrapper scrolls, not the page — a wide table must never make the
     // whole document scroll sideways.
-    <div className="w-full overflow-x-auto">
+    /* relative: an absolutely positioned child (an sr-only label in a
+       header) escaped the scroll box and widened the whole page on a
+       phone (client review, 2026-10-08). */
+    <div className="relative w-full overflow-x-auto">
       <table
         style={{ minWidth }}
         className={cn("w-full border-collapse text-left", className)}
