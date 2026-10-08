@@ -11,6 +11,13 @@
 export const menuStyles =
   "absolute z-50 mt-stack-sm rounded-card-nested border border-line bg-surface p-1.5 shadow-(--popover-shadow)";
 
+/* A top-bar menu on a phone: the bar's buttons sit mid-screen, so a menu
+   anchored to one runs off the left edge (client, 2026-10-08). Below the
+   sm breakpoint it opens full width under the bar instead; from sm up it
+   hangs off its button's right edge as before. Pair with a `sm:w-…`. */
+export const topBarMenuPlacement =
+  "max-sm:fixed max-sm:inset-x-4 max-sm:top-16 max-sm:w-auto sm:right-0";
+
 /* A row. Add its colours: `text-fg hover:bg-surface-sunken`, or
    `text-danger hover:bg-danger-surface` for a destructive one. */
 export const menuItemStyles =

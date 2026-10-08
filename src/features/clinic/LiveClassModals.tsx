@@ -489,20 +489,33 @@ export function RecordingModal({
       open
       onClose={onClose}
       title={item.title}
-      description={`${formatClassDate(item.date)} · ${item.attended} attended · rated ${item.rating}`}
+      description={`${formatClassDate(item.date)} · ${item.attended} attended${item.rating > 0 ? ` · rated ${item.rating}` : ""}`}
       footer={
         <>
+          {/* Unpublishing takes it off members' home screens. */}
+          {link ? (
+            <Button
+              variant="danger"
+              appearance="ghost"
+              onClick={() => {
+                onSave(item.title, "");
+                onClose();
+              }}
+            >
+              Unpublish
+            </Button>
+          ) : null}
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             Close
           </Button>
           <Button
-            disabled={!!error}
+            disabled={!!error || !url.trim()}
             onClick={() => {
               onSave(item.title, url);
               onClose();
             }}
           >
-            Save Link
+            {link ? "Save Changes" : "Publish to Members"}
           </Button>
         </>
       }
@@ -527,6 +540,11 @@ export function RecordingModal({
           />
         </div>
 
+        <p className="text-body-sm text-fg-muted">
+          Published recordings appear on every member&rsquo;s home screen, under
+          Recent Live Recordings.
+        </p>
+
         {error ? <Alert tone="warning">{error}</Alert> : null}
 
         {link && !error ? (
@@ -540,9 +558,7 @@ export function RecordingModal({
             Open the recording
           </a>
         ) : (
-          <p className="text-body-sm text-fg-muted">
-            No recording saved for this class yet.
-          </p>
+          <p className="text-body-sm text-fg-muted">Not published yet.</p>
         )}
       </div>
     </Modal>

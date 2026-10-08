@@ -7,7 +7,7 @@
 
 export { Button } from "./Button";
 export { buttonStyles } from "./buttonStyles";
-export { menuStyles, menuItemStyles } from "./menuStyles";
+export { menuStyles, menuItemStyles, topBarMenuPlacement } from "./menuStyles";
 export type { ButtonProps } from "./Button";
 export type {
   ButtonSize,

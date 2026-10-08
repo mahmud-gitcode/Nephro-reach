@@ -26,10 +26,7 @@ import {
 } from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import { useLiveClasses } from "@/features/clinic/useLiveClasses";
-import {
-  formatClassDate,
-  recentClasses,
-} from "@/features/clinic/liveClass.data";
+import { formatClassDate } from "@/features/clinic/liveClass.data";
 import {
   approvedTestimonials as onlyApproved,
   testimonialsByAuthor,
@@ -133,13 +130,10 @@ export default function UserDashboard() {
   const dh = dictionary?.dashboardHome;
   /* The next class the clinic has on its schedule — the same record the
      clinic's Live Class page edits. */
-  const { upcoming, recordings } = useLiveClasses();
+  const { upcoming, recordings, past } = useLiveClasses();
   const nextClass = upcoming[0];
   /* Recordings the admin has posted (client, 2026-10-06), newest first. */
-  const posted = recentClasses
-    .filter((item) => recordings[item.title])
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 3);
+  const posted = past.filter((item) => recordings[item.title]).slice(0, 3);
   const firstName = user?.name.split(" ")[0] || "Sarah";
   const greeting = useMemo(() => getGreeting(dh), [dh]);
   const [isRideModalOpen, setIsRideModalOpen] = useState(false);

@@ -52,6 +52,8 @@ export type AckCopy = {
   /** Shown above the paragraphs, e.g. a warning. */
   lead?: string;
   body: string[];
+  /** A bulleted list after the paragraphs. */
+  points?: string[];
   check: string;
   cancel: string;
   confirm: string;
@@ -110,6 +112,13 @@ export function AcknowledgeNotice({
             {paragraph}
           </p>
         ))}
+        {copy.points ? (
+          <ul className="list-disc space-y-stack-xs pl-5 text-body-sm text-fg-secondary">
+            {copy.points.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+        ) : null}
         <label className="flex min-h-11 cursor-pointer items-start gap-inline-md rounded-control border border-line p-inset-sm select-none">
           <input
             type="checkbox"
@@ -146,6 +155,55 @@ export function useAcknowledge(copy: AckCopy) {
     />
   );
   return { guard, notice };
+}
+
+/* Share Outside NephroReach — the client's own notice (2026-10-08). */
+const SHARE_OUTSIDE_COPY: Record<"en" | "es", AckCopy> = {
+  en: {
+    title: "Share Outside NephroReach",
+    body: [
+      "You are about to share information with a person or organization outside of the NephroReach platform.",
+      "By continuing, you acknowledge that:",
+    ],
+    points: [
+      "You selected the recipient and are responsible for confirming that the recipient’s contact information is correct.",
+      "The recipient may not be a NephroReach member and may not be subject to NephroReach’s privacy, security, or access controls after the information is delivered.",
+      "Information you choose to share may contain sensitive personal or health information.",
+      "NephroReach does not guarantee that the recipient will open, read, review, acknowledge, or respond to the information you send. Sending information does not confirm that the recipient has received, reviewed, or acted upon it.",
+      "Once the information has been successfully delivered to the recipient, NephroReach cannot control how the recipient accesses, stores, uses, forwards, or further discloses the information.",
+      "Do not rely on this sharing feature for emergencies, urgent medical concerns, or situations requiring an immediate response.",
+      "Only share information with individuals or organizations you trust and intend to receive it.",
+    ],
+    check:
+      "I understand that the recipient may or may not open or respond to the information, and I authorize NephroReach to send the information I selected to the recipient I designated.",
+    cancel: "Cancel",
+    confirm: "Confirm & Share",
+  },
+  es: {
+    title: "Compartir Fuera de NephroReach",
+    body: [
+      "Está a punto de compartir información con una persona u organización fuera de la plataforma NephroReach.",
+      "Al continuar, usted reconoce que:",
+    ],
+    points: [
+      "Usted seleccionó al destinatario y es responsable de confirmar que su información de contacto es correcta.",
+      "Es posible que el destinatario no sea miembro de NephroReach y que no esté sujeto a los controles de privacidad, seguridad o acceso de NephroReach una vez entregada la información.",
+      "La información que elija compartir puede contener información personal o de salud confidencial.",
+      "NephroReach no garantiza que el destinatario abra, lea, revise, confirme o responda a la información que envía. Enviar información no confirma que el destinatario la haya recibido, revisado o actuado en consecuencia.",
+      "Una vez entregada la información al destinatario, NephroReach no puede controlar cómo el destinatario accede, guarda, usa, reenvía o divulga la información.",
+      "No dependa de esta función para emergencias, problemas médicos urgentes o situaciones que requieran una respuesta inmediata.",
+      "Comparta información solo con personas u organizaciones de su confianza que deban recibirla.",
+    ],
+    check:
+      "Entiendo que el destinatario puede o no abrir o responder a la información, y autorizo a NephroReach a enviar la información que seleccioné al destinatario que designé.",
+    cancel: "Cancelar",
+    confirm: "Confirmar y Compartir",
+  },
+};
+
+/** The notice before a Share Outside NephroReach link is sent. */
+export function useShareOutsideNotice(isEs = false) {
+  return useAcknowledge(isEs ? SHARE_OUTSIDE_COPY.es : SHARE_OUTSIDE_COPY.en);
 }
 
 /** The External Sharing Notice around an export or share. */

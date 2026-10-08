@@ -12,6 +12,7 @@ import {
   buttonStyles,
   menuItemStyles,
   menuStyles,
+  topBarMenuPlacement,
 } from "@/components/ui";
 import { useDismiss } from "@/lib/utils/useDismiss";
 import { useNow } from "@/lib/utils/useNow";
@@ -123,7 +124,7 @@ function BellMenu({
         <div
           role="menu"
           aria-label={title}
-          className={`${menuStyles} right-0 w-80 max-w-[calc(100vw-2rem)]`}
+          className={`${menuStyles} ${topBarMenuPlacement} sm:w-80`}
         >
           <p className="border-b border-line px-3 pt-1.5 pb-2.5 text-label-lg text-fg">
             {title}

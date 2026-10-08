@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Award,
@@ -48,7 +48,6 @@ import {
   attendanceTrend,
   classDate,
   formatClassDate,
-  recentClasses,
   registrationSources,
   settings,
   summary,
@@ -58,7 +57,6 @@ import type { RecentClass } from "./liveClass.data";
 import { useLiveClasses } from "./useLiveClasses";
 import {
   classesOnDay,
-  pastClasses,
   settingSummary,
   type ManagedClass,
   type SettingId,
@@ -414,10 +412,13 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
 }
 
 function RecentLiveClasses({
+  classes,
   recordings,
   onView,
   onViewAll,
 }: {
+  /** Classes that have taken place, newest first. */
+  classes: RecentClass[];
   recordings: Record<string, string>;
   /** Managing: open the recording's link editor. Without it the button
    *  plays the recording, when one is posted. */
@@ -426,9 +427,16 @@ function RecentLiveClasses({
 }) {
   return (
     <Card as="section" padding="small">
-      <PanelHeading title="Recent Live Classes" />
+      <PanelHeading
+        title="Recent Live Classes"
+        description={
+          onView
+            ? "Publish a recording and it appears on every member's home screen, under Recent Live Recordings."
+            : undefined
+        }
+      />
       <ul className="divide-y divide-line-subtle">
-        {recentClasses.map((item) => (
+        {classes.slice(0, 4).map((item) => (
           <li
             key={item.title}
             className="flex items-center gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
@@ -445,8 +453,15 @@ function RecentLiveClasses({
                 {formatClassDate(item.date)} · {item.attended} attended
               </p>
               <p className="mt-stack-xs flex items-center gap-inline-xs text-caption text-fg-secondary">
-                <Rating value={item.rating} size="h-3.5 w-3.5" />
-                <span aria-hidden="true">{item.rating}</span>
+                {item.rating > 0 ? (
+                  <>
+                    <Rating value={item.rating} size="h-3.5 w-3.5" />
+                    <span aria-hidden="true">{item.rating}</span>
+                  </>
+                ) : null}
+                <Badge tone={recordings[item.title] ? "success" : "neutral"}>
+                  {recordings[item.title] ? "Published" : "Not published"}
+                </Badge>
               </p>
             </div>
             {onView ? (
@@ -455,9 +470,13 @@ function RecentLiveClasses({
                 variant="neutral"
                 appearance="fill-stroke"
                 size="small"
-                aria-label={`View ${item.title} recording`}
+                aria-label={
+                  recordings[item.title]
+                    ? `Edit ${item.title} recording`
+                    : `Publish ${item.title} recording`
+                }
               >
-                {recordings[item.title] ? "Open" : "View"}
+                {recordings[item.title] ? "Edit" : "Publish"}
               </Button>
             ) : (
               <Button
@@ -600,7 +619,7 @@ export default function ClinicLiveClass({
   href?: string;
 }) {
   const live = useLiveClasses();
-  const past = useMemo(() => pastClasses(), []);
+  const past = live.past;
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedClass | null>(null);
@@ -650,6 +669,7 @@ export default function ClinicLiveClass({
           <LiveClassCalendar classes={live.classes} />
         </Suspense>
         <RecentLiveClasses
+          classes={past}
           recordings={live.recordings}
           onView={manage ? setRecording : undefined}
           onViewAll={manage ? () => setLibraryOpen(true) : undefined}

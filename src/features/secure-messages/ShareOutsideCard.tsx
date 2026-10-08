@@ -1,6 +1,6 @@
 "use client";
 
-import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
+import { useShareOutsideNotice } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import { Copy, ExternalLink, Paperclip, Share2 } from "lucide-react";
 import {
@@ -163,7 +163,7 @@ function ShareModal({
   onShared?: () => void;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
-  const share = useExternalShare(isEs);
+  const share = useShareOutsideNotice(isEs);
   const me = useMemberName();
   const store = useShares();
   const offices = useOutsideOffices();

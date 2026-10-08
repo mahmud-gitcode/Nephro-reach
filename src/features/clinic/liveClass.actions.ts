@@ -1,6 +1,7 @@
 import {
   classDate,
   recentClasses,
+  type RecentClass,
   settings as SETTING_CARDS,
   upcomingClasses,
   type RegistrationStatus,
@@ -304,8 +305,32 @@ export function recordingLinkError(url: string): string | null {
   return null;
 }
 
-export function pastClasses() {
-  return [...recentClasses].sort((a, b) => b.date.localeCompare(a.date));
+/**
+ * Classes that have taken place, newest first: the sample history, plus
+ * every class the admin scheduled whose date has passed and that was not
+ * called off — so each new live class can have its recording published
+ * (client, 2026-10-08). Recordings are kept by title, so a topic held
+ * twice keeps its newest session.
+ */
+export function pastClasses(
+  classes: ManagedClass[] = [],
+  today = "",
+): RecentClass[] {
+  const held: RecentClass[] = classes
+    .filter((c) => c.status !== "Cancelled" && !!today && c.date < today)
+    .map((c) => ({
+      title: c.topic,
+      date: c.date,
+      attended: c.registered,
+      /* No rating collected for these yet. */
+      rating: 0,
+    }));
+  const byTitle = new Map<string, RecentClass>();
+  for (const item of [...recentClasses, ...held]) {
+    const seen = byTitle.get(item.title);
+    if (!seen || item.date > seen.date) byTitle.set(item.title, item);
+  }
+  return [...byTitle.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /* --------------------------------------------------------------------------

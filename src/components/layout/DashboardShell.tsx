@@ -13,6 +13,7 @@ import {
   buttonStyles,
   menuItemStyles,
   menuStyles,
+  topBarMenuPlacement,
 } from "@/components/ui";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import EmergencyModal from "@/features/emergency/EmergencyModal";
@@ -225,7 +226,10 @@ function LanguageSwitcher() {
         />
       </button>
       {langOpen ? (
-        <div role="menu" className={`${menuStyles} right-0 w-40`}>
+        <div
+          role="menu"
+          className={`${menuStyles} ${topBarMenuPlacement} sm:w-40`}
+        >
           {(["EN", "ES"] as const).map((code) => {
             const current = language === code;
             return (
@@ -342,8 +346,10 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <nav className="flex min-w-0 items-center gap-inline-sm overflow-hidden text-body-sm text-fg-muted">
           {isUser ? (
             <>
-              {/* Mobile: concise active page title */}
-              <span className="truncate text-label-md text-fg sm:hidden">
+              {/* Mobile: no room beside the controls — it was cut to one
+                  letter (client, 2026-10-08). Kept for screen readers;
+                  the page's own heading names it on screen. */}
+              <span className="sr-only sm:hidden">
                 {trail[trail.length - 1] ?? "Dashboard"}
               </span>
               {/* Tablet/Desktop: full breadcrumbs trail */}
@@ -564,7 +570,7 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
         <div
           role="menu"
           aria-label={isEs ? "Cuenta" : "Account"}
-          className={`${menuStyles} right-0 w-60 max-w-[calc(100vw-2rem)]`}
+          className={`${menuStyles} ${topBarMenuPlacement} sm:w-60`}
         >
           {/* Who is signed in. Below `lg` this is the only place it is said. */}
           <div className="border-b border-line px-3 pt-1.5 pb-2.5">

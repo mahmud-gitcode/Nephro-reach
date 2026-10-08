@@ -10,6 +10,7 @@ import {
   normaliseLiveClassActions,
   removeClass,
   setClassStatus,
+  pastClasses,
   sortClasses,
   updateClass,
   upcomingFrom,
@@ -86,6 +87,11 @@ export function useLiveClasses() {
     /** Still to come and not called off — what the table shows. */
     upcoming: useMemo(
       () => upcomingFrom(actions.classes, today),
+      [actions.classes, today],
+    ),
+    /** Classes that have taken place — each can carry a recording. */
+    past: useMemo(
+      () => pastClasses(actions.classes, today),
       [actions.classes, today],
     ),
     recordings: actions.recordings,

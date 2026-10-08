@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pastClasses,
   SETTING_FIELDS,
   addClass,
   addDays,
@@ -350,5 +351,52 @@ describe("the meeting link members join by", () => {
       classes: [{ id: "x", date: "2026-10-20", joinUrl: "javascript:x" }],
     });
     expect(read.classes[0].joinUrl).toBeUndefined();
+  });
+});
+
+describe("pastClasses", () => {
+  const base = {
+    time: "6:00 PM",
+    educator: "NephroReach",
+    program: "Live",
+    registered: 40,
+    capacity: 100,
+  };
+  const classes = [
+    {
+      ...base,
+      id: "a",
+      date: "2026-10-01",
+      topic: "Potassium Basics",
+      status: "Open",
+    },
+    {
+      ...base,
+      id: "b",
+      date: "2026-10-02",
+      topic: "Called Off",
+      status: "Cancelled",
+    },
+    {
+      ...base,
+      id: "c",
+      date: "2026-10-20",
+      topic: "Still To Come",
+      status: "Open",
+    },
+  ] as Parameters<typeof pastClasses>[0];
+
+  it("adds the admin's held classes, so their recordings can be published", () => {
+    const past = pastClasses(classes, "2026-10-08");
+    const titles = past.map((c) => c.title);
+    expect(titles[0]).toBe("Potassium Basics");
+    expect(past[0]).toMatchObject({ attended: 40, rating: 0 });
+    expect(titles).not.toContain("Called Off");
+    expect(titles).not.toContain("Still To Come");
+    expect(titles).toContain("Understanding Your Kidneys");
+  });
+
+  it("keeps the sample history when nothing has been held", () => {
+    expect(pastClasses().length).toBeGreaterThan(0);
   });
 });

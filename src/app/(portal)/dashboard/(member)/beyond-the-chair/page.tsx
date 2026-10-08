@@ -384,16 +384,21 @@ export default function BetweenTreatmentPage() {
 
         <RecoveryTrendsCard entries={entries} />
 
-        {/* A clinic not on NephroReach cannot see check-ins in the portal,
-            so the member can email them instead (client, 2026-10-05). */}
-        {enrollment.ready && !enrollment.enrolled ? (
+        {/* Every member can share their check-ins outside NephroReach
+            (client, 2026-10-07); a clinic not on NephroReach cannot see
+            them in the portal, so that case is said out loud. */}
+        {enrollment.ready ? (
           <ShareLogCard
             isEs={isEs}
             title={isEs ? "Mis registros de bienestar" : "My check-ins"}
             description={
-              isEs
-                ? "Su clínica de diálisis no está en NephroReach. Envíe sus registros a un correo que usted elija, o descárguelos."
-                : "Your dialysis clinic is not on NephroReach. Send your check-ins to an email you choose, or download them."
+              enrollment.enrolled
+                ? isEs
+                  ? "Comparta sus registros con alguien fuera de NephroReach, o descárguelos."
+                  : "Share your check-ins with someone outside NephroReach, or download them."
+                : isEs
+                  ? "Su clínica de diálisis no está en NephroReach. Envíe sus registros a un correo que usted elija, o descárguelos."
+                  : "Your dialysis clinic is not on NephroReach. Send your check-ins to an email you choose, or download them."
             }
             fileName="check-ins"
             table={{
