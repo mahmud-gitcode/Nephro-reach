@@ -7,6 +7,7 @@ import {
   validateProfile,
   writeClinicSettings,
 } from "./settings.data";
+import { organization } from "@/features/staff/staff";
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -67,5 +68,32 @@ describe("storage", () => {
     expect(settings.notifications.billing).toBe(false);
     expect(settings.notifications.weeklySummary).toBe(true);
     expect(settings.profile).toEqual(defaultClinicSettings().profile);
+  });
+});
+
+describe("each office keeps its own settings", () => {
+  const nephrology = organization("riverside-nephrology")!;
+
+  it("starts the nephrology office from its own name and home page", async () => {
+    const settings = await readClinicSettings(nephrology);
+    expect(settings.profile.name).toBe("Riverside Nephrology Associates");
+    expect(settings.office.landingPage).toBe("/dashboard/nephrology");
+  });
+
+  it("never overwrites the dialysis center's on-call phone", async () => {
+    const clinic = defaultClinicSettings();
+    clinic.office.onCallPhone = "(803) 555-0100";
+    await writeClinicSettings(clinic);
+
+    const office = defaultClinicSettings(nephrology);
+    office.office.onCallPhone = "(803) 555-0199";
+    await writeClinicSettings(office, nephrology);
+
+    expect((await readClinicSettings()).office.onCallPhone).toBe(
+      "(803) 555-0100",
+    );
+    expect((await readClinicSettings(nephrology)).office.onCallPhone).toBe(
+      "(803) 555-0199",
+    );
   });
 });

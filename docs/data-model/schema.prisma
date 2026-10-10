@@ -1,0 +1,1822 @@
+// ============================================================================
+//  NephroReach — data model, first draft (2026-10-08)
+// ----------------------------------------------------------------------------
+//  Written from the frontend as it stands: every localStorage store under
+//  src/features/** and its TypeScript shape. Nothing here is wired up yet —
+//  Prisma is not a dependency — this file is the contract the backend is
+//  built against. Read docs/data-model/README.md first: it explains the
+//  three ownership rules every table follows and lists the open questions.
+//
+//  Conventions
+//  - Every id is a cuid string. Every table has createdAt; mutable ones have
+//    updatedAt.
+//  - A date the member picks from a calendar is @db.Date. A moment something
+//    happened is DateTime.
+//  - Member-entered clinical numbers stay String where the frontend keeps
+//    them as typed text ("3.5 hrs", "140/90") — parsing happens on display,
+//    so nothing the member wrote is lost on the way in.
+//  - Bilingual content keeps the frontend's *En / *Es columns.
+//  - Json is used only for nested content nobody filters on (question
+//    options, form answers, settings bags). Anything a list, filter, report
+//    or permission check reads is a real column.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+//  1. IDENTITY, ORGANIZATIONS, ACCESS
+// ============================================================================
+
+/// Everyone who signs in: platform admins, office staff, members, caregivers.
+/// Replaces the demo accounts in features/auth/auth.ts and the passwords in
+/// nr:staff-accounts.
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  passwordHash  String
+  name          String
+  platformRole  PlatformRole
+  status        UserStatus   @default(ACTIVE)
+  language      Language     @default(EN)
+  mfaEnabled    Boolean      @default(false)
+  lastSignInAt  DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  memberships   StaffMembership[]
+  patient       Patient?
+  caregiverOf   CaregiverGrant[]
+  preferences   UserPreference?
+  auditEntries  AuditLog[]
+}
+
+/// NephroReach staff (ADMIN), office staff (STAFF), members (MEMBER) and
+/// caregivers (CAREGIVER). What an office user may do comes from
+/// StaffMembership.role, never from this field.
+enum PlatformRole {
+  ADMIN
+  STAFF
+  MEMBER
+  CAREGIVER
+}
+
+enum UserStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+enum Language {
+  EN
+  ES
+}
+
+/// A dialysis center, vascular access center or nephrology office — each its
+/// own portal and its own tenant. Data one organization owns is never
+/// readable by another.
+model Organization {
+  id         String           @id @default(cuid())
+  name       String
+  type       OrganizationType
+  address    String           @default("")
+  phone      String           @default("")
+  email      String           @default("")
+  timeZone   String           @default("America/New_York")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  settings        OrganizationSettings?
+  staff           StaffMembership[]
+  careLinks       CareRelationship[]
+  enrollments     ProgramEnrollment[]
+  subscription    OrganizationSubscription?
+  conversations   Conversation[]
+  teamMessages    TeamMessage[]
+  labImports      LabImportBatch[]
+  ccmEnrollments  CcmEnrollment[]
+  ccmActivities   CcmActivity[]
+  ccmInbox        CcmInboxItem[]
+  conditionLibrary CcmConditionLibraryEntry[]
+  accessProfiles  AccessProfile[]       @relation("AccessCenter")
+  referralsSent   AccessReferral[]      @relation("ReferralSender")
+  referralsIn     AccessReferral[]      @relation("ReferralReceiver")
+  tripsHandled    TripRequest[]
+  supportTickets  SupportTicket[]
+}
+
+enum OrganizationType {
+  DIALYSIS_CENTER
+  ACCESS_CENTER
+  NEPHROLOGY_OFFICE
+  TRANSPLANT_CENTER // in the client spec, not built in the frontend yet
+}
+
+/// clinic-settings: office hours drive the after-hours auto-reply, onCallPhone
+/// the 2-hour unread escalation SMS.
+model OrganizationSettings {
+  organizationId String       @id
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  notifications  Json         // Record<NotificationId, boolean>
+  landingPage    String       @default("")
+  itemsPerPage   Int          @default(10)
+  dateFormat     String       @default("MM/DD/YYYY")
+  opensAt        String       @default("08:00")
+  closesAt       String       @default("17:00")
+  onCallPhone    String?
+  twoFactorMethod String?
+  updatedAt      DateTime     @updatedAt
+}
+
+/// One person's job at one organization. A user may work at more than one.
+model StaffMembership {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  /// One of STAFF_ROLES in features/staff/staff.ts. Kept as text because the
+  /// role list differs per portal and is still being settled with the client;
+  /// the permission matrix lives in code, keyed by (portal, role).
+  role           String
+  isOwner        Boolean      @default(false) // the office's own login: every permission
+  status         UserStatus   @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+/// The person being cared for. A patient can exist before they have an
+/// account: a clinic enrolls them by name and MRN, and the member registers
+/// later — so userId is optional.
+model Patient {
+  id          String    @id @default(cuid())
+  userId      String?   @unique
+  user        User?     @relation(fields: [userId], references: [id])
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime? @db.Date
+  phone       String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  careLinks          CareRelationship[]
+  caregivers         CaregiverGrant[]
+  shareGrants        PatientShareGrant[]
+  enrollments        ProgramEnrollment[]
+  emergencyContact   EmergencyContact?
+  careContacts       CareContact[]
+  homeClinic         HomeDialysisClinic?
+  rideContacts       RideContact[]
+  allergies          Allergy[]
+  conditions         MedicalCondition[]
+  bpReadings         BloodPressureReading[]
+  weightFluid        WeightFluidEntry[]
+  foods              FoodEntry[]
+  fluidIntake        DailyFluidIntake[]
+  nutritionGoal      NutritionGoal?
+  exercise           ExerciseEntry[]
+  checkIns           DailyCheckIn[]
+  clinicNotices      ClinicNotice[]
+  dialysisDayLogs    DialysisDayLog[]
+  modality           DialysisModalitySetting?
+  homeSystem         HomeDialysisSystem?
+  treatmentVitals    HomeTreatmentVitals[]
+  homeVisits         HomeVisit[]
+  pdExchanges        PdExchange[]
+  supplyMonths       SupplyMonth[]
+  providerOrders     ProviderOrder[]
+  treatmentMeds      TreatmentMedication[]
+  accessPhotos       AccessPhoto[]
+  medications        Medication[]
+  doses              DoseRecord[]
+  sideEffects        SideEffectRecord[]
+  moods              MoodEntry[]
+  appointments       Appointment[]
+  labResults         LabResult[]
+  careTeamQuestions  CareTeamQuestion[]
+  erReports          ErVisitReport[]
+  conversations      Conversation[]
+  trips              TripRequest[]
+  accessProfiles     AccessProfile[]
+  referrals          AccessReferral[]
+  ccmEnrollments     CcmEnrollment[]
+  ccmActivities      CcmActivity[]
+  ccmInbox           CcmInboxItem[]
+  learner            LearnerAnswer[]
+  quizAttempts       QuizAttempt[]
+  certificates       Certificate[]
+  journeyDays        JourneyDayProgress[]
+  outsideShares      OutsideShare[]
+  subscription       MemberSubscription?
+}
+
+/// THE tenant boundary for patient data. An organization's staff can see a
+/// patient only while a CareRelationship links them, and only the areas the
+/// patient has shared (PatientShareGrant). Every staff query joins through
+/// here — enforced in the data-access layer and covered by isolation tests.
+model CareRelationship {
+  id             String       @id @default(cuid())
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  /// MRN is per facility: the same person has a different MRN at each.
+  mrn            String
+  status         CareStatus   @default(ACTIVE)
+  startedOn      DateTime     @default(now()) @db.Date
+  endedOn        DateTime?    @db.Date
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, mrn])
+  @@unique([patientId, organizationId])
+}
+
+enum CareStatus {
+  ACTIVE
+  ENDED
+}
+
+/// Patient-controlled sharing of their own logs with an organization they are
+/// linked to. Open client item: which areas exist and what the defaults are.
+model PatientShareGrant {
+  id             String    @id @default(cuid())
+  patientId      String
+  patient        Patient   @relation(fields: [patientId], references: [id])
+  organizationId String
+  area           ShareArea
+  grantedAt      DateTime  @default(now())
+  revokedAt      DateTime?
+
+  @@unique([patientId, organizationId, area])
+}
+
+enum ShareArea {
+  PERSONAL_LOGS
+  NUTRITION
+  MEDICATIONS
+  LABS
+  DIALYSIS_LOGS
+  CHECK_INS
+}
+
+/// Caregiver permissions come from the patient, area by area. The journal
+/// defaults to No (client spec).
+model CaregiverGrant {
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     Patient   @relation(fields: [patientId], references: [id])
+  caregiverId String
+  caregiver   User      @relation(fields: [caregiverId], references: [id])
+  relationship String   @default("")
+  /// Record<area, "none" | "view" | "edit">
+  permissions Json
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@unique([patientId, caregiverId])
+}
+
+/// Language, quick actions, BP reminder times — small per-user preferences.
+model UserPreference {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id])
+  quickActions    String[] // QuickActionId[]
+  bpReminderTimes String[] // "HH:mm"
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================================================
+//  2. AUDIT, REVISIONS, FILES — required by HIPAA and the client spec
+// ============================================================================
+
+/// Who read or changed what, and when. Written by the data-access layer on
+/// every PHI read and write — never by a page.
+model AuditLog {
+  id             String   @id @default(cuid())
+  actorId        String?
+  actor          User?    @relation(fields: [actorId], references: [id])
+  organizationId String?
+  action         String   // "read" | "create" | "update" | "delete" | "export" | "sign-in" …
+  entity         String   // table name
+  entityId       String
+  patientId      String?
+  ip             String?
+  at             DateTime @default(now())
+
+  @@index([patientId, at])
+  @@index([organizationId, at])
+}
+
+/// Providers never overwrite what a patient entered: a correction is a
+/// revision with who / what / when / old / new. Also used for the medication
+/// change history (client, 2026-10-07).
+model RecordRevision {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  field     String
+  oldValue  String?
+  newValue  String?
+  changedBy String   // User.id
+  reason    String?
+  at        DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+/// Every upload — photos, travel documents, message attachments, lab CSVs.
+/// Replaces the data: URLs kept in localStorage today. The bytes live in
+/// object storage; this row is the pointer and the owner.
+model FileObject {
+  id          String   @id @default(cuid())
+  storageKey  String   @unique
+  fileName    String
+  contentType String
+  sizeBytes   Int
+  uploadedBy  String   // User.id
+  patientId   String?  // set when the file is PHI
+  createdAt   DateTime @default(now())
+}
+
+// ============================================================================
+//  3. MEMBER PROFILE
+// ============================================================================
+
+/// profile-emergency-contact
+model EmergencyContact {
+  patientId    String   @id
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  name         String
+  phone        String
+  relationship String
+  updatedAt    DateTime @updatedAt
+}
+
+/// care-contacts: the member's other offices.
+model CareContact {
+  id        String          @id @default(cuid())
+  patientId String
+  patient   Patient         @relation(fields: [patientId], references: [id])
+  kind      CareContactKind
+  name      String
+  phone     String
+  address   String
+  updatedAt DateTime        @updatedAt
+
+  @@unique([patientId, kind])
+}
+
+enum CareContactKind {
+  VASCULAR
+  NEPHROLOGY
+  TRANSPLANT
+  PRIMARY_CARE
+}
+
+/// dialysis-clinic: the member's home unit. Linked to an Organization when the
+/// clinic is on NephroReach; free text when it is not (travel requests then go
+/// out by Share Outside NephroReach).
+model HomeDialysisClinic {
+  patientId      String   @id
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  organizationId String?
+  name           String
+  phone          String
+  address        String
+  email          String?
+  updatedAt      DateTime @updatedAt
+}
+
+/// rides
+model RideContact {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  name      String
+  phone     String
+  note      String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// my-health → allergies
+model Allergy {
+  id        String          @id @default(cuid())
+  patientId String
+  patient   Patient         @relation(fields: [patientId], references: [id])
+  name      String
+  type      AllergyType
+  reaction  String
+  severity  AllergySeverity
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+enum AllergyType {
+  MEDICATION
+  FOOD
+  ENVIRONMENTAL
+}
+
+enum AllergySeverity {
+  SEVERE
+  MODERATE
+  MILD
+}
+
+/// my-health → medical history
+model MedicalCondition {
+  id        String          @id @default(cuid())
+  patientId String
+  patient   Patient         @relation(fields: [patientId], references: [id])
+  name      String
+  status    ConditionStatus
+  diagnosed String          // as the member wrote it ("2019", "Spring 2020")
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+enum ConditionStatus {
+  CURRENT
+  PAST
+}
+
+// ============================================================================
+//  4. PERSONAL LOG — the member's own entries
+// ============================================================================
+
+/// blood-pressure-readings
+model BloodPressureReading {
+  id         String          @id @default(cuid())
+  patientId  String
+  patient    Patient         @relation(fields: [patientId], references: [id])
+  takenOn    DateTime        @db.Date
+  takenAt    String          // "HH:mm"
+  systolic   Int
+  diastolic  Int
+  pulse      Int
+  position   String          // POSITIONS
+  symptoms   String          @default("")
+  medication BpMedicationState
+  mood       String?
+  notes      String          @default("")
+  photoId    String?         // FileObject
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([patientId, takenOn])
+}
+
+enum BpMedicationState {
+  TAKEN
+  LATE
+  NOT_TAKEN
+}
+
+/// weight-fluid-log. Values are strings: transcribed from a home scale.
+model WeightFluidEntry {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  entryDate   DateTime @db.Date
+  morning     String   @default("")
+  evening     String   @default("")
+  urineOutput String   @default("")
+  intake      String   @default("")
+  goal        String   @default("")
+  swelling    String   @default("")
+  shortnessOfBreath String @default("")
+  weakness    String   @default("")
+  rapidGain   String?
+  dizziness   String?
+  cramping    String?
+  nausea      String?
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([patientId, entryDate])
+}
+
+/// nutrition-foods
+model FoodEntry {
+  id         String   @id @default(cuid())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  entryDate  DateTime @db.Date
+  meal       Meal
+  name       String
+  portion    String
+  calories   Float
+  sodium     Float    // mg
+  potassium  Float    // mg
+  phosphorus Float    // mg
+  protein    Float
+  carbs      Float
+  fats       Float
+  fiber      Float
+  createdAt  DateTime @default(now())
+
+  @@index([patientId, entryDate])
+}
+
+enum Meal {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+/// nutrition-fluids: one total per day.
+model DailyFluidIntake {
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  entryDate DateTime @db.Date
+  amount    Float
+  updatedAt DateTime @updatedAt
+
+  @@id([patientId, entryDate])
+}
+
+/// nutrition-goals
+model NutritionGoal {
+  patientId  String   @id
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  sodium     Float
+  potassium  Float
+  phosphorus Float
+  protein    Float
+  calories   Float
+  carbs      Float
+  fats       Float
+  fiber      Float
+  fluid      Float
+  updatedAt  DateTime @updatedAt
+}
+
+/// exercise-log. Calories are never stored — derived on read.
+model ExerciseEntry {
+  id         String    @id @default(cuid())
+  patientId  String
+  patient    Patient   @relation(fields: [patientId], references: [id])
+  entryDate  DateTime  @db.Date
+  activity   String    // ExerciseActivity
+  customName String    @default("")
+  amount     Float
+  unit       String    // ExerciseUnit
+  intensity  String    // light | moderate | vigorous
+  feeling    String?
+  note       String    @default("")
+  createdAt  DateTime  @default(now())
+}
+
+/// between-treatment-check-ins ("Daily Check-in"): one per day.
+model DailyCheckIn {
+  id                String   @id @default(cuid())
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id])
+  checkInDate       DateTime @db.Date
+  treatmentDay      Boolean
+  feeling           String   // good | okay | rough
+  recoveryWindow    String?
+  backToNormalAt    String?
+  energyLevel       Int?     // 1–5
+  resumedActivities String?
+  symptoms          String[]
+  severity          String   // mild | moderate | severe
+  bloodPressure     String?
+  weight            String?
+  urineOutputMl     String?
+  appetite          String?
+  missedTreatment   Boolean
+  notes             String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  notice ClinicNotice?
+
+  @@unique([patientId, checkInDate])
+}
+
+/// clinic-notices: the member asking for one day of their check-in to reach
+/// the clinic. Sent once, never unsent.
+model ClinicNotice {
+  id         String       @id @default(cuid())
+  patientId  String
+  patient    Patient      @relation(fields: [patientId], references: [id])
+  checkInId  String       @unique
+  checkIn    DailyCheckIn @relation(fields: [checkInId], references: [id])
+  organizationId String   // the clinic it goes to
+  reasons    String[]     // ClinicNoticeReason[]
+  raisedAt   DateTime     @default(now())
+  deliverOn  DateTime     @db.Date
+}
+
+/// The dialysis-day symptom log — the paper form, ~50 fields. Scalar fields
+/// are columns; the per-symptom severity maps are Json.
+model DialysisDayLog {
+  id                 String   @id @default(cuid())
+  patientId          String
+  patient            Patient  @relation(fields: [patientId], references: [id])
+  logDate            DateTime @db.Date
+  isDialysisDay      Boolean
+  treatmentType      String
+  startTime          String
+  endTime            String
+  location           String
+  attended           Boolean
+  arrivedLate        Boolean
+  endedEarly         Boolean
+  rescheduled        Boolean
+  missedTreatments   Int      @default(0)
+  medsTakenPrescribed Boolean
+  preWeight          String
+  postWeight         String
+  fluidRemoved       String
+  bloodPressurePost  String
+  heartRatePost      String
+  preOverallFeel     Int
+  postOverallFeel    Int
+  /// cramping, lowBp, highBp, fatigue, recoveryTime ratings; pre/intra/post
+  /// symptom lists, "other" text and severity maps; medications given.
+  details            Json
+  otherNotes         String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([patientId, logDate])
+}
+
+/// dialysis-modality
+model DialysisModalitySetting {
+  patientId String   @id
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  modality  DialysisModality
+  updatedAt DateTime @updatedAt
+}
+
+enum DialysisModality {
+  IN_CENTER_HD
+  HOME_HD
+  PD
+}
+
+/// dialysis-home-system
+model HomeDialysisSystem {
+  patientId                String    @id
+  patient                  Patient   @relation(fields: [patientId], references: [id])
+  machine                  String    // nxstage | fresenius | outset | other
+  serial                   String    @default("")
+  lastDisinfection         DateTime? @db.Date
+  lastFilterChange         DateTime? @db.Date
+  filterIntervalDays       Int       @default(30)
+  disinfectionIntervalDays Int       @default(7)
+  updatedAt                DateTime  @updatedAt
+}
+
+/// dialysis-treatment-vitals (home HD): one per treatment day.
+model HomeTreatmentVitals {
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  treatmentDate DateTime @db.Date
+  preWeightKg   String   @default("")
+  postWeightKg  String   @default("")
+  preBp         String   @default("")
+  postBp        String   @default("")
+  preHeartRate  String   @default("")
+  postHeartRate String   @default("")
+  temperature   String   @default("")
+  feeling       String
+  updatedAt     DateTime @updatedAt
+
+  @@id([patientId, treatmentDate])
+}
+
+/// dialysis-home-visits
+model HomeVisit {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  visitDate DateTime @db.Date
+  time      String
+  provider  String   // rn | pd-nurse | biomed | provider
+  purpose   String
+  status    String   // scheduled | completed | missed
+  remind    Boolean  @default(true)
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+/// dialysis-pd-exchanges
+model PdExchange {
+  id           String   @id @default(cuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  exchangeDate DateTime @db.Date
+  startTime    String
+  dextrose     String   // 1.5 | 2.5 | 4.25 | icodextrin | other
+  fillMl       Int
+  drainMl      Int
+  dwellMinutes Int
+  clarity      String   // clear | cloudy | bloody | fibrin
+  exitSiteOk   Boolean
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+}
+
+/// dialysis-supplies: one inventory per month. Counts keyed by supply item id.
+model SupplyMonth {
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  monthKey  String   // "yyyy-mm"
+  counts    Json     // Record<itemId, { have, needed?, checked }>
+  notes     String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@id([patientId, monthKey])
+}
+
+/// provider-orders
+model ProviderOrder {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  orderDate DateTime @db.Date
+  order     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// treatment-medications: medications given in the chair.
+model TreatmentMedication {
+  id         String   @id @default(cuid())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  givenOn    DateTime @db.Date
+  medication String
+  dose       String
+  reason     String
+  given      Boolean
+  createdAt  DateTime @default(now())
+}
+
+/// dialysis-access-photos
+model AccessPhoto {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  fileId    String   // FileObject
+  subject   String   // access | exit-site | equipment | other
+  note      String   @default("")
+  takenAt   DateTime
+  sentAt    DateTime?
+}
+
+/// er-visits: the weekly "Have you been to the ER?" answer. A log only —
+/// never read for triage (legal ruling, Before the ER).
+model ErVisitReport {
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  weekOf     DateTime @db.Date
+  wentToEr   Boolean
+  reportedAt DateTime @default(now())
+
+  @@id([patientId, weekOf])
+}
+
+/// care-team-questions
+model CareTeamQuestion {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  role      String   // Provider | Dietitian | Social Worker | Nurse
+  question  String
+  status    String   // Submitted | Discussed | Answered
+  answer    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// member-appointments. Rows sourced from the access center are read-only
+/// here (sourceAccessAppointmentId set).
+model Appointment {
+  id         String   @id @default(cuid())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  date       DateTime @db.Date
+  start      String
+  end        String
+  title      String
+  doctor     String
+  location   String
+  address    String
+  notes      String   @default("")
+  attendance String?  // attended | missed
+  reminder   String?  // ReminderLead
+  sourceAccessAppointmentId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ============================================================================
+//  5. MEDICATIONS
+// ============================================================================
+
+/// member-medications. Edits are recorded in RecordRevision (entity
+/// "Medication") — a dose going 5 mg → 10 mg is a change, not an overwrite.
+model Medication {
+  id           String   @id @default(cuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  name         String
+  dose         String
+  route        String
+  frequency    String
+  purpose      String
+  startDate    String   // as on the bottle; may be "---"
+  endDate      String
+  pharmacy     String
+  status       String   // Active | …
+  provider     String?
+  instructions String?
+  photoId      String?  // FileObject
+  needsRefill  Boolean  @default(false) // medication-refills
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reminder    MedicationReminder?
+  doses       DoseRecord[]
+  sideEffects SideEffectRecord[]
+}
+
+/// medication-reminders. Today matched by name; here by medicationId.
+model MedicationReminder {
+  id           String     @id @default(cuid())
+  medicationId String     @unique
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  times        String[]   // "HH:mm", first is the main time
+  frequency    String
+  channels     String[]   // in_app | sms
+  enabled      Boolean    @default(true)
+  notes        String?
+}
+
+/// medication-doses: one status per scheduled dose per day.
+model DoseRecord {
+  id           String     @id @default(cuid())
+  patientId    String
+  patient      Patient    @relation(fields: [patientId], references: [id])
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  doseDate     DateTime   @db.Date
+  doseTime     String
+  status       DoseStatus
+  stampedAt    DateTime?
+
+  @@unique([medicationId, doseDate, doseTime])
+}
+
+enum DoseStatus {
+  PENDING
+  TAKEN
+  LATE
+  MISSED
+}
+
+/// medication-side-effects
+model SideEffectRecord {
+  id           String     @id @default(cuid())
+  patientId    String
+  patient      Patient    @relation(fields: [patientId], references: [id])
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  effectDate   DateTime   @db.Date
+  effectTime   String
+  effect       String     // SideEffect
+  createdAt    DateTime   @default(now())
+}
+
+/// medication-mood: one per day.
+model MoodEntry {
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  moodDate  DateTime @db.Date
+  mood      Int
+  notes     String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@id([patientId, moodDate])
+}
+
+// ============================================================================
+//  6. LABS — one table, every result carries its source
+// ============================================================================
+
+/// Replaces both custom-lab-results (member typed) and clinic-labs (CSV).
+model LabResult {
+  id            String    @id @default(cuid())
+  patientId     String
+  patient       Patient   @relation(fields: [patientId], references: [id])
+  drawnOn       DateTime  @db.Date
+  test          String
+  value         String    // as reported; parsed on display
+  unit          String    @default("")
+  reference     String    @default("")
+  notes         String?
+  source        LabSource
+  enteredBy     String    // User.id
+  importBatchId String?
+  importBatch   LabImportBatch? @relation(fields: [importBatchId], references: [id])
+  createdAt     DateTime  @default(now())
+
+  @@index([patientId, drawnOn])
+}
+
+enum LabSource {
+  PATIENT_ENTERED
+  PROVIDER_ENTERED
+  FACILITY_CSV_IMPORT
+  FUTURE_INTEGRATION
+}
+
+/// One CSV upload: who, when, how many rows were accepted / refused. Rows
+/// whose MRN is not on the clinic's roster are refused, never guessed.
+model LabImportBatch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  fileId         String       // FileObject
+  uploadedBy     String       // User.id
+  acceptedRows   Int
+  refusedRows    Int
+  duplicateRows  Int
+  refusals       Json         // [{ row, mrn, reason }]
+  confirmedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  results LabResult[]
+}
+
+// ============================================================================
+//  7. MESSAGING
+// ============================================================================
+
+/// One thread between a patient and one office. The member and the office
+/// see the same record; per-side state (unread, flagged, archived) lives on
+/// ConversationState. Patients never message physicians directly — the
+/// office inbox does.
+model Conversation {
+  id             String       @id @default(cuid())
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  category       String       // care-team | appointments
+  createdAt      DateTime     @default(now())
+
+  messages Message[]
+  states   ConversationState[]
+
+  @@index([organizationId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  authorId       String?      // User.id; null for automated (after-hours reply)
+  authorSide     MessageSide
+  body           String
+  attachmentId   String?      // FileObject
+  automated      Boolean      @default(false)
+  sentAt         DateTime     @default(now())
+
+  @@index([conversationId, sentAt])
+}
+
+enum MessageSide {
+  MEMBER
+  OFFICE
+}
+
+model ConversationState {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  side           MessageSide
+  unread         Int          @default(0)
+  flagged        Boolean      @default(false)
+  archived       Boolean      @default(false)
+  /// Set when an unread message passes 2 hours; drives the escalation SMS.
+  escalatedAt    DateTime?
+
+  @@id([conversationId, side])
+}
+
+/// team-messages: staff to staff inside one office.
+model TeamMessage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  fromId         String       // User.id
+  toId           String       // User.id
+  body           String
+  sentAt         DateTime     @default(now())
+  readAt         DateTime?
+
+  @@index([organizationId, toId])
+}
+
+// ============================================================================
+//  8. VASCULAR ACCESS — owned by the access center, visible to the patient,
+//     their dialysis center and their nephrology office
+// ============================================================================
+
+model AccessProfile {
+  id              String       @id @default(cuid())
+  patientId       String
+  patient         Patient      @relation(fields: [patientId], references: [id])
+  accessCenterId  String
+  accessCenter    Organization @relation("AccessCenter", fields: [accessCenterId], references: [id])
+  type            String       // ACCESS_TYPES, incl. "TBD"
+  location        String
+  createdOn       String
+  status          String       // ACCESS_STATUSES — only the access center changes it
+  lastAssessment  String
+  dialysisCanPost Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  appointments AccessAppointment[]
+  updates      AccessUpdate[]
+  history      AccessHistoryEntry[]
+  concerns     AccessConcern[]
+  transport    TransportRequest[]
+  messages     AccessMessage[]
+
+  @@unique([patientId, accessCenterId])
+}
+
+model AccessAppointment {
+  id          String        @id @default(cuid())
+  profileId   String
+  profile     AccessProfile @relation(fields: [profileId], references: [id])
+  date        DateTime      @db.Date
+  time        String
+  title       String        // APPOINTMENT_TYPES
+  place       String
+  team        String        // vascular | dialysis
+  result      String?
+  performedBy String?
+  completedAt DateTime?
+}
+
+model AccessUpdate {
+  id        String        @id @default(cuid())
+  profileId String
+  profile   AccessProfile @relation(fields: [profileId], references: [id])
+  date      DateTime      @db.Date
+  title     String
+  detail    String
+  kind      String        // done | scheduled | received
+}
+
+model AccessHistoryEntry {
+  id          String        @id @default(cuid())
+  profileId   String
+  profile     AccessProfile @relation(fields: [profileId], references: [id])
+  date        DateTime      @db.Date
+  type        String        // Imaging | Procedure | Surgery | Consult
+  procedure   String
+  location    String
+  performedBy String
+  result      String
+}
+
+model AccessConcern {
+  id         String        @id @default(cuid())
+  profileId  String
+  profile    AccessProfile @relation(fields: [profileId], references: [id])
+  reportedBy String        // User.id
+  kinds      String[]      // CONCERN_KINDS
+  detail     String
+  imageId    String?       // FileObject
+  status     String        // Open | Reviewed
+  reportedAt DateTime      @default(now())
+  editedAt   DateTime?
+  resentAt   DateTime?
+}
+
+/// Rides for access appointments: the dialysis center's only
+/// (Administrator and Social Worker, permission rides.manage).
+model TransportRequest {
+  id                 String        @id @default(cuid())
+  profileId          String
+  profile            AccessProfile @relation(fields: [profileId], references: [id])
+  appointmentId      String
+  status             String        // Requested | Acknowledged | Confirmed | Cancelled
+  handledBy          String
+  pickupAddress      String
+  returnTrip         Boolean
+  mobility           String        // ambulatory | wheelchair | stretcher
+  memberNote         String        @default("")
+  pickupTime         String?
+  returnPickupTime   String?
+  provider           String?
+  phone              String?
+  confirmationNumber String?
+  confirmationNote   String?
+  requestedAt        DateTime      @default(now())
+  acknowledgedAt     DateTime?
+  confirmedAt        DateTime?
+  confirmedBy        String?
+  cancelledAt        DateTime?
+  cancelledBy        String?       // member | dialysis
+}
+
+/// The three-party access thread (patient, access center, dialysis center).
+model AccessMessage {
+  id        String        @id @default(cuid())
+  profileId String
+  profile   AccessProfile @relation(fields: [profileId], references: [id])
+  authorId  String        // User.id
+  party     String        // member | access | dialysis
+  body      String
+  imageId   String?
+  private   Boolean       @default(false) // staff-only, hidden from the patient
+  sentAt    DateTime      @default(now())
+}
+
+/// A dialysis center or nephrology office asking the access center for
+/// something (concern, new access, appointment request, message).
+model AccessReferral {
+  id          String       @id @default(cuid())
+  patientId   String
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  fromOrgId   String
+  fromOrg     Organization @relation("ReferralSender", fields: [fromOrgId], references: [id])
+  toOrgId     String
+  toOrg       Organization @relation("ReferralReceiver", fields: [toOrgId], references: [id])
+  startedByAccess Boolean  @default(false)
+  sentBy      String       // User.id
+  kind        String       // REFERRAL_KINDS
+  findings    String[]
+  detail      String
+  urgent      Boolean      @default(false)
+  status      String       // New | Acknowledged | Scheduled | Closed
+  assignedTo  String?      // User.id — open: the client's "assigned referrals"
+  handledBy   String?
+  handledAt   DateTime?
+  sentAt      DateTime     @default(now())
+
+  replies AccessReferralReply[]
+}
+
+model AccessReferralReply {
+  id         String         @id @default(cuid())
+  referralId String
+  referral   AccessReferral @relation(fields: [referralId], references: [id])
+  authorId   String
+  body       String
+  sentAt     DateTime       @default(now())
+}
+
+// ============================================================================
+//  9. CCM — chronic care management, nephrology office
+// ============================================================================
+
+model CcmEnrollment {
+  id                      String       @id @default(cuid())
+  patientId               String
+  patient                 Patient      @relation(fields: [patientId], references: [id])
+  organizationId          String
+  organization            Organization @relation(fields: [organizationId], references: [id])
+  provider                String
+  careManager             String
+  location                String
+  conditions              String[]
+  /// Compliance filter: either one takes the patient out of the billing queue
+  /// and locks Save CCM Activity.
+  isOnDialysis            Boolean      @default(false)
+  isOnHomeHealthOrHospice Boolean      @default(false)
+  /// CCM_REQUIREMENTS id → { met, inProgress, notApplicable, date, detail }
+  requirements            Json
+  /// Kidney-care (KRT) planning answers, access type choice, EHR documented.
+  kidneyCarePlan          Json?
+  enrolledAt              DateTime     @default(now())
+
+  @@unique([patientId, organizationId])
+}
+
+model CcmActivity {
+  id             String       @id @default(cuid())
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  staffId        String       // User.id
+  type           String       // ACTIVITY_TYPES
+  activityDate   DateTime     @db.Date
+  minutes        Int
+  start          String?
+  end            String?
+  note           String
+  outcome        String
+  counts         String       // yes | no | pending
+  ehrDocumented  Boolean      @default(false)
+  followUpDate   DateTime?    @db.Date
+  followUpAssignee String?
+  followUpTask   String?
+  followUpDone   Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, activityDate])
+}
+
+/// Alerts derived from the member's own logs (useMemberFeed). Dialysis
+/// treatment data never alerts (client rule).
+model CcmInboxItem {
+  id             String       @id @default(cuid())
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  kind           String       // FeedKind
+  text           String
+  sourceEntity   String?      // e.g. "BloodPressureReading"
+  sourceId       String?
+  receivedAt     DateTime     @default(now())
+  resolvedAt     DateTime?
+  resolvedBy     String?
+}
+
+/// ccm-condition-library: an office's own condition list.
+model CcmConditionLibraryEntry {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  archived       Boolean      @default(false)
+
+  @@unique([organizationId, name])
+}
+
+// ============================================================================
+//  10. TRAVEL DIALYSIS
+// ============================================================================
+
+/// A request, not a booking: the member asks, the home facility coordinates
+/// and fills in the placement.
+model TripRequest {
+  id               String     @id @default(cuid())
+  patientId        String
+  patient          Patient    @relation(fields: [patientId], references: [id])
+  /// The home facility handling it; null when the clinic is off NephroReach
+  /// and the request went out by Share Outside NephroReach.
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  street           String
+  city             String
+  state            String
+  zip              String
+  departDate       DateTime   @db.Date
+  returnDate       DateTime   @db.Date
+  treatmentsNeeded Int
+  preferredDays    String[]   // Weekday[]
+  preferredTime    String     // TimePreference
+  contactPhone     String
+  emergencyName    String
+  emergencyPhone   String
+  emergencyRelationship String
+  insurancePlan    String
+  insuranceMemberId String
+  documentsReady   String[]
+  prepDone         String[]
+  notes            String     @default("")
+  /// OPEN: 6 statuses (architecture guide) vs 8 (requirements doc). Kept as
+  /// text until Joni decides; see README.
+  status           String
+  facilityNote     String     @default("")
+  placementFacility String?
+  placementAddress  String?
+  placementPhone    String?
+  submittedAt      DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  statusHistory TripStatusEvent[]
+  documents     TripDocument[]
+  confirmed     ConfirmedTreatment[]
+  timeChanges   TimeChangeRequest[]
+  treatments    TravelTreatment[]
+  reflection    TravelReflection?
+}
+
+model TripStatusEvent {
+  id      String      @id @default(cuid())
+  tripId  String
+  trip    TripRequest @relation(fields: [tripId], references: [id])
+  status  String
+  by      String      // User.id
+  at      DateTime    @default(now())
+}
+
+model TripDocument {
+  id         String      @id @default(cuid())
+  tripId     String
+  trip       TripRequest @relation(fields: [tripId], references: [id])
+  key        String      // TravelDocumentKey
+  fileId     String      // FileObject
+  attachedAt DateTime    @default(now())
+}
+
+model ConfirmedTreatment {
+  id     String      @id @default(cuid())
+  tripId String
+  trip   TripRequest @relation(fields: [tripId], references: [id])
+  date   DateTime    @db.Date
+  time   String
+}
+
+model TimeChangeRequest {
+  id            String      @id @default(cuid())
+  tripId        String
+  trip          TripRequest @relation(fields: [tripId], references: [id])
+  preferredTime String
+  preferredDays String[]
+  note          String
+  requestedAt   DateTime    @default(now())
+  resolvedAt    DateTime?
+  facilityReply String?
+}
+
+/// travel-treatments: how each away treatment went.
+model TravelTreatment {
+  id            String      @id @default(cuid())
+  tripId        String
+  trip          TripRequest @relation(fields: [tripId], references: [id])
+  date          DateTime    @db.Date
+  facilityName  String
+  preWeight     String?
+  postWeight    String?
+  bloodPressure String?
+  treatmentTime String?
+  fluidRemoved  String?
+  completed     Boolean
+  notes         String      @default("")
+  createdAt     DateTime    @default(now())
+}
+
+/// travel-reflections: one per trip, ≤ 500 chars.
+model TravelReflection {
+  tripId    String      @id
+  trip      TripRequest @relation(fields: [tripId], references: [id])
+  body      String      @db.VarChar(500)
+  updatedAt DateTime    @updatedAt
+}
+
+// ============================================================================
+//  11. EDUCATION — courses, the classroom, live classes
+// ============================================================================
+
+/// course-library. Bilingual content; questions and transcripts are Json
+/// because they are read whole and never filtered.
+model Course {
+  id                 String   @id @default(cuid())
+  titleEn            String
+  titleEs            String
+  descriptionEn      String
+  descriptionEs      String
+  groupLabelEn       String   @default("Module")
+  groupLabelEs       String   @default("Módulo")
+  itemLabelEn        String   @default("Class")
+  itemLabelEs        String   @default("Clase")
+  passMark           Int      @default(70)
+  maxAttempts        Int      @default(3)
+  showAnswers        Boolean  @default(true)
+  certificateEnabled Boolean  @default(true)
+  requireExamPass    Boolean  @default(true)
+  finalExam          Json     // Question[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  modules CourseModule[]
+}
+
+model CourseModule {
+  id       String  @id @default(cuid())
+  courseId String
+  course   Course  @relation(fields: [courseId], references: [id])
+  order    Int
+  titleEn  String
+  titleEs  String
+
+  classes CourseClass[]
+}
+
+model CourseClass {
+  id              String       @id @default(cuid())
+  moduleId        String
+  module          CourseModule @relation(fields: [moduleId], references: [id])
+  order           Int
+  slug            String       // the day slug progress is keyed by
+  titleEn         String
+  titleEs         String
+  summaryEn       String
+  summaryEs       String
+  kind            String       // video | audio | reading | exam
+  durationMinutes Int
+  mediaSrc        String
+  poster          String
+  bodyEn          String
+  bodyEs          String
+  keyPointsEn     String[]
+  keyPointsEs     String[]
+  transcript      Json         // CourseTranscriptCue[]
+  documents       Json         // CourseDocument[]
+  activities      Json         // Question[]
+  videoQuestions  Json         // VideoQuestion[]
+}
+
+/// Which program a patient is enrolled in, by which office (clinic-enrollments).
+model ProgramEnrollment {
+  id             String       @id @default(cuid())
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  program        String       // Journey to Dialysis (21-Day) | Crash Dialysis (5-Day)
+  source         String       // Office Referral | Provider Referral | Hospital Discharge | Self-Pay
+  status         String       // Enrolled | Pending Start | Not Started | Withdrawn
+  startDate      DateTime     @db.Date
+  enrolledOn     DateTime     @default(now())
+}
+
+/// journey-progress + journey-notes, keyed by day slug so content can change.
+model JourneyDayProgress {
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  daySlug   String
+  status    String   // not-started | in-progress | completed
+  percent   Int
+  note      String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@id([patientId, daySlug])
+}
+
+/// classroom-learner → answers
+model LearnerAnswer {
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  questionId String
+  answer     Json     // { value?, pairs?, text?, fields? }
+  answeredAt DateTime @default(now())
+
+  @@id([patientId, questionId])
+}
+
+/// classroom-learner → attempts
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  quizKey     String
+  answers     Json
+  correct     Int
+  total       Int
+  percent     Int
+  passed      Boolean
+  submittedAt DateTime @default(now())
+}
+
+/// classroom-learner → certificates
+model Certificate {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  courseId  String
+  name      String
+  issuedAt  DateTime @default(now())
+}
+
+/// clinic-live-class: admin-hosted. Clinics read it; members join.
+model LiveClass {
+  id           String   @id @default(cuid())
+  date         DateTime @db.Date
+  time         String
+  topic        String
+  educator     String
+  program      String
+  capacity     Int
+  registered   Int      @default(0)
+  status       String   // Open | Not Yet Open | Cancelled
+  joinUrl      String?
+  recordingUrl String?  // published → member home "Recent Live Recordings"
+  createdAt    DateTime @default(now())
+}
+
+/// clinic-live-class → settings cards.
+model LiveClassSetting {
+  id     String @id // SettingId
+  values Json
+}
+
+// ============================================================================
+//  12. PLATFORM CONTENT — admin-managed, no tenant
+// ============================================================================
+
+/// library-resources
+model LibraryResource {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  kind            String   // video | document | article
+  category        String   // LibraryCategory
+  titleEn         String
+  titleEs         String
+  summaryEn       String
+  summaryEs       String
+  poster          String
+  videoSrc        String?
+  durationSeconds Int?
+  fileSrc         String?
+  fileMetaEn      String?
+  fileMetaEs      String?
+  bodyEn          String[]
+  bodyEs          String[]
+  readMinutes     Int?
+  published       Boolean  @default(false)
+  publishedAt     DateTime?
+
+  saves LibrarySave[]
+}
+
+/// library-saved
+model LibrarySave {
+  userId     String
+  resourceId String
+  resource   LibraryResource @relation(fields: [resourceId], references: [id])
+  savedAt    DateTime        @default(now())
+
+  @@id([userId, resourceId])
+}
+
+/// table-talk-episodes
+model TableTalkEpisode {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  titleEn         String
+  titleEs         String
+  descriptionEn   String
+  descriptionEs   String
+  speakers        Json     // Speaker[]
+  audience        String   // patients | caregivers | both
+  thumbnail       String
+  videoSrc        String?
+  durationSeconds Int?
+  captionsEn      String?
+  captionsEs      String?
+  transcriptEn    String?
+  transcriptEs    String?
+  isShort         Boolean  @default(false)
+  isLiveEvent     Boolean  @default(false)
+  featured        Boolean  @default(false)
+  status          String   // draft | scheduled | published | archived
+  publishAt       DateTime?
+  publishedAt     DateTime?
+  order           Int
+
+  categories TableTalkEpisodeCategory[]
+  favorites  TableTalkFavorite[]
+}
+
+/// table-talk-categories
+model TableTalkCategory {
+  id       String  @id @default(cuid())
+  labelEn  String
+  labelEs  String
+  order    Int
+  archived Boolean @default(false)
+
+  episodes TableTalkEpisodeCategory[]
+}
+
+model TableTalkEpisodeCategory {
+  episodeId  String
+  episode    TableTalkEpisode  @relation(fields: [episodeId], references: [id])
+  categoryId String
+  category   TableTalkCategory @relation(fields: [categoryId], references: [id])
+
+  @@id([episodeId, categoryId])
+}
+
+/// table-talk-favorites
+model TableTalkFavorite {
+  userId    String
+  episodeId String
+  episode   TableTalkEpisode @relation(fields: [episodeId], references: [id])
+  savedAt   DateTime         @default(now())
+
+  @@id([userId, episodeId])
+}
+
+/// table-talk-questions: never public on its own; an admin reads every one.
+model TableTalkQuestion {
+  id          String   @id @default(cuid())
+  userId      String
+  body        String
+  status      String   // new | reviewed | planned | answered | declined
+  adminNote   String   @default("")
+  submittedAt DateTime @default(now())
+}
+
+/// Community: a positive board — posts and likes only, no replies (client).
+/// Every post waits for approval.
+model CommunityPost {
+  id         String   @id @default(cuid())
+  authorId   String   // User.id
+  categoryId String
+  body       String
+  hashtags   String   @default("")
+  imageId    String?
+  status     String   // pending | approved | rejected
+  /// Moderation — what the auto-screen caught ("routine" when nothing).
+  flagReason    String
+  flagLevel     Int
+  matchedPhrase String  @default("")
+  decidedBy     String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  submittedAt   DateTime @default(now())
+
+  likes CommunityLike[]
+}
+
+model CommunityLike {
+  postId  String
+  post    CommunityPost @relation(fields: [postId], references: [id])
+  userId  String
+  likedAt DateTime      @default(now())
+
+  @@id([postId, userId])
+}
+
+/// community-reviews: shown on the marketing site once approved.
+model Review {
+  id            String    @id @default(cuid())
+  userId        String
+  rating        Int       // 1–5
+  role          String
+  location      String?
+  comment       String
+  status        String    // pending | approved | declined
+  adminFeedback String?
+  createdAt     DateTime  @default(now())
+  approvedAt    DateTime?
+}
+
+/// video-testimonials
+model Testimonial {
+  id        String   @id @default(cuid())
+  data      Json     // shape still settling in features/testimonials
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+//  13. SHARING, SUPPORT, BILLING
+// ============================================================================
+
+/// outside-shares: one item sent by secure link (/secure/[token]). Every
+/// share passed the Share Outside NephroReach notice first.
+model OutsideShare {
+  id             String   @id @default(cuid())
+  token          String   @unique
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  kind           String   // ShareKind
+  recipientEmail String
+  recipientOrg   String
+  subject        String
+  body           String
+  attachmentId   String?  // FileObject
+  expiresAt      DateTime?
+  verifiedName   String?
+  verifiedOrg    String?
+  verifiedAt     DateTime?
+  sharedAt       DateTime @default(now())
+
+  events       OutsideShareEvent[]
+  infoRequests OutsideShareInfoRequest[]
+}
+
+model OutsideShareEvent {
+  id      String       @id @default(cuid())
+  shareId String
+  share   OutsideShare @relation(fields: [shareId], references: [id])
+  event   String       // shared | notified | opened | verified | downloaded | info-requested
+  by      String
+  at      DateTime     @default(now())
+}
+
+/// "Request information for your organization" — lands in the admin's
+/// Support Inbox.
+model OutsideShareInfoRequest {
+  id           String       @id @default(cuid())
+  shareId      String
+  share        OutsideShare @relation(fields: [shareId], references: [id])
+  name         String
+  organization String
+  email        String
+  phone        String
+  at           DateTime     @default(now())
+  contactedAt  DateTime?
+}
+
+/// support-tickets: from every dashboard to the admin's Support Inbox.
+model SupportTicket {
+  id             String        @id @default(cuid())
+  fromUserId     String
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  dashboard      String
+  subject        String
+  category       String        // account | technical | billing | classes | other
+  message        String
+  status         String        // open | answered | resolved
+  createdAt      DateTime      @default(now())
+
+  replies SupportReply[]
+}
+
+model SupportReply {
+  id       String        @id @default(cuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id])
+  authorId String
+  side     String        // support | requester
+  body     String
+  at       DateTime      @default(now())
+}
+
+/// subscription-plans: member plans, shown on the landing pricing table.
+model SubscriptionPlan {
+  id                 String   @id @default(cuid())
+  name               String
+  price              String
+  billing            String
+  billingType        String   // recurring | one_time
+  billingPeriodLabel String
+  accessDays         Int?
+  trialDays          Int?
+  trialLabel         String?
+  description        String
+  popular            Boolean  @default(false)
+  badge              String?
+  features           Json     // { label, included }[]
+
+  subscribers MemberSubscription[]
+}
+
+/// Which plan a member is on. Payment details stay with the payment
+/// provider; only its customer/subscription ids are stored here.
+model MemberSubscription {
+  patientId          String           @id
+  patient            Patient          @relation(fields: [patientId], references: [id])
+  planId             String
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  status             String           // trialing | active | past_due | cancelled
+  providerCustomerId String?
+  providerSubId      String?
+  currentPeriodEnd   DateTime?
+}
+
+/// org-subscriptions: office plans, kept apart from member plans so they never
+/// reach the landing page.
+model OrganizationPlan {
+  id               String @id @default(cuid())
+  name             String
+  audience         OrganizationType
+  monthlyFee       Int    // USD
+  patientsIncluded Int
+
+  subscriptions OrganizationSubscription[]
+}
+
+model OrganizationSubscription {
+  organizationId String           @id
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  planId         String
+  plan           OrganizationPlan @relation(fields: [planId], references: [id])
+  status         String
+  renewalChoice  String?          // clinic-billing-actions
+  startedAt      DateTime         @default(now())
+}

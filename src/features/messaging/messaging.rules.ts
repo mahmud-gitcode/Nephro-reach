@@ -518,6 +518,49 @@ export function clinicConversations(
   );
 }
 
+/** A patient's message to the office still waiting for a reply. */
+export type OpenQuestion = {
+  conversationId: string;
+  memberName: string;
+  mrn?: string;
+  program?: string;
+  /** The message itself, or the attachment's name when it was only a file. */
+  body: string;
+  /** ISO 8601 */
+  sentAt: string;
+};
+
+/**
+ * The questions an office owes an answer to: every thread in its inbox
+ * whose last word is the patient's. Longest waiting first.
+ *
+ * What Reports' "Open Questions" counts (client, 2026-10-09: the count must
+ * lead to the question). A member's private "questions for my care team"
+ * list is not here — it is never sent anywhere.
+ */
+export function openQuestions(
+  conversations: Conversation[],
+  officeName: string = FACILITY.name,
+): OpenQuestion[] {
+  return clinicConversations(conversations, officeName)
+    .filter((c) => !c.archived)
+    .flatMap((c) => {
+      const last = lastMessage(c);
+      if (!last || last.author !== "member") return [];
+      return [
+        {
+          conversationId: c.id,
+          memberName: c.memberName,
+          mrn: c.patient?.mrn,
+          program: c.patient?.program,
+          body: last.body || last.attachment?.name || "",
+          sentAt: last.sentAt,
+        },
+      ];
+    })
+    .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+}
+
 /** The threads belonging to one member, whichever end they are addressed to. */
 export function memberConversations(
   conversations: Conversation[],

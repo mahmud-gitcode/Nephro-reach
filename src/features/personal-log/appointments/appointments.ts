@@ -206,6 +206,48 @@ export function addAppointment(
   ];
 }
 
+/**
+ * Changes an appointment the member added — a new time, a new day (client,
+ * 2026-10-10). A visit moved to another day or time has not happened yet,
+ * so any "did you go?" answer for the old slot is cleared.
+ */
+export function updateAppointment(
+  list: Appointment[],
+  id: string,
+  draft: AppointmentDraft,
+): Appointment[] {
+  return list.map((a) => {
+    if (a.id !== id || a.source) return a;
+    const moved = a.date !== draft.date || a.start !== draft.start;
+    const next: Appointment = {
+      ...a,
+      ...draft,
+      title: draft.title.trim(),
+      doctor: draft.doctor.trim(),
+      location: draft.location.trim(),
+      address: draft.address.trim(),
+      notes: draft.notes.trim(),
+    };
+    if (moved) delete next.attendance;
+    return next;
+  });
+}
+
+/** The editable part of an appointment, to fill the form with. */
+export function draftOf(a: Appointment): AppointmentDraft {
+  return {
+    date: a.date,
+    start: a.start,
+    end: a.end,
+    title: a.title,
+    doctor: a.doctor,
+    location: a.location,
+    address: a.address,
+    notes: a.notes,
+    reminder: a.reminder,
+  };
+}
+
 export function setAttendance(
   list: Appointment[],
   id: string,

@@ -727,3 +727,35 @@ describe("after hours", () => {
     });
   });
 });
+
+describe("open questions for Reports", () => {
+  it("lists threads whose last word is the patient's, oldest first", () => {
+    const state = rules.seedState(Date.now());
+    const open = rules.openQuestions(state.conversations);
+    expect(open.length).toBeGreaterThan(0);
+    for (const q of open) {
+      const thread = state.conversations.find((c) => c.id === q.conversationId);
+      expect(rules.lastMessage(thread!)?.author).toBe("member");
+      expect(q.body.length).toBeGreaterThan(0);
+    }
+    const sorted = [...open].sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+    expect(open).toEqual(sorted);
+  });
+
+  it("drops a question once the office replies", () => {
+    const state = rules.seedState(Date.now());
+    const [first] = rules.openQuestions(state.conversations);
+    const replied = rules.appendMessage(
+      state,
+      first.conversationId,
+      "We will call you today.",
+      "clinic",
+      Date.now(),
+    );
+    expect(
+      rules
+        .openQuestions(replied.conversations)
+        .some((q) => q.conversationId === first.conversationId),
+    ).toBe(false);
+  });
+});

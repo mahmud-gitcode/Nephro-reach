@@ -260,7 +260,9 @@ export default function MyRidesPage() {
                 />
               }
             >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Cards as wide as a name and a Call button need; as many
+                  per row as fit. */}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-4">
                 {rides.map((ride) => (
                   <RideContactCard
                     key={ride.id}

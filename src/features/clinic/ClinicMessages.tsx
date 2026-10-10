@@ -1,7 +1,13 @@
 "use client";
 
 import type { CareTeamContact } from "@/features/messaging/messaging.types";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -331,6 +337,27 @@ export default function ClinicMessages({
     },
     [markRead],
   );
+
+  /* A link here can name a thread (?thread=…), as Reports' Open Questions
+     does, so "Reply" lands on the patient's conversation rather than the
+     top of the inbox. Followed once, when the inbox has loaded. */
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current || isLoading) return;
+    const id = new URLSearchParams(window.location.search).get("thread");
+    const target = id ? conversations.find((c) => c.id === id) : undefined;
+    if (!target) {
+      deepLinked.current = true;
+      return;
+    }
+    /* Opened on the next tick, once the inbox has painted. Marked done
+       only when it runs, so a re-render in between does not lose it. */
+    const timer = window.setTimeout(() => {
+      deepLinked.current = true;
+      open(target);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isLoading, conversations, open]);
 
   /* ↑/↓ walk the inbox and Escape leaves the thread, because a clinic
      working a queue of ninety messages should not have to aim at each one.

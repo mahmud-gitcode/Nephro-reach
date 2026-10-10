@@ -420,6 +420,14 @@ export const supportItems: NavItem[] = [
     roles: ["nephrology"],
     permission: "staff.manage",
   },
+  /* Its own hours and on-call nurse manager (client, 2026-10-09). */
+  {
+    label: "Settings",
+    href: "/dashboard/nephrology/settings",
+    icon: Settings,
+    roles: ["nephrology"],
+    permission: "settings.manage",
+  },
 ];
 
 export function getBreadcrumb(pathname: string, language?: string) {
@@ -437,6 +445,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/nephrology/team"))
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/nephrology/settings"))
+    return language === "ES" ? "Configuración" : "Settings";
   if (pathname.startsWith("/dashboard/nephrology/messages"))
     return language === "ES" ? "Mensajes" : "Messages";
   if (pathname.startsWith("/dashboard/nephrology/access-messages"))
@@ -665,6 +675,7 @@ export function getNavLabel(
     "/dashboard/nephrology/messages": "Mensajes",
     "/dashboard/nephrology/access-messages": "Mensajes del Centro de Acceso",
     "/dashboard/nephrology/team": "Personal y Roles",
+    "/dashboard/nephrology/settings": "Configuración",
     "/dashboard/clinic/team": "Personal y Roles",
     "/dashboard/clinic/settings": "Configuración",
     "/dashboard/clinic/support": "Soporte",

@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { organizationFor, type Organization } from "@/features/staff/staff";
 import {
   defaultSettingsActions,
   normaliseSettingsActions,
@@ -23,32 +25,40 @@ import {
    them would make every user added rewrite the office's address.
    ========================================================================== */
 
-const ACTIONS_KEY = storageKey("clinic-settings-actions");
-const QUERY_KEY = ["clinic-settings-actions"];
+/* One record per office, like the settings themselves: the dialysis center
+   keeps its original key. */
+function actionsKey(org?: Organization): string {
+  return org && org.portal !== "clinic"
+    ? storageKey(`org-settings-actions-${org.id}`)
+    : storageKey("clinic-settings-actions");
+}
 
-async function readActions(): Promise<SettingsActions> {
-  return normaliseSettingsActions(await readJson<unknown>(ACTIONS_KEY, null));
+async function readActions(key: string): Promise<SettingsActions> {
+  return normaliseSettingsActions(await readJson<unknown>(key, null));
 }
 
 export function useSettingsActions() {
   const queryClient = useQueryClient();
+  const org = organizationFor(useOptionalAuth()?.user);
+  const key = actionsKey(org);
+  const queryKey = useMemo(() => ["clinic-settings-actions", key], [key]);
 
   const actionsQuery = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: readActions,
+    queryKey,
+    queryFn: () => readActions(key),
   });
 
   const write = useMutation({
     mutationFn: async (
       transform: (current: SettingsActions) => SettingsActions,
     ) => {
-      const next = transform(await readActions());
-      return writeJson(ACTIONS_KEY, {
+      const next = transform(await readActions(key));
+      return writeJson(key, {
         ...next,
         updatedAt: new Date().toISOString(),
       });
     },
-    onSuccess: (actions) => queryClient.setQueryData(QUERY_KEY, actions),
+    onSuccess: (actions) => queryClient.setQueryData(queryKey, actions),
   });
 
   const actions = actionsQuery.data ?? defaultSettingsActions();

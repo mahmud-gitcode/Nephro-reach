@@ -1065,7 +1065,7 @@ function ConversationModal({
 function PageSkeleton() {
   return (
     <div aria-busy="true" className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Skeleton height={320} className="rounded-card" />
         <Skeleton height={320} className="rounded-card" />
       </div>
@@ -1125,7 +1125,10 @@ export default function VascularAccess() {
           </Alert>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Side by side only on a wide screen: on a tablet in landscape the
+            two halves left each appointment's title and place clipped
+            (client, 2026-10-09). */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <OverviewCard {...props} />
           <AppointmentsCard {...props} />
         </div>
@@ -1138,7 +1141,7 @@ export default function VascularAccess() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <MessagesCard {...props} />
           <Card as="section" padding="small" className="h-full">
             <SectionTitle

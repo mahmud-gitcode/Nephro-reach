@@ -309,6 +309,70 @@ function DialysisManagementDashboard() {
     setIsExtraTxModalOpen(false);
   };
 
+  /* The freeform note belongs with the schedule. On a wide screen it sits
+     in the rail beside it; stacked (tablet, phone) it follows the schedule
+     instead of opening the page as a large empty box. */
+  const notesCard = (
+    <section
+      aria-label={isEs ? "Notas del horario" : "Schedule notes"}
+      className="flex flex-col gap-2 rounded-card border border-line bg-surface p-6 transition-all focus-within:border-primary-soft-line focus-within:ring-2 focus-within:ring-ring/60"
+    >
+      {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
+      <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
+        <span className="text-caption font-bold text-fg-secondary">
+          {isEs ? "Notas del horario" : "Schedule Notes"}
+        </span>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleUndoNote}
+            disabled={historyIndex <= 0}
+            title={isEs ? "Deshacer (Undo)" : "Undo"}
+            className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRedoNote}
+            disabled={historyIndex >= noteHistory.length - 1}
+            title={isEs ? "Rehacer (Redo)" : "Redo"}
+            className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Redo2 className="h-3.5 w-3.5" />
+          </button>
+
+          <div className="mx-0.5 h-3.5 w-px bg-line" />
+
+          <button
+            type="button"
+            onClick={handleCleanNote}
+            disabled={!weeklyNote}
+            title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
+            className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Eraser className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Note area */}
+      <textarea
+        value={weeklyNote}
+        onChange={handleNoteChange}
+        rows={2}
+        placeholder={
+          isEs
+            ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
+            : "Write any notes, symptoms, or reminders here..."
+        }
+        className="min-h-[160px] w-full flex-1 resize-none bg-transparent text-caption font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-body-sm"
+      />
+    </section>
+  );
+
   return (
     <NoticeRailLayout
       title={<PageTitle href="/dashboard/personal-log/dialysis-management" />}
@@ -316,65 +380,9 @@ function DialysisManagementDashboard() {
         <>
           <PersonalLogDisclaimer spaced={false} stacked />
 
-          {/* Freeform note, alongside the schedule */}
-          <section
-            aria-label={isEs ? "Notas del horario" : "Schedule notes"}
-            className="flex flex-col gap-2 rounded-card border border-line bg-surface p-6 transition-all focus-within:border-primary-soft-line focus-within:ring-2 focus-within:ring-ring/60"
-          >
-            {/* Note head bar: label on the left, Undo / Redo / Clean on the right */}
-            <div className="flex items-center justify-between gap-2 border-b border-line/70 pb-1.5">
-              <span className="text-caption font-bold text-fg-secondary">
-                {isEs ? "Notas del horario" : "Schedule Notes"}
-              </span>
-
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleUndoNote}
-                  disabled={historyIndex <= 0}
-                  title={isEs ? "Deshacer (Undo)" : "Undo"}
-                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleRedoNote}
-                  disabled={historyIndex >= noteHistory.length - 1}
-                  title={isEs ? "Rehacer (Redo)" : "Redo"}
-                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-line/80 hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <Redo2 className="h-3.5 w-3.5" />
-                </button>
-
-                <div className="mx-0.5 h-3.5 w-px bg-line" />
-
-                <button
-                  type="button"
-                  onClick={handleCleanNote}
-                  disabled={!weeklyNote}
-                  title={isEs ? "Limpiar nota (Clean)" : "Clean Note"}
-                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-control text-fg-muted transition-all hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Note area */}
-            <textarea
-              value={weeklyNote}
-              onChange={handleNoteChange}
-              rows={2}
-              placeholder={
-                isEs
-                  ? "Escribe cualquier nota, síntoma o recordatorio aquí..."
-                  : "Write any notes, symptoms, or reminders here..."
-              }
-              className="min-h-[160px] w-full flex-1 resize-none bg-transparent text-caption font-medium text-fg-secondary outline-none placeholder:text-fg-subtle sm:text-body-sm"
-            />
-          </section>
+          {/* Beside the page on a wide screen; under the schedule
+              otherwise (see notesCard). */}
+          <div className="hidden xl:block">{notesCard}</div>
         </>
       }
     >
@@ -435,7 +443,10 @@ function DialysisManagementDashboard() {
                 being shared, so the member starts when it suits them. That
                 row drops out and the reminder becomes a time of its own
                 rather than a subtraction from a slot. */}
-              <ul className="grid grid-cols-1 gap-inline-md sm:grid-cols-2 lg:grid-cols-3">
+              {/* As many day cards per row as fit at a readable width, not
+                  a column count per screen size — the card's own width is
+                  what decides whether "5:30 AM" fits. */}
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-inline-md">
                 {visibleWeekdays.map((day) => (
                   <li
                     key={day}
@@ -447,27 +458,27 @@ function DialysisManagementDashboard() {
 
                     <dl className="flex flex-col gap-stack-xs text-body-sm">
                       <div className="flex items-center justify-between gap-inline-md">
-                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                        <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
                           <Hourglass
                             aria-hidden="true"
                             className="h-3.5 w-3.5 shrink-0"
                           />
                           {isEs ? "Tiempo de sesión" : "Run time"}
                         </dt>
-                        <dd className="font-semibold text-fg tabular-nums">
+                        <dd className="font-semibold whitespace-nowrap text-fg tabular-nums">
                           {formatDuration(durationFor(currentSchedule, day))}
                         </dd>
                       </div>
                       {modalityLog.hasChair ? (
                         <div className="flex items-center justify-between gap-inline-md">
-                          <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                          <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
                             <Clock
                               aria-hidden="true"
                               className="h-3.5 w-3.5 shrink-0"
                             />
                             {isEs ? "Hora del sillón" : "Chair time"}
                           </dt>
-                          <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                          <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold whitespace-nowrap text-fg tabular-nums">
                             {formatReminder(
                               currentSchedule.chairTimes[day] ??
                                 DEFAULT_CHAIR_TIME,
@@ -478,14 +489,14 @@ function DialysisManagementDashboard() {
                       ) : null}
                       {/* When the alarm goes off. */}
                       <div className="flex items-center justify-between gap-inline-md">
-                        <dt className="inline-flex items-center gap-inline-xs text-fg-muted">
+                        <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
                           <Bell
                             aria-hidden="true"
                             className="h-3.5 w-3.5 shrink-0"
                           />
                           {isEs ? "Recordatorio" : "Reminder"}
                         </dt>
-                        <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold text-fg tabular-nums">
+                        <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold whitespace-nowrap text-fg tabular-nums">
                           {formatReminder(
                             reminderTimeFor(
                               currentSchedule,
@@ -503,6 +514,8 @@ function DialysisManagementDashboard() {
             </div>
           </section>
         </div>
+
+        <div className="xl:hidden">{notesCard}</div>
 
         {/* 2. Provider orders and instructions */}
         <ProviderOrdersSection />

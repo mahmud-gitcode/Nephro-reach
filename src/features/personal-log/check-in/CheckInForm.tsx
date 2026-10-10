@@ -47,6 +47,7 @@ import type {
 } from "./checkIn.types";
 import {
   Alert,
+  Badge,
   Button,
   Chip,
   ChipGroup,
@@ -115,25 +116,47 @@ const SEVERITIES: {
   { value: "severe", labelEn: "Severe", labelEs: "Severo" },
 ];
 
-/** A headed group inside the form, so a long form still reads in sections. */
+/**
+ * A numbered step inside the form. The number says how far along the
+ * member is in a long form, and the heading is a size above the field
+ * labels, so the sections read as sections rather than as more fields.
+ */
 function Section({
+  step,
   title,
   hint,
+  badge,
   children,
 }: {
+  step: number;
   title: string;
   hint?: string;
+  /** Beside the title, e.g. how many symptoms are picked. */
+  badge?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-stack-md border-t border-line pt-inset-md first:border-0 first:pt-0">
-      <div>
-        <h3 className="text-heading-5 text-fg">{title}</h3>
-        {hint ? (
-          <p className="mt-stack-xs text-body-sm text-fg-muted">{hint}</p>
-        ) : null}
+    <section className="space-y-stack-md border-t border-line pt-inset-lg first:border-0 first:pt-0">
+      <div className="flex items-start gap-inline-md">
+        <span
+          aria-hidden="true"
+          className="flex size-7 shrink-0 items-center justify-center rounded-pill bg-primary-soft text-label-sm text-fg-brand tabular-nums"
+        >
+          {step}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="flex flex-wrap items-center gap-inline-sm text-heading-4 text-fg">
+            {title}
+            {badge}
+          </h3>
+          {hint ? (
+            <p className="mt-0.5 text-body-sm text-fg-muted">{hint}</p>
+          ) : null}
+        </div>
       </div>
-      {children}
+      <div className="space-y-stack-md sm:pl-[calc(1.75rem+var(--spacing-inline-md))]">
+        {children}
+      </div>
     </section>
   );
 }
@@ -189,8 +212,12 @@ export function CheckInForm({
 
   const addOther = () => {
     const value = otherSymptom.trim();
-    if (!value || draft.symptoms.includes(value)) return;
-    set({ symptoms: [...draft.symptoms, value] });
+    if (!value) return;
+    setDraft((current) =>
+      current.symptoms.includes(value)
+        ? current
+        : { ...current, symptoms: [...current.symptoms, value] },
+    );
     setOtherSymptom("");
   };
 
@@ -213,8 +240,8 @@ export function CheckInForm({
       }
       description={
         isEs
-          ? "Un registro por día. Todo menos el día es opcional."
-          : "One check-in a day. Everything except the day is optional."
+          ? "Un registro por día. Solo el día es obligatorio; llena lo que quieras."
+          : "One check-in a day. Only the day is required — fill in as much as you like."
       }
       footer={
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
@@ -239,11 +266,12 @@ export function CheckInForm({
     >
       <div className="space-y-stack-lg">
         <Section
+          step={1}
           title={isEs ? "El día" : "The day"}
           hint={
             isEs
-              ? "Elige el día. Puedes registrar un día anterior si lo olvidaste."
-              : "Pick the day. You can log an earlier day if you forgot one."
+              ? "Puedes registrar un día anterior si lo olvidaste."
+              : "You can log an earlier day if you forgot one."
           }
         >
           <FormField
@@ -288,7 +316,13 @@ export function CheckInForm({
             what makes "treatment days versus the days between" answerable. */}
           <SwitchRow
             checked={draft.treatmentDay}
-            onChange={(checked) => set({ treatmentDay: checked })}
+            onChange={(checked) =>
+              /* A day with a treatment is not a missed one. */
+              set({
+                treatmentDay: checked,
+                ...(checked ? { missedTreatment: false } : {}),
+              })
+            }
             title={
               isEs
                 ? "Tuve tratamiento este día"
@@ -300,6 +334,27 @@ export function CheckInForm({
                 : "This is what lets us compare treatment days with the days between."
             }
           />
+
+          {/* Asked here, beside "had a treatment", because they are the
+              same question from two sides; only on a day without one. */}
+          {!draft.treatmentDay ? (
+            <>
+              <SwitchRow
+                checked={draft.missedTreatment}
+                onChange={(checked) => set({ missedTreatment: checked })}
+                title={
+                  isEs
+                    ? "Falté a un tratamiento este día"
+                    : "I missed a treatment on this day"
+                }
+                description={
+                  isEs
+                    ? "Tu equipo necesita saberlo, aunque hayas tenido un buen día."
+                    : "Your team needs to know, even if the day itself went fine."
+                }
+              />
+            </>
+          ) : null}
 
           <FormField
             label={
@@ -343,11 +398,12 @@ export function CheckInForm({
           with no answer. */}
         {draft.treatmentDay ? (
           <Section
+            step={2}
             title={isEs ? "Recuperación" : "Recovery"}
             hint={
               isEs
-                ? "Cómo te fue después de llegar a casa."
-                : "How it went after you got home."
+                ? "Cómo te fue después de llegar a casa. Todo es opcional."
+                : "How it went after you got home. All optional."
             }
           >
             <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
@@ -357,7 +413,6 @@ export function CheckInForm({
                     ? "¿Cuánto tardaste en recuperarte?"
                     : "How long did recovery take?"
                 }
-                optionalLabel={isEs ? "opcional" : "optional"}
               >
                 {(props) => (
                   <Select
@@ -388,7 +443,6 @@ export function CheckInForm({
                     ? "Hora en que te sentiste normal"
                     : "Time you felt back to normal"
                 }
-                optionalLabel={isEs ? "opcional" : "optional"}
               >
                 {(props) => (
                   <Input
@@ -402,10 +456,7 @@ export function CheckInForm({
                 )}
               </FormField>
 
-              <FormField
-                label={isEs ? "Nivel de energía" : "Energy level"}
-                optionalLabel={isEs ? "opcional" : "optional"}
-              >
+              <FormField label={isEs ? "Nivel de energía" : "Energy level"}>
                 {(props) => (
                   <Select
                     {...props}
@@ -436,7 +487,6 @@ export function CheckInForm({
                     ? "¿Pudiste hacer tus actividades habituales?"
                     : "Could you do your usual activities?"
                 }
-                optionalLabel={isEs ? "opcional" : "optional"}
               >
                 {(props) => (
                   <Select
@@ -465,7 +515,15 @@ export function CheckInForm({
         ) : null}
 
         <Section
+          step={draft.treatmentDay ? 3 : 2}
           title={isEs ? "Síntomas" : "Symptoms"}
+          badge={
+            hasSymptoms ? (
+              <Badge tone="info">
+                {draft.symptoms.length} {isEs ? "elegidos" : "selected"}
+              </Badge>
+            ) : null
+          }
           hint={
             isEs
               ? "Toca los que tuviste. Deja vacío si no tuviste ninguno."
@@ -481,7 +539,10 @@ export function CheckInForm({
                 key={symptom}
                 selected={draft.symptoms.includes(symptom)}
                 onClick={() =>
-                  set({ symptoms: toggleSymptom(draft.symptoms, symptom) })
+                  setDraft((current) => ({
+                    ...current,
+                    symptoms: toggleSymptom(current.symptoms, symptom),
+                  }))
                 }
               >
                 {isEs ? LOCALIZED_SYMPTOMS[symptom] || symptom : symptom}
@@ -496,7 +557,10 @@ export function CheckInForm({
                   key={symptom}
                   selected
                   onRemove={() =>
-                    set({ symptoms: toggleSymptom(draft.symptoms, symptom) })
+                    setDraft((current) => ({
+                      ...current,
+                      symptoms: toggleSymptom(current.symptoms, symptom),
+                    }))
                   }
                 >
                   {symptom}
@@ -549,6 +613,7 @@ export function CheckInForm({
         </Section>
 
         <Section
+          step={draft.treatmentDay ? 4 : 3}
           title={isEs ? "Mediciones" : "Readings"}
           hint={
             isEs
@@ -559,8 +624,11 @@ export function CheckInForm({
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
             <FormField
               label={isEs ? "Presión arterial" : "Blood pressure"}
-              hint={isEs ? "Por ejemplo 128/74" : "For example 128/74"}
-              optionalLabel={isEs ? "opcional" : "optional"}
+              hint={
+                isEs
+                  ? "Número de arriba / de abajo, p. ej. 128/74"
+                  : "Top / bottom number, e.g. 128/74"
+              }
             >
               {(props) => (
                 <Input
@@ -570,15 +638,12 @@ export function CheckInForm({
                   onChange={(event) =>
                     set({ bloodPressure: event.target.value || undefined })
                   }
-                  placeholder="128/74"
+                  placeholder={isEs ? "p. ej. 128/74" : "e.g. 128/74"}
                 />
               )}
             </FormField>
 
-            <FormField
-              label={isEs ? "Peso" : "Weight"}
-              optionalLabel={isEs ? "opcional" : "optional"}
-            >
+            <FormField label={isEs ? "Peso" : "Weight"}>
               {(props) => (
                 <Input
                   {...props}
@@ -587,7 +652,7 @@ export function CheckInForm({
                   onChange={(event) =>
                     set({ weight: event.target.value || undefined })
                   }
-                  placeholder="72.4"
+                  placeholder={isEs ? "p. ej. 72.4" : "e.g. 72.4"}
                 />
               )}
             </FormField>
@@ -596,7 +661,6 @@ export function CheckInForm({
               label={
                 isEs ? "Orina en 24 horas (mL)" : "24-hour urine output (mL)"
               }
-              optionalLabel={isEs ? "opcional" : "optional"}
             >
               {(props) => (
                 <Input
@@ -606,15 +670,12 @@ export function CheckInForm({
                   onChange={(event) =>
                     set({ urineOutputMl: event.target.value || undefined })
                   }
-                  placeholder="500"
+                  placeholder={isEs ? "p. ej. 500" : "e.g. 500"}
                 />
               )}
             </FormField>
 
-            <FormField
-              label={isEs ? "Apetito" : "Appetite"}
-              optionalLabel={isEs ? "opcional" : "optional"}
-            >
+            <FormField label={isEs ? "Apetito" : "Appetite"}>
               {(props) => (
                 <Select
                   {...props}
@@ -639,22 +700,48 @@ export function CheckInForm({
           </div>
         </Section>
 
-        <Section title={isEs ? "Notas" : "Notes"}>
-          <SwitchRow
-            checked={draft.missedTreatment}
-            onChange={(checked) => set({ missedTreatment: checked })}
-            title={
+        <Section
+          step={draft.treatmentDay ? 5 : 4}
+          title={isEs ? "Notas" : "Notes"}
+        >
+          <FormField
+            label={isEs ? "Cómo te fue" : "How the day went"}
+            hint={
               isEs
-                ? "Falté a un tratamiento este día"
-                : "I missed a treatment on this day"
+                ? "Cualquier cosa que quieras contarle a tu equipo en la próxima cita."
+                : "Anything you want to tell your team at the next appointment."
             }
-            description={
-              isEs
-                ? "Tu equipo necesita saberlo, aunque hayas tenido un buen día."
-                : "Your team needs to know, even if the day itself went fine."
+          >
+            {(props) => (
+              <Textarea
+                {...props}
+                rows={4}
+                value={draft.notes}
+                onChange={(event) => set({ notes: event.target.value })}
+              />
+            )}
+          </FormField>
+          <LogMediaBar
+            logName="Check-in"
+            isEs={isEs}
+            onDictated={(text) =>
+              setDraft((current) => ({
+                ...current,
+                notes: appendText(current.notes, text),
+              }))
             }
           />
+        </Section>
 
+        <Section
+          step={draft.treatmentDay ? 6 : 5}
+          title={isEs ? "Tu clínica" : "Your clinic"}
+          hint={
+            isEs
+              ? "Tú decides si este día llega a tu equipo de atención."
+              : "You decide whether this day reaches your care team."
+          }
+        >
           {/* This banner used to read "this log does not notify them", which
             left a member who had just missed a run to phone it in on their
             own. Beyond the Chair is the only record of the days between
@@ -701,35 +788,6 @@ export function CheckInForm({
                 : "Tell your clinic as soon as you can — this check-in will not be sent."}
             </Alert>
           ) : null}
-
-          <FormField
-            label={isEs ? "Cómo te fue" : "How the day went"}
-            optionalLabel={isEs ? "opcional" : "optional"}
-            hint={
-              isEs
-                ? "Cualquier cosa que quieras contarle a tu equipo en la próxima cita."
-                : "Anything you want to tell your team at the next appointment."
-            }
-          >
-            {(props) => (
-              <Textarea
-                {...props}
-                rows={4}
-                value={draft.notes}
-                onChange={(event) => set({ notes: event.target.value })}
-              />
-            )}
-          </FormField>
-          <LogMediaBar
-            logName="Check-in"
-            isEs={isEs}
-            onDictated={(text) =>
-              setDraft((current) => ({
-                ...current,
-                notes: appendText(current.notes, text),
-              }))
-            }
-          />
         </Section>
       </div>
     </Modal>

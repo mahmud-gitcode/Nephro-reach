@@ -88,10 +88,11 @@ export function RideContactCard({
 
       <a
         href={`tel:${ride.phone.replace(/[^0-9+]/g, "")}`}
-        className={buttonStyles({ fullWidth: true })}
+        className={`${buttonStyles({ fullWidth: true })} min-w-0`}
+        aria-label={`${t("myRides.call")} ${ride.name}`}
       >
         <Phone />
-        <span>
+        <span className="truncate">
           {t("myRides.call")} {ride.name}
         </span>
       </a>

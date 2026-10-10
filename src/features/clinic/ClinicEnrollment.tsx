@@ -758,6 +758,7 @@ function EnrollmentView() {
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
     mrn: string;
+    ccm?: boolean;
   } | null>(null);
 
   function updateFilters(change: Partial<Filters>) {
@@ -773,9 +774,9 @@ function EnrollmentView() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  function enrolled(name: string, mrn: string) {
+  function enrolled(name: string, mrn: string, ccm?: boolean) {
     setEnrolling(false);
-    setJustEnrolled({ name, mrn });
+    setJustEnrolled({ name, mrn, ccm });
     /* Clear the filters so the new patient is in view, not hidden by a
        status filter they do not match. */
     updateFilters({ query: "", ...NO_FILTERS });
@@ -799,19 +800,30 @@ function EnrollmentView() {
         <Alert
           tone="success"
           icon={<CheckCircle2 />}
-          title={`${justEnrolled.name} is enrolled.`}
+          title={
+            justEnrolled.ccm
+              ? `${justEnrolled.name} is enrolled in CCM.`
+              : `${justEnrolled.name} is enrolled.`
+          }
           onDismiss={() => setJustEnrolled(null)}
           action={
             <Link
-              href={memberLink({ mrn: justEnrolled.mrn })}
+              href={
+                justEnrolled.ccm
+                  ? "/dashboard/nephrology"
+                  : memberLink({ mrn: justEnrolled.mrn })
+              }
               className={outlineLink}
             >
-              View on the Member page
+              {justEnrolled.ccm
+                ? "View on the CCM dashboard"
+                : "View on the Member page"}
             </Link>
           }
         >
-          They are highlighted in the list below and count toward your contract
-          seats.
+          {justEnrolled.ccm
+            ? "They are on your CCM dashboard now. CCM uses no contract seat."
+            : "They are highlighted in the list below and count toward your contract seats."}
         </Alert>
       ) : null}
 

@@ -16,31 +16,34 @@ export const clinicSettingsKey = ["clinic", "settings"] as const;
 /** The office's profile, notification choices and portal preferences. */
 export function useClinicSettings() {
   const queryClient = useQueryClient();
+  const user = useOptionalAuth()?.user;
+  /* Each office reads and saves its own record: the nephrology office's
+     on-call phone and hours must never overwrite the dialysis center's.
+     A member (no organization) reads the dialysis center's, whose hours
+     drive the after-hours reply on their messages. */
+  const org = organizationFor(user);
+  const queryKey = useMemo(
+    () => [...clinicSettingsKey, org?.id ?? "clinic"],
+    [org?.id],
+  );
 
   const query = useQuery({
-    queryKey: clinicSettingsKey,
-    queryFn: readClinicSettings,
+    queryKey,
+    queryFn: () => readClinicSettings(org),
   });
 
   const write = useMutation({
-    mutationFn: writeClinicSettings,
-    onSuccess: (settings) =>
-      queryClient.setQueryData(clinicSettingsKey, settings),
+    mutationFn: (settings: ClinicSettings) =>
+      writeClinicSettings(settings, org),
+    onSuccess: (settings) => queryClient.setQueryData(queryKey, settings),
   });
 
   const { mutate } = write;
-  const user = useOptionalAuth()?.user;
-  /* The stored profile is the dialysis center's. Another office reading
-     the clinic pages it shares (the nephrology office) sees its own name
-     on them — billing, reports — rather than the dialysis center's. */
-  const org = organizationFor(user);
   const stored = query.data;
-  const settings = useMemo(() => {
-    const base = stored ?? defaultClinicSettings();
-    return org && org.portal !== "clinic"
-      ? { ...base, profile: { ...base.profile, name: org.name } }
-      : base;
-  }, [stored, org]);
+  const settings = useMemo(
+    () => stored ?? defaultClinicSettings(org),
+    [stored, org],
+  );
 
   return {
     settings,
@@ -50,11 +53,11 @@ export function useClinicSettings() {
     update: useCallback(
       (change: Partial<ClinicSettings>) =>
         mutate({
-          ...(queryClient.getQueryData<ClinicSettings>(clinicSettingsKey) ??
-            defaultClinicSettings()),
+          ...(queryClient.getQueryData<ClinicSettings>(queryKey) ??
+            defaultClinicSettings(org)),
           ...change,
         }),
-      [mutate, queryClient],
+      [mutate, queryClient, queryKey, org],
     ),
 
     isPending: query.isPending,

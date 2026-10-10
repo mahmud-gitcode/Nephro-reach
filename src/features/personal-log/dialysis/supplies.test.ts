@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  statusAdvice,
+  toOrder,
   monthKeyOf,
   neededFor,
   normaliseMonth,
@@ -152,5 +154,21 @@ describe("reading a stored month back", () => {
       checked: true,
     });
     expect(month.notes).toBe("order gauze");
+  });
+});
+
+describe("what to reorder", () => {
+  const item = { id: "x", labelEn: "Gauze", labelEs: "Gasas", needed: 20 };
+
+  it("says how many to order, not just that stock is low", () => {
+    expect(toOrder(item, { have: 5, checked: true })).toBe(15);
+    expect(statusAdvice(item, { have: 5, checked: true }, false)).toBe(
+      "Order 15",
+    );
+    expect(statusAdvice(item, undefined, false)).toBe("Out of stock: order 20");
+    expect(statusAdvice(item, { have: 25, checked: true }, false)).toBe(
+      "Enough",
+    );
+    expect(toOrder(item, { have: 25, checked: true })).toBe(0);
   });
 });

@@ -345,6 +345,32 @@ export function supplyStatus(
   return have < needed ? "low" : "ok";
 }
 
+/** How many to reorder to reach the month's figure; 0 when there is enough. */
+export function toOrder(
+  item: SupplyItem,
+  count: SupplyCount | undefined,
+): number {
+  return Math.max(0, neededFor(item, count) - (count?.have ?? 0));
+}
+
+/**
+ * The status as an instruction rather than a verdict: "Order 15" says what
+ * to do, where "Low" left the member to work out how many (client,
+ * 2026-10-09: the directions were not clear).
+ */
+export function statusAdvice(
+  item: SupplyItem,
+  count: SupplyCount | undefined,
+  isEs: boolean,
+): string {
+  const status = supplyStatus(item, count);
+  const n = toOrder(item, count);
+  if (status === "missing")
+    return isEs ? `Agotado: pida ${n}` : `Out of stock: order ${n}`;
+  if (status === "low") return isEs ? `Pida ${n}` : `Order ${n}`;
+  return isEs ? "Suficiente" : "Enough";
+}
+
 export function statusLabel(status: SupplyStatus, isEs: boolean): string {
   if (status === "missing") return isEs ? "Falta" : "Missing";
   if (status === "low") return isEs ? "Bajo" : "Low";

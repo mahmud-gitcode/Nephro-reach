@@ -3,6 +3,7 @@
 import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
 import React, { useEffect, useState } from "react";
 import {
+  Pencil,
   Calendar,
   CalendarPlus,
   ChevronRight,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui";
 import {
   appointmentError,
+  draftOf,
   awaitingAnswer,
   REMINDER_LEADS,
   directionsUrl,
@@ -177,6 +179,7 @@ function DetailsModal({
   isEs,
   isPast,
   onAttendance,
+  onEdit,
   onDelete,
   onClose,
 }: {
@@ -185,6 +188,8 @@ function DetailsModal({
   /** The day has gone by, so "did you go?" can be answered. */
   isPast: boolean;
   onAttendance: (attendance: Attendance) => void;
+  /** Absent for an appointment that belongs to another record. */
+  onEdit?: () => void;
   /** Absent for an appointment that belongs to another record. */
   onDelete?: () => void;
   onClose: () => void;
@@ -195,7 +200,7 @@ function DetailsModal({
     <Modal
       open
       onClose={onClose}
-      size="big"
+      size="wide"
       title={appointment.title}
       description={dateParts(appointment.date, isEs).long}
       footer={
@@ -231,13 +236,18 @@ function DetailsModal({
                   : "From your Vascular Access record."}
               </p>
             )}
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={onClose}
-            >
-              {t("appointments.close")}
-            </Button>
+            {/* No Close here: the × does that, and a fourth button
+                pushed the row onto two lines on a tablet. */}
+            {onEdit ? (
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                leadingIcon={<Pencil />}
+                onClick={onEdit}
+              >
+                {isEs ? "Editar" : "Edit"}
+              </Button>
+            ) : null}
             {!isPast ? (
               <Button
                 variant="neutral"
@@ -444,6 +454,9 @@ export default function AppointmentsPage() {
   const unanswered = awaitingAnswer(store.appointments, today)[0];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  /* The appointment being changed, or null when adding a new one: the
+     same form does both. */
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AppointmentDraft>(EMPTY);
   const [tried, setTried] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -465,10 +478,24 @@ export default function AppointmentsPage() {
     e.preventDefault();
     setTried(true);
     if (error) return;
-    store.add(draft);
+    if (editingId) store.update(editingId, draft);
+    else store.add(draft);
+    closeForm();
+  }
+
+  function closeForm() {
     setIsModalOpen(false);
+    setEditingId(null);
     setDraft(EMPTY);
     setTried(false);
+  }
+
+  function openEdit(appointment: Appointment) {
+    setDraft(draftOf(appointment));
+    setEditingId(appointment.id);
+    setTried(false);
+    setOpenId(null);
+    setIsModalOpen(true);
   }
 
   const shown = showAll ? ahead : ahead.slice(0, 3);
@@ -612,6 +639,7 @@ export default function AppointmentsPage() {
             store.setAttendance(opened.id, attendance)
           }
           onClose={() => setOpenId(null)}
+          onEdit={opened.source ? undefined : () => openEdit(opened)}
           onDelete={
             opened.source
               ? undefined
@@ -625,14 +653,18 @@ export default function AppointmentsPage() {
 
       <Modal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeForm}
         title={
           <span className="flex items-center gap-inline-md">
             <Calendar
               aria-hidden="true"
               className="h-icon-big w-icon-big text-fg-brand"
             />
-            {t("appointments.modalTitle")}
+            {editingId
+              ? isEs
+                ? "Editar Cita"
+                : "Edit Appointment"
+              : t("appointments.modalTitle")}
           </span>
         }
         footer={
@@ -640,12 +672,16 @@ export default function AppointmentsPage() {
             <Button
               variant="neutral"
               appearance="fill-stroke"
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeForm}
             >
               {t("appointments.cancel")}
             </Button>
             <Button type="submit" form="appointment-form">
-              {t("appointments.save")}
+              {editingId
+                ? isEs
+                  ? "Guardar Cambios"
+                  : "Save Changes"
+                : t("appointments.save")}
             </Button>
           </>
         }

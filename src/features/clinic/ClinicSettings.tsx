@@ -43,6 +43,7 @@ import { useSettingsActions } from "./useSettingsActions";
 import { useStaffAccounts } from "@/features/staff/useStaffAccounts";
 import { organizationFor } from "@/features/staff/staff";
 import { useAuth } from "@/features/auth/AuthContext";
+import type { UserRole } from "@/features/auth/auth";
 import { exportDocument, exportFilename } from "./settings.actions";
 import {
   ChangePasswordModal,
@@ -55,12 +56,12 @@ import {
 
 type Update = (change: Partial<ClinicSettings>) => void;
 
-/* The landing page can be any screen in the clinic sidebar, so the list is
-   read from the sidebar rather than copied — a page added there appears
-   here without anyone remembering to. */
-const LANDING_PAGES = sidebarItems.filter((item) =>
-  item.roles?.includes("clinic"),
-);
+/* The landing page can be any screen in the office's own sidebar, so the
+   list is read from the sidebar rather than copied — a page added there
+   appears here without anyone remembering to. */
+function landingPagesFor(portal: UserRole) {
+  return sidebarItems.filter((item) => item.roles?.includes(portal));
+}
 
 const LANGUAGES: { code: LanguageCode; label: string }[] = [
   { code: "EN", label: "English (US)" },
@@ -489,9 +490,11 @@ function RowButton({ label, onClick }: { label: string; onClick: () => void }) {
 function OfficePreferencesCard({
   office,
   update,
+  landingPages,
 }: {
   office: OfficePreferences;
   update: Update;
+  landingPages: ReturnType<typeof landingPagesFor>;
 }) {
   const { language, setLanguage } = useLanguage();
 
@@ -514,7 +517,7 @@ function OfficePreferencesCard({
               value={office.landingPage}
               onChange={(event) => set("landingPage", event.target.value)}
             >
-              {LANDING_PAGES.map((page) => (
+              {landingPages.map((page) => (
                 <option key={page.href} value={page.href}>
                   {page.label}
                 </option>
@@ -677,7 +680,13 @@ function DataPrivacyCard({
   );
 }
 
-export default function ClinicSettings() {
+export default function ClinicSettings({
+  href = "/dashboard/clinic/settings",
+}: {
+  /** The office's own Settings entry: the dialysis center's, or the
+   *  nephrology office's (client, 2026-10-09). */
+  href?: string;
+}) {
   const { settings, update, isPending, error, refetch, saveError } =
     useClinicSettings();
   const emailRef = useRef<HTMLDivElement>(null);
@@ -734,7 +743,7 @@ export default function ClinicSettings() {
 
   return (
     <div className="space-y-4">
-      <PageTitle href="/dashboard/clinic/settings" />
+      <PageTitle href={href} />
 
       {error ? (
         <Alert
@@ -780,7 +789,11 @@ export default function ClinicSettings() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <OfficePreferencesCard office={settings.office} update={update} />
+        <OfficePreferencesCard
+          office={settings.office}
+          update={update}
+          landingPages={landingPagesFor(org?.portal ?? "clinic")}
+        />
         <div className="xl:col-span-2">
           <DataPrivacyCard
             onDownload={downloadData}

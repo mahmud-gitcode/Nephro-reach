@@ -1,4 +1,5 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import type { Organization } from "@/features/staff/staff";
 
 /* ==========================================================================
    Clinic settings
@@ -67,14 +68,32 @@ export type ClinicSettings = {
   office: OfficePreferences;
 };
 
-export const defaultClinicSettings = (): ClinicSettings => ({
-  profile: {
-    name: "Riverside Dialysis Center",
-    address: "123 Kidney Care Way, Columbia, SC 29201",
-    phone: "(803) 555-0187",
-    email: "mcarter@riversidedialysis.com",
-    timeZone: "(GMT-05:00) Eastern Time (ET)",
-  },
+/** Where each portal opens until its office picks a landing page. */
+const PORTAL_HOME: Record<Organization["portal"], string> = {
+  clinic: "/dashboard/clinic",
+  nephrology: "/dashboard/nephrology",
+  access: "/dashboard/access-center",
+};
+
+/** The dialysis center's settings, or another office's: that office's own
+ *  name and home page, and a blank contact block for it to fill in. */
+export const defaultClinicSettings = (org?: Organization): ClinicSettings => ({
+  profile:
+    org && org.portal !== "clinic"
+      ? {
+          name: org.name,
+          address: "",
+          phone: "",
+          email: "",
+          timeZone: "(GMT-05:00) Eastern Time (ET)",
+        }
+      : {
+          name: "Riverside Dialysis Center",
+          address: "123 Kidney Care Way, Columbia, SC 29201",
+          phone: "(803) 555-0187",
+          email: "mcarter@riversidedialysis.com",
+          timeZone: "(GMT-05:00) Eastern Time (ET)",
+        },
   /* Everything on except SMS, which the client marks optional — a text
      message is the one channel that can cost the recipient money. */
   notifications: {
@@ -88,7 +107,7 @@ export const defaultClinicSettings = (): ClinicSettings => ({
     sms: false,
   },
   office: {
-    landingPage: "/dashboard/clinic",
+    landingPage: PORTAL_HOME[org?.portal ?? "clinic"],
     itemsPerPage: 10,
     dateFormat: "MM/DD/YYYY",
     opensAt: "08:00",
@@ -120,13 +139,25 @@ export function initials(name: string): string {
     .join("");
 }
 
-const KEY = storageKey("clinic-settings");
+/* Each office keeps its own settings (client, 2026-10-09: the nephrology
+   office sets its own on-call nurse manager). The dialysis center keeps the
+   key it always had, so what it saved before still reads. */
+export function settingsKey(org?: Organization): string {
+  return org && org.portal !== "clinic"
+    ? storageKey(`org-settings-${org.id}`)
+    : storageKey("clinic-settings");
+}
 
 /* Merged section by section, so a record saved before a new notification
    or preference existed still reads back complete. */
-export async function readClinicSettings(): Promise<ClinicSettings> {
-  const stored = await readJson<Partial<ClinicSettings> | null>(KEY, null);
-  const defaults = defaultClinicSettings();
+export async function readClinicSettings(
+  org?: Organization,
+): Promise<ClinicSettings> {
+  const stored = await readJson<Partial<ClinicSettings> | null>(
+    settingsKey(org),
+    null,
+  );
+  const defaults = defaultClinicSettings(org);
   return {
     profile: { ...defaults.profile, ...stored?.profile },
     notifications: { ...defaults.notifications, ...stored?.notifications },
@@ -136,6 +167,7 @@ export async function readClinicSettings(): Promise<ClinicSettings> {
 
 export async function writeClinicSettings(
   settings: ClinicSettings,
+  org?: Organization,
 ): Promise<ClinicSettings> {
-  return writeJson(KEY, settings);
+  return writeJson(settingsKey(org), settings);
 }

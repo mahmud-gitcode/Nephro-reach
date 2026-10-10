@@ -36,6 +36,7 @@ import {
   Progress,
   Select,
   type SeriesTone,
+  buttonStyles,
 } from "@/components/ui";
 import { downloadText, toCsv } from "@/lib/utils/download";
 import { useNow } from "@/lib/utils/useNow";
@@ -59,6 +60,15 @@ import {
 } from "./reports.data";
 import { useClinicSettings } from "./useClinicSettings";
 import { useClinicData } from "./useClinicData";
+import { useMessages } from "@/features/messaging/useMessages";
+import * as messagingRules from "@/features/messaging/messaging.rules";
+import type { OpenQuestion } from "@/features/messaging/messaging.rules";
+import {
+  FACILITY,
+  NEPHROLOGY_OFFICE,
+} from "@/features/messaging/messaging.seed";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { organizationFor } from "@/features/staff/staff";
 import { MEMBER_STATUSES, type RosterMember } from "./members.data";
 
 type Report = ReturnType<typeof rosterReport>;
@@ -452,7 +462,13 @@ function RecentActivity() {
 }
 
 /* Each report is a CSV of the rows on screen, built in the browser. */
-function CustomReports({ rows }: { rows: RosterMember[] }) {
+function CustomReports({
+  rows,
+  questions,
+}: {
+  rows: RosterMember[];
+  questions: OpenQuestion[];
+}) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
   const reports: Array<{
@@ -514,12 +530,13 @@ function CustomReports({ rows }: { rows: RosterMember[] }) {
       id: "questions",
       label: "Open Questions Report",
       table: () => [
-        ["Name", "Program", "Questions", "Open"],
-        ...rows.map((m) => [
-          m.name,
-          m.program,
-          m.questions.total,
-          m.questions.open,
+        ["Patient", "MRN", "Program", "Sent", "Question"],
+        ...questions.map((q) => [
+          q.memberName,
+          q.mrn ?? "",
+          q.program ?? "",
+          new Date(q.sentAt).toLocaleString("en-US"),
+          q.body,
         ]),
       ],
     },
@@ -591,6 +608,59 @@ function CustomReports({ rows }: { rows: RosterMember[] }) {
   );
 }
 
+/** Each unanswered question as the patient wrote it, with a way straight
+ *  to the conversation to answer it. */
+function OpenQuestionsList({
+  questions,
+  messagesHref,
+}: {
+  questions: OpenQuestion[];
+  messagesHref: string;
+}) {
+  const now = useNow();
+  if (questions.length === 0) {
+    return (
+      <p className="text-body-sm text-fg-muted">
+        No unanswered patient messages. You are all caught up.
+      </p>
+    );
+  }
+  return (
+    <ul className="divide-y divide-line-subtle">
+      {questions.map((q) => (
+        <li
+          key={q.conversationId}
+          className="flex flex-col gap-stack-sm py-inset-sm first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-inline-lg"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-label-lg text-fg">{q.memberName}</p>
+            <p className="text-caption text-fg-muted">
+              {[q.program, q.mrn ? `MRN ${q.mrn}` : null]
+                .filter(Boolean)
+                .join(" · ")}
+              {" · "}
+              {messagingRules.relativeLabel(q.sentAt, now)}
+            </p>
+            <blockquote className="mt-stack-xs line-clamp-3 border-l-2 border-line pl-inset-xs text-body-sm text-fg-secondary">
+              {q.body}
+            </blockquote>
+          </div>
+          <Link
+            href={`${messagesHref}?thread=${encodeURIComponent(q.conversationId)}`}
+            className={buttonStyles({
+              size: "small",
+              variant: "neutral",
+              appearance: "fill-stroke",
+            })}
+          >
+            Reply
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function ClinicReports() {
   const clinic = useClinicData();
   const roster = clinic.data?.roster ?? [];
@@ -599,7 +669,31 @@ export default function ClinicReports() {
     status: ALL_MEMBERS_LABEL,
   });
   const rows = reportRows(roster, filters);
-  const report = rosterReport(rows);
+  const base = rosterReport(rows);
+
+  /* Open Questions are real messages: a patient's last word to this
+     office, still unanswered (client, 2026-10-09: the count has to lead to
+     the question). Each office reads its own inbox. */
+  const org = organizationFor(useOptionalAuth()?.user);
+  const isNephrology = org?.portal === "nephrology";
+  const office = isNephrology ? NEPHROLOGY_OFFICE : FACILITY;
+  const messagesHref = isNephrology
+    ? "/dashboard/nephrology/messages"
+    : "/dashboard/clinic/messages";
+  const { conversations } = useMessages();
+  const filtered =
+    filters.program !== ALL_PROGRAMS_LABEL ||
+    filters.status !== ALL_MEMBERS_LABEL;
+  const shownMrns = new Set(rows.map((m) => m.mrn));
+  const questions = messagingRules
+    .openQuestions(conversations, office.name)
+    .filter((q) => !filtered || (q.mrn ? shownMrns.has(q.mrn) : false));
+  const report = {
+    ...base,
+    kpis: base.kpis.map((k) =>
+      k.id === "questions" ? { ...k, value: String(questions.length) } : k,
+    ),
+  };
   const programs = [...new Set(roster.map((m) => m.program))].sort();
   const [questionsOpen, setQuestionsOpen] = useState(false);
   const exportShare = useExternalShare();
@@ -649,35 +743,9 @@ export default function ClinicReports() {
         open={questionsOpen}
         onClose={() => setQuestionsOpen(false)}
         title="Open Questions"
-        description="Questions members asked their care team that nobody has answered yet."
+        description="Patient messages to your office that are still waiting for a reply. Replying in Messages clears them."
       >
-        <ul className="divide-y divide-line-subtle">
-          {rows
-            .filter((m) => m.questions.open > 0)
-            .sort((a, b) => b.questions.open - a.questions.open)
-            .map((m) => (
-              <li
-                key={m.mrn}
-                className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
-              >
-                <span className="min-w-0">
-                  <span className="block text-label-lg text-fg">{m.name}</span>
-                  <span className="block text-caption text-fg-muted">
-                    {m.program} · MRN {m.mrn}
-                  </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-inline-md">
-                  <Badge tone="warning">{m.questions.open} open</Badge>
-                  <Link
-                    href={`/dashboard/clinic/members?mrn=${m.mrn}`}
-                    className="rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    Open member
-                  </Link>
-                </span>
-              </li>
-            ))}
-        </ul>
+        <OpenQuestionsList questions={questions} messagesHref={messagesHref} />
       </Modal>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -713,7 +781,7 @@ export default function ClinicReports() {
         <RecentActivity />
       </section>
 
-      <CustomReports rows={rows} />
+      <CustomReports rows={rows} questions={questions} />
     </div>
   );
 }

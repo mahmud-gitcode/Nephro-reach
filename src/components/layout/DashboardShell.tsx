@@ -385,12 +385,19 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   return (
                     <span
                       key={`${item}-${index}`}
-                      className="flex items-center gap-inline-sm"
+                      /* Below xl the bar is shared with five controls, so
+                         only the current page is named; the parents came
+                         back cut to "Personal Lo" on a tablet. */
+                      className={
+                        last
+                          ? "flex min-w-0 items-center gap-inline-sm"
+                          : "hidden items-center gap-inline-sm xl:flex"
+                      }
                     >
                       {index > 0 ? (
                         <ChevronRight
                           aria-hidden="true"
-                          className="size-4 shrink-0 text-fg-subtle"
+                          className={`size-4 shrink-0 text-fg-subtle ${last ? "hidden xl:block" : ""}`}
                         />
                       ) : null}
                       {href && !last ? (
@@ -404,7 +411,9 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                         <span
                           aria-current={last ? "page" : undefined}
                           className={
-                            last ? "text-label-md text-fg" : "text-fg-muted"
+                            last
+                              ? "truncate text-label-md text-fg"
+                              : "text-fg-muted"
                           }
                         >
                           {item}
