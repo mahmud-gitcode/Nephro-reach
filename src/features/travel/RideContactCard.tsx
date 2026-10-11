@@ -17,7 +17,7 @@ export function RideContactCard({
   /** Omitted for the last remaining contact — a member must keep one ride. */
   onDelete?: () => void;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <Card
@@ -59,7 +59,7 @@ export function RideContactCard({
               size="small"
               iconOnly
               onClick={onEdit}
-              aria-label={`Edit ${ride.name}`}
+              aria-label={`${language === "ES" ? "Editar" : "Edit"} ${ride.name}`}
             >
               <Pencil className="h-4 w-4" />
             </Button>

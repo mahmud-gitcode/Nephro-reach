@@ -23,7 +23,7 @@ import { PageTitle } from "@/components/layout/PageTitle";
 
 export default function MyHealthPage() {
   const [activeTab, setActiveTab] = React.useState<HealthTab>("allergies");
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const h = dictionary?.myHealth;
 
   /* Saved on this device; the demo patient starts with a sample record. */
@@ -116,7 +116,9 @@ export default function MyHealthPage() {
         items={tabItems}
         value={activeTab}
         onChange={setActiveTab}
-        label="My Health sections"
+        label={
+          language === "ES" ? "Secciones de Mi Salud" : "My Health sections"
+        }
       />
 
       <TabPanel id="allergies" value={activeTab}>

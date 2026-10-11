@@ -620,7 +620,7 @@ function TreatmentEntriesTable({
                       title={
                         dt?.table?.viewTooltip || "View Full Entry Details"
                       }
-                      aria-label={`View full entry for ${entry.displayDate}`}
+                      aria-label={`${isEs ? "Ver el registro completo del" : "View full entry for"} ${entry.displayDate}`}
                     >
                       <Eye />
                     </Link>
@@ -634,7 +634,7 @@ function TreatmentEntriesTable({
                         iconOnly: true,
                       })}
                       title={dt?.table?.editTooltip || "Edit Entry"}
-                      aria-label={`Edit entry for ${entry.displayDate}`}
+                      aria-label={`${isEs ? "Editar el registro del" : "Edit entry for"} ${entry.displayDate}`}
                     >
                       <Pencil />
                     </Link>

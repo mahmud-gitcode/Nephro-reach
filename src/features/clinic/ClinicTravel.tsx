@@ -243,7 +243,12 @@ function ManageModal({
             {canEdit ? "Cancel" : "Close"}
           </Button>
           {canEdit ? (
-            <Button onClick={() => onSave({ status, placement, note })}>
+            /* Confirmed tells the patient it is booked, so it cannot be
+               saved without somewhere and some time to be booked into. */
+            <Button
+              disabled={blocked !== null}
+              onClick={() => onSave({ status, placement, note })}
+            >
               Save changes
             </Button>
           ) : null}
@@ -501,11 +506,11 @@ function ManageModal({
 
             {blocked ? (
               <Alert tone="warning">
-                Marked confirmed, but there{" "}
+                To confirm, add{" "}
                 {blocked === "no-treatments"
-                  ? "are no treatment times"
-                  : "is no receiving facility"}
-                . The patient would be told it is booked.
+                  ? "at least one treatment time"
+                  : "the receiving facility"}
+                . The patient is told it is booked as soon as you save.
               </Alert>
             ) : null}
           </section>

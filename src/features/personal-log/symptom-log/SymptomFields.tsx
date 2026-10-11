@@ -13,6 +13,7 @@ import {
   SEGMENT_ITEM,
   SEGMENT_TRACK,
 } from "./symptomLog.styles";
+import { symptomLabel } from "./symptomLog.copy";
 
 /* The form's controls. Every one of them is a row: a question on the left
    and the answer on the right. */
@@ -36,10 +37,12 @@ export function BinaryToggle({
   label,
   value,
   onChange,
+  isEs = false,
 }: {
   label: string;
   value: "Yes" | "No";
   onChange: (v: "Yes" | "No") => void;
+  isEs?: boolean;
 }) {
   return (
     <SegmentedChoice
@@ -47,8 +50,8 @@ export function BinaryToggle({
       value={value}
       onChange={onChange}
       options={[
-        { value: "Yes" as const, label: "Yes" },
-        { value: "No" as const, label: "No" },
+        { value: "Yes" as const, label: symptomLabel("Yes", isEs) },
+        { value: "No" as const, label: symptomLabel("No", isEs) },
       ]}
       className={`${FIELD_ROW} h-full`}
       labelClassName={FIELD_LABEL}
@@ -64,10 +67,12 @@ export function SeverityFiveToggle({
   label,
   value,
   onChange,
+  isEs = false,
 }: {
   label: string;
   value: "Yes" | "No" | "Mild" | "Moderate" | "Severe";
   onChange: (v: "Yes" | "No" | "Mild" | "Moderate" | "Severe") => void;
+  isEs?: boolean;
 }) {
   return (
     <SegmentedChoice
@@ -75,7 +80,7 @@ export function SeverityFiveToggle({
       value={value}
       onChange={onChange}
       options={(["Yes", "No", "Mild", "Moderate", "Severe"] as const).map(
-        (option) => ({ value: option, label: option }),
+        (option) => ({ value: option, label: symptomLabel(option, isEs) }),
       )}
       className={FIELD_ROW}
       labelClassName={FIELD_LABEL}
@@ -91,10 +96,12 @@ export function CounterField({
   label,
   value,
   onChange,
+  isEs = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
+  isEs?: boolean;
 }) {
   return (
     <div className={`${FIELD_ROW} h-full`}>
@@ -103,7 +110,7 @@ export function CounterField({
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
-          aria-label={`Decrease ${label}`}
+          aria-label={`${isEs ? "Disminuir" : "Decrease"} ${label}`}
           className="flex size-10 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Minus className="size-3.5" />
@@ -114,7 +121,7 @@ export function CounterField({
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          aria-label={`Increase ${label}`}
+          aria-label={`${isEs ? "Aumentar" : "Increase"} ${label}`}
           className="flex size-10 cursor-pointer items-center justify-center rounded-control-small bg-surface text-fg-muted shadow-control transition-colors hover:text-fg-brand"
         >
           <Plus className="size-3.5" />
@@ -128,20 +135,23 @@ export function SeverityRow({
   label,
   value,
   onChange,
+  isEs = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
+  isEs?: boolean;
 }) {
   const pct = Math.min(100, Math.max(0, (value / 10) * 100));
 
   return (
     <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3.5 py-3 transition-colors hover:border-line-strong">
       <span className="w-32 shrink-0 truncate text-body-sm font-semibold text-fg-secondary sm:w-36">
-        {label}
+        {symptomLabel(label, isEs)}
       </span>
       <input
         type="range"
+        aria-label={symptomLabel(label, isEs)}
         min="0"
         max="10"
         value={value}
@@ -198,10 +208,12 @@ export function SymptomChips({
   options,
   selected,
   onToggle,
+  isEs = false,
 }: {
   options: string[];
   selected: string[];
   onToggle: (item: string) => void;
+  isEs?: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -218,7 +230,7 @@ export function SymptomChips({
                 : "border-line bg-surface text-fg-secondary hover:border-primary-edge hover:text-fg-brand"
             }`}
           >
-            {sym}
+            {symptomLabel(sym, isEs)}
           </button>
         );
       })}
@@ -229,9 +241,11 @@ export function SymptomChips({
 export function MoodPicker({
   value,
   onChange,
+  isEs = false,
 }: {
   value: number;
   onChange: (v: number) => void;
+  isEs?: boolean;
 }) {
   return (
     <div className="grid grid-cols-5 gap-2 sm:gap-3">
@@ -257,7 +271,7 @@ export function MoodPicker({
                 active ? "text-fg-brand" : "text-fg-muted"
               }`}
             >
-              {m.label}
+              {symptomLabel(m.label, isEs)}
             </span>
           </button>
         );

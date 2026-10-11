@@ -47,12 +47,21 @@ describe("Before the ER library", () => {
 
   it("never uses triage wording", () => {
     const banned =
-      /may mean|call (your clinic )?now|go to the er|based on your symptoms|you should go/i;
+      /may mean|call (your clinic )?now|go to the er\b|based on your symptoms|you should go/i;
     for (const topic of BEFORE_THE_ER_TOPICS) {
+      /* Every field a member reads, not only the main ones: the boxed note
+         and the grouped questions were once left out of this check. */
       const text = [
+        topic.titleEn,
+        topic.summaryEn,
         ...topic.educationEn,
-        ...topic.pointsEn.map((p) => p.text),
+        topic.pointsTitleEn,
+        ...topic.pointsEn.flatMap((p) => [p.term, p.text]),
         ...topic.questionsEn,
+        ...(topic.questionGroupsEn ?? []).flatMap((g) => [g.title, ...g.items]),
+        ...(topic.noteEn
+          ? [topic.noteEn.title, ...topic.noteEn.paragraphs]
+          : []),
         ...topic.safetyEn,
       ].join(" ");
       expect(text, topic.slug).not.toMatch(banned);

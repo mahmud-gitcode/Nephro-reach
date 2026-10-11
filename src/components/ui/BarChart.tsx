@@ -2,6 +2,7 @@
 
 import React, { useId } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { CATEGORICAL_TONES, SeriesTone, toneVar } from "./Chart";
 
 /* ==========================================================================
@@ -76,6 +77,7 @@ export function BarChart({
   height = 160,
   className,
 }: BarChartProps) {
+  const isEs = useLanguageCode() === "ES";
   const tableId = useId();
   const top = yMax ?? niceMax(bars.map((b) => b.value));
 
@@ -195,8 +197,8 @@ export function BarChart({
           <caption>{label}</caption>
           <thead>
             <tr>
-              <th scope="col">Category</th>
-              <th scope="col">Value</th>
+              <th scope="col">{isEs ? "Categoría" : "Category"}</th>
+              <th scope="col">{isEs ? "Valor" : "Value"}</th>
             </tr>
           </thead>
           <tbody>

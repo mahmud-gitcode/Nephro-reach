@@ -141,7 +141,14 @@ export function MetricCards({
                 </span>
               </p>
               <p className="mt-stack-xs text-caption text-fg-muted">
-                {edwNote || w?.edwMetrics?.edwSetBy || "Set by care team."}
+                {/* The stored default is English; show it in the member's language. */}
+                {(() => {
+                  const note =
+                    edwNote || w?.edwMetrics?.edwSetBy || "Set by care team.";
+                  return language === "ES" && note === "Set by care team."
+                    ? "Lo fija tu equipo de atención."
+                    : note;
+                })()}
               </p>
             </div>
           </div>

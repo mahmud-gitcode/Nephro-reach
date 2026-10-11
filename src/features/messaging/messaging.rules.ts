@@ -288,14 +288,14 @@ function localDayKey(iso: string): string {
  * Compared by calendar day rather than by elapsed hours — a message sent at
  * 11pm is "Yesterday" at 1am, not "2 hours ago".
  */
-export function dayLabel(iso: string, now: number): string {
+export function dayLabel(iso: string, now: number, isEs = false): string {
   const key = localDayKey(iso);
   const today = localDayKey(new Date(now).toISOString());
   const yesterday = localDayKey(new Date(now - DAY).toISOString());
 
-  if (key === today) return "Today";
-  if (key === yesterday) return "Yesterday";
-  return new Date(iso).toLocaleDateString(undefined, {
+  if (key === today) return isEs ? "Hoy" : "Today";
+  if (key === yesterday) return isEs ? "Ayer" : "Yesterday";
+  return new Date(iso).toLocaleDateString(isEs ? "es" : undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -319,16 +319,22 @@ export function timeLabel(iso: string): string {
  * subtraction. Past today the clock stops mattering and the day takes
  * over, then the date.
  */
-export function inboxTimeLabel(iso: string, now: number): string {
+export function inboxTimeLabel(
+  iso: string,
+  now: number,
+  /** The member inbox in Spanish; the clinic's is English only. */
+  isEs = false,
+): string {
+  const locale = isEs ? "es" : undefined;
   const key = localDayKey(iso);
   if (key === localDayKey(new Date(now).toISOString())) return timeLabel(iso);
   if (key === localDayKey(new Date(now - DAY).toISOString()))
-    return "Yesterday";
+    return isEs ? "Ayer" : "Yesterday";
   const elapsed = now - new Date(iso).getTime();
   if (elapsed < 7 * DAY) {
-    return new Date(iso).toLocaleDateString(undefined, { weekday: "long" });
+    return new Date(iso).toLocaleDateString(locale, { weekday: "long" });
   }
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -612,7 +618,8 @@ export function memberFilterCounts(conversations: Conversation[]) {
  */
 /* The client (2026-10-06): patients do not message physicians directly.
    They write to the nurse or the care team, who bring the physician in. */
-const PHYSICIAN_ROLE = /(provider|physician|nephrologist|doctor|md|np|app)/i;
+const PHYSICIAN_ROLE =
+  /\b(provider|physician|nephrologist|doctor|md|np|app)\b/i;
 
 /** May a member write to this contact? Not a physician or provider. */
 export function memberCanMessage(contact: Conversation["contact"]): boolean {

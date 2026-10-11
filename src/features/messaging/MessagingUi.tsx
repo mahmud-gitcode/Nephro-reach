@@ -32,6 +32,53 @@ import type { Attachment, Conversation, Message } from "./messaging.types";
  *  conversation, never taller than the window so the composer stays put. */
 export const PANE_HEIGHT = "h-[calc(100dvh-13rem)] min-h-[560px]";
 
+/* The member screen offers Spanish; the clinic screens are English only.
+   So every part takes `isEs` from the member screen and defaults to
+   English, and a member's language choice on a shared computer never
+   reaches the clinic inbox. */
+const COPY = {
+  en: {
+    filters: "Message filters",
+    search: "Search conversations",
+    unread: "unread",
+    attachment: "Has an attachment",
+    noMessages: "No messages yet",
+    you: "You",
+    noMatch: "No conversations match that search.",
+    emptyFolder: "Nothing in this folder.",
+    back: "Back to all conversations",
+    download: "Download",
+    sampleFile:
+      "This sample file was never stored, so there is nothing to download",
+    messages: "Messages",
+    newMessages: "New messages",
+    automated: "Automated reply · ",
+    send: "Send message",
+    hint: "Enter to send · Shift + Enter for a new line",
+  },
+  es: {
+    filters: "Filtros de mensajes",
+    search: "Buscar conversaciones",
+    unread: "sin leer",
+    attachment: "Tiene un archivo adjunto",
+    noMessages: "Aún no hay mensajes",
+    you: "Tú",
+    noMatch: "Ninguna conversación coincide con esa búsqueda.",
+    emptyFolder: "No hay nada en esta carpeta.",
+    back: "Volver a todas las conversaciones",
+    download: "Descargar",
+    sampleFile:
+      "Este archivo de ejemplo nunca se guardó, así que no hay nada que descargar",
+    messages: "Mensajes",
+    newMessages: "Mensajes nuevos",
+    automated: "Respuesta automática · ",
+    send: "Enviar mensaje",
+    hint: "Enter para enviar · Shift + Enter para una nueva línea",
+  },
+} as const;
+
+const copyFor = (isEs = false) => (isEs ? COPY.es : COPY.en);
+
 /* --------------------------------------------------------------------------
    Avatar
    -------------------------------------------------------------------------- */
@@ -83,15 +130,17 @@ export function InboxFilters<T extends string>({
   options,
   value,
   onChange,
+  isEs,
 }: {
   options: ReadonlyArray<FilterOption<T>>;
   value: T;
   onChange: (next: T) => void;
+  isEs?: boolean;
 }) {
   return (
     <div
       role="group"
-      aria-label="Message filters"
+      aria-label={copyFor(isEs).filters}
       className="flex shrink-0 gap-0.5 overflow-x-auto rounded-field bg-surface-sunken p-0.5"
     >
       {options.map((option) => {
@@ -135,10 +184,12 @@ export function InboxSearch({
   value,
   onChange,
   placeholder,
+  isEs,
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder: string;
+  isEs?: boolean;
 }) {
   return (
     <Input
@@ -147,7 +198,7 @@ export function InboxSearch({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      aria-label="Search conversations"
+      aria-label={copyFor(isEs).search}
       leadingIcon={<Search aria-hidden="true" />}
       className="shrink-0"
     />
@@ -171,6 +222,7 @@ export function ConversationItem({
   unread,
   active,
   onSelect,
+  isEs,
 }: {
   avatar: React.ReactNode;
   title: string;
@@ -182,8 +234,10 @@ export function ConversationItem({
   unread: number;
   active: boolean;
   onSelect: () => void;
+  isEs?: boolean;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
+  const copy = copyFor(isEs);
 
   /* Arrow keys can move the selection past the edge of a scrolled list.
      `nearest` keeps a row that is already visible exactly where it is. */
@@ -198,7 +252,9 @@ export function ConversationItem({
         type="button"
         onClick={onSelect}
         aria-current={active ? "true" : undefined}
-        aria-label={unread > 0 ? `${title}, ${unread} unread` : undefined}
+        aria-label={
+          unread > 0 ? `${title}, ${unread} ${copy.unread}` : undefined
+        }
         className={cn(
           "relative flex w-full cursor-pointer items-center gap-inline-md rounded-card-nested px-inset-sm py-inset-sm text-left",
           "transition-colors duration-150 ease-standard",
@@ -244,7 +300,7 @@ export function ConversationItem({
             </span>
             {hasAttachment ? (
               <Paperclip
-                aria-label="Has an attachment"
+                aria-label={copy.attachment}
                 className="size-3.5 shrink-0 text-fg-muted"
               />
             ) : null}
@@ -261,20 +317,30 @@ export function ConversationItem({
 }
 
 /** "You: …" for my own last message, the text otherwise. */
-export function previewOf(conversation: Conversation, mine: Message["author"]) {
+export function previewOf(
+  conversation: Conversation,
+  mine: Message["author"],
+  isEs = false,
+) {
+  const copy = copyFor(isEs);
   const last = rules.lastMessage(conversation);
-  if (!last) return "No messages yet";
+  if (!last) return copy.noMessages;
   const text =
     last.body || (last.attachment ? `📎 ${last.attachment.name}` : "");
-  return last.author === mine ? `You: ${text}` : text;
+  return last.author === mine ? `${copy.you}: ${text}` : text;
 }
 
-export function EmptyList({ searching }: { searching: boolean }) {
+export function EmptyList({
+  searching,
+  isEs,
+}: {
+  searching: boolean;
+  isEs?: boolean;
+}) {
+  const copy = copyFor(isEs);
   return (
     <p className="px-inset-sm py-inset-md text-center text-body-sm text-fg-muted">
-      {searching
-        ? "No conversations match that search."
-        : "Nothing in this folder."}
+      {searching ? copy.noMatch : copy.emptyFolder}
     </p>
   );
 }
@@ -289,12 +355,14 @@ export function ThreadHeader({
   subtitle,
   extra,
   onBack,
+  isEs,
 }: {
   avatar: React.ReactNode;
   title: string;
   subtitle?: React.ReactNode;
   extra?: React.ReactNode;
   onBack: () => void;
+  isEs?: boolean;
 }) {
   return (
     <header className="flex shrink-0 items-center gap-inline-md border-b border-line px-inset-md py-inset-sm">
@@ -304,7 +372,7 @@ export function ThreadHeader({
         size="small"
         iconOnly
         onClick={onBack}
-        aria-label="Back to all conversations"
+        aria-label={copyFor(isEs).back}
         className="lg:hidden"
       >
         <ArrowLeft aria-hidden="true" />
@@ -324,12 +392,15 @@ export function ThreadHeader({
 export function AttachmentCard({
   attachment,
   onBrand,
+  isEs,
 }: {
   attachment: Attachment;
   /* Inside a brand-filled bubble the usual borders vanish, so the card
      switches to translucent white rather than a second colour scheme. */
   onBrand: boolean;
+  isEs?: boolean;
 }) {
+  const copy = copyFor(isEs);
   /* A photo is the point of the message, so it shows as itself; a file row
      would make the nurse click to see a red exit site. */
   if (attachment.imageUrl) {
@@ -374,17 +445,13 @@ export function AttachmentCard({
       </span>
       <Button
         disabled={!attachment.dataUrl}
-        title={
-          attachment.dataUrl
-            ? undefined
-            : "This sample file was never stored, so there is nothing to download"
-        }
+        title={attachment.dataUrl ? undefined : copy.sampleFile}
         onClick={() => downloadAttachment(attachment)}
         variant="neutral"
         appearance="fill-stroke"
         size="small"
         iconOnly
-        aria-label={`Download ${attachment.name}`}
+        aria-label={`${copy.download} ${attachment.name}`}
       >
         <Download aria-hidden="true" />
       </Button>
@@ -406,6 +473,7 @@ export function MessageLog({
   otherName,
   firstUnreadId,
   now,
+  isEs,
 }: {
   conversation: Conversation;
   /** The author on this side of the screen. */
@@ -414,8 +482,10 @@ export function MessageLog({
   otherName: string;
   firstUnreadId: string | null;
   now: number;
+  isEs?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const copy = copyFor(isEs);
   const groups = useMemo(
     () => rules.groupByDay(conversation.messages),
     [conversation.messages],
@@ -429,12 +499,12 @@ export function MessageLog({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-inset-md py-inset-md">
-      <ol className="space-y-stack-lg" aria-label="Messages">
+      <ol className="space-y-stack-lg" aria-label={copy.messages}>
         {groups.map((group) => (
           <li key={group.dayKey}>
             <p className="mb-stack-md flex items-center gap-inline-md text-caption text-fg-muted">
               <span aria-hidden="true" className="h-px flex-1 bg-line" />
-              {rules.dayLabel(group.messages[0].sentAt, now)}
+              {rules.dayLabel(group.messages[0].sentAt, now, isEs)}
               <span aria-hidden="true" className="h-px flex-1 bg-line" />
             </p>
             <ol>
@@ -460,7 +530,7 @@ export function MessageLog({
                           aria-hidden="true"
                           className="h-px flex-1 bg-brand-600"
                         />
-                        New messages
+                        {copy.newMessages}
                         <span
                           aria-hidden="true"
                           className="h-px flex-1 bg-brand-600"
@@ -489,6 +559,7 @@ export function MessageLog({
                         <AttachmentCard
                           attachment={message.attachment}
                           onBrand={isMine}
+                          isEs={isEs}
                         />
                       ) : null}
                       <p
@@ -498,9 +569,9 @@ export function MessageLog({
                         )}
                       >
                         <span className="sr-only">
-                          {isMine ? "You" : otherName},{" "}
+                          {isMine ? copy.you : otherName},{" "}
                         </span>
-                        {message.automated ? "Automated reply · " : ""}
+                        {message.automated ? copy.automated : ""}
                         {rules.timeLabel(message.sentAt)}
                       </p>
                     </div>
@@ -544,6 +615,7 @@ export function Composer({
   placeholder,
   label,
   confirmSend,
+  isEs,
 }: {
   /** Runs before the send, e.g. the safety notice; it calls `send` when
    *  the member confirms, so a cancel keeps what they typed. */
@@ -555,8 +627,10 @@ export function Composer({
   onSend: (body: string, attachment?: Attachment) => void;
   placeholder: string;
   label: string;
+  isEs?: boolean;
 }) {
   const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const copy = copyFor(isEs);
   const [pending, setPending] = useState<Attachment | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
 
@@ -591,6 +665,7 @@ export function Composer({
             <PendingAttachment
               attachment={pending}
               onRemove={() => setPending(null)}
+              isEs={isEs}
             />
           ) : null}
           {attachError ? (
@@ -619,6 +694,7 @@ export function Composer({
             setAttachError(null);
           }}
           onError={setAttachError}
+          isEs={isEs}
         />
         <textarea
           ref={fieldRef}
@@ -643,7 +719,7 @@ export function Composer({
           iconOnly
           disabled={!canSend}
           loading={sending}
-          aria-label="Send message"
+          aria-label={copy.send}
         >
           <Send aria-hidden="true" />
         </Button>
@@ -652,7 +728,7 @@ export function Composer({
         id="composer-hint"
         className="mt-stack-xs hidden text-caption text-fg-muted sm:block"
       >
-        Enter to send · Shift + Enter for a new line
+        {copy.hint}
       </p>
     </div>
   );

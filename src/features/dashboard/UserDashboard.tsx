@@ -351,7 +351,9 @@ export default function UserDashboard() {
               title={
                 nextClass?.joinUrl
                   ? undefined
-                  : "The join link appears here once it is added"
+                  : language === "ES"
+                    ? "El enlace para unirse aparece aquí cuando se agrega"
+                    : "The join link appears here once it is added"
               }
               onClick={() =>
                 nextClass?.joinUrl &&

@@ -32,6 +32,7 @@ function readAsDataUrl(file: File): Promise<string> {
 /** A picked file as an attachment, or an error message to show instead. */
 export async function toAttachment(
   file: File,
+  isEs = false,
 ): Promise<{ attachment: Attachment } | { error: string }> {
   if (file.type.startsWith("image/")) {
     const imageUrl = await downscaleToDataUrl(file);
@@ -45,7 +46,9 @@ export async function toAttachment(
   }
   if (file.size > MAX_FILE_BYTES) {
     return {
-      error: `That file is ${sizeLabel(file.size)}. Files up to ${sizeLabel(MAX_FILE_BYTES)} can be attached for now; photos of any size are shrunk to fit.`,
+      error: isEs
+        ? `Ese archivo pesa ${sizeLabel(file.size)}. Por ahora se pueden adjuntar archivos de hasta ${sizeLabel(MAX_FILE_BYTES)}; las fotos de cualquier tamaño se reducen para que quepan.`
+        : `That file is ${sizeLabel(file.size)}. Files up to ${sizeLabel(MAX_FILE_BYTES)} can be attached for now; photos of any size are shrunk to fit.`,
     };
   }
   return {

@@ -11,6 +11,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    Modal
@@ -117,6 +118,7 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const isEs = useLanguageCode() === "ES";
   const titleId = useId();
   const descriptionId = useId();
 
@@ -356,7 +358,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               className="cursor-pointer rounded-control-small p-1 text-fg-muted transition-colors duration-150 hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-edge"
-              aria-label="Close dialog"
+              aria-label={isEs ? "Cerrar ventana" : "Close dialog"}
             >
               <X className="h-5 w-5" aria-hidden="true" />
             </button>

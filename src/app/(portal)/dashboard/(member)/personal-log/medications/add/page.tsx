@@ -190,7 +190,9 @@ export default function AddMedicationPage() {
               size: "small",
               iconOnly: true,
             })}
-            aria-label="Close add medication"
+            aria-label={
+              isEs ? "Cerrar agregar medicamento" : "Close add medication"
+            }
           >
             <X />
           </Link>

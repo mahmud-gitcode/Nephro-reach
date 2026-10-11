@@ -1,6 +1,7 @@
 "use client";
 
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
+import { useLanguage } from "@/context/LanguageContext";
 import { LogMediaBar, appendText } from "./LogMediaBar";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -52,6 +53,11 @@ export default function DialysisDaySymptomLogForm({
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
   const router = useRouter();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  /* English and Spanish for this form's own text; the symptom names and
+     answers go through symptomLabel, so what is saved stays in English. */
+  const tx = (en: string, es: string) => (isEs ? es : en);
 
   const [activeTab, setActiveTab] = useState<number>(1);
 
@@ -266,19 +272,22 @@ export default function DialysisDaySymptomLogForm({
   ];
 
   const summaryItems = [
-    { label: "Treatment Type", value: treatmentType },
-    { label: "Start Time", value: startTime },
-    { label: "End Time", value: endTime },
-    { label: "Location", value: location },
-    { label: "Care Team", value: careTeam },
-    { label: "Post Weight", value: postWeightSummary },
+    {
+      label: tx("Treatment Type", "Tipo de tratamiento"),
+      value: treatmentType,
+    },
+    { label: tx("Start Time", "Hora de inicio"), value: startTime },
+    { label: tx("End Time", "Hora de fin"), value: endTime },
+    { label: tx("Location", "Lugar"), value: location },
+    { label: tx("Care Team", "Equipo de atención"), value: careTeam },
+    { label: tx("Post Weight", "Peso posterior"), value: postWeightSummary },
   ];
 
   const steps = [
-    { id: 1, label: "Pre-Dialysis" },
-    { id: 2, label: "During Session" },
-    { id: 3, label: "Post & Vitals" },
-    { id: 4, label: "Full View" },
+    { id: 1, label: tx("Pre-Dialysis", "Antes de la diálisis") },
+    { id: 2, label: tx("During Session", "Durante la sesión") },
+    { id: 3, label: tx("Post & Vitals", "Después y signos vitales") },
+    { id: 4, label: tx("Full View", "Vista completa") },
   ];
 
   return (
@@ -287,7 +296,7 @@ export default function DialysisDaySymptomLogForm({
       <div className="w-full rounded-card border border-line bg-surface p-6 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <h1 className="text-heading-4 font-bold tracking-tight text-fg">
-            Dialysis Day Log
+            {tx("Dialysis Day Log", "Registro del día de diálisis")}
           </h1>
 
           <div className="flex flex-wrap items-end gap-3">
@@ -297,7 +306,7 @@ export default function DialysisDaySymptomLogForm({
                 htmlFor="dialysis-log-date"
                 className="text-caption font-bold text-fg-muted"
               >
-                Date
+                {tx("Date", "Fecha")}
               </label>
               <input
                 id="dialysis-log-date"
@@ -318,7 +327,7 @@ export default function DialysisDaySymptomLogForm({
             {/* Dialysis Day Toggle with Label */}
             <div className="flex flex-col gap-1.5">
               <span className="text-caption font-bold text-fg-muted">
-                Dialysis Day
+                {tx("Dialysis Day", "Día de diálisis")}
               </span>
               <div className={`${SEGMENT_TRACK} h-9`}>
                 <button
@@ -328,7 +337,7 @@ export default function DialysisDaySymptomLogForm({
                     isDialysisDay ? SEGMENT_ACTIVE : SEGMENT_IDLE
                   }`}
                 >
-                  Yes
+                  {tx("Yes", "Sí")}
                 </button>
                 <button
                   type="button"
@@ -348,7 +357,8 @@ export default function DialysisDaySymptomLogForm({
                 type="button"
                 onClick={() => share.guard(() => window.print())}
                 className="flex size-9 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand"
-                title="Print"
+                title={tx("Print", "Imprimir")}
+                aria-label={tx("Print", "Imprimir")}
               >
                 <Printer className="size-4" />
               </button>
@@ -358,6 +368,7 @@ export default function DialysisDaySymptomLogForm({
                   type="button"
                   onClick={onClose}
                   className="flex size-9 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-secondary"
+                  aria-label={tx("Close", "Cerrar")}
                 >
                   <X className="size-4" />
                 </button>
@@ -398,7 +409,10 @@ export default function DialysisDaySymptomLogForm({
                   <button
                     type="button"
                     onClick={() => setActiveTab(step.id)}
-                    className="group flex shrink-0 cursor-pointer flex-col items-center gap-2 sm:flex-row"
+                    /* Shrinks on a phone, and the label wraps under its
+                       circle: the Spanish step names are too long for one
+                       line at 390px. */
+                    className="group flex min-w-0 shrink cursor-pointer flex-col items-center gap-2 sm:flex-row"
                   >
                     <span
                       className={`flex size-8 shrink-0 items-center justify-center rounded-pill text-caption font-bold transition-colors ${
@@ -414,11 +428,13 @@ export default function DialysisDaySymptomLogForm({
                       ) : step.id <= 3 ? (
                         step.id
                       ) : (
-                        <span className="text-caption">ALL</span>
+                        <span className="text-caption">
+                          {tx("ALL", "TODO")}
+                        </span>
                       )}
                     </span>
                     <span
-                      className={`text-center text-caption font-bold transition-colors sm:text-left ${
+                      className={`text-center text-caption font-bold text-balance transition-colors sm:text-left ${
                         isCurrent
                           ? "text-fg-brand"
                           : isCompleted
@@ -432,7 +448,7 @@ export default function DialysisDaySymptomLogForm({
 
                   {idx < arr.length - 1 && (
                     <div
-                      className={`mx-2 h-0.5 flex-1 rounded-pill transition-colors sm:mx-4 ${
+                      className={`mx-2 h-0.5 min-w-3 flex-1 rounded-pill transition-colors sm:mx-4 ${
                         activeTab > step.id ? "bg-primary-solid" : "bg-line"
                       }`}
                     />
@@ -450,26 +466,35 @@ export default function DialysisDaySymptomLogForm({
             <div className="space-y-6 p-5 sm:p-6">
               {/* All options from reference image: Attendance Tracking */}
               <section className="space-y-3">
-                <SectionTitle>Attendance &amp; Schedule</SectionTitle>
+                <SectionTitle>
+                  {tx("Attendance & Schedule", "Asistencia y horario")}
+                </SectionTitle>
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   <BinaryToggle
-                    label="Treatment attended"
+                    label={tx("Treatment attended", "Asistió al tratamiento")}
+                    isEs={isEs}
                     value={attended}
                     onChange={setAttended}
                   />
                   <BinaryToggle
-                    label="Arrived late"
+                    label={tx("Arrived late", "Llegó tarde")}
+                    isEs={isEs}
                     value={arrivedLate}
                     onChange={setArrivedLate}
                   />
                   <CounterField
-                    label="Missed treatments"
+                    label={tx("Missed treatments", "Tratamientos perdidos")}
+                    isEs={isEs}
                     value={missedTreatments}
                     onChange={setMissedTreatments}
                   />
                   <BinaryToggle
-                    label="Rescheduled missed treatment"
+                    label={tx(
+                      "Rescheduled missed treatment",
+                      "Reprogramó el tratamiento perdido",
+                    )}
+                    isEs={isEs}
                     value={rescheduled}
                     onChange={setRescheduled}
                   />
@@ -478,16 +503,27 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Pre-dialysis condition */}
               <section className="space-y-3">
-                <SectionTitle>Pre-Treatment Condition</SectionTitle>
+                <SectionTitle>
+                  {tx(
+                    "Pre-Treatment Condition",
+                    "Estado antes del tratamiento",
+                  )}
+                </SectionTitle>
 
                 {/* Mood */}
-                <MoodPicker value={preFeel} onChange={setPreFeel} />
+                <MoodPicker value={preFeel} onChange={setPreFeel} isEs={isEs} />
 
                 {/* Pre Symptoms Chips */}
                 <div className={`${PANEL} space-y-3`}>
-                  <PanelTitle>Pre-Dialysis Symptoms</PanelTitle>
+                  <PanelTitle>
+                    {tx(
+                      "Pre-Dialysis Symptoms",
+                      "Síntomas antes de la diálisis",
+                    )}
+                  </PanelTitle>
                   <SymptomChips
                     options={preOptions}
+                    isEs={isEs}
                     selected={preSymptoms}
                     onToggle={(sym) =>
                       toggleItem(preSymptoms, setPreSymptoms, sym)
@@ -497,12 +533,18 @@ export default function DialysisDaySymptomLogForm({
 
                 {/* Pre Severity Sliders */}
                 <div className={`${PANEL} space-y-3`}>
-                  <PanelTitle>Symptom Severity (0–10)</PanelTitle>
+                  <PanelTitle>
+                    {tx(
+                      "Symptom Severity (0–10)",
+                      "Intensidad de los síntomas (0–10)",
+                    )}
+                  </PanelTitle>
                   <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
                     {Object.keys(preSeverity).map((key) => (
                       <SeverityRow
                         key={key}
                         label={key}
+                        isEs={isEs}
                         value={preSeverity[key]}
                         onChange={(v) =>
                           setPreSeverity({ ...preSeverity, [key]: v })
@@ -519,11 +561,17 @@ export default function DialysisDaySymptomLogForm({
           {(activeTab === 2 || activeTab === 4) && (
             <div className="space-y-6 p-5 sm:p-6">
               <section className="space-y-3">
-                <SectionTitle>During Treatment</SectionTitle>
+                <SectionTitle>
+                  {tx("During Treatment", "Durante el tratamiento")}
+                </SectionTitle>
 
                 {/* Sequential for extra fluid removal (yes/no) */}
                 <BinaryToggle
-                  label="Sequential for extra fluid removal"
+                  label={tx(
+                    "Sequential for extra fluid removal",
+                    "Secuencial para retirar más líquido",
+                  )}
+                  isEs={isEs}
                   value={sequentialFluidRemoval}
                   onChange={setSequentialFluidRemoval}
                 />
@@ -531,26 +579,32 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Core 5-state symptoms from user reference image */}
               <section className="space-y-3">
-                <SectionTitle>Intra-Session Symptoms</SectionTitle>
+                <SectionTitle>
+                  {tx("Intra-Session Symptoms", "Síntomas durante la sesión")}
+                </SectionTitle>
 
                 <div className="space-y-2.5">
                   <SeverityFiveToggle
-                    label="Cramping"
+                    label={tx("Cramping", "Calambres")}
+                    isEs={isEs}
                     value={crampingSeverity}
                     onChange={setCrampingSeverity}
                   />
                   <SeverityFiveToggle
-                    label="Low BP"
+                    label={tx("Low BP", "Presión baja")}
+                    isEs={isEs}
                     value={lowBpSeverity}
                     onChange={setLowBpSeverity}
                   />
                   <SeverityFiveToggle
-                    label="High BP"
+                    label={tx("High BP", "Presión alta")}
+                    isEs={isEs}
                     value={highBpSeverity}
                     onChange={setHighBpSeverity}
                   />
                   <SeverityFiveToggle
-                    label="Fatigue"
+                    label={tx("Fatigue", "Fatiga")}
+                    isEs={isEs}
                     value={fatigueSeverity}
                     onChange={setFatigueSeverity}
                   />
@@ -559,9 +613,12 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Other intra symptoms */}
               <div className={`${PANEL} space-y-3`}>
-                <PanelTitle>Additional Symptoms</PanelTitle>
+                <PanelTitle>
+                  {tx("Additional Symptoms", "Otros síntomas")}
+                </PanelTitle>
                 <SymptomChips
                   options={intraOptions}
+                  isEs={isEs}
                   selected={intraSymptoms}
                   onToggle={(sym) =>
                     toggleItem(intraSymptoms, setIntraSymptoms, sym)
@@ -571,12 +628,17 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Notes */}
               <div className={`${PANEL} space-y-3`}>
-                <PanelTitle>Session Notes</PanelTitle>
+                <PanelTitle>
+                  {tx("Session Notes", "Notas de la sesión")}
+                </PanelTitle>
                 <textarea
                   rows={3}
                   value={intraNotes}
                   onChange={(e) => setIntraNotes(e.target.value)}
-                  placeholder="Session details, interventions, or notes..."
+                  placeholder={tx(
+                    "Session details, interventions, or notes...",
+                    "Detalles de la sesión, intervenciones o notas...",
+                  )}
                   className="w-full resize-none rounded-control border border-line bg-surface p-3 text-body-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -588,16 +650,31 @@ export default function DialysisDaySymptomLogForm({
             <div className="space-y-6 p-5 sm:p-6">
               {/* Post-dialysis condition — mirrors the Pre-Treatment block on Tab 1 */}
               <section className="space-y-3">
-                <SectionTitle>Post-Treatment Condition</SectionTitle>
+                <SectionTitle>
+                  {tx(
+                    "Post-Treatment Condition",
+                    "Estado después del tratamiento",
+                  )}
+                </SectionTitle>
 
                 {/* Mood */}
-                <MoodPicker value={postFeel} onChange={setPostFeel} />
+                <MoodPicker
+                  value={postFeel}
+                  onChange={setPostFeel}
+                  isEs={isEs}
+                />
 
                 {/* Post Symptoms Chips */}
                 <div className={`${PANEL} space-y-3`}>
-                  <PanelTitle>Post-Dialysis Symptoms</PanelTitle>
+                  <PanelTitle>
+                    {tx(
+                      "Post-Dialysis Symptoms",
+                      "Síntomas después de la diálisis",
+                    )}
+                  </PanelTitle>
                   <SymptomChips
                     options={postOptions}
+                    isEs={isEs}
                     selected={postSymptoms}
                     onToggle={(sym) =>
                       toggleItem(postSymptoms, setPostSymptoms, sym)
@@ -607,12 +684,18 @@ export default function DialysisDaySymptomLogForm({
 
                 {/* Post Severity Sliders */}
                 <div className={`${PANEL} space-y-3`}>
-                  <PanelTitle>Symptom Severity (0–10)</PanelTitle>
+                  <PanelTitle>
+                    {tx(
+                      "Symptom Severity (0–10)",
+                      "Intensidad de los síntomas (0–10)",
+                    )}
+                  </PanelTitle>
                   <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
                     {Object.keys(postSeverity).map((key) => (
                       <SeverityRow
                         key={key}
                         label={key}
+                        isEs={isEs}
                         value={postSeverity[key]}
                         onChange={(v) =>
                           setPostSeverity({ ...postSeverity, [key]: v })
@@ -625,24 +708,35 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Recovery Time Severity Toggle */}
               <section className="space-y-3">
-                <SectionTitle>Post-Treatment Recovery</SectionTitle>
+                <SectionTitle>
+                  {tx(
+                    "Post-Treatment Recovery",
+                    "Recuperación después del tratamiento",
+                  )}
+                </SectionTitle>
 
                 <div className="space-y-2.5">
                   <BinaryToggle
-                    label="Ended early"
+                    label={tx("Ended early", "Terminó antes")}
+                    isEs={isEs}
                     value={endedEarly}
                     onChange={setEndedEarly}
                   />
 
                   <SeverityFiveToggle
-                    label="Recovery time"
+                    label={tx("Recovery time", "Tiempo de recuperación")}
+                    isEs={isEs}
                     value={recoverySeverity}
                     onChange={setRecoverySeverity}
                   />
 
                   {/* Medication Prescribed Compliance */}
                   <BinaryToggle
-                    label="Prescribed medications taken"
+                    label={tx(
+                      "Prescribed medications taken",
+                      "Tomó los medicamentos recetados",
+                    )}
+                    isEs={isEs}
                     value={medsTakenPrescribed}
                     onChange={setMedsTakenPrescribed}
                   />
@@ -650,43 +744,53 @@ export default function DialysisDaySymptomLogForm({
 
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-primary-soft-line bg-primary-soft px-3.5 py-3">
                   <span className="text-caption font-medium text-fg-muted">
-                    Need a prompt for your doses?
+                    {tx(
+                      "Need a prompt for your doses?",
+                      "¿Necesitas un aviso para tus dosis?",
+                    )}
                   </span>
                   <Link
                     href="/dashboard/personal-log/medications"
                     className="inline-flex items-center gap-1.5 text-caption font-bold text-fg-brand hover:text-fg-brand hover:underline"
                   >
                     <Bell className="size-3.5" />
-                    <span>Set Medication Reminders</span>
+                    <span>
+                      {tx(
+                        "Set Medication Reminders",
+                        "Configurar recordatorios de medicamentos",
+                      )}
+                    </span>
                   </Link>
                 </div>
               </section>
 
               {/* Clinical Vitals Cards */}
               <section className="space-y-3">
-                <SectionTitle>Clinical Measurements</SectionTitle>
+                <SectionTitle>
+                  {tx("Clinical Measurements", "Mediciones clínicas")}
+                </SectionTitle>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <VitalCard
-                    label="Fluid Removed"
+                    label={tx("Fluid Removed", "Líquido retirado")}
                     icon={Droplets}
                     value={fluidRemoved}
                     onChange={setFluidRemoved}
                     placeholder="2.3"
-                    unit="Liters"
+                    unit={tx("Liters", "Litros")}
                     inputMode="decimal"
                   />
                   <VitalCard
-                    label="Post Weight"
+                    label={tx("Post Weight", "Peso posterior")}
                     icon={Scale}
                     value={postWeight}
                     onChange={setPostWeight}
                     placeholder="72.4"
-                    unit={`kg${preWeight ? ` (pre: ${preWeight})` : ""}`}
+                    unit={`kg${preWeight ? ` (${tx("pre", "antes")}: ${preWeight})` : ""}`}
                     inputMode="decimal"
                   />
                   <VitalCard
-                    label="Blood Pressure"
+                    label={tx("Blood Pressure", "Presión arterial")}
                     icon={HeartPulse}
                     value={bpPost}
                     onChange={setBpPost}
@@ -695,7 +799,7 @@ export default function DialysisDaySymptomLogForm({
                     inputMode="text"
                   />
                   <VitalCard
-                    label="Heart Rate"
+                    label={tx("Heart Rate", "Frecuencia cardíaca")}
                     icon={Activity}
                     value={pulsePost}
                     onChange={setPulsePost}
@@ -708,17 +812,25 @@ export default function DialysisDaySymptomLogForm({
 
               {/* Notes field */}
               <div className={`${PANEL} space-y-3`}>
-                <PanelTitle>Recovery Notes</PanelTitle>
+                <PanelTitle>
+                  {tx("Recovery Notes", "Notas de recuperación")}
+                </PanelTitle>
                 <textarea
                   rows={3}
                   value={generalNotes}
                   onChange={(e) => setGeneralNotes(e.target.value)}
-                  placeholder="Post-dialysis notes or recovery observations..."
+                  placeholder={tx(
+                    "Post-dialysis notes or recovery observations...",
+                    "Notas después de la diálisis u observaciones de la recuperación...",
+                  )}
                   className="w-full resize-none rounded-control border border-line bg-surface p-3 text-body-sm text-fg-secondary transition-colors outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring"
                 />
                 <LogMediaBar
-                  logName="Dialysis day log"
-                  isEs={false}
+                  logName={tx(
+                    "Dialysis day log",
+                    "Registro del día de diálisis",
+                  )}
+                  isEs={isEs}
                   onDictated={(text) =>
                     setGeneralNotes((current: string) =>
                       appendText(current, text),
@@ -739,7 +851,7 @@ export default function DialysisDaySymptomLogForm({
               className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <ArrowLeft className="size-3.5" />
-              <span>Previous Page</span>
+              <span>{tx("Previous Page", "Página anterior")}</span>
             </button>
           ) : onClose ? (
             <button
@@ -747,14 +859,14 @@ export default function DialysisDaySymptomLogForm({
               onClick={onClose}
               className="inline-flex h-10 cursor-pointer items-center rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
-              Cancel
+              {tx("Cancel", "Cancelar")}
             </button>
           ) : (
             <Link
               href="/dashboard/personal-log/dialysis-treatment"
               className="inline-flex h-10 items-center rounded-control border border-line bg-surface px-4 text-caption font-bold text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg"
             >
-              Cancel
+              {tx("Cancel", "Cancelar")}
             </Link>
           )}
 
@@ -764,7 +876,7 @@ export default function DialysisDaySymptomLogForm({
               onClick={() => setActiveTab(activeTab + 1)}
               className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-5 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
-              <span>Next Page</span>
+              <span>{tx("Next Page", "Página siguiente")}</span>
               <ArrowRight className="size-3.5" />
             </button>
           ) : (
@@ -774,7 +886,7 @@ export default function DialysisDaySymptomLogForm({
               className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-6 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
             >
               <Check className="size-4" />
-              <span>Save Log</span>
+              <span>{tx("Save Log", "Guardar registro")}</span>
             </button>
           )}
         </div>

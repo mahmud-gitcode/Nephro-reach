@@ -759,3 +759,49 @@ describe("open questions for Reports", () => {
     ).toBe(false);
   });
 });
+
+/* The client (2026-10-06): patients do not message physicians directly. The
+   pattern once held invisible backspace bytes where \b was meant, so it
+   matched nobody and every physician thread stayed open to the member. */
+describe("who a member may message", () => {
+  const person = (role: string): CareTeamContact => ({
+    name: "Someone",
+    role,
+    kind: "person",
+  });
+
+  it.each(["Provider", "Physician", "Nephrologist", "Doctor", "MD", "NP"])(
+    "blocks %s",
+    (role) => {
+      expect(rules.memberCanMessage(person(role))).toBe(false);
+    },
+  );
+
+  it.each([
+    "Dialysis Nurse",
+    "Renal Dietitian",
+    "Social Worker",
+    "Scheduling",
+    "Care Coordinator",
+  ])("allows %s", (role) => {
+    expect(rules.memberCanMessage(person(role))).toBe(true);
+  });
+
+  it("always allows the office itself", () => {
+    expect(
+      rules.memberCanMessage({
+        name: "Riverside Nephrology Associates",
+        role: "Your Nephrology Office",
+        kind: "facility",
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves physicians out of the seeded care team a member can write to", () => {
+    const team = rules
+      .careTeamFor(rules.seedConversations(Date.now()))
+      .filter(rules.memberCanMessage)
+      .map((c) => c.role);
+    expect(team).not.toContain("Provider");
+  });
+});

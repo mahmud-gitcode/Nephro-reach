@@ -9,6 +9,7 @@ import { ComposeModal } from "@/features/community/ComposeModal";
 import { routeForCommunity } from "@/features/community/moderation";
 import CommunityDisclaimer from "@/features/community/CommunityDisclaimer";
 import { useModerationQueue } from "@/features/community/useModerationQueue";
+import { useCommunityLikes } from "@/features/community/useCommunityLikes";
 import { approvedPosts } from "@/features/community/moderationQueue.rules";
 import type {
   CommunityTab,
@@ -123,7 +124,7 @@ export default function CommunityPage() {
   const authorName = user?.name || (language === "ES" ? "Usted" : "You");
 
   const [activeTabId, setActiveTabId] = useState<string>("all");
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const { liked, toggle: toggleLike } = useCommunityLikes();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>(
@@ -318,12 +319,7 @@ export default function CommunityPage() {
                 <button
                   type="button"
                   className="group -my-2.5 flex min-h-11 cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  onClick={() =>
-                    setLiked((current) => ({
-                      ...current,
-                      [post.id]: !current[post.id],
-                    }))
-                  }
+                  onClick={() => toggleLike(post.id)}
                   aria-pressed={isLiked}
                   aria-label={comm?.likePostAria || "Like post"}
                 >

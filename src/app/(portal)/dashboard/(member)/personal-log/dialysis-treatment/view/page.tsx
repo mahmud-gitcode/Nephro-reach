@@ -112,8 +112,9 @@ function TreatmentDetailContent() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-stack-xl text-fg-secondary">
-      {/* HEADER BAR: BACK LINK & EDIT ACTION */}
-      <div className="flex items-center justify-between gap-3">
+      {/* HEADER BAR: BACK LINK & EDIT ACTION. Wraps on a phone, where the
+          Spanish labels are too long to sit side by side. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/dashboard/personal-log/dialysis-treatment"
           className={buttonStyles({

@@ -13,12 +13,15 @@ export function AttachButton({
   onError,
   disabled,
   appearance = "fill-stroke",
+  isEs = false,
 }: {
   onAttach: (attachment: Attachment) => void;
   onError: (message: string) => void;
   disabled?: boolean;
   /** "ghost" inside a composer that already draws the field's border. */
   appearance?: "fill-stroke" | "ghost";
+  /** The member screen in Spanish; staff screens are English only. */
+  isEs?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState(false);
@@ -38,11 +41,15 @@ export function AttachButton({
           if (!file) return;
           setReading(true);
           try {
-            const result = await toAttachment(file);
+            const result = await toAttachment(file, isEs);
             if ("error" in result) onError(result.error);
             else onAttach(result.attachment);
           } catch {
-            onError("That file could not be read. Try another.");
+            onError(
+              isEs
+                ? "No se pudo leer ese archivo. Prueba con otro."
+                : "That file could not be read. Try another.",
+            );
           } finally {
             setReading(false);
           }
@@ -55,7 +62,7 @@ export function AttachButton({
         iconOnly
         loading={reading}
         disabled={disabled}
-        aria-label="Attach a file"
+        aria-label={isEs ? "Adjuntar un archivo" : "Attach a file"}
         onClick={() => input.current?.click()}
       >
         <Paperclip aria-hidden="true" />
@@ -68,9 +75,11 @@ export function AttachButton({
 export function PendingAttachment({
   attachment,
   onRemove,
+  isEs = false,
 }: {
   attachment: Attachment;
   onRemove: () => void;
+  isEs?: boolean;
 }) {
   return (
     <div className="flex items-center gap-inline-md rounded-control border border-line bg-surface p-inset-xs">
@@ -100,7 +109,7 @@ export function PendingAttachment({
         appearance="ghost"
         size="small"
         iconOnly
-        aria-label={`Remove ${attachment.name}`}
+        aria-label={`${isEs ? "Quitar" : "Remove"} ${attachment.name}`}
         onClick={onRemove}
       >
         <X aria-hidden="true" />

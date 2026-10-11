@@ -70,6 +70,7 @@ const MEMBER_OWNED = new Set([
   "care-team-questions",
   "classroom-learner",
   "clinic-notices",
+  "community-likes",
   "custom-lab-results",
   "dialysis-access-photos",
   "dialysis-clinic",

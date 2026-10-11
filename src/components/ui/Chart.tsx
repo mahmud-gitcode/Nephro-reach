@@ -2,6 +2,7 @@
 
 import React, { useId, useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    LineChart · Sparkline
@@ -135,6 +136,7 @@ export function LineChart({
   area,
   className,
 }: LineChartProps) {
+  const isEs = useLanguageCode() === "ES";
   const tableId = useId();
   const gradientId = useId();
   const count = xLabels.length;
@@ -372,7 +374,7 @@ export function LineChart({
           <caption>{label}</caption>
           <thead>
             <tr>
-              <th scope="col">Point</th>
+              <th scope="col">{isEs ? "Punto" : "Point"}</th>
               {series.map((s) => (
                 <th key={s.id} scope="col">
                   {s.label}
@@ -434,6 +436,7 @@ export function Sparkline({
   height = 32,
   className,
 }: SparklineProps) {
+  const isEs = useLanguageCode() === "ES";
   if (points.length === 0) return null;
 
   const min = Math.min(...points);
@@ -452,7 +455,7 @@ export function Sparkline({
   return (
     <svg
       role="img"
-      aria-label={`${label}. From ${points[0]} to ${points[points.length - 1]}.`}
+      aria-label={`${label}. ${isEs ? "De" : "From"} ${points[0]} ${isEs ? "a" : "to"} ${points[points.length - 1]}.`}
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}

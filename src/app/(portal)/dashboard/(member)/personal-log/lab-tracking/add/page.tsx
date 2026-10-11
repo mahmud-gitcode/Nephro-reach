@@ -224,7 +224,7 @@ const designCategories: CategoryGroup[] = [
 
 export default function AddLabTrackingPage() {
   const router = useRouter();
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const l = dictionary?.labTracking;
 
   const [labDate, setLabDate] = useState<string>("2024-05-31");
@@ -355,7 +355,7 @@ export default function AddLabTrackingPage() {
           </h1>
           <Link
             href="/dashboard/personal-log/lab-tracking"
-            aria-label="Close form"
+            aria-label={language === "ES" ? "Cerrar formulario" : "Close form"}
             className={buttonStyles({
               variant: "neutral",
               appearance: "stroke",

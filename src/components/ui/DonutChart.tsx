@@ -2,6 +2,7 @@
 
 import React, { useId } from "react";
 import { CATEGORICAL_TONES, SeriesTone, toneVar } from "./Chart";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    DonutChart
@@ -50,6 +51,7 @@ export function DonutChart({
   thickness = 26,
   className,
 }: DonutChartProps) {
+  const isEs = useLanguageCode() === "ES";
   const tableId = useId();
   const total = segments.reduce((sum, s) => sum + Math.max(s.value, 0), 0);
 
@@ -104,9 +106,9 @@ export function DonutChart({
           <caption>{label}</caption>
           <thead>
             <tr>
-              <th scope="col">Segment</th>
-              <th scope="col">Value</th>
-              <th scope="col">Share</th>
+              <th scope="col">{isEs ? "Segmento" : "Segment"}</th>
+              <th scope="col">{isEs ? "Valor" : "Value"}</th>
+              <th scope="col">{isEs ? "Porcentaje" : "Share"}</th>
             </tr>
           </thead>
           <tbody>

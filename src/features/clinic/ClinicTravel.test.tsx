@@ -92,6 +92,24 @@ describe("Travel Requests", () => {
     });
   });
 
+  it("will not confirm a trip with no facility or treatment times", async () => {
+    const user = userEvent.setup();
+    render(<ClinicTravel />);
+    await user.click(
+      screen.getByRole("button", { name: /Manage Maria Lopez's trip/ }),
+    );
+    const dialog = screen.getByRole("dialog");
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "Status" }),
+      "confirmed",
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Save changes" }),
+    ).toBeDisabled();
+    expect(within(dialog).getByText(/To confirm, add/)).toBeInTheDocument();
+    expect(saveArrangement).not.toHaveBeenCalled();
+  });
+
   it("shows finished trips under Past, by patient", async () => {
     const user = userEvent.setup();
     render(<ClinicTravel />);

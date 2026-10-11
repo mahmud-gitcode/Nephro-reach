@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import en from "@/dictionaries/en.json";
 import es from "@/dictionaries/es.json";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
@@ -90,11 +96,24 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const dictionary = dictionaries[language];
 
+  /* The page's language for screen readers and the browser's own spell
+     check and translation offer: Spanish text announced in an English voice
+     is close to unintelligible. */
+  useEffect(() => {
+    document.documentElement.lang = language === "ES" ? "es" : "en";
+  }, [language]);
+
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, dictionary }}>
       {children}
     </LanguageContext.Provider>
   );
+}
+
+/** The language for shared components that may render outside a
+ *  LanguageProvider (the UI kit, its tests): English when there is none. */
+export function useLanguageCode(): LanguageCode {
+  return useContext(LanguageContext)?.language ?? "EN";
 }
 
 export function useLanguage() {

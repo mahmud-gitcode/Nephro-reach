@@ -316,7 +316,9 @@ export default function MyLabsPage() {
           {/* The view's toolbar: the tabs and the category filter on the
               left, the page's actions on the right, the primary one last. */}
           <div className="flex flex-wrap items-center justify-between gap-inline-md">
-            <div className="flex flex-wrap items-center gap-inline-md">
+            {/* min-w-0 lets the tabs scroll inside their own track on a
+                phone instead of pushing the page wider than the screen. */}
+            <div className="flex max-w-full min-w-0 flex-wrap items-center gap-inline-md">
               <Tabs
                 label={
                   language === "ES" ? "Vista de laboratorios" : "Lab views"
@@ -335,7 +337,11 @@ export default function MyLabsPage() {
               {activeTab !== "history" && (
                 <Select
                   selectSize="small"
-                  aria-label="Filter by category"
+                  aria-label={
+                    language === "ES"
+                      ? "Filtrar por categoría"
+                      : "Filter by category"
+                  }
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
@@ -406,7 +412,11 @@ export default function MyLabsPage() {
                         "Previous Result"}
                       <span className="relative mt-0.5 flex items-center tracking-normal normal-case">
                         <select
-                          aria-label="Select comparison lab draw date"
+                          aria-label={
+                            language === "ES"
+                              ? "Elegir la fecha de laboratorio para comparar"
+                              : "Select comparison lab draw date"
+                          }
                           value={compareDateId}
                           onChange={(e) => setCompareDateId(e.target.value)}
                           className="w-full cursor-pointer appearance-none rounded-control-small bg-transparent pr-5 text-label-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -532,7 +542,7 @@ export default function MyLabsPage() {
                               label={`${getTestDisplayName(
                                 test.id,
                                 test.name,
-                              )} trend`}
+                              )} ${language === "ES" ? "tendencia" : "trend"}`}
                               width={80}
                               height={24}
                             />

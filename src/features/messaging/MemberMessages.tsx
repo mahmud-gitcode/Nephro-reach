@@ -78,7 +78,13 @@ import type {
 /** The centre's own number, shown where a member may need a human now. */
 const URGENT_PHONE = "(803) 555-0187";
 
-function ContactAvatar({ contact }: { contact: CareTeamContact }) {
+function ContactAvatar({
+  contact,
+  isEs,
+}: {
+  contact: CareTeamContact;
+  isEs: boolean;
+}) {
   /* A facility gets a building rather than initials: "RDC" reads as a
      person with an odd name, and a member thinks of the centre as a place. */
   return (
@@ -92,7 +98,7 @@ function ContactAvatar({ contact }: { contact: CareTeamContact }) {
       {contact.online ? (
         <span
           role="img"
-          aria-label="Online"
+          aria-label={isEs ? "En línea" : "Online"}
           className="bg-chart-positive absolute right-0 bottom-0 size-3 rounded-pill ring-2 ring-surface"
         />
       ) : null}
@@ -108,38 +114,52 @@ type Compose = { body: string; category: MessageCategory };
  * message is the wrong tool. The care team itself is the list on the left —
  * every name there is a thread — so it is not repeated here.
  */
-function MemberRail({ onCompose }: { onCompose: (compose: Compose) => void }) {
+function MemberRail({
+  onCompose,
+  isEs,
+}: {
+  onCompose: (compose: Compose) => void;
+  isEs: boolean;
+}) {
   return (
     <div className="space-y-stack-lg">
-      <RailSection title="Quick Actions">
+      <RailSection title={isEs ? "Acciones rápidas" : "Quick Actions"}>
         <ul className="space-y-0.5">
           <RailActionItem
-            label="Request a Call"
+            label={isEs ? "Pedir una llamada" : "Request a Call"}
             icon={PhoneCall}
             onClick={() =>
               onCompose({
                 category: "care-team",
-                body: "Could someone give me a call, please? The best time to reach me is ",
+                body: isEs
+                  ? "¿Alguien podría llamarme, por favor? La mejor hora para localizarme es "
+                  : "Could someone give me a call, please? The best time to reach me is ",
               })
             }
           />
           <RailActionItem
-            label="Schedule an Appointment"
+            label={isEs ? "Programar una cita" : "Schedule an Appointment"}
             icon={CalendarPlus}
             onClick={() =>
               onCompose({
                 category: "appointments",
-                body: "I would like to schedule an appointment. Days and times that work for me: ",
+                body: isEs
+                  ? "Me gustaría programar una cita. Días y horas que me funcionan: "
+                  : "I would like to schedule an appointment. Days and times that work for me: ",
               })
             }
           />
           <RailActionItem
-            label="View My Lab Results"
+            label={
+              isEs ? "Ver mis resultados de laboratorio" : "View My Lab Results"
+            }
             icon={BarChart3}
             href="/dashboard/personal-log/lab-tracking"
           />
           <RailActionItem
-            label="Ask a General Question"
+            label={
+              isEs ? "Hacer una pregunta general" : "Ask a General Question"
+            }
             icon={CircleHelp}
             onClick={() => onCompose({ category: "care-team", body: "" })}
           />
@@ -159,10 +179,13 @@ function MemberRail({ onCompose }: { onCompose: (compose: Compose) => void }) {
             className="size-5 shrink-0 text-fg-brand"
           />
           <div className="min-w-0">
-            <h2 className="text-heading-5 text-fg">Need help now?</h2>
+            <h2 className="text-heading-5 text-fg">
+              {isEs ? "¿Necesitas ayuda ahora?" : "Need help now?"}
+            </h2>
             <p className="mt-0.5 text-body-sm text-fg-secondary">
-              Messages are not watched around the clock. For anything urgent,
-              call your dialysis center.
+              {isEs
+                ? "Los mensajes no se revisan las 24 horas. Para cualquier cosa urgente, llama a tu centro de diálisis."
+                : "Messages are not watched around the clock. For anything urgent, call your dialysis center."}
             </p>
           </div>
         </div>
@@ -176,7 +199,7 @@ function MemberRail({ onCompose }: { onCompose: (compose: Compose) => void }) {
           )}
         >
           <Phone aria-hidden="true" />
-          Call {URGENT_PHONE}
+          {isEs ? "Llamar al" : "Call"} {URGENT_PHONE}
         </a>
       </section>
     </div>
@@ -199,7 +222,8 @@ export default function MemberMessages() {
   /* Not an emergency service: the safety notice before every send, and
      the automatic reply after hours (client, 2026-10-07). */
   const { language } = useLanguage();
-  const safety = useSafetyNotice(language === "ES");
+  const isEs = language === "ES";
+  const safety = useSafetyNotice(isEs);
   const afterHoursReply = useAfterHoursReply();
 
   /* The member's slice of the one platform-wide store. Their thread with
@@ -285,10 +309,10 @@ export default function MemberMessages() {
 
   const unread = rules.totalUnread(conversations);
   const filters: FilterOption<MemberInboxFilter>[] = [
-    { id: "all", label: "All" },
-    { id: "care-team", label: "Care Team" },
-    { id: "appointments", label: "Appointments" },
-    { id: "archived", label: "Archived" },
+    { id: "all", label: isEs ? "Todos" : "All" },
+    { id: "care-team", label: isEs ? "Equipo de atención" : "Care Team" },
+    { id: "appointments", label: isEs ? "Citas" : "Appointments" },
+    { id: "archived", label: isEs ? "Archivados" : "Archived" },
   ];
 
   return (
@@ -299,12 +323,16 @@ export default function MemberMessages() {
         action={
           /* Quiet status first, the page's one primary action last. */
           <div className="flex flex-wrap items-center gap-inline-md">
-            {unread > 0 ? <Badge tone="info">{unread} unread</Badge> : null}
+            {unread > 0 ? (
+              <Badge tone="info">
+                {unread} {isEs ? "sin leer" : "unread"}
+              </Badge>
+            ) : null}
             <Button
               leadingIcon={<SquarePen aria-hidden="true" />}
               onClick={() => setComposing({ category: "care-team", body: "" })}
             >
-              New Message
+              {isEs ? "Nuevo mensaje" : "New Message"}
             </Button>
           </div>
         }
@@ -314,10 +342,13 @@ export default function MemberMessages() {
         <Alert
           tone="danger"
           onDismiss={clearWriteError}
-          title="Your message was not saved"
+          title={
+            isEs ? "Tu mensaje no se guardó" : "Your message was not saved"
+          }
         >
-          Messages are kept in this browser, which can refuse them in a private
-          window or when site data is full. Nothing was sent to your care team.
+          {isEs
+            ? "Los mensajes se guardan en este navegador, que puede rechazarlos en una ventana privada o cuando los datos del sitio están llenos. No se envió nada a tu equipo de atención."
+            : "Messages are kept in this browser, which can refuse them in a private window or when site data is full. Nothing was sent to your care team."}
         </Alert>
       ) : null}
 
@@ -329,8 +360,12 @@ export default function MemberMessages() {
         empty={
           <EmptyState
             icon={<MessageSquarePlus />}
-            title="No messages yet"
-            description="When your care team writes to you, their messages will appear here."
+            title={isEs ? "Aún no hay mensajes" : "No messages yet"}
+            description={
+              isEs
+                ? "Cuando tu equipo de atención te escriba, sus mensajes aparecerán aquí."
+                : "When your care team writes to you, their messages will appear here."
+            }
           />
         }
       >
@@ -347,18 +382,20 @@ export default function MemberMessages() {
               <InboxSearch
                 value={query}
                 onChange={setQuery}
-                placeholder="Search messages..."
+                placeholder={isEs ? "Buscar mensajes..." : "Search messages..."}
+                isEs={isEs}
               />
               <InboxFilters
                 options={filters}
                 value={filter}
                 onChange={setFilter}
+                isEs={isEs}
               />
               {visible.length === 0 ? (
-                <EmptyList searching={query.length > 0} />
+                <EmptyList searching={query.length > 0} isEs={isEs} />
               ) : (
                 <ol
-                  aria-label="Conversations"
+                  aria-label={isEs ? "Conversaciones" : "Conversations"}
                   className="-mx-inset-xs min-h-0 flex-1 space-y-0.5 overflow-y-auto px-inset-xs"
                 >
                   {visible.map((conversation) => {
@@ -367,17 +404,23 @@ export default function MemberMessages() {
                       <ConversationItem
                         key={conversation.id}
                         avatar={
-                          <ContactAvatar contact={conversation.contact} />
+                          <ContactAvatar
+                            contact={conversation.contact}
+                            isEs={isEs}
+                          />
                         }
                         title={conversation.contact.name}
-                        preview={previewOf(conversation, "member")}
+                        preview={previewOf(conversation, "member", isEs)}
                         time={
-                          last ? rules.inboxTimeLabel(last.sentAt, now) : null
+                          last
+                            ? rules.inboxTimeLabel(last.sentAt, now, isEs)
+                            : null
                         }
                         hasAttachment={rules.hasAttachment(conversation)}
                         unread={conversation.unread}
                         active={conversation.id === activeId}
                         onSelect={() => open(conversation)}
+                        isEs={isEs}
                       />
                     );
                   })}
@@ -395,14 +438,17 @@ export default function MemberMessages() {
               {active ? (
                 <>
                   <ThreadHeader
-                    avatar={<ContactAvatar contact={active.contact} />}
+                    avatar={
+                      <ContactAvatar contact={active.contact} isEs={isEs} />
+                    }
                     title={active.contact.name}
                     subtitle={
                       active.contact.online
-                        ? `${active.contact.role} · Online`
+                        ? `${active.contact.role} · ${isEs ? "En línea" : "Online"}`
                         : active.contact.role
                     }
                     onBack={() => setActiveId(null)}
+                    isEs={isEs}
                   />
                   <MessageLog
                     conversation={active}
@@ -410,11 +456,13 @@ export default function MemberMessages() {
                     otherName={active.contact.name}
                     firstUnreadId={firstUnreadIdOf(active, unreadAtOpen)}
                     now={now}
+                    isEs={isEs}
                   />
                   {!rules.memberCanMessage(active.contact) ? (
                     <p className="border-t border-line-subtle px-inset-md py-inset-sm text-body-sm text-fg-muted">
-                      Physicians can&apos;t be messaged directly. Message your
-                      nurse or care team and they will bring your physician in.
+                      {isEs
+                        ? "No se puede escribir directamente a los médicos. Escribe a tu enfermera o a tu equipo de atención y ellos incluirán a tu médico."
+                        : "Physicians can't be messaged directly. Message your nurse or care team and they will bring your physician in."}
                     </p>
                   ) : (
                     <Composer
@@ -437,16 +485,23 @@ export default function MemberMessages() {
                           afterHoursReply(),
                         )
                       }
-                      placeholder={`Message ${active.contact.name.split(",")[0]}...`}
-                      label={`Message ${active.contact.name}`}
+                      placeholder={`${isEs ? "Escribe a" : "Message"} ${active.contact.name.split(",")[0]}...`}
+                      label={`${isEs ? "Escribe a" : "Message"} ${active.contact.name}`}
+                      isEs={isEs}
                     />
                   )}
                 </>
               ) : (
                 <NoThread
                   icon={<MessageSquarePlus />}
-                  title="Pick a conversation"
-                  description="Choose someone on your care team to read and reply, or start a new message."
+                  title={
+                    isEs ? "Elige una conversación" : "Pick a conversation"
+                  }
+                  description={
+                    isEs
+                      ? "Elige a alguien de tu equipo de atención para leer y responder, o empieza un mensaje nuevo."
+                      : "Choose someone on your care team to read and reply, or start a new message."
+                  }
                 />
               )}
             </div>
@@ -454,13 +509,15 @@ export default function MemberMessages() {
             {/* On a phone the open thread gets the whole screen; the rail
                 comes back with the list. */}
             <aside
-              aria-label="Quick actions and help"
+              aria-label={
+                isEs ? "Acciones rápidas y ayuda" : "Quick actions and help"
+              }
               className={cn(
                 "border-t border-line p-inset-md lg:col-span-2 lg:block xl:col-span-1 xl:h-[calc(100dvh-13rem)] xl:min-h-[560px] xl:overflow-y-auto xl:border-t-0 xl:border-l",
                 active && "hidden",
               )}
             >
-              <MemberRail onCompose={setComposing} />
+              <MemberRail onCompose={setComposing} isEs={isEs} />
             </aside>
           </div>
         </Card>
@@ -468,9 +525,10 @@ export default function MemberMessages() {
 
       {composing ? (
         <NewMessageModal
-          title="New Message"
-          recipientLabel="To"
+          title={isEs ? "Nuevo mensaje" : "New Message"}
+          recipientLabel={isEs ? "Para" : "To"}
           withCategory
+          isEs={isEs}
           initialBody={composing.body}
           initialCategory={composing.category}
           recipients={[
