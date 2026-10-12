@@ -180,6 +180,28 @@ export function LibraryComposer({
     }
   };
 
+  /* An image post: the picture is the post, so it is also its cover
+     (client, 2026-10-12: "I also want to be able to add images"). */
+  const attachImage = async (file: File) => {
+    setCoverError(false);
+    try {
+      const dataUrl = await downscaleToDataUrl(file);
+      setAttachment({ name: file.name, previewUrl: dataUrl });
+      set({
+        kind: "image",
+        poster: dataUrl,
+        videoSrc: undefined,
+        durationSeconds: undefined,
+        fileSrc: undefined,
+        fileMetaEn: undefined,
+        fileMetaEs: undefined,
+      });
+      setCoverName(file.name);
+    } catch {
+      setCoverError(true);
+    }
+  };
+
   const removeAttachment = () => {
     setAttachment(null);
     set({
@@ -310,6 +332,14 @@ export function LibraryComposer({
               </button>
             </div>
 
+            {attachment.previewUrl && draft.kind === "image" ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */
+              <img
+                src={attachment.previewUrl}
+                alt=""
+                className="mt-stack-sm max-h-80 w-full rounded-control object-contain"
+              />
+            ) : null}
             {attachment.previewUrl && draft.kind === "video" ? (
               <video
                 src={attachment.previewUrl}
@@ -360,6 +390,12 @@ export function LibraryComposer({
               label="Document"
               accept=".pdf,.doc,.docx,application/pdf"
               onPick={attachDocument}
+            />
+            <AttachButton
+              icon={ImageIcon}
+              label="Image post"
+              accept="image/*"
+              onPick={(file) => void attachImage(file)}
             />
             <AttachButton
               icon={ImageIcon}

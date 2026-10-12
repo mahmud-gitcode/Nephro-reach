@@ -32,6 +32,7 @@ import {
   Alert,
   AsyncSection,
   Badge,
+  buttonStyles,
   Button,
   Card,
   EmptyState,
@@ -340,6 +341,24 @@ export default function ManageTableTalkPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-inline-md">
+          {/* Straight to the members' questions: they sat below every
+              episode and the admin could not find them (client, 2026-10-12). */}
+          <a
+            href="#suggested-questions"
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+            })}
+          >
+            <MessageCircleQuestion
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
+            Suggested questions
+            {newQuestionCount > 0 ? (
+              <Badge tone="warning">{newQuestionCount} new</Badge>
+            ) : null}
+          </a>
           <Button
             variant="neutral"
             appearance="fill-stroke"
@@ -457,7 +476,11 @@ export default function ManageTableTalkPage() {
         </AsyncSection>
       </Card>
 
-      <Card as="section" className="mt-stack-lg">
+      <Card
+        as="section"
+        id="suggested-questions"
+        className="mt-stack-lg scroll-mt-24"
+      >
         <h2 className="text-heading-4 text-fg">Suggested questions</h2>
         <p className="mt-0.5 text-body-md text-fg-muted">
           Topic suggestions from members. Nothing here is published, and no

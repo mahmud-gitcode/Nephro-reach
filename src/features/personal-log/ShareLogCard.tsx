@@ -14,9 +14,18 @@ import {
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
+import { useHealthcareTeam } from "@/features/care-team/useHealthcareTeam";
+import {
+  OTHER_RECIPIENT,
+  TeamRecipientSelect,
+} from "@/features/care-team/TeamRecipientSelect";
 
 /* ==========================================================================
-   Share this log — download, print, or email to someone the member picks
+   Share this log — download, print, or send it on
+   --------------------------------------------------------------------------
+   A member sends to someone on their healthcare team, or picks Other, which
+   is Share Outside NephroReach (client, 2026-10-12: sharing stays inside the
+   network, never a free-for-all). Staff still type the address.
    ========================================================================== */
 
 export function ShareLogCard({
@@ -45,6 +54,11 @@ export function ShareLogCard({
      same secure link as Messages (client, 2026-10-07). */
   const isMember = useOptionalAuth()?.user?.role === "user";
   const [outside, setOutside] = useState(false);
+  const { recipients } = useHealthcareTeam();
+  const [recipientId, setRecipientId] = useState("");
+  const picked =
+    recipients.find((member) => member.id === recipientId) ?? recipients[0];
+  const chosen = picked ? picked.id : OTHER_RECIPIENT;
   const emailError = isEmail(to)
     ? undefined
     : isEs
@@ -74,9 +88,13 @@ export function ShareLogCard({
         </h2>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
           {description ??
-            (isEs
-              ? "Descargue su registro, imprímalo o envíelo por correo a quien usted elija."
-              : "Download your log, print it, or email it to someone you choose.")}
+            (isMember
+              ? isEs
+                ? "Descargue su registro, imprímalo o envíelo a alguien de su equipo de salud."
+                : "Download your log, print it, or send it to someone on your healthcare team."
+              : isEs
+                ? "Descargue su registro, imprímalo o envíelo por correo a quien usted elija."
+                : "Download your log, print it, or email it to someone you choose.")}
         </p>
       </div>
 
@@ -112,44 +130,80 @@ export function ShareLogCard({
         </Button>
       </div>
 
-      <form
-        className="flex flex-col gap-inline-md sm:flex-row sm:items-end"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setTried(true);
-          if (emailError || empty) return;
-          share.guard(() => {
-            window.location.href = mailtoHref(
-              to,
-              title,
-              emailBody(title, table, footer),
-            );
-          });
-        }}
-      >
-        <FormField
-          label={isEs ? "Enviar por correo a" : "Email to"}
-          error={tried ? emailError : undefined}
-          className="flex-1"
+      {isMember ? (
+        <form
+          className="flex flex-col gap-inline-md sm:flex-row sm:items-end"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (empty) return;
+            if (chosen === OTHER_RECIPIENT || !picked) {
+              setOutside(true);
+              return;
+            }
+            share.guard(() => {
+              window.location.href = mailtoHref(
+                picked.email,
+                title,
+                emailBody(title, table, footer),
+              );
+            });
+          }}
         >
-          {(field) => (
-            <Input
-              {...field}
-              type="email"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              placeholder={isEs ? "nombre@ejemplo.com" : "name@example.com"}
-            />
-          )}
-        </FormField>
-        <Button
-          type="submit"
-          disabled={empty}
-          leadingIcon={<Mail aria-hidden="true" />}
+          <TeamRecipientSelect
+            recipients={recipients}
+            value={chosen}
+            onChange={setRecipientId}
+            isEs={isEs}
+            className="flex-1"
+          />
+          <Button
+            type="submit"
+            disabled={empty}
+            leadingIcon={<Mail aria-hidden="true" />}
+          >
+            {isEs ? "Enviar" : "Send"}
+          </Button>
+        </form>
+      ) : (
+        <form
+          className="flex flex-col gap-inline-md sm:flex-row sm:items-end"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setTried(true);
+            if (emailError || empty) return;
+            share.guard(() => {
+              window.location.href = mailtoHref(
+                to,
+                title,
+                emailBody(title, table, footer),
+              );
+            });
+          }}
         >
-          {isEs ? "Enviar" : "Send"}
-        </Button>
-      </form>
+          <FormField
+            label={isEs ? "Enviar por correo a" : "Email to"}
+            error={tried ? emailError : undefined}
+            className="flex-1"
+          >
+            {(field) => (
+              <Input
+                {...field}
+                type="email"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+                placeholder={isEs ? "nombre@ejemplo.com" : "name@example.com"}
+              />
+            )}
+          </FormField>
+          <Button
+            type="submit"
+            disabled={empty}
+            leadingIcon={<Mail aria-hidden="true" />}
+          >
+            {isEs ? "Enviar" : "Send"}
+          </Button>
+        </form>
+      )}
       <p className="text-caption text-fg-muted">
         {empty
           ? isEs

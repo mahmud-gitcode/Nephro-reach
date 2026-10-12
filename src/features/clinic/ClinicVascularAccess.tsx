@@ -402,7 +402,11 @@ function PatientModal({
   const [tab, setTab] = useState<PatientTab>(initialTab);
   const [completing, setCompleting] = useState<string | null>(null);
   const upcoming = upcomingAppointments(record, today);
-  const concerns = openConcerns(record);
+  /* Only the reports the member sent to this office (2026-10-12). */
+  const concerns = openConcerns(
+    record,
+    party === "access" ? "access" : "dialysis",
+  );
   const unread = unreadFor(record, party);
 
   function showTab(next: PatientTab) {
@@ -921,7 +925,10 @@ export default function ClinicVascularAccess({
   }, [records, query, status]);
 
   const concerns = records.flatMap((record) =>
-    openConcerns(record).map((concern) => ({ record, concern })),
+    openConcerns(record, atAccess ? "access" : "dialysis").map((concern) => ({
+      record,
+      concern,
+    })),
   );
   /* The dialysis center sees only its own threads. */
   const referrals = threadsFor(store.referrals, office);
@@ -1049,7 +1056,10 @@ export default function ClinicVascularAccess({
                 ) : (
                   rows.map((record) => {
                     const next = nextAppointment(record, today);
-                    const openCount = openConcerns(record).length;
+                    const openCount = openConcerns(
+                      record,
+                      atAccess ? "access" : "dialysis",
+                    ).length;
                     const unread = unreadFor(record, party);
                     return (
                       <TableRow key={record.mrn}>

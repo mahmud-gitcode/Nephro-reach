@@ -2,6 +2,7 @@ import React from "react";
 import DashboardGuard from "@/features/auth/DashboardGuard";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { QueryProvider } from "@/lib/data/QueryProvider";
+import { MemberTourGate } from "@/features/onboarding/MemberTour";
 
 export default function DashboardLayout({
   children,
@@ -14,7 +15,11 @@ export default function DashboardLayout({
     <div data-typeface="portal" className="contents">
       <QueryProvider>
         <DashboardGuard>
-          <DashboardShell>{children}</DashboardShell>
+          <DashboardShell>
+            {children}
+            {/* The guided tour on a member's first visit (2026-10-12). */}
+            <MemberTourGate />
+          </DashboardShell>
         </DashboardGuard>
       </QueryProvider>
     </div>

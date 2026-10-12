@@ -50,7 +50,7 @@ import type { Conversation } from "@/features/messaging/messaging.types";
 import { shouldSuggestNotice } from "@/features/personal-log/check-in/clinicNotice.rules";
 import type { ClinicNotice } from "@/features/personal-log/check-in/clinicNotice.types";
 import {
-  statusOf,
+  isHigh,
   type BpReading,
 } from "@/features/personal-log/blood-pressure/bloodPressure";
 import type { Appointment } from "@/features/personal-log/appointments/appointments";
@@ -317,7 +317,7 @@ export function bpAlerts(
     text: `${r.systolic < 90 ? "Low" : "Very high"} reading ${bp(r)} on ${shortDate(r.date)}`,
   }));
 
-  const high = recent.filter((r) => !isSevereBp(r) && statusOf(r) === "High");
+  const high = recent.filter((r) => !isSevereBp(r) && isHigh(r));
   const repeated: FeedItem[] =
     high.length >= 2
       ? [

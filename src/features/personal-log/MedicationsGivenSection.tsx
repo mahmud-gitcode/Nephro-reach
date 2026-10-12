@@ -102,8 +102,27 @@ const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
   { value: "dose", descEn: "", descEs: "dosis" },
 ];
 
-export default function MedicationsGivenSection() {
+/** "May 31, 2024", the way these rows have always stored their date. */
+function rowDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/* One treatment's medications. Each treatment starts blank; the member can
+   bring in the ones they get every week and tick whether they got them
+   this time (client, 2026-10-12). */
+export default function MedicationsGivenSection({
+  treatmentDate,
+}: {
+  /** yyyy-mm-dd: the treatment these rows belong to. */
+  treatmentDate: string;
+}) {
   const { language } = useLanguage();
+  const dayLabel = rowDate(treatmentDate);
 
   const {
     medications,
@@ -116,6 +135,29 @@ export default function MedicationsGivenSection() {
     saveError,
     dismissSaveError,
   } = useTreatmentMedications();
+  const all = medications;
+  const forDay = all.filter((m) => m.date === dayLabel);
+  /* The medications of the most recent other treatment, to start from. */
+  const lastOther = all.find((m) => m.date !== dayLabel)?.date;
+  const regular = lastOther
+    ? Array.from(
+        new Map(
+          all
+            .filter((m) => m.date === lastOther)
+            .map((m) => [m.medication, m] as const),
+        ).values(),
+      )
+    : [];
+  const bringRegular = () => {
+    regular.forEach((m, index) => {
+      void add({
+        ...m,
+        id: `${Date.now()}-${index}`,
+        date: dayLabel,
+        given: false,
+      }).catch(() => {});
+    });
+  };
 
   // Add Medication Modal State
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -125,7 +167,7 @@ export default function MedicationsGivenSection() {
   const [formDoseUnit, setFormDoseUnit] = useState("mg");
   const [formDoseUnitOther, setFormDoseUnitOther] = useState("");
   const [formReason, setFormReason] = useState("");
-  const [formDate, setFormDate] = useState("May 31, 2024");
+  const [formDate, setFormDate] = useState(dayLabel);
   const [formMedError, setFormMedError] = useState("");
 
   const handleOpenAddMedModal = () => {
@@ -135,7 +177,7 @@ export default function MedicationsGivenSection() {
     setFormDoseUnit("mg");
     setFormDoseUnitOther("");
     setFormReason("");
-    setFormDate("May 31, 2024");
+    setFormDate(dayLabel);
     setFormMedError("");
     setIsMedModalOpen(true);
   };
@@ -292,16 +334,30 @@ export default function MedicationsGivenSection() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {medications.length === 0 ? (
+              {forDay.length === 0 ? (
                 <TableEmptyRow colSpan={6}>
-                  <p className="text-center text-body-sm text-fg-muted">
-                    {language === "ES"
-                      ? "No hay medicamentos registrados para este tratamiento."
-                      : "No medications recorded for this treatment."}
-                  </p>
+                  <div className="space-y-stack-sm text-center">
+                    <p className="text-body-sm text-fg-muted">
+                      {language === "ES"
+                        ? `No hay medicamentos registrados para el tratamiento del ${dayLabel}.`
+                        : `No medications recorded for the ${dayLabel} treatment.`}
+                    </p>
+                    {regular.length > 0 ? (
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={bringRegular}
+                      >
+                        {language === "ES"
+                          ? `Agregar mis medicamentos habituales (${regular.length})`
+                          : `Add my regular medications (${regular.length})`}
+                      </Button>
+                    ) : null}
+                  </div>
                 </TableEmptyRow>
               ) : (
-                medications.map((item) => {
+                forDay.map((item) => {
                   const toggleLabel = item.given
                     ? language === "ES"
                       ? `Desmarcar ${item.medication}`

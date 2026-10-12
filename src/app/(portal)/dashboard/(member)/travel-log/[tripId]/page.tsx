@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { ArrowLeft, Clock, Plane, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import TravelChecklist from "@/features/travel/TravelChecklist";
@@ -64,7 +64,7 @@ export default function TripDetailPage() {
     setPrep,
     requestTimeChange,
     withdrawTimeChange,
-    cancel,
+    requestCancel,
     isPending,
     error,
     refetch,
@@ -72,7 +72,6 @@ export default function TripDetailPage() {
   } = useTrips();
   const trip = trips.find((entry) => entry.id === tripId);
 
-  const router = useRouter();
   const [askingTimeChange, setAskingTimeChange] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [tab, setTab] = useState<TripTab>("info");
@@ -176,7 +175,8 @@ export default function TripDetailPage() {
 
                     {/* Cancelling lives here rather than on the trip card, where
                       a stray tap on a list is too easy. */}
-                    {tripPhase(trip) === "home" ? null : (
+                    {tripPhase(trip) === "home" ||
+                    trip.cancelRequestedAt ? null : (
                       <Button
                         size="small"
                         variant="danger"
@@ -193,6 +193,19 @@ export default function TripDetailPage() {
                   </div>
                 </div>
               </Card>
+
+              {trip.cancelRequestedAt ? (
+                <Alert
+                  tone="warning"
+                  title={
+                    isEs ? "Cancelación solicitada" : "Cancellation requested"
+                  }
+                >
+                  {isEs
+                    ? `Pidió a su centro de diálisis que cancele este viaje el ${new Date(trip.cancelRequestedAt).toLocaleString("es-ES")}. Su centro lo gestionará con el otro centro, o le dirá si debe llamar usted.`
+                    : `You asked your dialysis center to cancel this trip on ${new Date(trip.cancelRequestedAt).toLocaleString("en-US")}. They will handle it with the other unit, or tell you if you need to call yourself.`}
+                </Alert>
+              ) : null}
 
               {trip.facilityNote.trim() ? (
                 <Card as="section" padding="small" className="h-full">
@@ -333,8 +346,8 @@ export default function TripDetailPage() {
           title={isEs ? "¿Cancelar este viaje?" : "Cancel this trip?"}
           description={
             isEs
-              ? `Tu solicitud para ${destinationLabel(trip)} se eliminará. Si tu clínica ya está trabajando en ella, avísales.`
-              : `Your request for ${destinationLabel(trip)} will be removed. If your clinic is already working on it, let them know.`
+              ? `Su centro de diálisis recibirá una solicitud para cancelar ${destinationLabel(trip)}. El viaje queda en su lista con la fecha, como prueba de que lo pidió.`
+              : `Your dialysis center gets a request to cancel ${destinationLabel(trip)}. The trip stays on your list with the date, as proof you asked.`
           }
           footer={
             <div className="flex flex-wrap items-center justify-end gap-inline-md">
@@ -348,12 +361,11 @@ export default function TripDetailPage() {
               <Button
                 variant="danger"
                 onClick={() => {
-                  cancel(trip.id);
+                  requestCancel(trip.id);
                   setConfirmingCancel(false);
-                  router.push("/dashboard/travel-log");
                 }}
               >
-                {isEs ? "Cancelar viaje" : "Cancel trip"}
+                {isEs ? "Pedir la cancelación" : "Request cancellation"}
               </Button>
             </div>
           }

@@ -3,6 +3,10 @@
 import React, { useState } from "react";
 import { Droplet, Dumbbell, Plus, Target, Utensils } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  formatFluid,
+  useFluidUnit,
+} from "@/features/personal-log/nutrition/fluidUnit";
 import { Alert, AsyncSection, Skeleton, TabPanel, Tabs } from "@/components/ui";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -23,7 +27,6 @@ import {
 } from "@/features/personal-log/nutrition/NutritionModals";
 import { NutritionDayPicker } from "@/features/personal-log/nutrition/NutritionDayPicker";
 import { NUTRIENT_ORDER } from "@/features/personal-log/nutrition/nutrition.constants";
-import { formatNumber } from "@/features/personal-log/nutrition/nutrition.format";
 import type { MealKey } from "@/features/personal-log/nutrition/nutrition.types";
 import { useNutritionLog } from "@/features/personal-log/nutrition/useNutritionLog";
 import {
@@ -38,6 +41,7 @@ import { useExerciseLog } from "@/features/personal-log/exercise/useExerciseLog"
 import type { ExerciseEntry } from "@/features/personal-log/exercise/exercise.types";
 export default function NutritionPage() {
   const { language, dictionary } = useLanguage();
+  const { unit: fluidUnit } = useFluidUnit();
   const n = dictionary?.nutrition;
   const isEs = language === "ES";
 
@@ -124,7 +128,7 @@ export default function NutritionPage() {
     },
     {
       title: n?.keyMetrics?.fluids?.title || "Fluids",
-      description: `${formatNumber(fluidMl)} / ${formatNumber(goals.fluid)} ml`,
+      description: `${formatFluid(fluidMl, fluidUnit)} / ${formatFluid(goals.fluid, fluidUnit)}`,
       value: `${fluidPercent}%`,
       progress: fluidPercent,
       icon: Droplet,

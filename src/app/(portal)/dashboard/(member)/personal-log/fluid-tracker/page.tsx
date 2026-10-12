@@ -13,6 +13,7 @@ import { WeightTrendChart } from "@/features/personal-log/fluid/panels/WeightTre
 import { GoalProgress } from "@/features/personal-log/fluid/panels/GoalProgress";
 import { FluidIntakeTrend } from "@/features/personal-log/fluid/panels/FluidIntakeTrend";
 import { UrinaryOutput } from "@/features/personal-log/fluid/panels/UrinaryOutput";
+import { FluidSymptomTracker } from "@/features/personal-log/fluid/panels/FluidSymptomTracker";
 import { AlertsInsights } from "@/features/personal-log/fluid/panels/AlertsInsights";
 import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
 import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
@@ -335,6 +336,8 @@ export default function FluidTrackerPage() {
         todayDateStr={todayDateStr}
         onOpenEdwModal={() => setIsEdwModalOpen(true)}
       />
+
+      <FluidSymptomTracker entries={entries} isEs={language === "ES"} />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <WeightTrendChart />

@@ -28,6 +28,7 @@ import {
   SYMPTOMS,
   bpError,
   statusOf,
+  categoryOf,
   type BpDraft,
   type BpError,
   type BpReading,
@@ -38,12 +39,6 @@ import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloo
 import { useNow } from "@/lib/utils/useNow";
 
 const LIST = "/dashboard/personal-log/blood-pressure";
-
-const statusTone = {
-  High: "danger",
-  Elevated: "warning",
-  Normal: "success",
-} as const;
 
 const ERROR_EN: Record<BpError, string> = {
   date: "Pick a date on or before today",
@@ -207,8 +202,8 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
             {t("bloodPressure.add.howIFelt")}
           </h2>
           {preview ? (
-            <Badge tone={statusTone[preview]}>
-              {t(`bloodPressure.statuses.${preview}`) || preview}
+            <Badge tone={categoryOf(preview).tone}>
+              {isEs ? categoryOf(preview).es : categoryOf(preview).en}
             </Badge>
           ) : null}
         </div>
@@ -313,7 +308,11 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
 
       <Card padding="small" className="mt-stack-lg">
         <SegmentedChoice
-          label={t("bloodPressure.add.medicationQuestion")}
+          label={
+            isEs
+              ? "¿Tomé hoy mi medicamento para la presión arterial según lo recetado?"
+              : "Did I take my blood pressure medication as prescribed today?"
+          }
           value={medication}
           onChange={(next: MedicationState) => setMedication(next)}
           options={MEDICATION_STATES.map((m) => ({

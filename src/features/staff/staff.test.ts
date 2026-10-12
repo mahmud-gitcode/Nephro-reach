@@ -78,7 +78,12 @@ describe("whose staff", () => {
     expect(
       organizationFor({ role: "clinic", org: "Riverside Dialysis Center" })?.id,
     ).toBe("riverside");
-    expect(organizationFor({ role: "admin" })).toBeUndefined();
+    /* NephroReach's own team (client, 2026-10-12): the admin owns it. */
+    expect(organizationFor({ role: "admin" })?.id).toBe("nephroreach");
+    expect(roleCan("Administrative Support", "admin.support", "admin")).toBe(
+      true,
+    );
+    expect(roleCan("Content Manager", "admin.support", "admin")).toBe(false);
     expect(roleCan("Office Manager", "staff.manage")).toBe(true);
     expect(roleCan("Administrator", "staff.manage", "access")).toBe(true);
     expect(roleCan("Nurse", "staff.manage")).toBe(false);

@@ -25,10 +25,13 @@ const draft: BpDraft = {
 
 describe("blood pressure", () => {
   it("reads status from the page's guide", () => {
-    expect(statusOf({ systolic: 145, diastolic: 80 })).toBe("High");
-    expect(statusOf({ systolic: 120, diastolic: 91 })).toBe("High");
-    expect(statusOf({ systolic: 132, diastolic: 78 })).toBe("Elevated");
-    expect(statusOf({ systolic: 125, diastolic: 82 })).toBe("Elevated");
+    expect(statusOf({ systolic: 185, diastolic: 100 })).toBe("Crisis");
+    expect(statusOf({ systolic: 150, diastolic: 125 })).toBe("Crisis");
+    expect(statusOf({ systolic: 145, diastolic: 80 })).toBe("Stage 2");
+    expect(statusOf({ systolic: 120, diastolic: 91 })).toBe("Stage 2");
+    expect(statusOf({ systolic: 132, diastolic: 78 })).toBe("Stage 1");
+    expect(statusOf({ systolic: 115, diastolic: 82 })).toBe("Stage 1");
+    expect(statusOf({ systolic: 125, diastolic: 78 })).toBe("Elevated");
     expect(statusOf({ systolic: 118, diastolic: 74 })).toBe("Normal");
   });
 

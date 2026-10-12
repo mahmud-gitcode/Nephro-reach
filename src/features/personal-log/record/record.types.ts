@@ -11,6 +11,11 @@ export interface ProviderOrder {
   date: string;
   order: string;
   completed: boolean;
+  /** "yyyy-mm-ddTHH:MM", local time: when to remind the member
+   *  (client, 2026-10-12). Absent for no reminder. */
+  remindAt?: string;
+  /** Set when the member dismissed the reminder without finishing. */
+  reminderDone?: boolean;
 }
 
 export interface LoggedSymptomEntry {

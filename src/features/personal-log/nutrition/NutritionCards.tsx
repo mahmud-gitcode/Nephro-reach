@@ -3,6 +3,7 @@
 import React from "react";
 import { ChevronRight, Droplet, Plus, Trash2, Utensils } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { formatFluid, useFluidUnit } from "./fluidUnit";
 import {
   Button,
   Card,
@@ -443,6 +444,7 @@ export function FluidTracker({
 }) {
   const { dictionary } = useLanguage();
   const n = dictionary?.nutrition;
+  const { unit } = useFluidUnit();
 
   const percent = goalMl > 0 ? Math.round((fluidMl / goalMl) * 100) : 0;
   // Each drop represents a seventh of the daily goal
@@ -457,10 +459,10 @@ export function FluidTracker({
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-heading-1 leading-none font-semibold text-fg">
-              {formatNumber(fluidMl)} ml
+              {formatFluid(fluidMl, unit)}
             </p>
             <p className="mt-1 text-body-sm leading-5 font-medium text-fg-muted">
-              of {formatNumber(goalMl)} ml
+              of {formatFluid(goalMl, unit)}
             </p>
           </div>
           <p

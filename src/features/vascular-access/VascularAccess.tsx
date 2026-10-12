@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   BookOpen,
+  Camera,
   Car,
   MessagesSquare,
   Pencil,
@@ -38,9 +39,11 @@ import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import { useMemberName } from "@/features/auth/useMemberName";
 import * as messaging from "@/features/messaging/messaging.rules";
-import AccessPhotosSection from "@/features/personal-log/dialysis/AccessPhotosSection";
 import { PhotoPicker } from "@/features/personal-log/dialysis/PhotoPicker";
-import { useAccessPhotos } from "@/features/personal-log/dialysis/useAccessPhotos";
+import {
+  downscaleToDataUrl,
+  useAccessPhotos,
+} from "@/features/personal-log/dialysis/useAccessPhotos";
 import {
   ACCESS_TYPES,
   CONCERN_KINDS,
@@ -62,6 +65,7 @@ import {
   upcomingAppointments,
   type AccessConcern,
   type AccessRecord,
+  type ConcernRecipient,
   type MobilityLevel,
 } from "./vascularAccess.data";
 import {
@@ -320,6 +324,24 @@ function concernDate(iso: string, isEs: boolean) {
 
 /* The member's reports under the button (client, 2026-10-06): they can see
    what they sent, and edit, delete or resend it. */
+/** "Vascular access center and dialysis center". */
+function recipientsLabel(
+  sendTo: ConcernRecipient[] | undefined,
+  isEs: boolean,
+): string {
+  const who = sendTo ?? ["access", "dialysis"];
+  const names = who.map((w) =>
+    w === "access"
+      ? isEs
+        ? "centro de acceso vascular"
+        : "vascular access center"
+      : isEs
+        ? "centro de diálisis"
+        : "dialysis center",
+  );
+  return names.join(isEs ? " y " : " and ");
+}
+
 function ConcernCard({ record, store, isEs }: Props) {
   const [open, setOpen] = useState<AccessConcern | "new" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -392,7 +414,8 @@ function ConcernCard({ record, store, isEs }: Props) {
                     {concern.detail}
                   </p>
                   <p className="text-caption text-fg-muted">
-                    {isEs ? "Enviado " : "Sent "}
+                    {isEs ? "Enviado a " : "Sent to "}
+                    {recipientsLabel(concern.sendTo, isEs)} ·{" "}
                     {concernDate(concern.reportedAt, isEs)}
                     {concern.editedAt
                       ? ` · ${isEs ? "editado" : "edited"} ${concernDate(concern.editedAt, isEs)}`
@@ -423,8 +446,8 @@ function ConcernCard({ record, store, isEs }: Props) {
                         store.resendConcern(record.mrn, concern.id);
                         setNotice(
                           isEs
-                            ? "Reenviado a tu equipo de acceso."
-                            : "Sent to your access team again.",
+                            ? `Reenviado a: ${recipientsLabel(concern.sendTo, true)}.`
+                            : `Sent again to: ${recipientsLabel(concern.sendTo, false)}.`,
                         );
                       }}
                     >
@@ -455,16 +478,17 @@ function ConcernCard({ record, store, isEs }: Props) {
           isEs={isEs}
           editing={open === "new" ? undefined : open}
           onClose={() => setOpen(null)}
-          onSent={(edited) => {
+          onSent={(edited, sendTo) => {
             setOpen(null);
+            const where = recipientsLabel(sendTo, isEs);
             setNotice(
               edited
                 ? isEs
-                  ? "Cambios enviados a tu equipo de acceso."
-                  : "Your changes were sent to your access team."
+                  ? `Cambios enviados a: ${where}.`
+                  : `Your changes were sent to: ${where}.`
                 : isEs
-                  ? "Enviado a tu equipo de acceso."
-                  : "Sent to your access team.",
+                  ? `Enviado a: ${where}.`
+                  : `Sent to: ${where}.`,
             );
           }}
         />
@@ -521,7 +545,7 @@ function ConcernModal({
   /** A report being changed; absent for a new one. */
   editing?: AccessConcern;
   onClose: () => void;
-  onSent: (edited: boolean) => void;
+  onSent: (edited: boolean, sendTo: ConcernRecipient[]) => void;
 }) {
   const safety = useSafetyNotice(isEs);
   const photoLog = useAccessPhotos();
@@ -531,7 +555,23 @@ function ConcernModal({
   /* An edit keeps the photo already sent unless a new one is picked. */
   const [keptImage, setKeptImage] = useState(editing?.imageUrl);
   const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
-  const valid = kinds.length > 0 && detail.trim().length > 0;
+  /* A photo taken or picked from the phone's album right here (client,
+     2026-10-12: "under Report a Concern, put Add photo"). */
+  const [newImage, setNewImage] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState(false);
+  /* Where it goes, said up front: the dialysis center sends the order to
+     the access center, so by default both see it (client, 2026-10-12). */
+  const [sendTo, setSendTo] = useState<ConcernRecipient[]>(
+    editing?.sendTo ?? ["access", "dialysis"],
+  );
+  const valid =
+    kinds.length > 0 && detail.trim().length > 0 && sendTo.length > 0;
+  const toggleRecipient = (who: ConcernRecipient) =>
+    setSendTo((current) =>
+      current.includes(who)
+        ? current.filter((entry) => entry !== who)
+        : [...current, who],
+    );
 
   const toggle = (id: string) =>
     setKinds((current) =>
@@ -569,10 +609,12 @@ function ConcernModal({
             disabled={!valid}
             onClick={() =>
               safety.guard(() => {
-                const imageUrl = photo ? photo.dataUrl : keptImage;
+                const imageUrl =
+                  newImage ?? (photo ? photo.dataUrl : keptImage);
                 const change = {
                   kinds,
                   detail: detail.trim(),
+                  sendTo,
                   ...(imageUrl ? { imageUrl } : {}),
                 };
                 if (editing) {
@@ -581,7 +623,7 @@ function ConcernModal({
                   store.reportConcern(record.mrn, change);
                 }
                 if (photo) photoLog.markSent(photo.id);
-                onSent(Boolean(editing));
+                onSent(Boolean(editing), sendTo);
               })
             }
           >
@@ -625,7 +667,85 @@ function ConcernModal({
             />
           )}
         </FormField>
-        {keptImage && !photo ? (
+        <p className="text-label-md text-fg-secondary">
+          {isEs ? "Enviar a" : "Send to"}
+        </p>
+        <ChipGroup label={isEs ? "Enviar a" : "Send to"}>
+          <Chip
+            selected={sendTo.includes("access")}
+            onClick={() => toggleRecipient("access")}
+          >
+            {isEs ? "Centro de acceso vascular" : "Vascular access center"}
+          </Chip>
+          <Chip
+            selected={sendTo.includes("dialysis")}
+            onClick={() => toggleRecipient("dialysis")}
+          >
+            {isEs ? "Centro de diálisis" : "Dialysis center"}
+          </Chip>
+        </ChipGroup>
+        {sendTo.length === 0 ? (
+          <p className="text-caption text-danger">
+            {isEs ? "Elija al menos uno." : "Choose at least one."}
+          </p>
+        ) : null}
+        {newImage ? (
+          <div className="flex items-center gap-inline-md">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+            <img
+              src={newImage}
+              alt={isEs ? "Foto para enviar" : "Photo to send"}
+              className="h-14 w-14 rounded-control object-cover"
+            />
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="ghost"
+              onClick={() => setNewImage(null)}
+            >
+              {isEs ? "Quitar foto" : "Remove photo"}
+            </Button>
+          </div>
+        ) : null}
+        <div className="space-y-stack-xs">
+          <label
+            className={buttonStyles({
+              variant: "neutral",
+              appearance: "fill-stroke",
+              size: "small",
+            })}
+          >
+            <Camera aria-hidden="true" />
+            {isEs ? "Tomar o elegir una foto" : "Take or choose a photo"}
+            {/* No `capture`: on a phone the picker then offers both the
+                camera and the album. */}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                try {
+                  setPhotoError(false);
+                  setNewImage(await downscaleToDataUrl(file));
+                  setPhotoId(null);
+                } catch {
+                  setPhotoError(true);
+                }
+              }}
+            />
+          </label>
+          {photoError ? (
+            <p className="text-caption text-danger">
+              {isEs
+                ? "No se pudo leer esa foto."
+                : "That photo could not be read."}
+            </p>
+          ) : null}
+        </div>
+        {keptImage && !photo && !newImage ? (
           <div className="flex items-center gap-inline-md">
             {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
             <img
@@ -643,12 +763,22 @@ function ConcernModal({
             </Button>
           </div>
         ) : null}
-        <PhotoPicker
-          photos={photoLog.photos}
-          value={photoId}
-          onChange={setPhotoId}
-          isEs={isEs}
-        />
+        {photoLog.photos.length > 0 ? (
+          <PhotoPicker
+            photos={photoLog.photos}
+            value={photoId}
+            onChange={(id) => {
+              setPhotoId(id);
+              if (id) setNewImage(null);
+            }}
+            isEs={isEs}
+            label={
+              isEs
+                ? "O una de sus fotos guardadas"
+                : "Or one of your saved photos"
+            }
+          />
+        ) : null}
         <Alert tone="warning">
           {isEs
             ? "Sangrado que no para, o sin frémito: llama al 911 o a tu centro ahora."
@@ -1133,12 +1263,9 @@ export default function VascularAccess() {
           <AppointmentsCard {...props} />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ConcernCard {...props} />
           <TransportCard {...props} />
-          <div className="lg:col-span-2 xl:col-span-1">
-            <AccessPhotosSection />
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

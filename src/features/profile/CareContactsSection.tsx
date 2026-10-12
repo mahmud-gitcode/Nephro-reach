@@ -115,9 +115,7 @@ function OfficeForm({
                   {name}
                 </option>
               ))}
-              <option value={OTHER}>
-                {isEs ? "Otra oficina…" : "Another office…"}
-              </option>
+              <option value={OTHER}>{isEs ? "Otro…" : "Other…"}</option>
             </Select>
           )}
         </FormField>

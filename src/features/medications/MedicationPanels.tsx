@@ -15,8 +15,12 @@ import {
   Printer,
   Save,
   Share2,
-  Smile,
 } from "lucide-react";
+import { useHealthcareTeam } from "@/features/care-team/useHealthcareTeam";
+import {
+  OTHER_RECIPIENT,
+  TeamRecipientSelect,
+} from "@/features/care-team/TeamRecipientSelect";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
@@ -26,9 +30,6 @@ import {
   Card,
   ChartLegend,
   DonutChart,
-  FormField,
-  RadioCard,
-  RadioGroup,
   Select,
   Table,
   TableBody,
@@ -36,7 +37,6 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
-  Textarea,
   buttonStyles,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
@@ -899,44 +899,22 @@ export function AdherenceChart({
   );
 }
 
+/* Section 5, "How I Feel", came out (client, 2026-10-12): the Daily
+   Check-In already asks it, and a second answer here went nowhere. */
 export function AlertsAndMood({
   reminders,
   onOpenReminderModal,
-  log,
   showSampleAlerts,
 }: {
   /** The sample alerts belong to the sample list: shown only with it. */
   showSampleAlerts: boolean;
   reminders: MedicationReminder[];
   onOpenReminderModal: (medName?: string) => void;
-  log: MedicationLog;
 }) {
   const { language, t } = useLanguage();
-  const isEs = language === "ES";
-
-  /* Today's entry, if there is one. The form used to hold its own state and
-     a Save button wired to nothing, so a member could write how they felt,
-     press Save, and lose it on the next render. */
-  const today = rules.todayIso();
-  const saved = log.moodOn(today);
-
-  const [selectedMood, setSelectedMood] = useState(saved?.mood ?? 1);
-  const [notes, setNotes] = useState(saved?.notes ?? "");
-  const [justSaved, setJustSaved] = useState(false);
-
-  const dirty =
-    selectedMood !== (saved?.mood ?? 1) || notes !== (saved?.notes ?? "");
-
-  const moods = [
-    { label: t("medicationsLog.mood.veryGood") },
-    { label: t("medicationsLog.mood.good") },
-    { label: t("medicationsLog.mood.okay") },
-    { label: t("medicationsLog.mood.poor") },
-    { label: t("medicationsLog.mood.veryPoor") },
-  ];
 
   return (
-    <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
+    <section>
       <Card padding="small">
         <SectionTitle number="4" title={t("medicationsLog.section4")} />
 
@@ -996,77 +974,6 @@ export function AlertsAndMood({
           ))}
         </div>
       </Card>
-
-      <Card padding="small">
-        <SectionTitle number="5" title={t("medicationsLog.section5")} />
-        <Card tone="flat" padding="small" className="mt-stack-md">
-          <p className="text-body-md text-fg">
-            {t("medicationsLog.mood.howDoYouFeel")}
-          </p>
-
-          {/* Five moods, one answer — a radio group, so arrow keys move
-              between them and only the chosen one is a tab stop. */}
-          <RadioGroup
-            label={t("medicationsLog.mood.howDoYouFeel")}
-            value={String(selectedMood)}
-            onChange={(next) => setSelectedMood(Number(next))}
-            orientation="horizontal"
-            className="mt-stack-sm grid grid-cols-5 gap-inline-xs sm:gap-inline-md"
-          >
-            {moods.map((m, index) => (
-              <RadioCard
-                key={m.label}
-                layout="tile"
-                value={String(index)}
-                title={m.label}
-                icon={<Smile />}
-              />
-            ))}
-          </RadioGroup>
-
-          <div className="mt-stack-lg border-t border-line pt-inset-sm">
-            <FormField label={t("medicationsLog.mood.notes")}>
-              {(props) => (
-                <Textarea
-                  {...props}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="h-24 resize-none"
-                  placeholder={t("medicationsLog.mood.notesPlaceholder")}
-                />
-              )}
-            </FormField>
-          </div>
-
-          <Button
-            className="mt-stack-md w-full"
-            disabled={log.isSavingMood || (!dirty && justSaved)}
-            onClick={() => {
-              log.saveMoodEntry({
-                date: today,
-                mood: selectedMood,
-                notes,
-                savedAt: new Date().toISOString(),
-              });
-              setJustSaved(true);
-            }}
-          >
-            {log.isSavingMood
-              ? isEs
-                ? "Guardando…"
-                : "Saving…"
-              : t("medicationsLog.mood.saveLog")}
-          </Button>
-
-          {/* Confirmed rather than assumed: this is a form a member fills in
-              and walks away from. */}
-          {justSaved && !dirty ? (
-            <p className="mt-stack-sm text-center text-body-sm text-success">
-              {isEs ? "Guardado para hoy." : "Saved for today."}
-            </p>
-          ) : null}
-        </Card>
-      </Card>
     </section>
   );
 }
@@ -1077,7 +984,7 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare(isEs);
 
-  const [recipient, setRecipient] = useState("nurse");
+  const [recipient, setRecipient] = useState("");
   const [sent, setSent] = useState(false);
   /* Share Outside NephroReach, as in Messages (client, 2026-10-07). */
   const meds = useMedications();
@@ -1109,24 +1016,16 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
      recipient, and Download / Print. The three product cards that had grown
      here — PDF, Excel, Share, all wired to nothing — said more about export
      formats than about what a member wanted to do. */
-  const recipients = [
-    {
-      value: "nurse",
-      labelEn: "Dialysis nurse",
-      labelEs: "Enfermera de diálisis",
-    },
-    { value: "nephrologist", labelEn: "Nephrologist", labelEs: "Nefrólogo" },
-    { value: "dietitian", labelEn: "Dietitian", labelEs: "Dietista" },
-    { value: "pharmacy", labelEn: "Pharmacy", labelEs: "Farmacia" },
-    { value: "caregiver", labelEn: "Caregiver", labelEs: "Cuidador" },
-  ];
-
-  const recipientLabel =
-    recipients.find((entry) => entry.value === recipient) ?? recipients[0];
+  /* The member's healthcare team, then Other (client, 2026-10-12). */
+  const team = useHealthcareTeam();
+  const picked =
+    team.recipients.find((member) => member.id === recipient) ??
+    team.recipients[0];
+  const chosen = picked ? picked.id : OTHER_RECIPIENT;
 
   return (
     <Card as="section" padding="small">
-      <SectionTitle number="6" title={t("medicationsLog.section6")} />
+      <SectionTitle number="5" title={t("medicationsLog.section6")} />
 
       <p className="mt-stack-sm measure text-body-sm text-fg-muted">
         {isEs
@@ -1134,7 +1033,9 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
           : "Your log already saves to this device each time you mark a dose."}
       </p>
 
-      <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-end">
+      {/* Wraps: the recipient picker takes its own line when the row is
+          short of room (iPad review, 2026-10-12). */}
+      <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:flex-wrap sm:items-end">
         {/* 1. Save */}
         <Button
           variant="neutral"
@@ -1147,30 +1048,25 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
 
         {/* 2. Export, with the recipient chosen alongside it rather than
                hidden behind a second screen. */}
-        <div className="flex flex-1 flex-col gap-inline-md sm:flex-row sm:items-end">
-          <FormField
-            label={isEs ? "Enviar a" : "Send to"}
-            className="flex-1 sm:max-w-[260px]"
-          >
-            {(props) => (
-              <Select
-                {...props}
-                value={recipient}
-                onChange={(event) => {
-                  setRecipient(event.target.value);
-                  setSent(false);
-                }}
-              >
-                {recipients.map((entry) => (
-                  <option key={entry.value} value={entry.value}>
-                    {isEs ? entry.labelEs : entry.labelEn}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </FormField>
+        <div className="flex flex-col gap-inline-md sm:min-w-[320px] sm:flex-1 sm:flex-row sm:items-end">
+          <TeamRecipientSelect
+            recipients={team.recipients}
+            value={chosen}
+            onChange={(next) => {
+              setRecipient(next);
+              setSent(false);
+            }}
+            isEs={isEs}
+            className="flex-1 sm:max-w-[320px]"
+          />
 
-          <Button onClick={() => share.guard(() => setSent(true))}>
+          <Button
+            onClick={() =>
+              chosen === OTHER_RECIPIENT
+                ? setOutside(true)
+                : share.guard(() => setSent(true))
+            }
+          >
             <Share2 aria-hidden="true" />
             {isEs ? "Exportar" : "Export"}
           </Button>
@@ -1218,8 +1114,8 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
           onDismiss={() => setSent(false)}
         >
           {isEs
-            ? `El envío a ${recipientLabel.labelEs} se conectará cuando el portal del equipo esté activo. Por ahora usa Descargar / Imprimir para compartirlo.`
-            : `Sending to your ${recipientLabel.labelEn.toLowerCase()} connects once the care team portal is live. For now, use Download / Print to share it.`}
+            ? `El envío a ${picked?.name || picked?.email || ""} se conectará cuando el servidor esté activo. Por ahora usa Descargar / Imprimir para compartirlo.`
+            : `Sending to ${picked?.name || picked?.email || ""} connects once the server is live. For now, use Download / Print to share it.`}
         </Alert>
       ) : null}
     </Card>

@@ -4,27 +4,36 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  Activity,
   Angry,
   ArrowLeft,
   Calendar,
   Droplets,
   Frown,
-  HeartPulse,
   Laugh,
   Meh,
   Pencil,
   Pill,
-  Scale,
   Smile,
 } from "lucide-react";
+import type { DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
+import { useTreatmentLog } from "@/features/personal-log/dialysis/useTreatmentLog";
 import {
-  mockDialysisEntries,
-  DialysisLogEntry,
-} from "@/features/personal-log/dialysisTreatmentData";
+  attendanceOf,
+  fluidRemovedKg,
+} from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
-import { Badge, buttonStyles, Card } from "@/components/ui";
+import {
+  Badge,
+  buttonStyles,
+  Card,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui";
 
 const MOOD_CONFIG: Record<
   number,
@@ -94,10 +103,34 @@ function TreatmentDetailContent() {
   const { dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const searchParams = useSearchParams();
-  const entryId = searchParams.get("id") || "entry-01";
+  const entryId = searchParams.get("id") ?? "";
+  const log = useTreatmentLog();
+  const found = log.entries.find((e) => e.id === entryId);
 
-  const entry: DialysisLogEntry =
-    mockDialysisEntries.find((e) => e.id === entryId) || mockDialysisEntries[0];
+  if (log.isPending) return <FallbackLoading />;
+  if (!found) {
+    return (
+      <div className="mx-auto w-full max-w-5xl space-y-stack-md py-12 text-center">
+        <p className="text-body-md text-fg-muted">
+          That treatment is not in your log.
+        </p>
+        <Link
+          href="/dashboard/personal-log/dialysis-treatment"
+          className={buttonStyles({ variant: "neutral", appearance: "stroke" })}
+        >
+          {dt?.backToTreatment || "Back to Dialysis Treatment"}
+        </Link>
+      </div>
+    );
+  }
+  return <TreatmentDetail entry={found} />;
+}
+
+function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
+  const { dictionary } = useLanguage();
+  const dt = dictionary.dialysisTreatment;
+  const isHome = entry.modality === "home-hd";
+  const removed = fluidRemovedKg(entry.preWeight, entry.postWeight);
 
   const preMoodConfig = MOOD_CONFIG[entry.preOverallFeel] || MOOD_CONFIG[4];
   const PreMoodIcon = preMoodConfig.icon;
@@ -160,61 +193,29 @@ function TreatmentDetailContent() {
           </div>
         </div>
 
-        {/* 6-Column Summary Bar */}
-        <div className="grid grid-cols-2 divide-y divide-line-subtle rounded-card border border-line bg-surface-sunken p-6 text-caption sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.treatmentType || "Treatment Type"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.treatmentType}
-            </p>
-          </div>
-
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.startTime || "Start Time"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.startTime}
-            </p>
-          </div>
-
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.endTime || "End Time"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.endTime}
-            </p>
-          </div>
-
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.location || "Location"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.location}
-            </p>
-          </div>
-
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.careTeam || "Care Team"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.careTeam}
-            </p>
-          </div>
-
-          <div className="min-w-0 px-3 py-1.5 sm:py-0">
-            <p className="text-caption text-fg-muted">
-              {dt?.detail?.summaryBar?.postWeight || "Post Weight"}
-            </p>
-            <p className="mt-stack-xs truncate text-label-sm text-fg">
-              {entry.postWeightSummary}
-            </p>
-          </div>
+        {/* Summary bar: the header facts the form now asks for (client,
+            2026-10-12) — no treatment type, location or post weight. */}
+        <div className="grid grid-cols-2 divide-y divide-line-subtle rounded-card border border-line bg-surface-sunken p-6 text-caption sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
+          {[
+            [
+              dt?.detail?.summaryBar?.startTime || "Start Time",
+              entry.startTime,
+            ],
+            [dt?.detail?.summaryBar?.endTime || "End Time", entry.endTime],
+            ["Time on treatment", entry.duration],
+            [dt?.detail?.summaryBar?.careTeam || "Care Team", entry.careTeam],
+            [
+              "Fluid removed",
+              removed === null ? "" : `${removed} kg ≈ ${removed} L`,
+            ],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0 px-3 py-1.5 sm:py-0">
+              <p className="text-caption text-fg-muted">{label}</p>
+              <p className="mt-stack-xs truncate text-label-sm text-fg">
+                {value || "—"}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -226,18 +227,15 @@ function TreatmentDetailContent() {
             {dt?.detail?.attendanceSchedule?.title || "Attendance & Schedule"}
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <DetailRow
-              label={
-                dt?.detail?.attendanceSchedule?.attended || "Treatment attended"
-              }
-              value={formatYesNo(entry.attended)}
-            />
-            <DetailRow
-              label={
-                dt?.detail?.attendanceSchedule?.arrivedLate || "Arrived late"
-              }
-              value={formatYesNo(entry.arrivedLate)}
-            />
+            <DetailRow label="Status" value={attendanceOf(entry)} />
+            {!isHome ? (
+              <DetailRow
+                label={
+                  dt?.detail?.attendanceSchedule?.arrivedLate || "Arrived late"
+                }
+                value={formatYesNo(entry.arrivedLate)}
+              />
+            ) : null}
             <DetailRow
               label={
                 dt?.detail?.attendanceSchedule?.endedEarly || "Ended early"
@@ -245,20 +243,25 @@ function TreatmentDetailContent() {
               value={formatYesNo(entry.endedEarly)}
             />
             <DetailRow
-              label={
-                dt?.detail?.attendanceSchedule?.missed || "Missed treatments"
+              label="Extra recovery time"
+              value={
+                entry.extraRecovery === "Yes"
+                  ? `${entry.extraRecoveryMinutes ?? 0} min`
+                  : formatYesNo("No")
               }
-              value={entry.missedTreatments}
             />
-            <div className="md:col-span-2">
-              <DetailRow
-                label={
-                  dt?.detail?.attendanceSchedule?.rescheduled ||
-                  "Rescheduled missed treatment"
-                }
-                value={formatYesNo(entry.rescheduled)}
-              />
-            </div>
+            {entry.status === "rescheduled" ? (
+              <div className="md:col-span-2">
+                <DetailRow
+                  label="Make-up session"
+                  value={
+                    entry.makeupFor
+                      ? `For the treatment missed on ${entry.makeupFor}`
+                      : "Extra session"
+                  }
+                />
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -357,6 +360,18 @@ function TreatmentDetailContent() {
               value={formatYesNo(entry.cramping)}
             />
             <DetailRow
+              label="Dizziness"
+              value={formatYesNo(entry.dizziness || "No")}
+            />
+            <DetailRow
+              label="Swelling"
+              value={formatYesNo(entry.swelling || "No")}
+            />
+            <DetailRow
+              label="Shortness of breath"
+              value={formatYesNo(entry.shortnessOfBreath || "No")}
+            />
+            <DetailRow
               label={dt?.detail?.duringTreatment?.lowBp || "Low BP"}
               value={formatYesNo(entry.lowBp)}
             />
@@ -433,76 +448,51 @@ function TreatmentDetailContent() {
                 "Clinical Measurements"}
             </h3>
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
-                <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-caption font-semibold">
-                    {dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed"}
-                  </span>
-                  <Droplets className="size-4 text-fg-subtle" />
-                </div>
-                <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">
-                    {entry.fluidRemoved}
-                  </span>
-                  <span className="text-caption text-fg-muted">
-                    {dt?.clinicalMeasurements?.liters || "Liters"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
-                <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-caption font-semibold">
-                    {dt?.clinicalMeasurements?.postWeight || "Post Weight"}
-                  </span>
-                  <Scale className="size-4 text-fg-subtle" />
-                </div>
-                <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">
-                    {entry.postWeight}
-                  </span>
-                  <span className="text-caption text-fg-muted">
-                    kg (pre: {entry.preWeight})
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
-                <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-caption font-semibold">
-                    {dt?.clinicalMeasurements?.bloodPressure ||
-                      "Blood Pressure"}
-                  </span>
-                  <HeartPulse className="size-4 text-fg-subtle" />
-                </div>
-                <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">
-                    {entry.bloodPressurePost}
-                  </span>
-                  <span className="text-caption text-fg-muted">
-                    {dt?.clinicalMeasurements?.mmHg || "mmHg"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-stack-xs rounded-card border border-line bg-surface p-6">
-                <div className="flex items-center justify-between text-fg-secondary">
-                  <span className="text-caption font-semibold">
-                    {dt?.clinicalMeasurements?.heartRate || "Heart Rate"}
-                  </span>
-                  <Activity className="size-4 text-fg-subtle" />
-                </div>
-                <div className="flex items-baseline gap-1.5 pt-1">
-                  <span className="text-metric-sm text-fg">
-                    {entry.heartRatePost}
-                  </span>
-                  <span className="text-caption text-fg-muted">
-                    {dt?.clinicalMeasurements?.bpm || "bpm"}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Pre and post side by side, as the pre- and post-screens ask
+                the same three things. */}
+            <Card padding="none" className="overflow-hidden">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Measurement</TableHeaderCell>
+                    <TableHeaderCell>Pre-treatment</TableHeaderCell>
+                    <TableHeaderCell>Post-treatment</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[
+                    ["Weight (kg)", entry.preWeight, entry.postWeight],
+                    [
+                      "Blood pressure (mmHg)",
+                      entry.preBloodPressure,
+                      entry.bloodPressurePost,
+                    ],
+                    [
+                      "Heart rate (bpm)",
+                      entry.preHeartRate,
+                      entry.heartRatePost,
+                    ],
+                  ].map(([label, pre, post]) => (
+                    <TableRow key={label}>
+                      <TableCell emphasis>{label}</TableCell>
+                      <TableCell className="tabular-nums">
+                        {pre || "—"}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {post || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+            <p className="flex items-center gap-1.5 text-body-sm text-fg-secondary">
+              <Droplets className="size-4 text-fg-subtle" />
+              {dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed"}:{" "}
+              <span className="text-label-md text-fg">
+                {removed === null ? "—" : `${removed} kg ≈ ${removed} L`}
+              </span>
+            </p>
           </div>
 
           {/* Administered Medications */}

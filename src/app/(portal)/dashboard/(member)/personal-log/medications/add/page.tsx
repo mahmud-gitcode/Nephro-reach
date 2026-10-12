@@ -11,6 +11,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { MEDICATION_NAMES } from "@/features/medications/medicationNames";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
@@ -260,14 +261,29 @@ export default function AddMedicationPage() {
                             ))}
                       </Select>
                     ) : (
-                      <Input
-                        {...props}
-                        type={field.type}
-                        placeholder={placeholder}
-                        leadingIcon={field.search ? <Search /> : undefined}
-                        value={draft[field.key]}
-                        onChange={(e) => set(field.key, e.target.value)}
-                      />
+                      <>
+                        <Input
+                          {...props}
+                          type={field.type}
+                          placeholder={placeholder}
+                          leadingIcon={field.search ? <Search /> : undefined}
+                          /* The name suggests as it is typed (client,
+                             2026-10-12), so the phone cannot autocorrect it. */
+                          list={field.search ? "medication-names" : undefined}
+                          autoComplete={field.search ? "off" : undefined}
+                          autoCorrect={field.search ? "off" : undefined}
+                          spellCheck={field.search ? false : undefined}
+                          value={draft[field.key]}
+                          onChange={(e) => set(field.key, e.target.value)}
+                        />
+                        {field.search ? (
+                          <datalist id="medication-names">
+                            {MEDICATION_NAMES.map((name) => (
+                              <option key={name} value={name} />
+                            ))}
+                          </datalist>
+                        ) : null}
+                      </>
                     )
                   }
                 </FormField>

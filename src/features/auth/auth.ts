@@ -49,6 +49,7 @@ const ADMIN_PREFIXES = [
   "/dashboard/admin-community",
   "/dashboard/design-system",
   "/dashboard/admin-support",
+  "/dashboard/admin-team",
 ];
 
 export const CLINIC_PREFIX = "/dashboard/clinic";

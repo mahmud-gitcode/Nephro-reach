@@ -1,12 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import DialysisDaySymptomLogForm from "@/features/personal-log/DialysisDaySymptomLogForm";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { buttonStyles } from "@/components/ui";
+
+/* ?edit=<id> changes a charted treatment; ?date=<yyyy-mm-dd> opens on a
+   scheduled day (from "Did you miss a treatment?"). */
+function Form() {
+  const params = useSearchParams();
+  return (
+    <DialysisDaySymptomLogForm
+      isModal={false}
+      editId={params.get("edit") ?? undefined}
+      initialDate={params.get("date") ?? undefined}
+    />
+  );
+}
 
 export default function AddDialysisTreatmentPage() {
   const { dictionary } = useLanguage();
@@ -28,7 +42,9 @@ export default function AddDialysisTreatmentPage() {
         <span>{dt?.backToTreatment || "Back to Dialysis Treatment"}</span>
       </Link>
 
-      <DialysisDaySymptomLogForm isModal={false} />
+      <Suspense fallback={null}>
+        <Form />
+      </Suspense>
     </div>
   );
 }

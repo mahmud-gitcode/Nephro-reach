@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
 import { userCan } from "@/features/staff/staff";
@@ -43,7 +43,6 @@ import {
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout } = useAuth();
   const { language } = useLanguage();
   const role = user?.role ?? "user";
@@ -168,7 +167,6 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         type="button"
         onClick={() => {
           logout();
-          router.push("/");
         }}
         className="mt-stack-md flex h-14 shrink-0 cursor-pointer items-center justify-center gap-inline-lg rounded-control bg-surface text-label-md text-danger transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-on-nav"
       >
@@ -511,7 +509,6 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
   const { user, logout } = useAuth();
   const { language } = useLanguage();
-  const router = useRouter();
   const isEs = language === "ES";
 
   const [open, setOpen] = useState(false);
@@ -615,7 +612,6 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
               onClick={() => {
                 setOpen(false);
                 logout();
-                router.push("/");
               }}
               className={`${menuItemStyles} text-danger hover:bg-danger-surface`}
             >

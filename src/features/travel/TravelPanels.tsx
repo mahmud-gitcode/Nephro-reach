@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Plane } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
@@ -10,7 +10,7 @@ import type { TripRequest } from "./trip.types";
 import { reflectionRemaining } from "./travelTreatment.rules";
 import { REFLECTION_MAX } from "./travelTreatment.types";
 import { useTravelTreatments } from "./useTravelTreatments";
-import { Card, SectionTitle, Textarea } from "@/components/ui";
+import { Button, Card, SectionTitle, Textarea } from "@/components/ui";
 
 /* ==========================================================================
    Travel panels
@@ -91,7 +91,13 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
   const isEs = language === "ES";
   const { reflectionFor, saveReflection } = useTravelTreatments();
 
-  const reflection = reflectionFor(trip.id);
+  const saved = reflectionFor(trip.id);
+  /* A draft and a Save button (client, 2026-10-12): it saved on every key,
+     and with nothing to press a member could not tell that it had. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const reflection = draft ?? saved;
+  const dirty = draft !== null && draft !== saved;
   const remaining = reflectionRemaining(reflection);
 
   return (
@@ -107,8 +113,8 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
         title={isEs ? "Notas y Reflexiones" : "Notes & Reflections"}
         hint={
           isEs
-            ? "¿Cómo te sentiste durante tus tratamientos de viaje?"
-            : "How did you feel during your travel treatments?"
+            ? "Fechas y horarios confirmados, cómo se sintió… lo que quiera guardar."
+            : "Confirmed dates and times, how you felt… anything you want to keep."
         }
       />
 
@@ -121,16 +127,39 @@ export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
         placeholder={
           isEs ? "Escribe tus notas aquí…" : "Write your notes here…"
         }
-        onChange={(event) => saveReflection(trip.id, event.target.value)}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setJustSaved(false);
+        }}
       />
 
-      <p
-        className={`mt-stack-xs text-right text-body-sm ${
-          remaining <= 50 ? "text-warning" : "text-fg-muted"
-        }`}
-      >
-        {reflection.length}/{REFLECTION_MAX}
-      </p>
+      <div className="mt-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
+        <p
+          className={`text-body-sm ${
+            remaining <= 50 ? "text-warning" : "text-fg-muted"
+          }`}
+        >
+          {reflection.length}/{REFLECTION_MAX}
+        </p>
+        <span className="flex items-center gap-inline-md">
+          {justSaved && !dirty ? (
+            <span role="status" className="text-body-sm text-success">
+              {isEs ? "Guardado" : "Saved"}
+            </span>
+          ) : null}
+          <Button
+            size="small"
+            disabled={!dirty}
+            onClick={() => {
+              saveReflection(trip.id, reflection);
+              setDraft(null);
+              setJustSaved(true);
+            }}
+          >
+            {isEs ? "Guardar notas" : "Save notes"}
+          </Button>
+        </span>
+      </div>
     </Card>
   );
 }

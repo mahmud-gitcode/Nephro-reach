@@ -22,6 +22,8 @@ export const COMMON_SYMPTOM_OPTIONS = [
   "Restless legs",
   "Difficulty sleeping",
   "Nausea",
+  /* Asked for on the call (client, 2026-10-12). */
+  "Vomiting",
   "Constipation",
   "Headache",
   "Low energy",
@@ -40,6 +42,7 @@ export const LOCALIZED_SYMPTOMS: Record<string, string> = {
   "Restless legs": "Piernas inquietas",
   "Difficulty sleeping": "Dificultad para dormir",
   Nausea: "Náuseas",
+  Vomiting: "Vómitos",
   Constipation: "Estreñimiento",
   Headache: "Dolor de cabeza",
   "Low energy": "Baja energía",

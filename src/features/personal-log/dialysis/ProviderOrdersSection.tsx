@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ClipboardList, Plus, Trash2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { BellRing, Check, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { listOrders, saveOrders } from "./orders.repository";
-import type { ProviderOrder } from "../record/record.types";
+import { useProviderOrders } from "./useProviderOrders";
 import {
   Alert,
   AsyncSection,
@@ -17,6 +15,7 @@ import {
   Modal,
   SectionTitle,
   Skeleton,
+  SwitchRow,
   Table,
   TableBody,
   TableCell,
@@ -33,7 +32,15 @@ import {
    because it is prescribed, not performed.
    ========================================================================== */
 
-const ordersKey = ["dialysis", "provider-orders"] as const;
+function reminderLabel(stamp: string, isEs: boolean): string {
+  const [date, time] = stamp.split("T");
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, min] = (time ?? "09:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min).toLocaleString(
+    isEs ? "es-ES" : "en-US",
+    { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
+  );
+}
 
 function todayIso(now = new Date()): string {
   const year = now.getFullYear();
@@ -64,19 +71,8 @@ function formatOrderDate(
 export function ProviderOrdersSection() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const queryClient = useQueryClient();
-
-  const query = useQuery({ queryKey: ordersKey, queryFn: listOrders });
-
-  const write = useMutation({
-    mutationFn: async (
-      transform: (current: ProviderOrder[]) => ProviderOrder[],
-    ) => saveOrders(transform(await listOrders())),
-    onSuccess: (orders) => queryClient.setQueryData(ordersKey, orders),
-  });
-
-  const { mutate, reset } = write;
-  const orders = useMemo(() => query.data ?? [], [query.data]);
+  const { query, write, orders, mutate, toggle, remove } = useProviderOrders();
+  const { reset } = write;
 
   /* Newest first: a member checking what they were told reads the most
      recent instruction, not the oldest one still on the list. */
@@ -85,25 +81,14 @@ export function ProviderOrdersSection() {
     [orders],
   );
 
-  const toggle = useCallback(
-    (id: string) =>
-      mutate((current) =>
-        current.map((order) =>
-          order.id === id ? { ...order, completed: !order.completed } : order,
-        ),
-      ),
-    [mutate],
-  );
-
-  const remove = useCallback(
-    (id: string) => mutate((current) => current.filter((o) => o.id !== id)),
-    [mutate],
-  );
-
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(() => todayIso());
   const [text, setText] = useState("");
   const [touched, setTouched] = useState(false);
+  /* "Do you want to set a reminder for it?" (client, 2026-10-12). */
+  const [remind, setRemind] = useState(false);
+  const [remindDate, setRemindDate] = useState(() => todayIso());
+  const [remindTime, setRemindTime] = useState("09:00");
 
   const add = () => {
     setTouched(true);
@@ -115,12 +100,14 @@ export function ProviderOrdersSection() {
         date,
         order: text.trim(),
         completed: false,
+        ...(remind ? { remindAt: `${remindDate}T${remindTime}` } : {}),
       },
       ...current,
     ]);
     setOpen(false);
     setText("");
     setTouched(false);
+    setRemind(false);
   };
 
   return (
@@ -202,7 +189,19 @@ export function ProviderOrdersSection() {
                       {day}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{shown}</TableCell>
-                    <TableCell className="leading-snug">{item.order}</TableCell>
+                    <TableCell className="leading-snug">
+                      {item.order}
+                      {item.remindAt && !item.completed ? (
+                        <span className="mt-stack-xs flex items-center gap-inline-xs text-caption text-fg-muted">
+                          <BellRing
+                            aria-hidden="true"
+                            className="size-3.5 shrink-0"
+                          />
+                          {isEs ? "Recordatorio:" : "Reminder:"}{" "}
+                          {reminderLabel(item.remindAt, isEs)}
+                        </span>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
                       {/* A real checkbox role, so a screen reader announces
                           whether the order is done rather than "button". */}
@@ -315,6 +314,43 @@ export function ProviderOrdersSection() {
                 />
               )}
             </FormField>
+
+            <SwitchRow
+              checked={remind}
+              onChange={setRemind}
+              title={isEs ? "Recordármelo" : "Set a reminder"}
+              description={
+                isEs
+                  ? "Le avisaremos en Notificaciones, por si lo olvida."
+                  : "We will remind you in Notifications, in case you forget."
+              }
+            />
+            {remind ? (
+              <div className="grid gap-stack-md sm:grid-cols-2">
+                <FormField
+                  label={isEs ? "Día del recordatorio" : "Reminder day"}
+                >
+                  {(props) => (
+                    <Input
+                      {...props}
+                      type="date"
+                      value={remindDate}
+                      onChange={(event) => setRemindDate(event.target.value)}
+                    />
+                  )}
+                </FormField>
+                <FormField label={isEs ? "Hora" : "Time"}>
+                  {(props) => (
+                    <Input
+                      {...props}
+                      type="time"
+                      value={remindTime}
+                      onChange={(event) => setRemindTime(event.target.value)}
+                    />
+                  )}
+                </FormField>
+              </div>
+            ) : null}
           </div>
         </Modal>
       ) : null}

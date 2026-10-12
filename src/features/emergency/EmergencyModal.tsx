@@ -79,6 +79,14 @@ export default function EmergencyModal({ open, onClose }: EmergencyModalProps) {
             <MapPin aria-hidden="true" />
             {em?.findEr || "Find Nearest Emergency Room"}
           </a>
+          {/* Said before the tap rather than behind a second dialog: on this
+              screen a confirmation would only slow someone down (client,
+              2026-10-12: tell them it connects to their maps). */}
+          <p className="-mt-stack-sm text-center text-caption text-fg-muted">
+            {isEs
+              ? "Abre la aplicación de mapas de su teléfono y sale de NephroReach."
+              : "Opens the maps app on your phone and leaves NephroReach."}
+          </p>
 
           {/* Dials the contact on the member's profile. It used to be a
             permanently disabled button with nowhere to read a number from,

@@ -324,7 +324,7 @@
     "today": "Hoy",
     "section1": "Lista Maestra de Medicamentos",
     "section2": "Horario de Dosis",
-    "section3": "Panel de Adherencia y Análisis",
+    "section3": "Panel de Cumplimiento y Análisis",
     "section4": "Alertas y Recordatorios",
     "section5": "Cómo Me Siento",
     "section6": "Exportar / Informes",
@@ -353,7 +353,7 @@
       "Missed": "Omitido"
     },
     "adherence": {
-      "overallTitle": "Adherencia General (Esta Semana)",
+      "overallTitle": "Cumplimiento General (Esta Semana)",
       "totalDoses": "Dosis Totales: 12",
       "overall": "General",
       "taken": "Tomadas",
@@ -361,9 +361,9 @@
       "missed": "Omitidas",
       "missedTitle": "Dosis Omitidas (Esta Semana)",
       "totalMissed": "Total de Dosis Omitidas:",
-      "bpVsAdherence": "Presión Arterial vs. Adherencia a la Medicación",
+      "bpVsAdherence": "Presión Arterial vs. Cumplimiento de la Medicación",
       "bp": "PA",
-      "adherencePercent": "Adherencia(%)"
+      "adherencePercent": "Cumplimiento(%)"
     },
     "days": {
       "Sun": "Dom",

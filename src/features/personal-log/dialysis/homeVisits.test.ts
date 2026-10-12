@@ -8,6 +8,8 @@ import {
   sortVisits,
   upsertVisit,
   visitError,
+  visitRemindersDue,
+  visitsFor,
   type HomeVisit,
 } from "./homeVisits";
 
@@ -139,5 +141,42 @@ describe("reading stored visits back", () => {
   it("names each provider in both languages", () => {
     expect(providerLabel("biomed", false)).toBe("Biomed");
     expect(providerLabel("pd-nurse", true)).toBe("Enfermera de DP");
+  });
+});
+
+describe("home visit reminders (client, 2026-10-12)", () => {
+  const visit = (over: Partial<HomeVisit>): HomeVisit => ({
+    id: "v",
+    date: "2026-10-13",
+    time: "10:30",
+    provider: "rn",
+    purpose: "",
+    status: "scheduled",
+    remind: true,
+    notes: "",
+    ...over,
+  });
+
+  it("reminds from the day before until the day itself", () => {
+    const list = [
+      visit({ id: "tomorrow" }),
+      visit({ id: "today", date: "2026-10-12" }),
+      visit({ id: "later", date: "2026-10-20" }),
+      visit({ id: "off", remind: false }),
+      visit({ id: "done", status: "completed" }),
+    ];
+    expect(visitRemindersDue(list, "2026-10-12").map((v) => v.id)).toEqual([
+      "today",
+      "tomorrow",
+    ]);
+  });
+
+  it("keeps Home HD and PD visits apart", () => {
+    const list = [
+      visit({ id: "hd", modality: "home-hd" }),
+      visit({ id: "pd", modality: "pd" }),
+      visit({ id: "old" }),
+    ];
+    expect(visitsFor(list, "pd").map((v) => v.id)).toEqual(["pd", "old"]);
   });
 });

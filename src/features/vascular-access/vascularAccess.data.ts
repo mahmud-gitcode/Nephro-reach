@@ -152,7 +152,20 @@ export type AccessConcern = {
   editedAt?: string;
   /** ISO 8601. The member sent it to the team again. */
   resentAt?: string;
+  /** Who the member sent it to (client, 2026-10-12): the access center,
+   *  the dialysis center, or both. Absent on older reports: both. */
+  sendTo?: ConcernRecipient[];
 };
+
+export type ConcernRecipient = "access" | "dialysis";
+
+/** Whether an office sees a report: only the ones sent to it. */
+export function concernSentTo(
+  concern: Pick<AccessConcern, "sendTo">,
+  office: ConcernRecipient,
+): boolean {
+  return !concern.sendTo || concern.sendTo.includes(office);
+}
 
 /** Who arranges rides: the dialysis center's social worker, as is usual
  *  for dialysis patients' non-emergency transport. */
@@ -417,9 +430,17 @@ export function sortedHistory(record: AccessRecord): AccessHistoryEntry[] {
   return [...record.history].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export function openConcerns(record: AccessRecord): AccessConcern[] {
+export function openConcerns(
+  record: AccessRecord,
+  /** Only the reports sent to this office. */
+  office?: ConcernRecipient,
+): AccessConcern[] {
   return record.concerns
-    .filter((concern) => concern.status === "Open")
+    .filter(
+      (concern) =>
+        concern.status === "Open" &&
+        (!office || concernSentTo(concern, office)),
+    )
     .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
 }
 
@@ -662,7 +683,7 @@ export function completeAppointment(
 export function reportConcern(
   state: AccessState,
   mrn: string,
-  concern: Pick<AccessConcern, "kinds" | "detail" | "imageUrl">,
+  concern: Pick<AccessConcern, "kinds" | "detail" | "imageUrl" | "sendTo">,
   now: number,
 ): AccessState {
   return updateRecord(state, mrn, (record) => ({
@@ -684,7 +705,10 @@ export function reportConcern(
    sent, and edit, delete or resend it. An edit or a resend is new
    information, so the report opens again for the access team. */
 
-type ConcernChange = Pick<AccessConcern, "kinds" | "detail" | "imageUrl">;
+type ConcernChange = Pick<
+  AccessConcern,
+  "kinds" | "detail" | "imageUrl" | "sendTo"
+>;
 
 function reopen(record: AccessRecord): AccessRecord {
   return {

@@ -13,6 +13,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
 import {
@@ -54,6 +55,7 @@ const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   video: PlayCircle,
   document: FileText,
   article: BookOpen,
+  image: ImageIcon,
 };
 
 function SummaryCard({
@@ -93,6 +95,7 @@ function SummaryCard({
 function kindLabel(kind: LibraryKind): string {
   if (kind === "document") return "Document";
   if (kind === "article") return "Article";
+  if (kind === "image") return "Image";
   return "Video";
 }
 
@@ -110,6 +113,7 @@ function metaLabel(resource: LibraryResource): string {
       ? formatDuration(resource.durationSeconds)
       : "No file yet";
   if (resource.kind === "document") return resource.fileMetaEn || "No file yet";
+  if (resource.kind === "image") return "Image";
   return resource.readMinutes ? `${resource.readMinutes} min read` : "Empty";
 }
 

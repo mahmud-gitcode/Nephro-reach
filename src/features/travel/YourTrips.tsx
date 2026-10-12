@@ -78,7 +78,11 @@ function TripTile({ trip, onEdit }: { trip: TripRequest; onEdit: () => void }) {
                   : "info"
             }
           >
-            {statusLabel(trip.status, isEs)}
+            {trip.cancelRequestedAt
+              ? isEs
+                ? "Cancelación solicitada"
+                : "Cancellation requested"
+              : statusLabel(trip.status, isEs)}
           </Badge>
         </span>
       </Link>

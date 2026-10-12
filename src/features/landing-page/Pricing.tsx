@@ -298,7 +298,10 @@ export default function Pricing({
                 style={{
                   minHeight: equalHeight ? `${equalHeight}px` : undefined,
                 }}
-                className="card-smooth-hover flex h-full flex-col items-stretch rounded-[36px] hover:shadow-xl"
+                /* Dropped by the height of the "Most popular" banner, so
+                   every card's title, price and button line up (client
+                   review, 2026-10-12: "a little broken"). */
+                className="card-smooth-hover flex h-full flex-col items-stretch rounded-[36px] hover:shadow-xl md:mt-9 md:h-auto"
               >
                 <PlanCard
                   plan={plan}

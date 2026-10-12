@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Activity,
   Calendar,
+  CalendarCheck,
   CalendarX,
   CheckCircle2,
   Clock,
@@ -17,22 +18,29 @@ import {
   Scale,
   Timer,
 } from "lucide-react";
+import type { DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
+import { useTreatmentLog } from "@/features/personal-log/dialysis/useTreatmentLog";
+import { useDialysisSchedule } from "@/features/personal-log/dialysis/useDialysisSchedule";
 import {
-  mockDialysisEntries,
-  DialysisLogEntry,
-} from "@/features/personal-log/dialysisTreatmentData";
+  attendanceOf,
+  fluidRemovedKg,
+  intraSymptomCounts,
+  monthSummary,
+  uncharted,
+} from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
 import MachineWaterCard from "@/features/personal-log/dialysis/MachineWaterCard";
-import TreatmentVitalsCard from "@/features/personal-log/dialysis/TreatmentVitalsCard";
 import HelpfulTipsCard from "@/features/personal-log/dialysis/HelpfulTipsCard";
 import PdExchangeLog from "@/features/personal-log/dialysis/PdExchangeLog";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import {
+  Alert,
   Badge,
   Button,
+  DonutChart,
   buttonStyles,
   Card,
   EmptyState,
@@ -93,38 +101,65 @@ function StatTile({
   );
 }
 
-function SummaryCards() {
-  const { dictionary } = useLanguage();
+/* The month's attendance, counted from what the member charted (client,
+   2026-10-12: attended, arrived late, ended early, missed — this month). */
+function SummaryCards({
+  entries,
+  monthKey,
+  isHome,
+}: {
+  entries: DialysisLogEntry[];
+  monthKey: string;
+  isHome: boolean;
+}) {
+  const { dictionary, language } = useLanguage();
+  const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
+  const month = monthSummary(entries, monthKey);
+  const charted = month.attended + month.missed;
   const summaryCards = [
     {
       label: dt?.summary?.attended || "Treatment attended",
-      value: "90%",
+      value: charted ? `${Math.round((month.attended / charted) * 100)}%` : "—",
       icon: CheckCircle2,
       tone: "success" as const,
     },
-    {
-      label: dt?.summary?.arrivedLate || "Arrived late",
-      value: "2",
-      icon: Clock,
-      tone: "warning" as const,
-    },
+    /* Arriving late means nothing at home (client, 2026-10-12). */
+    ...(isHome
+      ? []
+      : [
+          {
+            label: dt?.summary?.arrivedLate || "Arrived late",
+            value: String(month.arrivedLate),
+            icon: Clock,
+            tone: "warning" as const,
+          },
+        ]),
     {
       label: dt?.summary?.endedEarly || "Ended early",
-      value: "4",
+      value: String(month.endedEarly),
       icon: Timer,
       tone: "danger" as const,
     },
     {
       label: dt?.summary?.missed || "Missed treatments",
-      value: "2",
+      value: String(month.missed),
       icon: CalendarX,
       tone: "danger" as const,
+    },
+    {
+      label: isEs ? "Reprogramados" : "Rescheduled",
+      value: String(month.rescheduled),
+      icon: CalendarCheck,
+      tone: "accent" as const,
     },
   ];
 
   return (
-    <section className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4">
+    <section
+      aria-label={isEs ? "Este mes" : "This month"}
+      className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4"
+    >
       {summaryCards.map((card) => (
         <StatTile
           key={card.label}
@@ -138,34 +173,45 @@ function SummaryCards() {
   );
 }
 
-function ClinicalMeasurementsCards() {
-  const { dictionary } = useLanguage();
+/* The charted session's numbers: pre and post side by side, and the fluid
+   removed worked out from the two weights (client, 2026-10-12). */
+function ClinicalMeasurementsCards({
+  entry,
+}: {
+  entry: DialysisLogEntry | undefined;
+}) {
+  const { dictionary, language } = useLanguage();
+  const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
+  const removed = entry
+    ? fluidRemovedKg(entry.preWeight, entry.postWeight)
+    : null;
+  const dash = (v: string | undefined) => (v && v.trim() ? v : "—");
   const clinicalMeasurements = [
     {
       label: dt?.clinicalMeasurements?.fluidRemoved || "Fluid Removed",
-      value: "2.3",
-      unit: dt?.clinicalMeasurements?.liters || "Liters",
+      value: removed === null ? "—" : String(removed),
+      unit: "kg ≈ L",
       icon: Droplets,
       tone: "brand" as const,
     },
     {
-      label: dt?.clinicalMeasurements?.postWeight || "Post Weight",
-      value: "72.4",
-      unit: "kg (pre: 74.7)",
+      label: isEs ? "Peso antes / después" : "Pre / Post Weight",
+      value: `${dash(entry?.preWeight)} / ${dash(entry?.postWeight)}`,
+      unit: "kg",
       icon: Scale,
       tone: "success" as const,
     },
     {
-      label: dt?.clinicalMeasurements?.bloodPressure || "Blood Pressure",
-      value: "118 / 72",
+      label: isEs ? "Presión antes / después" : "BP Pre / Post",
+      value: `${dash(entry?.preBloodPressure)} · ${dash(entry?.bloodPressurePost)}`,
       unit: dt?.clinicalMeasurements?.mmHg || "mmHg",
       icon: Activity,
       tone: "accent" as const,
     },
     {
-      label: dt?.clinicalMeasurements?.heartRate || "Heart Rate",
-      value: "78",
+      label: isEs ? "Pulso antes / después" : "Heart Rate Pre / Post",
+      value: `${dash(entry?.preHeartRate)} / ${dash(entry?.heartRatePost)}`,
       unit: dt?.clinicalMeasurements?.bpm || "bpm",
       icon: HeartPulse,
       tone: "danger" as const,
@@ -179,6 +225,11 @@ function ClinicalMeasurementsCards() {
         <span>
           {dt?.clinicalMeasurements?.title || "Clinical Measurements"}
         </span>
+        {entry ? (
+          <span className="text-body-sm font-normal text-fg-muted">
+            · {entry.displayDate}
+          </span>
+        ) : null}
       </h2>
 
       <div className="grid grid-cols-2 gap-inset-sm sm:gap-inline-lg xl:grid-cols-4">
@@ -197,116 +248,58 @@ function ClinicalMeasurementsCards() {
   );
 }
 
-function SymptomsDonut() {
-  const { dictionary } = useLanguage();
+const SYMPTOM_LABEL: Record<string, { en: string; es: string }> = {
+  cramping: { en: "Cramping", es: "Calambres" },
+  dizziness: { en: "Dizziness", es: "Mareo" },
+  swelling: { en: "Swelling", es: "Hinchazón" },
+  shortnessOfBreath: { en: "Shortness of breath", es: "Falta de aire" },
+  lowBp: { en: "Low BP", es: "Presión baja" },
+  highBp: { en: "High BP", es: "Presión alta" },
+  fatigue: { en: "Fatigue", es: "Fatiga" },
+};
+
+/* How often each symptom came up during the member's charted treatments. */
+function SymptomsDonut({ entries }: { entries: DialysisLogEntry[] }) {
+  const { dictionary, language } = useLanguage();
+  const isEs = language === "ES";
   const dt = dictionary.dialysisTreatment;
-  const symptomSlices = [
-    {
-      label: dt?.symptomsDonut?.cramping || "Cramping",
-      count: 29,
-      percent: 50,
-      color: "var(--color-brand-600)",
-    },
-    {
-      label: dt?.symptomsDonut?.lowBp || "Low BP",
-      count: 16,
-      percent: 28,
-      color: "var(--color-warning-500)",
-    },
-    {
-      label: dt?.symptomsDonut?.fatigue || "Fatigue",
-      count: 13,
-      percent: 22,
-      color: "var(--color-danger-500)",
-    },
-  ];
-
-  const size = 210;
-  const strokeWidth = 26;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  let accumulatedOffset = 0;
+  const attended = entries.filter((e) => attendanceOf(e) !== "Missed");
+  const counts = intraSymptomCounts(attended).filter((c) => c.count > 0);
+  const label = dt?.symptomsDonut?.title || "Symptoms During Treatment";
 
   return (
-    <Card
-      as="section"
-      className="flex flex-col justify-between space-y-stack-lg"
-    >
-      <h2 className="text-heading-4 text-fg">
-        {dt?.symptomsDonut?.title || "Symptoms During Treatment"}
-      </h2>
-
-      <div className="relative flex items-center justify-center py-2">
-        <div className="relative" style={{ width: size, height: size }}>
-          <svg
-            width={size}
-            height={size}
-            className="-rotate-90"
-            role="img"
-            aria-label={symptomSlices
-              .map(
-                (slice) =>
-                  `${slice.label}: ${slice.count}, ${slice.percent} percent`,
-              )
-              .join(". ")}
-          >
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="var(--color-surface-sunken)"
-              strokeWidth={strokeWidth}
-            />
-            {symptomSlices.map((slice) => {
-              const strokeDasharray = `${(slice.percent / 100) * circumference} ${circumference}`;
-              const strokeDashoffset = -accumulatedOffset;
-              accumulatedOffset += (slice.percent / 100) * circumference;
-
-              return (
-                <circle
-                  key={slice.label}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill="none"
-                  stroke={slice.color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="butt"
-                />
-              );
-            })}
-          </svg>
-
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-metric-md text-fg">86%</span>
-            <span className="mt-stack-xs text-caption text-fg-muted">
-              {dt?.symptomsDonut?.overall || "Overall"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-inline-md border-t border-line-subtle pt-inset-sm text-center">
-        {symptomSlices.map((slice) => (
-          <div key={slice.label} className="space-y-stack-xs">
-            <div className="flex items-center justify-center gap-inline-xs text-caption text-fg-secondary">
-              <span
-                aria-hidden="true"
-                className="h-2.5 w-2.5 shrink-0 rounded-pill"
-                style={{ backgroundColor: slice.color }}
-              />
-              <span>{slice.label}</span>
-            </div>
-            <p className="text-label-sm text-fg">
-              {slice.count} ({slice.percent}%)
-            </p>
-          </div>
-        ))}
-      </div>
+    <Card as="section" className="flex flex-col space-y-stack-lg">
+      <h2 className="text-heading-4 text-fg">{label}</h2>
+      {counts.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">
+          {isEs
+            ? "Ningún síntoma registrado durante sus tratamientos."
+            : "No symptoms charted during your treatments."}
+        </p>
+      ) : (
+        <>
+          <DonutChart
+            className="self-center"
+            label={label}
+            segments={counts.map((c) => ({
+              label: isEs ? SYMPTOM_LABEL[c.key].es : SYMPTOM_LABEL[c.key].en,
+              value: c.count,
+            }))}
+            centerValue={attended.length}
+            centerLabel={isEs ? "tratamientos" : "treatments"}
+          />
+          <ul className="grid grid-cols-2 gap-inline-md border-t border-line-subtle pt-inset-sm">
+            {counts.map((c) => (
+              <li key={c.key} className="text-caption text-fg-secondary">
+                {isEs ? SYMPTOM_LABEL[c.key].es : SYMPTOM_LABEL[c.key].en}:{" "}
+                <span className="text-label-sm text-fg">
+                  {c.count} / {attended.length}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </Card>
   );
 }
@@ -318,25 +311,31 @@ function toDateInputValue(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Newest logged treatment, so the page opens on a day that has data. */
-const LATEST_ENTRY_DATE =
-  [...mockDialysisEntries]
-    .map((entry) => entry.date)
-    .sort()
-    .pop() ?? toDateInputValue(new Date());
-
 export default function DialysisTreatmentPage() {
   const { language, dictionary } = useLanguage();
   const dt = dictionary.dialysisTreatment;
   const isEs = language === "ES";
   const modalityLog = useDialysisModality();
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    LATEST_ENTRY_DATE,
+  const log = useTreatmentLog();
+  const schedule = useDialysisSchedule();
+  const todayIso = toDateInputValue(new Date());
+  /* Null shows every date; the page opens on all of them. */
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const isHome = modalityLog.modality === "home-hd";
+  /* In-center and home logs are kept apart (client, 2026-10-12: "all three
+     of these are different"). Sample entries carry no modality: in-center. */
+  const entries = log.entries.filter(
+    (e) =>
+      (e.modality ?? "in-center-hd") === (isHome ? "home-hd" : "in-center-hd"),
   );
-
   const visibleEntries = selectedDate
-    ? mockDialysisEntries.filter((entry) => entry.date === selectedDate)
-    : mockDialysisEntries;
+    ? entries.filter((entry) => entry.date === selectedDate)
+    : entries;
+  const latestAttended = visibleEntries.find(
+    (e) => attendanceOf(e) !== "Missed",
+  );
+  /* Scheduled days in the last week with nothing charted. */
+  const notCharted = uncharted(schedule.periods, log.entries, todayIso);
 
   return (
     <div className="w-full space-y-stack-xl">
@@ -355,8 +354,8 @@ export default function DialysisTreatmentPage() {
       {modalityLog.modality === "pd" ? (
         <PdExchangeLog
           log={modalityLog}
-          date={selectedDate ?? LATEST_ENTRY_DATE}
-          dayLabel={formatPdDayLabel(selectedDate ?? LATEST_ENTRY_DATE, isEs)}
+          date={selectedDate ?? todayIso}
+          dayLabel={formatPdDayLabel(selectedDate ?? todayIso, isEs)}
         />
       ) : (
         <>
@@ -412,29 +411,76 @@ export default function DialysisTreatmentPage() {
             </div>
           </div>
 
-          {/* TOP 4 SUMMARY CARDS */}
-          <SummaryCards />
-
-          {/* At home the member owns the machine and takes the observations,
-              so the log has to ask for what a technician and a nurse would
-              otherwise have recorded. Neither belongs on an in-center page. */}
-          {modalityLog.modality === "home-hd" ? (
-            <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-2 [&>*]:min-w-0">
-              <MachineWaterCard />
-              <TreatmentVitalsCard date={selectedDate ?? LATEST_ENTRY_DATE} />
-            </section>
+          {/* "Did you miss a treatment?" — a scheduled day with nothing
+              charted (client, 2026-10-12). */}
+          {notCharted.length > 0 ? (
+            <Alert
+              tone="info"
+              title={
+                isEs
+                  ? "¿Tuvo estos tratamientos?"
+                  : "Did you have these treatments?"
+              }
+            >
+              <ul className="mt-stack-xs space-y-stack-sm">
+                {notCharted.slice(0, 3).map((day) => (
+                  <li
+                    key={day.date}
+                    className="flex flex-wrap items-center gap-inline-md"
+                  >
+                    <span className="min-w-40 text-body-sm">
+                      {formatPdDayLabel(day.date, isEs)}
+                    </span>
+                    <Link
+                      href={`/dashboard/personal-log/dialysis-treatment/add?date=${day.date}`}
+                      className={buttonStyles({ size: "small" })}
+                    >
+                      {isEs ? "Registrarlo" : "Chart it"}
+                    </Link>
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      onClick={() =>
+                        log.markMissed(
+                          day.date,
+                          isHome ? "home-hd" : "in-center-hd",
+                        )
+                      }
+                    >
+                      {isEs ? "Lo perdí" : "I missed it"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </Alert>
           ) : null}
 
+          {/* THIS MONTH'S ATTENDANCE */}
+          <SummaryCards
+            entries={entries}
+            monthKey={todayIso.slice(0, 7)}
+            isHome={isHome}
+          />
+
+          {/* At home the member owns the machine, so its maintenance is
+              tracked here. The session's vitals are charted with the
+              treatment itself — pre and post — rather than in a second
+              card that asked for the same numbers (client, 2026-10-12). */}
+          {isHome ? <MachineWaterCard /> : null}
+
           {/* CLINICAL MEASUREMENTS */}
-          <ClinicalMeasurementsCards />
+          <ClinicalMeasurementsCards entry={latestAttended} />
 
           {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
           <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12 [&>*]:min-w-0">
             <div className="xl:col-span-8">
-              <MedicationsGivenSection />
+              <MedicationsGivenSection
+                treatmentDate={latestAttended?.date ?? todayIso}
+              />
             </div>
             <div className="xl:col-span-4">
-              <SymptomsDonut />
+              <SymptomsDonut entries={entries} />
             </div>
           </section>
 
@@ -558,7 +604,7 @@ function TreatmentEntriesTable({
               <TableRow key={entry.id}>
                 <TableCell emphasis>
                   <span className="block">
-                    {entry.displayDate.split(",")[1]}
+                    {entry.displayDate.split(",").slice(0, 2).join(",")}
                   </span>
                   <span className="block text-caption font-normal text-fg-muted">
                     {entry.startTime} – {entry.endTime}
@@ -568,7 +614,11 @@ function TreatmentEntriesTable({
                 <TableCell>{entry.treatmentType}</TableCell>
 
                 <TableCell numeric>
-                  <Badge tone="info">{entry.fluidRemoved}</Badge>
+                  {entry.fluidRemoved ? (
+                    <Badge tone="info">{entry.fluidRemoved}</Badge>
+                  ) : (
+                    "—"
+                  )}
                 </TableCell>
 
                 <TableCell numeric>
@@ -604,7 +654,12 @@ function TreatmentEntriesTable({
                 </TableCell>
 
                 <TableCell>
-                  <AttendanceBadge status={entry.attendance} />
+                  <AttendanceBadge status={attendanceOf(entry)} />
+                  {entry.status === "rescheduled" ? (
+                    <Badge tone="info" className="mt-stack-xs">
+                      {isEs ? "Reposición" : "Make-up"}
+                    </Badge>
+                  ) : null}
                 </TableCell>
 
                 <TableCell>

@@ -8,8 +8,10 @@ import {
   removeVisit,
   sortVisits,
   upsertVisit,
+  visitsFor,
   type HomeVisit,
   type HomeVisitDraft,
+  type HomeVisitModality,
 } from "./homeVisits";
 
 const VISITS_KEY = ["dialysis-home-visits"];
@@ -23,7 +25,8 @@ function todayIso(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-export function useHomeVisits() {
+/** The member's home visits; with a modality, only that modality's. */
+export function useHomeVisits(modality?: HomeVisitModality) {
   const queryClient = useQueryClient();
 
   const visitsQuery = useQuery({
@@ -37,7 +40,11 @@ export function useHomeVisits() {
     onSuccess: (visits) => queryClient.setQueryData(VISITS_KEY, visits),
   });
 
-  const visits = visitsQuery.data ?? NO_VISITS;
+  const all = visitsQuery.data ?? NO_VISITS;
+  const visits = useMemo(
+    () => (modality ? visitsFor(all, modality) : all),
+    [all, modality],
+  );
   const { mutate } = write;
   const today = todayIso();
 
@@ -45,13 +52,14 @@ export function useHomeVisits() {
     (draft: HomeVisitDraft, editId?: string) => {
       const visit: HomeVisit = {
         ...draft,
+        ...(modality ? { modality } : {}),
         id:
           editId ??
           `visit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       };
       mutate((current) => upsertVisit(current, visit));
     },
-    [mutate],
+    [mutate, modality],
   );
 
   return {

@@ -67,9 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loginAs],
   );
 
+  /* A full page load to the home page (client, 2026-10-12: "when I click
+     log out, it don't log me out"). Navigating inside the app raced the
+     dashboard's own redirect to the login page, and every screen's cached
+     data stayed in memory for whoever signed in next in that tab. */
   const logout = useCallback(() => {
     clearSessionCookie();
     setSession(null);
+    window.location.assign("/");
   }, []);
 
   const value = useMemo(

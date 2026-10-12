@@ -11,8 +11,9 @@
    language toggle never has to refetch, exactly as the journey content does.
    ========================================================================== */
 
-/** How a resource is consumed. Drives the icon and the detail layout. */
-export type LibraryKind = "video" | "document" | "article";
+/** How a resource is consumed. Drives the icon and the detail layout.
+ *  "image" — a picture post, e.g. an infographic (client, 2026-10-12). */
+export type LibraryKind = "video" | "document" | "article" | "image";
 
 /** Topic buckets the filter row is built from. */
 export type LibraryCategory =

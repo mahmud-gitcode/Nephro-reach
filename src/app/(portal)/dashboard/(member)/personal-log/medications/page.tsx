@@ -107,7 +107,6 @@ export default function MedicationLogPage() {
             showSampleAlerts={showSampleAlerts}
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
-            log={log}
           />
         </div>
       </AsyncSection>

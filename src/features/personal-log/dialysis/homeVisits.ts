@@ -25,7 +25,13 @@ export interface HomeVisit {
   /** Whether the member wants a nudge the day before. */
   remind: boolean;
   notes: string;
+  /** Home HD and PD keep their own visits (client, 2026-10-12: "peritoneal
+   *  and hemo is not the same"). Absent on visits saved before the split,
+   *  which show under both. */
+  modality?: HomeVisitModality;
 }
+
+export type HomeVisitModality = "home-hd" | "pd";
 
 export type HomeVisitDraft = Omit<HomeVisit, "id">;
 
@@ -123,6 +129,37 @@ export function nextVisit(
     : null;
 }
 
+/** The visits that belong to one home modality. */
+export function visitsFor(
+  visits: HomeVisit[],
+  modality: HomeVisitModality,
+): HomeVisit[] {
+  return visits.filter((v) => !v.modality || v.modality === modality);
+}
+
+/**
+ * Visits whose "remind me the day before" has come: from the day before
+ * until the day itself, while still scheduled. The reminder was a switch
+ * that nothing read (client, 2026-10-12).
+ */
+export function visitRemindersDue(
+  visits: HomeVisit[],
+  todayIso: string,
+): HomeVisit[] {
+  const [y, m, d] = todayIso.split("-").map(Number);
+  const tomorrow = new Date(y, m - 1, d + 1);
+  const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+  return visits
+    .filter(
+      (v) =>
+        v.remind &&
+        v.status === "scheduled" &&
+        v.date >= todayIso &&
+        v.date <= tomorrowIso,
+    )
+    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+}
+
 export function upsertVisit(
   visits: HomeVisit[],
   visit: HomeVisit,
@@ -162,6 +199,9 @@ export function normaliseVisits(stored: unknown): HomeVisit[] {
           : "scheduled",
         remind: raw.remind !== false,
         notes: typeof raw.notes === "string" ? raw.notes : "",
+        ...(raw.modality === "home-hd" || raw.modality === "pd"
+          ? { modality: raw.modality }
+          : {}),
       },
     ];
   });

@@ -2,7 +2,15 @@
 
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { FormField, Input, Modal } from "@/components/ui";
+import { FormField, Input, Modal, SegmentedChoice } from "@/components/ui";
+import {
+  FLUID_PRESETS,
+  formatFluid,
+  fromMl,
+  toMl,
+  useFluidUnit,
+  type FluidUnit,
+} from "./fluidUnit";
 import { toNumber } from "./nutrition.format";
 import {
   MEAL_KEYS,
@@ -385,8 +393,6 @@ export function GoalsModal({
   );
 }
 
-const WATER_PRESETS = [120, 240, 330, 500];
-
 export function AddWaterModal({
   dayLabel,
   onClose,
@@ -401,12 +407,14 @@ export function AddWaterModal({
   const n = dictionary?.nutrition;
   const isEs = language === "ES";
 
-  const [amount, setAmount] = useState("240");
+  /* Ounces first (client, 2026-10-12); the log stores millilitres. */
+  const { unit, setUnit } = useFluidUnit();
+  const [amount, setAmount] = useState(unit === "oz" ? "8" : "240");
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const ml = toNumber(amount);
-    if (ml > 0) onSave(ml);
+    const value = toNumber(amount);
+    if (value > 0) onSave(toMl(value, unit));
   };
 
   return (
@@ -420,8 +428,26 @@ export function AddWaterModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        <SegmentedChoice<FluidUnit>
+          label={isEs ? "Unidad" : "Unit"}
+          value={unit}
+          onChange={(next) => {
+            /* The amount follows the unit, so 8 oz becomes 237 ml. */
+            const value = toNumber(amount);
+            if (value > 0) setAmount(`${fromMl(toMl(value, unit), next)}`);
+            setUnit(next);
+          }}
+          options={[
+            { value: "oz", label: isEs ? "Onzas (oz)" : "Ounces (oz)" },
+            {
+              value: "ml",
+              label: isEs ? "Mililitros (ml)" : "Millilitres (ml)",
+            },
+          ]}
+        />
+
         <div className="grid grid-cols-4 gap-2">
-          {WATER_PRESETS.map((preset) => {
+          {FLUID_PRESETS[unit].map((preset) => {
             const isSelected = toNumber(amount) === preset;
             return (
               <button
@@ -434,7 +460,7 @@ export function AddWaterModal({
                     : "border-line bg-surface text-fg-secondary hover:bg-surface-sunken"
                 }`}
               >
-                {preset} ml
+                {preset} {unit}
               </button>
             );
           })}
@@ -442,10 +468,19 @@ export function AddWaterModal({
 
         <NumberField
           label={isEs ? "Cantidad" : "Amount"}
-          unit="ml"
+          unit={unit}
           value={amount}
           onChange={setAmount}
         />
+        {toNumber(amount) > 0 ? (
+          <p className="text-caption text-fg-muted">
+            ={" "}
+            {formatFluid(
+              toMl(toNumber(amount), unit),
+              unit === "oz" ? "ml" : "oz",
+            )}
+          </p>
+        ) : null}
 
         <div className="flex items-center justify-end gap-2 border-t border-line-subtle pt-4">
           <button

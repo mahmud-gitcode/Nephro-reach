@@ -4,18 +4,12 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import {
-  ArrowLeft,
-  Bookmark,
-  Download,
-  FileText,
-  Library,
-  Printer,
-} from "lucide-react";
+import { Bookmark, Download, FileText, Library, Printer } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
 import { formatPublished } from "@/features/library/library.rules";
 import { useLibrary } from "@/features/library/useLibrary";
+import { LibraryBackLink } from "@/features/library/member/LibraryBackLink";
 import { kindLabel, metaLabel } from "@/features/library/member/RelatedLibrary";
 import type { LibraryResource } from "@/features/library/library.types";
 import {
@@ -235,17 +229,14 @@ export default function LibraryResourcePage() {
        a post is prose, and prose past ~800px is hard to track from the end
        of one line to the start of the next. */
     <div className="mx-auto w-full max-w-[800px] space-y-stack-xl">
-      <Link
-        href="/dashboard/my-library"
-        className={buttonStyles({
-          size: "small",
-          variant: "neutral",
-          appearance: "fill-stroke",
-        })}
-      >
-        <ArrowLeft aria-hidden="true" className="size-4 shrink-0" />
-        {isEs ? "Volver a Mi Biblioteca" : "Back to My Library"}
-      </Link>
+      <LibraryBackLink
+        isEs={isEs}
+        fallback={{
+          href: "/dashboard/my-library",
+          en: "Back to My Library",
+          es: "Volver a Mi Biblioteca",
+        }}
+      />
 
       {saveError ? (
         <Alert tone="warning">
@@ -339,6 +330,20 @@ export default function LibraryResourcePage() {
             {resource.kind === "video" ? (
               <>
                 <VideoStage resource={resource} />
+                <div className="space-y-stack-md">
+                  <PostBody resource={resource} />
+                </div>
+              </>
+            ) : resource.kind === "image" ? (
+              <>
+                <Card padding="none" className="overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded data URL or a public path */}
+                  <img
+                    src={resource.poster}
+                    alt={isEs ? resource.titleEs : resource.titleEn}
+                    className="w-full object-contain"
+                  />
+                </Card>
                 <div className="space-y-stack-md">
                   <PostBody resource={resource} />
                 </div>

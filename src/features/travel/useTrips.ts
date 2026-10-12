@@ -70,6 +70,24 @@ export function useTrips() {
     [mutate],
   );
 
+  /* Cancelling sends the dialysis center a request and keeps the trip, so
+     the member can show they asked (client, 2026-10-12). */
+  const requestCancel = useCallback(
+    (id: string) =>
+      mutate((current) =>
+        current.map((trip) =>
+          trip.id === id
+            ? {
+                ...trip,
+                cancelRequestedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              }
+            : trip,
+        ),
+      ),
+    [mutate],
+  );
+
   const setStatus = useCallback(
     (id: string, status: TripRequest["status"]) =>
       mutate((current) => rules.updateTripStatus(current, id, status)),
@@ -205,6 +223,7 @@ export function useTrips() {
     submit,
     update,
     cancel,
+    requestCancel,
     setDocuments,
     setPrep,
     attachFile,

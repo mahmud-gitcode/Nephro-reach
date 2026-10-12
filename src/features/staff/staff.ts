@@ -24,7 +24,7 @@ export type Organization = {
   id: string;
   name: string;
   /** Which portal its staff sign into. */
-  portal: Extract<UserRole, "clinic" | "access" | "nephrology">;
+  portal: Extract<UserRole, "clinic" | "access" | "nephrology" | "admin">;
   kind: string;
 };
 
@@ -46,6 +46,15 @@ export const ORGANIZATIONS: Organization[] = [
     name: "Riverside Nephrology Associates",
     portal: "nephrology",
     kind: "Nephrology Office",
+  },
+  /* NephroReach's own team (client, 2026-10-12): the admin adds people —
+     a virtual office manager to start — each with the parts of the admin
+     portal their role allows. The admin's own login owns the account. */
+  {
+    id: "nephroreach",
+    name: "NephroReach",
+    portal: "admin",
+    kind: "Platform Team",
   },
 ];
 
@@ -86,6 +95,9 @@ export const STAFF_ROLES = [
   "Access Coordinator",
   "Scheduler / Front Desk",
   "Billing / Administrative Staff",
+  /* NephroReach's own admin team (client, 2026-10-12). */
+  "Administrative Support",
+  "Content Manager",
 ] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
@@ -107,6 +119,7 @@ const PRACTICE_ROLES: StaffRole[] = [
 export const ROLES_BY_PORTAL: Record<StaffPortal, StaffRole[]> = {
   clinic: PRACTICE_ROLES,
   nephrology: PRACTICE_ROLES,
+  admin: ["Office Manager", "Administrative Support", "Content Manager"],
   access: [
     "Access Center Administrator",
     "Office Manager",
@@ -137,6 +150,7 @@ const ACCESS_ALIAS: Partial<Record<StaffRole, StaffRole>> = {
 /** A role as an organisation of this kind understands it. */
 export function portalRole(role: StaffRole, portal: StaffPortal): StaffRole {
   if (rolesFor(portal).includes(role)) return role;
+  if (portal === "admin") return "Administrative Support";
   if (portal === "access") return ACCESS_ALIAS[role] ?? "Nurse";
   const back = (Object.keys(ACCESS_ALIAS) as StaffRole[]).find(
     (k) => ACCESS_ALIAS[k] === role,
@@ -356,6 +370,32 @@ export const PERMISSIONS = [
     label: "Manage staff",
     detail: "Add staff, change roles, turn off sign-in",
   },
+  /* The NephroReach admin portal's own parts (client, 2026-10-12). */
+  {
+    id: "admin.support",
+    label: "Answer support requests",
+    detail: "The Support Inbox from every dashboard",
+  },
+  {
+    id: "admin.reviews",
+    label: "Moderate reviews and stories",
+    detail: "Member reviews and From Fear to Hope testimonials",
+  },
+  {
+    id: "admin.community",
+    label: "Moderate the community",
+    detail: "Hide or remove community posts",
+  },
+  {
+    id: "admin.content",
+    label: "Manage content",
+    detail: "Curriculum, library, Table Talk and live classes",
+  },
+  {
+    id: "admin.members",
+    label: "See members and subscriptions",
+    detail: "The members list, subscriptions and SMS analytics",
+  },
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number]["id"];
 
@@ -366,9 +406,31 @@ const ACCESS_ONLY = (id: Permission) =>
     id !== "access.view" &&
     id !== "access.schedule") ||
   id === "account.manage";
+/* The admin portal's permissions belong to NephroReach's own team only. */
+const ADMIN_ONLY = (id: Permission) => id.startsWith("admin.");
 const EVERY: Permission[] = PERMISSIONS.map((p) => p.id).filter(
-  (id) => !ACCESS_ONLY(id),
+  (id) => !ACCESS_ONLY(id) && !ADMIN_ONLY(id),
 );
+
+/* NephroReach's own team: the office manager runs the day to day, support
+   answers members and moderates, the content manager publishes. */
+export const ADMIN_ROLE_PERMISSIONS: Partial<Record<StaffRole, Permission[]>> =
+  {
+    "Office Manager": [
+      "admin.support",
+      "admin.reviews",
+      "admin.community",
+      "admin.content",
+      "admin.members",
+      "staff.manage",
+    ],
+    "Administrative Support": [
+      "admin.support",
+      "admin.reviews",
+      "admin.community",
+    ],
+    "Content Manager": ["admin.content"],
+  };
 
 /* Who may do what at an access center or a nephrology office. Messages to
    clinicians and those who handle questions; scheduling and CCM time to
@@ -625,7 +687,9 @@ export function roleCan(
       ? DIALYSIS_ROLE_PERMISSIONS
       : portal === "access"
         ? ACCESS_ROLE_PERMISSIONS
-        : ROLE_PERMISSIONS;
+        : portal === "admin"
+          ? ADMIN_ROLE_PERMISSIONS
+          : ROLE_PERMISSIONS;
   return matrix[portalRole(role, portal)]?.includes(permission) ?? false;
 }
 
@@ -876,6 +940,14 @@ export function seedStaff(now: number): StaffAccount[] {
       "ccm@nephroreach.com",
       "riverside-nephrology",
       "Care Coordinator",
+    ),
+    /* NephroReach's virtual office manager (client, 2026-10-12). */
+    person(
+      "seed-s13",
+      "Dana Brooks",
+      "support@nephroreach.com",
+      "nephroreach",
+      "Administrative Support",
     ),
   ];
 }

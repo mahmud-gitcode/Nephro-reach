@@ -94,6 +94,11 @@ const STATUS_TONE: Record<TripStatus, BadgeTone> = {
 };
 
 function StatusTag({ trip }: { trip: TripRequest }) {
+  /* The member asked to cancel (client, 2026-10-12): the center manages it
+     with the other unit. */
+  if (trip.cancelRequestedAt) {
+    return <Badge tone="danger">Cancellation requested</Badge>;
+  }
   return (
     <Badge tone={STATUS_TONE[trip.status]}>
       {statusLabel(trip.status, false)}

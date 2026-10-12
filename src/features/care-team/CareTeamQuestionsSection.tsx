@@ -47,10 +47,10 @@ export default function CareTeamQuestionsSection({
   } = useCareTeamQuestions();
   const [selectedRole, setSelectedRole] = useState<CareTeamRole | "All">("All");
   const [searchQuery, setSearchQuery] = useState("");
-  /* On a phone the first four show; twelve open answers made the page
-     7,000px long (client review, 2026-10-08). */
-  const [showAll, setShowAll] = useState(false);
-  const PHONE_PREVIEW = 4;
+  /* Five a page at every width: thirty questions made one very long page
+     (client, 2026-10-08 and 2026-10-12). */
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 5;
   const [statusFilter, setStatusFilter] = useState<"All" | QuestionStatus>(
     "All",
   );
@@ -180,6 +180,17 @@ export default function CareTeamQuestionsSection({
     return matchesRole && matchesStatus && matchesQuery;
   });
 
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredQuestions.length / PAGE_SIZE),
+  );
+  /* A filter that leaves fewer pages pulls the page back into range. */
+  const currentPage = Math.min(page, pageCount - 1);
+  const shownQuestions = filteredQuestions.slice(
+    currentPage * PAGE_SIZE,
+    (currentPage + 1) * PAGE_SIZE,
+  );
+
   const getStatusBadgeStyle = (status: QuestionStatus) => {
     switch (status) {
       case "Answered":
@@ -202,7 +213,9 @@ export default function CareTeamQuestionsSection({
       {!hideTitle && (
         <SectionTitle
           title={
-            language === "ES" ? "Preguntas al Equipo" : "Care Team Questions"
+            language === "ES"
+              ? "Preguntas al Equipo para su Próximo Tratamiento"
+              : "Care Team Questions for Your Next Treatment"
           }
           action={
             <Button onClick={handleOpenAddModal} className="shrink-0">
@@ -338,12 +351,10 @@ export default function CareTeamQuestionsSection({
               </p>
             </div>
           ) : (
-            filteredQuestions.map((q, index) => (
+            shownQuestions.map((q) => (
               <div
                 key={q.id}
-                className={`space-y-3 rounded-card border border-line bg-surface p-inset-md transition-shadow sm:p-6 ${
-                  !showAll && index >= PHONE_PREVIEW ? "max-sm:hidden" : ""
-                }`}
+                className="space-y-3 rounded-card border border-line bg-surface p-inset-md transition-shadow sm:p-6"
               >
                 {/* Question Row with Status Tag, Edit Button, and Delete */}
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -439,18 +450,35 @@ export default function CareTeamQuestionsSection({
               </div>
             ))
           )}
-          {!showAll && filteredQuestions.length > PHONE_PREVIEW ? (
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              fullWidth
-              className="sm:hidden"
-              onClick={() => setShowAll(true)}
+          {pageCount > 1 ? (
+            <nav
+              aria-label={language === "ES" ? "Páginas" : "Pages"}
+              className="flex items-center justify-between gap-inline-md pt-stack-sm"
             >
-              {language === "ES"
-                ? `Ver todas (${filteredQuestions.length})`
-                : `Show all (${filteredQuestions.length})`}
-            </Button>
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                disabled={currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                {language === "ES" ? "Anterior" : "Previous"}
+              </Button>
+              <span className="text-body-sm text-fg-muted tabular-nums">
+                {language === "ES"
+                  ? `Página ${currentPage + 1} de ${pageCount}`
+                  : `Page ${currentPage + 1} of ${pageCount}`}
+              </span>
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                disabled={currentPage >= pageCount - 1}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                {language === "ES" ? "Siguiente" : "Next"}
+              </Button>
+            </nav>
           ) : null}
         </div>
       </AsyncSection>

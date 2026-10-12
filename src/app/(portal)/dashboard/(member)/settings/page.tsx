@@ -5,6 +5,7 @@ import { Bell, Building2, KeyRound, Phone, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import EmergencyContactSection from "@/features/profile/EmergencyContactSection";
+import { START_TOUR_EVENT } from "@/features/onboarding/MemberTour";
 import { CareContactsSection } from "@/features/profile/CareContactsSection";
 import {
   Alert,
@@ -148,6 +149,7 @@ function ProfileInformation({
   };
 }) {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [name, setName] = useState(user?.name || "Sarah Jenkins");
   const [phone, setPhone] = useState("555-019-2834");
   const [saved, setSaved] = useState(false);
@@ -209,7 +211,17 @@ function ProfileInformation({
           </FormField>
         </div>
 
-        <div className="mt-stack-xl flex justify-end">
+        <div className="mt-stack-xl flex flex-wrap items-center justify-between gap-inline-md">
+          {/* The first-visit tour, again (client, 2026-10-12). */}
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => window.dispatchEvent(new Event(START_TOUR_EVENT))}
+          >
+            {language === "ES"
+              ? "Ver el recorrido otra vez"
+              : "Take the tour again"}
+          </Button>
           <Button type="submit">
             {profileData?.saveButton || "Save Profile Changes"}
           </Button>

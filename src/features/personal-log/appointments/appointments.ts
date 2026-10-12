@@ -32,6 +32,9 @@ export type Appointment = {
   source?: "vascular-access";
   /** How long before to be reminded (client, 2026-10-05). */
   reminder?: ReminderLead;
+  /** Set once a missed visit has been booked again, which ends the
+   *  "remember to reschedule" reminder (client, 2026-10-12). */
+  rescheduled?: boolean;
 };
 
 export const REMINDER_LEADS = [
@@ -123,7 +126,7 @@ export type Attendance = "attended" | "missed";
 
 export type AppointmentDraft = Omit<
   Appointment,
-  "id" | "attendance" | "source"
+  "id" | "attendance" | "source" | "rescheduled"
 >;
 
 /**
@@ -253,7 +256,27 @@ export function setAttendance(
   id: string,
   attendance: Attendance,
 ): Appointment[] {
-  return list.map((a) => (a.id === id ? { ...a, attendance } : a));
+  return list.map((a) => {
+    if (a.id !== id) return a;
+    const next: Appointment = { ...a, attendance };
+    if (attendance === "attended") delete next.rescheduled;
+    return next;
+  });
+}
+
+/** Missed visits not yet booked again, most recent first. The member is
+ *  reminded to reschedule until they do (client, 2026-10-12). */
+export function needsReschedule(list: Appointment[]): Appointment[] {
+  return list
+    .filter((a) => a.attendance === "missed" && !a.rescheduled)
+    .sort((a, b) => key(b).localeCompare(key(a)));
+}
+
+export function markRescheduled(
+  list: Appointment[],
+  id: string,
+): Appointment[] {
+  return list.map((a) => (a.id === id ? { ...a, rescheduled: true } : a));
 }
 
 /** Past appointments from the last 30 days the member has not answered

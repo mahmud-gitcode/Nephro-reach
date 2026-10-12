@@ -23,6 +23,7 @@ import {
   ChipGroup,
   EmptyState,
   FormField,
+  Input,
   Skeleton,
   Textarea,
 } from "@/components/ui";
@@ -36,6 +37,8 @@ export default function UserReviewsPage() {
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [role, setRole] = useState<string>("Dialysis Member");
+  /* "Other" is typed in (client, 2026-10-12). */
+  const [otherRole, setOtherRole] = useState("");
   const [comment, setComment] = useState<string>("");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
@@ -57,6 +60,11 @@ export default function UserReviewsPage() {
       label: isEs ? "Cuidador Familiar" : "Family Caregiver",
     },
     { key: "CKD Learner", label: isEs ? "Estudiante de ERC" : "CKD Learner" },
+    {
+      key: "Transplant Warrior",
+      label: isEs ? "Guerrero del Trasplante" : "Transplant Warrior",
+    },
+    { key: "Other", label: isEs ? "Otro" : "Other" },
   ];
 
   /* The thank-you appears after the review is stored, and the box is only
@@ -66,7 +74,13 @@ export default function UserReviewsPage() {
     e.preventDefault();
     if (!comment.trim() || isSaving) return;
 
-    void submit({ userName, userEmail, rating, role, comment: comment.trim() })
+    void submit({
+      userName,
+      userEmail,
+      rating,
+      role: role === "Other" ? otherRole.trim() || "Other" : role,
+      comment: comment.trim(),
+    })
       .then(() => {
         setComment("");
         setSubmittedMessage(
@@ -157,6 +171,21 @@ export default function UserReviewsPage() {
                 </Chip>
               ))}
             </ChipGroup>
+            {role === "Other" ? (
+              <FormField
+                label={isEs ? "Su rol" : "Your role"}
+                className="mt-stack-sm"
+              >
+                {(field) => (
+                  <Input
+                    {...field}
+                    value={otherRole}
+                    onChange={(e) => setOtherRole(e.target.value)}
+                    maxLength={40}
+                  />
+                )}
+              </FormField>
+            ) : null}
           </fieldset>
 
           <FormField label={isEs ? "Su Mensaje" : "Your Review"} required>

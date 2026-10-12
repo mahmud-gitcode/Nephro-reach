@@ -13,7 +13,6 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import {
   ALL_WEEKDAYS,
-  DEFAULT_DURATION_MINUTES,
   DEFAULT_CHAIR_TIME,
   durationFor,
   WEEKDAY_ES,
@@ -22,7 +21,6 @@ import {
   formatReminder,
   reminderTimeFor,
   fromDateKey,
-  appendSchedulePeriod,
   buildSchedulePeriod,
   makeIsTreatmentDay,
   nextScheduledDate,
@@ -33,7 +31,6 @@ import {
   treatmentNumberInMonth,
   type ApplyScope,
   type ExtraTreatment,
-  type SchedulePeriod,
 } from "@/features/personal-log/dialysis/schedule";
 import {
   EditWeekModal,
@@ -54,6 +51,7 @@ import AccessPhotosSection from "@/features/personal-log/dialysis/AccessPhotosSe
 import SupplyChecklistSection from "@/features/personal-log/dialysis/SupplyChecklistSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
+import { useDialysisSchedule } from "@/features/personal-log/dialysis/useDialysisSchedule";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { Alert, SectionTitle } from "@/components/ui";
@@ -67,25 +65,9 @@ function DialysisManagementDashboard() {
 
   // Section 2 State: Dialysis Schedule
   // Dated schedule history. The last period is the one currently in force.
-  const [schedulePeriods, setSchedulePeriods] = useState<SchedulePeriod[]>([
-    /* A typical week: Monday, Wednesday and Friday, a 4-hour run in the
-       chair at 5:30 AM, and a reminder at 4:00 AM (90 minutes before). */
-    {
-      fromKey: "0000-01-01",
-      days: ["Monday", "Wednesday", "Friday"],
-      chairTimes: {
-        Monday: "05:30",
-        Wednesday: "05:30",
-        Friday: "05:30",
-      },
-      reminderLeadMinutes: 90,
-      durations: {
-        Monday: DEFAULT_DURATION_MINUTES,
-        Wednesday: DEFAULT_DURATION_MINUTES,
-        Friday: DEFAULT_DURATION_MINUTES,
-      },
-    },
-  ]);
+  // Dated schedule history, stored. The last period is the one in force.
+  const schedule = useDialysisSchedule();
+  const schedulePeriods = schedule.periods;
   const currentSchedule = schedulePeriods[schedulePeriods.length - 1];
   const selectedDays = currentSchedule.days;
   // Display option: drop the empty placeholder tiles for non-treatment days.
@@ -282,7 +264,7 @@ function DialysisManagementDashboard() {
   }: EditWeekResult) => {
     const fromKey = toDateKey(scopeEffectiveDate(scope));
     const period = buildSchedulePeriod(draft, fromKey);
-    setSchedulePeriods((prev) => appendSchedulePeriod(prev, period));
+    schedule.append(period);
     setHideBlankDays(nextHideBlankDays);
     setIsEditWeekModalOpen(false);
   };

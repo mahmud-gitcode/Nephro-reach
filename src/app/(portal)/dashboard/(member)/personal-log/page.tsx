@@ -13,6 +13,7 @@ import {
   Notebook,
   Pill,
   Plus,
+  Trash2,
   User,
 } from "lucide-react";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
@@ -23,8 +24,25 @@ import {
   buttonStyles,
   Card,
   EmptyState,
+  FormField,
   Input,
+  Select,
+  Skeleton,
 } from "@/components/ui";
+import { useNow } from "@/lib/utils/useNow";
+import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import {
+  timeRange,
+  upcoming,
+} from "@/features/personal-log/appointments/appointments";
+import { useHealthcareTeam } from "@/features/care-team/useHealthcareTeam";
+import {
+  TEAM_ROLES,
+  roleLabel,
+  teamError,
+  type TeamDraft,
+  type TeamRole,
+} from "@/features/care-team/healthcareTeam";
 import { PageTitle } from "@/components/layout/PageTitle";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -109,7 +127,15 @@ const tileConfigs: LogTileConfig[] = [
 ];
 
 function UpcomingAppointments() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === "ES";
+  const store = useAppointments();
+  const now = new Date(useNow());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  /* Read from the member's own list: this card said "No upcoming
+     appointments" with one booked for tomorrow (client, 2026-10-12). */
+  const ahead = upcoming(store.appointments, today).slice(0, 3);
 
   return (
     <Card
@@ -133,50 +159,140 @@ function UpcomingAppointments() {
         </Link>
       </div>
 
-      <Card tone="sunken" padding="none">
-        <EmptyState variant="bare" title={t("personalLogHub.upcoming.empty")} />
-      </Card>
+      {store.isPending ? (
+        <Skeleton height={120} />
+      ) : ahead.length === 0 ? (
+        <Card tone="sunken" padding="none">
+          <EmptyState
+            variant="bare"
+            title={t("personalLogHub.upcoming.empty")}
+          />
+        </Card>
+      ) : (
+        <ul className="divide-y divide-line-subtle rounded-card-nested border border-line-subtle">
+          {ahead.map((appointment) => (
+            <li
+              key={appointment.id}
+              className="flex flex-wrap items-center justify-between gap-inline-md px-inset-md py-inset-sm"
+            >
+              <div className="min-w-0">
+                <p className="text-label-md text-fg">{appointment.title}</p>
+                <p className="text-body-sm text-fg-muted">
+                  {appointment.doctor}
+                  {appointment.location ? ` · ${appointment.location}` : ""}
+                </p>
+              </div>
+              <p className="text-body-sm text-fg tabular-nums">
+                {new Date(`${appointment.date}T00:00`).toLocaleDateString(
+                  isEs ? "es-US" : "en-US",
+                  { weekday: "short", month: "short", day: "numeric" },
+                )}{" "}
+                · {timeRange(appointment)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }
 
 function HealthcareTeam() {
-  const { t } = useLanguage();
-  const [email, setEmail] = useState("");
-  const [clinicians, setClinicians] = useState<string[]>([]);
+  const { t, language } = useLanguage();
+  const isEs = language === "ES";
+  const team = useHealthcareTeam();
+  const [draft, setDraft] = useState<TeamDraft>({
+    email: "",
+    name: "",
+    role: "nurse",
+  });
+  const [tried, setTried] = useState(false);
+  const error = teamError(team.team, draft);
+  const errorText =
+    tried && error
+      ? error === "duplicate"
+        ? isEs
+          ? "Esta persona ya está en su equipo."
+          : "This person is already on your team."
+        : isEs
+          ? "Escriba un correo electrónico válido."
+          : "Enter a valid email address."
+      : undefined;
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      setClinicians((prev) => [...prev, email.trim()]);
-      setEmail("");
-    }
+    setTried(true);
+    if (error) return;
+    team.invite(draft);
+    setDraft({ email: "", name: "", role: draft.role });
+    setTried(false);
   };
 
   return (
     <Card
       tone="default"
       as="section"
-      className="space-y-stack-md border border-line bg-white shadow-card"
+      id="healthcare-team"
+      className="scroll-mt-24 space-y-stack-md border border-line bg-white shadow-card"
     >
       <div>
         <h2 className="text-heading-4 text-fg">
           {t("personalLogHub.team.title")}
         </h2>
+        <p className="mt-stack-xs text-body-sm text-fg-muted">
+          {isEs
+            ? "Las personas que acepten su invitación aparecen en «Enviar a» cuando comparte sus registros."
+            : "People who accept your invitation show up in “Send to” when you share your logs."}
+        </p>
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-inline-md">
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("personalLogHub.team.placeholder")}
-          leadingIcon={<Mail />}
-          aria-label={t("personalLogHub.team.title")}
-          className="flex-1"
-        />
+      <form
+        onSubmit={handleAdd}
+        className="grid gap-inline-md sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end"
+      >
+        <FormField
+          label={isEs ? "Correo electrónico" : "Email"}
+          error={errorText}
+        >
+          {(field) => (
+            <Input
+              {...field}
+              type="email"
+              value={draft.email}
+              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+              placeholder={t("personalLogHub.team.placeholder")}
+              leadingIcon={<Mail />}
+            />
+          )}
+        </FormField>
+        <FormField label={isEs ? "Nombre (opcional)" : "Name (optional)"}>
+          {(field) => (
+            <Input
+              {...field}
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+          )}
+        </FormField>
+        <FormField label={isEs ? "Función" : "Role"}>
+          {(field) => (
+            <Select
+              {...field}
+              value={draft.role}
+              onChange={(e) =>
+                setDraft({ ...draft, role: e.target.value as TeamRole })
+              }
+            >
+              {TEAM_ROLES.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {isEs ? role.es : role.en}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
         <Button type="submit" leadingIcon={<Plus />}>
-          {t("personalLogHub.team.add")}
+          {isEs ? "Invitar" : "Invite"}
         </Button>
       </form>
 
@@ -185,17 +301,63 @@ function HealthcareTeam() {
       </p>
 
       <Card padding="none" className="border border-line-subtle bg-white">
-        {clinicians.length === 0 ? (
+        {team.isPending ? (
+          <Skeleton height={80} />
+        ) : team.team.length === 0 ? (
           <EmptyState variant="bare" title={t("personalLogHub.team.empty")} />
         ) : (
           <ul className="divide-y divide-line-subtle">
-            {clinicians.map((c, i) => (
+            {team.team.map((member) => (
               <li
-                key={i}
-                className="flex items-center justify-between gap-inline-lg px-inset-md py-inset-sm"
+                key={member.id}
+                className="flex flex-wrap items-center justify-between gap-inline-lg px-inset-md py-inset-sm"
               >
-                <span className="text-body-sm text-fg">{c}</span>
-                <Badge tone="info">{t("personalLogHub.team.invited")}</Badge>
+                <div className="min-w-0">
+                  <p className="text-label-md text-fg">
+                    {member.name || member.email}
+                  </p>
+                  <p className="text-body-sm text-fg-muted">
+                    {roleLabel(member.role, isEs)}
+                    {member.name ? ` · ${member.email}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-inline-sm">
+                  <Badge
+                    tone={member.status === "accepted" ? "success" : "info"}
+                  >
+                    {member.status === "accepted"
+                      ? isEs
+                        ? "Aceptó"
+                        : "Accepted"
+                      : t("personalLogHub.team.invited")}
+                  </Badge>
+                  {/* Until the server emails the invitation, the member can
+                      play the other side of it. */}
+                  {member.status === "invited" ? (
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      onClick={() => team.accept(member.id)}
+                    >
+                      {isEs ? "Marcar aceptada" : "Mark accepted"}
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    variant="neutral"
+                    appearance="ghost"
+                    iconOnly
+                    aria-label={
+                      isEs
+                        ? `Quitar a ${member.email}`
+                        : `Remove ${member.email}`
+                    }
+                    onClick={() => team.remove(member.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

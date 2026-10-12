@@ -40,7 +40,9 @@ export function ErVisitsCard({ isEs }: { isEs: boolean }) {
     <Card as="section" padding="small" className="space-y-stack-md">
       <div>
         <h2 className="text-heading-4 text-fg">
-          {isEs ? "Registro de Visitas a Urgencias" : "ER Visit Tracking"}
+          {isEs
+            ? "Visitas a Urgencias Autorreportadas"
+            : "Self-Reported ER Visits"}
         </h2>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
           {isEs

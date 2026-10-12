@@ -340,7 +340,7 @@
     "today": "Today",
     "section1": "Medication Master List",
     "section2": "Dose Schedule",
-    "section3": "Adherence & Insights Dashboard",
+    "section3": "Compliance & Insights Dashboard",
     "section4": "Alerts & Reminders",
     "section5": "How I Feel",
     "section6": "Export / Reporting",
@@ -369,7 +369,7 @@
       "Missed": "Missed"
     },
     "adherence": {
-      "overallTitle": "Overall Adherence (This Week)",
+      "overallTitle": "Overall Compliance (This Week)",
       "totalDoses": "Total Doses: 12",
       "overall": "Overall",
       "taken": "Taken",
@@ -377,9 +377,9 @@
       "missed": "Missed",
       "missedTitle": "Missed Doses (This Week)",
       "totalMissed": "Total Missed Doses:",
-      "bpVsAdherence": "BP vs. Medication Adherence",
+      "bpVsAdherence": "BP vs. Medication Compliance",
       "bp": "BP",
-      "adherencePercent": "Adherence(%)"
+      "adherencePercent": "Compliance(%)"
     },
     "days": {
       "Sun": "Sun",
@@ -404,7 +404,7 @@
     },
     "reports": {
       "weeklySummary": "Weekly Summary (PDF)",
-      "weeklySummaryDesc": "Detailed report on adherence, symptoms, and missed doses for your doctor.",
+      "weeklySummaryDesc": "Detailed report on compliance, symptoms, and missed doses for your doctor.",
       "fullList": "Full Medication List",
       "fullListDesc": "A clean, high-density printout of all current medications and providers.",
       "shareProvider": "Share with Provider",

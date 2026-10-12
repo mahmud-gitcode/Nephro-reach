@@ -36,6 +36,7 @@ import {
   REMINDER_LEADS,
   directionsUrl,
   icsFor,
+  needsReschedule,
   past,
   timeRange,
   upcoming,
@@ -373,6 +374,19 @@ function NextAppointment({
               {next.address}
             </p>
           ) : null}
+          {/* The instructions the member wrote down, where they look before
+              they leave (client, 2026-10-12): they were only in the details
+              dialog. */}
+          {next.notes ? (
+            <div className="mt-stack-md rounded-card-nested bg-surface-sunken p-inset-sm">
+              <p className="text-label-sm text-fg-muted">
+                {isEs ? "Notas e instrucciones" : "Notes & instructions"}
+              </p>
+              <p className="mt-stack-xs text-body-md whitespace-pre-wrap text-fg">
+                {next.notes}
+              </p>
+            </div>
+          ) : null}
           {next.location || next.address ? (
             <Button
               fullWidth
@@ -452,11 +466,15 @@ export default function AppointmentsPage() {
      than left in a details dialog nobody opens. The answer (or the lack of
      one) reaches the care team's CCM dashboard. */
   const unanswered = awaitingAnswer(store.appointments, today)[0];
+  /* A missed visit keeps reminding the member to book it again. */
+  const toReschedule = needsReschedule(store.appointments)[0];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   /* The appointment being changed, or null when adding a new one: the
      same form does both. */
   const [editingId, setEditingId] = useState<string | null>(null);
+  /* The missed visit a new booking replaces. */
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AppointmentDraft>(EMPTY);
   const [tried, setTried] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -480,14 +498,26 @@ export default function AppointmentsPage() {
     if (error) return;
     if (editingId) store.update(editingId, draft);
     else store.add(draft);
+    if (reschedulingId) store.markRescheduled(reschedulingId);
     closeForm();
   }
 
   function closeForm() {
     setIsModalOpen(false);
     setEditingId(null);
+    setReschedulingId(null);
     setDraft(EMPTY);
     setTried(false);
+  }
+
+  /** The add form, filled from the missed visit, with a new date to pick. */
+  function openReschedule(appointment: Appointment) {
+    setDraft({ ...draftOf(appointment), date: "", reminder: "1d" });
+    setEditingId(null);
+    setReschedulingId(appointment.id);
+    setTried(false);
+    setOpenId(null);
+    setIsModalOpen(true);
   }
 
   function openEdit(appointment: Appointment) {
@@ -540,6 +570,35 @@ export default function AppointmentsPage() {
               onClick={() => store.setAttendance(unanswered.id, "missed")}
             >
               {isEs ? "No, la perdí" : "No, I missed it"}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+
+      {toReschedule && !unanswered ? (
+        <Alert
+          tone="warning"
+          title={
+            isEs
+              ? `Recuerde reprogramar su cita de ${toReschedule.title}`
+              : `Remember to reschedule your ${toReschedule.title} appointment`
+          }
+        >
+          <p>
+            {isEs ? "Perdió esta cita el" : "You missed it on"}{" "}
+            {dateParts(toReschedule.date, isEs).long} · {toReschedule.doctor}.
+          </p>
+          <div className="mt-stack-sm flex flex-wrap gap-inline-md">
+            <Button size="small" onClick={() => openReschedule(toReschedule)}>
+              {isEs ? "Agregar nueva fecha" : "Add the new date"}
+            </Button>
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => store.markRescheduled(toReschedule.id)}
+            >
+              {isEs ? "Ya la reprogramé" : "I've rescheduled it"}
             </Button>
           </div>
         </Alert>
@@ -664,7 +723,11 @@ export default function AppointmentsPage() {
               ? isEs
                 ? "Editar Cita"
                 : "Edit Appointment"
-              : t("appointments.modalTitle")}
+              : reschedulingId
+                ? isEs
+                  ? "Reprogramar Cita"
+                  : "Reschedule Appointment"
+                : t("appointments.modalTitle")}
           </span>
         }
         footer={

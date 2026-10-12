@@ -1,6 +1,23 @@
+type Severity = "Yes" | "No" | "Mild" | "Moderate" | "Severe";
+
 export interface DialysisLogEntry {
   id: string;
   date: string;
+  /* Added 2026-10-12, when the log started being stored and tied to the
+     schedule. Optional, so the sample entries still read. */
+  modality?: "in-center-hd" | "home-hd";
+  /** Attended, missed, or a make-up session for a missed one. */
+  status?: "attended" | "missed" | "rescheduled";
+  /** For a make-up session: the missed day it replaces (yyyy-mm-dd). */
+  makeupFor?: string;
+  preBloodPressure?: string;
+  preHeartRate?: string;
+  /** Extra time in the chair after the run, for recovery. */
+  extraRecovery?: "Yes" | "No";
+  extraRecoveryMinutes?: number;
+  dizziness?: Severity;
+  swelling?: Severity;
+  shortnessOfBreath?: Severity;
   displayDate: string;
   isDialysisDay: boolean;
   treatmentType: string;

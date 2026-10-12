@@ -242,6 +242,7 @@ export function libraryTotals(resources: LibraryResource[]) {
       .length,
     articles: resources.filter((resource) => resource.kind === "article")
       .length,
+    images: resources.filter((resource) => resource.kind === "image").length,
   };
 }
 

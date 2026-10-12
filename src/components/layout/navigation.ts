@@ -67,6 +67,14 @@ export const sidebarItems: NavItem[] = [
     icon: LayoutDashboard,
     roles: ["admin", "user"],
   },
+  /* The redesigned member dashboard, side by side with the first until
+     it is approved (2026-10-12). */
+  {
+    label: "Dashboard 2",
+    href: "/dashboard/dashboard-2",
+    icon: LayoutDashboard,
+    roles: ["user"],
+  },
   {
     label: "Where's My Ride",
     href: "/dashboard/my-rides",
@@ -126,24 +134,28 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/members",
     icon: Users,
     roles: ["admin"],
+    permission: "admin.members",
   },
   {
     label: "Class Management",
     href: "/dashboard/manage-curriculum",
     icon: FlaskConical,
     roles: ["admin"],
+    permission: "admin.content",
   },
   {
     label: "Library Management",
     href: "/dashboard/manage-library",
     icon: Library,
     roles: ["admin"],
+    permission: "admin.content",
   },
   {
     label: "Table Talk Management",
     href: "/dashboard/manage-table-talk",
     icon: Mic,
     roles: ["admin"],
+    permission: "admin.content",
   },
   {
     label: "My Classroom",
@@ -168,6 +180,7 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/live-class",
     icon: Video,
     roles: ["admin"],
+    permission: "admin.content",
   },
   {
     label: "Messages",
@@ -186,12 +199,14 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/sms-analytics",
     icon: MessageCircle,
     roles: ["admin"],
+    permission: "admin.members",
   },
   {
     label: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
     roles: ["admin"],
+    permission: "admin.members",
   },
   { label: "Reviews", href: "/dashboard/reviews", icon: Star, roles: ["user"] },
   {
@@ -199,24 +214,28 @@ export const sidebarItems: NavItem[] = [
     href: "/dashboard/admin-reviews",
     icon: Star,
     roles: ["admin"],
+    permission: "admin.reviews",
   },
   {
     label: "Community Moderation",
     href: "/dashboard/admin-community",
     icon: ShieldAlert,
     roles: ["admin"],
+    permission: "admin.community",
   },
   {
     label: "Testimonials Moderation",
     href: "/dashboard/admin-testimonials",
     icon: Video,
     roles: ["admin"],
+    permission: "admin.reviews",
   },
   {
     label: "Design System",
     href: "/dashboard/design-system",
     icon: Palette,
     roles: ["admin"],
+    permission: "staff.manage",
   },
 
   /* Clinic portal. Every clinic route is namespaced under /dashboard/clinic
@@ -405,6 +424,16 @@ export const supportItems: NavItem[] = [
     href: "/dashboard/admin-support",
     icon: HelpCircle,
     roles: ["admin"],
+    permission: "admin.support",
+  },
+  /* NephroReach's own team (client, 2026-10-12): the admin adds people
+     and sets what each may do, as every office does. */
+  {
+    label: "Staff & Roles",
+    href: "/dashboard/admin-team",
+    icon: UserCog,
+    roles: ["admin"],
+    permission: "staff.manage",
   },
   {
     label: "Staff & Roles",
@@ -433,6 +462,10 @@ export const supportItems: NavItem[] = [
 export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname === "/dashboard" || pathname === "/dashboard/")
     return language === "ES" ? "Panel" : "Dashboard";
+  if (pathname.startsWith("/dashboard/dashboard-2"))
+    return language === "ES" ? "Panel 2" : "Dashboard 2";
+  if (pathname.startsWith("/dashboard/admin-team"))
+    return language === "ES" ? "Personal y Roles" : "Staff & Roles";
   if (pathname.startsWith("/dashboard/design-system"))
     return language === "ES" ? "Sistema de Diseño" : "Design System";
   if (pathname.startsWith("/dashboard/access-center/team"))

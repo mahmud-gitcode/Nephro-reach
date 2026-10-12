@@ -286,7 +286,7 @@ function ShareModal({
           )}
         </FormField>
         <div className="grid gap-stack-md sm:grid-cols-2">
-          <FormField label={isEs ? "Oficina" : "Office"}>
+          <FormField label={isEs ? "Destinatario" : "Recipient"}>
             {(field) => (
               <Select
                 {...field}
@@ -298,14 +298,16 @@ function ShareModal({
                     {o.name}
                   </option>
                 ))}
-                <option value={OTHER}>
-                  {isEs ? "Otra oficina…" : "Another office…"}
-                </option>
+                <option value={OTHER}>{isEs ? "Otro…" : "Other…"}</option>
               </Select>
             )}
           </FormField>
           {choice === OTHER ? (
-            <FormField label={isEs ? "Nombre de la oficina" : "Office name"}>
+            <FormField
+              label={
+                isEs ? "Nombre (oficina o persona)" : "Name (office or person)"
+              }
+            >
               {(field) => (
                 <Input
                   {...field}

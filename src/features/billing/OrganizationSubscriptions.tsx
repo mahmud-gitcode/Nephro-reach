@@ -31,7 +31,8 @@ import { ORGANIZATIONS, type Organization } from "@/features/staff/staff";
    Frontend only. Charging the plan is Stripe's job once a server exists.
    ========================================================================== */
 
-type Portal = Organization["portal"];
+/* NephroReach's own team is not a subscriber. */
+type Portal = Exclude<Organization["portal"], "admin">;
 
 export type OrgPlan = {
   id: string;
@@ -222,51 +223,53 @@ export function OrganizationSubscriptions() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {ORGANIZATIONS.map((org) => {
-              const current = assignmentFor(org);
-              const options = state.plans.filter(
-                (p) => p.audience === org.portal,
-              );
-              return (
-                <TableRow key={org.id}>
-                  <TableCell emphasis>{org.name}</TableCell>
-                  <TableCell>{org.kind}</TableCell>
-                  <TableCell>
-                    <Select
-                      selectSize="small"
-                      aria-label={`Plan for ${org.name}`}
-                      value={current.planId}
-                      onChange={(e) =>
-                        assign(org.id, { ...current, planId: e.target.value })
-                      }
-                    >
-                      {options.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} · {money(p.monthlyFee)}/mo
-                        </option>
-                      ))}
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      selectSize="small"
-                      aria-label={`Status for ${org.name}`}
-                      value={current.status}
-                      onChange={(e) =>
-                        assign(org.id, {
-                          ...current,
-                          status: e.target.value as OrgSubscriptionStatus,
-                        })
-                      }
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {ORGANIZATIONS.filter((org) => org.portal !== "admin").map(
+              (org) => {
+                const current = assignmentFor(org);
+                const options = state.plans.filter(
+                  (p) => p.audience === org.portal,
+                );
+                return (
+                  <TableRow key={org.id}>
+                    <TableCell emphasis>{org.name}</TableCell>
+                    <TableCell>{org.kind}</TableCell>
+                    <TableCell>
+                      <Select
+                        selectSize="small"
+                        aria-label={`Plan for ${org.name}`}
+                        value={current.planId}
+                        onChange={(e) =>
+                          assign(org.id, { ...current, planId: e.target.value })
+                        }
+                      >
+                        {options.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} · {money(p.monthlyFee)}/mo
+                          </option>
+                        ))}
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        selectSize="small"
+                        aria-label={`Status for ${org.name}`}
+                        value={current.status}
+                        onChange={(e) =>
+                          assign(org.id, {
+                            ...current,
+                            status: e.target.value as OrgSubscriptionStatus,
+                          })
+                        }
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                );
+              },
+            )}
           </TableBody>
         </Table>
       </Card>

@@ -28,25 +28,29 @@ import {
   byDay,
   readingsCsv,
   statusOf,
+  BP_CATEGORIES,
+  categoryOf,
+  complianceTrend,
+  type BpStatus,
   trend,
   type BpReading,
 } from "@/features/personal-log/blood-pressure/bloodPressure";
 import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
 import { downloadText } from "@/lib/utils/download";
 
-const statusTone = {
-  High: "danger",
-  Elevated: "warning",
-  Normal: "success",
-} as const;
-
-function ReadingStatus({ status }: { status: string }) {
-  const { t } = useLanguage();
-  const label = t(`bloodPressure.statuses.${status}`) || status;
-  const tone =
-    statusTone[status as keyof typeof statusTone] ?? ("neutral" as const);
-
-  return <Badge tone={tone}>{label}</Badge>;
+function ReadingStatus({ status }: { status: BpStatus }) {
+  const { language } = useLanguage();
+  const category = categoryOf(status);
+  /* The short name on a badge; the guide carries the long one. */
+  const short =
+    status === "Stage 1" || status === "Stage 2"
+      ? language === "ES"
+        ? `Etapa ${status.slice(-1)}`
+        : status
+      : language === "ES"
+        ? category.es
+        : category.en;
+  return <Badge tone={category.tone}>{short}</Badge>;
 }
 
 function formatDay(iso: string, isEs: boolean) {
@@ -416,30 +420,51 @@ function TrendChart() {
           />
         )}
       </div>
+
+      {/* BP vs. Medication Compliance — back by request (client,
+          2026-10-12): the same days, with how the member answered "Did I
+          take my blood pressure medication as prescribed today?" as a light
+          green line beneath, so a missed dose sits under its high reading. */}
+      {points.length >= 2 ? (
+        <div className="mt-stack-xl border-t border-line-subtle pt-stack-lg">
+          <h3 className="text-heading-5 text-fg">
+            {t("medicationsLog.adherence.bpVsAdherence")}
+          </h3>
+          <LineChart
+            className="mt-stack-md"
+            label={t("medicationsLog.adherence.bpVsAdherence")}
+            unit="%"
+            yMin={0}
+            yMax={100}
+            yTicks={3}
+            height={120}
+            area={false}
+            xLabels={points.map((p) => {
+              const [, m, d] = p.date.split("-").map(Number);
+              return `${m}/${d}`;
+            })}
+            series={[
+              {
+                id: "compliance",
+                label: isEs
+                  ? "Medicamento para la presión tomado (%)"
+                  : "BP medication taken (%)",
+                tone: "success",
+                points: complianceTrend(bp.readings),
+              },
+            ]}
+          />
+        </div>
+      ) : null}
     </Card>
   );
 }
 
 function ReadingGuide() {
-  const { t } = useLanguage();
-
-  const guideRows = [
-    {
-      label: t("bloodPressure.guide.high"),
-      status: t("bloodPressure.statuses.High"),
-      tone: "danger" as const,
-    },
-    {
-      label: t("bloodPressure.guide.elevated"),
-      status: t("bloodPressure.statuses.Elevated"),
-      tone: "warning" as const,
-    },
-    {
-      label: t("bloodPressure.guide.normal"),
-      status: t("bloodPressure.statuses.Normal"),
-      tone: "success" as const,
-    },
-  ];
+  const { t, language } = useLanguage();
+  const isEs = language === "ES";
+  const join = (j: "and" | "or" | "and/or") =>
+    isEs ? { and: "y", or: "o", "and/or": "y/o" }[j] : j;
 
   return (
     <Card as="section">
@@ -455,16 +480,38 @@ function ReadingGuide() {
         </h2>
       </div>
 
-      <div className="mt-stack-xl space-y-stack-lg">
-        {guideRows.map((row) => (
-          <Card key={row.label} tone="sunken" padding="small">
-            <p className="text-body-sm text-fg-secondary">{row.label}</p>
-            <span className="mt-stack-sm block">
-              <Badge tone={row.tone}>{row.status}</Badge>
-            </span>
+      <div className="mt-stack-lg space-y-stack-sm">
+        {BP_CATEGORIES.map((row) => (
+          <Card key={row.status} tone="sunken" padding="small">
+            {/* The short name on the badge, the full one beneath: the long
+                AHA names ran out of this narrow column. */}
+            <Badge tone={row.tone}>
+              {row.status === "Stage 1" || row.status === "Stage 2"
+                ? isEs
+                  ? `Etapa ${row.status.slice(-1)}`
+                  : row.status
+                : isEs
+                  ? row.es
+                  : row.en}
+            </Badge>
+            {row.status === "Stage 1" || row.status === "Stage 2" ? (
+              <p className="mt-stack-xs text-label-sm text-fg">
+                {isEs ? row.es : row.en}
+              </p>
+            ) : null}
+            <p className="mt-stack-xs text-body-sm text-fg-secondary">
+              {isEs ? "Sistólica" : "Systolic"} {row.systolic}{" "}
+              <span className="text-label-sm text-fg">{join(row.join)}</span>{" "}
+              {isEs ? "Diastólica" : "Diastolic"} {row.diastolic}
+            </p>
           </Card>
         ))}
       </div>
+      <p className="mt-stack-md text-caption text-fg-muted">
+        {isEs
+          ? "En mm Hg. Fuente: American Heart Association. Su equipo de atención fija su meta personal."
+          : "In mm Hg. Source: American Heart Association. Your care team sets your personal goal."}
+      </p>
     </Card>
   );
 }

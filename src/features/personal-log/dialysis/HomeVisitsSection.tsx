@@ -67,7 +67,7 @@ export default function HomeVisitsSection({
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const log = useHomeVisits();
+  const log = useHomeVisits(modalityLog.modality === "pd" ? "pd" : "home-hd");
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<HomeVisit | null>(null);
   const [draft, setDraft] = useState<HomeVisitDraft>(() =>

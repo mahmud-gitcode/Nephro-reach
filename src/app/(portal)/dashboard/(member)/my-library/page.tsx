@@ -11,6 +11,8 @@ import {
   Library,
   PlayCircle,
   Search,
+  ArrowLeft,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
@@ -32,10 +34,12 @@ import {
   Chip,
   ChipGroup,
   EmptyState,
+  buttonStyles,
   Input,
   Skeleton,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { LIBRARY_BACK_TO } from "@/features/library/member/LibraryBackLink";
 
 /* ==========================================================================
    My Library
@@ -50,6 +54,7 @@ export const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   video: PlayCircle,
   document: FileText,
   article: BookOpen,
+  image: ImageIcon,
 };
 
 function ResourceCard({
@@ -168,7 +173,11 @@ function MyLibraryContent() {
 
   /* A link can open one shelf: /dashboard/my-library?category=access-care
      (the Vascular Access tab's Do's and Don'ts, 2026-10-05). */
-  const wanted = useSearchParams().get("category");
+  const params = useSearchParams();
+  const wanted = params.get("category");
+  /* Opened from another page (the lab takeaways, a nutrition resource):
+     a way back to it (client, 2026-10-12). */
+  const back = LIBRARY_BACK_TO[params.get("from") ?? ""];
   const [filter, setFilter] = useState<LibraryFilter>(() => ({
     search: "",
     kind: "all",
@@ -189,10 +198,24 @@ function MyLibraryContent() {
     { key: "video", label: isEs ? "Videos" : "Videos" },
     { key: "document", label: isEs ? "Documentos" : "Documents" },
     { key: "article", label: isEs ? "Artículos" : "Articles" },
+    { key: "image", label: isEs ? "Imágenes" : "Images" },
   ];
 
   return (
     <div className="space-y-stack-xl">
+      {back ? (
+        <Link
+          href={back.href}
+          className={buttonStyles({
+            variant: "neutral",
+            appearance: "fill-stroke",
+            size: "small",
+          })}
+        >
+          <ArrowLeft aria-hidden="true" />
+          {isEs ? back.es : back.en}
+        </Link>
+      ) : null}
       <PageTitle href="/dashboard/my-library" />
 
       <Card as="section" padding="none" className="overflow-hidden p-inset-lg">

@@ -2,9 +2,10 @@
 
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
-import { ClinicLabsCard } from "@/features/labs/ClinicLabsCard";
+import { useMemberClinicLabs } from "@/features/labs/useMemberClinicLabs";
+import { usDate } from "@/features/clinic/ccm.data";
 import { LabInfoButton } from "@/features/labs/LabInfoButton";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Apple,
@@ -73,6 +74,23 @@ export default function MyLabsPage() {
   const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(
     0,
   );
+  /* What the dialysis center uploaded fills in the panels below as the
+     latest result (client, 2026-10-12), and opening this page counts as
+     having seen the "new lab result" notification. */
+  const clinic = useMemberClinicLabs();
+  const { unseen: clinicUnseen, markSeen: markClinicSeen } = clinic;
+  useEffect(() => {
+    if (clinicUnseen) markClinicSeen();
+  }, [clinicUnseen, markClinicSeen]);
+  const clinicDates = Object.values(clinic.latest).map((r) => r.date);
+  const clinicDate = clinicDates.length
+    ? clinicDates.reduce((a, b) => (b > a ? b : a))
+    : null;
+  /* The newer of the member's own draw and the clinic's. */
+  const latestIso =
+    clinicDate && (!customData?.date || clinicDate > customData.date)
+      ? `${clinicDate}T00:00`
+      : customData?.date;
 
   const pastDrawDates = [
     {
@@ -122,8 +140,8 @@ export default function MyLabsPage() {
     },
   ];
 
-  const latestDrawDate = customData?.date
-    ? new Date(customData.date).toLocaleDateString(
+  const latestDrawDate = latestIso
+    ? new Date(latestIso).toLocaleDateString(
         language === "ES" ? "es-ES" : "en-US",
         { month: "short", day: "numeric", year: "numeric" },
       )
@@ -133,9 +151,7 @@ export default function MyLabsPage() {
 
   /* The stat card shows the day large and the year beneath it: a full date
      at figure size does not fit a fifth of the row. */
-  const drawDate = customData?.date
-    ? new Date(customData.date)
-    : new Date(2024, 4, 31);
+  const drawDate = latestIso ? new Date(latestIso) : new Date(2024, 4, 31);
   const drawDay = drawDate.toLocaleDateString(
     language === "ES" ? "es-ES" : "en-US",
     { month: "short", day: "numeric" },
@@ -190,6 +206,21 @@ export default function MyLabsPage() {
     displayName: getCategoryName(cat.id, cat.name),
     tests: cat.tests.map((test) => {
       const displayName = getTestDisplayName(test.id, test.name);
+      const fromClinic = clinic.latest[test.id];
+      const customNewer =
+        !!customData?.date &&
+        !!fromClinic &&
+        customData.date.slice(0, 10) > fromClinic.date;
+      if (fromClinic && !(customNewer && customData?.values?.[test.name])) {
+        return {
+          ...test,
+          displayName,
+          latestResult: fromClinic.unit
+            ? `${fromClinic.value} ${fromClinic.unit}`
+            : fromClinic.value,
+          status: fromClinic.flag ?? ("In Range" as const),
+        };
+      }
       if (customData?.values && customData.values[test.name]) {
         const rawVal = customData.values[test.name];
         const unitParts = test.latestResult.split(" ");
@@ -229,7 +260,20 @@ export default function MyLabsPage() {
       />
       <PersonalLogDisclaimer />
 
-      <ClinicLabsCard isEs={language === "ES"} />
+      {clinicDate ? (
+        <Alert
+          tone="info"
+          title={
+            language === "ES"
+              ? "Resultados nuevos de su clínica"
+              : "New results from your clinic"
+          }
+        >
+          {language === "ES"
+            ? `Su centro de diálisis subió resultados del ${usDate(clinicDate)}. Ya aparecen abajo como sus resultados más recientes.`
+            : `Your dialysis center uploaded results from ${usDate(clinicDate)}. They show below as your latest results.`}
+        </Alert>
+      ) : null}
 
       {/* Most of this page is reference data, which renders either way. Only
           the member's own entered draw comes from storage — so a failed read
@@ -1193,7 +1237,7 @@ export default function MyLabsPage() {
                 "Learn what your lab numbers mean and how they affect your health."}
             </p>
             <Link
-              href="/dashboard/my-library"
+              href="/dashboard/my-library?from=labs"
               className={
                 buttonStyles({
                   variant: "neutral",

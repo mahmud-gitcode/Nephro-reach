@@ -45,6 +45,9 @@ export default function Engagement() {
       desc: t("engagement.item3Desc"),
       image: "/images/Class.jpg",
       alt: "The NephroReach classroom",
+      /* A wide photo in a 4:3 frame: shown whole rather than cropped at
+         the sides (client, 2026-10-12: "this picture is cut off"). */
+      fit: "contain" as const,
     },
     {
       label: t("engagement.item4Badge"),
@@ -57,8 +60,10 @@ export default function Engagement() {
       label: t("engagement.item5Badge"),
       title: t("engagement.item5Title"),
       desc: t("engagement.item5Desc"),
-      image: "/images/home/engagement.png",
-      alt: "The NephroReach dashboard",
+      /* The member's own blood pressure screen — what they would share
+         (client, 2026-10-12). Swap the file if her Fiverr image is final. */
+      image: "/images/home/share-provider.png",
+      alt: "A member's blood pressure trends and medication compliance",
     },
   ];
 
@@ -115,7 +120,7 @@ export default function Engagement() {
                 aria-hidden={index !== active}
                 fill
                 sizes="(max-width: 1024px) 100vw, 600px"
-                className={`object-cover transition-opacity duration-700 ease-out ${
+                className={`${"fit" in item && item.fit === "contain" ? "object-contain" : "object-cover"} transition-opacity duration-700 ease-out ${
                   index === active ? "opacity-100" : "opacity-0"
                 }`}
               />

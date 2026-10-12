@@ -3,7 +3,13 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, ChevronRight, FileText, PlayCircle } from "lucide-react";
+import {
+  BookOpen,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
+  PlayCircle,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { formatDuration, sortByNewest } from "../library.rules";
 import { useLibrary } from "../useLibrary";
@@ -31,11 +37,13 @@ const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   video: PlayCircle,
   document: FileText,
   article: BookOpen,
+  image: ImageIcon,
 };
 
 export function kindLabel(kind: LibraryKind, isEs: boolean): string {
   if (kind === "document") return isEs ? "Documento" : "Document";
   if (kind === "article") return isEs ? "Artículo" : "Article";
+  if (kind === "image") return isEs ? "Imagen" : "Image";
   return "Video";
 }
 

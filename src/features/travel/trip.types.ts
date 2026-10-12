@@ -225,4 +225,8 @@ export interface TripRequest {
   placement?: TripPlacement;
   /** An open or answered request to move the booked times. */
   timeChange?: TimeChangeRequest;
+  /** ISO 8601. The member asked the dialysis center to cancel the trip
+   *  (client, 2026-10-12): the request stays on record as their proof,
+   *  rather than vanishing. */
+  cancelRequestedAt?: string;
 }

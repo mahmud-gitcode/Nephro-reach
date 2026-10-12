@@ -29,10 +29,26 @@ import { doseRows } from "@/features/medications/medicationList";
 import { todayIso } from "@/features/medications/medicationLog.rules";
 import { minutesOf } from "@/features/medications/reminders.time";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import { useHomeVisits } from "@/features/personal-log/dialysis/useHomeVisits";
+import {
+  providerLabel,
+  visitRemindersDue,
+} from "@/features/personal-log/dialysis/homeVisits";
+import {
+  ordersDue,
+  useProviderOrders,
+} from "@/features/personal-log/dialysis/useProviderOrders";
+import { useHomeSystem } from "@/features/personal-log/dialysis/useHomeHd";
+import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
+import { useTreatmentLog } from "@/features/personal-log/dialysis/useTreatmentLog";
+import { useDialysisSchedule } from "@/features/personal-log/dialysis/useDialysisSchedule";
+import { uncharted } from "@/features/personal-log/dialysis/treatmentLog";
+import { useMemberClinicLabs } from "@/features/labs/useMemberClinicLabs";
 import { useBpReminders } from "@/features/personal-log/blood-pressure/useBpReminders";
 import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
 import { dueCheck } from "@/features/personal-log/blood-pressure/bpReminders";
 import {
+  needsReschedule,
   remindersDue,
   timeRange,
 } from "@/features/personal-log/appointments/appointments";
@@ -56,7 +72,14 @@ import {
    loads a member's medication or ER records.
    ========================================================================== */
 
-type Inbox = { href: string; threads: Conversation[] } | null;
+/* `mine`: which side of a thread the signed-in person is, so a message
+   they wrote themselves is never shown as "Message from" the other side
+   (client, 2026-10-12). */
+type Inbox = {
+  href: string;
+  threads: Conversation[];
+  mine: "member" | "clinic";
+} | null;
 
 function BellMenu({
   count,
@@ -144,7 +167,11 @@ function BellMenu({
           {unread.length > 0 ? (
             <div className="max-h-80 overflow-y-auto pt-1.5">
               {unread.slice(0, 6).map((conversation) => {
-                const last = messagingRules.lastMessage(conversation);
+                /* The newest message from the other side: the thread's
+                   own newest may be the reader's reply. */
+                const last = [...conversation.messages]
+                  .reverse()
+                  .find((message) => message.author !== inbox!.mine);
                 return (
                   <Link
                     key={conversation.id}
@@ -213,6 +240,32 @@ function MemberNotifications() {
   const log = useMedicationLog();
   const appointments = useAppointments();
   const comingUp = remindersDue(appointments.appointments, now);
+  const toReschedule = needsReschedule(appointments.appointments)[0];
+  /* A result the dialysis center uploaded (client, 2026-10-12). */
+  const clinicLabs = useMemberClinicLabs();
+  /* Home visits with "remind me the day before" (client, 2026-10-12). */
+  const homeVisits = useHomeVisits();
+  const visitsDue = visitRemindersDue(homeVisits.visits, homeVisits.today);
+  /* Provider orders the member asked to be reminded of. */
+  const orders = useProviderOrders();
+  const orderReminders = ordersDue(orders.orders, new Date(now));
+  /* Home HD machine jobs that are due today or overdue (2026-10-12). */
+  const modality = useDialysisModality();
+  const homeSystem = useHomeSystem();
+  /* A scheduled treatment day with nothing charted (client, 2026-10-12):
+     "Did you miss a treatment?" — only for hemodialysis, in-center or home. */
+  const treatments = useTreatmentLog();
+  const schedule = useDialysisSchedule();
+  const unchartedDay =
+    modality.modality !== "pd" && !treatments.isPending && !schedule.isPending
+      ? uncharted(schedule.periods, treatments.entries, homeSystem.today)[0]
+      : undefined;
+  const maintenanceDue =
+    modality.modality === "home-hd"
+      ? homeSystem.checks.filter(
+          (c) => c.dueIso && c.dueIso <= homeSystem.today,
+        )
+      : [];
   const bpTimes = useBpReminders().times;
   const bp = useBloodPressure();
   const bpDue = dueCheck(bpTimes, bp.readings, new Date(now));
@@ -236,7 +289,16 @@ function MemberNotifications() {
   );
 
   const count =
-    (askEr ? 1 : 0) + due.length + comingUp.length + (bpDue ? 1 : 0);
+    (askEr ? 1 : 0) +
+    due.length +
+    comingUp.length +
+    (bpDue ? 1 : 0) +
+    (toReschedule ? 1 : 0) +
+    (clinicLabs.unseen ? 1 : 0) +
+    visitsDue.length +
+    orderReminders.length +
+    maintenanceDue.length +
+    (unchartedDay ? 1 : 0);
 
   return (
     <BellMenu
@@ -245,9 +307,152 @@ function MemberNotifications() {
       unread={[]}
       fromOf={(c) => c.contact.name}
       nothingElse={
-        !askEr && due.length === 0 && comingUp.length === 0 && !bpDue
+        !askEr &&
+        due.length === 0 &&
+        comingUp.length === 0 &&
+        !bpDue &&
+        !toReschedule &&
+        !clinicLabs.unseen &&
+        visitsDue.length === 0 &&
+        orderReminders.length === 0 &&
+        maintenanceDue.length === 0 &&
+        !unchartedDay
       }
     >
+      {unchartedDay ? (
+        <AskRow
+          question={
+            isEs
+              ? `¿Tuvo su tratamiento de diálisis el ${unchartedDay.date}?`
+              : `Did you have your dialysis treatment on ${unchartedDay.date}?`
+          }
+        >
+          <Link
+            href={`/dashboard/personal-log/dialysis-treatment/add?date=${unchartedDay.date}`}
+            className={buttonStyles({ size: "small" })}
+          >
+            {isEs ? "Sí, registrarlo" : "Yes, chart it"}
+          </Link>
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() =>
+              treatments.markMissed(
+                unchartedDay.date,
+                modality.modality === "home-hd" ? "home-hd" : "in-center-hd",
+              )
+            }
+          >
+            {isEs ? "No, lo perdí" : "No, I missed it"}
+          </Button>
+        </AskRow>
+      ) : null}
+      {maintenanceDue.map((check) => (
+        <AskRow
+          key={check.id}
+          question={
+            check.id === "disinfection"
+              ? isEs
+                ? `Toca desinfectar la máquina (${check.dueIso})`
+                : `Machine disinfection is due (${check.dueIso})`
+              : isEs
+                ? `Toca cambiar el filtro de agua (${check.dueIso})`
+                : `Water filter change is due (${check.dueIso})`
+          }
+        >
+          <Button
+            size="small"
+            onClick={() =>
+              homeSystem.save(
+                check.id === "disinfection"
+                  ? { lastDisinfection: homeSystem.today }
+                  : { lastFilterChange: homeSystem.today },
+              )
+            }
+          >
+            {isEs ? "Hecho hoy" : "Done today"}
+          </Button>
+        </AskRow>
+      ))}
+      {visitsDue.slice(0, 3).map((visit) => (
+        <AskRow
+          key={visit.id}
+          question={
+            isEs
+              ? `Visita a domicilio ${visit.date === homeVisits.today ? "hoy" : "mañana"}: ${providerLabel(visit.provider, true)}${visit.time ? ` · ${visit.time}` : ""}`
+              : `Home visit ${visit.date === homeVisits.today ? "today" : "tomorrow"}: ${providerLabel(visit.provider, false)}${visit.time ? ` · ${visit.time}` : ""}`
+          }
+        >
+          {visit.purpose ? (
+            <p className="w-full text-caption text-fg-muted">{visit.purpose}</p>
+          ) : null}
+          <Link
+            href="/dashboard/personal-log/dialysis-management"
+            className="text-caption text-fg-brand hover:underline"
+          >
+            {isEs ? "Ver visitas" : "View visits"}
+          </Link>
+        </AskRow>
+      ))}
+      {orderReminders.slice(0, 3).map((order) => (
+        <AskRow
+          key={order.id}
+          question={`${isEs ? "Recordatorio" : "Reminder"}: ${order.order}`}
+        >
+          <Button size="small" onClick={() => orders.toggle(order.id)}>
+            {isEs ? "Hecho" : "Done"}
+          </Button>
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => orders.dismissReminder(order.id)}
+          >
+            {isEs ? "Descartar" : "Dismiss"}
+          </Button>
+        </AskRow>
+      ))}
+      {clinicLabs.unseen && clinicLabs.newest ? (
+        <AskRow
+          question={
+            isEs
+              ? `Nuevo resultado de laboratorio de su clínica (${clinicLabs.newest.date})`
+              : `New lab result from your clinic (${clinicLabs.newest.date})`
+          }
+        >
+          <Link
+            href="/dashboard/personal-log/lab-tracking"
+            className={buttonStyles({ size: "small" })}
+          >
+            {isEs ? "Ver mis laboratorios" : "View my labs"}
+          </Link>
+        </AskRow>
+      ) : null}
+      {toReschedule ? (
+        <AskRow
+          question={
+            isEs
+              ? `Recuerde reprogramar: ${toReschedule.title} (perdida el ${toReschedule.date})`
+              : `Remember to reschedule: ${toReschedule.title} (missed ${toReschedule.date})`
+          }
+        >
+          <Link
+            href="/dashboard/personal-log/appointments"
+            className={buttonStyles({ size: "small" })}
+          >
+            {isEs ? "Reprogramar" : "Reschedule"}
+          </Link>
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => appointments.markRescheduled(toReschedule.id)}
+          >
+            {isEs ? "Ya lo hice" : "Done"}
+          </Button>
+        </AskRow>
+      ) : null}
       {bpDue ? (
         <AskRow
           question={
@@ -269,6 +474,13 @@ function MemberNotifications() {
           key={appointment.id}
           question={`${isEs ? "Cita" : "Appointment"}: ${appointment.title} · ${appointment.date} ${timeRange(appointment)}`}
         >
+          {/* The member's own instructions travel with the reminder
+              (client, 2026-10-12). */}
+          {appointment.notes ? (
+            <p className="w-full text-caption whitespace-pre-wrap text-fg-muted">
+              {appointment.notes}
+            </p>
+          ) : null}
           <Link
             href="/dashboard/personal-log/appointments"
             className="text-caption text-fg-brand hover:underline"
@@ -345,12 +557,13 @@ function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
       inbox: {
         href: "/dashboard/messages",
         threads: messagingRules.memberConversations(conversations, memberName),
+        mine: "member",
       },
       fromOf: (c) => c.contact.name,
     };
   }
   const staff = (href: string, threads: Conversation[]) => ({
-    inbox: { href, threads },
+    inbox: { href, threads, mine: "clinic" as const },
     fromOf: (c: Conversation) => c.memberName,
   });
   if (user?.role === "clinic" && userCan(user, "messages.view")) {

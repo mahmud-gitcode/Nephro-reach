@@ -19,6 +19,13 @@ import {
   videoLengthError,
 } from "./testimonials.rules";
 import { useTestimonials } from "./useTestimonials";
+
+const KNOWN_ROLES = [
+  "Dialysis Member",
+  "Family Caregiver",
+  "CKD Learner",
+  "Transplant Warrior",
+];
 import type { Testimonial } from "./testimonials.types";
 
 interface SubmitTestimonialModalProps {
@@ -43,7 +50,19 @@ export default function SubmitTestimonialModal({
   const [memberName, setMemberName] = useState(
     editing?.memberName || user?.name || "Charles Xavier",
   );
-  const [role, setRole] = useState(editing?.role || "Dialysis Member");
+  /* A role outside the four is "Other", typed in (client, 2026-10-12). */
+  const knownRole = (value: string) => KNOWN_ROLES.includes(value);
+  const [role, setRole] = useState(
+    !editing?.role
+      ? "Dialysis Member"
+      : knownRole(editing.role)
+        ? editing.role
+        : "Other",
+  );
+  const [otherRole, setOtherRole] = useState(
+    editing?.role && !knownRole(editing.role) ? editing.role : "",
+  );
+  const roleValue = role === "Other" ? otherRole.trim() || "Other" : role;
   const [title, setTitle] = useState(
     editing?.title || "From Fear to Hope: My Dialysis Journey",
   );
@@ -126,6 +145,7 @@ export default function SubmitTestimonialModal({
     { key: "Family Caregiver", label: "Family Caregiver" },
     { key: "CKD Learner", label: "CKD Learner" },
     { key: "Transplant Warrior", label: "Transplant Warrior" },
+    { key: "Other", label: "Other" },
   ];
 
   /* "Thank You for Sharing!" is shown only once the submission is stored.
@@ -138,7 +158,7 @@ export default function SubmitTestimonialModal({
     if (editing) {
       void revise(editing.id, {
         title: title.trim(),
-        role,
+        role: roleValue,
         videoUrl: videoUrl.trim(),
         summary: summary.trim(),
       })
@@ -154,7 +174,7 @@ export default function SubmitTestimonialModal({
       memberName: memberName.trim() || "Member",
       memberEmail: user?.email || "user@nephroreach.com",
       title: title.trim() || "From Fear to Hope: My Dialysis Journey",
-      role,
+      role: roleValue,
       videoUrl: videoUrl.trim(),
       summary: summary.trim(),
       duration: duration || undefined,
@@ -272,6 +292,19 @@ export default function SubmitTestimonialModal({
                 </Chip>
               ))}
             </ChipGroup>
+            {role === "Other" ? (
+              <FormField label="Your role" className="mt-stack-sm">
+                {(field) => (
+                  <Input
+                    {...field}
+                    value={otherRole}
+                    onChange={(e) => setOtherRole(e.target.value)}
+                    placeholder="e.g. Kidney donor, nurse, friend"
+                    maxLength={40}
+                  />
+                )}
+              </FormField>
+            ) : null}
           </div>
 
           <FormField

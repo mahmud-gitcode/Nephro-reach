@@ -41,15 +41,109 @@ export type BpReading = {
 
 export type BpDraft = Omit<BpReading, "id">;
 
-export type BpStatus = "High" | "Elevated" | "Normal";
+/* The American Heart Association's five categories, the chart the client
+   sent (2026-10-12). The guide card and every reading's badge come from this
+   one table, so they cannot disagree. A reference, not advice: what to do
+   about a reading stays with the member's care team. */
+export type BpStatus = "Normal" | "Elevated" | "Stage 1" | "Stage 2" | "Crisis";
 
-/** The guide on the page: High 140+/90+, Elevated 130–139 or 80–89. */
+export const BP_CATEGORIES: ReadonlyArray<{
+  status: BpStatus;
+  en: string;
+  es: string;
+  systolic: string;
+  join: "and" | "or" | "and/or";
+  diastolic: string;
+  tone: "success" | "warning" | "danger";
+}> = [
+  {
+    status: "Normal",
+    en: "Normal",
+    es: "Normal",
+    systolic: "Less than 120",
+    join: "and",
+    diastolic: "Less than 80",
+    tone: "success",
+  },
+  {
+    status: "Elevated",
+    en: "Elevated",
+    es: "Elevada",
+    systolic: "120–129",
+    join: "and",
+    diastolic: "Less than 80",
+    tone: "warning",
+  },
+  {
+    status: "Stage 1",
+    en: "High Blood Pressure (Hypertension) Stage 1",
+    es: "Presión Arterial Alta (Hipertensión) Etapa 1",
+    systolic: "130–139",
+    join: "or",
+    diastolic: "80–89",
+    tone: "warning",
+  },
+  {
+    status: "Stage 2",
+    en: "High Blood Pressure (Hypertension) Stage 2",
+    es: "Presión Arterial Alta (Hipertensión) Etapa 2",
+    systolic: "140 or higher",
+    join: "or",
+    diastolic: "90 or higher",
+    tone: "danger",
+  },
+  {
+    status: "Crisis",
+    en: "Severe Hypertension",
+    es: "Hipertensión Grave",
+    systolic: "Higher than 180",
+    join: "and/or",
+    diastolic: "Higher than 120",
+    tone: "danger",
+  },
+];
+
+export function categoryOf(status: BpStatus) {
+  return BP_CATEGORIES.find((c) => c.status === status) ?? BP_CATEGORIES[0];
+}
+
+/** The reading's AHA category. */
 export function statusOf(
   reading: Pick<BpReading, "systolic" | "diastolic">,
 ): BpStatus {
-  if (reading.systolic >= 140 || reading.diastolic >= 90) return "High";
-  if (reading.systolic >= 130 || reading.diastolic >= 80) return "Elevated";
+  const { systolic, diastolic } = reading;
+  if (systolic > 180 || diastolic > 120) return "Crisis";
+  if (systolic >= 140 || diastolic >= 90) return "Stage 2";
+  if (systolic >= 130 || diastolic >= 80) return "Stage 1";
+  if (systolic >= 120) return "Elevated";
   return "Normal";
+}
+
+/** Stage 2 or above — what used to read "High". */
+export function isHigh(reading: Pick<BpReading, "systolic" | "diastolic">) {
+  const status = statusOf(reading);
+  return status === "Stage 2" || status === "Crisis";
+}
+
+/* How the member answered "Did I take my blood pressure medication as
+   prescribed today?", as a share of the day: Taken counts fully, Late half. */
+const TAKEN_SHARE: Record<MedicationState, number> = {
+  Taken: 100,
+  Late: 50,
+  "Not taken": 0,
+};
+
+/** For each reading in the trend, that day's medication compliance (%). */
+export function complianceTrend(readings: BpReading[]): number[] {
+  const points = trend(readings);
+  return points.map((point) => {
+    const sameDay = readings.filter((r) => r.date === point.date);
+    const total = sameDay.reduce(
+      (sum, r) => sum + TAKEN_SHARE[r.medication],
+      0,
+    );
+    return Math.round(total / Math.max(sameDay.length, 1));
+  });
 }
 
 export type BpError =
