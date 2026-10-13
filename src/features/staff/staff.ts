@@ -24,7 +24,10 @@ export type Organization = {
   id: string;
   name: string;
   /** Which portal its staff sign into. */
-  portal: Extract<UserRole, "clinic" | "access" | "nephrology" | "admin">;
+  portal: Extract<
+    UserRole,
+    "clinic" | "access" | "nephrology" | "admin" | "hospital"
+  >;
   kind: string;
 };
 
@@ -46,6 +49,14 @@ export const ORGANIZATIONS: Organization[] = [
     name: "Riverside Nephrology Associates",
     portal: "nephrology",
     kind: "Nephrology Office",
+  },
+  /* A hospital (client, 2026-10-13): kidney education and the move home,
+     not care coordination. */
+  {
+    id: "riverside-general",
+    name: "Riverside General Hospital",
+    portal: "hospital",
+    kind: "Hospital",
   },
   /* NephroReach's own team (client, 2026-10-12): the admin adds people —
      a virtual office manager to start — each with the parts of the admin
@@ -98,10 +109,16 @@ export const STAFF_ROLES = [
   /* NephroReach's own admin team (client, 2026-10-12). */
   "Administrative Support",
   "Content Manager",
+  /* A hospital's own set (client, 2026-10-13). */
+  "Hospital Administrator",
+  "Case Manager / Social Worker",
+  "Hospital RN",
+  "Nephrology Physician / APP",
+  "Education Coordinator",
 ] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
-type StaffPortal = Organization["portal"];
+export type StaffPortal = Organization["portal"];
 
 const PRACTICE_ROLES: StaffRole[] = [
   "Office Manager",
@@ -120,6 +137,14 @@ export const ROLES_BY_PORTAL: Record<StaffPortal, StaffRole[]> = {
   clinic: PRACTICE_ROLES,
   nephrology: PRACTICE_ROLES,
   admin: ["Office Manager", "Administrative Support", "Content Manager"],
+  hospital: [
+    "Hospital Administrator",
+    "Case Manager / Social Worker",
+    "Hospital RN",
+    "Nephrology Physician / APP",
+    "Education Coordinator",
+    "Billing / Administrative Staff",
+  ],
   access: [
     "Access Center Administrator",
     "Office Manager",
@@ -151,6 +176,7 @@ const ACCESS_ALIAS: Partial<Record<StaffRole, StaffRole>> = {
 export function portalRole(role: StaffRole, portal: StaffPortal): StaffRole {
   if (rolesFor(portal).includes(role)) return role;
   if (portal === "admin") return "Administrative Support";
+  if (portal === "hospital") return "Hospital RN";
   if (portal === "access") return ACCESS_ALIAS[role] ?? "Nurse";
   const back = (Object.keys(ACCESS_ALIAS) as StaffRole[]).find(
     (k) => ACCESS_ALIAS[k] === role,
@@ -396,6 +422,47 @@ export const PERMISSIONS = [
     label: "See members and subscriptions",
     detail: "The members list, subscriptions and SMS analytics",
   },
+  /* A hospital's portal (client, 2026-10-13). */
+  {
+    id: "hospital.overview",
+    label: "See the hospital overview",
+    detail: "Enrollment and education totals",
+  },
+  {
+    id: "hospital.patients",
+    label: "See enrolled patients",
+    detail: "Patients enrolled through this hospital, and their status",
+  },
+  {
+    id: "hospital.enroll",
+    label: "Enroll patients",
+    detail: "Enroll patients and update their enrollment status",
+  },
+  {
+    id: "hospital.education.assign",
+    label: "Assign education programs",
+    detail: "Give a patient access to a course",
+  },
+  {
+    id: "hospital.education.monitor",
+    label: "Monitor education progress",
+    detail: "Course progress, knowledge checks and completion",
+  },
+  {
+    id: "hospital.reports",
+    label: "See education reports",
+    detail: "Enrollment, participation and completion reports",
+  },
+  {
+    id: "hospital.reports.download",
+    label: "Download reports",
+    detail: "Export education reports as CSV",
+  },
+  {
+    id: "hospital.messages",
+    label: "Message patients and outpatient teams",
+    detail: "Secure messages with enrolled patients",
+  },
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number]["id"];
 
@@ -406,11 +473,63 @@ const ACCESS_ONLY = (id: Permission) =>
     id !== "access.view" &&
     id !== "access.schedule") ||
   id === "account.manage";
-/* The admin portal's permissions belong to NephroReach's own team only. */
-const ADMIN_ONLY = (id: Permission) => id.startsWith("admin.");
+/* The admin portal's permissions belong to NephroReach's own team only,
+   and a hospital's to hospitals. */
+const ADMIN_ONLY = (id: Permission) =>
+  id.startsWith("admin.") || id.startsWith("hospital.");
 const EVERY: Permission[] = PERMISSIONS.map((p) => p.id).filter(
   (id) => !ACCESS_ONLY(id) && !ADMIN_ONLY(id),
 );
+
+/* A hospital, as the client set it out (2026-10-13). Billing sees no
+   patient information; the physician reads education, not enrolls. */
+export const HOSPITAL_ROLE_PERMISSIONS: Partial<
+  Record<StaffRole, Permission[]>
+> = {
+  "Hospital Administrator": [
+    "hospital.overview",
+    "hospital.patients",
+    "hospital.enroll",
+    "hospital.education.assign",
+    "hospital.education.monitor",
+    "hospital.reports",
+    "hospital.reports.download",
+    "hospital.messages",
+    "billing.view",
+    "settings.manage",
+    "staff.manage",
+  ],
+  "Case Manager / Social Worker": [
+    "hospital.overview",
+    "hospital.patients",
+    "hospital.enroll",
+    "hospital.education.assign",
+    "hospital.education.monitor",
+    "hospital.messages",
+  ],
+  "Hospital RN": [
+    "hospital.overview",
+    "hospital.patients",
+    "hospital.enroll",
+    "hospital.education.assign",
+    "hospital.education.monitor",
+  ],
+  "Nephrology Physician / APP": [
+    "hospital.patients",
+    "hospital.education.monitor",
+    "hospital.messages",
+  ],
+  "Education Coordinator": [
+    "hospital.overview",
+    "hospital.patients",
+    "hospital.enroll",
+    "hospital.education.assign",
+    "hospital.education.monitor",
+    "hospital.reports",
+    "hospital.reports.download",
+  ],
+  "Billing / Administrative Staff": ["billing.view"],
+};
 
 /* NephroReach's own team: the office manager runs the day to day, support
    answers members and moderates, the content manager publishes. */
@@ -689,7 +808,9 @@ export function roleCan(
         ? ACCESS_ROLE_PERMISSIONS
         : portal === "admin"
           ? ADMIN_ROLE_PERMISSIONS
-          : ROLE_PERMISSIONS;
+          : portal === "hospital"
+            ? HOSPITAL_ROLE_PERMISSIONS
+            : ROLE_PERMISSIONS;
   return matrix[portalRole(role, portal)]?.includes(permission) ?? false;
 }
 
@@ -699,12 +820,103 @@ export function roleCan(
  * its account owner and may do everything.
  */
 export function userCan(
-  user: { role: UserRole; staffRole?: StaffRole } | null | undefined,
+  user:
+    { role: UserRole; staffRole?: StaffRole; org?: string } | null | undefined,
   permission: Permission,
 ): boolean {
   if (!user) return false;
   if (!isStaffPortal(user.role) || !user.staffRole) return true;
+  /* The organisation's own choices first (client, 2026-10-13), then the
+     defaults below. */
+  const org = organizationFor(user);
+  const custom = org ? customLookup?.(org.id, user.staffRole) : undefined;
+  if (custom) return custom.includes(permission);
   return roleCan(user.staffRole, permission, user.role as StaffPortal);
+}
+
+/* ------------------------------------------------ an organisation's own
+
+   The client (2026-10-13): the matrices above are where every
+   organisation starts, but its main login decides — turning each feature
+   on or off for each role. The saved choices live in rolePermissions.ts;
+   it registers how to read them here, so this file stays free of storage.
+   ------------------------------------------------------------------------ */
+
+type CustomLookup = (
+  orgId: string,
+  role: StaffRole,
+) => Permission[] | undefined;
+let customLookup: CustomLookup | null = null;
+
+export function setCustomPermissionLookup(lookup: CustomLookup | null): void {
+  customLookup = lookup;
+}
+
+/* The roles an organisation created for itself (client, 2026-10-13). */
+let customRolesLookup: ((orgId: string) => string[]) | null = null;
+
+export function setCustomRolesLookup(
+  lookup: ((orgId: string) => string[]) | null,
+): void {
+  customRolesLookup = lookup;
+}
+
+/** An organisation's roles: the built-in ones, then the ones it made.
+ *  A created role's name is carried as a StaffRole; its features come
+ *  from the organisation's own settings, never the defaults. */
+export function rolesForOrg(orgId: string): StaffRole[] {
+  const portal = organization(orgId)?.portal;
+  const custom = (customRolesLookup?.(orgId) ?? []) as StaffRole[];
+  return [...rolesFor(portal), ...custom];
+}
+
+/** A role the organisation created, not one of the built-in ones. */
+export function isCustomRole(orgId: string, role: string): boolean {
+  return (customRolesLookup?.(orgId) ?? []).includes(role);
+}
+
+/** What a role may do by default in a portal. */
+export function defaultPermissions(
+  role: StaffRole,
+  portal: StaffPortal,
+): Permission[] {
+  return PERMISSIONS.filter((p) => roleCan(role, p.id, portal)).map(
+    (p) => p.id,
+  );
+}
+
+/** Every feature a portal's roles could be given: what any of its roles
+ *  has by default, plus managing staff, settings and billing. */
+export function portalPermissions(portal: StaffPortal): Permission[] {
+  const used = new Set<Permission>(["staff.manage", "billing.view"]);
+  for (const role of rolesFor(portal)) {
+    for (const id of defaultPermissions(role, portal)) used.add(id);
+  }
+  /* No settings page in these portals yet. */
+  if (portal === "admin" || portal === "hospital") {
+    used.delete("settings.manage");
+  }
+  /* The portal's own work first, running the office last. */
+  const office: Permission[] = [
+    "billing.view",
+    "settings.manage",
+    "staff.manage",
+  ];
+  const ids = PERMISSIONS.map((p) => p.id).filter((id) => used.has(id));
+  return [
+    ...ids.filter((id) => !office.includes(id)),
+    ...office.filter((id) => used.has(id)),
+  ];
+}
+
+/** What a role may do in one organisation: its own choice, or the default. */
+export function effectivePermissions(
+  role: StaffRole,
+  portal: StaffPortal,
+  orgId?: string,
+): Permission[] {
+  const custom = orgId ? customLookup?.(orgId, role) : undefined;
+  return custom ?? defaultPermissions(role, portal);
 }
 
 /* -------------------------------------------------------------- accounts */
@@ -940,6 +1152,42 @@ export function seedStaff(now: number): StaffAccount[] {
       "ccm@nephroreach.com",
       "riverside-nephrology",
       "Care Coordinator",
+    ),
+    /* Riverside General Hospital's team (client, 2026-10-13). */
+    person(
+      "seed-s14",
+      "Grace Nolan, RN",
+      "hospitalrn@nephroreach.com",
+      "riverside-general",
+      "Hospital RN",
+    ),
+    person(
+      "seed-s15",
+      "Omar Haddad",
+      "educator@nephroreach.com",
+      "riverside-general",
+      "Education Coordinator",
+    ),
+    person(
+      "seed-s16",
+      "Tasha Greene, LCSW",
+      "casemanager@nephroreach.com",
+      "riverside-general",
+      "Case Manager / Social Worker",
+    ),
+    person(
+      "seed-s17",
+      "Dr. Priya Raman",
+      "hospitalmd@nephroreach.com",
+      "riverside-general",
+      "Nephrology Physician / APP",
+    ),
+    person(
+      "seed-s18",
+      "Ben Ortiz",
+      "hospitalbilling@nephroreach.com",
+      "riverside-general",
+      "Billing / Administrative Staff",
     ),
     /* NephroReach's virtual office manager (client, 2026-10-12). */
     person(

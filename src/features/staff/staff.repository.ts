@@ -1,6 +1,7 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import {
   ORGANIZATIONS,
+  isCustomRole,
   organization,
   portalRole,
   seedStaff,
@@ -48,7 +49,11 @@ function withNewOrganizations(stored: StaffAccount[]): StaffAccount[] {
   let changed = all !== stored;
   const normal = all.map((account) => {
     const portal = organization(account.orgId)?.portal;
-    const role = portal ? portalRole(account.role, portal) : account.role;
+    /* A role the organisation created stays as it is. */
+    const role =
+      portal && !isCustomRole(account.orgId, account.role)
+        ? portalRole(account.role, portal)
+        : account.role;
     if (role === account.role) return account;
     changed = true;
     return { ...account, role };

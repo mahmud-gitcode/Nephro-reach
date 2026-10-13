@@ -374,6 +374,51 @@ export const sidebarItems: NavItem[] = [
     roles: ["clinic", "nephrology", "access"],
     permission: "billing.view",
   },
+
+  /* Hospital portal (client, 2026-10-13): kidney education and the move
+     home — no care-coordination pages. */
+  {
+    label: "Overview",
+    href: "/dashboard/hospital",
+    icon: LayoutDashboard,
+    roles: ["hospital"],
+    permission: "hospital.overview",
+  },
+  {
+    label: "Patients",
+    href: "/dashboard/hospital/patients",
+    icon: Users,
+    roles: ["hospital"],
+    permission: "hospital.patients",
+  },
+  {
+    label: "Kidney Education",
+    href: "/dashboard/hospital/education",
+    icon: BookOpen,
+    roles: ["hospital"],
+    permission: "hospital.patients",
+  },
+  {
+    label: "Education Reports",
+    href: "/dashboard/hospital/reports",
+    icon: FileText,
+    roles: ["hospital"],
+    permission: "hospital.reports",
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/hospital/messages",
+    icon: MessageSquareText,
+    roles: ["hospital"],
+    permission: "hospital.messages",
+  },
+  {
+    label: "Billing & Contracts",
+    href: "/dashboard/hospital/billing",
+    icon: CreditCard,
+    roles: ["hospital"],
+    permission: "billing.view",
+  },
 ];
 
 export const supportItems: NavItem[] = [
@@ -444,6 +489,19 @@ export const supportItems: NavItem[] = [
   },
   {
     label: "Staff & Roles",
+    href: "/dashboard/hospital/team",
+    icon: UserCog,
+    roles: ["hospital"],
+    permission: "staff.manage",
+  },
+  {
+    label: "Support",
+    href: "/dashboard/hospital/support",
+    icon: HelpCircle,
+    roles: ["hospital"],
+  },
+  {
+    label: "Staff & Roles",
     href: "/dashboard/nephrology/team",
     icon: UserCog,
     roles: ["nephrology"],
@@ -462,6 +520,24 @@ export const supportItems: NavItem[] = [
 export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname === "/dashboard" || pathname === "/dashboard/")
     return language === "ES" ? "Panel" : "Dashboard";
+  if (pathname.startsWith("/dashboard/hospital/patients"))
+    return language === "ES" ? "Pacientes" : "Patients";
+  if (pathname.startsWith("/dashboard/hospital/education"))
+    return language === "ES" ? "Educación Renal" : "Kidney Education";
+  if (pathname.startsWith("/dashboard/hospital/reports"))
+    return language === "ES" ? "Informes de Educación" : "Education Reports";
+  if (pathname.startsWith("/dashboard/hospital/messages"))
+    return language === "ES" ? "Mensajes" : "Messages";
+  if (pathname.startsWith("/dashboard/hospital/billing"))
+    return language === "ES"
+      ? "Facturación y Contratos"
+      : "Billing & Contracts";
+  if (pathname.startsWith("/dashboard/hospital/team"))
+    return language === "ES" ? "Personal y Roles" : "Staff & Roles";
+  if (pathname.startsWith("/dashboard/hospital/support"))
+    return language === "ES" ? "Soporte" : "Support";
+  if (pathname === "/dashboard/hospital")
+    return language === "ES" ? "Resumen" : "Overview";
   if (pathname.startsWith("/dashboard/dashboard-2"))
     return language === "ES" ? "Panel 2" : "Dashboard 2";
   if (pathname.startsWith("/dashboard/admin-team"))
@@ -769,6 +845,7 @@ const OWN_TAB_UNDER_PERSONAL_LOG = [
 export function isActiveRoute(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   if (href === "/dashboard/clinic") return pathname === "/dashboard/clinic";
+  if (href === "/dashboard/hospital") return pathname === "/dashboard/hospital";
   if (href === "/dashboard/personal-log") {
     return (
       pathname === "/dashboard/personal-log" ||
@@ -839,6 +916,12 @@ const BOTTOM_NAV: Record<UserRole, string[]> = {
     "/dashboard/live-class",
     "/dashboard/admin-support",
   ],
+  hospital: [
+    "/dashboard/hospital",
+    "/dashboard/hospital/patients",
+    "/dashboard/hospital/education",
+    "/dashboard/hospital/messages",
+  ],
 };
 
 /** The short names a tab has room for. */
@@ -854,6 +937,10 @@ const BOTTOM_LABEL: Record<string, { en: string; es: string }> = {
   "/dashboard/clinic/billing": { en: "Billing", es: "Facturación" },
   "/dashboard/live-class": { en: "Live", es: "En Vivo" },
   "/dashboard/admin-support": { en: "Support", es: "Soporte" },
+  "/dashboard/hospital": { en: "Home", es: "Inicio" },
+  "/dashboard/hospital/patients": { en: "Patients", es: "Pacientes" },
+  "/dashboard/hospital/education": { en: "Education", es: "Educación" },
+  "/dashboard/hospital/messages": { en: "Messages", es: "Mensajes" },
 };
 
 export type BottomNavItem = Pick<NavItem, "href" | "icon"> & { label: string };

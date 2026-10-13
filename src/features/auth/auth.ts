@@ -10,7 +10,11 @@ import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
    each patient's access record with the dialysis clinic (2026-09-30).
    "nephrology" is a nephrology office (client, 2026-10-03: each office has
    its own login): CCM, and its messages with the access center. */
-export type UserRole = "admin" | "user" | "clinic" | "access" | "nephrology";
+/* "hospital" (client, 2026-10-13): a kidney education and patient
+   transition portal — the hospital enrolls, NephroReach teaches, staff
+   follow progress. Not another care-coordination system. */
+export type UserRole =
+  "admin" | "user" | "clinic" | "access" | "nephrology" | "hospital";
 
 export type AuthUser = {
   email: string;
@@ -35,6 +39,8 @@ export const ACCESS_HOME = "/dashboard/access-center";
 /* A nephrology office opens on the clinic dashboard it shares
    (client, 2026-10-05: it has everything the clinic has but travel). */
 export const NEPHROLOGY_HOME = "/dashboard/clinic";
+/* A hospital has its own portal under its own prefix. */
+export const HOSPITAL_HOME = "/dashboard/hospital";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -55,6 +61,7 @@ const ADMIN_PREFIXES = [
 export const CLINIC_PREFIX = "/dashboard/clinic";
 export const ACCESS_PREFIX = "/dashboard/access-center";
 export const NEPHROLOGY_PREFIX = "/dashboard/nephrology";
+export const HOSPITAL_PREFIX = "/dashboard/hospital";
 const NEPHROLOGY_EXCLUDED = [
   "/dashboard/clinic/travel",
   "/dashboard/clinic/messages",
@@ -93,12 +100,19 @@ export const DEMO_ACCOUNTS = [
     name: "Riverside Nephrology Associates",
     role: "nephrology" as const,
   },
+  {
+    email: "hospital@nephroreach.com",
+    password: "hospital123",
+    name: "Riverside General Hospital",
+    role: "hospital" as const,
+  },
 ];
 
 export function homeForRole(role: UserRole) {
   if (role === "clinic") return CLINIC_HOME;
   if (role === "access") return ACCESS_HOME;
   if (role === "nephrology") return NEPHROLOGY_HOME;
+  if (role === "hospital") return HOSPITAL_HOME;
   return role === "admin" ? ADMIN_HOME : USER_HOME;
 }
 
@@ -116,6 +130,12 @@ export function isAccessCenterRoute(pathname: string) {
   return pathname === ACCESS_PREFIX || pathname.startsWith(`${ACCESS_PREFIX}/`);
 }
 
+export function isHospitalRoute(pathname: string) {
+  return (
+    pathname === HOSPITAL_PREFIX || pathname.startsWith(`${HOSPITAL_PREFIX}/`)
+  );
+}
+
 export function isNephrologyRoute(pathname: string) {
   return (
     pathname === NEPHROLOGY_PREFIX ||
@@ -125,6 +145,9 @@ export function isNephrologyRoute(pathname: string) {
 
 export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
+  /* A hospital sees its own routes and nothing else. */
+  if (isHospitalRoute(pathname)) return role === "hospital";
+  if (role === "hospital") return false;
   /* An access center sees its own routes and nothing else. */
   if (isAccessCenterRoute(pathname)) return role === "access";
   /* …and the shared contract page (2026-10-06). No reports: the client
@@ -172,7 +195,8 @@ export function parseSession(
         parsed.role === "user" ||
         parsed.role === "clinic" ||
         parsed.role === "access" ||
-        parsed.role === "nephrology")
+        parsed.role === "nephrology" ||
+        parsed.role === "hospital")
     ) {
       return parsed;
     }

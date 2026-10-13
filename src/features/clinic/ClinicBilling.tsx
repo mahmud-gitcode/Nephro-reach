@@ -504,7 +504,15 @@ function BillingSummary({
   );
 }
 
-export default function ClinicBilling() {
+export default function ClinicBilling({
+  href = "/dashboard/clinic/billing",
+  covered: coveredOverride,
+}: {
+  /** The page in the signed-in office's own menu. */
+  href?: string;
+  /** Patients covered, when the office counts its own (a hospital). */
+  covered?: number;
+} = {}) {
   /* Invoices, the renewal countdown and "this month" all hang off today's
      date. This page is prerendered at build time, so reading the clock
      during that render would bake in the build date and then disagree with
@@ -513,7 +521,8 @@ export default function ClinicBilling() {
   /* Seats in use come from the live roster, so a patient enrolled on Enroll
      Patients counts here at once; the demo count stands in until it loads. */
   const clinic = useClinicData();
-  const covered = clinic.data?.patients.length ?? patientsCovered;
+  const covered =
+    coveredOverride ?? clinic.data?.patients.length ?? patientsCovered;
   const today = mounted ? new Date() : null;
 
   /* What this clinic has done here — payments made, changes asked for, the
@@ -540,7 +549,7 @@ export default function ClinicBilling() {
           2026-10-06). It pays everything still owed; Stripe takes the
           card on the live site. */}
       <PageTitle
-        href="/dashboard/clinic/billing"
+        href={href}
         action={
           <Button
             leadingIcon={<CreditCard aria-hidden="true" />}

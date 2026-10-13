@@ -6,6 +6,11 @@ import { useLanguage } from "@/context/LanguageContext";
 import {
   Activity,
   CalendarCheck,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
+  MapPin,
+  Stethoscope,
   Apple,
   FileText,
   HeartPulse,
@@ -126,26 +131,38 @@ const tileConfigs: LogTileConfig[] = [
   },
 ];
 
+/** "Today", "Tomorrow", "In 5 days" — how far off a visit is. */
+function whenLabel(date: string, today: string, isEs: boolean): string {
+  const [y1, m1, d1] = today.split("-").map(Number);
+  const [y2, m2, d2] = date.split("-").map(Number);
+  const days = Math.round(
+    (new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime()) /
+      86_400_000,
+  );
+  if (days <= 0) return isEs ? "Hoy" : "Today";
+  if (days === 1) return isEs ? "Mañana" : "Tomorrow";
+  return isEs ? `En ${days} días` : `In ${days} days`;
+}
+
 function UpcomingAppointments() {
   const { t, language } = useLanguage();
   const isEs = language === "ES";
+  const locale = isEs ? "es-US" : "en-US";
   const store = useAppointments();
   const now = new Date(useNow());
   const pad = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   /* Read from the member's own list: this card said "No upcoming
      appointments" with one booked for tomorrow (client, 2026-10-12). */
-  const ahead = upcoming(store.appointments, today).slice(0, 3);
+  const all = upcoming(store.appointments, today);
+  const ahead = all.slice(0, 3);
 
   return (
-    <Card
-      tone="default"
-      as="section"
-      className="space-y-stack-md border border-line bg-white shadow-card"
-    >
-      <div className="flex items-center justify-between gap-inline-lg">
-        <h2 className="text-heading-4 text-fg">
+    <Card as="section" className="space-y-stack-md">
+      <div className="flex flex-wrap items-center justify-between gap-inline-md">
+        <h2 className="flex items-center gap-inline-sm text-heading-4 text-fg">
           {t("personalLogHub.upcoming.title")}
+          {all.length > 0 ? <Badge tone="info">{all.length}</Badge> : null}
         </h2>
         <Link
           href="/dashboard/personal-log/appointments"
@@ -156,43 +173,142 @@ function UpcomingAppointments() {
           })}
         >
           {t("personalLogHub.upcoming.viewAll")}
+          <ChevronRight aria-hidden="true" />
         </Link>
       </div>
 
       {store.isPending ? (
-        <Skeleton height={120} />
+        <Skeleton height={180} />
       ) : ahead.length === 0 ? (
-        <Card tone="sunken" padding="none">
-          <EmptyState
-            variant="bare"
-            title={t("personalLogHub.upcoming.empty")}
-          />
-        </Card>
-      ) : (
-        <ul className="divide-y divide-line-subtle rounded-card-nested border border-line-subtle">
-          {ahead.map((appointment) => (
-            <li
-              key={appointment.id}
-              className="flex flex-wrap items-center justify-between gap-inline-md px-inset-md py-inset-sm"
+        <EmptyState
+          icon={<CalendarDays />}
+          title={t("personalLogHub.upcoming.empty")}
+          description={
+            isEs
+              ? "Agregue su próxima cita para recibir un recordatorio."
+              : "Add your next visit to be reminded before it."
+          }
+          action={
+            <Link
+              href="/dashboard/personal-log/appointments"
+              className={buttonStyles({ size: "small" })}
             >
-              <div className="min-w-0">
-                <p className="text-label-md text-fg">{appointment.title}</p>
-                <p className="text-body-sm text-fg-muted">
-                  {appointment.doctor}
-                  {appointment.location ? ` · ${appointment.location}` : ""}
-                </p>
-              </div>
-              <p className="text-body-sm text-fg tabular-nums">
-                {new Date(`${appointment.date}T00:00`).toLocaleDateString(
-                  isEs ? "es-US" : "en-US",
-                  { weekday: "short", month: "short", day: "numeric" },
-                )}{" "}
-                · {timeRange(appointment)}
-              </p>
-            </li>
-          ))}
+              <Plus aria-hidden="true" />
+              {isEs ? "Agregar una cita" : "Add an appointment"}
+            </Link>
+          }
+        />
+      ) : (
+        /* One row per visit, the whole row a link: a date tile to scan
+           down, how soon it is, then the time, who and where, each with an
+           icon so nothing runs together (client, 2026-10-12). */
+        <ul className="space-y-stack-sm">
+          {ahead.map((appointment, index) => {
+            const date = new Date(`${appointment.date}T00:00`);
+            const soon = whenLabel(appointment.date, today, isEs);
+            const isNext = index === 0;
+            return (
+              <li key={appointment.id}>
+                <Link
+                  href="/dashboard/personal-log/appointments"
+                  className={`group flex items-start gap-inline-lg rounded-card-nested border p-inset-sm transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:items-center ${
+                    isNext
+                      ? "border-primary-soft-line bg-primary-soft"
+                      : "border-line-subtle"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex w-16 shrink-0 flex-col items-center rounded-card-nested py-inset-xs ${
+                      isNext
+                        ? "bg-primary-solid text-primary-on-solid"
+                        : "bg-surface-sunken text-fg"
+                    }`}
+                  >
+                    <span className="text-overline uppercase">
+                      {date.toLocaleDateString(locale, { month: "short" })}
+                    </span>
+                    <span className="text-metric-sm leading-none">
+                      {date.getDate()}
+                    </span>
+                    <span className="text-caption">
+                      {date.toLocaleDateString(locale, { weekday: "short" })}
+                    </span>
+                  </span>
+
+                  <span className="min-w-0 flex-1 space-y-stack-xs">
+                    <span className="flex flex-wrap items-center gap-inline-sm">
+                      <span className="text-label-lg text-fg">
+                        {appointment.title}
+                      </span>
+                      <Badge tone={isNext ? "info" : "neutral"}>{soon}</Badge>
+                      {appointment.source === "vascular-access" ? (
+                        <Badge tone="neutral">
+                          {isEs ? "Acceso vascular" : "Vascular access"}
+                        </Badge>
+                      ) : null}
+                    </span>
+                    <span className="flex flex-col gap-stack-xs text-body-sm text-fg-secondary sm:flex-row sm:flex-wrap sm:gap-inline-lg">
+                      <span className="inline-flex items-center gap-inline-xs">
+                        <Clock3
+                          aria-hidden="true"
+                          className="size-4 shrink-0 text-fg-muted"
+                        />
+                        <span className="tabular-nums">
+                          {timeRange(appointment)}
+                        </span>
+                      </span>
+                      {appointment.doctor ? (
+                        <span className="inline-flex items-center gap-inline-xs">
+                          <Stethoscope
+                            aria-hidden="true"
+                            className="size-4 shrink-0 text-fg-muted"
+                          />
+                          {appointment.doctor}
+                        </span>
+                      ) : null}
+                      {appointment.location ? (
+                        <span className="inline-flex min-w-0 items-center gap-inline-xs">
+                          <MapPin
+                            aria-hidden="true"
+                            className="size-4 shrink-0 text-fg-muted"
+                          />
+                          <span className="truncate">
+                            {appointment.location}
+                          </span>
+                        </span>
+                      ) : null}
+                    </span>
+                    {appointment.notes ? (
+                      <span className="flex items-start gap-inline-xs text-caption text-fg-muted">
+                        <FileText
+                          aria-hidden="true"
+                          className="mt-0.5 size-3.5 shrink-0"
+                        />
+                        <span className="line-clamp-1">
+                          {appointment.notes}
+                        </span>
+                      </span>
+                    ) : null}
+                  </span>
+
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-5 shrink-0 self-center text-fg-subtle transition-transform group-hover:translate-x-0.5"
+                  />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
+      {all.length > ahead.length ? (
+        <p className="text-caption text-fg-muted">
+          {isEs
+            ? `${all.length - ahead.length} cita(s) más en Citas.`
+            : `${all.length - ahead.length} more on Appointments.`}
+        </p>
+      ) : null}
     </Card>
   );
 }

@@ -43,6 +43,7 @@ import {
   SectionTitle,
   Skeleton,
 } from "@/components/ui";
+import { MyHospitalCourse } from "@/features/hospital/MyHospitalCourse";
 import { PageTitle } from "@/components/layout/PageTitle";
 
 export const KIND_ICON: Record<CourseClassKind, React.ElementType> = {
@@ -218,6 +219,9 @@ export default function MyClassroomPage() {
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-stack-xl">
       <PageTitle href="/dashboard/my-classroom" />
+
+      {/* A course the member's hospital enrolled them in (2026-10-13). */}
+      <MyHospitalCourse isEs={isEs} />
 
       {/* Until the read lands, every figure here would be zero — and "0 of 21
           complete" to someone who finished ten days is worse than a

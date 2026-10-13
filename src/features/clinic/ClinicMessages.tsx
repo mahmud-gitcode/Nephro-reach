@@ -248,13 +248,29 @@ function PatientRail({
   );
 }
 
+export type InboxPatient = {
+  name: string;
+  mrn: string;
+  program: string;
+  enrolledOn: string;
+  status: string;
+};
+
 export default function ClinicMessages({
   office = FACILITY,
   href = "/dashboard/clinic/messages",
+  patients: patientsOverride,
+  showRides = true,
 }: {
-  /** Whose inbox: the dialysis center, or the nephrology office. */
+  /** Whose inbox: the dialysis center, the nephrology office, a hospital. */
   office?: CareTeamContact;
   href?: string;
+  /** The patients this office may write to; the clinic's roster when
+   *  absent. A hospital passes only the patients it enrolled. */
+  patients?: InboxPatient[];
+  /** Ride requests belong to the dialysis center's inbox, not a
+   *  hospital's (client, 2026-10-13). */
+  showRides?: boolean;
 } = {}) {
   const {
     conversations: allConversations,
@@ -286,7 +302,8 @@ export default function ClinicMessages({
   const canTeam = useCan("messages.team");
   /* Every patient on the clinic's list, newly enrolled ones included. */
   const clinicData = useClinicData();
-  const patients = clinicData.data?.patients ?? [];
+  const patients: InboxPatient[] =
+    patientsOverride ?? clinicData.data?.patients ?? [];
   const [activeId, setActiveId] = useState<string | null>(null);
   /* Drafts live up here, keyed by thread. A coordinator is interrupted
      mid-reply constantly — losing what they had typed because they glanced
@@ -620,7 +637,7 @@ export default function ClinicMessages({
       </AsyncSection>
       {/* Rides to access appointments: the social worker books them from
           here, beside the patients' messages (client, 2026-10-01). */}
-      <ClinicRideRequests />
+      {showRides ? <ClinicRideRequests /> : null}
       {/* Staff to staff: nurses message the physicians (client,
           2026-10-06). */}
       {canTeam ? <TeamMessages /> : null}

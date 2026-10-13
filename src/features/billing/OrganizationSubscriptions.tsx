@@ -59,6 +59,19 @@ const AUDIENCE: Record<Portal, string> = {
   clinic: "Dialysis Center",
   access: "Vascular Access Center",
   nephrology: "Nephrology Office",
+  hospital: "Hospital",
+};
+
+/* Hospital pricing stays configurable (client, 2026-10-13): a sample plan
+   the admin edits like any other. */
+const HOSPITAL_PLAN: OrgPlan = {
+  id: "hospital",
+  name: "Hospital Education Plan",
+  audience: "hospital",
+  monthlyFee: 1495,
+  patientsIncluded: 100,
+  description:
+    "Hospital portal: patient enrollment, the 3-Day Kidney Failure Crash Course, education reports and secure messages.",
 };
 
 /* Sample prices for the admin to replace; the dialysis plan matches the
@@ -92,12 +105,20 @@ const DEFAULT_STATE: State = {
       description:
         "Nephrology portal with CCM time tracking, labs, reports and access center messages.",
     },
+    HOSPITAL_PLAN,
   ],
   assignments: {},
 };
 
 const KEY = storageKey("org-subscriptions");
 const QUERY = ["org-subscriptions"];
+
+/** Plans saved before hospitals existed get the sample hospital plan. */
+function withHospital(state: State): State {
+  return state.plans.some((p) => p.audience === "hospital")
+    ? state
+    : { ...state, plans: [...state.plans, HOSPITAL_PLAN] };
+}
 
 function money(amount: number) {
   return amount.toLocaleString("en-US", {
@@ -111,11 +132,14 @@ function useOrgSubscriptions() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: QUERY,
-    queryFn: () => readJson<State>(KEY, DEFAULT_STATE),
+    queryFn: () => readJson<State>(KEY, DEFAULT_STATE).then(withHospital),
   });
   const write = useMutation({
     mutationFn: async (transform: (s: State) => State) =>
-      writeJson(KEY, transform(await readJson<State>(KEY, DEFAULT_STATE))),
+      writeJson(
+        KEY,
+        transform(withHospital(await readJson<State>(KEY, DEFAULT_STATE))),
+      ),
     onSuccess: (next) => queryClient.setQueryData(QUERY, next),
   });
   return { state: query.data ?? DEFAULT_STATE, change: write.mutate };

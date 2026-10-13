@@ -110,6 +110,13 @@ const MEMBER_OWNED = new Set([
   "member-medications",
   "member-appointments",
   "my-health",
+  /* Added 2026-10-12/13: each member's own. */
+  "healthcare-team",
+  "dialysis-treatments",
+  "dialysis-schedule",
+  "fluid-unit",
+  "member-tour-done",
+  "clinic-labs-seen",
 ]);
 
 /** The signed-in session's role and email, read from the cookie. */

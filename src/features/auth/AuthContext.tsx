@@ -8,6 +8,9 @@ import React, {
   useState,
 } from "react";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+/* Loaded with the session so every permission check reads what each
+   organisation turned on or off for its roles (2026-10-13). */
+import "@/features/staff/rolePermissions";
 import {
   authenticate,
   AuthUser,

@@ -71,6 +71,7 @@ export type ClinicSettings = {
 /** Where each portal opens until its office picks a landing page. */
 const PORTAL_HOME: Record<Organization["portal"], string> = {
   admin: "/dashboard",
+  hospital: "/dashboard/hospital",
   clinic: "/dashboard/clinic",
   nephrology: "/dashboard/nephrology",
   access: "/dashboard/access-center",
