@@ -56,6 +56,7 @@ const ADMIN_PREFIXES = [
   "/dashboard/design-system",
   "/dashboard/admin-support",
   "/dashboard/admin-team",
+  "/dashboard/portal-comparison",
 ];
 
 export const CLINIC_PREFIX = "/dashboard/clinic";

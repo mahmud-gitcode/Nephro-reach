@@ -230,6 +230,14 @@ export const sidebarItems: NavItem[] = [
     roles: ["admin"],
     permission: "admin.reviews",
   },
+  /* What each organisation's portal has, side by side (2026-10-13). */
+  {
+    label: "Portal Comparison",
+    href: "/dashboard/portal-comparison",
+    icon: Layers,
+    roles: ["admin"],
+    permission: "staff.manage",
+  },
   {
     label: "Design System",
     href: "/dashboard/design-system",
@@ -538,6 +546,8 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Soporte" : "Support";
   if (pathname === "/dashboard/hospital")
     return language === "ES" ? "Resumen" : "Overview";
+  if (pathname.startsWith("/dashboard/portal-comparison"))
+    return language === "ES" ? "Comparación de Portales" : "Portal Comparison";
   if (pathname.startsWith("/dashboard/dashboard-2"))
     return language === "ES" ? "Panel 2" : "Dashboard 2";
   if (pathname.startsWith("/dashboard/admin-team"))
