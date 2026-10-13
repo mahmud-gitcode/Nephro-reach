@@ -32,7 +32,9 @@ async function readState(): Promise<HospitalState> {
   ) {
     return stored.state;
   }
-  const seeded = rules.seedHospital(Date.now());
+  /* Loaded on first use only: the sample is not in every page's code. */
+  const { seedHospital } = await import("./hospital.seed");
+  const seeded = seedHospital(Date.now());
   await writeJson(KEY, { version: VERSION, state: seeded });
   return seeded;
 }

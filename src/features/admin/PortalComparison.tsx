@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Info, Minus, X } from "lucide-react";
+import { Check, Download, Info, Minus, X } from "lucide-react";
 import {
   Badge,
   Button,
@@ -15,6 +15,14 @@ import {
   TableRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import {
+  CONTROL,
+  PORTALS,
+  SECTIONS,
+  type Cell,
+  type Limited,
+} from "./portalComparison.data";
+import { downloadComparisonPdf } from "./portalComparisonPdf";
 
 /* ==========================================================================
    Portal Comparison — what each organisation's portal has
@@ -26,403 +34,6 @@ import { PageTitle } from "@/components/layout/PageTitle";
    ========================================================================== */
 
 const HREF = "/dashboard/portal-comparison";
-
-type Limited = { included: string[]; notIncluded: string[] };
-type Cell = "yes" | "no" | Limited | number;
-type Portal = "hospital" | "dialysis" | "access" | "nephrology";
-
-const PORTALS: { id: Portal; name: string; login: string }[] = [
-  { id: "hospital", name: "Hospital", login: "hospital@nephroreach.com" },
-  { id: "dialysis", name: "Dialysis Center", login: "clinic@nephroreach.com" },
-  {
-    id: "access",
-    name: "Vascular Access Center",
-    login: "access@nephroreach.com",
-  },
-  {
-    id: "nephrology",
-    name: "Nephrology Office",
-    login: "nephrology@nephroreach.com",
-  },
-];
-
-/* The access work the dialysis center and nephrology office share in. */
-const ACCESS_SIDE: Limited = {
-  included: [
-    "See each patient's access record and status",
-    "See open concerns and photos the patient sent to them",
-    "Send a referral to the access center",
-    "Take part in the patient's three-way access conversation",
-  ],
-  notIncluded: [
-    "Schedule, confirm or reschedule access appointments",
-    "Update referral or coordination status",
-    "Arrange transport for an access procedure",
-    "See concerns the patient sent only to the access center",
-  ],
-};
-
-type Row = { feature: string; cells: Record<Portal, Cell> };
-type Section = { title: string; rows: Row[] };
-
-const SECTIONS: Section[] = [
-  {
-    title: "Patients",
-    rows: [
-      {
-        feature: "Dashboard / Overview",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Patient list",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Enroll patients",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Mark patient as newly diagnosed / on dialysis",
-        cells: {
-          hospital: "yes",
-          dialysis: "no",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "Update enrollment status (admitted / discharged / withdrawn)",
-        cells: {
-          hospital: "yes",
-          dialysis: "no",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-    ],
-  },
-  {
-    title: "Education",
-    rows: [
-      {
-        feature: "3-Day Kidney Failure Crash Course",
-        cells: {
-          hospital: "yes",
-          dialysis: "no",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "21-Day course progress",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Assign an education program to a patient",
-        cells: {
-          hospital: "yes",
-          dialysis: "no",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "Live classes",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-    ],
-  },
-  {
-    title: "Care",
-    rows: [
-      {
-        feature: "Patient check-ins",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Labs (view / CSV upload)",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "CCM (Chronic Care Management) time log",
-        cells: {
-          hospital: "no",
-          dialysis: "no",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Vascular access: view",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Vascular access: concerns, photos, appointments",
-        cells: {
-          hospital: "no",
-          dialysis: ACCESS_SIDE,
-          access: "yes",
-          nephrology: ACCESS_SIDE,
-        },
-      },
-      {
-        feature: "Send referrals",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Receive referrals",
-        cells: {
-          hospital: "no",
-          dialysis: "no",
-          access: "yes",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "Travel dialysis",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "Rides / transportation",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "ER visit reports",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-    ],
-  },
-  {
-    title: "Messages",
-    rows: [
-      {
-        feature: "Message patients",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Message other organizations",
-        cells: {
-          hospital: {
-            included: [
-              "Message the patients the hospital enrolled — one thread each",
-              "No message is copied to other organizations automatically",
-            ],
-            notIncluded: [
-              "Message the patient's dialysis center (in the client's plan, not built yet)",
-              "Message the patient's nephrology office (in the client's plan, not built yet)",
-            ],
-          },
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Share outside NephroReach (secure link)",
-        cells: {
-          hospital: {
-            included: [
-              "Patients can still share their own records with any office by secure link",
-            ],
-            notIncluded: [
-              "Hospital staff sending a secure link to an office not on NephroReach (in the client's plan, not built yet)",
-            ],
-          },
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-    ],
-  },
-  {
-    title: "Office",
-    rows: [
-      {
-        feature: "Reports",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: {
-            included: [
-              "Live counts on the Access Patients workspace (open referrals, concerns, appointments)",
-              'The "See reports" permission exists for the administrator, office manager and billing staff',
-            ],
-            notIncluded: [
-              "A separate Reports page",
-              "Downloadable reports (CSV)",
-            ],
-          },
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Monthly education report + CSV download",
-        cells: {
-          hospital: "yes",
-          dialysis: "no",
-          access: "no",
-          nephrology: "no",
-        },
-      },
-      {
-        feature: "Contract & billing",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Settings",
-        cells: {
-          hospital: "no",
-          dialysis: "yes",
-          access: "no",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Support (contact NephroReach)",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-    ],
-  },
-  {
-    title: "Staff & roles",
-    rows: [
-      {
-        feature: "Add / manage staff",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Built-in staff roles",
-        cells: { hospital: 6, dialysis: 9, access: 8, nephrology: 9 },
-      },
-      {
-        feature: "Create new roles",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-      {
-        feature: "Turn each role's features on / off",
-        cells: {
-          hospital: "yes",
-          dialysis: "yes",
-          access: "yes",
-          nephrology: "yes",
-        },
-      },
-    ],
-  },
-];
-
-const CONTROL: {
-  portal: string;
-  roles: string;
-  staff: string;
-}[] = [
-  {
-    portal: "Hospital",
-    roles: "Main login (hospital@)",
-    staff: "Main login, Hospital Administrator",
-  },
-  {
-    portal: "Dialysis Center",
-    roles: "Main login (clinic@)",
-    staff: "Main login, Office Manager",
-  },
-  {
-    portal: "Vascular Access Center",
-    roles: "Main login (access@)",
-    staff: "Main login, Access Center Administrator, Office Manager",
-  },
-  {
-    portal: "Nephrology Office",
-    roles: "Main login (nephrology@)",
-    staff: "Main login, Office Manager, Administrator",
-  },
-];
 
 function CellMark({
   cell,
@@ -473,7 +84,17 @@ export default function PortalComparison() {
 
   return (
     <div className="space-y-stack-xl">
-      <PageTitle href={HREF} />
+      <PageTitle
+        href={HREF}
+        action={
+          <Button
+            leadingIcon={<Download aria-hidden="true" />}
+            onClick={downloadComparisonPdf}
+          >
+            Download PDF
+          </Button>
+        }
+      />
       <p className="measure text-body-md text-fg-muted">
         What each organization&rsquo;s portal has, side by side. Click{" "}
         <span className="text-label-md text-fg">Limited</span> to see what is

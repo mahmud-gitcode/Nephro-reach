@@ -58,8 +58,21 @@ import path from "node:path";
  * largest chunks are still React/Next; no app chunk passes 25 KB. This
  * total also counts lazy chunks Turbopack emits per route, which only
  * download when used. Same ~10% headroom rule.
+ *
+ * Raised to 1690 against a measured 1537 (2026-10-13). No dependency was
+ * added. First the weight that was waste: the hospital's sample patients
+ * rode in every hospital page; they now load only when a browser has no
+ * saved data (hospital.seed.ts), which took 3 KB off. The rest is new
+ * pages and flows from the client's 2026-10-12/13 rounds: the Hospital
+ * portal (eight routes), Dashboard 2, the stored dialysis treatment log
+ * and schedule, the admin team and Portal Comparison with its PDF, custom
+ * roles, the guided tour, and the reminders in the notification bell.
+ * Turbopack copies a small shared module (the hospital store, the share
+ * card's healthcare team) into each route's chunk rather than a common
+ * one, so this sum counts them several times though a visitor downloads
+ * each once. No app chunk passes 28 KB. Same ~10% headroom rule.
  */
-const BUDGET_KB = 1480;
+const BUDGET_KB = 1690;
 
 const ROOT = ".next/static";
 

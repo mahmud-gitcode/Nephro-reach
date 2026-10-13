@@ -121,18 +121,31 @@ function contentStream(page: PdfPage): string {
  * above — so `pdfBytes` can widen it to a Uint8Array with a plain charCode.
  */
 export function buildPdf(page: PdfPage, title = "Document"): string {
-  const stream = contentStream(page);
+  return buildPdfDocument([page], title);
+}
 
+/**
+ * Several pages as one PDF file (2026-10-13: a reference table runs past one
+ * page). Objects: 1 catalog, 2 page tree, 3–4 fonts, 5 info, then a page and
+ * its content stream for each page.
+ */
+export function buildPdfDocument(pages: PdfPage[], title = "Document"): string {
+  const pageObject = (index: number) => 6 + index * 2;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
-      `/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    `<< /Type /Pages /Kids [${pages.map((_, i) => `${pageObject(i)} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
     `<< /Title (${escapePdfText(title)}) /Producer (NephroReach) >>`,
   ];
+  pages.forEach((page, index) => {
+    const stream = contentStream(page);
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
+        `/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${pageObject(index) + 1} 0 R >>`,
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    );
+  });
 
   let file = "%PDF-1.4\n";
   const offsets: number[] = [];
@@ -154,7 +167,7 @@ export function buildPdf(page: PdfPage, title = "Document"): string {
   }
 
   file +=
-    `trailer\n<< /Size ${count} /Root 1 0 R /Info ${objects.length} 0 R >>\n` +
+    `trailer\n<< /Size ${count} /Root 1 0 R /Info 5 0 R >>\n` +
     `startxref\n${xrefOffset}\n%%EOF\n`;
 
   return file;
