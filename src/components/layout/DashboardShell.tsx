@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
 import { userCan } from "@/features/staff/staff";
+import { useCaregiverView } from "@/features/caregivers/useCaregivers";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Button,
@@ -46,10 +47,13 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const { language } = useLanguage();
   const role = user?.role ?? "user";
-  /* A staff member's role can take a page away too (billing, settings). */
+  const caregiver = useCaregiverView();
+  /* A staff member's role can take a page away too (billing, settings);
+     for a caregiver, the patient's sharing does. */
   const shows = (item: (typeof sidebarItems)[number]) =>
     item.roles.includes(role) &&
-    (!item.permission || userCan(user, item.permission));
+    (!item.permission || userCan(user, item.permission)) &&
+    (!item.caregiver || caregiver.can(item.caregiver));
   const visibleItems = sidebarItems.filter(shows);
   const visibleSupport = supportItems.filter(shows);
 
@@ -539,9 +543,13 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
               ? isEs
                 ? "Hospital"
                 : "Hospital"
-              : isEs
-                ? "Usuario"
-                : "User";
+              : user?.role === "caregiver"
+                ? isEs
+                  ? "Cuidador"
+                  : "Caregiver"
+                : isEs
+                  ? "Usuario"
+                  : "User";
 
   /* Settings is a member route, so an admin is not offered a link that
      would bounce them straight back out of it. */
@@ -640,10 +648,12 @@ function BottomNav({ onMore }: { onMore: () => void }) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const role = user?.role ?? "user";
+  const caregiver = useCaregiverView();
   const visible = [...sidebarItems, ...supportItems].filter(
     (item) =>
       item.roles.includes(role) &&
-      (!item.permission || userCan(user, item.permission)),
+      (!item.permission || userCan(user, item.permission)) &&
+      (!item.caregiver || caregiver.can(item.caregiver)),
   );
   const tabs = bottomNavItems(role, visible, language);
   if (tabs.length === 0) return null;

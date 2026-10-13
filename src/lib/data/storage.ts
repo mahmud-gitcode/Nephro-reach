@@ -133,12 +133,72 @@ function sessionOf(): { role?: string; email?: string } | null {
   }
 }
 
+/* --------------------------------------------------------------------------
+   A caregiver reads the patient they are looking after (2026-10-13)
+   --------------------------------------------------------------------------
+   The caregiver picks a patient; the choice is kept per caregiver, and it
+   counts only while the patient's invite is active. No choice, or a
+   removed one, reads an empty store — never the caregiver's own or the
+   demo patient's. With a server, the grant is checked on every request.
+   -------------------------------------------------------------------------- */
+
+export const CAREGIVER_GRANTS_KEY = "nr:caregiver-grants";
+const viewingKey = (caregiver: string) =>
+  `nr:caregiver-viewing:${caregiver.toLowerCase()}`;
+
+function hasActiveGrant(caregiver: string, patient: string): boolean {
+  try {
+    const raw = window.localStorage.getItem(CAREGIVER_GRANTS_KEY);
+    const grants = raw ? JSON.parse(raw)?.state?.grants : null;
+    return (
+      Array.isArray(grants) &&
+      grants.some(
+        (g: {
+          caregiverEmail?: string;
+          patientEmail?: string;
+          status?: string;
+        }) =>
+          g.status === "active" &&
+          g.caregiverEmail === caregiver.toLowerCase() &&
+          g.patientEmail === patient,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** The patient a caregiver is looking at, if their invite still stands. */
+export function caregiverViewing(caregiver: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const patient = window.localStorage.getItem(viewingKey(caregiver));
+    return patient && hasActiveGrant(caregiver, patient) ? patient : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setCaregiverViewing(caregiver: string, patient: string | null) {
+  try {
+    if (patient) window.localStorage.setItem(viewingKey(caregiver), patient);
+    else window.localStorage.removeItem(viewingKey(caregiver));
+  } catch {
+    /* Blocked storage: the caregiver picks again next time. */
+  }
+}
+
 /** The key a read or write actually uses: a member-owned key is filed
  *  under the signed-in member, unless that member is the demo patient. */
 export function resolveKey(key: string): string {
   const name = key.startsWith("nr:") ? key.slice(3) : key;
   if (!MEMBER_OWNED.has(name)) return key;
   const session = sessionOf();
+  if (session?.role === "caregiver") {
+    const patient = session.email ? caregiverViewing(session.email) : null;
+    if (!patient) return `nr:caregiver-none:${name}`;
+    return patient === DEMO_MEMBER_EMAIL ? key : `nr:member:${patient}:${name}`;
+  }
   if (
     !session ||
     session.role !== "user" ||

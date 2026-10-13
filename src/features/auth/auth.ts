@@ -13,8 +13,16 @@ import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 /* "hospital" (client, 2026-10-13): a kidney education and patient
    transition portal — the hospital enrolls, NephroReach teaches, staff
    follow progress. Not another care-coordination system. */
+/* "caregiver" (client spec, confirmed 2026-10-13): one person a patient
+   invites, signed in as themselves, seeing only what that patient shares. */
 export type UserRole =
-  "admin" | "user" | "clinic" | "access" | "nephrology" | "hospital";
+  | "admin"
+  | "user"
+  | "clinic"
+  | "access"
+  | "nephrology"
+  | "hospital"
+  | "caregiver";
 
 export type AuthUser = {
   email: string;
@@ -41,6 +49,8 @@ export const ACCESS_HOME = "/dashboard/access-center";
 export const NEPHROLOGY_HOME = "/dashboard/clinic";
 /* A hospital has its own portal under its own prefix. */
 export const HOSPITAL_HOME = "/dashboard/hospital";
+/* A caregiver's pages, under their own prefix. */
+export const CAREGIVER_HOME = "/dashboard/caregiver";
 
 const ADMIN_PREFIXES = [
   "/dashboard/members",
@@ -63,6 +73,7 @@ export const CLINIC_PREFIX = "/dashboard/clinic";
 export const ACCESS_PREFIX = "/dashboard/access-center";
 export const NEPHROLOGY_PREFIX = "/dashboard/nephrology";
 export const HOSPITAL_PREFIX = "/dashboard/hospital";
+export const CAREGIVER_PREFIX = "/dashboard/caregiver";
 const NEPHROLOGY_EXCLUDED = [
   "/dashboard/clinic/travel",
   "/dashboard/clinic/messages",
@@ -107,6 +118,12 @@ export const DEMO_ACCOUNTS = [
     name: "Riverside General Hospital",
     role: "hospital" as const,
   },
+  {
+    email: "caregiver@nephroreach.com",
+    password: "caregiver123",
+    name: "Sarah Taylor",
+    role: "caregiver" as const,
+  },
 ];
 
 export function homeForRole(role: UserRole) {
@@ -114,6 +131,7 @@ export function homeForRole(role: UserRole) {
   if (role === "access") return ACCESS_HOME;
   if (role === "nephrology") return NEPHROLOGY_HOME;
   if (role === "hospital") return HOSPITAL_HOME;
+  if (role === "caregiver") return CAREGIVER_HOME;
   return role === "admin" ? ADMIN_HOME : USER_HOME;
 }
 
@@ -137,6 +155,12 @@ export function isHospitalRoute(pathname: string) {
   );
 }
 
+export function isCaregiverRoute(pathname: string) {
+  return (
+    pathname === CAREGIVER_PREFIX || pathname.startsWith(`${CAREGIVER_PREFIX}/`)
+  );
+}
+
 export function isNephrologyRoute(pathname: string) {
   return (
     pathname === NEPHROLOGY_PREFIX ||
@@ -146,6 +170,9 @@ export function isNephrologyRoute(pathname: string) {
 
 export function canAccessPath(role: UserRole, pathname: string) {
   if (!pathname.startsWith("/dashboard")) return true;
+  /* A caregiver sees their own routes and nothing else. */
+  if (isCaregiverRoute(pathname)) return role === "caregiver";
+  if (role === "caregiver") return false;
   /* A hospital sees its own routes and nothing else. */
   if (isHospitalRoute(pathname)) return role === "hospital";
   if (role === "hospital") return false;
@@ -197,7 +224,8 @@ export function parseSession(
         parsed.role === "clinic" ||
         parsed.role === "access" ||
         parsed.role === "nephrology" ||
-        parsed.role === "hospital")
+        parsed.role === "hospital" ||
+        parsed.role === "caregiver")
     ) {
       return parsed;
     }
@@ -292,6 +320,42 @@ export function authenticate(email: string, password: string): AuthUser | null {
   }
 
   return null;
+}
+
+/** The kind of account that already uses this email, or null. */
+export function accountRole(email: string): UserRole | null {
+  const normalized = email.trim().toLowerCase();
+  const demo = DEMO_ACCOUNTS.find((account) => account.email === normalized);
+  if (demo) return demo.role;
+  const staff = readStaffForLogin().find((a) => a.email === normalized);
+  if (staff) return organization(staff.orgId)?.portal ?? "clinic";
+  const registered = readRegisteredUsers().find(
+    (account) => account.email.toLowerCase() === normalized,
+  );
+  return registered?.role ?? null;
+}
+
+/** True when any NephroReach account already uses this email. */
+export function emailInUse(email: string): boolean {
+  return accountRole(email) !== null;
+}
+
+/** A caregiver's own account, made from a patient's invite. */
+export function registerCaregiver(input: {
+  name: string;
+  email: string;
+  password: string;
+}): { user: AuthUser } | { error: "exists" } {
+  const email = input.email.trim().toLowerCase();
+  if (emailInUse(email)) return { error: "exists" };
+  const user: StoredAccount = {
+    email,
+    password: input.password,
+    name: input.name.trim() || "Caregiver",
+    role: "caregiver",
+  };
+  writeRegisteredUsers([...readRegisteredUsers(), user]);
+  return { user: { email: user.email, name: user.name, role: "caregiver" } };
 }
 
 export function registerUser(input: {

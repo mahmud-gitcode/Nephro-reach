@@ -1,7 +1,8 @@
 /* ==========================================================================
    Portal Comparison — the data
    --------------------------------------------------------------------------
-   What each organisation's portal has (2026-10-13). One source for the
+   What each organisation's portal has, as agreed with the client
+   (2026-10-13, her review of this page). One source for the
    admin page and its PDF, so the two cannot disagree.
    ========================================================================== */
 
@@ -38,6 +39,17 @@ const ACCESS_SIDE: Limited = {
     "Arrange transport for an access procedure",
     "See concerns the patient sent only to the access center",
   ],
+};
+
+/* The dialysis center also arranges the ride (client, 2026-10-13). */
+const DIALYSIS_ACCESS_SIDE: Limited = {
+  included: [
+    ...ACCESS_SIDE.included,
+    "Arrange transport for an access procedure",
+  ],
+  notIncluded: ACCESS_SIDE.notIncluded.filter(
+    (item) => item !== "Arrange transport for an access procedure",
+  ),
 };
 
 export type Row = { feature: string; cells: Record<Portal, Cell> };
@@ -78,18 +90,18 @@ export const SECTIONS: Section[] = [
         feature: "Mark patient as newly diagnosed / on dialysis",
         cells: {
           hospital: "yes",
-          dialysis: "no",
+          dialysis: "yes",
           access: "no",
-          nephrology: "no",
+          nephrology: "yes",
         },
       },
       {
         feature: "Update enrollment status (admitted / discharged / withdrawn)",
         cells: {
           hospital: "yes",
-          dialysis: "no",
+          dialysis: "yes",
           access: "no",
-          nephrology: "no",
+          nephrology: "yes",
         },
       },
     ],
@@ -101,9 +113,19 @@ export const SECTIONS: Section[] = [
         feature: "3-Day Kidney Failure Crash Course",
         cells: {
           hospital: "yes",
-          dialysis: "no",
+          dialysis: "yes",
           access: "no",
-          nephrology: "no",
+          nephrology: "yes",
+        },
+      },
+      {
+        feature:
+          "Finish the 3-Day course: 21-Day course + platform free for 45 days, then subscribe",
+        cells: {
+          hospital: "yes",
+          dialysis: "yes",
+          access: "no",
+          nephrology: "yes",
         },
       },
       {
@@ -119,15 +141,15 @@ export const SECTIONS: Section[] = [
         feature: "Assign an education program to a patient",
         cells: {
           hospital: "yes",
-          dialysis: "no",
+          dialysis: "yes",
           access: "no",
-          nephrology: "no",
+          nephrology: "yes",
         },
       },
       {
         feature: "Live classes",
         cells: {
-          hospital: "no",
+          hospital: "yes",
           dialysis: "yes",
           access: "no",
           nephrology: "yes",
@@ -178,7 +200,7 @@ export const SECTIONS: Section[] = [
         feature: "Vascular access: concerns, photos, appointments",
         cells: {
           hospital: "no",
-          dialysis: ACCESS_SIDE,
+          dialysis: DIALYSIS_ACCESS_SIDE,
           access: "yes",
           nephrology: ACCESS_SIDE,
         },
@@ -196,7 +218,7 @@ export const SECTIONS: Section[] = [
         feature: "Receive referrals",
         cells: {
           hospital: "no",
-          dialysis: "no",
+          dialysis: "yes",
           access: "yes",
           nephrology: "no",
         },
@@ -245,16 +267,7 @@ export const SECTIONS: Section[] = [
       {
         feature: "Message other organizations",
         cells: {
-          hospital: {
-            included: [
-              "Message the patients the hospital enrolled — one thread each",
-              "No message is copied to other organizations automatically",
-            ],
-            notIncluded: [
-              "Message the patient's dialysis center (in the client's plan, not built yet)",
-              "Message the patient's nephrology office (in the client's plan, not built yet)",
-            ],
-          },
+          hospital: "yes",
           dialysis: "yes",
           access: "yes",
           nephrology: "yes",
@@ -263,14 +276,7 @@ export const SECTIONS: Section[] = [
       {
         feature: "Share outside NephroReach (secure link)",
         cells: {
-          hospital: {
-            included: [
-              "Patients can still share their own records with any office by secure link",
-            ],
-            notIncluded: [
-              "Hospital staff sending a secure link to an office not on NephroReach (in the client's plan, not built yet)",
-            ],
-          },
+          hospital: "yes",
           dialysis: "yes",
           access: "yes",
           nephrology: "yes",
@@ -303,9 +309,9 @@ export const SECTIONS: Section[] = [
         feature: "Monthly education report + CSV download",
         cells: {
           hospital: "yes",
-          dialysis: "no",
+          dialysis: "yes",
           access: "no",
-          nephrology: "no",
+          nephrology: "yes",
         },
       },
       {
@@ -320,9 +326,9 @@ export const SECTIONS: Section[] = [
       {
         feature: "Settings",
         cells: {
-          hospital: "no",
+          hospital: "yes",
           dialysis: "yes",
-          access: "no",
+          access: "yes",
           nephrology: "yes",
         },
       },

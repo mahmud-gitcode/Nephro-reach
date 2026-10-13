@@ -4,12 +4,15 @@ import {
   Armchair,
   BarChart3,
   BookOpen,
+  CalendarClock,
+  CalendarDays,
   ClipboardCheck,
   Car,
   CreditCard,
   FileText,
   FlaskConical,
   GraduationCap,
+  HandHeart,
   HelpCircle,
   HeartPulse,
   Hospital,
@@ -22,6 +25,7 @@ import {
   MessagesSquare,
   MessageSquareText,
   Palette,
+  Pill,
   Plane,
   Settings,
   ShieldAlert,
@@ -34,6 +38,7 @@ import {
 } from "lucide-react";
 import { UserRole } from "@/features/auth/auth";
 import type { Permission } from "@/features/staff/staff";
+import type { CaregiverPermission } from "@/features/caregivers/caregivers.data";
 import { getJourneyDayBySlug } from "@/features/education/dialysisJourneyData";
 import { topicBySlug } from "@/features/emergency/beforeTheEr.topics";
 
@@ -58,6 +63,8 @@ export type NavItem = {
   roles: UserRole[];
   /** For staff: the role permission the page needs (features/staff). */
   permission?: Permission;
+  /** For a caregiver: what the patient must have shared for the page. */
+  caregiver?: CaregiverPermission;
 };
 
 export const sidebarItems: NavItem[] = [
@@ -427,9 +434,66 @@ export const sidebarItems: NavItem[] = [
     roles: ["hospital"],
     permission: "billing.view",
   },
+
+  /* Caregiver (client spec, 2026-10-13): only what the patient shared. */
+  {
+    label: "Home",
+    href: "/dashboard/caregiver",
+    icon: LayoutDashboard,
+    roles: ["caregiver"],
+  },
+  {
+    label: "Dialysis Schedule",
+    href: "/dashboard/caregiver/schedule",
+    icon: CalendarDays,
+    roles: ["caregiver"],
+    caregiver: "schedule",
+  },
+  {
+    label: "Medications",
+    href: "/dashboard/caregiver/medications",
+    icon: Pill,
+    roles: ["caregiver"],
+    caregiver: "medications",
+  },
+  {
+    label: "Appointments",
+    href: "/dashboard/caregiver/appointments",
+    icon: CalendarClock,
+    roles: ["caregiver"],
+    caregiver: "appointments",
+  },
+  {
+    label: "Lab Results",
+    href: "/dashboard/caregiver/labs",
+    icon: FlaskConical,
+    roles: ["caregiver"],
+    caregiver: "labs",
+  },
+  {
+    label: "Education",
+    href: "/dashboard/caregiver/education",
+    icon: GraduationCap,
+    roles: ["caregiver"],
+    caregiver: "education",
+  },
+  {
+    label: "Journal",
+    href: "/dashboard/caregiver/journal",
+    icon: Notebook,
+    roles: ["caregiver"],
+    caregiver: "journal",
+  },
 ];
 
 export const supportItems: NavItem[] = [
+  /* The patient invites caregivers and decides what each sees. */
+  {
+    label: "My Caregivers",
+    href: "/dashboard/my-caregivers",
+    icon: HandHeart,
+    roles: ["user"],
+  },
   {
     label: "Support",
     href: "/dashboard/support",
@@ -528,6 +592,22 @@ export const supportItems: NavItem[] = [
 export function getBreadcrumb(pathname: string, language?: string) {
   if (pathname === "/dashboard" || pathname === "/dashboard/")
     return language === "ES" ? "Panel" : "Dashboard";
+  if (pathname.startsWith("/dashboard/my-caregivers"))
+    return language === "ES" ? "Mis Cuidadores" : "My Caregivers";
+  if (pathname.startsWith("/dashboard/caregiver/schedule"))
+    return language === "ES" ? "Horario de Diálisis" : "Dialysis Schedule";
+  if (pathname.startsWith("/dashboard/caregiver/medications"))
+    return language === "ES" ? "Medicamentos" : "Medications";
+  if (pathname.startsWith("/dashboard/caregiver/appointments"))
+    return language === "ES" ? "Citas" : "Appointments";
+  if (pathname.startsWith("/dashboard/caregiver/labs"))
+    return language === "ES" ? "Resultados de Laboratorio" : "Lab Results";
+  if (pathname.startsWith("/dashboard/caregiver/education"))
+    return language === "ES" ? "Educación" : "Education";
+  if (pathname.startsWith("/dashboard/caregiver/journal"))
+    return language === "ES" ? "Diario" : "Journal";
+  if (pathname === "/dashboard/caregiver")
+    return language === "ES" ? "Inicio" : "Home";
   if (pathname.startsWith("/dashboard/hospital/patients"))
     return language === "ES" ? "Pacientes" : "Patients";
   if (pathname.startsWith("/dashboard/hospital/education"))
@@ -856,6 +936,8 @@ export function isActiveRoute(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   if (href === "/dashboard/clinic") return pathname === "/dashboard/clinic";
   if (href === "/dashboard/hospital") return pathname === "/dashboard/hospital";
+  if (href === "/dashboard/caregiver")
+    return pathname === "/dashboard/caregiver";
   if (href === "/dashboard/personal-log") {
     return (
       pathname === "/dashboard/personal-log" ||
@@ -932,6 +1014,12 @@ const BOTTOM_NAV: Record<UserRole, string[]> = {
     "/dashboard/hospital/education",
     "/dashboard/hospital/messages",
   ],
+  caregiver: [
+    "/dashboard/caregiver",
+    "/dashboard/caregiver/schedule",
+    "/dashboard/caregiver/medications",
+    "/dashboard/caregiver/appointments",
+  ],
 };
 
 /** The short names a tab has room for. */
@@ -951,6 +1039,10 @@ const BOTTOM_LABEL: Record<string, { en: string; es: string }> = {
   "/dashboard/hospital/patients": { en: "Patients", es: "Pacientes" },
   "/dashboard/hospital/education": { en: "Education", es: "Educación" },
   "/dashboard/hospital/messages": { en: "Messages", es: "Mensajes" },
+  "/dashboard/caregiver": { en: "Home", es: "Inicio" },
+  "/dashboard/caregiver/schedule": { en: "Schedule", es: "Horario" },
+  "/dashboard/caregiver/medications": { en: "Meds", es: "Medicinas" },
+  "/dashboard/caregiver/appointments": { en: "Visits", es: "Citas" },
 };
 
 export type BottomNavItem = Pick<NavItem, "href" | "icon"> & { label: string };
