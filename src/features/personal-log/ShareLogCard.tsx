@@ -13,6 +13,7 @@ import {
 } from "./shareLog";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { isMemberRole } from "@/features/auth/useMember";
 import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 import { useHealthcareTeam } from "@/features/care-team/useHealthcareTeam";
 import {
@@ -52,7 +53,7 @@ export function ShareLogCard({
   const share = useExternalShare(isEs);
   /* Members can also send the log through Share Outside NephroReach, the
      same secure link as Messages (client, 2026-10-07). */
-  const isMember = useOptionalAuth()?.user?.role === "user";
+  const isMember = isMemberRole(useOptionalAuth()?.user?.role);
   const [outside, setOutside] = useState(false);
   const { recipients } = useHealthcareTeam();
   const [recipientId, setRecipientId] = useState("");
@@ -104,7 +105,7 @@ export function ShareLogCard({
           appearance="fill-stroke"
           disabled={empty}
           leadingIcon={<Download aria-hidden="true" />}
-          onClick={() => share.guard(download)}
+          onClick={() => share.guard(download, "download")}
         >
           {isEs ? "Descargar CSV" : "Download CSV"}
         </Button>
@@ -124,7 +125,7 @@ export function ShareLogCard({
           appearance="fill-stroke"
           disabled={empty}
           leadingIcon={<Printer aria-hidden="true" />}
-          onClick={() => share.guard(() => window.print())}
+          onClick={() => share.guard(() => window.print(), "print")}
         >
           {isEs ? "Imprimir / PDF" : "Print / PDF"}
         </Button>

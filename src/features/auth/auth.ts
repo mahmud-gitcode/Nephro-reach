@@ -118,6 +118,14 @@ export const DEMO_ACCOUNTS = [
     name: "Riverside General Hospital",
     role: "hospital" as const,
   },
+  /* A second patient, so a caregiver with two patients can be tried from
+     both sides (2026-10-14). */
+  {
+    email: "grace@nephroreach.com",
+    password: "user123",
+    name: "Grace Taylor",
+    role: "user" as const,
+  },
   {
     email: "caregiver@nephroreach.com",
     password: "caregiver123",
@@ -168,11 +176,18 @@ export function isNephrologyRoute(pathname: string) {
   );
 }
 
-export function canAccessPath(role: UserRole, pathname: string) {
+export function canAccessPath(role: UserRole, pathname: string): boolean {
   if (!pathname.startsWith("/dashboard")) return true;
-  /* A caregiver sees their own routes and nothing else. */
+  /* A caregiver has their own page (their patients), and every member page
+     — acting for the patient they switched to — except inviting other
+     caregivers (2026-10-14). */
   if (isCaregiverRoute(pathname)) return role === "caregiver";
-  if (role === "caregiver") return false;
+  if (role === "caregiver") {
+    return (
+      !pathname.startsWith("/dashboard/my-caregivers") &&
+      canAccessPath("user", pathname)
+    );
+  }
   /* A hospital sees its own routes and nothing else. */
   if (isHospitalRoute(pathname)) return role === "hospital";
   if (role === "hospital") return false;

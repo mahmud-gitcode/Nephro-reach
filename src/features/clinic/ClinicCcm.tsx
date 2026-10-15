@@ -533,11 +533,13 @@ function Worklist({
         }
         canExport={shown.length > 0}
         onExport={() =>
-          share.guard(() =>
-            downloadCsv(
-              `ccm-worklist-${month}.csv`,
-              worklistCsv(shown, month, library),
-            ),
+          share.guard(
+            () =>
+              downloadCsv(
+                `ccm-worklist-${month}.csv`,
+                worklistCsv(shown, month, library),
+              ),
+            "download",
           )
         }
         library={library}

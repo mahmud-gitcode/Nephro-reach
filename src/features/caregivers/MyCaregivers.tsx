@@ -14,26 +14,23 @@ import {
   Modal,
   Select,
   Skeleton,
-  SwitchRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
-  CAREGIVER_PERMISSIONS,
-  DEFAULT_PERMISSIONS,
   RELATIONSHIPS,
   inviteError,
   type CaregiverGrant,
-  type CaregiverPermission,
   type InviteDraft,
 } from "./caregivers.data";
 import { useMyCaregivers } from "./useCaregivers";
 
 /* ==========================================================================
-   My Caregivers — the patient decides
+   My Caregivers — the patient invites
    --------------------------------------------------------------------------
-   The patient invites a caregiver by email and turns on, one by one, what
-   that person may see. The journal starts off. A caregiver can be removed
-   at any time, and the patient sees what each caregiver has done.
+   The patient invites a caregiver by email. Once they accept, the
+   caregiver can do everything the patient can, for the patient — except
+   invite other caregivers (2026-10-14). A caregiver can be removed at any
+   time, and the patient sees what each caregiver opened.
    ========================================================================== */
 
 const HREF = "/dashboard/my-caregivers";
@@ -67,8 +64,9 @@ export default function MyCaregivers() {
       />
 
       <Alert tone="info" icon={<HandHeart />}>
-        A caregiver signs in with their own account and sees only what you turn
-        on. Your journal stays private unless you share it.
+        A caregiver signs in with their own account and can do everything you
+        can in NephroReach for you, except invite other caregivers. Remove them
+        at any time.
       </Alert>
 
       {mine.saveError ? (
@@ -94,8 +92,6 @@ export default function MyCaregivers() {
             <CaregiverCard
               key={g.id}
               grant={g}
-              disabled={mine.isSaving}
-              onToggle={(p, on) => mine.setPermission(g.id, p, on)}
               onRemove={() => setRemoving(g)}
             />
           ))}
@@ -116,7 +112,7 @@ export default function MyCaregivers() {
           size="small"
           onClose={() => setRemoving(null)}
           title={`Remove ${removing.caregiverName}?`}
-          description="They lose access straight away. What they already saw cannot be taken back, and anything they did stays in your activity."
+          description="They lose access to your account straight away. What they already saw cannot be taken back, and anything they changed stays in your records."
           footer={
             <>
               <Button
@@ -145,13 +141,9 @@ export default function MyCaregivers() {
 
 function CaregiverCard({
   grant,
-  disabled,
-  onToggle,
   onRemove,
 }: {
   grant: CaregiverGrant;
-  disabled: boolean;
-  onToggle: (permission: CaregiverPermission, on: boolean) => void;
   onRemove: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -190,23 +182,6 @@ function CaregiverCard({
           </Button>
         </div>
       ) : null}
-
-      <h4 className="mt-stack-lg text-label-md text-fg">What they can see</h4>
-      <div className="mt-stack-xs divide-y divide-line">
-        {CAREGIVER_PERMISSIONS.map((p) => (
-          <SwitchRow
-            key={p.id}
-            title={p.label}
-            description={p.description}
-            checked={grant.permissions.includes(p.id)}
-            disabled={disabled}
-            onChange={(on) => onToggle(p.id, on)}
-          />
-        ))}
-      </div>
-      <p className="mt-stack-sm text-caption text-fg-muted">
-        Billing and account settings are never shared.
-      </p>
 
       <h4 className="mt-stack-lg text-label-md text-fg">Recent activity</h4>
       <ul className="mt-stack-xs space-y-stack-xs">
@@ -250,7 +225,6 @@ function InviteModal({
     caregiverName: "",
     caregiverEmail: "",
     relationship: RELATIONSHIPS[0],
-    permissions: [...DEFAULT_PERMISSIONS],
   });
   const [tried, setTried] = useState(false);
   const [sentId, setSentId] = useState<string | null>(null);
@@ -299,7 +273,7 @@ function InviteModal({
       onClose={onClose}
       size="wide"
       title="Invite a caregiver"
-      description="Someone who helps with your care, such as a family member. They see only what you turn on below."
+      description="Someone who helps with your care, such as a family member. Once they accept, they can do everything you can in NephroReach for you, except invite other caregivers."
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
@@ -373,26 +347,6 @@ function InviteModal({
               />
             )}
           </FormField>
-        </div>
-        <div>
-          <h4 className="text-label-md text-fg">What they can see</h4>
-          <div className="mt-stack-xs divide-y divide-line">
-            {CAREGIVER_PERMISSIONS.map((p) => (
-              <SwitchRow
-                key={p.id}
-                title={p.label}
-                description={p.description}
-                checked={draft.permissions.includes(p.id)}
-                onChange={(on) =>
-                  set({
-                    permissions: on
-                      ? [...draft.permissions, p.id]
-                      : draft.permissions.filter((x) => x !== p.id),
-                  })
-                }
-              />
-            ))}
-          </div>
         </div>
       </div>
     </Modal>

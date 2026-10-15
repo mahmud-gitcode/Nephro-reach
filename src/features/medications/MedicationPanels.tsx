@@ -1077,7 +1077,7 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
         <Button
           variant="neutral"
           appearance="fill-stroke"
-          onClick={() => share.guard(() => window.print())}
+          onClick={() => share.guard(() => window.print(), "print")}
         >
           <Printer aria-hidden="true" />
           {isEs ? "Descargar / Imprimir" : "Download / Print"}

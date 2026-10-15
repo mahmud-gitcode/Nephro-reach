@@ -419,7 +419,7 @@ export default function MyLabsPage() {
                 variant="neutral"
                 appearance="fill-stroke"
                 size="small"
-                onClick={() => share.guard(() => window.print())}
+                onClick={() => share.guard(() => window.print(), "print")}
               >
                 <Download />
                 {l?.actions?.exportPdf || "Export PDF"}

@@ -8,6 +8,8 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { canAccessPath } from "@/features/auth/auth";
 import { userCan } from "@/features/staff/staff";
 import { useCaregiverView } from "@/features/caregivers/useCaregivers";
+import { isMemberRole } from "@/features/auth/useMember";
+import { CaregiverBar } from "@/features/caregivers/CaregiverBar";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Button,
@@ -38,6 +40,7 @@ import {
   getBreadcrumbTrail,
   getNavLabel,
   isActiveRoute,
+  showsNavItem,
   sidebarItems,
   supportItems,
 } from "./navigation";
@@ -48,12 +51,11 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const { language } = useLanguage();
   const role = user?.role ?? "user";
   const caregiver = useCaregiverView();
-  /* A staff member's role can take a page away too (billing, settings);
-     for a caregiver, the patient's sharing does. */
+  /* A staff member's role can take a page away too (billing, settings).
+     A caregiver acting for a patient gets the member's menu. */
   const shows = (item: (typeof sidebarItems)[number]) =>
-    item.roles.includes(role) &&
-    (!item.permission || userCan(user, item.permission)) &&
-    (!item.caregiver || caregiver.can(item.caregiver));
+    showsNavItem(item, role, !!caregiver.grant) &&
+    (!item.permission || userCan(user, item.permission));
   const visibleItems = sidebarItems.filter(shows);
   const visibleSupport = supportItems.filter(shows);
 
@@ -328,7 +330,7 @@ function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const [emergencyOpen, setEmergencyOpen] = useState(false);
-  const isUser = user?.role === "user";
+  const isUser = isMemberRole(user?.role);
   const trail = getBreadcrumbTrail(pathname, language);
   const currentPage = getBreadcrumb(pathname, language);
   const homeLabel = language === "ES" ? "Panel" : "Dashboard";
@@ -520,6 +522,8 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
   const wrapRef = useDismiss<HTMLDivElement>(open, close);
 
   const name = user?.name ?? (isEs ? "Invitado" : "Guest");
+  /* A caregiver is shown with the patient they are acting for. */
+  const caringFor = useCaregiverView().grant?.patientName;
   /* A staff member is shown by their role at their organisation. */
   const roleLabel = user?.staffRole
     ? `${user.staffRole}${user.org ? ` · ${user.org}` : ""}`
@@ -545,8 +549,8 @@ function ProfileMenu({ avatarSrc }: { avatarSrc: string }) {
                 : "Hospital"
               : user?.role === "caregiver"
                 ? isEs
-                  ? "Cuidador"
-                  : "Caregiver"
+                  ? `Cuidador${caringFor ? ` de ${caringFor}` : ""}`
+                  : `Caregiver${caringFor ? ` for ${caringFor}` : ""}`
                 : isEs
                   ? "Usuario"
                   : "User";
@@ -651,9 +655,8 @@ function BottomNav({ onMore }: { onMore: () => void }) {
   const caregiver = useCaregiverView();
   const visible = [...sidebarItems, ...supportItems].filter(
     (item) =>
-      item.roles.includes(role) &&
-      (!item.permission || userCan(user, item.permission)) &&
-      (!item.caregiver || caregiver.can(item.caregiver)),
+      showsNavItem(item, role, !!caregiver.grant) &&
+      (!item.permission || userCan(user, item.permission)),
   );
   const tabs = bottomNavItems(role, visible, language);
   if (tabs.length === 0) return null;
@@ -768,6 +771,7 @@ export default function DashboardShell({
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         {/* Room at the bottom for the bottom bar, below lg. */}
         <main className="px-4 py-5 max-lg:pb-24 md:px-8 lg:px-8">
+          <CaregiverBar />
           {children}
         </main>
       </div>

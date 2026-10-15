@@ -338,32 +338,34 @@ function PatientTable({
             size="small"
             disabled={filtered.length === 0}
             onClick={() =>
-              share.guard(() =>
-                downloadText(
-                  "enrolled-patients.csv",
-                  toCsv([
-                    [
-                      "Name",
-                      "MRN",
-                      "Program",
-                      "Enrolled",
-                      "Status",
-                      "Start",
-                      "Progress %",
-                      "Source",
-                    ],
-                    ...filtered.map((p) => [
-                      p.name,
-                      p.mrn,
-                      p.program,
-                      p.enrolledOn,
-                      p.status,
-                      p.startDate,
-                      p.progress,
-                      p.source,
+              share.guard(
+                () =>
+                  downloadText(
+                    "enrolled-patients.csv",
+                    toCsv([
+                      [
+                        "Name",
+                        "MRN",
+                        "Program",
+                        "Enrolled",
+                        "Status",
+                        "Start",
+                        "Progress %",
+                        "Source",
+                      ],
+                      ...filtered.map((p) => [
+                        p.name,
+                        p.mrn,
+                        p.program,
+                        p.enrolledOn,
+                        p.status,
+                        p.startDate,
+                        p.progress,
+                        p.source,
+                      ]),
                     ]),
-                  ]),
-                ),
+                  ),
+                "download",
               )
             }
           >

@@ -90,7 +90,7 @@ function Body({
   const header = (
     <CardHeader
       title={`${grant.patientName} invited you`}
-      description={`To be their caregiver (${grant.relationship.toLowerCase()}). You will see only what they share with you, and they can change that at any time.`}
+      description={`To be their caregiver (${grant.relationship.toLowerCase()}). You can help with everything in their NephroReach account, and they can remove you at any time.`}
     />
   );
 

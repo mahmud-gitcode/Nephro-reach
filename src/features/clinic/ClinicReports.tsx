@@ -573,11 +573,13 @@ function CustomReports({
               type="button"
               disabled={rows.length === 0}
               onClick={() =>
-                share.guard(() =>
-                  downloadText(
-                    `${report.id}-report.csv`,
-                    toCsv(report.table()),
-                  ),
+                share.guard(
+                  () =>
+                    downloadText(
+                      `${report.id}-report.csv`,
+                      toCsv(report.table()),
+                    ),
+                  "download",
                 )
               }
               className="flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
@@ -723,7 +725,7 @@ export default function ClinicReports() {
         action={
           <Button
             size="small"
-            onClick={() => exportShare.guard(exportReport)}
+            onClick={() => exportShare.guard(exportReport, "download")}
             disabled={rows.length === 0}
           >
             <Download className="h-4 w-4" />

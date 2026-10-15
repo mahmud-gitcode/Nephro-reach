@@ -260,20 +260,22 @@ function QuickActions({
       icon: Download,
       disabled: rows.length === 0,
       onClick: () =>
-        share.guard(() =>
-          downloadText(
-            "check-in-report.csv",
-            toCsv([
-              ["Member", "Program", "Date", "Status", "Notes"],
-              ...rows.map((r) => [
-                r.name,
-                r.program,
-                r.date,
-                r.status,
-                r.notes,
+        share.guard(
+          () =>
+            downloadText(
+              "check-in-report.csv",
+              toCsv([
+                ["Member", "Program", "Date", "Status", "Notes"],
+                ...rows.map((r) => [
+                  r.name,
+                  r.program,
+                  r.date,
+                  r.status,
+                  r.notes,
+                ]),
               ]),
-            ]),
-          ),
+            ),
+          "download",
         ),
     },
   ];

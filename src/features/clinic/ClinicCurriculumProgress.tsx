@@ -406,32 +406,34 @@ function MemberTable({
           className="lg:ml-auto"
           disabled={filtered.length === 0}
           onClick={() =>
-            share.guard(() =>
-              downloadText(
-                "member-progress.csv",
-                toCsv([
-                  [
-                    "Name",
-                    "MRN",
-                    "Program",
-                    "Module",
-                    "Step",
-                    "Of",
-                    "Progress %",
-                    "Status",
-                  ],
-                  ...filtered.map((m) => [
-                    m.name,
-                    m.mrn,
-                    m.program,
-                    m.module,
-                    m.step,
-                    m.length,
-                    m.progress,
-                    m.status,
+            share.guard(
+              () =>
+                downloadText(
+                  "member-progress.csv",
+                  toCsv([
+                    [
+                      "Name",
+                      "MRN",
+                      "Program",
+                      "Module",
+                      "Step",
+                      "Of",
+                      "Progress %",
+                      "Status",
+                    ],
+                    ...filtered.map((m) => [
+                      m.name,
+                      m.mrn,
+                      m.program,
+                      m.module,
+                      m.step,
+                      m.length,
+                      m.progress,
+                      m.status,
+                    ]),
                   ]),
-                ]),
-              ),
+                ),
+              "download",
             )
           }
         >

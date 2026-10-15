@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { Send } from "lucide-react";
+import { Download, Printer, Send } from "lucide-react";
 import { Alert, Button, Modal } from "@/components/ui";
 
 /* ==========================================================================
@@ -10,11 +10,15 @@ import { Alert, Button, Modal } from "@/components/ui";
    Every place information can be exported or sent outside NephroReach —
    a download, a print, an email, a secure link — asks first, in the
    client's own words, and only goes ahead once the person ticks the
-   acknowledgement and presses Confirm & Send.
+   acknowledgement and presses the confirm button.
+
+   The button names what happens next (client, 2026-10-15: a Download CSV
+   button opened a notice that said "Confirm & Send"): Confirm & Download,
+   Confirm & Print, or Confirm & Send.
 
    Usage:
      const share = useExternalShare(isEs);
-     <Button onClick={() => share.guard(download)}>Download</Button>
+     <Button onClick={() => share.guard(download, "download")}>Download</Button>
      {share.notice}
    ========================================================================== */
 
@@ -25,12 +29,16 @@ const COPY: Record<"en" | "es", AckCopy> = {
       "You are about to send information to a person or organization outside of the NephroReach network.",
       "Once information is exported or sent outside of NephroReach, NephroReach cannot control how the recipient accesses, stores, uses, forwards, downloads, or further shares that information. The recipient may not be subject to NephroReach’s privacy, security, or confidentiality requirements.",
       "Before continuing, please confirm that you selected the correct recipient and that you are authorized to share the information included in this export. Do not include information that is not necessary for the intended purpose.",
-      "By selecting “Confirm & Send,” you acknowledge that the information will leave the NephroReach environment and may no longer be protected by NephroReach’s security controls.",
+      "By selecting “{confirm},” you acknowledge that the information will leave the NephroReach environment and may no longer be protected by NephroReach’s security controls.",
     ],
     check:
       "I understand that I am sending information outside of NephroReach and have confirmed the recipient and information being shared.",
     cancel: "Cancel",
     confirm: "Confirm & Send",
+    confirmFor: {
+      download: "Confirm & Download",
+      print: "Confirm & Print",
+    },
   },
   es: {
     title: "Aviso de Compartir Fuera de NephroReach",
@@ -38,13 +46,26 @@ const COPY: Record<"en" | "es", AckCopy> = {
       "Está a punto de enviar información a una persona u organización fuera de la red de NephroReach.",
       "Una vez que la información se exporta o se envía fuera de NephroReach, NephroReach no puede controlar cómo el destinatario accede, guarda, usa, reenvía, descarga o vuelve a compartir esa información. Es posible que el destinatario no esté sujeto a los requisitos de privacidad, seguridad o confidencialidad de NephroReach.",
       "Antes de continuar, confirme que seleccionó al destinatario correcto y que está autorizado para compartir la información incluida. No incluya información que no sea necesaria para el propósito previsto.",
-      "Al seleccionar “Confirmar y Enviar”, usted reconoce que la información saldrá del entorno de NephroReach y es posible que ya no esté protegida por los controles de seguridad de NephroReach.",
+      "Al seleccionar “{confirm}”, usted reconoce que la información saldrá del entorno de NephroReach y es posible que ya no esté protegida por los controles de seguridad de NephroReach.",
     ],
     check:
       "Entiendo que estoy enviando información fuera de NephroReach y he confirmado el destinatario y la información que se comparte.",
     cancel: "Cancelar",
     confirm: "Confirmar y Enviar",
+    confirmFor: {
+      download: "Confirmar y Descargar",
+      print: "Confirmar e Imprimir",
+    },
   },
+};
+
+/** What the guarded action does, which the confirm button names. */
+export type ShareKind = "send" | "download" | "print";
+
+const KIND_ICON: Record<ShareKind, React.ReactNode> = {
+  send: <Send aria-hidden="true" />,
+  download: <Download aria-hidden="true" />,
+  print: <Printer aria-hidden="true" />,
 };
 
 export type AckCopy = {
@@ -56,7 +77,10 @@ export type AckCopy = {
   points?: string[];
   check: string;
   cancel: string;
+  /** The confirm button for a send; `{confirm}` in the text becomes it. */
   confirm: string;
+  /** The confirm button for a download or a print, when it differs. */
+  confirmFor?: Partial<Record<ShareKind, string>>;
 };
 
 /** A notice that must be acknowledged: the box ticked, then the confirm
@@ -64,15 +88,18 @@ export type AckCopy = {
 export function AcknowledgeNotice({
   open,
   copy,
+  kind = "send",
   onCancel,
   onConfirm,
 }: {
   open: boolean;
   copy: AckCopy;
+  kind?: ShareKind;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const [agreed, setAgreed] = useState(false);
+  const confirm = copy.confirmFor?.[kind] ?? copy.confirm;
   const close = () => {
     setAgreed(false);
     onCancel();
@@ -90,13 +117,13 @@ export function AcknowledgeNotice({
           </Button>
           <Button
             disabled={!agreed}
-            leadingIcon={<Send aria-hidden="true" />}
+            leadingIcon={KIND_ICON[kind]}
             onClick={() => {
               setAgreed(false);
               onConfirm();
             }}
           >
-            {copy.confirm}
+            {confirm}
           </Button>
         </>
       }
@@ -109,7 +136,7 @@ export function AcknowledgeNotice({
         ) : null}
         {copy.body.map((paragraph) => (
           <p key={paragraph} className="text-body-sm text-fg-secondary">
-            {paragraph}
+            {paragraph.replace("{confirm}", confirm)}
           </p>
         ))}
         {copy.points ? (
@@ -137,7 +164,9 @@ export function AcknowledgeNotice({
  *  Render `notice` once, anywhere in the component. */
 export function useAcknowledge(copy: AckCopy) {
   const [pending, setPending] = useState<(() => void) | null>(null);
-  const guard = useCallback((action: () => void) => {
+  const [kind, setKind] = useState<ShareKind>("send");
+  const guard = useCallback((action: () => void, what: ShareKind = "send") => {
+    setKind(what);
     /* Stored as a thunk: a function handed to setState is called. */
     setPending(() => action);
   }, []);
@@ -145,6 +174,7 @@ export function useAcknowledge(copy: AckCopy) {
     <AcknowledgeNotice
       open={pending !== null}
       copy={copy}
+      kind={kind}
       onCancel={() => setPending(null)}
       onConfirm={() => {
         const action = pending;

@@ -47,6 +47,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { useMember } from "@/features/auth/useMember";
 import { isEmail } from "@/features/personal-log/shareLog";
 import type { ShareInitial } from "@/features/secure-messages/ShareOutsideCard";
 import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
@@ -340,7 +341,9 @@ export function TravelDialysisSection() {
   /* A clinic not on NephroReach still gets the request, by email
      (client, 2026-10-07). */
   const { clinic, save: saveClinic } = useDialysisClinic();
-  const memberName = useOptionalAuth()?.user?.name ?? "";
+  const actingFor = useMember();
+  const signedIn = useOptionalAuth()?.user?.name ?? "";
+  const memberName = actingFor?.name ?? signedIn;
   const [outside, setOutside] = useState<ShareInitial | null>(null);
   /* Decided by the clinic, never asked: on NephroReach it goes there,
      otherwise to the clinic's email. */

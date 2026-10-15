@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Award, CheckCircle2, Circle, Printer } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useMember } from "@/features/auth/useMember";
 import {
   Alert,
   AsyncSection,
@@ -139,7 +139,7 @@ function Step({
 export default function CertificatePage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { user } = useAuth();
+  const member = useMember();
   const classroom = useClassroom();
   const { course, lessons } = classroom;
   const { progress, isPending: progressPending } = useJourneyProgress(lessons);
@@ -148,7 +148,7 @@ export default function CertificatePage() {
   const existing = course ? learner.certificateFor(course.id) : undefined;
   const [name, setName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const typedName = name ?? existing?.name ?? user?.name ?? "";
+  const typedName = name ?? existing?.name ?? member?.name ?? "";
 
   const pending = classroom.isPending || progressPending || learner.isPending;
   const courseTitle = course

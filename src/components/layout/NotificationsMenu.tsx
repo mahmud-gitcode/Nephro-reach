@@ -19,6 +19,7 @@ import { useNow } from "@/lib/utils/useNow";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
 import type { Conversation } from "@/features/messaging/messaging.types";
+import { isMemberRole } from "@/features/auth/useMember";
 import { useMemberName } from "@/features/auth/useMemberName";
 import { useErVisits } from "@/features/emergency/useErVisits";
 import { answerFor, weekOf } from "@/features/emergency/erVisits";
@@ -552,7 +553,7 @@ function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
   const { user } = useAuth();
   const memberName = useMemberName();
   const { conversations } = useMessages();
-  if (user?.role === "user") {
+  if (isMemberRole(user?.role)) {
     return {
       inbox: {
         href: "/dashboard/messages",
@@ -618,7 +619,7 @@ function StaffNotifications() {
 
 export function NotificationsMenu() {
   const { user } = useAuth();
-  return user?.role === "user" ? (
+  return isMemberRole(user?.role) ? (
     <MemberNotifications />
   ) : (
     <StaffNotifications />

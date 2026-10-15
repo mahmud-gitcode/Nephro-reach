@@ -8,7 +8,7 @@ export const INITIAL_TESTIMONIALS: Testimonial[] = [
     memberEmail: "james.t@example.com",
     title: "From Fear to Hope: My Dialysis Journey",
     role: "Dialysis Member (3 Years)",
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Sample video
+    videoUrl: "https://youtu.be/Hu7-vb7WNlY", // Placeholder until the client sends the real stories
     thumbnailUrl: "/images/user-dashboard/testimonial.jpg",
     duration: "4:12",
     summary:
@@ -23,7 +23,7 @@ export const INITIAL_TESTIMONIALS: Testimonial[] = [
     memberEmail: "elena.r@example.com",
     title: "From Fear to Hope: Finding Routine & Community",
     role: "Peritoneal Dialysis Patient",
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: "https://youtu.be/Hu7-vb7WNlY",
     thumbnailUrl: "/images/user-dashboard/testimonial.jpg",
     duration: "3:48",
     summary:
@@ -38,7 +38,7 @@ export const INITIAL_TESTIMONIALS: Testimonial[] = [
     memberEmail: "david.m@example.com",
     title: "From Fear to Hope: A Caregiver's Perspective",
     role: "Family Caregiver",
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    videoUrl: "https://youtu.be/Hu7-vb7WNlY",
     thumbnailUrl: "/images/user-dashboard/testimonial.jpg",
     duration: "5:20",
     summary:

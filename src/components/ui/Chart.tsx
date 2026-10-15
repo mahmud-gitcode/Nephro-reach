@@ -94,6 +94,12 @@ export type ChartSeries = {
   points: Array<number | null>;
   /** A thinner dashed line — for a comparison, e.g. "last month". */
   dashed?: boolean;
+  /** Read against the right-hand axis (`rightAxis`), for a measure in other
+   *  units on the same days — e.g. medication taken (%) under blood
+   *  pressure (mmHg). */
+  axis?: "left" | "right";
+  /** This series' unit, when it differs from the chart's. */
+  unit?: string;
 };
 
 export type LineChartProps = {
@@ -106,6 +112,9 @@ export type LineChartProps = {
   yTicks?: number;
   /** Unit shown after each value in the accessible table. */
   unit?: string;
+  /** A second scale on the right, for series with `axis: "right"`. Its
+   *  ticks fall on the same grid lines as the left axis. */
+  rightAxis?: { min: number; max: number };
   /** What the chart is of. Required — it becomes the accessible name. */
   label: string;
   height?: number;
@@ -130,6 +139,7 @@ export function LineChart({
   yMax,
   yTicks = 5,
   unit,
+  rightAxis,
   label,
   height = 200,
   showLegend = true,
@@ -147,19 +157,32 @@ export function LineChart({
   const xFor = (i: number) =>
     count <= 1 ? VB_W / 2 : PAD_X + (i * (VB_W - PAD_X * 2)) / (count - 1);
 
-  const yFor = (v: number) => {
-    const span = yMax - yMin || 1;
-    const clamped = Math.min(Math.max(v, yMin), yMax);
-    return PAD_Y + ((yMax - clamped) / span) * (VB_H - PAD_Y * 2);
+  const boundsOf = (s?: ChartSeries) =>
+    s?.axis === "right" && rightAxis
+      ? { lo: rightAxis.min, hi: rightAxis.max }
+      : { lo: yMin, hi: yMax };
+
+  const yFor = (v: number, s?: ChartSeries) => {
+    const { lo, hi } = boundsOf(s);
+    const span = hi - lo || 1;
+    const clamped = Math.min(Math.max(v, lo), hi);
+    return PAD_Y + ((hi - clamped) / span) * (VB_H - PAD_Y * 2);
   };
 
   /* As a share of the plot, for the HTML drawn over the stretched SVG. */
   const xPct = (i: number) => (xFor(i) / VB_W) * 100;
-  const yPct = (v: number) => (yFor(v) / VB_H) * 100;
+  const yPct = (v: number, s?: ChartSeries) => (yFor(v, s) / VB_H) * 100;
 
   const ticks = Array.from({ length: yTicks }, (_, i) =>
     Math.round(yMax - (i * (yMax - yMin)) / (yTicks - 1)),
   );
+  const rightTicks = rightAxis
+    ? Array.from({ length: yTicks }, (_, i) =>
+        Math.round(
+          rightAxis.max - (i * (rightAxis.max - rightAxis.min)) / (yTicks - 1),
+        ),
+      )
+    : null;
 
   const lead = series[0];
   /* The fill marks THE line — so by default only when there is one, or one
@@ -173,7 +196,10 @@ export function LineChart({
     lead !== undefined &&
     lead.points.every((v) => v !== null);
 
-  const withUnit = (v: number) => `${v}${unit ? ` ${unit}` : ""}`;
+  const withUnit = (v: number, s?: ChartSeries) => {
+    const u = s?.unit ?? unit;
+    return `${v}${u ? ` ${u}` : ""}`;
+  };
 
   return (
     <figure className={cn("m-0", className)}>
@@ -190,7 +216,11 @@ export function LineChart({
 
       <div
         className="grid gap-inline-md"
-        style={{ gridTemplateColumns: "38px minmax(0,1fr)" }}
+        style={{
+          gridTemplateColumns: rightTicks
+            ? "38px minmax(0,1fr) 38px"
+            : "38px minmax(0,1fr)",
+        }}
       >
         {/* Y axis */}
         <div
@@ -242,7 +272,9 @@ export function LineChart({
                   fill={`url(#${gradientId})`}
                   points={[
                     `${xFor(0)},${VB_H - PAD_Y}`,
-                    ...lead.points.map((v, i) => `${xFor(i)},${yFor(v ?? 0)}`),
+                    ...lead.points.map(
+                      (v, i) => `${xFor(i)},${yFor(v ?? 0, lead)}`,
+                    ),
                     `${xFor(count - 1)},${VB_H - PAD_Y}`,
                   ].join(" ")}
                 />
@@ -266,7 +298,9 @@ export function LineChart({
               <polyline
                 key={s.id}
                 points={s.points
-                  .map((v, i) => (v === null ? null : `${xFor(i)},${yFor(v)}`))
+                  .map((v, i) =>
+                    v === null ? null : `${xFor(i)},${yFor(v, s)}`,
+                  )
                   .filter(Boolean)
                   .join(" ")}
                 fill="none"
@@ -293,7 +327,7 @@ export function LineChart({
                     className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-pill border-2 bg-surface"
                     style={{
                       left: `${xPct(active)}%`,
-                      top: `${yPct(v)}%`,
+                      top: `${yPct(v, s)}%`,
                       borderColor: toneVar[s.tone],
                     }}
                   />
@@ -340,7 +374,7 @@ export function LineChart({
                   >
                     <Swatch tone={s.tone} dashed={s.dashed} />
                     <span className="font-semibold text-fg tabular-nums">
-                      {v === null || v === undefined ? "—" : withUnit(v)}
+                      {v === null || v === undefined ? "—" : withUnit(v, s)}
                     </span>
                     {s.label}
                   </p>
@@ -349,6 +383,19 @@ export function LineChart({
             </div>
           ) : null}
         </div>
+
+        {/* Right axis */}
+        {rightTicks ? (
+          <div
+            aria-hidden="true"
+            className="flex flex-col justify-between text-left text-caption text-fg-muted"
+            style={{ height }}
+          >
+            {rightTicks.map((tick) => (
+              <span key={tick}>{tick}</span>
+            ))}
+          </div>
+        ) : null}
 
         {/* X axis */}
         <span />
@@ -362,6 +409,7 @@ export function LineChart({
             </span>
           ))}
         </div>
+        {rightTicks ? <span /> : null}
       </div>
 
       {/* The same numbers, reachable by a screen reader. Not decorative:
@@ -390,7 +438,7 @@ export function LineChart({
                   <td key={s.id}>
                     {s.points[i] === null || s.points[i] === undefined
                       ? "No reading"
-                      : withUnit(s.points[i] as number)}
+                      : withUnit(s.points[i] as number, s)}
                   </td>
                 ))}
               </tr>

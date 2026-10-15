@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CAREGIVER_GRANTS_KEY,
@@ -9,50 +9,64 @@ import {
   setCaregiverViewing,
   writeJson,
 } from "@/lib/data/storage";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useAuth, useOptionalAuth } from "@/features/auth/AuthContext";
 import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
 import * as rules from "./caregivers.data";
-import type { CaregiverPermission, CaregiverState } from "./caregivers.data";
+import type { CaregiverState } from "./caregivers.data";
 
 /* ==========================================================================
    Caregivers — storage
    --------------------------------------------------------------------------
-   One shared record, as the clinic's stores are: the patient writes the
-   invites and what each caregiver may see, the caregiver accepts. Here the
-   screens filter; with a server the grant is checked on every request.
+   One shared record: the patient writes the invites, the caregiver
+   accepts. Here the screens filter; with a server the grant is checked on
+   every request the caregiver makes.
    ========================================================================== */
 
 const KEY = CAREGIVER_GRANTS_KEY;
 export const caregiversKey = ["caregivers", "grants"] as const;
-const VERSION = 1;
+/* 2: full access and several patients (2026-10-14). 3: Grace has a login. */
+const VERSION = 4;
 
 type Envelope = { version: number; state: CaregiverState };
 
-/** The demo: John Taylor's daughter already looks after him. */
+const CAREGIVER = {
+  caregiverEmail: "caregiver@nephroreach.com",
+  caregiverName: "Sarah Taylor",
+};
+
+/** The demo: Sarah looks after her father John and her grandmother. */
 function seed(now: number): CaregiverState {
   const day = 24 * 60 * 60 * 1000;
-  const invitedAt = new Date(now - 9 * day).toISOString();
-  const acceptedAt = new Date(now - 9 * day + 3 * 60 * 60 * 1000).toISOString();
+  const at = (days: number) => new Date(now - days * day).toISOString();
   return {
     grants: [
       {
-        id: "cg-demo-sarah",
+        ...CAREGIVER,
+        id: "cg-demo-john",
         patientEmail: DEMO_MEMBER_EMAIL,
         patientName: DEMO_MEMBER_NAME,
-        caregiverEmail: "caregiver@nephroreach.com",
-        caregiverName: "Sarah Taylor",
         relationship: "Daughter",
         status: "active",
-        permissions: [...rules.DEFAULT_PERMISSIONS],
-        invitedAt,
-        acceptedAt,
+        invitedAt: at(9),
+        acceptedAt: at(8.9),
         activity: [
-          {
-            at: new Date(now - 2 * day).toISOString(),
-            action: "Viewed Medications",
-          },
-          { at: acceptedAt, action: "Accepted" },
-          { at: invitedAt, action: "Invited" },
+          { at: at(2), action: "Opened Medications" },
+          { at: at(8.9), action: "Accepted" },
+          { at: at(9), action: "Invited" },
+        ],
+      },
+      {
+        ...CAREGIVER,
+        id: "cg-demo-grace",
+        patientEmail: "grace@nephroreach.com",
+        patientName: "Grace Taylor",
+        relationship: "Grandchild",
+        status: "active",
+        invitedAt: at(20),
+        acceptedAt: at(19),
+        activity: [
+          { at: at(19), action: "Accepted" },
+          { at: at(20), action: "Invited" },
         ],
       },
     ],
@@ -96,12 +110,12 @@ function useCaregiverStore() {
   };
 }
 
-/** The signed-in patient's caregivers: invite, share, remove. */
+/** The signed-in patient's caregivers: invite and remove. */
 export function useMyCaregivers() {
   const { user } = useAuth();
   const store = useCaregiverStore();
   const { mutate, mutateAsync } = store;
-  const email = user?.email ?? "";
+  const email = user?.role === "user" ? user.email : "";
   const patient = useMemo(
     () => ({ email, name: user?.name ?? "" }),
     [email, user?.name],
@@ -114,7 +128,7 @@ export function useMyCaregivers() {
     state: store.state,
     patientEmail: email,
     caregivers: useMemo(
-      () => rules.grantsForPatient(store.state, email),
+      () => (email ? rules.grantsForPatient(store.state, email) : []),
       [store.state, email],
     ),
     invite: useCallback(
@@ -129,11 +143,6 @@ export function useMyCaregivers() {
       },
       [mutateAsync, patient],
     ),
-    setPermission: useCallback(
-      (id: string, permission: CaregiverPermission, on: boolean) =>
-        mutate((s) => rules.setPermission(s, id, permission, on, Date.now())),
-      [mutate],
-    ),
     remove: useCallback(
       (id: string) => mutate((s) => rules.remove(s, id, Date.now())),
       [mutate],
@@ -141,13 +150,13 @@ export function useMyCaregivers() {
   };
 }
 
-/* The patient this caregiver is looking at. A query, so the banner, the
-   menu and the page all read one answer, and a change reaches all three. */
+/* The patient this caregiver is acting for. A query, so the switcher, the
+   menu and every page read one answer, and a switch reaches all of them. */
 const viewingKey = (email: string) => ["caregivers", "viewing", email] as const;
 
-/** The signed-in caregiver: their patients, invites, and who they view. */
+/** The signed-in caregiver: their patients, invites, and who they act for. */
 export function useCaregiverView() {
-  const { user } = useAuth();
+  const user = useOptionalAuth()?.user;
   const queryClient = useQueryClient();
   const store = useCaregiverStore();
   const { mutate, mutateAsync } = store;
@@ -180,10 +189,10 @@ export function useCaregiverView() {
   );
 
   return {
-    isPending: store.isPending || viewingQuery.isPending,
+    isCaregiver: !!email,
+    isPending: !!email && (store.isPending || viewingQuery.isPending),
     isSaving: store.isSaving,
     saveError: store.saveError,
-    grants,
     pending: useMemo(
       () => grants.filter((g) => g.status === "pending"),
       [grants],
@@ -194,10 +203,6 @@ export function useCaregiverView() {
     ),
     grant,
     choose,
-    can: useCallback(
-      (permission: CaregiverPermission) => rules.can(grant, permission),
-      [grant],
-    ),
     accept: useCallback(
       (id: string) => mutateAsync((s) => rules.accept(s, id, Date.now())),
       [mutateAsync],
@@ -213,21 +218,6 @@ export function useCaregiverView() {
       [mutate],
     ),
   };
-}
-
-/** Records that the caregiver opened a page, at most once an hour each. */
-export function useLogCaregiverView(action: string) {
-  const { grant, log } = useCaregiverView();
-  const done = useRef(false);
-  useEffect(() => {
-    if (!grant || done.current) return;
-    done.current = true;
-    const hour = 60 * 60 * 1000;
-    const recent = grant.activity.find(
-      (a) => a.action === action && Date.now() - Date.parse(a.at) < hour,
-    );
-    if (!recent) log(grant.id, action);
-  }, [grant, action, log]);
 }
 
 /** An invite, read by its id from the link the patient sent. */

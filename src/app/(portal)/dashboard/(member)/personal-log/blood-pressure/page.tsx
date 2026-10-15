@@ -96,11 +96,13 @@ function DailyBloodPressureList() {
             leadingIcon={<Download />}
             disabled={bp.readings.length === 0}
             onClick={() =>
-              share.guard(() =>
-                downloadText(
-                  "blood-pressure-readings.csv",
-                  readingsCsv(bp.readings),
-                ),
+              share.guard(
+                () =>
+                  downloadText(
+                    "blood-pressure-readings.csv",
+                    readingsCsv(bp.readings),
+                  ),
+                "download",
               )
             }
           >
@@ -393,12 +395,17 @@ function TrendChart() {
               : "The trend appears once you have two or more readings."}
           </p>
         ) : (
+          /* One chart (client, 2026-10-14): blood pressure in mmHg on the
+             left, and — on the same days — how much of the BP medication the
+             member took, on the right, so a missed dose sits under its high
+             reading. */
           <LineChart
-            label={t("bloodPressure.trendsTitle")}
+            label={`${t("bloodPressure.trendsTitle")} · ${t("medicationsLog.adherence.bpVsAdherence")}`}
             unit="mmHg"
             yMin={60}
             yMax={180}
-            height={206}
+            rightAxis={{ min: 0, max: 100 }}
+            height={300}
             xLabels={points.map((p) => {
               const [, m, d] = p.date.split("-").map(Number);
               return `${m}/${d}`;
@@ -416,46 +423,21 @@ function TrendChart() {
                 tone: "danger",
                 points: points.map((p) => p.diastolic),
               },
-            ]}
-          />
-        )}
-      </div>
-
-      {/* BP vs. Medication Compliance — back by request (client,
-          2026-10-12): the same days, with how the member answered "Did I
-          take my blood pressure medication as prescribed today?" as a light
-          green line beneath, so a missed dose sits under its high reading. */}
-      {points.length >= 2 ? (
-        <div className="mt-stack-xl border-t border-line-subtle pt-stack-lg">
-          <h3 className="text-heading-5 text-fg">
-            {t("medicationsLog.adherence.bpVsAdherence")}
-          </h3>
-          <LineChart
-            className="mt-stack-md"
-            label={t("medicationsLog.adherence.bpVsAdherence")}
-            unit="%"
-            yMin={0}
-            yMax={100}
-            yTicks={3}
-            height={120}
-            area={false}
-            xLabels={points.map((p) => {
-              const [, m, d] = p.date.split("-").map(Number);
-              return `${m}/${d}`;
-            })}
-            series={[
               {
                 id: "compliance",
                 label: isEs
-                  ? "Medicamento para la presión tomado (%)"
-                  : "BP medication taken (%)",
+                  ? "Medicamento para la presión tomado (%, eje derecho)"
+                  : "BP medication taken (%, right axis)",
                 tone: "success",
+                dashed: true,
+                axis: "right",
+                unit: "%",
                 points: complianceTrend(bp.readings),
               },
             ]}
           />
-        </div>
-      ) : null}
+        )}
+      </div>
     </Card>
   );
 }
@@ -567,7 +549,7 @@ export default function BloodPressureLogPage() {
 
       <DailyBloodPressureList />
 
-      <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-[minmax(0,1fr)_257px]">
+      <section className="grid grid-cols-1 gap-inline-lg xl:grid-cols-[minmax(0,1fr)_257px] xl:items-start">
         <TrendChart />
         <ReadingGuide />
       </section>

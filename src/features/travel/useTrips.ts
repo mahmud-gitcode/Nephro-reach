@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useMember } from "@/features/auth/useMember";
 import { DEMO_MEMBER_EMAIL } from "@/lib/data/demoIdentity";
 import { listTrips, saveTrips } from "./trip.repository";
 import * as rules from "./trip.rules";
@@ -38,17 +39,19 @@ export function useTrips() {
 
   const { mutate, reset } = write;
   const { user } = useAuth();
+  /* The member, or the patient a caregiver acts for. */
+  const member = useMember();
   /* A member sees their own requests only; the clinic sees everyone's.
      A request from before trips carried a patient is the demo patient's. */
   const trips = useMemo(() => {
     const all = query.data ?? [];
-    if (user?.role !== "user") return all;
+    if (!member) return user ? all : [];
     return all.filter((trip) =>
       trip.patient
-        ? trip.patient.email === user.email
-        : user.email === DEMO_MEMBER_EMAIL,
+        ? trip.patient.email === member.email
+        : member.email === DEMO_MEMBER_EMAIL,
     );
-  }, [query.data, user]);
+  }, [query.data, user, member]);
 
   /* The request carries who sent it, so the clinic — which handles many
      patients' trips — can see whose trip it is. */
@@ -59,10 +62,10 @@ export function useTrips() {
           ...trip,
           patient:
             trip.patient ??
-            (user ? { name: user.name, email: user.email } : undefined),
+            (member ? { name: member.name, email: member.email } : undefined),
         }),
       ),
-    [mutate, user],
+    [mutate, member],
   );
 
   const cancel = useCallback(

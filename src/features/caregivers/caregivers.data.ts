@@ -1,76 +1,21 @@
 /* ==========================================================================
    Caregivers — the rules
    --------------------------------------------------------------------------
-   The client's spec (2026-09-13, confirmed 2026-10-13): a caregiver is not
-   an organization. They are one person the patient invites, they sign in
-   with their own account so everything they do is theirs, and the patient
-   — never a clinic — decides what they may see. The private journal is off
-   unless the patient turns it on. Billing and account settings are never
-   shared.
+   A caregiver is one person a patient invites. They sign in with their own
+   account and can then do everything the patient can in NephroReach — for
+   that patient — except invite other caregivers (decision, 2026-10-14;
+   replaces the first, view-only version). One caregiver can look after
+   several patients and switches between them.
 
-   First version: the caregiver can see; acting for the patient comes next.
    Pure functions: state in, state out.
    ========================================================================== */
-
-export type CaregiverPermission =
-  | "schedule"
-  | "medications"
-  | "appointments"
-  | "labs"
-  | "education"
-  | "journal";
-
-export const CAREGIVER_PERMISSIONS: {
-  id: CaregiverPermission;
-  label: string;
-  description: string;
-}[] = [
-  {
-    id: "schedule",
-    label: "Dialysis schedule",
-    description: "Treatment days and chair times.",
-  },
-  {
-    id: "medications",
-    label: "Medications",
-    description: "The medication list, doses and how often.",
-  },
-  {
-    id: "appointments",
-    label: "Appointments",
-    description: "Upcoming and past appointments.",
-  },
-  {
-    id: "labs",
-    label: "Lab results",
-    description: "Results the care team uploads.",
-  },
-  {
-    id: "education",
-    label: "Education",
-    description: "Progress in the 21-Day course.",
-  },
-  {
-    id: "journal",
-    label: "Private journal",
-    description: "Notes written during the course. Off unless you share it.",
-  },
-];
-
-/** What a new invite starts with: everything but the journal. */
-export const DEFAULT_PERMISSIONS: CaregiverPermission[] = [
-  "schedule",
-  "medications",
-  "appointments",
-  "labs",
-  "education",
-];
 
 export const RELATIONSHIPS = [
   "Spouse / partner",
   "Son",
   "Daughter",
   "Parent",
+  "Grandchild",
   "Sibling",
   "Friend",
   "Professional caregiver",
@@ -93,7 +38,6 @@ export type CaregiverGrant = {
   caregiverName: string;
   relationship: string;
   status: GrantStatus;
-  permissions: CaregiverPermission[];
   invitedAt: string;
   acceptedAt?: string;
   removedAt?: string;
@@ -107,7 +51,6 @@ export type InviteDraft = {
   caregiverName: string;
   caregiverEmail: string;
   relationship: string;
-  permissions: CaregiverPermission[];
 };
 
 const ACTIVITY_LIMIT = 50;
@@ -167,7 +110,6 @@ export function invite(
     caregiverName: draft.caregiverName.trim(),
     relationship: draft.relationship,
     status: "pending",
-    permissions: [...draft.permissions],
     invitedAt: at,
     activity: [{ at, action: "Invited" }],
   };
@@ -200,30 +142,6 @@ export function remove(
   );
 }
 
-export function setPermission(
-  state: CaregiverState,
-  id: string,
-  permission: CaregiverPermission,
-  on: boolean,
-  now: number,
-): CaregiverState {
-  const at = new Date(now).toISOString();
-  const label =
-    CAREGIVER_PERMISSIONS.find((p) => p.id === permission)?.label ?? permission;
-  return change(state, id, (g) => {
-    const has = g.permissions.includes(permission);
-    if (has === on) return g;
-    const permissions = on
-      ? [...g.permissions, permission]
-      : g.permissions.filter((p) => p !== permission);
-    return withActivity(
-      { ...g, permissions },
-      `${label} ${on ? "shared" : "turned off"}`,
-      at,
-    );
-  });
-}
-
 export function logActivity(
   state: CaregiverState,
   id: string,
@@ -235,7 +153,7 @@ export function logActivity(
   );
 }
 
-/** The patient's caregivers, current ones first. */
+/** The patient's caregivers, removed ones left out. */
 export function grantsForPatient(
   state: CaregiverState,
   patientEmail: string,
@@ -269,11 +187,3 @@ export function activeGrant(
       normEmail(g.patientEmail) === normEmail(patientEmail),
   );
 }
-
-export const can = (
-  grant: CaregiverGrant | undefined,
-  permission: CaregiverPermission,
-) =>
-  !!grant &&
-  grant.status === "active" &&
-  grant.permissions.includes(permission);

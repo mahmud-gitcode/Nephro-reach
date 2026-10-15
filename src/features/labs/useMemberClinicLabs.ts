@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useMember } from "@/features/auth/useMember";
 import { useClinicLabs } from "@/features/clinic/useClinicLabs";
 import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_MRN } from "@/lib/data/demoIdentity";
 import { hasUnseen, latestByPanel, newestUpload } from "./clinicLabs.member";
@@ -17,10 +17,10 @@ const seenKey = ["labs", "clinic-seen"] as const;
  *  member's record carries their MRN; in the demo only the demo patient
  *  has one. */
 export function useMemberClinicLabs() {
-  const { user } = useAuth();
+  const member = useMember();
   const store = useClinicLabs();
   const queryClient = useQueryClient();
-  const mrn = user?.email === DEMO_MEMBER_EMAIL ? DEMO_MEMBER_MRN : null;
+  const mrn = member?.email === DEMO_MEMBER_EMAIL ? DEMO_MEMBER_MRN : null;
 
   const seen = useQuery({
     queryKey: seenKey,

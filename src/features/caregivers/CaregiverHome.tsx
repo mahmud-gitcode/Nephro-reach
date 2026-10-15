@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
-import Link from "next/link";
-import { Check, ChevronRight, HandHeart, Lock } from "lucide-react";
+import React from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, HandHeart } from "lucide-react";
 import {
   Badge,
   Button,
@@ -12,41 +12,34 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
-import { CAREGIVER_PERMISSIONS } from "./caregivers.data";
 import { useCaregiverView } from "./useCaregivers";
-import {
-  ActiveMedicationsCard,
-  CourseProgressCard,
-  NextAppointmentCard,
-  NextTreatmentCard,
-} from "./CaregiverViews";
+import { PatientAvatar } from "./CaregiverBar";
 
 /* ==========================================================================
-   Caregiver Home
+   My Patients — a caregiver's home
    --------------------------------------------------------------------------
-   Invitations to accept, the people this caregiver looks after (a parent
-   and a grandparent, say), and — for the one they are viewing — a short
-   summary and what that person shares with them.
+   Invitations to accept, and the people this caregiver looks after (a
+   parent and a grandparent, say). Opening one switches the whole portal to
+   that patient's account (2026-10-14).
    ========================================================================== */
 
-const BASE = "/dashboard/caregiver";
+const HREF = "/dashboard/caregiver";
 
 export default function CaregiverHome() {
   const view = useCaregiverView();
-  const { grant, patients, choose, isPending } = view;
+  const { grant, patients, choose } = view;
+  const router = useRouter();
 
-  /* One person to look after: no need to make them pick. */
-  useEffect(() => {
-    if (!isPending && !grant && patients.length === 1) {
-      void choose(patients[0].patientEmail);
-    }
-  }, [isPending, grant, patients, choose]);
+  const open = async (patientEmail: string) => {
+    await choose(patientEmail);
+    router.push("/dashboard");
+  };
 
-  if (isPending) return <Skeleton height={320} />;
+  if (view.isPending) return <Skeleton height={320} />;
 
   return (
     <div className="space-y-stack-xl">
-      <PageTitle href={BASE} title="Caregiver Home" />
+      <PageTitle href={HREF} />
 
       {view.pending.length > 0 ? (
         <Card>
@@ -59,7 +52,7 @@ export default function CaregiverHome() {
               >
                 <p className="text-body-sm text-fg">
                   <strong>{g.patientName}</strong> invited you to be their
-                  caregiver ({g.relationship.toLowerCase()}).
+                  caregiver.
                 </p>
                 <div className="flex gap-inline-sm">
                   <Button
@@ -74,7 +67,7 @@ export default function CaregiverHome() {
                     disabled={view.isSaving}
                     onClick={async () => {
                       await view.accept(g.id);
-                      if (!grant) await choose(g.patientEmail);
+                      await open(g.patientEmail);
                     }}
                   >
                     Accept
@@ -94,89 +87,44 @@ export default function CaregiverHome() {
         />
       ) : null}
 
-      {patients.length > 1 ? (
+      {patients.length > 0 ? (
         <Card>
-          <CardHeader title="People you care for" />
-          <ul className="mt-stack-md divide-y divide-line">
+          <CardHeader
+            title="People you care for"
+            description="Open a patient to use NephroReach for them. You can switch at any time from the bar at the top of every page."
+          />
+          <ul className="mt-stack-md space-y-stack-xs">
             {patients.map((g) => {
-              const viewing = grant?.id === g.id;
+              const current = grant?.id === g.id;
               return (
-                <li
-                  key={g.id}
-                  className="flex items-center justify-between gap-inline-md py-stack-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="text-label-md text-fg">{g.patientName}</p>
-                    <p className="text-caption text-fg-muted">
-                      {g.relationship}
-                    </p>
-                  </div>
-                  {viewing ? (
-                    <Badge tone="success">Viewing</Badge>
-                  ) : (
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => void choose(g.patientEmail)}
-                    >
-                      View
-                    </Button>
-                  )}
+                <li key={g.id}>
+                  <button
+                    type="button"
+                    onClick={() => void open(g.patientEmail)}
+                    className="flex min-h-16 w-full cursor-pointer items-center gap-inline-md rounded-control px-2 py-stack-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-ring"
+                  >
+                    <PatientAvatar name={g.patientName} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-inline-sm text-label-lg text-fg">
+                        <span className="truncate">{g.patientName}</span>
+                        {current ? (
+                          <Badge tone="success">Open now</Badge>
+                        ) : null}
+                      </span>
+                      <span className="block text-caption text-fg-muted">
+                        {g.relationship}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-inline-sm text-label-md text-fg-brand">
+                      {current ? "Continue" : "Open"}
+                      <ArrowRight aria-hidden="true" className="size-4" />
+                    </span>
+                  </button>
                 </li>
               );
             })}
           </ul>
         </Card>
-      ) : null}
-
-      {grant ? (
-        <>
-          <div className="grid grid-cols-1 gap-stack-md sm:grid-cols-2 xl:grid-cols-4">
-            {view.can("schedule") ? <NextTreatmentCard /> : null}
-            {view.can("medications") ? <ActiveMedicationsCard /> : null}
-            {view.can("appointments") ? <NextAppointmentCard /> : null}
-            {view.can("education") ? <CourseProgressCard /> : null}
-          </div>
-
-          <Card>
-            <CardHeader
-              title={`What ${grant.patientName} shares with you`}
-              description="Only they can change this, from their own account."
-            />
-            <ul className="mt-stack-md divide-y divide-line">
-              {CAREGIVER_PERMISSIONS.map((p) => {
-                const shared = view.can(p.id);
-                const href = `${BASE}/${p.id}`;
-                return (
-                  <li key={p.id}>
-                    {shared ? (
-                      <Link
-                        href={href}
-                        className="flex min-h-11 items-center justify-between gap-inline-md py-stack-sm text-fg hover:text-fg-brand"
-                      >
-                        <span className="text-label-md">{p.label}</span>
-                        <span className="flex items-center gap-inline-sm">
-                          <Badge tone="success">Shared</Badge>
-                          <ChevronRight aria-hidden className="size-4" />
-                        </span>
-                      </Link>
-                    ) : (
-                      <div className="flex min-h-11 items-center justify-between gap-inline-md py-stack-sm">
-                        <span className="text-label-md text-fg-muted">
-                          {p.label}
-                        </span>
-                        <Badge tone="neutral" icon={<Lock />}>
-                          Not shared
-                        </Badge>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        </>
       ) : null}
     </div>
   );

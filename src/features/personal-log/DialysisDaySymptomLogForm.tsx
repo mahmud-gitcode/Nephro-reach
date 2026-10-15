@@ -433,7 +433,7 @@ function TreatmentForm({
             {share.notice}
             <button
               type="button"
-              onClick={() => share.guard(() => window.print())}
+              onClick={() => share.guard(() => window.print(), "print")}
               className="flex size-10 cursor-pointer items-center justify-center rounded-control border border-line bg-surface text-fg-muted transition-colors hover:border-primary-edge hover:text-fg-brand"
               title={tx("Print", "Imprimir")}
               aria-label={tx("Print", "Imprimir")}
