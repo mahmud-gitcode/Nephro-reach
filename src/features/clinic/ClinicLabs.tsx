@@ -10,6 +10,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  FormField,
   Modal,
   Select,
   Skeleton,
@@ -26,6 +27,7 @@ import { userCan } from "@/features/staff/staff";
 import {
   LAB_CSV_COLUMNS,
   LAB_CSV_TEMPLATE,
+  PATIENT_CSV_TEMPLATE,
   labFlag,
   labsFor,
   parseLabCsv,
@@ -46,9 +48,15 @@ import { UpdatedBar } from "./UpdatedBar";
 
 const HREF = "/dashboard/clinic/labs";
 
-function downloadTemplate() {
+/* Uploading for several patients at once: the file's MRN column says
+   whose each row is. */
+const SEVERAL = "__several__";
+
+function downloadTemplate(forOne: boolean) {
   const url = URL.createObjectURL(
-    new Blob([LAB_CSV_TEMPLATE], { type: "text/csv" }),
+    new Blob([forOne ? PATIENT_CSV_TEMPLATE : LAB_CSV_TEMPLATE], {
+      type: "text/csv",
+    }),
   );
   const link = document.createElement("a");
   link.href = url;
@@ -58,28 +66,39 @@ function downloadTemplate() {
 }
 
 function UploadModal({
-  knownMrns,
+  patients,
+  initialMrn,
   store,
   me,
   onDone,
   onClose,
 }: {
-  knownMrns: string[];
+  patients: Array<{ name: string; mrn: string }>;
+  /** The patient on screen when Upload was pressed. */
+  initialMrn: string;
   store: ClinicLabsStore;
   me: string;
   onDone: (count: number) => void;
   onClose: () => void;
 }) {
+  const knownMrns = patients.map((p) => p.mrn);
+  /* The patient comes first, then the file (client, 2026-10-18). */
+  const [patient, setPatient] = useState(initialMrn || SEVERAL);
+  const [fileText, setFileText] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
-  const [parsed, setParsed] = useState<ParsedLabs | null>(null);
+  const forOne = patient !== SEVERAL;
+  const parsed: ParsedLabs | null =
+    fileText === null
+      ? null
+      : parseLabCsv(fileText, knownMrns, forOne ? patient : undefined);
 
   async function read(file: File) {
     setFileName(file.name);
-    setParsed(parseLabCsv(await file.text(), knownMrns));
+    setFileText(await file.text());
   }
 
   const count = parsed?.rows.length ?? 0;
-  const patients = new Set(parsed?.rows.map((r) => r.mrn)).size;
+  const patientCount = new Set(parsed?.rows.map((r) => r.mrn)).size;
 
   return (
     <Modal
@@ -109,12 +128,34 @@ function UploadModal({
       }
     >
       <div className="space-y-stack-md">
+        <FormField label="Patient" required>
+          {(field) => (
+            <Select
+              {...field}
+              value={patient}
+              onChange={(e) => setPatient(e.target.value)}
+            >
+              {patients.map((p) => (
+                <option key={p.mrn} value={p.mrn}>
+                  {p.name} · MRN {p.mrn}
+                </option>
+              ))}
+              <option value={SEVERAL}>
+                Several patients (the file has an MRN column)
+              </option>
+            </Select>
+          )}
+        </FormField>
         <p className="text-body-sm text-fg-secondary">
           A CSV file with a header row. Columns:{" "}
           <span className="text-label-md text-fg">
-            {LAB_CSV_COLUMNS.join(", ")}
+            {(forOne
+              ? LAB_CSV_COLUMNS.filter((c) => c !== "mrn")
+              : LAB_CSV_COLUMNS
+            ).join(", ")}
           </span>
-          . The first four are required; dates may be YYYY-MM-DD or MM/DD/YYYY.
+          . The first {forOne ? "three" : "four"} are required; dates may be
+          YYYY-MM-DD or MM/DD/YYYY.
         </p>
         <div className="flex flex-wrap items-center gap-inline-md">
           <label className="inline-flex">
@@ -137,7 +178,7 @@ function UploadModal({
             variant="neutral"
             appearance="ghost"
             leadingIcon={<Download aria-hidden="true" />}
-            onClick={downloadTemplate}
+            onClick={() => downloadTemplate(forOne)}
           >
             Download template
           </Button>
@@ -147,8 +188,11 @@ function UploadModal({
           <div className="space-y-stack-sm">
             {count > 0 ? (
               <Alert tone="success">
-                {count} result{count === 1 ? "" : "s"} for {patients} patient
-                {patients === 1 ? "" : "s"} ready to import.
+                {forOne
+                  ? `${count} result${count === 1 ? "" : "s"} for ${
+                      patients.find((p) => p.mrn === patient)?.name ?? patient
+                    } ready to import.`
+                  : `${count} result${count === 1 ? "" : "s"} for ${patientCount} patient${patientCount === 1 ? "" : "s"} ready to import.`}
               </Alert>
             ) : null}
             {parsed.errors.length > 0 ? (
@@ -315,7 +359,8 @@ export default function ClinicLabs() {
       {body}
       {uploading ? (
         <UploadModal
-          knownMrns={patients.map((p) => p.mrn)}
+          patients={ordered}
+          initialMrn={selected}
           store={store}
           me={me}
           onDone={setImported}

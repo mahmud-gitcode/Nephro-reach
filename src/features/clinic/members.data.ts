@@ -93,7 +93,7 @@ const tracking: Record<string, Tracking> = {
   "778899": t("Attention Needed", 27, "1 week ago", "Sep 14 at 12:00 PM", [0, 3], [1, 3], [0, 0]),
   "889900": t("On Track", 62, "2 days ago", "Sep 19 at 10:45 AM", [2, 3], [3, 3], [0, 0]),
   "990011": t("On Track", 74, "Today", "Today at 6:55 AM", [3, 3], [3, 3], [1, 0]),
-  "101112": t("On Track", 19, "3 days ago", "Sep 18 at 2:20 PM", [1, 3], [2, 3], [0, 0]),
+  "101112": t("On Track", 19, "2 days ago", "Sep 19 at 2:20 PM", [1, 3], [2, 3], [0, 0]),
   "121314": t("On Track", 58, "1 day ago", "Yesterday at 11:40 AM", [2, 3], [3, 3], [0, 0]),
   "131415": t("On Track", 41, "2 days ago", "Sep 19 at 4:30 PM", [2, 3], [2, 3], [0, 0]),
   "141516": t("On Track", 12, "Today", "Today at 9:02 AM", [1, 1], [1, 1], [0, 0]),
@@ -113,6 +113,31 @@ export type RosterMember = Pick<
 function currentModuleFor(mrn: string): string {
   const row = curriculum.find((member) => member.mrn === mrn);
   return row ? `${stepLabel(row)} · ${row.module}` : "Not started";
+}
+
+/** Days without activity before a member needs a follow-up (client,
+    2026-10-18: "if they've been inactive for 3 days, follow up"). */
+export const FOLLOW_UP_AFTER_DAYS = 3;
+
+/** Whole days since "Today", "1 day ago", "6 days ago", "1 week ago";
+    null for a member with no activity yet. */
+export function daysInactive(lastActivity: string): number | null {
+  const text = lastActivity.trim().toLowerCase();
+  if (text === "today") return 0;
+  const match = /^(\d+)\s+(day|week)s?\s+ago$/.exec(text);
+  if (!match) return null;
+  return Number(match[1]) * (match[2] === "week" ? 7 : 1);
+}
+
+/** An On Track member who has gone quiet is due a follow-up; a worse
+    status already asks for one. */
+export function withFollowUpRule(tracking: Tracking): Tracking {
+  const days = daysInactive(tracking.lastActivity);
+  return tracking.status === "On Track" &&
+    days !== null &&
+    days >= FOLLOW_UP_AFTER_DAYS
+    ? { ...tracking, status: "Need Follow-Up" }
+    : tracking;
 }
 
 /** A patient enrolled today has done nothing yet — which is a fact to
@@ -136,7 +161,7 @@ export function rosterMemberFor(patient: Patient): RosterMember {
     program: patient.program,
     enrolledOn: patient.enrolledOn,
     currentModule: currentModuleFor(patient.mrn),
-    ...(tracking[patient.mrn] ?? justEnrolled),
+    ...withFollowUpRule(tracking[patient.mrn] ?? justEnrolled),
   };
 }
 

@@ -10,7 +10,12 @@ import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloo
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
 import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
-import { LINKED_MEMBER, memberCheckInRows, memberInbox } from "./memberFeed";
+import {
+  LINKED_MEMBER,
+  fluidFollowUpRows,
+  memberCheckInRows,
+  memberInbox,
+} from "./memberFeed";
 
 /**
  * What the linked member's app has raised for the clinic: inbox items and
@@ -81,9 +86,15 @@ export function useMemberFeed(now: number, today: string, program: string) {
     [checkIns.entries, notices.notices, program, today],
   );
 
+  const followUpRows = useMemo(
+    () => fluidFollowUpRows(weights.entries, program, today),
+    [weights.entries, program, today],
+  );
+
   return {
     inbox,
     checkInRows,
+    followUpRows,
     /* Until the check-ins have loaded, "no check-in for a week" would be a
        false Missed row. */
     isPending: checkIns.isPending || notices.isPending,

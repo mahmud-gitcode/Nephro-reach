@@ -62,6 +62,7 @@ import {
   enrollment,
   liveClassLink,
   memberLink,
+  messageLink,
   performance,
   programProgress,
   statusCards,
@@ -249,7 +250,7 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-inline-md pl-12 sm:pl-0">
-                  <Link href={MESSAGES} className={outlineLink}>
+                  <Link href={messageLink(member.mrn)} className={outlineLink}>
                     <MessageSquareText className="h-4 w-4" />
                     Message
                   </Link>
@@ -285,9 +286,11 @@ const QUICK_ACTIONS = [
     href: MESSAGES,
     icon: MessageSquareText,
   },
+  /* Only the NephroReach admin schedules classes (client, 2026-10-18);
+     the clinic follows its members' attendance and may join one. */
   {
-    label: "Schedule Class",
-    hint: "Plan the next live class",
+    label: "Live Classes",
+    hint: "See what your members attend",
     href: "/dashboard/clinic/live-class",
     icon: CalendarPlus,
   },
@@ -581,7 +584,7 @@ function MemberRow({ member }: { member: RosterMember }) {
             <Eye aria-hidden="true" />
           </Link>
           <Link
-            href={MESSAGES}
+            href={messageLink(member.mrn)}
             className={iconLink}
             aria-label={`Message ${member.name}`}
             title="Send message"

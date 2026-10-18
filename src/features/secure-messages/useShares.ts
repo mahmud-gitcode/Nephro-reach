@@ -73,5 +73,9 @@ export function useShares() {
       run((s) => rules.recordDownload(s, id, Date.now())),
     requestInfo: (id: string, request: Omit<rules.InfoRequest, "at">) =>
       run((s) => rules.requestInfo(s, id, request, Date.now())),
+    /** Resolves to false once the recipient's replies are used up. */
+    reply: async (id: string, body: string) =>
+      (await run((s) => rules.replyAsRecipient(s, id, body, Date.now()))) !==
+      null,
   };
 }

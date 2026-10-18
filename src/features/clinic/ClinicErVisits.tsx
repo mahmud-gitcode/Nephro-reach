@@ -49,7 +49,7 @@ export function ClinicErVisits() {
       <Card as="section" padding="small" className="h-full xl:col-span-2">
         <div className="mb-stack-md flex flex-wrap items-start justify-between gap-inline-md">
           <div>
-            <h2 className="text-heading-4 text-fg">ER Visits</h2>
+            <h2 className="text-heading-4 text-fg">Self-Reported ER Visits</h2>
             <p className="mt-stack-xs text-body-sm text-fg-muted">
               Reported by your patients in their weekly check-in question.
             </p>
@@ -86,7 +86,7 @@ export function ClinicErVisits() {
           <Skeleton height={200} />
         ) : (
           <BarChart
-            label="ER visits reported per month, all patients"
+            label="Self-reported ER visits per month, all patients"
             bars={months.map((m) => ({
               label: monthName(m.month),
               value: m.visits,
@@ -100,12 +100,16 @@ export function ClinicErVisits() {
       </Card>
 
       <Card as="section" padding="small" className="h-full">
-        <h2 className="text-heading-4 text-fg">Patients With ER Visits</h2>
+        <h2 className="text-heading-4 text-fg">
+          Patients With Self-Reported ER Visits
+        </h2>
         <p className="mt-stack-xs mb-stack-md text-body-sm text-fg-muted">
           Last 90 days
         </p>
         {recent.length === 0 ? (
-          <p className="text-body-sm text-fg-muted">No ER visits reported.</p>
+          <p className="text-body-sm text-fg-muted">
+            No self-reported ER visits.
+          </p>
         ) : (
           <ul className="divide-y divide-line-subtle">
             {recent.slice(0, 6).map((patient) => (

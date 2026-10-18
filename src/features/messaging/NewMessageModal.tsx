@@ -29,6 +29,7 @@ export function NewMessageModal({
   withCategory = false,
   isEs = false,
   initialBody = "",
+  initialRecipient,
   initialCategory = "care-team",
   onSend,
   onClose,
@@ -39,6 +40,8 @@ export function NewMessageModal({
   confirmSend?: (send: () => void) => void;
   /** Pre-filled text, e.g. a check-in reminder. */
   initialBody?: string;
+  /** The recipient already chosen, e.g. "Message" on a member's row. */
+  initialRecipient?: string;
   initialCategory?: MessageCategory;
   title: string;
   recipientLabel: string;
@@ -49,7 +52,11 @@ export function NewMessageModal({
   onSend: (recipient: string, body: string, category: MessageCategory) => void;
   onClose: () => void;
 }) {
-  const [recipient, setRecipient] = useState(recipients[0]?.value ?? "");
+  const [recipient, setRecipient] = useState(
+    recipients.some((r) => r.value === initialRecipient)
+      ? initialRecipient!
+      : (recipients[0]?.value ?? ""),
+  );
   const [category, setCategory] = useState<MessageCategory>(initialCategory);
   const [body, setBody] = useState(initialBody);
   const [tried, setTried] = useState(false);

@@ -55,7 +55,7 @@ import { cn } from "@/lib/utils/cn";
 import { JOURNEY_DAYS } from "@/features/education/dialysisJourneyData";
 import { tableIconButton } from "./tableButton";
 import { initials } from "./clinicIcons";
-import { memberLink } from "./clinicDashboard.data";
+import { memberLink, messageLink } from "./clinicDashboard.data";
 import { paginate, ROWS_PER_PAGE_OPTIONS } from "./enrollment.data";
 import {
   ALL_PROGRAMS,
@@ -574,7 +574,7 @@ function MemberTable({
                         <Eye aria-hidden="true" />
                       </button>
                       <Link
-                        href={MESSAGES}
+                        href={messageLink(member.mrn)}
                         className={iconControl}
                         aria-label={`Message ${member.name}`}
                         title="Send message"
@@ -661,7 +661,7 @@ function ProgressModal({
       description={`MRN ${member.mrn} · ${member.program}`}
       footer={
         <>
-          <Link href={MESSAGES} className={outlineLink}>
+          <Link href={messageLink(member.mrn)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
             Send Message
           </Link>

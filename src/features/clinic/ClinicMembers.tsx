@@ -21,7 +21,6 @@ import { UserPlusSolid, UsersSolid } from "@/components/icons/solid";
 import { statusIconSolid, statusKeyTone, statusText } from "./StatusIconsSolid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
-  Alert,
   Badge,
   Button,
   buttonStyles,
@@ -70,13 +69,14 @@ import {
   type RosterMember,
   type RosterStatus,
 } from "./members.data";
-import { EnrollPatientModal } from "./EnrollPatientModal";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData, type ClinicData } from "./useClinicData";
+import { messageLink } from "./clinicDashboard.data";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 const MESSAGES = "/dashboard/clinic/messages";
+const ENROLL = "/dashboard/clinic/enroll-patients";
 
 const outlineLink = buttonStyles({
   variant: "neutral",
@@ -191,14 +191,12 @@ function MemberTable({
   onFilters,
   selectedMrn,
   onSelect,
-  onAdd,
 }: {
   list: RosterMember[];
   filters: Filters;
   onFilters: (next: Partial<Filters>) => void;
   selectedMrn: string | null;
   onSelect: (mrn: string) => void;
-  onAdd: () => void;
 }) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
@@ -280,20 +278,16 @@ function MemberTable({
             <option key={option}>{option}</option>
           ))}
         </Select>
-        {/* Adding a member is enrolling a patient: the same form as Enroll
-            Patients, opened here so the list stays in view. */}
-        <Button
-          size="small"
-          className="lg:ml-auto"
-          onClick={onAdd}
-          disabled={list.length >= allowed}
-          title={
-            list.length >= allowed ? "All contract seats are filled" : undefined
-          }
+        {/* Patients are added in one place, Enroll Patients; this page
+            tracks them once they are in (client, 2026-10-18: "Add Member"
+            here and "Enroll New Patient" there were the same thing). */}
+        <Link
+          href={ENROLL}
+          className={cn(buttonStyles({ size: "small" }), "lg:ml-auto")}
         >
           <Plus className="h-4 w-4" />
-          Add Member
-        </Button>
+          Enroll Patient
+        </Link>
       </div>
 
       {/* Bulk actions appear once something is ticked, so the checkboxes
@@ -435,7 +429,7 @@ function MemberTable({
                           <Eye aria-hidden="true" />
                         </button>
                         <Link
-                          href={MESSAGES}
+                          href={messageLink(member.mrn)}
                           className={iconControl}
                           aria-label={`Message ${member.name}`}
                           title="Send message"
@@ -542,7 +536,7 @@ function MemberDetailsModal({
       description={`MRN ${member.mrn} · Enrolled ${member.enrolledOn}`}
       footer={
         <>
-          <Link href={MESSAGES} className={outlineLink}>
+          <Link href={messageLink(member.mrn)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
             Send Message
           </Link>
@@ -864,11 +858,6 @@ function MembersView() {
      from the dashboard carrying ?mrn= — never by itself on page load. */
   const [selectedMrn, setSelectedMrn] = useState<string | null>(initial.mrn);
   const selected = list.find((member) => member.mrn === selectedMrn) ?? null;
-  const [enrolling, setEnrolling] = useState(false);
-  const [justEnrolled, setJustEnrolled] = useState<{
-    name: string;
-    mrn: string;
-  } | null>(null);
 
   function writeUrl(next: Filters, mrn: string | null) {
     const query = new URLSearchParams();
@@ -918,24 +907,6 @@ function MembersView() {
 
   if (clinic.isPending) return <PageSkeleton />;
 
-  const enrollModal = enrolling ? (
-    <EnrollPatientModal
-      list={clinic.data?.patients ?? []}
-      onClose={() => setEnrolling(false)}
-      onEnrolled={(name, mrn) => {
-        setEnrolling(false);
-        setJustEnrolled({ name, mrn });
-        /* Clear the filters so the new member is in the list, not hidden
-           by a status they do not have yet. */
-        updateFilters({
-          query: "",
-          program: ALL_PROGRAMS,
-          status: ALL_STATUSES,
-        });
-      }}
-    />
-  ) : null;
-
   if (list.length === 0) {
     return (
       <>
@@ -944,42 +915,18 @@ function MembersView() {
           title="No members yet"
           description="Patients you enroll will appear here, with their progress and status."
           action={
-            <Button size="small" onClick={() => setEnrolling(true)}>
+            <Link href={ENROLL} className={buttonStyles({ size: "small" })}>
               <Plus className="h-4 w-4" />
               Enroll a patient
-            </Button>
+            </Link>
           }
         />
-        {enrollModal}
       </>
     );
   }
 
   return (
     <>
-      {justEnrolled ? (
-        <Alert
-          tone="success"
-          title={`${justEnrolled.name} is now a member.`}
-          onDismiss={() => setJustEnrolled(null)}
-          action={
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              size="small"
-              onClick={() => {
-                select(justEnrolled.mrn);
-                setJustEnrolled(null);
-              }}
-            >
-              View details
-            </Button>
-          }
-        >
-          They start as Not Started and count toward your contract seats.
-        </Alert>
-      ) : null}
-
       <SummaryCards list={list} />
 
       <MemberTable
@@ -988,10 +935,7 @@ function MembersView() {
         onFilters={updateFilters}
         selectedMrn={selectedMrn}
         onSelect={select}
-        onAdd={() => setEnrolling(true)}
       />
-
-      {enrollModal}
 
       {selected ? (
         <MemberDetailsModal member={selected} onClose={close} />

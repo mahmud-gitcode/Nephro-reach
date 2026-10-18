@@ -12,6 +12,7 @@ import {
   type EnrollmentSource,
   type Patient,
 } from "./enrollment.data";
+import { listCourses, type Course } from "@/features/education/courseLibrary";
 
 /* ==========================================================================
    Enrolling a patient
@@ -26,6 +27,21 @@ import {
 const KEY = storageKey("clinic-enrollments");
 
 export const ENROLL_PROGRAMS = [JOURNEY, CRASH] as const;
+
+/**
+ * What a patient can be enrolled in: the two contracted programs, then
+ * every course the admin has added since (client, 2026-10-18: "whenever I
+ * add a new program, it will have to come right here").
+ */
+export function enrollablePrograms(
+  courses: Pick<Course, "titleEn" | "seeded">[],
+): string[] {
+  const added = courses
+    .filter((course) => !course.seeded)
+    .map((course) => course.titleEn.trim())
+    .filter(Boolean);
+  return [...new Set<string>([...ENROLL_PROGRAMS, ...added])];
+}
 
 export const ENROLL_SOURCES: EnrollmentSource[] = [
   "Office Referral",
@@ -61,6 +77,7 @@ export type EnrollmentErrors = Partial<Record<keyof EnrollmentDraft, string>>;
 export function validateEnrollment(
   draft: EnrollmentDraft,
   roster: Pick<Patient, "mrn">[],
+  programs: readonly string[] = ENROLL_PROGRAMS,
 ): EnrollmentErrors {
   const errors: EnrollmentErrors = {};
   if (roster.length >= CONTRACT_SLOTS) {
@@ -72,8 +89,7 @@ export function validateEnrollment(
   if (!/^\d{6}$/.test(mrn)) errors.mrn = "An MRN is 6 digits.";
   else if (roster.some((patient) => patient.mrn === mrn))
     errors.mrn = "A patient with this MRN is already enrolled.";
-  if (!(ENROLL_PROGRAMS as readonly string[]).includes(draft.program))
-    errors.program = "Choose a program.";
+  if (!programs.includes(draft.program)) errors.program = "Choose a program.";
   if (!ENROLL_SOURCES.includes(draft.source as EnrollmentSource))
     errors.source = "Choose how they were referred.";
   return errors;
@@ -128,7 +144,8 @@ export async function enrollPatient(
   today = new Date(),
 ): Promise<Patient> {
   const added = await readEnrolled();
-  const errors = validateEnrollment(draft, [...patients, ...added]);
+  const programs = enrollablePrograms(await listCourses());
+  const errors = validateEnrollment(draft, [...patients, ...added], programs);
   const first = Object.values(errors)[0];
   if (first) throw new StorageError(first);
   const patient = toPatient(draft, today);

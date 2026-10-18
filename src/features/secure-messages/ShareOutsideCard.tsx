@@ -50,7 +50,17 @@ const STATUS: Record<ShareStatus, { en: string; es: string; tone: BadgeTone }> =
     sent: { en: "Sent", es: "Enviado", tone: "neutral" },
     opened: { en: "Link opened", es: "Enlace abierto", tone: "info" },
     viewed: { en: "Viewed", es: "Visto", tone: "success" },
+    replied: { en: "Replied", es: "Respondió", tone: "accent" },
   };
+
+/* What an office sends: a member's own logs and travel requests are not
+   theirs to share. */
+const OFFICE_KINDS: ShareKind[] = [
+  "message",
+  "referral",
+  "appointment",
+  "document",
+];
 
 type Office = { name: string; kind: string };
 
@@ -155,18 +165,29 @@ function ShareModal({
   onClose,
   initial,
   onShared,
+  sender,
 }: {
   isEs: boolean;
   onClose: () => void;
   initial?: ShareInitial;
   /** Told once the link is created. */
   onShared?: () => void;
+  /** An office sending instead of the signed-in member (client,
+   *  2026-10-18: clinics message people outside NephroReach). */
+  sender?: string;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useShareOutsideNotice(isEs);
-  const me = useMemberName();
+  const memberName = useMemberName();
+  const me = sender ?? memberName;
   const store = useShares();
-  const offices = useOutsideOffices();
+  const memberOffices = useOutsideOffices();
+  /* An office types who it is writing to; the member's own care contacts
+     are not its address book. */
+  const offices = sender ? [] : memberOffices;
+  const kinds = sender
+    ? SHARE_KINDS.filter((k) => OFFICE_KINDS.includes(k.id))
+    : SHARE_KINDS;
   const [kind, setKind] = useState<ShareKind>(initial?.kind ?? "message");
   const [choice, setChoice] = useState(() =>
     initial?.office
@@ -250,6 +271,7 @@ function ShareModal({
                 setToken(
                   await store.create({
                     patientName: me,
+                    ...(sender ? { fromOffice: true } : {}),
                     kind,
                     recipientEmail: email,
                     recipientOrg,
@@ -277,7 +299,7 @@ function ShareModal({
               value={kind}
               onChange={(e) => setKind(e.target.value as ShareKind)}
             >
-              {SHARE_KINDS.map((k) => (
+              {kinds.map((k) => (
                 <option key={k.id} value={k.id}>
                   {isEs ? k.es : k.en}
                 </option>
@@ -437,11 +459,14 @@ function ShareModal({
 function MySharesModal({
   isEs,
   onClose,
+  sender,
 }: {
   isEs: boolean;
   onClose: () => void;
+  sender?: string;
 }) {
-  const me = useMemberName();
+  const memberName = useMemberName();
+  const me = sender ?? memberName;
   const store = useShares();
   const shares = sharesForPatient(store.state, me);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -458,7 +483,13 @@ function MySharesModal({
       open
       size="wide"
       onClose={onClose}
-      title={isEs ? "Lo que compartí" : "What I've Shared"}
+      title={
+        sender
+          ? "Sent Outside NephroReach"
+          : isEs
+            ? "Lo que compartí"
+            : "What I've Shared"
+      }
     >
       <ul className="divide-y divide-line-subtle">
         {shares.map((share) => {
@@ -493,6 +524,23 @@ function MySharesModal({
                     ? "Ver enlace y registro"
                     : "Show link and activity"}
               </Button>
+              {share.replies?.length ? (
+                <ol className="space-y-stack-xs">
+                  {share.replies.map((reply) => (
+                    <li
+                      key={reply.at}
+                      className="rounded-card-nested bg-surface-sunken p-inset-sm"
+                    >
+                      <p className="text-caption text-fg-muted">
+                        {reply.by} · {when(reply.at)}
+                      </p>
+                      <p className="text-body-sm whitespace-pre-line text-fg">
+                        {reply.body}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
               {expanded ? (
                 <div className="space-y-stack-sm">
                   <LinkBox token={share.token} isEs={isEs} />
@@ -572,6 +620,54 @@ export function ShareOutsideCard() {
         <MySharesModal isEs={isEs} onClose={() => setViewing(false)} />
       ) : null}
     </section>
+  );
+}
+
+/**
+ * An office's way out of NephroReach: the same secure-link share, sent in
+ * the office's name, with what it has sent beside it. For the clinic and
+ * other office inboxes (client, 2026-10-18).
+ */
+export function OfficeShareOutside({ sender }: { sender: string }) {
+  const store = useShares();
+  const count = sharesForPatient(store.state, sender).length;
+  const [sharing, setSharing] = useState(false);
+  const [viewing, setViewing] = useState(false);
+
+  return (
+    <>
+      {count > 0 ? (
+        <Button
+          variant="neutral"
+          appearance="ghost"
+          onClick={() => setViewing(true)}
+        >
+          Sent outside ({count})
+        </Button>
+      ) : null}
+      <Button
+        variant="neutral"
+        appearance="fill-stroke"
+        leadingIcon={<Share2 aria-hidden="true" />}
+        onClick={() => setSharing(true)}
+      >
+        Message Outside NephroReach
+      </Button>
+      {sharing ? (
+        <ShareModal
+          isEs={false}
+          sender={sender}
+          onClose={() => setSharing(false)}
+        />
+      ) : null}
+      {viewing ? (
+        <MySharesModal
+          isEs={false}
+          sender={sender}
+          onClose={() => setViewing(false)}
+        />
+      ) : null}
+    </>
   );
 }
 

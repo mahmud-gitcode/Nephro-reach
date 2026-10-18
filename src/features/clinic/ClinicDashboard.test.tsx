@@ -30,6 +30,12 @@ vi.mock("./useClinicData", () => ({
   useEnrollPatient: () => ({ mutate: vi.fn(), isPending: false, error: null }),
 }));
 
+/* The enroll form lists the admin's added courses as programs. */
+vi.mock("@/features/education/courseLibrary", () => ({
+  useCourseLibrary: () => ({ courses: [] }),
+  listCourses: async () => [],
+}));
+
 const { default: ClinicDashboard } = await import("./ClinicDashboard");
 
 const loaded = { roster, activity: recentActivity, classes: upcomingClasses };

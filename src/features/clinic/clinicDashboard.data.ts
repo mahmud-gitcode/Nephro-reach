@@ -91,6 +91,12 @@ export function memberLink(filters: { status?: string; mrn?: string }) {
   return `${MEMBERS}${query ? `?${query}` : ""}`;
 }
 
+/** Messages, opened on one patient's thread — or New Message addressed to
+ *  them when they have none yet. */
+export function messageLink(mrn: string) {
+  return `/dashboard/clinic/messages?to=${encodeURIComponent(mrn)}`;
+}
+
 /** Curriculum Progress, filtered, scrolled to its member table. */
 export function curriculumLink(filters: { status?: string; q?: string }) {
   const params = new URLSearchParams();

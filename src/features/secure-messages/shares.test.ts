@@ -3,6 +3,8 @@ import {
   createShare,
   recordDownload,
   recordOpened,
+  replyAsRecipient,
+  repliesLeft,
   requestInfo,
   shareByToken,
   shareStatus,
@@ -85,5 +87,28 @@ describe("Share Outside NephroReach", () => {
       "downloaded",
       "info-requested",
     ]);
+  });
+
+  it("lets the verified recipient reply twice, then stops", () => {
+    expect(replyAsRecipient(made, share.id, "Thanks", NOW)).toBeNull();
+    const verified = verifyRecipient(
+      made,
+      share.id,
+      {
+        email: "coordinator@lakeside.org",
+        name: "Dana",
+        organization: "Lakeside",
+      },
+      NOW + 1,
+    )!;
+    const once = replyAsRecipient(verified, share.id, " Got it ", NOW + 2)!;
+    expect(once.shares[0].replies).toEqual([
+      { by: "Dana", body: "Got it", at: new Date(NOW + 2).toISOString() },
+    ]);
+    expect(shareStatus(once.shares[0])).toBe("replied");
+    expect(replyAsRecipient(once, share.id, "  ", NOW + 3)).toBeNull();
+    const twice = replyAsRecipient(once, share.id, "One more", NOW + 3)!;
+    expect(repliesLeft(twice.shares[0])).toBe(0);
+    expect(replyAsRecipient(twice, share.id, "Third", NOW + 4)).toBeNull();
   });
 });

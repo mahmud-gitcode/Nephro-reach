@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { FACILITY } from "@/features/messaging/messaging.seed";
 import { NewMessageModal } from "@/features/messaging/NewMessageModal";
+import { OfficeShareOutside } from "@/features/secure-messages/ShareOutsideCard";
 import { useClinicData } from "./useClinicData";
 import { ClinicRideRequests } from "./RideRequests";
 import { useCan } from "@/features/staff/useStaffAccounts";
@@ -298,12 +299,16 @@ export default function ClinicMessages({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [composing, setComposing] = useState(false);
+  /* The patient a "Message" link named, preselected in New Message. */
+  const [composeTo, setComposeTo] = useState<string | undefined>();
   const canReply = useCan("messages.reply");
   const canTeam = useCan("messages.team");
   /* Every patient on the clinic's list, newly enrolled ones included. */
   const clinicData = useClinicData();
-  const patients: InboxPatient[] =
-    patientsOverride ?? clinicData.data?.patients ?? [];
+  const patients: InboxPatient[] = useMemo(
+    () => patientsOverride ?? clinicData.data?.patients ?? [],
+    [patientsOverride, clinicData.data],
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   /* Drafts live up here, keyed by thread. A coordinator is interrupted
      mid-reply constantly — losing what they had typed because they glanced
@@ -376,6 +381,33 @@ export default function ClinicMessages({
     return () => window.clearTimeout(timer);
   }, [isLoading, conversations, open]);
 
+  /* "Message" on a member (?to=<MRN>) opens that patient's thread, or New
+     Message addressed to them when there is none yet (client, 2026-10-18).
+     Waits for the roster, which names the patient. */
+  const addressed = useRef(false);
+  useEffect(() => {
+    if (addressed.current || isLoading || patients.length === 0) return;
+    const mrn = new URLSearchParams(window.location.search).get("to");
+    const patient = mrn ? patients.find((p) => p.mrn === mrn) : undefined;
+    if (!patient) {
+      addressed.current = true;
+      return;
+    }
+    const thread = conversations.find(
+      (c) => c.patient?.mrn === mrn || c.memberName === patient.name,
+    );
+    /* Marked done only when it runs, as the ?thread= link above. */
+    const timer = window.setTimeout(() => {
+      addressed.current = true;
+      if (thread) open(thread);
+      else if (canReply) {
+        setComposeTo(patient.mrn);
+        setComposing(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isLoading, patients, conversations, open, canReply]);
+
   /* ↑/↓ walk the inbox and Escape leaves the thread, because a clinic
      working a queue of ninety messages should not have to aim at each one.
      Ignored while a field has focus, or the arrow keys would stop moving
@@ -431,6 +463,10 @@ export default function ClinicMessages({
           /* Quiet status first, the page's one primary action last. */
           <div className="flex flex-wrap items-center gap-inline-md">
             {unread > 0 ? <Badge tone="info">{unread} unread</Badge> : null}
+            {/* People not on NephroReach — a rehab facility, an outside
+                nephrology office — get a secure link (client,
+                2026-10-18). */}
+            {canReply ? <OfficeShareOutside sender={office.name} /> : null}
             {canReply ? (
               <Button
                 leadingIcon={<SquarePen aria-hidden="true" />}
@@ -646,6 +682,7 @@ export default function ClinicMessages({
         <NewMessageModal
           title="New Message"
           recipientLabel="Patient"
+          initialRecipient={composeTo}
           recipients={patients.map((patient) => ({
             value: patient.mrn,
             label: `${patient.name} · MRN ${patient.mrn}`,
@@ -679,7 +716,10 @@ export default function ClinicMessages({
                 rules.conversationIdFor(patient.name, office.name),
             );
           }}
-          onClose={() => setComposing(false)}
+          onClose={() => {
+            setComposing(false);
+            setComposeTo(undefined);
+          }}
         />
       ) : null}
     </div>

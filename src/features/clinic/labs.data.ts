@@ -45,6 +45,12 @@ export const LAB_CSV_TEMPLATE =
   "123456,2026-09-28,Potassium,5.6,mEq/L,3.5-5.0\n" +
   "123456,2026-09-28,Phosphorus,6.1,mg/dL,2.5-4.5\n";
 
+/** For one patient chosen first: no MRN column needed. */
+export const PATIENT_CSV_TEMPLATE =
+  "date,test,value,unit,reference\n" +
+  "2026-09-28,Potassium,5.6,mEq/L,3.5-5.0\n" +
+  "2026-09-28,Phosphorus,6.1,mg/dL,2.5-4.5\n";
+
 export type LabRow = Omit<LabResult, "id" | "uploadedAt" | "uploadedBy">;
 
 export type ParsedLabs = {
@@ -97,8 +103,16 @@ export function normalDate(value: string): string | null {
  * Reads a lab CSV. The header row names the columns, in any order; mrn,
  * date, test and value are required. Rows for patients not on the roster,
  * or with a bad date or a blank value, are refused with a reason.
+ *
+ * With `forMrn` the patient was chosen before the file (client,
+ * 2026-10-18): the MRN column may be left out, and a row naming someone
+ * else is refused rather than filed on the wrong chart.
  */
-export function parseLabCsv(text: string, knownMrns: string[]): ParsedLabs {
+export function parseLabCsv(
+  text: string,
+  knownMrns: string[],
+  forMrn?: string,
+): ParsedLabs {
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   const headerAt = lines.findIndex((line) => line.trim() !== "");
   if (headerAt === -1) {
@@ -106,7 +120,7 @@ export function parseLabCsv(text: string, knownMrns: string[]): ParsedLabs {
   }
   const header = cells(lines[headerAt]).map((h) => h.toLowerCase());
   const col = (name: string) => header.indexOf(name);
-  const missing = ["mrn", "date", "test", "value"].filter(
+  const missing = [...(forMrn ? [] : ["mrn"]), "date", "test", "value"].filter(
     (name) => col(name) === -1,
   );
   if (missing.length > 0) {
@@ -130,11 +144,16 @@ export function parseLabCsv(text: string, knownMrns: string[]): ParsedLabs {
     const c = cells(line);
     const get = (name: string) =>
       col(name) === -1 ? "" : (c[col(name)] ?? "");
-    const mrn = get("mrn");
+    const mrn = forMrn ? get("mrn") || forMrn : get("mrn");
     const date = normalDate(get("date"));
     const test = get("test");
     const value = get("value");
-    if (!known.has(mrn)) {
+    if (forMrn && mrn !== forMrn) {
+      errors.push({
+        line: lineNo,
+        message: `MRN "${mrn}" is not the patient you chose (${forMrn}).`,
+      });
+    } else if (!known.has(mrn)) {
       errors.push({
         line: lineNo,
         message: `MRN "${mrn}" is not a clinic patient.`,

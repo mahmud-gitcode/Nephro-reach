@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -12,12 +12,13 @@ import {
 import { CONTRACT_SLOTS, type Patient } from "./enrollment.data";
 import {
   emptyDraft,
-  ENROLL_PROGRAMS,
+  enrollablePrograms,
   ENROLL_SOURCES,
   validateEnrollment,
   type EnrollmentDraft,
 } from "./enrollment.store";
 import { useEnrollPatient } from "./useClinicData";
+import { useCourseLibrary } from "@/features/education/courseLibrary";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { organizationFor } from "@/features/staff/staff";
@@ -76,6 +77,8 @@ function EnrollForm({
   const [draft, setDraft] = useState<EnrollmentDraft>(emptyDraft);
   const [attempted, setAttempted] = useState(false);
   const enroll = useEnrollPatient();
+  const { courses } = useCourseLibrary();
+  const programs = useMemo(() => enrollablePrograms(courses), [courses]);
   const canEnroll = useCan("patients.enroll");
 
   const offersCcm = Boolean(ccm);
@@ -108,7 +111,7 @@ function EnrollForm({
   const errors: Record<string, string | undefined> = attempted
     ? isCcm
       ? ccmErrors()
-      : validateEnrollment(draft, list)
+      : validateEnrollment(draft, list, programs)
     : {};
   const set = (field: keyof EnrollmentDraft, value: string) =>
     setDraft((current) => ({ ...current, [field]: value }));
@@ -131,7 +134,8 @@ function EnrollForm({
       onEnrolled(draft.name.trim(), draft.mrn.trim(), true);
       return;
     }
-    if (Object.keys(validateEnrollment(draft, list)).length > 0) return;
+    if (Object.keys(validateEnrollment(draft, list, programs)).length > 0)
+      return;
     enroll.mutate(draft, {
       onSuccess: (patient) => onEnrolled(patient.name, patient.mrn),
     });
@@ -257,7 +261,7 @@ function EnrollForm({
                 value={draft.program}
                 onChange={(event) => set("program", event.target.value)}
               >
-                {ENROLL_PROGRAMS.map((option) => (
+                {programs.map((option) => (
                   <option key={option}>{option}</option>
                 ))}
                 {offersCcm ? <option>{CCM_PROGRAM}</option> : null}

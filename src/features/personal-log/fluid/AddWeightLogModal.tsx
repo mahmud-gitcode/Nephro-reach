@@ -11,7 +11,7 @@ import {
   Scale,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Button, Input, Modal, Textarea } from "@/components/ui";
+import { Alert, Button, Input, Modal, Textarea } from "@/components/ui";
 import type { WeightFluidEntry } from "./fluid.types";
 import { YesNoChoice } from "./YesNoChoice";
 
@@ -409,6 +409,16 @@ export function AddWeightLogModal({
                 onChange={setFormRapidGain}
               />
             </div>
+            {/* Swelling and shortness of breath reach the clinic's
+                follow-up list (client, 2026-10-18). Said plainly, with no
+                judgement of how serious it is. */}
+            {formSwelling || formSob ? (
+              <Alert tone="info" live={false}>
+                {language === "ES"
+                  ? "Su clínica de diálisis verá lo que reportó para que su equipo pueda comunicarse con usted. En una emergencia, llame al 911."
+                  : "Your dialysis clinic will see what you reported, so their care team can follow up with you. In an emergency, call 911."}
+              </Alert>
+            ) : null}
           </div>
 
           {/* Group 2. Its "Possible Too Much Fluid Removed" title was removed

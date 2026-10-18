@@ -56,7 +56,8 @@ export type ShareEvent =
   | "opened"
   | "verified"
   | "downloaded"
-  | "info-requested";
+  | "info-requested"
+  | "replied";
 
 export type ShareLogEntry = { event: ShareEvent; by: string; at: string };
 
@@ -69,11 +70,25 @@ export type InfoRequest = {
   at: string;
 };
 
+/** A recipient's answer on the secure page. */
+export type ShareReply = { by: string; body: string; at: string };
+
+/**
+ * How many times the recipient may answer before the page asks them to
+ * continue on NephroReach (client, 2026-10-18: "let them reply maybe
+ * twice"). One constant, so the number is easy to change once decided.
+ */
+export const MAX_RECIPIENT_REPLIES = 2;
+
 export type OutsideShare = {
   id: string;
   /** The secret part of the link. */
   token: string;
+  /** Who shared it: a member's name, or an office's when `fromOffice`. */
   patientName: string;
+  /** Sent by a clinic or office about its work, not by a member
+   *  (client, 2026-10-18: clinics message people outside NephroReach). */
+  fromOffice?: boolean;
   kind: ShareKind;
   recipientEmail: string;
   /** Optional: the office's name, as the member knows it. */
@@ -86,6 +101,8 @@ export type OutsideShare = {
   /** Who opened it, once verified. */
   verifiedBy?: { name: string; organization: string; at: string };
   infoRequests: InfoRequest[];
+  /** Absent on shares made before replies existed. */
+  replies?: ShareReply[];
   log: ShareLogEntry[];
 };
 
@@ -107,7 +124,8 @@ export type NewShare = Pick<
   | "subject"
   | "body"
   | "attachment"
->;
+> &
+  Partial<Pick<OutsideShare, "fromOffice">>;
 
 /** A share and its link; the recipient is notified (logged). */
 export function createShare(
@@ -243,22 +261,59 @@ export function requestInfo(
   );
 }
 
-export type ShareStatus = "sent" | "opened" | "viewed";
+/** Replies the recipient still has. */
+export function repliesLeft(share: OutsideShare): number {
+  return Math.max(0, MAX_RECIPIENT_REPLIES - (share.replies?.length ?? 0));
+}
 
-/** What the member sees about their share. */
+/**
+ * The verified recipient answers. Null once they have used their replies,
+ * or before they have verified.
+ */
+export function replyAsRecipient(
+  state: SharesState,
+  id: string,
+  body: string,
+  now: number,
+): SharesState | null {
+  const share = state.shares.find((s) => s.id === id);
+  const text = body.trim();
+  if (!share?.verifiedBy || !text || repliesLeft(share) === 0) return null;
+  const by = share.verifiedBy.name || share.recipientEmail;
+  return update(state, id, (s) =>
+    logged(
+      {
+        ...s,
+        replies: [
+          ...(s.replies ?? []),
+          { by, body: text, at: new Date(now).toISOString() },
+        ],
+      },
+      "replied",
+      by,
+      now,
+    ),
+  );
+}
+
+export type ShareStatus = "sent" | "opened" | "viewed" | "replied";
+
+/** What the sender sees about their share. */
 export function shareStatus(share: OutsideShare): ShareStatus {
+  if (share.replies?.length) return "replied";
   if (share.verifiedBy) return "viewed";
   if (share.log.some((l) => l.event === "opened")) return "opened";
   return "sent";
 }
 
 export const SHARE_LOG_LABEL: Record<ShareEvent, string> = {
-  shared: "Shared by the member",
+  shared: "Shared",
   notified: "Secure link sent to the recipient (no content in the notice)",
   opened: "Link opened",
   verified: "Recipient verified and viewed",
   downloaded: "Attachment downloaded",
   "info-requested": "Requested information about NephroReach",
+  replied: "Recipient replied",
 };
 
 /** The page a share's link opens. */

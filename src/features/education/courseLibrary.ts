@@ -294,7 +294,7 @@ function normalizeCourse(course: Partial<Course> & { id: string }): Course {
 
 /* STORAGE — the whole of it. */
 
-async function listCourses(): Promise<Course[]> {
+export async function listCourses(): Promise<Course[]> {
   const stored = await readJson<Course[] | null>(STORAGE_KEY, null);
   /* An empty catalogue is not a state anyone meant to create — the seeded
      course cannot be deleted — so an empty array falls back to the seed. */

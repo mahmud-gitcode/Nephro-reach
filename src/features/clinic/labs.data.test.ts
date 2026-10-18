@@ -6,6 +6,7 @@ import {
   labsFor,
   normalDate,
   parseLabCsv,
+  PATIENT_CSV_TEMPLATE,
   seedLabs,
 } from "./labs.data";
 
@@ -93,5 +94,23 @@ describe("lab charts", () => {
     expect(labFlag({ value: "3.3", reference: "3.5-5.0" })).toBe("Low");
     expect(labFlag({ value: "4.0", reference: "3.5-5.0" })).toBeNull();
     expect(labFlag({ value: "pos", reference: "" })).toBeNull();
+  });
+});
+
+describe("uploading for a patient chosen first", () => {
+  it("files rows without an MRN on that patient's chart", () => {
+    const parsed = parseLabCsv(PATIENT_CSV_TEMPLATE, ["123456"], "123456");
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows.map((r) => r.mrn)).toEqual(["123456", "123456"]);
+  });
+
+  it("refuses a row that names a different patient", () => {
+    const parsed = parseLabCsv(
+      "mrn,date,test,value\n789012,2026-09-28,Potassium,5.1\n",
+      ["123456", "789012"],
+      "123456",
+    );
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.errors[0].message).toContain("not the patient you chose");
   });
 });

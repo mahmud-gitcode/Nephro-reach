@@ -81,6 +81,7 @@ import {
   weekLabel,
   weekStartOf,
   followUps,
+  type FollowUpRow,
   memberFeedback,
   overview,
   programs,
@@ -495,8 +496,18 @@ function CompletionTrend() {
   );
 }
 
-function FollowUpPanel({ program }: { program: string }) {
-  const rows = useMemo(() => byProgram(followUps, program), [program]);
+function FollowUpPanel({
+  program,
+  liveRows,
+}: {
+  program: string;
+  /** What the linked member reported in their own fluid log. */
+  liveRows: FollowUpRow[];
+}) {
+  const rows = useMemo(
+    () => byProgram([...liveRows, ...followUps], program),
+    [liveRows, program],
+  );
 
   return (
     <Card as="section" padding="small" id="follow-ups" className="scroll-mt-24">
@@ -666,7 +677,10 @@ export default function ClinicCheckIns() {
             onRemind={() => setReminding(true)}
           />
           <CompletionTrend />
-          <FollowUpPanel program={program} />
+          <FollowUpPanel
+            program={program}
+            liveRows={feed.isPending ? [] : feed.followUpRows}
+          />
         </div>
       </section>
       {reminding ? (

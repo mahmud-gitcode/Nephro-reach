@@ -97,7 +97,12 @@ export const outcomes: Outcome[] = [
     lastMonth: 8,
     lowerIsBetter: true,
   },
-  { label: "ER Visits", thisMonth: 3, lastMonth: 5, lowerIsBetter: true },
+  {
+    label: "Self-Reported ER Visits",
+    thisMonth: 3,
+    lastMonth: 5,
+    lowerIsBetter: true,
+  },
   {
     label: "Completed Program",
     thisMonth: 62,

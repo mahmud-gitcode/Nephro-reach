@@ -50,7 +50,7 @@ describe("the report reads the clinic's roster", () => {
 describe("the sample panels", () => {
   it.each([
     ["Hospitalizations", -38],
-    ["ER Visits", -40],
+    ["Self-Reported ER Visits", -40],
     ["Completed Program", 29],
     ["Active Members", 11],
   ])("%s change is computed: %i%%", (label, expected) => {

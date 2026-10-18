@@ -48,7 +48,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { tableIconButton } from "./tableButton";
 import { shortProgram } from "./clinicIcons";
-import { memberLink } from "./clinicDashboard.data";
+import { memberLink, messageLink } from "./clinicDashboard.data";
 import {
   ALL_PROGRAMS,
   ALL_SOURCES,
@@ -500,7 +500,7 @@ function PatientTable({
                         <Eye aria-hidden="true" />
                       </Link>
                       <Link
-                        href={MESSAGES}
+                        href={messageLink(patient.mrn)}
                         className={iconControl}
                         aria-label={`Message ${patient.name}`}
                         title="Send message"

@@ -82,11 +82,11 @@ describe("links", () => {
 describe("upcoming classes", () => {
   it("drop classes that have already happened", () => {
     const sept21 = new Date(2026, 8, 21, 15, 0);
-    expect(upcomingFrom(upcomingClasses, sept21).map((c) => c.date)).toEqual([
-      "2026-09-26",
-      "2026-10-03",
-      "2026-10-10",
-    ]);
+    expect(
+      upcomingFrom(upcomingClasses, sept21)
+        .slice(0, 3)
+        .map((c) => c.date),
+    ).toEqual(["2026-09-26", "2026-10-03", "2026-10-10"]);
   });
 
   it("keep a class later today", () => {
@@ -97,7 +97,7 @@ describe("upcoming classes", () => {
   });
 
   it("come back empty once the schedule has passed", () => {
-    expect(upcomingFrom(upcomingClasses, new Date(2026, 10, 1))).toEqual([]);
+    expect(upcomingFrom(upcomingClasses, new Date(2027, 0, 1))).toEqual([]);
   });
 });
 

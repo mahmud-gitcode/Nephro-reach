@@ -6,6 +6,7 @@ import {
   readAllPatients,
   readEnrolled,
   toPatient,
+  enrollablePrograms,
   validateEnrollment,
   type EnrollmentDraft,
 } from "./enrollment.store";
@@ -110,5 +111,35 @@ describe("saving", () => {
     await expect(enrollPatient(draft({ mrn: "799999" }))).rejects.toThrow(
       /seats are filled/,
     );
+  });
+});
+
+describe("programs the admin adds", () => {
+  it("are offered after the two contracted ones, once each", () => {
+    expect(
+      enrollablePrograms([
+        { titleEn: "21-Day Dialysis Journey", seeded: true },
+        { titleEn: " Home Dialysis Basics ", seeded: false },
+        { titleEn: JOURNEY, seeded: false },
+        { titleEn: "", seeded: false },
+      ]),
+    ).toEqual([JOURNEY, CRASH, "Home Dialysis Basics"]);
+  });
+
+  it("can be enrolled in", () => {
+    const programs = enrollablePrograms([
+      { titleEn: "Home Dialysis Basics", seeded: false },
+    ]);
+    expect(
+      validateEnrollment(
+        draft({ program: "Home Dialysis Basics" }),
+        [],
+        programs,
+      ).program,
+    ).toBeUndefined();
+    expect(
+      validateEnrollment(draft({ program: "Home Dialysis Basics" }), [])
+        .program,
+    ).toBe("Choose a program.");
   });
 });

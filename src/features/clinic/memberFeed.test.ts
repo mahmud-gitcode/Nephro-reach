@@ -22,6 +22,7 @@ import {
   accessAlerts,
   bpAlerts,
   bpSymptomAlerts,
+  fluidFollowUpRows,
   missedAppointmentAlerts,
   missedDoseAlerts,
   parseRange,
@@ -504,5 +505,39 @@ describe("in the CCM inbox", () => {
     const resolved = resolveInbox(state, feed[0].id);
     expect(resolved.resolvedFeed).toEqual([feed[0].id]);
     expect(openInbox(withFeed(resolved, feed), MRN)).toHaveLength(0);
+  });
+});
+
+describe("fluid log symptoms for follow-up", () => {
+  it("lists the latest day this week with symptoms, naming each", () => {
+    const rows = fluidFollowUpRows(
+      [
+        weighed("a", "2026-09-29", 74, { swelling: "YES", sob: "YES" }),
+        weighed("b", "2026-09-27", 74, { cramping: "YES" }),
+      ],
+      "Journey to Dialysis",
+      TODAY,
+    );
+    expect(rows).toEqual([
+      {
+        name: LINKED_MEMBER.name,
+        program: "Journey to Dialysis",
+        issue: "Reported swelling, shortness of breath (fluid log)",
+        lastCheckIn: "Sep 29, 2026",
+      },
+    ]);
+  });
+
+  it("ignores days with no symptoms and anything older than a week", () => {
+    expect(
+      fluidFollowUpRows(
+        [
+          weighed("a", "2026-09-29", 74, { swelling: "None", sob: "NO" }),
+          weighed("b", "2026-09-20", 74, { swelling: "Severe" }),
+        ],
+        "Journey to Dialysis",
+        TODAY,
+      ),
+    ).toEqual([]);
   });
 });

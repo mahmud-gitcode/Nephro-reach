@@ -261,6 +261,9 @@ export type AccessConversation = {
 export type AccessRecord = {
   memberName: string;
   mrn: string;
+  /** The patient's dialysis center, which the access center serves
+   *  several of. Absent means the demo's one center. */
+  dialysisCenter?: string;
   overview: AccessOverview;
   appointments: AccessAppointment[];
   updates: AccessUpdate[];
@@ -276,6 +279,12 @@ export type AccessRecord = {
 export type ReferralSource = "dialysis" | "nephrology";
 
 export const NEPHROLOGY_OFFICE_NAME = "Riverside Nephrology Associates";
+
+/** Which dialysis center a patient comes from (client, 2026-10-18: the
+ *  access center works with more than one). */
+export function dialysisCenterOf(record: AccessRecord): string {
+  return record.dialysisCenter ?? DIALYSIS_CENTER_NAME;
+}
 
 export const REFERRAL_KINDS = [
   "Access Concern",

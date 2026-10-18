@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Download, ExternalLink, ShieldCheck } from "lucide-react";
+import { Download, ExternalLink, Send, ShieldCheck } from "lucide-react";
 import {
   Alert,
   Button,
@@ -11,10 +11,13 @@ import {
   FormField,
   Input,
   Skeleton,
+  Textarea,
 } from "@/components/ui";
 import {
+  MAX_RECIPIENT_REPLIES,
   SHARE_KINDS,
   isEmail,
+  repliesLeft,
   shareByToken,
   type OutsideShare,
 } from "./shares";
@@ -25,9 +28,11 @@ import { useShares } from "./useShares";
    --------------------------------------------------------------------------
    Opened from the link a member sent (client, 2026-10-05). The recipient
    confirms who they are, then sees and can download only that item. No
-   NephroReach account, no portal, no reply box. The page ends with "Learn
-   more about NephroReach" and "Request information for your organization"
-   — ongoing tools come with an organisational account.
+   NephroReach account, no portal. They may answer a couple of times
+   (MAX_RECIPIENT_REPLIES, client 2026-10-18); after that the page sends
+   them to NephroReach. It ends with "Learn more about NephroReach" and
+   "Request information for your organization" — ongoing tools come with an
+   organisational account.
 
    Frontend phase: verification is confirming the email the link was sent
    to; the real identity check comes with the backend.
@@ -193,9 +198,92 @@ function SharedItem({ share }: { share: OutsideShare }) {
         </div>
       ) : null}
       <Alert tone="info" live={false}>
-        You are seeing only what {share.patientName} chose to share with you.
-        This page does not give access to their NephroReach account.
+        {share.fromOffice
+          ? `You are seeing only what ${share.patientName} chose to share with you. This page does not give access to NephroReach.`
+          : `You are seeing only what ${share.patientName} chose to share with you. This page does not give access to their NephroReach account.`}
       </Alert>
+    </Card>
+  );
+}
+
+function Replies({ share }: { share: OutsideShare }) {
+  const store = useShares();
+  const [body, setBody] = useState("");
+  const [tried, setTried] = useState(false);
+  const replies = share.replies ?? [];
+  const left = repliesLeft(share);
+  const error = body.trim() ? undefined : "Write a reply.";
+
+  return (
+    <Card as="section" padding="small" className="space-y-stack-md">
+      <div>
+        <h2 className="text-heading-4 text-fg">Reply to {share.patientName}</h2>
+        <p className="mt-stack-xs text-body-sm text-fg-secondary">
+          You can reply {MAX_RECIPIENT_REPLIES} times from this page.
+        </p>
+      </div>
+      {replies.length > 0 ? (
+        <ol className="space-y-stack-sm">
+          {replies.map((reply) => (
+            <li
+              key={reply.at}
+              className="rounded-card-nested bg-surface-sunken p-inset-sm"
+            >
+              <p className="text-caption text-fg-muted">
+                {reply.by} · {when(reply.at)}
+              </p>
+              <p className="mt-stack-xs text-body-sm whitespace-pre-line text-fg">
+                {reply.body}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {left > 0 ? (
+        <form
+          className="space-y-stack-sm"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setTried(true);
+            if (error) return;
+            if (await store.reply(share.id, body)) {
+              setBody("");
+              setTried(false);
+            }
+          }}
+        >
+          <FormField
+            label="Your reply"
+            required
+            error={tried ? error : undefined}
+            hint={`${left} of ${MAX_RECIPIENT_REPLIES} replies left`}
+          >
+            {(field) => (
+              <Textarea
+                {...field}
+                rows={3}
+                maxLength={1500}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+            )}
+          </FormField>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              loading={store.isSaving}
+              leadingIcon={<Send aria-hidden="true" />}
+            >
+              Send reply
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Alert tone="warning" title="You have used your replies">
+          To keep the conversation going, visit nephroreach.com and request an
+          account for your organization below.
+        </Alert>
+      )}
     </Card>
   );
 }
@@ -343,6 +431,7 @@ export default function SecureSharePage({ token }: { token: string }) {
     body = (
       <>
         <SharedItem share={share} />
+        <Replies share={share} />
         <LearnMore share={share} />
       </>
     );

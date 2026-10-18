@@ -59,6 +59,7 @@ import {
   formatTime,
   nextAppointment,
   openConcerns,
+  dialysisCenterOf,
   sortedHistory,
   sortedUpdates,
   unreadFor,
@@ -1060,6 +1061,15 @@ export default function ClinicVascularAccess({
                       record,
                       atAccess ? "access" : "dialysis",
                     ).length;
+                    /* Concerns staff sent about this patient count here
+                       too, not only the patient's own (client,
+                       2026-10-18). */
+                    const staffCount = referrals.filter(
+                      (r) =>
+                        r.mrn === record.mrn &&
+                        r.kind === "Access Concern" &&
+                        r.status !== "Closed",
+                    ).length;
                     const unread = unreadFor(record, party);
                     return (
                       <TableRow key={record.mrn}>
@@ -1079,6 +1089,11 @@ export default function ClinicVascularAccess({
                           <span className="block text-caption font-normal text-fg-muted tabular-nums">
                             MRN {record.mrn}
                           </span>
+                          {atAccess ? (
+                            <span className="block text-caption font-normal text-fg-muted">
+                              {dialysisCenterOf(record)}
+                            </span>
+                          ) : null}
                         </TableCell>
                         <TableCell>
                           {record.overview.type}
@@ -1102,8 +1117,24 @@ export default function ClinicVascularAccess({
                           )}
                         </TableCell>
                         <TableCell className="tabular-nums">
-                          {openCount > 0 ? (
-                            <Badge tone="danger">{openCount} open</Badge>
+                          {openCount + staffCount > 0 ? (
+                            <>
+                              <Badge tone="danger">
+                                {openCount + staffCount} open
+                              </Badge>
+                              <span className="block text-caption text-fg-muted">
+                                {[
+                                  openCount > 0
+                                    ? `${openCount} from patient`
+                                    : null,
+                                  staffCount > 0
+                                    ? `${staffCount} from staff`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </>
                           ) : (
                             "—"
                           )}

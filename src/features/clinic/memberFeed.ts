@@ -57,7 +57,7 @@ import type { Appointment } from "@/features/personal-log/appointments/appointme
 import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
 import type { AccessRecord } from "@/features/vascular-access/vascularAccess.data";
 import type { BetweenTreatmentCheckIn } from "@/features/personal-log/check-in/checkIn.types";
-import type { CheckInRow } from "./checkIns.data";
+import type { CheckInRow, FollowUpRow } from "./checkIns.data";
 
 /** The patient whose app feeds the clinic in the demo. MRN and program as
  *  in the messaging seed's chart for the same person. */
@@ -608,4 +608,56 @@ export function memberCheckInRows(
     });
   }
   return rows;
+}
+
+/** The fluid log's symptoms the clinic follows up on, as it names them. */
+const FLUID_SYMPTOMS: Array<[keyof WeightFluidEntry, string]> = [
+  ["swelling", "swelling"],
+  ["sob", "shortness of breath"],
+  ["rapidGain", "rapid weight gain"],
+  ["cramping", "cramps"],
+  ["dizziness", "dizziness"],
+];
+
+/** "YES", "Mild", "Severe" are a report; "NO", "None" and blanks are not. */
+function reported(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.trim().toLowerCase();
+  return text !== "" && text !== "no" && text !== "none";
+}
+
+/**
+ * Members Needing Follow-Up, from the member's own fluid log: their
+ * latest entry in the last week that reports a symptom (client,
+ * 2026-10-18: "they report swelling or shortness of breath … the clinic
+ * can see it and follow up"). One row, naming every symptom on that day.
+ */
+export function fluidFollowUpRows(
+  weights: WeightFluidEntry[],
+  program: string,
+  today: string,
+): FollowUpRow[] {
+  const since = daysBefore(today, 6);
+  const latest = weights
+    .filter(
+      (entry): entry is WeightFluidEntry & { date: string } =>
+        typeof entry.date === "string" &&
+        entry.date >= since &&
+        entry.date <= today,
+    )
+    .filter((entry) => FLUID_SYMPTOMS.some(([key]) => reported(entry[key])))
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  if (!latest) return [];
+  const symptoms = FLUID_SYMPTOMS.filter(([key]) => reported(latest[key])).map(
+    ([, label]) => label,
+  );
+  const issue = `Reported ${symptoms.join(", ")} (fluid log)`;
+  return [
+    {
+      name: LINKED_MEMBER.name,
+      program,
+      issue: issue.charAt(0).toUpperCase() + issue.slice(1),
+      lastCheckIn: shortDate(latest.date),
+    },
+  ];
 }

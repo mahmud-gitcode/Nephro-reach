@@ -84,16 +84,13 @@ describe("states", () => {
     expect(refetch).toHaveBeenCalled();
   });
 
-  it("offers to enroll when there is nobody yet, right here", async () => {
+  it("sends to Enroll Patients when there is nobody yet", () => {
     set({ data: { ...loaded, roster: [] } });
     render(<ClinicMembers />);
     expect(screen.getByText("No members yet")).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: /Enroll a patient/ }),
-    );
     expect(
-      screen.getByRole("dialog", { name: "Enroll New Patient" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /Enroll a patient/ }),
+    ).toHaveAttribute("href", "/dashboard/clinic/enroll-patients");
   });
 });
 
@@ -201,13 +198,14 @@ describe("bulk selection", () => {
 });
 
 describe("adding a member", () => {
-  it("opens the enroll form here, instead of going to another page", async () => {
+  it("has one way in: Enroll Patients", () => {
     set({ data: loaded });
     render(<ClinicMembers />);
-    await userEvent.click(screen.getByRole("button", { name: /Add Member/ }));
     expect(
-      screen.getByRole("dialog", { name: "Enroll New Patient" }),
-    ).toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
+      screen.queryByRole("button", { name: /Add Member/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Enroll Patient" }),
+    ).toHaveAttribute("href", "/dashboard/clinic/enroll-patients");
   });
 });

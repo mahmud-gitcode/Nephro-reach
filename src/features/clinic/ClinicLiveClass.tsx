@@ -38,6 +38,7 @@ import {
   Skeleton,
   Table,
   TableBody,
+  TableEmptyRow,
   TableCell,
   TableHead,
   TableHeaderCell,
@@ -248,6 +249,12 @@ function UpcomingClassesTable({
             </TableRow>
           </TableHead>
           <TableBody>
+            {classes.length === 0 ? (
+              <TableEmptyRow colSpan={editable ? 8 : 7}>
+                No upcoming live classes. NephroReach has not scheduled the next
+                one yet.
+              </TableEmptyRow>
+            ) : null}
             {classes.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="whitespace-nowrap tabular-nums">
