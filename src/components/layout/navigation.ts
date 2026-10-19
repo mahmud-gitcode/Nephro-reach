@@ -77,14 +77,6 @@ export const sidebarItems: NavItem[] = [
     icon: LayoutDashboard,
     roles: ["admin", "user"],
   },
-  /* The redesigned member dashboard, side by side with the first until
-     it is approved (2026-10-12). */
-  {
-    label: "Dashboard 2",
-    href: "/dashboard/dashboard-2",
-    icon: LayoutDashboard,
-    roles: ["user"],
-  },
   {
     label: "Where's My Ride",
     href: "/dashboard/my-rides",
@@ -586,8 +578,6 @@ export function getBreadcrumb(pathname: string, language?: string) {
     return language === "ES" ? "Resumen" : "Overview";
   if (pathname.startsWith("/dashboard/portal-comparison"))
     return language === "ES" ? "Comparación de Portales" : "Portal Comparison";
-  if (pathname.startsWith("/dashboard/dashboard-2"))
-    return language === "ES" ? "Panel 2" : "Dashboard 2";
   if (pathname.startsWith("/dashboard/admin-team"))
     return language === "ES" ? "Personal y Roles" : "Staff & Roles";
   if (pathname.startsWith("/dashboard/design-system"))

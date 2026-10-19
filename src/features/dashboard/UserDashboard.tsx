@@ -1,664 +1,727 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React from "react";
 import Link from "next/link";
 import {
-  Calendar,
+  ArrowRight,
+  BellRing,
+  CalendarDays,
+  CheckCircle2,
+  GraduationCap,
+  Clock,
+  MapPin,
+  MessageSquareText,
+  Pill,
+  UserRound,
   Users,
   Video,
-  Play,
-  PlayCircle,
-  Pencil,
-  Trash2,
 } from "lucide-react";
-import { useAuth } from "@/features/auth/AuthContext";
-import { useLanguage } from "@/context/LanguageContext";
-import { QuickActionsSection } from "./QuickActionsSection";
 import {
-  AsyncSection,
   Badge,
   Button,
+  buttonStyles,
   Card,
-  Modal,
+  EmptyState,
   Progress,
   Skeleton,
 } from "@/components/ui";
-import { LocalSvg } from "@/components/icons/LocalSvg";
-import { useLiveClasses } from "@/features/clinic/useLiveClasses";
-import { formatClassDate } from "@/features/clinic/liveClass.data";
+import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useMemberName } from "@/features/auth/useMemberName";
+import { useNow } from "@/lib/utils/useNow";
+import { cn } from "@/lib/utils/cn";
+import { QuickActionsSection } from "./QuickActionsSection";
+import { useMemberAttention } from "./useMemberAttention";
+import { StoriesCard } from "./StoriesCard";
 import {
-  approvedTestimonials as onlyApproved,
-  testimonialsByAuthor,
-  useTestimonials,
-  type Testimonial,
-} from "@/features/testimonials/useTestimonials";
-import { isRevisable } from "@/features/testimonials/testimonials.rules";
-import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
-import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
+  fromDateKey,
+  toDateKey,
+} from "@/features/personal-log/dialysis/schedule";
+import { useMedications } from "@/features/medications/useMedications";
+import { useReminders } from "@/features/medications/useReminders";
+import { useMedicationLog } from "@/features/medications/useMedicationLog";
+import { doseRows } from "@/features/medications/medicationList";
+import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
+import {
+  timeRange,
+  upcoming,
+} from "@/features/personal-log/appointments/appointments";
+import { useClassroom } from "@/features/education/classroom";
+import { useJourneyProgress } from "@/features/education/useJourneyProgress";
+import { useLiveClasses } from "@/features/clinic/useLiveClasses";
+import { useMessages } from "@/features/messaging/useMessages";
+import * as messagingRules from "@/features/messaging/messaging.rules";
 
-const asset = (name: string) => `/images/user-dashboard/${name}`;
+/* ==========================================================================
+   Member dashboard — the member's day on one screen
+   --------------------------------------------------------------------------
+   Built as "Dashboard 2" beside the old dashboard (2026-10-12) and made
+   the only one once approved (2026-10-19). Trimmed on review (2026-10-14) to
+   what the member acts on: what needs them and their messages, the next
+   live class, their learning, the next appointment and today's
+   medicines, their shortcuts, and the stories last. Every figure is read
+   from what the member has logged, never a fixed number.
+   ========================================================================== */
 
-/** Every section on this page announces itself the same way. */
-function SectionHeading({
+const HREF = "/dashboard";
+
+function greetingFor(hour: number, isEs: boolean): string {
+  if (hour < 12) return isEs ? "Buenos días" : "Good morning";
+  if (hour < 18) return isEs ? "Buenas tardes" : "Good afternoon";
+  return isEs ? "Buenas noches" : "Good evening";
+}
+
+/** "in 3 days", "tomorrow", "today" — how far off a date is. */
+function whenLabel(dateKey: string, today: string, isEs: boolean): string {
+  const days = Math.round(
+    (fromDateKey(dateKey).getTime() - fromDateKey(today).getTime()) / 86400000,
+  );
+  if (days <= 0) return isEs ? "Hoy" : "Today";
+  if (days === 1) return isEs ? "Mañana" : "Tomorrow";
+  return isEs ? `En ${days} días` : `In ${days} days`;
+}
+
+/** A card title with an optional link on the right. */
+function CardTitle({
   title,
-  subtitle,
-  action,
+  href,
+  linkLabel,
 }: {
   title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
+  href?: string;
+  linkLabel?: string;
 }) {
   return (
-    <div className="flex flex-col gap-inline-md sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <h2 className="text-heading-4 text-fg">{title}</h2>
-        {subtitle ? (
-          <p className="mt-stack-xs measure text-body-sm text-fg-muted">
-            {subtitle}
-          </p>
-        ) : null}
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+    <div className="flex items-center justify-between gap-inline-md">
+      <h2 className="text-heading-4 text-fg">{title}</h2>
+      {href && linkLabel ? (
+        <Link
+          href={href}
+          className="-my-2.5 inline-flex min-h-11 shrink-0 items-center gap-inline-xs text-label-md text-fg-brand hover:underline"
+        >
+          {linkLabel}
+          <ArrowRight aria-hidden="true" className="size-4" />
+        </Link>
+      ) : null}
     </div>
   );
 }
 
-function Icon({ src, className }: { src: string; className?: string }) {
+/** "07:40 am" → minutes after midnight, so doses sort by the clock. */
+function minutesOf(time: string): number {
+  const match = /(\d{1,2}):(\d{2})\s*(am|pm)?/i.exec(time);
+  if (!match) return 0;
+  let hours = Number(match[1]) % 12;
+  if (match[3]?.toLowerCase() === "pm") hours += 12;
+  if (!match[3]) hours = Number(match[1]);
+  return hours * 60 + Number(match[2]);
+}
+
+/** The head every card in the row shares: an icon, the title, a status. */
+function CardHead({
+  icon,
+  title,
+  badge,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  badge?: React.ReactNode;
+}) {
   return (
-    <span className={`relative block size-6 overflow-clip ${className ?? ""}`}>
-      <LocalSvg src={src} alt="" className="size-full" />
+    <div className="flex items-center gap-inline-md">
+      <span
+        aria-hidden="true"
+        className="flex size-10 shrink-0 items-center justify-center rounded-card-nested bg-primary-soft text-fg-brand [&_svg]:size-5"
+      >
+        {icon}
+      </span>
+      <h2 className="min-w-0 flex-1 text-heading-4 text-fg">{title}</h2>
+      {badge}
+    </div>
+  );
+}
+
+/** A calendar leaf: month over day, for a date at a glance. */
+function DateTile({
+  dateKey,
+  isEs,
+  size = "md",
+}: {
+  dateKey: string;
+  isEs: boolean;
+  size?: "md" | "lg";
+}) {
+  const date = fromDateKey(dateKey);
+  const locale = isEs ? "es-ES" : "en-US";
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex shrink-0 flex-col items-center justify-center rounded-card-nested border border-primary-soft-line bg-primary-soft text-fg-brand",
+        size === "lg" ? "size-20" : "size-16",
+      )}
+    >
+      <span className="text-label-sm uppercase">
+        {date.toLocaleDateString(locale, { month: "short" })}
+      </span>
+      <span
+        className={cn(
+          "leading-none tabular-nums",
+          size === "lg" ? "text-metric-md" : "text-heading-3",
+        )}
+      >
+        {date.getDate()}
+      </span>
     </span>
   );
 }
 
-/* Eight tints, all categories rather than states, so they come off the
-   categorical ramp. They briefly borrowed the status surfaces, which made
-   "Community" look like a success and "Classes Attended" like one too. */
-
-const stats = [
-  {
-    label: "Journal Entries",
-    value: "1,247",
-    icon: "stat-users.svg",
-    tone: "bg-cat-6-soft",
-  },
-  {
-    label: "Notification Check-ins",
-    value: "78%",
-    icon: "stat-clipboard.svg",
-    tone: "bg-cat-3-soft",
-  },
-  {
-    label: "Curriculum Progress",
-    value: "892",
-    icon: "stat-book.svg",
-    tone: "bg-cat-7-soft",
-  },
-  {
-    label: "Classes Attended",
-    value: "2",
-    icon: "stat-video.svg",
-    tone: "bg-cat-5-soft",
-  },
-];
-
-type GreetingStrings = {
-  greetingMorning?: string;
-  greetingAfternoon?: string;
-  greetingEvening?: string;
-};
-
-function getGreeting(dh?: GreetingStrings) {
-  const hour = new Date().getHours();
-  if (hour < 12) return dh?.greetingMorning || "Good morning";
-  if (hour < 17) return dh?.greetingAfternoon || "Good afternoon";
-  return dh?.greetingEvening || "Good evening";
-}
-
-/** "18:00" from the scheduler → "6:00 PM"; seeded "6:00 PM" passes through. */
-function clockLabel(time: string): string {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
-  if (!match) return time;
-  const hour = Number(match[1]);
-  return `${hour % 12 || 12}:${match[2]} ${hour < 12 ? "AM" : "PM"}`;
-}
-
 export default function UserDashboard() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const locale = isEs ? "es-ES" : "en-US";
   const { user } = useAuth();
-  const { language, dictionary } = useLanguage();
-  const dh = dictionary?.dashboardHome;
-  /* The next class the clinic has on its schedule — the same record the
-     clinic's Live Class page edits. */
-  const { upcoming, recordings, past } = useLiveClasses();
-  const nextClass = upcoming[0];
-  /* Recordings the admin has posted (client, 2026-10-06), newest first. */
-  const posted = past.filter((item) => recordings[item.title]).slice(0, 3);
-  const firstName = user?.name.split(" ")[0] || "Sarah";
-  const greeting = useMemo(() => getGreeting(dh), [dh]);
+  const memberName = useMemberName();
+  const now = new Date(useNow());
+  const today = toDateKey(now);
 
-  const [selectedVideo, setSelectedVideo] = useState<Testimonial | null>(null);
-  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  /* One cache, shared with the submit modal and the admin queue, so a new
-     submission shows up here without a window event to carry the news. */
-  const {
-    testimonials,
-    isPending: testimonialsPending,
-    error: testimonialsError,
-    refetch: refetchTestimonials,
-    remove: removeTestimonial,
-  } = useTestimonials();
+  const attention = useMemberAttention();
 
-  const approvedTestimonials = useMemo(
-    () => onlyApproved(testimonials),
-    [testimonials],
-  );
-  const userSubmissions = useMemo(
-    () => testimonialsByAuthor(testimonials, user?.email || ""),
-    [testimonials, user?.email],
-  );
-  /* The submission being revised, or null when the modal is taking a new
-     one. Keyed on the modal below so reopening starts from that story. */
-  const [editingStory, setEditingStory] = useState<Testimonial | null>(null);
-  const [pendingDeleteStory, setPendingDeleteStory] =
-    useState<Testimonial | null>(null);
+  const { conversations } = useMessages();
+  const threads = messagingRules
+    .sortByRecent(messagingRules.memberConversations(conversations, memberName))
+    .filter((c) => !c.archived);
+  const unread = messagingRules.totalUnread(threads);
 
-  const getStatLabel = (statKey: string, fallback: string) => {
-    switch (statKey) {
-      case "Journal Entries":
-        return dh?.stats?.journalEntries || fallback;
-      case "Notification Check-ins":
-      case "SMS Check-ins":
-        return dh?.stats?.smsCheckIns || fallback;
-      case "Curriculum Progress":
-        return dh?.stats?.curriculumProgress || fallback;
-      case "Classes Attended":
-        return dh?.stats?.classesAttended || fallback;
-      default:
-        return fallback;
-    }
-  };
+  const live = useLiveClasses();
+  const nextClass = live.upcoming[0];
+  const recordingCount = live.past.filter(
+    (c) => live.recordings[c.title],
+  ).length;
+
+  const classroom = useClassroom();
+  const journey = useJourneyProgress(classroom.lessons);
+
+  const appointments = useAppointments();
+  const nextAppointment = upcoming(appointments.appointments, today)[0];
+
+  const meds = useMedications();
+  const { reminders } = useReminders();
+  const doseLog = useMedicationLog();
+  const doses = doseRows(meds.medications, reminders)
+    .map((d) => ({
+      ...d,
+      state: doseLog.statusOf(today, d.medication, d.time),
+    }))
+    .sort((a, b) => minutesOf(a.time) - minutesOf(b.time));
+  const dosesDone = doses.filter(
+    (d) => d.state === "taken" || d.state === "late",
+  ).length;
+
+  /* The first dose still to log, in clock order. */
+  const nextDose = doses.find((d) => d.state !== "taken" && d.state !== "late");
+
+  const firstName = user?.name.split(" ")[0] ?? "";
 
   return (
-    <div className="space-y-stack-2xl">
-      <h1 className="text-heading-1 text-fg">
-        {greeting}, {firstName}
-      </h1>
-
-      <QuickActionsSection
-        isEs={language === "ES"}
-        title={
-          dh?.quickActionTitle ||
-          (language === "ES" ? "Acción Rápida" : "Quick Action")
+    <div className="space-y-stack-xl">
+      <PageTitle
+        href={HREF}
+        title={`${greetingFor(now.getHours(), isEs)}${firstName ? `, ${firstName}` : ""}`}
+        action={
+          <span className="text-body-sm text-fg-muted">
+            {now.toLocaleDateString(locale, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
         }
       />
 
-      <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-2">
-        <Card as="article" padding="small">
-          {/* Card header. The title is a real heading and the strongest type
-              here: it used to be `body-md` while the module title nested
-              inside it was `heading-5`, so the section read as less
-              important than one item within it. Wraps on a narrow screen
-              rather than squeezing the title against the day counter. */}
-          <div className="flex flex-wrap items-center gap-inline-md py-inset-xs">
-            <h2
-              id="curriculum-progress-title"
-              className="min-w-0 flex-1 text-heading-4 text-fg"
-            >
-              {dh?.curriculum?.title || "Curriculum Progress"}
-            </h2>
-            <Link
-              href="/dashboard/my-classroom"
-              className="-my-2.5 flex min-h-11 shrink-0 items-center gap-inline-sm rounded-control-small text-label-md text-fg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {dh?.curriculum?.weekBadge || "Day 1 of 21"}
-              <Icon src={asset("arrow-right.svg")} />
-            </Link>
-          </div>
+      {/* The member's own shortcuts (client: make them quick actions); first,
+          under the greeting (2026-10-14). */}
+      <QuickActionsSection
+        isEs={isEs}
+        title={isEs ? "Accesos directos" : "Shortcuts"}
+      />
 
-          {/* Three groups inside the well, each tight within itself and a
-              full step from the next, so the card reads as "which day →
-              how far → what to do" instead of five evenly spaced lines. */}
-          <Card tone="sunken" padding="small" className="mt-stack-md">
-            {/* 1 · Which day, and what it is called. One thing, so the
-                eyebrow sits against the title it labels — these used to be
-                a whole stack-lg apart, which read as two unrelated lines. */}
-            <p className="text-overline text-fg-brand">
-              {dh?.curriculum?.weekLabel || "Day 1"}
+      {/* Row: what needs doing (two-thirds), messages (one-third). */}
+      <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-3">
+        <Card as="section" className="space-y-stack-md xl:col-span-2">
+          <CardTitle
+            title={isEs ? "Necesita su atención" : "Needs your attention"}
+          />
+          {attention.isPending ? (
+            <Skeleton height={160} />
+          ) : attention.items.length === 0 ? (
+            <EmptyState
+              variant="bare"
+              icon={<CheckCircle2 />}
+              title={isEs ? "Está al día" : "You're all caught up"}
+              description={
+                isEs
+                  ? "Nada pendiente por ahora."
+                  : "Nothing waiting on you right now."
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-line-subtle rounded-card-nested border border-line-subtle">
+              {attention.items.slice(0, 6).map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center gap-inline-md px-inset-md py-inset-sm"
+                >
+                  <BellRing
+                    aria-hidden="true"
+                    className={`size-4 shrink-0 ${
+                      item.tone === "danger"
+                        ? "text-danger"
+                        : item.tone === "warning"
+                          ? "text-warning-glyph"
+                          : "text-fg-brand"
+                    }`}
+                  />
+                  <span className="min-w-0 flex-1 text-body-md text-fg">
+                    {isEs ? item.es : item.en}
+                  </span>
+                  <Link
+                    href={item.href}
+                    className={buttonStyles({
+                      size: "small",
+                      variant: "neutral",
+                      appearance: "fill-stroke",
+                    })}
+                  >
+                    {isEs ? item.ctaEs : item.ctaEn}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {attention.items.length > 6 ? (
+            <p className="text-caption text-fg-muted">
+              {isEs
+                ? `Y ${attention.items.length - 6} más en Notificaciones.`
+                : `And ${attention.items.length - 6} more in Notifications.`}
             </p>
-            <h3 className="mt-stack-xs text-heading-5 text-fg">
-              {dh?.curriculum?.moduleTitle || "Foundations of Awareness"}
-            </h3>
-
-            {/* 2 · How far in. The figure now sits directly above the bar it
-                describes, instead of across the row from it beside the
-                title, and it is no longer the faintest text in the card —
-                it is the one number a member came here to read. */}
-            <div className="mt-stack-lg">
-              <p className="text-label-lg text-fg">
-                {dh?.curriculum?.completed || "25% complete"}
-              </p>
-              <Progress
-                value={25}
-                /* The heading above already names this bar, so it is
-                   pointed at rather than given a second, invisible name. */
-                labelledBy="curriculum-progress-title"
-                className="mt-stack-sm"
-              />
-            </div>
-
-            {/* 3 · What to do next — the weakest voice in the card. */}
-            <p className="mt-stack-lg measure text-body-sm text-fg-secondary">
-              {dh?.curriculum?.description ||
-                "You've started reading the materials. Don't forget to complete the reflection exercise in your journal."}
-            </p>
-          </Card>
+          ) : null}
         </Card>
 
-        <div className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md">
-          {stats.map((stat) => (
-            <Card
-              as="article"
-              key={stat.label}
-              padding="none"
-              className="p-inset-md"
-            >
-              <div className="flex items-center justify-between gap-inline-md">
-                <p className="text-body-md text-fg-secondary">
-                  {getStatLabel(stat.label, stat.label)}
-                </p>
-                <span
-                  aria-hidden="true"
-                  className={`flex size-10 items-center justify-center rounded-control ${stat.tone}`}
-                >
-                  <Icon src={asset(stat.icon)} />
-                </span>
-              </div>
-              <p className="mt-stack-lg text-metric-sm text-fg">{stat.value}</p>
-            </Card>
-          ))}
-        </div>
+        <Card as="section" className="space-y-stack-md">
+          <CardTitle
+            title={isEs ? "Mensajes" : "Messages"}
+            href="/dashboard/messages"
+            linkLabel={isEs ? "Abrir" : "Open"}
+          />
+          <p className="flex items-center gap-inline-sm text-body-sm text-fg-muted">
+            <MessageSquareText
+              aria-hidden="true"
+              className="size-4 text-fg-brand"
+            />
+            {unread > 0
+              ? isEs
+                ? `${unread} sin leer`
+                : `${unread} unread`
+              : isEs
+                ? "Nada nuevo"
+                : "Nothing new"}
+          </p>
+          {threads.length === 0 ? (
+            <p className="text-body-sm text-fg-muted">
+              {isEs ? "Aún no hay mensajes." : "No messages yet."}
+            </p>
+          ) : (
+            <ul className="space-y-stack-xs">
+              {threads.slice(0, 3).map((thread) => {
+                const last = thread.messages[thread.messages.length - 1];
+                return (
+                  <li key={thread.id}>
+                    <Link
+                      href="/dashboard/messages"
+                      className="flex min-h-11 items-start gap-inline-md rounded-card-nested p-inset-xs hover:bg-surface-sunken"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex size-9 shrink-0 items-center justify-center rounded-pill bg-primary-soft text-fg-brand"
+                      >
+                        <UserRound className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-inline-sm">
+                          <span
+                            className={cn(
+                              "truncate text-label-md",
+                              thread.unread > 0
+                                ? "text-fg"
+                                : "text-fg-secondary",
+                            )}
+                          >
+                            {thread.contact.name}
+                          </span>
+                          {thread.unread > 0 ? (
+                            <Badge tone="info">{thread.unread}</Badge>
+                          ) : null}
+                        </span>
+                        <span className="block truncate text-caption text-fg-muted">
+                          {last
+                            ? last.body || last.attachment?.name || ""
+                            : thread.contact.role}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
       </section>
 
+      {/* The next live class: a full-width invitation, as on the first
+          dashboard, with when it is at a glance. */}
       <Card
         as="section"
-        padding="none"
-        /* A clear blue-to-white wash across the whole card, so the live
-           class stands out from the tiles around it. */
-        className="relative overflow-hidden bg-gradient-to-r from-brand-100 via-brand-50 to-surface p-inset-lg"
+        aria-label={isEs ? "Próxima clase en vivo" : "Next live class"}
+        className="relative overflow-hidden"
       >
-        {/* Subtle accent indicator bar on the left edge */}
-        <div
-          aria-hidden="true"
-          className="absolute top-0 left-0 h-full w-1.5 bg-brand-600"
-        />
-
-        <div className="relative flex flex-col gap-inset-md sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-inline-lg sm:items-center">
-            {/* Visual Icon Container */}
+        <div className="flex flex-col gap-inset-md md:flex-row md:items-center">
+          {nextClass ? (
+            <DateTile dateKey={nextClass.date} isEs={isEs} size="lg" />
+          ) : (
             <span
               aria-hidden="true"
-              className="flex size-14 shrink-0 items-center justify-center rounded-panel border border-primary-soft-line bg-primary-soft text-primary-fg"
+              className="flex size-20 shrink-0 items-center justify-center rounded-card-nested border border-primary-soft-line bg-primary-soft text-fg-brand"
             >
-              <Video className="size-7" />
+              <Video className="size-8" />
             </span>
+          )}
 
-            {/* Content Details */}
-            <div className="min-w-0 flex-1 space-y-stack-xs">
-              <div className="flex items-center gap-inline-md">
-                <Badge tone="danger" variant="soft" className="gap-inline-sm">
-                  <span className="relative flex size-2 items-center justify-center">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger-500 opacity-75" />
-                    <span className="relative inline-flex size-2 rounded-full bg-danger-600 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
-                  </span>
-                  {dh?.upcomingClass?.badge || "Upcoming Live Class"}
+          <div className="min-w-0 flex-1 space-y-stack-xs">
+            <div className="flex flex-wrap items-center gap-inline-sm">
+              <Badge tone="danger" icon={<Video />}>
+                {isEs ? "Clase en vivo" : "Live class"}
+              </Badge>
+              {nextClass ? (
+                <Badge tone="neutral">
+                  {whenLabel(nextClass.date, today, isEs)}
                 </Badge>
-              </div>
-
-              <h3 className="text-heading-4 text-fg">
-                {nextClass?.topic ??
-                  (language === "ES"
-                    ? "Aún no hay clase programada"
-                    : "No class scheduled yet")}
-              </h3>
-
-              <div className="flex flex-wrap items-center gap-inline-lg text-body-sm text-fg-muted">
-                <span className="flex items-center gap-inline-sm text-fg-secondary">
-                  <Calendar className="size-4 shrink-0 text-brand-600" />
-                  {nextClass
-                    ? `${formatClassDate(nextClass.date)} · ${clockLabel(nextClass.time)}`
-                    : language === "ES"
-                      ? "La próxima clase aparecerá aquí"
-                      : "The next class will be posted here"}
+              ) : null}
+            </div>
+            <h2 className="text-heading-4 text-fg">
+              {nextClass?.topic ??
+                (isEs
+                  ? "Aún no hay clase programada"
+                  : "No class scheduled yet")}
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-inline-lg gap-y-stack-xs text-body-sm text-fg-muted">
+              {nextClass ? (
+                <>
+                  <span className="inline-flex items-center gap-inline-sm">
+                    <CalendarDays aria-hidden="true" className="size-4" />
+                    {fromDateKey(nextClass.date).toLocaleDateString(locale, {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <span className="inline-flex items-center gap-inline-sm">
+                    <Clock aria-hidden="true" className="size-4" />
+                    {nextClass.time}
+                  </span>
+                  {nextClass.educator ? (
+                    <span className="inline-flex items-center gap-inline-sm">
+                      <UserRound aria-hidden="true" className="size-4" />
+                      {nextClass.educator}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span>
+                  {isEs
+                    ? "La próxima clase aparecerá aquí."
+                    : "The next class will be posted here."}
                 </span>
-                <span className="hidden text-line sm:inline">•</span>
-                <span className="flex items-center gap-inline-sm text-fg-muted">
-                  <Users className="size-4 shrink-0 text-fg-muted" />
-                  {language === "ES"
-                    ? "Sesión interactiva en vivo"
-                    : "Interactive group session"}
-                </span>
-              </div>
+              )}
+              <span className="inline-flex items-center gap-inline-sm">
+                <Users aria-hidden="true" className="size-4" />
+                {isEs
+                  ? "Sesión grupal interactiva"
+                  : "Interactive group session"}
+              </span>
             </div>
           </div>
 
-          {/* Action Button */}
-          <div className="shrink-0">
+          <div className="flex shrink-0 flex-col items-stretch gap-stack-xs md:items-end">
             <Button
-              size="big"
-              leadingIcon={<Video className="size-5" />}
-              className="w-full sm:w-auto"
+              leadingIcon={<Video />}
               disabled={!nextClass?.joinUrl}
-              title={
-                nextClass?.joinUrl
-                  ? undefined
-                  : language === "ES"
-                    ? "El enlace para unirse aparece aquí cuando se agrega"
-                    : "The join link appears here once it is added"
-              }
               onClick={() =>
                 nextClass?.joinUrl &&
                 window.open(nextClass.joinUrl, "_blank", "noopener,noreferrer")
               }
             >
-              {dh?.upcomingClass?.joinButton || "Join Class"}
+              {isEs ? "Unirse a la clase" : "Join class"}
             </Button>
+            {nextClass && !nextClass.joinUrl ? (
+              <span className="text-caption text-fg-muted md:text-right">
+                {isEs
+                  ? "El enlace aparece cuando se agrega."
+                  : "The join link appears once it is added."}
+              </span>
+            ) : null}
+            {recordingCount > 0 ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex min-h-11 items-center justify-center text-label-md text-fg-brand hover:underline"
+              >
+                {isEs
+                  ? `Ver clases pasadas (${recordingCount})`
+                  : `Watch past classes (${recordingCount})`}
+              </Link>
+            ) : null}
           </div>
         </div>
       </Card>
 
-      {posted.length > 0 ? (
-        <Card as="section" padding="small">
-          <h2 className="text-heading-4 text-fg">
-            {language === "ES"
-              ? "Grabaciones Recientes de Clases en Vivo"
-              : "Recent Live Recordings"}
-          </h2>
-          <ul className="mt-stack-md divide-y divide-line-subtle">
-            {posted.map((item) => (
-              <li
-                key={item.title}
-                className="flex items-center gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-control bg-surface-brand-subtle text-fg-brand"
-                >
-                  <PlayCircle className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-label-lg text-fg">{item.title}</p>
+      {/* Row: learning, the next appointment, today's medicines. One shape
+          for all three (2026-10-14): an icon and title, one figure that
+          answers the card, the detail under it, and the action pinned to
+          the bottom so the three line up. */}
+      <section className="grid grid-cols-1 gap-inset-md lg:grid-cols-2 xl:grid-cols-3">
+        <Card as="section" className="flex flex-col gap-stack-md">
+          <CardHead
+            icon={<GraduationCap />}
+            title={isEs ? "Mi aprendizaje" : "My learning"}
+          />
+          {classroom.isPending || journey.isPending ? (
+            <Skeleton height={160} />
+          ) : (
+            <>
+              <div className="space-y-stack-sm">
+                <div className="flex items-baseline justify-between gap-inline-md">
+                  <span className="text-metric-md text-fg tabular-nums">
+                    {journey.overallPercent}%
+                  </span>
+                  <span className="text-body-sm text-fg-muted">
+                    {isEs
+                      ? `${journey.completedCount} de ${classroom.lessons.length} lecciones`
+                      : `${journey.completedCount} of ${classroom.lessons.length} lessons`}
+                  </span>
+                </div>
+                <Progress
+                  value={journey.completedCount}
+                  max={Math.max(classroom.lessons.length, 1)}
+                  label={isEs ? "Progreso del curso" : "Course progress"}
+                />
+              </div>
+              {journey.nextDay ? (
+                <div className="rounded-card-nested bg-surface-sunken p-inset-sm">
                   <p className="text-caption text-fg-muted">
-                    {formatClassDate(item.date)}
+                    {isEs
+                      ? `Siguiente · Lección ${journey.nextDay.day}`
+                      : `Next up · Lesson ${journey.nextDay.day}`}
+                  </p>
+                  <p className="mt-stack-xs line-clamp-2 text-label-md text-fg">
+                    {isEs ? journey.nextDay.titleEs : journey.nextDay.titleEn}
                   </p>
                 </div>
-                <Button
-                  variant="neutral"
-                  appearance="fill-stroke"
-                  size="small"
-                  aria-label={`${language === "ES" ? "Ver" : "Watch"} ${item.title}`}
-                  onClick={() =>
-                    window.open(
-                      recordings[item.title],
-                      "_blank",
-                      "noopener,noreferrer",
-                    )
-                  }
-                >
-                  {language === "ES" ? "Ver" : "Watch"}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {/* From Fear to Hope Testimonials Section */}
-      <section className="space-y-stack-md">
-        <SectionHeading
-          title={
-            language === "ES"
-              ? "Testimonios: Del Miedo a la Esperanza"
-              : "From Fear to Hope Testimonials"
-          }
-          action={
-            <Button
-              variant="primary"
-              appearance="fill-stroke"
-              leadingIcon={<Video className="size-4" />}
-              onClick={() => setIsSubmitModalOpen(true)}
-            >
-              {language === "ES"
-                ? "Compartir Mi Historia"
-                : "Share Your Video Story"}
-            </Button>
-          }
-        />
-
-        {/* A member's own submissions, so they can see where each one got
-            to and change anything still waiting on review. Nothing here is
-            public until an admin approves it. */}
-        {userSubmissions.length > 0 ? (
-          <Card padding="small" className="space-y-stack-sm">
-            <h3 className="text-heading-4 text-fg">
-              {language === "ES" ? "Tus historias" : "Your stories"}
-            </h3>
-            <ul className="space-y-stack-xs">
-              {userSubmissions.map((story) => (
-                <li
-                  key={story.id}
-                  className="flex flex-wrap items-center justify-between gap-inline-md rounded-card border border-line bg-surface p-inset-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="text-label-md text-fg">{story.title}</p>
-                    {story.adminFeedback ? (
-                      <p className="mt-stack-xs text-body-sm text-fg-muted">
-                        {story.adminFeedback}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-inline-md">
-                    <Badge
-                      tone={
-                        story.status === "approved"
-                          ? "success"
-                          : story.status === "declined"
-                            ? "danger"
-                            : "warning"
-                      }
-                    >
-                      {story.status === "approved"
-                        ? language === "ES"
-                          ? "Publicada"
-                          : "Published"
-                        : story.status === "declined"
-                          ? language === "ES"
-                            ? "No aprobada"
-                            : "Not approved"
-                          : language === "ES"
-                            ? "En revisión"
-                            : "Under review"}
-                    </Badge>
-
-                    {/* Editable only while it waits: changing a published
-                        story would republish it without review. */}
-                    {isRevisable(story) ? (
-                      <Button
-                        size="small"
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        onClick={() => {
-                          setEditingStory(story);
-                          setIsSubmitModalOpen(true);
-                        }}
-                      >
-                        <Pencil
-                          aria-hidden="true"
-                          className="size-4 shrink-0"
-                        />
-                        {language === "ES" ? "Editar" : "Edit"}
-                      </Button>
-                    ) : null}
-
-                    {/* A member can withdraw their own story at any point,
-                        including after it is published — it is their face on
-                        a public page. */}
-                    <Button
-                      size="small"
-                      variant="danger"
-                      appearance="stroke"
-                      onClick={() => setPendingDeleteStory(story)}
-                      aria-label={
-                        language === "ES"
-                          ? `Eliminar ${story.title}`
-                          : `Delete ${story.title}`
-                      }
-                    >
-                      <Trash2 aria-hidden="true" className="size-4 shrink-0" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : null}
-
-        {/* Video Cards Grid */}
-        <AsyncSection
-          pending={testimonialsPending}
-          error={testimonialsError}
-          onRetry={refetchTestimonials}
-          errorTitle={
-            language === "ES"
-              ? "Los testimonios no se cargaron"
-              : "The testimonials did not load"
-          }
-          skeleton={
-            <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} height={200} />
-              ))}
-            </div>
-          }
-        >
-          <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {approvedTestimonials.map((item) => (
-              <Card
-                as="article"
-                key={item.id}
-                padding="small"
-                className="group cursor-pointer overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-raised"
-                onClick={() => setSelectedVideo(item)}
+              ) : (
+                <p className="flex items-center gap-inline-sm text-body-sm text-success">
+                  <CheckCircle2 aria-hidden="true" className="size-4" />
+                  {isEs
+                    ? "¡Terminó todas las lecciones!"
+                    : "You have finished every lesson!"}
+                </p>
+              )}
+              <Link
+                href={
+                  journey.nextDay
+                    ? `/dashboard/my-classroom/${journey.nextDay.slug}`
+                    : "/dashboard/my-classroom"
+                }
+                className={cn(buttonStyles({ fullWidth: true }), "mt-auto")}
               >
-                {/* Thumbnail Container */}
-                <div className="relative aspect-video w-full overflow-hidden rounded-card bg-surface-inverse">
-                  {/* next/image needs every remote host declared up front, and a
-                      testimonial thumbnail URL is whatever the member
-                      submitted. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={
-                      item.thumbnailUrl ||
-                      "/images/user-dashboard/testimonial.jpg"
-                    }
-                    alt=""
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/20">
-                    <span className="flex size-12 items-center justify-center rounded-pill bg-white/95 text-brand-700 shadow-md transition-transform duration-200 group-hover:scale-110">
-                      <Play className="ml-0.5 size-5 fill-current" />
-                    </span>
-                  </div>
-                  {/* Duration Badge */}
-                  {item.duration && (
-                    <span className="absolute right-2 bottom-2 rounded bg-black/80 px-2 py-0.5 text-caption font-medium text-white backdrop-blur-xs">
-                      {item.duration}
-                    </span>
-                  )}
-                </div>
+                {!journey.nextDay
+                  ? isEs
+                    ? "Ir a Mi clase"
+                    : "Go to My Classroom"
+                  : journey.hasStarted
+                    ? isEs
+                      ? "Continuar lección"
+                      : "Continue lesson"
+                    : isEs
+                      ? "Empezar el curso"
+                      : "Start the course"}
+              </Link>
+            </>
+          )}
+        </Card>
 
-                <div className="space-y-stack-xs p-inset-sm">
-                  <div className="flex items-center justify-between text-caption text-fg-muted">
-                    <span className="font-semibold text-fg">
-                      {item.memberName}
-                    </span>
-                    <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-caption text-fg-secondary">
-                      {item.role}
-                    </span>
-                  </div>
-                  <p className="line-clamp-1 text-label-md font-bold text-fg transition-colors group-hover:text-brand-600">
-                    {item.title}
+        <Card as="section" className="flex flex-col gap-stack-md">
+          <CardHead
+            icon={<CalendarDays />}
+            title={isEs ? "Próxima cita" : "Next appointment"}
+            badge={
+              nextAppointment ? (
+                <Badge tone="info">
+                  {whenLabel(nextAppointment.date, today, isEs)}
+                </Badge>
+              ) : null
+            }
+          />
+          {appointments.isPending ? (
+            <Skeleton height={160} />
+          ) : nextAppointment ? (
+            <>
+              <div className="flex items-center gap-inline-md">
+                <DateTile dateKey={nextAppointment.date} isEs={isEs} />
+                <div className="min-w-0">
+                  <p className="truncate text-label-lg text-fg">
+                    {nextAppointment.title}
                   </p>
-                  <p className="line-clamp-2 text-caption text-fg-muted italic">
-                    &ldquo;{item.summary}&rdquo;
+                  <p className="text-body-sm text-fg-muted">
+                    {fromDateKey(nextAppointment.date).toLocaleDateString(
+                      locale,
+                      { weekday: "long" },
+                    )}{" "}
+                    · {timeRange(nextAppointment)}
                   </p>
                 </div>
-              </Card>
-            ))}
-          </div>
-        </AsyncSection>
+              </div>
+              <dl className="space-y-stack-xs text-body-sm">
+                <div className="flex items-center gap-inline-sm">
+                  <dt className="sr-only">{isEs ? "Con" : "With"}</dt>
+                  <UserRound
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-fg-muted"
+                  />
+                  <dd className="truncate text-fg">{nextAppointment.doctor}</dd>
+                </div>
+                {nextAppointment.location ? (
+                  <div className="flex items-center gap-inline-sm">
+                    <dt className="sr-only">{isEs ? "Dónde" : "Where"}</dt>
+                    <MapPin
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-fg-muted"
+                    />
+                    <dd className="truncate text-fg">
+                      {nextAppointment.location}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </>
+          ) : (
+            <EmptyState
+              variant="bare"
+              icon={<CalendarDays />}
+              title={isEs ? "Nada programado" : "Nothing scheduled"}
+            />
+          )}
+          <Link
+            href="/dashboard/personal-log/appointments"
+            className={cn(
+              buttonStyles({
+                variant: "neutral",
+                appearance: "fill-stroke",
+                fullWidth: true,
+              }),
+              "mt-auto",
+            )}
+          >
+            {isEs ? "Ver todas las citas" : "See all appointments"}
+          </Link>
+        </Card>
+
+        <Card
+          as="section"
+          className="flex flex-col gap-stack-md lg:col-span-2 xl:col-span-1"
+        >
+          <CardHead
+            icon={<Pill />}
+            title={isEs ? "Medicamentos de hoy" : "Medicines today"}
+            badge={
+              doses.length > 0 && dosesDone === doses.length ? (
+                <Badge tone="success">{isEs ? "Completo" : "All done"}</Badge>
+              ) : null
+            }
+          />
+          {meds.isPending ? (
+            <Skeleton height={160} />
+          ) : doses.length === 0 ? (
+            <EmptyState
+              variant="bare"
+              icon={<Pill />}
+              title={
+                isEs ? "Sin recordatorios de dosis" : "No dose reminders set"
+              }
+            />
+          ) : (
+            <>
+              <div className="space-y-stack-sm">
+                <div className="flex items-baseline justify-between gap-inline-md">
+                  <span className="text-metric-md text-fg tabular-nums">
+                    {dosesDone}/{doses.length}
+                  </span>
+                  <span className="text-body-sm text-fg-muted">
+                    {isEs ? "dosis tomadas" : "doses taken"}
+                  </span>
+                </div>
+                <Progress
+                  value={dosesDone}
+                  max={doses.length}
+                  tone={dosesDone === doses.length ? "success" : "primary"}
+                  label={isEs ? "Dosis de hoy" : "Today's doses"}
+                />
+              </div>
+              {nextDose ? (
+                <div className="rounded-card-nested bg-surface-sunken p-inset-sm">
+                  <p className="flex items-center justify-between gap-inline-md text-caption text-fg-muted">
+                    {isEs ? "Próxima dosis" : "Next dose"}
+                    {minutesOf(nextDose.time) <
+                    now.getHours() * 60 + now.getMinutes() ? (
+                      <Badge tone="warning">
+                        {isEs ? "Atrasada" : "Overdue"}
+                      </Badge>
+                    ) : null}
+                  </p>
+                  <p className="mt-stack-xs flex items-center justify-between gap-inline-md text-label-md text-fg">
+                    <span className="truncate">{nextDose.medication}</span>
+                    <span className="shrink-0 tabular-nums">
+                      {nextDose.time}
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <p className="flex items-center gap-inline-sm text-body-sm text-success">
+                  <CheckCircle2 aria-hidden="true" className="size-4" />
+                  {isEs
+                    ? "Tomó todas las dosis de hoy."
+                    : "Every dose for today is logged."}
+                </p>
+              )}
+            </>
+          )}
+          <Link
+            href="/dashboard/personal-log/medications"
+            className={cn(
+              buttonStyles({
+                variant: "neutral",
+                appearance: "fill-stroke",
+                fullWidth: true,
+              }),
+              "mt-auto",
+            )}
+          >
+            {isEs ? "Ver medicamentos" : "See medicines"}
+          </Link>
+        </Card>
       </section>
 
-      {/* Video Player Modal */}
-      <VideoPlayerModal
-        testimonial={selectedVideo}
-        open={Boolean(selectedVideo)}
-        onClose={() => setSelectedVideo(null)}
-      />
-
-      {/* Withdrawing a story cannot be undone, so it asks. */}
-      {pendingDeleteStory ? (
-        <Modal
-          open
-          size="small"
-          closeOnBackdrop={false}
-          onClose={() => setPendingDeleteStory(null)}
-          title={
-            language === "ES" ? "¿Eliminar tu historia?" : "Delete your story?"
-          }
-          description={
-            language === "ES"
-              ? `"${pendingDeleteStory.title}" se eliminará. Si ya estaba publicada, dejará de aparecer para los demás.`
-              : `"${pendingDeleteStory.title}" will be removed. If it was published, it stops showing for everyone else.`
-          }
-          footer={
-            <>
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setPendingDeleteStory(null)}
-              >
-                {language === "ES" ? "Conservar" : "Keep it"}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  void removeTestimonial(pendingDeleteStory.id);
-                  setPendingDeleteStory(null);
-                }}
-              >
-                {language === "ES" ? "Eliminar" : "Delete"}
-              </Button>
-            </>
-          }
-        />
-      ) : null}
-
-      {/* Submit Testimonial Modal */}
-      <SubmitTestimonialModal
-        /* Keyed on the story: opening it for another one starts from that
-           story's text without an effect syncing the fields. */
-        key={editingStory ? `story-${editingStory.id}` : "story-new"}
-        open={isSubmitModalOpen}
-        onClose={() => {
-          setIsSubmitModalOpen(false);
-          setEditingStory(null);
-        }}
-        user={user}
-        editing={editingStory}
-        onSubmitted={refetchTestimonials}
-      />
+      {/* The stories, kept small and last (2026-10-12). */}
+      <StoriesCard isEs={isEs} />
     </div>
   );
 }
