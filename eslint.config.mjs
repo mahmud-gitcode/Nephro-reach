@@ -112,8 +112,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Parked code. Excluded from tsconfig for the same reason.
-    "trash/**",
   ]),
 ]);
 

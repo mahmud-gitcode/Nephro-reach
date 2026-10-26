@@ -4,16 +4,6 @@ out/
 build/
 next-env.d.ts
 
-# Parked code, deliberately excluded from tsconfig too.
-trash/
-
 # Generated or vendored
 package-lock.json
 public/
-
-# Vendored reference material — a saved requirements document, not source.
-Clicnic and Ceargiver concept/
-
-# Saved web page (browser "Save As" output) — reference material, not source.
-Exercise Tracker Section.html
-Exercise Tracker Section_files/
