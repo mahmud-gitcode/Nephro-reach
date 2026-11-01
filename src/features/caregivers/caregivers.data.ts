@@ -103,7 +103,9 @@ export function invite(
 ): { state: CaregiverState; grant: CaregiverGrant } {
   const at = new Date(now).toISOString();
   const grant: CaregiverGrant = {
-    id: `cg-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    /* The id is the invitation link's secret (/caregiver-invite/[id]), so it
+       comes from the secure random source, not Math.random. */
+    id: `cg-${crypto.randomUUID()}`,
     patientEmail: normEmail(patient.email),
     patientName: patient.name,
     caregiverEmail: normEmail(draft.caregiverEmail),

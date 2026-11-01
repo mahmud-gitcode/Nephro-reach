@@ -7,6 +7,8 @@
    typed in.
    ========================================================================== */
 
+import { csvCell } from "@/lib/utils/download";
+
 export const POSITIONS = ["Sitting", "Standing"] as const;
 export type Position = (typeof POSITIONS)[number];
 
@@ -216,10 +218,7 @@ export function trend(readings: BpReading[]): BpReading[] {
 
 /** The readings as CSV, for Export. */
 export function readingsCsv(readings: BpReading[]): string {
-  const cell = (value: string | number) => {
-    const text = String(value);
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-  };
+  const cell = csvCell;
   const header = [
     "Date",
     "Time",

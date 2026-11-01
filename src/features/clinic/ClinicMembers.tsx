@@ -543,7 +543,7 @@ function MemberDetailsModal({
           {/* The popup is the profile; the detail behind it is the patient's
               progress, which Curriculum Progress opens from the MRN. */}
           <Link
-            href={`/dashboard/clinic/curriculum-progress?mrn=${member.mrn}`}
+            href={`/dashboard/clinic/curriculum-progress?mrn=${encodeURIComponent(member.mrn)}`}
             className={buttonStyles({ size: "small" })}
           >
             View Progress

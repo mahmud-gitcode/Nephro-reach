@@ -15,3 +15,4 @@ can ever change.
 | [0003](./0003-design-tokens-in-three-layers.md)           | Design tokens in three layers                 |
 | [0004](./0004-our-own-file-walk-for-lint-and-format.md)   | Our own file walk for lint and format         |
 | [0005](./0005-every-gate-fails-rather-than-warns.md)      | Every gate fails rather than warns            |
+| [0006](./0006-frontend-security-baseline.md)              | A frontend security baseline before the API   |

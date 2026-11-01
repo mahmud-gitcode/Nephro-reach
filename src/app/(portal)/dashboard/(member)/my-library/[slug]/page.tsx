@@ -1,5 +1,6 @@
 "use client";
 
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -83,7 +84,7 @@ function DocumentStage({ resource }: { resource: LibraryResource }) {
 
       <div className="flex flex-wrap items-center gap-inline-md">
         <a
-          href={resource.fileSrc}
+          href={isSafeFileUrl(resource.fileSrc) ? resource.fileSrc : "#"}
           download
           className={buttonStyles({ size: "small" })}
         >

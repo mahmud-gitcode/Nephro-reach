@@ -4,10 +4,27 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+import { resetApiClientState } from "@/lib/api/client";
+
+const AUTH_CHANNEL = "nr-auth";
+
+/* Set in the tab that signs out, so it goes home as before instead of
+   reloading on its own message (a channel also hears other instances in
+   the same tab). */
+let signingOutHere = false;
+
+function announceSignOut() {
+  signingOutHere = true;
+  if (typeof BroadcastChannel === "undefined") return;
+  const channel = new BroadcastChannel(AUTH_CHANNEL);
+  channel.postMessage("signed-out");
+  channel.close();
+}
 /* Loaded with the session so every permission check reads what each
    organisation turned on or off for its roles (2026-10-13). */
 import "@/features/staff/rolePermissions";
@@ -76,8 +93,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      data stayed in memory for whoever signed in next in that tab. */
   const logout = useCallback(() => {
     clearSessionCookie();
+    resetApiClientState();
     setSession(null);
+    announceSignOut();
+    // A full load on purpose: it drops every cached screen's patient data.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/");
+  }, []);
+
+  /* Patient data must not stay on screen once the user has signed out:
+     - another tab of the portal reloads (and so meets the sign-in check)
+       when this tab signs out;
+     - a portal page the browser restores from its back/forward cache after
+       sign-out reloads instead of showing the old page. */
+  useEffect(() => {
+    const inPortal = () => window.location.pathname.startsWith("/dashboard");
+    const channel =
+      typeof BroadcastChannel === "undefined"
+        ? null
+        : new BroadcastChannel(AUTH_CHANNEL);
+    if (channel) {
+      channel.onmessage = (event) => {
+        if (event.data === "signed-out" && inPortal() && !signingOutHere)
+          window.location.reload();
+      };
+    }
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && inPortal()) window.location.reload();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      channel?.close();
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, []);
 
   const value = useMemo(

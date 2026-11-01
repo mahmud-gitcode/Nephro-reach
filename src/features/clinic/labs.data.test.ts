@@ -27,6 +27,18 @@ describe("lab CSV", () => {
     });
   });
 
+  it("reads Excel's CSV UTF-8 (a byte-order mark before the header)", () => {
+    const parsed = parseLabCsv(`﻿${LAB_CSV_TEMPLATE}`, ["123456"]);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows).toHaveLength(2);
+  });
+
+  it("refuses a file too large to read safely", () => {
+    const parsed = parseLabCsv("x".repeat(2_000_001), ["123456"]);
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.errors[0].message).toMatch(/too large/);
+  });
+
   it("takes columns in any order, quotes, CRLF and US dates", () => {
     const csv =
       'Test,Value,MRN,Date\r\n"Kt/V, single pool",1.4,123456,9/2/2026\r\n';

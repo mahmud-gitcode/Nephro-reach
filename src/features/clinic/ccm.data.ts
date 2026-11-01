@@ -12,6 +12,7 @@
    a status typed in by hand would drift from the time behind it.
    ========================================================================== */
 
+import { csvCell } from "@/lib/utils/download";
 import {
   updatePlan,
   type KidneyCareChange,
@@ -638,10 +639,7 @@ export function worklistCsv(
   month: string,
   library: CcmCondition[] = DEFAULT_CONDITIONS,
 ): string {
-  const cell = (value: string | number) => {
-    const text = String(value);
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-  };
+  const cell = csvCell;
   const header = [
     "Month",
     "Patient",

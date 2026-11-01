@@ -1,5 +1,6 @@
 "use client";
 
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import React, {
   createContext,
   useCallback,
@@ -58,7 +59,7 @@ export function ExternalLinkProvider({
   const handleClose = () => setPendingUrl(null);
 
   const handleConfirm = () => {
-    if (pendingUrl) {
+    if (isSafeLinkUrl(pendingUrl)) {
       window.open(pendingUrl, "_blank", "noopener,noreferrer");
     }
     setPendingUrl(null);
@@ -166,7 +167,7 @@ export function ExternalLink({
 
   return (
     <a
-      href={href}
+      href={isSafeLinkUrl(href) ? href : "#"}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(event) => {

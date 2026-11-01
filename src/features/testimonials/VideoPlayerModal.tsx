@@ -23,7 +23,7 @@ function getEmbedUrl(url: string): string | null {
   // Vimeo link
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch && vimeoMatch[1]) {
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&dnt=1`;
   }
   return null;
 }

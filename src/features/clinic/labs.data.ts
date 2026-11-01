@@ -59,6 +59,8 @@ export type ParsedLabs = {
   errors: Array<{ line: number; message: string }>;
 };
 
+const LAB_CSV_MAX_CHARS = 2_000_000;
+
 /** Splits one CSV line, honouring double quotes ("a, b" stays one cell). */
 function cells(line: string): string[] {
   const out: string[] = [];
@@ -113,7 +115,15 @@ export function parseLabCsv(
   knownMrns: string[],
   forMrn?: string,
 ): ParsedLabs {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  /* A runaway file would freeze the tab; the API takes 2 MB of JSON. */
+  if (text.length > LAB_CSV_MAX_CHARS) {
+    return {
+      rows: [],
+      errors: [{ line: 1, message: "The file is too large (2 MB at most)." }],
+    };
+  }
+  /* Excel's "CSV UTF-8" starts with a byte-order mark before "mrn". */
+  const lines = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n");
   const headerAt = lines.findIndex((line) => line.trim() !== "");
   if (headerAt === -1) {
     return { rows: [], errors: [{ line: 1, message: "The file is empty." }] };

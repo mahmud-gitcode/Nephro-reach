@@ -44,7 +44,9 @@ function BackLink({
   fallback?: { href: string; en: string; es: string };
 }) {
   const from = useSearchParams().get("from") ?? "";
-  const target = LIBRARY_BACK_TO[from] ?? fallback;
+  const target = Object.hasOwn(LIBRARY_BACK_TO, from)
+    ? LIBRARY_BACK_TO[from]
+    : fallback;
   if (!target) return null;
   return (
     <Link href={target.href} className={linkClass}>

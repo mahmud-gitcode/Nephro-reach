@@ -26,15 +26,19 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            /* Reads come from this device, so nothing goes stale behind our
-               back and there is nothing to refetch on window focus. Both of
-               these want revisiting the day the data comes from a server
-               that other people can also write to. */
-            staleTime: Infinity,
-            refetchOnWindowFocus: false,
-            /* localStorage does not fail intermittently: if it throws once
-               it will throw again, and a retry only delays the message. */
-            retry: false,
+            /* Data is moving from this device to the API, where an office or
+               a caregiver can change it too. Treat it as fresh for half a
+               minute, then refetch when the tab regains focus. */
+            staleTime: 30_000,
+            refetchOnWindowFocus: true,
+            /* Retry a network blip once, but never a 4xx: a refused or
+               invalid request fails the same way again. */
+            retry: (failureCount, error) => {
+              const status = (error as { status?: number }).status;
+              if (status !== undefined && status >= 400 && status < 500)
+                return false;
+              return failureCount < 1;
+            },
           },
           mutations: {
             retry: false,

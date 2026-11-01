@@ -177,7 +177,10 @@ function MyLibraryContent() {
   const wanted = params.get("category");
   /* Opened from another page (the lab takeaways, a nutrition resource):
      a way back to it (client, 2026-10-12). */
-  const back = LIBRARY_BACK_TO[params.get("from") ?? ""];
+  const from = params.get("from") ?? "";
+  const back = Object.hasOwn(LIBRARY_BACK_TO, from)
+    ? LIBRARY_BACK_TO[from]
+    : undefined;
   const [filter, setFilter] = useState<LibraryFilter>(() => ({
     search: "",
     kind: "all",

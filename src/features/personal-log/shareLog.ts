@@ -11,20 +11,17 @@
    download they can attach. Nothing leaves the device without them.
    ========================================================================== */
 
+import { csvCell } from "@/lib/utils/download";
+
 export type LogTable = {
   /** Column names. */
   header: string[];
   rows: Array<Array<string | number>>;
 };
 
-function cell(value: string | number): string {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
 export function toCsv(table: LogTable): string {
   return [table.header, ...table.rows]
-    .map((row) => row.map(cell).join(","))
+    .map((row) => row.map(csvCell).join(","))
     .join("\n");
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Download, ExternalLink, Send, ShieldCheck } from "lucide-react";
@@ -182,7 +183,9 @@ function SharedItem({ share }: { share: OutsideShare }) {
           <div className="flex flex-wrap items-center justify-between gap-inline-md">
             <span className="text-label-md text-fg">{attachment.name}</span>
             <a
-              href={attachment.dataUrl}
+              href={
+                isSafeFileUrl(attachment.dataUrl) ? attachment.dataUrl : "#"
+              }
               download={attachment.name}
               onClick={() => store.downloaded(share.id)}
               className={buttonStyles({

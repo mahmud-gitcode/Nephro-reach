@@ -1,5 +1,6 @@
 "use client";
 
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import React, { useEffect, useRef } from "react";
 import {
   Captions,
@@ -269,8 +270,10 @@ function DocumentsTab({
             <button
               {...(doc.href
                 ? {
-                    onClick: () =>
-                      window.open(doc.href, "_blank", "noopener,noreferrer"),
+                    onClick: () => {
+                      if (isSafeLinkUrl(doc.href))
+                        window.open(doc.href, "_blank", "noopener,noreferrer");
+                    },
                   }
                 : notBuiltYet("Opening a document"))}
               type="button"

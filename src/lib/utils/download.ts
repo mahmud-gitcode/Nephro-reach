@@ -18,11 +18,23 @@ export function downloadText(
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/** Rows as CSV, each value quoted when it holds a comma, quote or newline. */
+/**
+ * One CSV cell. Quoted when it holds a comma, quote or line break. Text that
+ * a spreadsheet would run as a formula (= + - @, tab, carriage return) gets a
+ * leading apostrophe, so a note typed as =HYPERLINK(...) opens as plain text
+ * in Excel instead of sending other rows' patient data anywhere (OWASP CSV
+ * injection). Plain numbers, negative ones included, are left as numbers.
+ */
+export function csvCell(value: string | number | null | undefined): string {
+  if (typeof value === "number") return String(value);
+  let text = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) {
+    text = `'${text}`;
+  }
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/** Rows as CSV, one {@link csvCell} per value. */
 export function toCsv(rows: Array<Array<string | number>>): string {
-  const cell = (value: string | number) => {
-    const text = String(value);
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-  };
-  return rows.map((row) => row.map(cell).join(",")).join("\n");
+  return rows.map((row) => row.map(csvCell).join(",")).join("\n");
 }

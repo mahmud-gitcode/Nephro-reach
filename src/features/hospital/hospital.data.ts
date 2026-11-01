@@ -13,6 +13,8 @@
    Pure: state in, state out. Storage lives in useHospital.ts.
    ========================================================================== */
 
+import { csvCell } from "@/lib/utils/download";
+
 export type LessonKind =
   "video" | "presentation" | "activity" | "knowledge-check";
 
@@ -294,11 +296,6 @@ export function monthlyReport(list: HospitalEnrollment[]): MonthRow[] {
           : 0,
       };
     });
-}
-
-function csvCell(value: string | number): string {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 /** The patient list as CSV, for a report download. */

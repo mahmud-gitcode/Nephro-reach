@@ -1,3 +1,4 @@
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
 import type { Attachment } from "./messaging.types";
 
@@ -63,7 +64,7 @@ export async function toAttachment(
 /** Saves an attachment's file, if the message carries one. */
 export function downloadAttachment(attachment: Attachment): boolean {
   const url = attachment.dataUrl ?? attachment.imageUrl;
-  if (!url) return false;
+  if (!isSafeFileUrl(url)) return false;
   const link = document.createElement("a");
   link.href = url;
   link.download = attachment.name;

@@ -103,6 +103,9 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-static-element-interactions": "off",
+      /* New in eslint-config-next 16.4 (upgraded 2026-11-01 for the
+         proxy-bypass advisory); Hero.tsx predates it. */
+      "@next/next/no-location-assign-relative-destination": "off",
     },
   },
 
