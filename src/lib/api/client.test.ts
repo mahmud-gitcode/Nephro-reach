@@ -501,3 +501,62 @@ describe("requests", () => {
     expect(calls[0].init.credentials).toBe("include");
   });
 });
+
+describe("outside-share links (Phase 11 P-1)", () => {
+  it("omit cookies, the office header, the cache and the referrer", async () => {
+    setActiveOrganization("org-1");
+    const { calls } = scriptFetch(() => ok({ kind: "message" }));
+    await api("/shared/abc/content", { shareSession: "s".repeat(43) });
+    const init = calls[0].init;
+    expect(init.credentials).toBe("omit");
+    expect(init.cache).toBe("no-store");
+    expect(init.referrerPolicy).toBe("no-referrer");
+    expect(headerOf(init, "X-Organization-Id")).toBeUndefined();
+    expect(headerOf(init, "x-share-session")).toBe("s".repeat(43));
+  });
+
+  it("send no session header when none is given", async () => {
+    const { calls } = scriptFetch(() => ok({ kind: "message" }));
+    await api("/shared/abc");
+    expect(headerOf(calls[0].init, "x-share-session")).toBeUndefined();
+    expect(calls[0].init.credentials).toBe("omit");
+  });
+
+  it("refuse a share session on any other route", async () => {
+    const { fetchMock } = scriptFetch(() => ok([]));
+    await expect(
+      api("/patients/p1/conversations", { shareSession: "x" }),
+    ).rejects.toThrow(/only to \/shared\//);
+    await expect(api("/sharedx/abc", { shareSession: "x" })).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never refresh or end the session on a share 401", async () => {
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    const { calls } = scriptFetch(() => ({
+      status: 401,
+      body: {
+        success: false,
+        statusCode: 401,
+        message: "Verify again",
+        code: "sharing.verification_required",
+      },
+    }));
+    await expect(
+      api("/shared/abc/content", { shareSession: "x" }),
+    ).rejects.toMatchObject({
+      status: 401,
+      code: "sharing.verification_required",
+    });
+    expect(calls).toHaveLength(1);
+    expect(ended).not.toHaveBeenCalled();
+  });
+
+  it("keep cookies on member routes", async () => {
+    const { calls } = scriptFetch(() => ok([]));
+    await api("/patients/p1/outside-shares");
+    expect(calls[0].init.credentials).toBe("include");
+    expect(calls[0].init.referrerPolicy).toBeUndefined();
+  });
+});
