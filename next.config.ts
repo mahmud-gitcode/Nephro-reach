@@ -104,7 +104,10 @@ const nextConfig: NextConfig = {
       { source: "/dashboard", headers: privatePageHeaders },
       { source: "/dashboard/:path*", headers: privatePageHeaders },
       { source: "/secure/:path*", headers: tokenPageHeaders },
-      { source: "/caregiver-invite/:path*", headers: tokenPageHeaders },
+      /* Phase 3: staff and caregiver invitation links (one-time token in the
+         path) and the portal picker. */
+      { source: "/invitations/:path*", headers: tokenPageHeaders },
+      { source: "/select-portal", headers: privatePageHeaders },
       ...AUTH_TOKEN_PAGES.map((source) => ({
         source,
         headers: tokenPageHeaders,
