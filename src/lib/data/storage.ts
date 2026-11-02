@@ -70,28 +70,16 @@ function assertBrowser() {
 const MEMBER_OWNED = new Set([
   "classroom-learner",
   "community-likes",
-  "dialysis-access-photos",
-  "dialysis-home-system",
-  "dialysis-home-visits",
-  "dialysis-modality",
-  "dialysis-pd-exchanges",
-  "dialysis-supplies",
   "dialysis-treatment-vitals",
-  "dialysis-urine-output",
   "journey-notes",
   "journey-progress",
   "library-saved",
-  "provider-orders",
   "rides",
   "table-talk-favorites",
   "table-talk-questions",
   "travel-reflections",
   "travel-treatments",
-  "treatment-medications",
   "member-appointments",
-  /* Added 2026-10-12/13: each member's own. */
-  "dialysis-treatments",
-  "dialysis-schedule",
 ]);
 
 /* Whose local stores this tab reads: set by AuthContext from the server's

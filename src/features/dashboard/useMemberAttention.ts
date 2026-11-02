@@ -80,7 +80,8 @@ export function useMemberAttention(): {
   if (
     modality.modality !== "pd" &&
     !treatments.isPending &&
-    !schedule.isPending
+    !schedule.isPending &&
+    !schedule.isDefault
   ) {
     for (const s of uncharted(
       schedule.periods,

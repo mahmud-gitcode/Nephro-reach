@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { subjectLabel, type AccessPhoto } from "./accessPhotos";
+import { AccessPhotoImage } from "./AccessPhotoImage";
 
 /**
  * Pick one photo from the member's access-photo log to send with something.
@@ -55,13 +55,10 @@ export function PhotoPicker({
                       : "border-line hover:border-primary-soft-line",
                   )}
                 >
-                  <Image
-                    src={entry.dataUrl}
+                  <AccessPhotoImage
+                    photoId={entry.id}
                     alt=""
-                    fill
-                    unoptimized
-                    sizes="56px"
-                    className="object-cover"
+                    className="absolute inset-0"
                   />
                   {selected ? (
                     <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white">

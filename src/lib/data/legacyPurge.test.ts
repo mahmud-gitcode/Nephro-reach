@@ -13,9 +13,10 @@ import {
    their feature moves to the API (INTEGRATION_PROGRESS deviations). */
 
 const LIVE = [
-  /* Still live until their phase (7) moves them to the API. */
-  "nr:member:new.member@example.test:dialysis-treatments",
-  "nr:dialysis-schedule",
+  /* Home-HD session vitals stay until D8 (retired by Phase 15 at the
+     latest): the one remaining member PHI store. */
+  "nr:member:new.member@example.test:dialysis-treatment-vitals",
+  "nr:dialysis-treatment-vitals",
 ];
 
 const RETIRED = [
@@ -32,6 +33,10 @@ const RETIRED = [
   "nr:staff-accounts",
   "nr:caregiver-grants",
   "nr:caregiver-viewing:caregiver@example.test",
+  /* Phase 7: dialysis and home dialysis moved to the API. */
+  "nr:member:new.member@example.test:dialysis-treatments",
+  "nr:dialysis-schedule",
+  "nr:dialysis-access-photos",
 ];
 
 beforeEach(() => {

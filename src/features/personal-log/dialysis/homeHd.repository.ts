@@ -1,29 +1,18 @@
 import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import {
-  normaliseSystem,
-  normaliseVitals,
-  type HomeSystem,
-  type TreatmentVitals,
-} from "./homeHd";
+import { normaliseVitals, type TreatmentVitals } from "./homeHd";
 
 /* ==========================================================================
-   Home system and session vitals — storage
+   Home-HD session vitals: the one dialysis store still in this browser
    --------------------------------------------------------------------------
-   Two keys. The system is one record the member edits a few times a year;
-   the vitals are written twice a session. Sharing a key would mean every
-   post-run weight rewrites the machine's serial number.
+   The home system moved to the API in Phase 7 (`homeDialysis.repository`).
+   The session vitals stay here until D8 decides whether they are one record
+   with the treatment or two; `nr:dialysis-treatment-vitals` is then retired
+   (Phase 15 at the latest). It is the one remaining member PHI key and is
+   deliberately not in the purge registry until then. No screen reads it
+   today (useTreatmentVitals has no caller).
    ========================================================================== */
 
-const SYSTEM_KEY = storageKey("dialysis-home-system");
 const VITALS_KEY = storageKey("dialysis-treatment-vitals");
-
-export async function getHomeSystem(): Promise<HomeSystem> {
-  return normaliseSystem(await readJson<unknown>(SYSTEM_KEY, null));
-}
-
-export async function saveHomeSystem(system: HomeSystem): Promise<HomeSystem> {
-  return writeJson(SYSTEM_KEY, system);
-}
 
 type StoredVitals = Record<string, unknown>;
 

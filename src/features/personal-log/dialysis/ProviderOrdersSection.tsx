@@ -5,6 +5,11 @@ import { BellRing, Check, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useProviderOrders } from "./useProviderOrders";
 import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
   Alert,
   AsyncSection,
   Button,
@@ -71,8 +76,8 @@ function formatOrderDate(
 export function ProviderOrdersSection() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { query, write, orders, mutate, toggle, remove } = useProviderOrders();
-  const { reset } = write;
+  const log = useProviderOrders();
+  const { orders, toggle, remove } = log;
 
   /* Newest first: a member checking what they were told reads the most
      recent instruction, not the oldest one still on the list. */
@@ -94,22 +99,21 @@ export function ProviderOrdersSection() {
     setTouched(true);
     if (text.trim().length === 0) return;
 
-    mutate((current) => [
-      {
-        id: `ord-${Date.now().toString(36)}`,
+    /* The dialog stays open until the server has the order. */
+    void log
+      .add({
         date,
         order: text.trim(),
-        completed: false,
         ...(remind ? { remindAt: `${remindDate}T${remindTime}` } : {}),
-      },
-      ...current,
-    ]);
-    setOpen(false);
-    setText("");
-    setTouched(false);
-    setRemind(false);
+      })
+      .then(() => {
+        setOpen(false);
+        setText("");
+        setTouched(false);
+        setRemind(false);
+      })
+      .catch(() => {});
   };
-
   return (
     <Card as="section">
       <SectionTitle
@@ -131,8 +135,12 @@ export function ProviderOrdersSection() {
         }
       />
 
-      {write.error ? (
-        <Alert tone="danger" className="mt-stack-md" onDismiss={reset}>
+      {log.saveError ? (
+        <Alert
+          tone="danger"
+          className="mt-stack-md"
+          onDismiss={log.dismissSaveError}
+        >
           {isEs
             ? "Ese cambio no se guardó. Tus órdenes no cambiaron."
             : "That change did not save. Your orders are unchanged."}
@@ -140,13 +148,16 @@ export function ProviderOrdersSection() {
       ) : null}
 
       <AsyncSection
-        pending={query.isPending}
-        error={query.error}
-        onRetry={() => void query.refetch()}
+        pending={log.isPending}
+        error={log.error}
+        onRetry={canRetry(log.error) ? log.refetch : undefined}
         isEmpty={sorted.length === 0}
-        errorTitle={
-          isEs ? "Tus órdenes no se cargaron" : "Your orders did not load"
-        }
+        errorTitle={errorTitleFor(
+          log.error,
+          isEs ? "Tus órdenes no se cargaron" : "Your orders did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(log.error, undefined, isEs ? "es" : "en")}
         skeleton={<Skeleton height={140} className="mt-stack-md" />}
         empty={
           <EmptyState
@@ -270,7 +281,7 @@ export function ProviderOrdersSection() {
               >
                 {isEs ? "Cancelar" : "Cancel"}
               </Button>
-              <Button onClick={add} disabled={write.isPending}>
+              <Button onClick={add} disabled={log.isSaving}>
                 {isEs ? "Guardar" : "Save Order"}
               </Button>
             </div>

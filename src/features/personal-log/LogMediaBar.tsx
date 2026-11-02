@@ -4,10 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Camera, Check, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui";
 import { checkUpload } from "@/lib/api/upload";
-import {
-  downscaleToDataUrl,
-  useAccessPhotos,
-} from "./dialysis/useAccessPhotos";
+import { useAccessPhotos } from "./dialysis/useAccessPhotos";
 
 /* ==========================================================================
    Camera and voice on every log
@@ -18,15 +15,14 @@ import {
      Dictate     speech to text into the notes, through the browser's own
                  speech recognition (Chrome, Edge, Safari). Hidden where the
                  browser has none, rather than a button that does nothing.
-     Take photo  the camera on a phone, a file picker elsewhere. The photo
-                 is shrunk like every photo in the app. With `onPhoto` it
-                 is attached to the entry being written — the reading or
-                 the medication (client, 2026-10-06: "upload to the log").
-                 Without it, it goes to the member's Photos log, labelled
-                 with the log it came from. With `onPhotoFile` (logs on
-                 the API, Phase 5) the picked File is handed over as is:
-                 the entry uploads it through `/files` and keeps only its
-                 id; the preview is an in-memory blob URL, never stored.
+     Take photo  the camera on a phone, a file picker elsewhere. With
+                 `onPhotoFile` (logs on the API, Phase 5) the picked File
+                 is handed over as is: the entry uploads it through
+                 `/files` and keeps only its id; the preview is an
+                 in-memory blob URL, never stored. Without it, it goes to
+                 the member's Photos (access photos, uploaded by file id
+                 since Phase 7), labelled with the log it came from. No
+                 photo is ever kept as a data: URL.
    ========================================================================== */
 
 type Recognition = {
@@ -59,8 +55,6 @@ export function LogMediaBar({
   logName,
   onDictated,
   isEs,
-  photo,
-  onPhoto,
   onPhotoFile,
   hasPhoto = false,
   photoPreview = null,
@@ -70,10 +64,6 @@ export function LogMediaBar({
   /** Receives each finished phrase, to add to the notes. */
   onDictated: (text: string) => void;
   isEs: boolean;
-  /** The photo already on the entry, when photos attach to it. */
-  photo?: string | null;
-  /** Attach the photo to the entry instead of the Photos log; null removes. */
-  onPhoto?: (dataUrl: string | null) => void;
   /** Attach the picked file to the entry (it uploads it); null removes. */
   onPhotoFile?: (file: File | null) => void;
   /** With `onPhotoFile`: whether the entry has a photo (saved or picked). */
@@ -85,7 +75,6 @@ export function LogMediaBar({
   const [canDictate, setCanDictate] = useState(false);
   const [listening, setListening] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState(false);
   const recognition = useRef<Recognition | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -168,19 +157,8 @@ export function LogMediaBar({
             if (!refused) onPhotoFile(file);
             return;
           }
-          if (onPhoto) {
-            setAttaching(true);
-            setAttachError(false);
-            try {
-              onPhoto(await downscaleToDataUrl(file));
-            } catch {
-              setAttachError(true);
-            } finally {
-              setAttaching(false);
-            }
-            return;
-          }
-          photos.add(file, "other", logName);
+          /* Uploaded to the member's Photos (by file id, Phase 7). */
+          void photos.add(file, "other", logName);
           setSaved(true);
         }}
       />
@@ -209,38 +187,19 @@ export function LogMediaBar({
           </Button>
         </span>
       ) : null}
-      {onPhoto && photo ? (
-        <span className="inline-flex items-center gap-inline-xs">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
-          <img
-            src={photo}
-            alt={isEs ? "Foto de esta entrada" : "Photo on this entry"}
-            className="h-10 w-10 rounded-control object-cover"
-          />
-          <Button
-            type="button"
-            size="small"
-            variant="neutral"
-            appearance="ghost"
-            onClick={() => onPhoto(null)}
-          >
-            {isEs ? "Quitar foto" : "Remove photo"}
-          </Button>
-        </span>
-      ) : null}
       <Button
         type="button"
         size="small"
         variant="neutral"
         appearance="fill-stroke"
-        loading={onPhotoFile ? false : onPhoto ? attaching : photos.isAdding}
+        loading={onPhotoFile ? false : photos.isAdding}
         leadingIcon={<Camera aria-hidden="true" />}
         onClick={() => {
           setSaved(false);
           fileInput.current?.click();
         }}
       >
-        {(onPhoto && photo) || (onPhotoFile && hasPhoto)
+        {onPhotoFile && hasPhoto
           ? isEs
             ? "Cambiar foto"
             : "Change photo"
@@ -253,8 +212,7 @@ export function LogMediaBar({
           {isEs ? "No se pudo usar la foto." : "That photo could not be used."}
         </span>
       ) : null}
-      {!onPhoto &&
-      !onPhotoFile &&
+      {!onPhotoFile &&
       saved &&
       !photos.isAdding &&
       !photos.encodeError &&

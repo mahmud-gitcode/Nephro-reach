@@ -30,7 +30,6 @@ import {
   toDateKey,
   treatmentNumberInMonth,
   type ApplyScope,
-  type ExtraTreatment,
   type SchedulePeriod,
 } from "@/features/personal-log/dialysis/schedule";
 import {
@@ -54,6 +53,9 @@ import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer
 import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
 import { useDialysisSchedule } from "@/features/personal-log/dialysis/useDialysisSchedule";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
+import { useExtraTreatments } from "@/features/personal-log/dialysis/useExtraTreatments";
+import ExtraTreatmentsList from "@/features/personal-log/dialysis/ExtraTreatmentsList";
+import { dialysisSaveErrorText } from "@/features/personal-log/dialysis/dialysisErrors";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
   Alert,
@@ -61,7 +63,12 @@ import {
   SectionTitle,
   SkeletonText,
 } from "@/components/ui";
-import { combineReads } from "@/lib/data/asyncState";
+import {
+  canRetry,
+  combineReads,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { PageTitle } from "@/components/layout/PageTitle";
 
 const NO_SCHEDULE: SchedulePeriod = {
@@ -87,7 +94,12 @@ function DialysisManagementDashboard() {
      instead; it keeps the closed modals below from reading undefined. */
   const currentSchedule =
     schedulePeriods[schedulePeriods.length - 1] ?? NO_SCHEDULE;
-  const reads = combineReads(modalityLog, enrollment, schedule);
+  /* Unscheduled sessions, from the API (Phase 7; page state before). */
+  const extraLog = useExtraTreatments();
+  const extraTreatments = extraLog.extras;
+  const reads = combineReads(modalityLog, enrollment, schedule, extraLog);
+  /* The server decides (memberCanEdit, D16); the page only follows it. */
+  const canEditSchedule = modalityLog.memberCanEdit;
   const selectedDays = currentSchedule.days;
   // Display option: drop the empty placeholder tiles for non-treatment days.
   const [hideBlankDays, setHideBlankDays] = useState(false);
@@ -97,18 +109,6 @@ function DialysisManagementDashboard() {
   );
   // How a saved week setting should be applied
   const [isEditWeekModalOpen, setIsEditWeekModalOpen] = useState(false);
-
-  // Extra Treatments (unscheduled sessions). Their cards are derived from the
-  // weekly schedule, so they stay correctly numbered if the week setting changes.
-  const [extraTreatments, setExtraTreatments] = useState<ExtraTreatment[]>([
-    {
-      id: "tx-extra-3-1",
-      dateKey: "2026-06-26",
-      reason: "Fluid Overload",
-      notes:
-        "Unscheduled extra session between treatment 3 and 4 to remove excess interdialytic fluid (+2.4 kg).",
-    },
-  ]);
 
   // Temp state for editing week
 
@@ -283,9 +283,13 @@ function DialysisManagementDashboard() {
   }: EditWeekResult) => {
     const fromKey = toDateKey(scopeEffectiveDate(scope));
     const period = buildSchedulePeriod(draft, fromKey);
-    schedule.append(period);
     setHideBlankDays(nextHideBlankDays);
-    setIsEditWeekModalOpen(false);
+    /* Closed once the server has it; a refusal (e.g. 403 when a center
+       manages the schedule) is shown on the page. */
+    void schedule
+      .appendAsync(period)
+      .then(() => setIsEditWeekModalOpen(false))
+      .catch(() => setIsEditWeekModalOpen(false));
   };
 
   const handleSaveExtraTreatment = ({
@@ -295,19 +299,14 @@ function DialysisManagementDashboard() {
   }: ExtraTreatmentDraft) => {
     const dateKey = toDateKey(date);
 
-    setExtraTreatments((prev) => [
-      ...prev,
-      {
-        id: `tx-extra-${dateKey}-${Date.now()}`,
-        dateKey,
-        reason,
-        notes: notes.trim(),
-      },
-    ]);
-
-    // Jump the cards list to the month the extra session belongs to
-    setViewMonthKey(`${date.getFullYear()}-${pad2(date.getMonth() + 1)}`);
-    setIsExtraTxModalOpen(false);
+    void extraLog
+      .add({ dateKey, reason, notes: notes.trim() })
+      .then(() => {
+        // Jump the cards list to the month the extra session belongs to
+        setViewMonthKey(`${date.getFullYear()}-${pad2(date.getMonth() + 1)}`);
+        setIsExtraTxModalOpen(false);
+      })
+      .catch(() => setIsExtraTxModalOpen(false));
   };
 
   /* The freeform note belongs with the schedule. On a wide screen it sits
@@ -397,12 +396,19 @@ function DialysisManagementDashboard() {
         <AsyncSection
           pending={reads.pending}
           error={reads.error}
-          onRetry={reads.onRetry}
-          errorTitle={
+          onRetry={canRetry(reads.error) ? reads.onRetry : undefined}
+          errorTitle={errorTitleFor(
+            reads.error,
             isEs
               ? "No se pudo cargar tu información de diálisis"
-              : "Your dialysis details could not be loaded"
-          }
+              : "Your dialysis details could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(
+            reads.error,
+            undefined,
+            isEs ? "es" : "en",
+          )}
           skeleton={<SkeletonText lines={6} />}
         >
           <ModalityTabs log={modalityLog} />
@@ -441,7 +447,15 @@ function DialysisManagementDashboard() {
                   <button
                     type="button"
                     onClick={handleOpenEditWeek}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-body-sm"
+                    disabled={!canEditSchedule}
+                    title={
+                      canEditSchedule
+                        ? undefined
+                        : isEs
+                          ? "Tu centro de diálisis maneja tu horario"
+                          : "Your dialysis center manages your schedule"
+                    }
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:py-2.5 sm:text-body-sm"
                   >
                     <Settings className="h-4 w-4 text-fg-muted" />
                     <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
@@ -449,6 +463,29 @@ function DialysisManagementDashboard() {
                 }
               />
 
+              {schedule.isDefault ? (
+                <Alert tone="info" className="mb-stack-md">
+                  {canEditSchedule
+                    ? isEs
+                      ? "Esta es una semana típica, no tu horario. Usa Editar Semana para guardar el tuyo."
+                      : "This is a typical week, not your schedule. Use Edit Week to save yours."
+                    : isEs
+                      ? "Esta es una semana típica, no tu horario. Tu centro de diálisis guarda tu horario."
+                      : "This is a typical week, not your schedule. Your dialysis center saves your schedule."}
+                </Alert>
+              ) : null}
+              {schedule.saveError ? (
+                <Alert
+                  tone="danger"
+                  className="mb-stack-md"
+                  onDismiss={schedule.dismissSaveError}
+                >
+                  {dialysisSaveErrorText(
+                    schedule.saveError,
+                    isEs ? "es" : "en",
+                  )}
+                </Alert>
+              ) : null}
               <div>
                 {/* One card per treatment day, in an even grid: the day as the
                   card's title, then how long, then when. Only treatment days
@@ -531,6 +568,14 @@ function DialysisManagementDashboard() {
           </div>
 
           <div className="xl:hidden">{notesCard}</div>
+
+          {/* Unscheduled extra sessions (new list, Phase 7). The server
+              checks each write; extra sessions are the member's own log. */}
+          <ExtraTreatmentsList
+            log={extraLog}
+            onAdd={() => setIsExtraTxModalOpen(true)}
+            isEs={isEs}
+          />
 
           {/* 2. Provider orders and instructions */}
           <ProviderOrdersSection />

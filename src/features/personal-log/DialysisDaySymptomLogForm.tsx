@@ -18,13 +18,23 @@ import {
 } from "@/features/personal-log/symptom-log/SymptomFields";
 import { PANEL } from "@/features/personal-log/symptom-log/symptomLog.styles";
 import type { DialysisLogEntry } from "./dialysisTreatmentData";
-import { useTreatmentLog } from "./dialysis/useTreatmentLog";
+import { useTreatmentEntry, useTreatmentLog } from "./dialysis/useTreatmentLog";
+import {
+  treatmentDraftProblem,
+  type TreatmentDraft,
+} from "./dialysis/treatment.mapper";
+import { saveErrorText } from "@/features/profile/saveError";
+import {
+  canRetry,
+  combineReads,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useDialysisSchedule } from "./dialysis/useDialysisSchedule";
 import { useDialysisModality } from "./dialysis/useDialysisModality";
 import {
   addMinutes,
   clock12,
-  displayDate,
   durationLabel,
   fluidRemovedKg,
   minutesBetween,
@@ -33,6 +43,7 @@ import {
 } from "./dialysis/treatmentLog";
 import {
   Alert,
+  AsyncSection,
   FormField,
   Input,
   SegmentedChoice,
@@ -81,23 +92,39 @@ function to24(value: string): string {
 }
 
 export default function DialysisDaySymptomLogForm(props: Props) {
+  const { language } = useLanguage();
+  const lang = language === "ES" ? "es" : "en";
   const log = useTreatmentLog();
   const schedule = useDialysisSchedule();
-  if (log.isPending || schedule.isPending) {
-    return (
-      <div className="h-96 animate-pulse rounded-card border border-line bg-surface-sunken" />
-    );
-  }
-  const editing = props.editId
-    ? log.entries.find((e) => e.id === props.editId)
-    : undefined;
+  /* The treatment being changed, read by id (it may be older than the
+     list's window). */
+  const one = useTreatmentEntry(props.editId);
+  const reads = combineReads(log, schedule, one);
+  const editing = one.entry ?? undefined;
   return (
-    <TreatmentForm
-      /* Keyed so the form starts again from the entry it was opened on. */
-      key={editing?.id ?? "new"}
-      {...props}
-      editing={editing}
-    />
+    <AsyncSection
+      pending={reads.pending}
+      error={reads.error}
+      onRetry={canRetry(reads.error) ? reads.onRetry : undefined}
+      errorTitle={errorTitleFor(
+        reads.error,
+        lang === "es"
+          ? "No se pudo cargar su registro de diálisis"
+          : "Your dialysis log could not be loaded",
+        lang,
+      )}
+      errorMessage={errorMessageFor(reads.error, undefined, lang)}
+      skeleton={
+        <div className="h-96 animate-pulse rounded-card border border-line bg-surface-sunken" />
+      }
+    >
+      <TreatmentForm
+        /* Keyed so the form starts again from the entry it was opened on. */
+        key={editing?.id ?? "new"}
+        {...props}
+        editing={editing}
+      />
+    </AsyncSection>
   );
 }
 
@@ -247,12 +274,17 @@ function TreatmentForm({
 
   // Post-treatment
   const [postFeel, setPostFeel] = useState(editing?.postOverallFeel ?? 3);
-  const [postSymptoms, setPostSymptoms] = useState<string[]>([]);
+  /* Saved since Phase 7 (they were collected and dropped: INT-12), and
+     loaded back when an entry is changed. */
+  const [postSymptoms, setPostSymptoms] = useState<string[]>(
+    editing?.postSymptoms ?? [],
+  );
   const [postSeverity, setPostSeverity] = useState<Record<string, number>>({
     Fatigue: 0,
     Nausea: 0,
     Pain: 0,
     Overall: 0,
+    ...(editing?.postSeverity ?? {}),
   });
 
   /* Clinical measurements: the pre-screen and the post-screen ask the same
@@ -283,52 +315,29 @@ function TreatmentForm({
     }
   };
 
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [saveProblem, setSaveProblem] = useState<string | null>(null);
   const dateTaken = log.entries.some(
     (e) => e.date === date && e.id !== editing?.id && e.status !== "missed",
   );
 
   const handleSave = async () => {
-    const isMissed = sessionStatus === "missed";
-    const entry: DialysisLogEntry = {
-      // A new entry gets its id when it is stored.
-      id: editing?.id ?? "",
+    /* careTeam is not sent: the server has no field for it yet (D8). */
+    const draft: TreatmentDraft = {
       date,
-      displayDate: displayDate(date),
-      isDialysisDay: true,
-      treatmentType: isHome ? "Home hemodialysis" : "In-center hemodialysis",
       modality,
       status: sessionStatus,
       ...(isMakeup && makeupFor ? { makeupFor } : {}),
-      startTime: isMissed ? "" : clock12(startTime),
-      endTime: isMissed ? "" : clock12(endTime),
-      duration: isMissed ? "" : durationLabel(runMinutes),
-      location: "",
-      careTeam: isMissed ? "" : careTeam.trim(),
-      postWeightSummary: postWeight ? `${postWeight} kg` : "",
-      attendance: isMissed
-        ? "Missed"
-        : endedEarly === "Yes"
-          ? "Ended Early"
-          : !isHome && arrivedLate === "Yes"
-            ? "Arrived Late"
-            : "Attended",
-      attended: isMissed ? "No" : "Yes",
+      startTime,
+      endTime,
       arrivedLate: isHome ? "No" : arrivedLate,
       endedEarly,
-      missedTreatments: isMissed ? 1 : 0,
-      rescheduled: isMakeup ? "Yes" : "No",
+      extraRecovery,
+      ...(extra ? { extraRecoveryMinutes: extra } : {}),
       preOverallFeel: preFeel,
+      postOverallFeel: postFeel,
+      medsTakenPrescribed,
       preSymptoms,
       preSeverity,
-      hadIntraSymptoms:
-        intraSymptoms.length > 0 ||
-        [
-          crampingSeverity,
-          dizzinessSeverity,
-          swellingSeverity,
-          sobSeverity,
-        ].some((v) => v !== "No"),
       sequentialFluidRemoval,
       cramping: crampingSeverity,
       dizziness: dizzinessSeverity,
@@ -337,32 +346,43 @@ function TreatmentForm({
       lowBp: lowBpSeverity,
       highBp: highBpSeverity,
       fatigue: fatigueSeverity,
-      intraSymptoms,
-      intraSeverity: {},
-      intraNotes,
-      postOverallFeel: postFeel,
       recoveryTime: recoverySeverity,
-      medsTakenPrescribed,
-      extraRecovery,
-      ...(extra ? { extraRecoveryMinutes: extra } : {}),
-      fluidRemoved: removed === null ? "" : `${removed} L`,
+      intraSymptoms,
+      intraNotes,
+      postSymptoms,
+      postSeverity,
       preWeight,
       postWeight,
-      weightDiff: removed === null ? "" : `-${removed} kg`,
+      fluidRemoved: removed,
       preBloodPressure: preBp,
       preHeartRate: preHr,
       bloodPressurePost: bpPost,
       heartRatePost: pulsePost,
-      medicationsGiven: editing?.medicationsGiven ?? [],
       otherNotes: generalNotes,
     };
+    /* Kilograms only (D7 open): "165 lb" is refused here and never sent. */
+    const problem = treatmentDraftProblem(draft);
+    if (problem) {
+      setSaveProblem(
+        problem === "weight-not-kg"
+          ? tx(
+              "Enter weights in kilograms as a number, like 72.4. Pounds are not accepted.",
+              "Anote el peso en kilogramos como número, por ejemplo 72.4. No se aceptan libras.",
+            )
+          : tx(
+              "Enter the start and end times again.",
+              "Vuelva a anotar la hora de inicio y de fin.",
+            ),
+      );
+      return;
+    }
     try {
-      setSaveFailed(false);
-      await log.save(entry);
+      setSaveProblem(null);
+      await log.save(draft, editing?.id);
       if (onClose) onClose();
       else router.push("/dashboard/personal-log/dialysis-treatment");
-    } catch {
-      setSaveFailed(true);
+    } catch (error) {
+      setSaveProblem(saveErrorText(error, isEs ? "es" : "en"));
     }
   };
 
@@ -593,14 +613,7 @@ function TreatmentForm({
         )}
       </div>
 
-      {saveFailed ? (
-        <Alert tone="danger">
-          {tx(
-            "That did not save. Your log is unchanged — please try again.",
-            "No se guardó. Su registro no cambió; inténtelo de nuevo.",
-          )}
-        </Alert>
-      ) : null}
+      {saveProblem ? <Alert tone="danger">{saveProblem}</Alert> : null}
 
       {isMissed ? (
         <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-surface px-5 py-4 sm:px-6">

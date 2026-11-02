@@ -1,26 +1,36 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import {
-  DEFAULT_DURATION_MINUTES,
-  appendSchedulePeriod,
-  normaliseSchedulePeriod,
-  type SchedulePeriod,
-} from "./schedule";
-
 /* ==========================================================================
-   The member's dialysis schedule — stored
+   The member's dialysis schedule, from the API (Phase 7)
    --------------------------------------------------------------------------
-   It lived in the Dialysis Management page's state, so a changed run time
-   was gone on the next visit (client, 2026-10-12: "I saved it… what did
-   that do?"). Stored now, and the treatment log reads the same schedule to
-   offer the sessions a member can chart.
+   `GET /patients/:id/dialysis/schedule` returns every dated period; saving
+   a week appends one (`POST`), and the server replaces the periods from its
+   start day on, so past treatments keep the schedule they were run on.
+
+   The typical week (`DEFAULT_SCHEDULE`) shows only after a SUCCESSFUL read
+   that returned no period, flagged `isDefault` so screens can say it is a
+   suggestion. It is never saved implicitly, never shown for a failed read
+   or a 403 (ADR 0007 §5), and its placeholder start day is never sent.
+   Whether the member may change it is the prescription's `memberCanEdit`.
    ========================================================================== */
 
-const KEY = storageKey("dialysis-schedule");
-export const scheduleKey = ["dialysis", "schedule"] as const;
+import { useCallback, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { DEFAULT_DURATION_MINUTES, type SchedulePeriod } from "./schedule";
+import { fromApiSchedule, toSchedulePeriodBody } from "./schedule.mapper";
+import { addSchedulePeriod, listSchedulePeriods } from "./dialysis.repository";
+
+export const SCHEDULE_FEATURE = "dialysis-schedule";
+
+export function scheduleKey(scope: PatientScope | null) {
+  return scopedKey(scope, SCHEDULE_FEATURE);
+}
 
 /** A typical week: Monday, Wednesday and Friday, four hours at 5:30 AM. */
 export const DEFAULT_SCHEDULE: SchedulePeriod[] = [
@@ -39,41 +49,53 @@ export const DEFAULT_SCHEDULE: SchedulePeriod[] = [
 
 const NO_PERIODS: SchedulePeriod[] = [];
 
-async function readSchedule(): Promise<SchedulePeriod[]> {
-  const stored = await readJson<unknown>(KEY, null);
-  if (!Array.isArray(stored) || stored.length === 0) return DEFAULT_SCHEDULE;
-  const periods = stored
-    .filter(
-      (p): p is SchedulePeriod =>
-        !!p && typeof p === "object" && typeof p.fromKey === "string",
-    )
-    .map((p) => normaliseSchedulePeriod(p));
-  return periods.length > 0 ? periods : DEFAULT_SCHEDULE;
-}
-
-export function useDialysisSchedule() {
+export function useDialysisSchedule(explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: scheduleKey, queryFn: readSchedule });
-  const write = useMutation({
-    mutationFn: async (period: SchedulePeriod) =>
-      writeJson(KEY, appendSchedulePeriod(await readSchedule(), period)),
-    onSuccess: (periods) => queryClient.setQueryData(scheduleKey, periods),
+  const queryKey = scheduleKey(scope);
+
+  const query = useQuery({
+    queryKey,
+    queryFn: async () =>
+      fromApiSchedule(await listSchedulePeriods(requireScope(scope))),
   });
-  /* The typical week stands in only while the read is in flight (pages
-     show a skeleton then) or when nothing was ever saved. A failed read is
-     an error, never the default week (INT-10). */
+
+  const write = useMutation({
+    mutationFn: (period: SchedulePeriod) =>
+      addSchedulePeriod(requireScope(scope), toSchedulePeriodBody(period)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  /* The suggestion only after a successful, empty read. */
+  const isDefault = query.isSuccess && query.data.length === 0;
   const periods = useMemo(
-    () => query.data ?? (query.isError ? NO_PERIODS : DEFAULT_SCHEDULE),
-    [query.data, query.isError],
+    () =>
+      query.isSuccess
+        ? isDefault
+          ? DEFAULT_SCHEDULE
+          : query.data
+        : NO_PERIODS,
+    [query.isSuccess, query.data, isDefault],
   );
-  const { mutate } = write;
+
+  const { mutate, mutateAsync } = write;
   return {
     periods,
+    /** True when `periods` is the typical week, not the member's own. */
+    isDefault,
     isPending: query.isPending,
     error: query.error,
     isError: query.isError,
     refetch: () => void query.refetch(),
+    isSaving: write.isPending,
+    saveError: write.error,
+    dismissSaveError: () => write.reset(),
     /** Appends a dated period: past treatments keep their schedule. */
     append: useCallback((period: SchedulePeriod) => mutate(period), [mutate]),
+    /** The same, resolving once the server has it (rejects on refusal). */
+    appendAsync: useCallback(
+      (period: SchedulePeriod) => mutateAsync(period),
+      [mutateAsync],
+    ),
   };
 }
