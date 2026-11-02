@@ -20,15 +20,21 @@ const isDev = process.env.NODE_ENV === "development";
 const apiOrigin = new URL(
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
 ).origin;
+/* File storage (presigned PUT for uploads, presigned GET for private files).
+   The production host is decision D18; until it is set, none is allowed. */
+const storageOrigin = process.env.NEXT_PUBLIC_STORAGE_ORIGIN
+  ? ` ${new URL(process.env.NEXT_PUBLIC_STORAGE_ORIGIN).origin}`
+  : "";
+const devPort = Number(process.env.NEXT_DEV_PORT) || 4000;
 
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' blob: data: ${apiOrigin}`,
-  `media-src 'self' blob: data: ${apiOrigin}`,
+  `img-src 'self' blob: data: ${apiOrigin}${storageOrigin}`,
+  `media-src 'self' blob: data: ${apiOrigin}${storageOrigin}`,
   "font-src 'self'",
-  `connect-src 'self' ${apiOrigin}${isDev ? " ws://localhost:4000" : ""}`,
+  `connect-src 'self' ${apiOrigin}${storageOrigin}${isDev ? ` ws://localhost:${devPort}` : ""}`,
   "frame-src https://www.youtube-nocookie.com https://player.vimeo.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
