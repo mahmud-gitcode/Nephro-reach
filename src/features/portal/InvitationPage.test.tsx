@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({}),
 }));
 
-const signOut = vi.fn(async () => true);
+const signOut = vi.fn(async (_options?: unknown) => true);
 vi.mock("@/lib/data/session", async (orig) => ({
   ...(await orig<typeof import("@/lib/data/session")>()),
   signOut: (o: unknown) => signOut(o as never),

@@ -18,6 +18,7 @@ import {
   pageOf,
   stubApi,
   type StubCall,
+  type StubReply,
 } from "@/features/profile/memberApiStub";
 import { inviteBody } from "./caregivers.api";
 import {
@@ -68,9 +69,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-function handler(
-  extra?: (c: StubCall) => ReturnType<Parameters<typeof stubApi>[0]>,
-) {
+function handler(extra?: (c: StubCall) => StubReply | undefined) {
   return (c: StubCall) => {
     const hit = extra?.(c);
     if (hit) return hit;

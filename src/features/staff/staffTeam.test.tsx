@@ -19,6 +19,7 @@ import {
   pageOf,
   stubApi,
   type StubCall,
+  type StubReply,
 } from "@/features/profile/memberApiStub";
 import { StaffTeamCard } from "./StaffTeam";
 
@@ -111,9 +112,7 @@ const MEMBER = {
   createdAt: "2026-11-01T00:00:00.000Z",
 };
 
-function handler(
-  extra?: (c: StubCall) => ReturnType<Parameters<typeof stubApi>[0]>,
-) {
+function handler(extra?: (c: StubCall) => StubReply | undefined) {
   return (c: StubCall) => {
     const hit = extra?.(c);
     if (hit) return hit;
