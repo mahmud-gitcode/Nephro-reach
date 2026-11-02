@@ -29,7 +29,13 @@ import {
   uncharted,
 } from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
-import { combineReads } from "@/lib/data/asyncState";
+import {
+  canRetry,
+  combineReads,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
@@ -327,7 +333,7 @@ export default function DialysisTreatmentPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const isHome = modalityLog.modality === "home-hd";
   /* In-center and home logs are kept apart (client, 2026-10-12: "all three
-     of these are different"). Sample entries carry no modality: in-center. */
+     of these are different"). */
   const entries = log.entries.filter(
     (e) =>
       (e.modality ?? "in-center-hd") === (isHome ? "home-hd" : "in-center-hd"),
@@ -338,8 +344,11 @@ export default function DialysisTreatmentPage() {
   const latestAttended = visibleEntries.find(
     (e) => attendanceOf(e) !== "Missed",
   );
-  /* Scheduled days in the last week with nothing charted. */
-  const notCharted = uncharted(schedule.periods, log.entries, todayIso);
+  /* Scheduled days in the last week with nothing charted. Never asked
+     about the suggested typical week: only the member's own schedule. */
+  const notCharted = schedule.isDefault
+    ? []
+    : uncharted(schedule.periods, log.entries, todayIso);
 
   return (
     <div className="w-full space-y-stack-xl">
@@ -359,19 +368,31 @@ export default function DialysisTreatmentPage() {
       <AsyncSection
         pending={reads.pending}
         error={reads.error}
-        onRetry={reads.onRetry}
-        errorTitle={
+        onRetry={canRetry(reads.error) ? reads.onRetry : undefined}
+        errorTitle={errorTitleFor(
+          reads.error,
           isEs
             ? "No se pudo cargar tu registro de diálisis"
-            : "Your dialysis log could not be loaded"
-        }
+            : "Your dialysis log could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          reads.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         skeleton={<SkeletonText lines={6} />}
       >
         <ModalityTabs log={modalityLog} showPdRhythm />
 
+        {log.saveError ? (
+          <Alert tone="danger">
+            {saveErrorText(log.saveError, isEs ? "es" : "en")}
+          </Alert>
+        ) : null}
+
         {modalityLog.modality === "pd" ? (
           <PdExchangeLog
-            log={modalityLog}
             date={selectedDate ?? todayIso}
             dayLabel={formatPdDayLabel(selectedDate ?? todayIso, isEs)}
           />
@@ -495,6 +516,7 @@ export default function DialysisTreatmentPage() {
               <div className="xl:col-span-8">
                 <MedicationsGivenSection
                   treatmentDate={latestAttended?.date ?? todayIso}
+                  treatmentId={latestAttended?.id ?? null}
                 />
               </div>
               <div className="xl:col-span-4">

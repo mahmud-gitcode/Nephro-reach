@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 5;
+export const STORAGE_VERSION = 6;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -184,6 +184,61 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "clinic-labs-seen",
     since: 5,
     why: "Phase 6: seen is seenByPatientAt on the care team results (POST /patients/:id/labs/seen, patient only). No screen reads this key.",
+  },
+  {
+    name: "dialysis-modality",
+    since: 6,
+    why: "Phase 7: the dialysis type is the prescription (GET/POST/PATCH /patients/:id/dialysis/prescription; 404 = not set; memberCanEdit from the server). No screen reads this key.",
+  },
+  {
+    name: "dialysis-schedule",
+    since: 6,
+    why: "Phase 7: schedule periods are /patients/:id/dialysis/schedule (POST appends a dated period). The typical week shows only after a successful empty read and is never saved. No screen reads this key.",
+  },
+  {
+    name: "dialysis-treatments",
+    since: 6,
+    why: "Phase 7: treatments are /patients/:id/dialysis/treatments (HH:mm times, kg-only weights, post-symptoms saved); the sample sessions (mockDialysisEntries) are deleted. No screen reads this key.",
+  },
+  {
+    name: "treatment-medications",
+    since: 6,
+    why: "Phase 7: medications given are /patients/:id/dialysis/treatment-medications (givenOn YYYY-MM-DD, linked by treatment id); the sample rows (treatmentMedications.seed.ts) are deleted and old display-date rows are not imported. No screen reads this key.",
+  },
+  {
+    name: "dialysis-pd-exchanges",
+    since: 6,
+    why: "Phase 7: PD exchanges are /patients/:id/dialysis/pd-exchanges, read per day; ultrafiltration comes from the server. No screen reads this key.",
+  },
+  {
+    name: "dialysis-home-system",
+    since: 6,
+    why: "Phase 7: the home system is /patients/:id/dialysis/home-system (PUT; the server's checks). No screen reads this key.",
+  },
+  {
+    name: "dialysis-home-visits",
+    since: 6,
+    why: "Phase 7: home visits are /patients/:id/dialysis/home-visits. No screen reads this key.",
+  },
+  {
+    name: "dialysis-supplies",
+    since: 6,
+    why: "Phase 7: supply months are /patients/:id/dialysis/supplies/{yyyy-mm} (PUT the month). No screen reads this key.",
+  },
+  {
+    name: "provider-orders",
+    since: 6,
+    why: "Phase 7: provider orders are /patients/:id/dialysis/provider-orders (remindAt sent as an instant with an offset). No screen reads this key.",
+  },
+  {
+    name: "dialysis-access-photos",
+    since: 6,
+    why: "Phase 7: access photos are uploaded through /files and kept by file id on /patients/:id/dialysis/access-photos, opened through a short-lived link. The old rows held data: URL images; nothing renders them. No screen reads this key.",
+  },
+  {
+    name: "dialysis-urine-output",
+    since: 6,
+    why: "Phase 7: no screen reads or writes this key (the Urine Output section was removed 2026-10-05); urine output is /patients/:id/urine-output on the check-in. Removed so its old rows do not linger.",
   },
 ];
 

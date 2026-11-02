@@ -1,9 +1,24 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { PackageCheck } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Badge, Card, Input, SectionTitle, Select } from "@/components/ui";
+import {
+  Alert,
+  AsyncSection,
+  Badge,
+  Card,
+  Input,
+  SectionTitle,
+  Select,
+  Skeleton,
+} from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
 import { useSupplyChecklist } from "./useSupplyChecklist";
 import {
@@ -63,6 +78,10 @@ export default function SupplyChecklistSection({
   const groups = supplyGroupsFor(modality);
   const checklist = useSupplyChecklist(modality);
   const { counts, summary } = checklist;
+  /* Notes are typed locally and saved when the field is left (one PUT of
+     the month, not one per key). */
+  const [notesDraft, setNotesDraft] = useState<string | null>(null);
+  const lang = isEs ? "es" : "en";
 
   // Nothing to count at a centre — see the note at the top of this file.
   if (groups.length === 0) return null;
@@ -114,147 +133,176 @@ export default function SupplyChecklistSection({
           </li>
         </ol>
 
-        {/* Where the month stands, in one line. Three numbers, no prose. */}
-        <div className="mb-stack-md flex flex-wrap items-center gap-inline-md">
-          <Badge tone="neutral" variant="soft">
-            <PackageCheck aria-hidden="true" className="h-3.5 w-3.5" />
-            {isEs ? "Contados" : "Counted"} {summary.checked}/{summary.total}
-          </Badge>
-          {summary.low > 0 ? (
-            <Badge tone="warning" variant="soft">
-              {isEs ? "Por pedir" : "To order"} {summary.low}
+        {checklist.saveError ? (
+          <Alert
+            tone="danger"
+            className="mb-stack-md"
+            onDismiss={checklist.dismissSaveError}
+          >
+            {saveErrorText(checklist.saveError, lang)}
+          </Alert>
+        ) : null}
+
+        {/* A failed read is an error, never a month of zeros. */}
+        <AsyncSection
+          pending={checklist.isPending}
+          error={checklist.error}
+          onRetry={canRetry(checklist.error) ? checklist.refetch : undefined}
+          errorTitle={errorTitleFor(
+            checklist.error,
+            isEs ? "Tu lista no se cargó" : "Your checklist did not load",
+            lang,
+          )}
+          errorMessage={errorMessageFor(checklist.error, undefined, lang)}
+          skeleton={<Skeleton height={200} />}
+        >
+          {/* Where the month stands, in one line. Three numbers, no prose. */}
+          <div className="mb-stack-md flex flex-wrap items-center gap-inline-md">
+            <Badge tone="neutral" variant="soft">
+              <PackageCheck aria-hidden="true" className="h-3.5 w-3.5" />
+              {isEs ? "Contados" : "Counted"} {summary.checked}/{summary.total}
             </Badge>
-          ) : null}
-          {summary.missing > 0 ? (
-            <Badge tone="danger" variant="soft">
-              {isEs ? "Agotados" : "Out of stock"} {summary.missing}
-            </Badge>
-          ) : null}
-          {summary.stocked ? (
-            <Badge tone="success" variant="soft">
-              {isEs ? "Todo en existencia" : "Fully stocked"}
-            </Badge>
-          ) : null}
-        </div>
+            {summary.low > 0 ? (
+              <Badge tone="warning" variant="soft">
+                {isEs ? "Por pedir" : "To order"} {summary.low}
+              </Badge>
+            ) : null}
+            {summary.missing > 0 ? (
+              <Badge tone="danger" variant="soft">
+                {isEs ? "Agotados" : "Out of stock"} {summary.missing}
+              </Badge>
+            ) : null}
+            {summary.stocked ? (
+              <Badge tone="success" variant="soft">
+                {isEs ? "Todo en existencia" : "Fully stocked"}
+              </Badge>
+            ) : null}
+          </div>
 
-        <div className="space-y-stack-lg">
-          {groups.map((group) => (
-            <section
-              key={group.id}
-              aria-label={isEs ? group.labelEs : group.labelEn}
-            >
-              <h3 className="mb-inline-md text-label-lg text-fg-secondary">
-                {isEs ? group.labelEs : group.labelEn}
-              </h3>
+          <div className="space-y-stack-lg">
+            {groups.map((group) => (
+              <section
+                key={group.id}
+                aria-label={isEs ? group.labelEs : group.labelEn}
+              >
+                <h3 className="mb-inline-md text-label-lg text-fg-secondary">
+                  {isEs ? group.labelEs : group.labelEn}
+                </h3>
 
-              <ul className="space-y-inline-sm">
-                {group.items.map((item) => {
-                  const count = counts[item.id];
-                  const status = supplyStatus(item, count);
-                  const inputId = `supply-${item.id}`;
+                <ul className="space-y-inline-sm">
+                  {group.items.map((item) => {
+                    const count = counts[item.id];
+                    const status = supplyStatus(item, count);
+                    const inputId = `supply-${item.id}`;
 
-                  return (
-                    <li
-                      key={item.id}
-                      className="flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface px-inset-sm py-inset-xs"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`${inputId}-checked`}
-                        checked={count?.checked ?? false}
-                        onChange={(event) =>
-                          checklist.setCount(item.id, {
-                            checked: event.target.checked,
-                          })
-                        }
-                        aria-label={`${isEs ? "Contado" : "Counted"}: ${
-                          isEs ? item.labelEs : item.labelEn
-                        }`}
-                        className="size-5 shrink-0 cursor-pointer accent-brand-600"
-                      />
-
-                      <label
-                        htmlFor={`${inputId}-checked`}
-                        className="min-w-32 flex-1 cursor-pointer text-body-sm text-fg"
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface px-inset-sm py-inset-xs"
                       >
-                        {isEs ? item.labelEs : item.labelEn}
-                      </label>
+                        <input
+                          type="checkbox"
+                          id={`${inputId}-checked`}
+                          checked={count?.checked ?? false}
+                          onChange={(event) =>
+                            checklist.setCount(item.id, {
+                              checked: event.target.checked,
+                            })
+                          }
+                          aria-label={`${isEs ? "Contado" : "Counted"}: ${
+                            isEs ? item.labelEs : item.labelEn
+                          }`}
+                          className="size-5 shrink-0 cursor-pointer accent-brand-600"
+                        />
 
-                      {/* "I have" first: it is the number the member types
+                        <label
+                          htmlFor={`${inputId}-checked`}
+                          className="min-w-32 flex-1 cursor-pointer text-body-sm text-fg"
+                        >
+                          {isEs ? item.labelEs : item.labelEn}
+                        </label>
+
+                        {/* "I have" first: it is the number the member types
                         each month. The month's figure follows, labelled,
                         so "20 of 0" can no longer read backwards. */}
-                      <div className="flex items-end gap-inline-sm">
-                        <label className="flex w-24 shrink-0 flex-col gap-0.5">
-                          <span className="text-caption whitespace-nowrap text-fg-muted">
-                            {isEs ? "Tengo" : "I have"}
-                          </span>
-                          <Input
-                            type="number"
-                            min={0}
-                            inputSize="small"
-                            className="w-full text-center"
-                            value={String(count?.have ?? 0)}
-                            onChange={(event) =>
-                              checklist.setCount(item.id, {
-                                have: Number(event.target.value) || 0,
-                              })
-                            }
-                          />
-                        </label>
-                        <label className="flex w-24 shrink-0 flex-col gap-0.5">
-                          <span className="text-caption whitespace-nowrap text-fg-muted">
-                            {isEs ? "Al mes" : "Need / month"}
-                          </span>
-                          <Input
-                            type="number"
-                            min={0}
-                            inputSize="small"
-                            className="w-full text-center"
-                            value={String(neededFor(item, count))}
-                            onChange={(event) =>
-                              checklist.setCount(item.id, {
-                                needed: Number(event.target.value) || 0,
-                              })
-                            }
-                          />
-                        </label>
-                        <Badge
-                          tone={TONES[status]}
-                          variant="soft"
-                          className="mb-1.5 min-w-32 justify-center"
-                        >
-                          {statusAdvice(item, count, isEs)}
-                        </Badge>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
+                        <div className="flex items-end gap-inline-sm">
+                          <label className="flex w-24 shrink-0 flex-col gap-0.5">
+                            <span className="text-caption whitespace-nowrap text-fg-muted">
+                              {isEs ? "Tengo" : "I have"}
+                            </span>
+                            <Input
+                              type="number"
+                              min={0}
+                              inputSize="small"
+                              className="w-full text-center"
+                              value={String(count?.have ?? 0)}
+                              onChange={(event) =>
+                                checklist.setCount(item.id, {
+                                  have: Number(event.target.value) || 0,
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="flex w-24 shrink-0 flex-col gap-0.5">
+                            <span className="text-caption whitespace-nowrap text-fg-muted">
+                              {isEs ? "Al mes" : "Need / month"}
+                            </span>
+                            <Input
+                              type="number"
+                              min={0}
+                              inputSize="small"
+                              className="w-full text-center"
+                              value={String(neededFor(item, count))}
+                              onChange={(event) =>
+                                checklist.setCount(item.id, {
+                                  needed: Number(event.target.value) || 0,
+                                })
+                              }
+                            />
+                          </label>
+                          <Badge
+                            tone={TONES[status]}
+                            variant="soft"
+                            className="mb-1.5 min-w-32 justify-center"
+                          >
+                            {statusAdvice(item, count, isEs)}
+                          </Badge>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
 
-        <div className="mt-stack-lg">
-          <label
-            htmlFor="supply-notes"
-            className="mb-inline-sm block text-label-md text-fg-secondary"
-          >
-            {isEs ? "Notas" : "Notes"}
-          </label>
-          <textarea
-            id="supply-notes"
-            rows={2}
-            maxLength={500}
-            value={checklist.month.notes}
-            onChange={(event) => checklist.setNotes(event.target.value)}
-            placeholder={
-              isEs
-                ? "Qué pedir, fechas de caducidad..."
-                : "What to order, expiry dates..."
-            }
-            className="w-full resize-none rounded-control border border-line bg-surface px-inset-sm py-inset-xs text-body-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary-soft-line focus:ring-2 focus:ring-ring/60"
-          />
-        </div>
+          <div className="mt-stack-lg">
+            <label
+              htmlFor="supply-notes"
+              className="mb-inline-sm block text-label-md text-fg-secondary"
+            >
+              {isEs ? "Notas" : "Notes"}
+            </label>
+            <textarea
+              id="supply-notes"
+              rows={2}
+              maxLength={500}
+              value={notesDraft ?? checklist.month.notes}
+              onChange={(event) => setNotesDraft(event.target.value)}
+              onBlur={() => {
+                if (notesDraft !== null && notesDraft !== checklist.month.notes)
+                  checklist.setNotes(notesDraft);
+                setNotesDraft(null);
+              }}
+              placeholder={
+                isEs
+                  ? "Qué pedir, fechas de caducidad..."
+                  : "What to order, expiry dates..."
+              }
+              className="w-full resize-none rounded-control border border-line bg-surface px-inset-sm py-inset-xs text-body-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary-soft-line focus:ring-2 focus:ring-ring/60"
+            />
+          </div>
+        </AsyncSection>
       </Card>
 
       {/* Send the month's list to the supplier, a caregiver or the care

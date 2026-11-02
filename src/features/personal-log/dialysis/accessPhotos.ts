@@ -5,25 +5,15 @@
    so they photograph it. The picture is evidence for the care team, not an
    album.
 
-   STORAGE, AND WHY IT LOOKS LIKE THIS
-   -----------------------------------
-   There is no backend yet, so a photo has to live in localStorage with
-   everything else. The camera on a modern phone produces 3–5 MB per shot,
-   base64 adds a third again, and the whole origin gets about 5 MB — so
-   storing what the member picked would blow the quota on the second photo
-   and take every other feature's data down with it.
-
-   Two rules keep it inside the budget, both enforced here rather than
-   trusted to the member:
-
-     · every photo is re-encoded to at most MAX_EDGE on its long side at
-       JPEG quality QUALITY, which lands a typical shot at 100–200 KB;
-     · at most MAX_PHOTOS are kept, oldest dropped first.
-
-   That is roughly 2 MB at worst. It is deliberately a thumbnail: enough for
-   a nurse to see redness, swelling or a cracked line, not a diagnostic
-   image. When there is a real backend, the original should be uploaded and
-   this downscale kept only for the on-page preview.
+   ON THE SERVER (Phase 7)
+   -----------------------
+   A photo is uploaded through /files (`uploadFile`, the server's allowlist
+   and 10 MB cap) and only its file id is sent, to
+   `/patients/:id/dialysis/access-photos`. The picture is never kept in the
+   browser: it opens through a short-lived download link, asked for when it
+   is shown. Before upload it is still shrunk to at most MAX_EDGE on its long
+   side (a File, never a stored data: URL), which keeps uploads small on a
+   phone connection.
    ========================================================================== */
 
 export const MAX_EDGE = 1024;
@@ -52,29 +42,30 @@ export function subjectLabel(value: PhotoSubject, isEs: boolean): string {
 }
 
 /**
- * A photo as a message attachment: its name, a size label, and a copy of
- * the image. Copied rather than referenced so a sent message still shows it
- * after the member deletes the original from their log.
+ * A photo as a message attachment: its name only. The image is NOT copied
+ * into the message any more (no data: URLs, ADR 0007 §4); messaging will
+ * reference the photo's file id (COLLAB, Phase 11).
  */
 export function photoAttachment(
   photo: AccessPhoto,
   isEs: boolean,
-): { name: string; sizeLabel: string; imageUrl: string } {
-  // base64 carries 3 bytes in every 4 characters.
-  const base64 = photo.dataUrl.slice(photo.dataUrl.indexOf(",") + 1);
-  const kb = Math.max(1, Math.round((base64.length * 3) / 4 / 1024));
+): { name: string; sizeLabel: string } {
   const label = subjectLabel(photo.subject, isEs);
   return {
     name: photo.note ? `${label} — ${photo.note}` : label,
-    sizeLabel: `JPEG · ${kb} KB`,
-    imageUrl: photo.dataUrl,
+    sizeLabel: "JPEG",
   };
 }
 
 export interface AccessPhoto {
   id: string;
-  /** A downscaled JPEG data URL — see the note at the top of this file. */
-  dataUrl: string;
+  /**
+   * @deprecated Gone since Phase 7: the picture is on the server, opened
+   * through `link(id)` / `AccessPhotoImage`. Always undefined; kept only so
+   * OFFICE's vascular-access screen (which still reads it) compiles until
+   * that lane switches to the link (Lead coordination note).
+   */
+  dataUrl?: undefined;
   subject: PhotoSubject;
   note: string;
   /** ISO 8601. */
@@ -146,38 +137,4 @@ export function removePhoto(photos: AccessPhoto[], id: string): AccessPhoto[] {
 /** Newest first, which is the order a care team would want to look. */
 export function sortPhotos(photos: AccessPhoto[]): AccessPhoto[] {
   return [...photos].sort((a, b) => b.takenAt.localeCompare(a.takenAt));
-}
-
-/** Read stored photos back, dropping anything without an image in it. */
-export function normalisePhotos(stored: unknown): AccessPhoto[] {
-  if (!Array.isArray(stored)) return [];
-
-  return stored.flatMap((value) => {
-    if (!value || typeof value !== "object") return [];
-    const raw = value as Partial<AccessPhoto>;
-
-    if (
-      typeof raw.id !== "string" ||
-      typeof raw.dataUrl !== "string" ||
-      !raw.dataUrl.startsWith("data:image/")
-    ) {
-      return [];
-    }
-
-    return [
-      {
-        id: raw.id,
-        dataUrl: raw.dataUrl,
-        subject: PHOTO_SUBJECTS.some((entry) => entry.value === raw.subject)
-          ? (raw.subject as PhotoSubject)
-          : "other",
-        note: typeof raw.note === "string" ? raw.note : "",
-        takenAt:
-          typeof raw.takenAt === "string"
-            ? raw.takenAt
-            : new Date(0).toISOString(),
-        sent: raw.sent === true,
-      },
-    ];
-  });
 }

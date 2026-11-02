@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Select, Tabs } from "@/components/ui";
+import { Alert, Select, Tabs } from "@/components/ui";
+import { dialysisSaveErrorText } from "./dialysisErrors";
 import {
   MODALITY_OPTIONS,
   PD_SCHEDULE_OPTIONS,
@@ -25,6 +26,12 @@ import type { DialysisModalityLog } from "./useDialysisModality";
 
    Full names on a wide screen, short names below `sm` — "Peritoneal
    dialysis" cannot share a phone's width with two siblings.
+
+   Phase 7: the type is the prescription's. When the server says the member
+   may not change it (`memberCanEdit` false: a dialysis center manages an
+   in-center prescription, D16) the strip and the PD questions are shown
+   read-only with the reason; nothing is merely hidden. A change the server
+   refuses anyway is shown, not swallowed.
    ========================================================================== */
 
 export default function ModalityTabs({
@@ -44,9 +51,13 @@ export default function ModalityTabs({
   const { language } = useLanguage();
   const isEs = language === "ES";
   const { settings, modality } = log;
+  const readOnly = !log.memberCanEdit || log.notOnDialysis;
 
   const items = MODALITY_OPTIONS.map((option) => ({
     id: option.value,
+    /* Read-only: the current type stays selected, the others cannot be
+       picked. */
+    disabled: readOnly && option.value !== modality,
     label: (
       /* Both variants are in the DOM and CSS picks one, so both would be
          announced — "Peritoneal dialysis PD". The visible pair is hidden
@@ -70,10 +81,41 @@ export default function ModalityTabs({
       <Tabs
         items={items}
         value={modality}
-        onChange={(next) => log.setModality(next as DialysisModality)}
+        onChange={(next) => {
+          if (readOnly || next === modality) return;
+          log.setModality(next as DialysisModality);
+        }}
         label={isEs ? "Tipo de diálisis" : "Dialysis type"}
         fullWidth
       />
+
+      {log.notOnDialysis ? (
+        <Alert tone="info" className="mt-stack-md">
+          {isEs
+            ? "Tu receta dice que no estás en diálisis. Tu equipo de atención la actualiza."
+            : "Your prescription says you are not on dialysis. Your care team updates it."}
+        </Alert>
+      ) : !log.memberCanEdit ? (
+        <Alert tone="info" className="mt-stack-md">
+          {log.facilityName
+            ? isEs
+              ? `Tu centro de diálisis (${log.facilityName}) maneja tu receta y tu horario. Pídeles cualquier cambio.`
+              : `Your dialysis center (${log.facilityName}) manages your prescription and schedule. Ask them for any change.`
+            : isEs
+              ? "Tu centro de diálisis maneja tu receta y tu horario. Pídeles cualquier cambio."
+              : "Your dialysis center manages your prescription and schedule. Ask them for any change."}
+        </Alert>
+      ) : null}
+
+      {log.saveError ? (
+        <Alert
+          tone="danger"
+          className="mt-stack-md"
+          onDismiss={log.dismissSaveError}
+        >
+          {dialysisSaveErrorText(log.saveError, isEs ? "es" : "en")}
+        </Alert>
+      ) : null}
 
       {/* Only PD has a rhythm to ask about. Haemodialysis of either kind is
           already described by the weekly schedule on the management tab. */}
@@ -89,6 +131,7 @@ export default function ModalityTabs({
             <Select
               id="pd-schedule"
               selectSize="small"
+              disabled={readOnly}
               value={settings.pdSchedule}
               onChange={(event) =>
                 log.saveSettings({
@@ -120,6 +163,7 @@ export default function ModalityTabs({
             <Select
               id="pd-exchanges"
               selectSize="small"
+              disabled={readOnly}
               value={String(settings.exchangesPerDay)}
               onChange={(event) =>
                 log.saveSettings({

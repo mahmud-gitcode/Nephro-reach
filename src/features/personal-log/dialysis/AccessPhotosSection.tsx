@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Image from "next/image";
 import { Camera, Trash2, Upload } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   Card,
@@ -13,10 +13,18 @@ import {
   Input,
   SectionTitle,
   Select,
+  Skeleton,
 } from "@/components/ui";
-import { useAccessPhotos } from "./useAccessPhotos";
 import {
-  MAX_PHOTOS,
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
+import { uploadErrorMessage } from "@/lib/api/upload";
+import { useAccessPhotos } from "./useAccessPhotos";
+import { AccessPhotoImage } from "./AccessPhotoImage";
+import {
   PHOTO_SUBJECTS,
   fileError,
   subjectLabel,
@@ -29,9 +37,9 @@ import {
    A member cannot show a nurse a red exit site down the phone, so they
    photograph it and it goes to the care team with the message.
 
-   Every picture is re-encoded to a bounded thumbnail on the way in, and the
-   list is capped — see accessPhotos.ts for why that is not optional while
-   the app stores everything in localStorage.
+   Every picture is shrunk, uploaded through /files and kept on the server
+   by file id (Phase 7); each one opens through a short-lived link. Nothing
+   about it stays in this browser.
    ========================================================================== */
 
 export default function AccessPhotosSection() {
@@ -55,7 +63,7 @@ export default function AccessPhotosSection() {
     setPickError(problem);
     if (problem) return;
 
-    log.add(file, subject, note.trim());
+    void log.add(file, subject, note.trim());
     setNote("");
   };
 
@@ -65,7 +73,7 @@ export default function AccessPhotosSection() {
         title={isEs ? "Fotos" : "Photos"}
         action={
           <Badge tone="neutral" variant="soft">
-            {log.photos.length}/{MAX_PHOTOS}
+            {log.photos.length}
           </Badge>
         }
       />
@@ -137,73 +145,89 @@ export default function AccessPhotosSection() {
       ) : null}
 
       {log.encodeError ? (
-        <Alert tone="danger" className="mb-stack-md">
+        <Alert
+          tone="danger"
+          className="mb-stack-md"
+          onDismiss={log.dismissErrors}
+        >
           {isEs
-            ? "No se pudo leer esa imagen."
-            : "That image could not be read."}
+            ? "No se pudo subir esa imagen."
+            : uploadErrorMessage(log.encodeError)}
         </Alert>
       ) : null}
 
       {log.saveError ? (
-        <Alert tone="danger" className="mb-stack-md">
-          {isEs
-            ? "No hay espacio para guardarla. Borra una foto anterior."
-            : "There is no room to save it. Delete an older photo."}
+        <Alert
+          tone="danger"
+          className="mb-stack-md"
+          onDismiss={log.dismissErrors}
+        >
+          {saveErrorText(log.saveError, isEs ? "es" : "en")}
         </Alert>
       ) : null}
 
-      {log.photos.length === 0 ? (
-        <EmptyState
-          title={isEs ? "Sin fotos" : "No photos yet"}
-          description={
-            isEs
-              ? "Sube una foto si algo se ve mal en tu acceso o tu equipo."
-              : "Upload a photo if something looks wrong with your access or equipment."
-          }
-        />
-      ) : (
-        <ul className="grid grid-cols-2 gap-inline-md sm:grid-cols-3 lg:grid-cols-4">
-          {log.photos.map((photo) => (
-            <li
-              key={photo.id}
-              className="overflow-hidden rounded-control border border-line bg-surface"
-            >
-              <div className="relative aspect-square w-full bg-surface-sunken">
-                <Image
-                  src={photo.dataUrl}
-                  alt={`${subjectLabel(photo.subject, isEs)}${photo.note ? ` — ${photo.note}` : ""}`}
-                  fill
-                  unoptimized
-                  sizes="(max-width: 640px) 50vw, 25vw"
-                  className="object-cover"
-                />
-              </div>
+      <AsyncSection
+        pending={log.isPending}
+        error={log.error}
+        onRetry={canRetry(log.error) ? log.refetch : undefined}
+        errorTitle={errorTitleFor(
+          log.error,
+          isEs ? "Tus fotos no se cargaron" : "Your photos did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(log.error, undefined, isEs ? "es" : "en")}
+        skeleton={<Skeleton height={120} />}
+      >
+        {log.photos.length === 0 ? (
+          <EmptyState
+            title={isEs ? "Sin fotos" : "No photos yet"}
+            description={
+              isEs
+                ? "Sube una foto si algo se ve mal en tu acceso o tu equipo."
+                : "Upload a photo if something looks wrong with your access or equipment."
+            }
+          />
+        ) : (
+          <ul className="grid grid-cols-2 gap-inline-md sm:grid-cols-3 lg:grid-cols-4">
+            {log.photos.map((photo) => (
+              <li
+                key={photo.id}
+                className="overflow-hidden rounded-control border border-line bg-surface"
+              >
+                <div className="relative aspect-square w-full bg-surface-sunken">
+                  <AccessPhotoImage
+                    photoId={photo.id}
+                    alt={`${subjectLabel(photo.subject, isEs)}${photo.note ? ` — ${photo.note}` : ""}`}
+                    className="absolute inset-0"
+                  />
+                </div>
 
-              <div className="space-y-1 p-inset-xs">
-                <span className="flex items-center gap-inline-xs text-body-sm font-semibold text-fg">
-                  <Camera aria-hidden="true" className="h-3.5 w-3.5" />
-                  {subjectLabel(photo.subject, isEs)}
-                </span>
-                {photo.note ? (
-                  <span className="block truncate text-body-sm text-fg-muted">
-                    {photo.note}
+                <div className="space-y-1 p-inset-xs">
+                  <span className="flex items-center gap-inline-xs text-body-sm font-semibold text-fg">
+                    <Camera aria-hidden="true" className="h-3.5 w-3.5" />
+                    {subjectLabel(photo.subject, isEs)}
                   </span>
-                ) : null}
+                  {photo.note ? (
+                    <span className="block truncate text-body-sm text-fg-muted">
+                      {photo.note}
+                    </span>
+                  ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => log.remove(photo.id)}
-                  aria-label={`${isEs ? "Eliminar foto" : "Delete photo"} — ${subjectLabel(photo.subject, isEs)}`}
-                  className="inline-flex cursor-pointer items-center gap-inline-xs rounded-control p-1 text-body-sm text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {isEs ? "Eliminar" : "Delete"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <button
+                    type="button"
+                    onClick={() => log.remove(photo.id)}
+                    aria-label={`${isEs ? "Eliminar foto" : "Delete photo"} — ${subjectLabel(photo.subject, isEs)}`}
+                    className="inline-flex cursor-pointer items-center gap-inline-xs rounded-control p-1 text-body-sm text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {isEs ? "Eliminar" : "Delete"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AsyncSection>
     </Card>
   );
 }

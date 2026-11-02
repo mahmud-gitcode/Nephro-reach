@@ -5,6 +5,7 @@ import { Bell, CalendarPlus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   Card,
@@ -13,8 +14,15 @@ import {
   Modal,
   SectionTitle,
   Select,
+  Skeleton,
 } from "@/components/ui";
 import { useHomeVisits } from "./useHomeVisits";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import {
   VISIT_PROVIDERS,
   VISIT_STATUSES,
@@ -95,8 +103,7 @@ export default function HomeVisitsSection({
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (error) return;
-    log.save(draft, editing?.id);
-    setIsOpen(false);
+    log.save(draft, editing?.id, () => setIsOpen(false));
   };
 
   const set = (patch: Partial<HomeVisitDraft>) =>
@@ -122,59 +129,82 @@ export default function HomeVisitsSection({
         </Alert>
       ) : null}
 
-      {log.ordered.length === 0 ? (
-        <EmptyState
-          title={isEs ? "Sin visitas" : "No visits yet"}
-          description={
-            isEs
-              ? "Agrega la próxima visita de tu enfermera o biomédico."
-              : "Add your next nurse or biomed visit."
-          }
-        />
-      ) : (
-        <ul className="space-y-inline-sm">
-          {log.ordered.map((visit) => (
-            <li
-              key={visit.id}
-              className="flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface px-inset-sm py-inset-xs"
-            >
-              <button
-                type="button"
-                onClick={() => openEdit(visit)}
-                className="min-w-0 flex-1 cursor-pointer text-left"
+      {log.saveError ? (
+        <Alert
+          tone="danger"
+          className="mb-stack-md"
+          onDismiss={log.dismissSaveError}
+        >
+          {saveErrorText(log.saveError, isEs ? "es" : "en")}
+        </Alert>
+      ) : null}
+
+      <AsyncSection
+        pending={log.isPending}
+        error={log.error}
+        onRetry={canRetry(log.error) ? log.refetch : undefined}
+        errorTitle={errorTitleFor(
+          log.error,
+          isEs ? "Tus visitas no se cargaron" : "Your visits did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(log.error, undefined, isEs ? "es" : "en")}
+        skeleton={<Skeleton height={100} />}
+      >
+        {log.ordered.length === 0 ? (
+          <EmptyState
+            title={isEs ? "Sin visitas" : "No visits yet"}
+            description={
+              isEs
+                ? "Agrega la próxima visita de tu enfermera o biomédico."
+                : "Add your next nurse or biomed visit."
+            }
+          />
+        ) : (
+          <ul className="space-y-inline-sm">
+            {log.ordered.map((visit) => (
+              <li
+                key={visit.id}
+                className="flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface px-inset-sm py-inset-xs"
               >
-                <span className="block truncate text-body-sm font-semibold text-fg">
-                  {formatVisitDate(visit.date, visit.time, isEs)}
-                </span>
-                <span className="block truncate text-body-sm text-fg-muted">
-                  {providerLabel(visit.provider, isEs)}
-                  {visit.purpose ? ` · ${visit.purpose}` : ""}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openEdit(visit)}
+                  className="min-w-0 flex-1 cursor-pointer text-left"
+                >
+                  <span className="block truncate text-body-sm font-semibold text-fg">
+                    {formatVisitDate(visit.date, visit.time, isEs)}
+                  </span>
+                  <span className="block truncate text-body-sm text-fg-muted">
+                    {providerLabel(visit.provider, isEs)}
+                    {visit.purpose ? ` · ${visit.purpose}` : ""}
+                  </span>
+                </button>
 
-              {visit.remind && visit.status === "scheduled" ? (
-                <Bell
-                  aria-label={isEs ? "Recordatorio activo" : "Reminder on"}
-                  className="h-4 w-4 shrink-0 text-fg-muted"
-                />
-              ) : null}
+                {visit.remind && visit.status === "scheduled" ? (
+                  <Bell
+                    aria-label={isEs ? "Recordatorio activo" : "Reminder on"}
+                    className="h-4 w-4 shrink-0 text-fg-muted"
+                  />
+                ) : null}
 
-              <Badge tone={STATUS_TONES[visit.status]} variant="soft">
-                {statusLabel(visit.status, isEs)}
-              </Badge>
+                <Badge tone={STATUS_TONES[visit.status]} variant="soft">
+                  {statusLabel(visit.status, isEs)}
+                </Badge>
 
-              <button
-                type="button"
-                onClick={() => log.remove(visit.id)}
-                aria-label={`${isEs ? "Eliminar visita" : "Delete visit"} — ${formatVisitDate(visit.date, visit.time, isEs)}`}
-                className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <button
+                  type="button"
+                  onClick={() => log.remove(visit.id)}
+                  aria-label={`${isEs ? "Eliminar visita" : "Delete visit"} — ${formatVisitDate(visit.date, visit.time, isEs)}`}
+                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AsyncSection>
 
       <Modal
         open={isOpen}

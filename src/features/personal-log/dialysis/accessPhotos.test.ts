@@ -4,7 +4,6 @@ import {
   MAX_PHOTOS,
   addPhoto,
   capPhotos,
-  normalisePhotos,
   removePhoto,
   scaledSize,
   sortPhotos,
@@ -12,11 +11,8 @@ import {
   type AccessPhoto,
 } from "./accessPhotos";
 
-const PIXEL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAA=";
-
 function photo(patch: Partial<AccessPhoto> & { id: string }): AccessPhoto {
   return {
-    dataUrl: PIXEL,
     subject: "access",
     note: "",
     takenAt: "2026-09-11T08:00:00.000Z",
@@ -98,28 +94,10 @@ describe("the list a care team reads", () => {
   });
 });
 
-describe("reading stored photos back", () => {
-  it("drops a row with nothing to show", () => {
-    // Without a usable data URL there is no picture, and an entry that
-    // renders a broken image is worse than one that is not there.
-    expect(normalisePhotos([{ id: "a" }])).toEqual([]);
-    expect(
-      normalisePhotos([{ id: "a", dataUrl: "https://example.com/x" }]),
-    ).toEqual([]);
-    expect(normalisePhotos(null)).toEqual([]);
-  });
-
-  it("keeps a row that carries an image", () => {
-    const [read] = normalisePhotos([{ id: "a", dataUrl: PIXEL }]);
-    expect(read.dataUrl).toBe(PIXEL);
-    expect(read.subject).toBe("other");
-    expect(read.sent).toBe(false);
-  });
-
-  it("refuses a subject it does not recognise", () => {
-    const [read] = normalisePhotos([
-      { id: "a", dataUrl: PIXEL, subject: "x-ray" },
-    ]);
-    expect(read.subject).toBe("other");
+describe("photos live on the server (Phase 7)", () => {
+  it("a photo carries no picture data, only its id and details", () => {
+    const one = photo({ id: "a" });
+    expect(one.dataUrl).toBeUndefined();
+    expect(JSON.stringify(one)).not.toContain("data:");
   });
 });

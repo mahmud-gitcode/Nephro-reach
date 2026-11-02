@@ -19,10 +19,17 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import { useTreatmentMedications } from "@/features/personal-log/useTreatmentMedications";
 import {
-  useTreatmentMedications,
-  type TreatmentMedication,
-} from "@/features/personal-log/useTreatmentMedications";
+  parseGivenOn,
+  rowDate,
+} from "@/features/personal-log/treatmentMedications.types";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 
 const OTHER_MEDICATION = "__other__";
 
@@ -102,24 +109,17 @@ const DOSE_UNITS: { value: string; descEn: string; descEs: string }[] = [
   { value: "dose", descEn: "", descEs: "dosis" },
 ];
 
-/** "May 31, 2024", the way these rows have always stored their date. */
-function rowDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 /* One treatment's medications. Each treatment starts blank; the member can
    bring in the ones they get every week and tick whether they got them
    this time (client, 2026-10-12). */
 export default function MedicationsGivenSection({
   treatmentDate,
+  treatmentId = null,
 }: {
   /** yyyy-mm-dd: the treatment these rows belong to. */
   treatmentDate: string;
+  /** The server id of that treatment, when it is charted: new rows link to it. */
+  treatmentId?: string | null;
 }) {
   const { language } = useLanguage();
   const dayLabel = rowDate(treatmentDate);
@@ -136,24 +136,26 @@ export default function MedicationsGivenSection({
     dismissSaveError,
   } = useTreatmentMedications();
   const all = medications;
-  const forDay = all.filter((m) => m.date === dayLabel);
+  const forDay = all.filter((m) => m.givenOn === treatmentDate);
   /* The medications of the most recent other treatment, to start from. */
-  const lastOther = all.find((m) => m.date !== dayLabel)?.date;
+  const lastOther = all.find((m) => m.givenOn !== treatmentDate)?.givenOn;
   const regular = lastOther
     ? Array.from(
         new Map(
           all
-            .filter((m) => m.date === lastOther)
+            .filter((m) => m.givenOn === lastOther)
             .map((m) => [m.medication, m] as const),
         ).values(),
       )
     : [];
   const bringRegular = () => {
-    regular.forEach((m, index) => {
+    regular.forEach((m) => {
       void add({
-        ...m,
-        id: `${Date.now()}-${index}`,
-        date: dayLabel,
+        givenOn: treatmentDate,
+        treatmentId,
+        medication: m.medication,
+        dose: m.dose,
+        reason: m.reason,
         given: false,
       }).catch(() => {});
     });
@@ -226,26 +228,30 @@ export default function MedicationsGivenSection({
       return;
     }
 
-    const newEntry: TreatmentMedication = {
-      id: Date.now().toString(),
-      date: formDate.trim() || "Today",
+    /* The typed day ("May 31, 2024") as YYYY-MM-DD; an empty field is the
+       treatment's own day. */
+    const givenOn = formDate.trim() ? parseGivenOn(formDate) : treatmentDate;
+    if (!givenOn) {
+      setFormMedError(
+        language === "ES"
+          ? "Escriba la fecha como May 31, 2024."
+          : "Enter the date like May 31, 2024.",
+      );
+      return;
+    }
+
+    /* The modal stays open until the entry is actually stored. */
+    add({
+      givenOn,
+      treatmentId: givenOn === treatmentDate ? treatmentId : null,
       medication: medicationName,
       dose: `${formDose.trim()} ${doseUnit}`,
       reason: formReason.trim() || "Dialysis Support",
       given: true,
-    };
-
-    /* The modal stays open until the entry is actually stored. */
-    add(newEntry)
+    })
       .then(() => setIsMedModalOpen(false))
       .catch((cause: unknown) =>
-        setFormMedError(
-          cause instanceof Error
-            ? cause.message
-            : language === "ES"
-              ? "No se pudo guardar."
-              : "That could not be saved.",
-        ),
+        setFormMedError(saveErrorText(cause, language === "ES" ? "es" : "en")),
       );
   };
 
@@ -287,11 +293,7 @@ export default function MedicationsGivenSection({
           }
           onDismiss={dismissSaveError}
         >
-          {saveError instanceof Error
-            ? saveError.message
-            : language === "ES"
-              ? "Inténtelo de nuevo."
-              : "Please try again."}
+          {saveErrorText(saveError, language === "ES" ? "es" : "en")}
         </Alert>
       ) : null}
 
@@ -299,12 +301,19 @@ export default function MedicationsGivenSection({
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle={
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
           language === "ES"
             ? "No se pudo cargar el registro"
-            : "This record did not load"
-        }
+            : "This record did not load",
+          language === "ES" ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          error,
+          undefined,
+          language === "ES" ? "es" : "en",
+        )}
         skeleton={<Skeleton height={220} />}
       >
         <div className="flex-1 overflow-hidden rounded-card-nested border border-line">

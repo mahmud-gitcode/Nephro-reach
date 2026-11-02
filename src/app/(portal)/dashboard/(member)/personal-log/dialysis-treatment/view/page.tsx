@@ -16,7 +16,13 @@ import {
   Smile,
 } from "lucide-react";
 import type { DialysisLogEntry } from "@/features/personal-log/dialysisTreatmentData";
-import { useTreatmentLog } from "@/features/personal-log/dialysis/useTreatmentLog";
+import { useTreatmentEntry } from "@/features/personal-log/dialysis/useTreatmentLog";
+import { useTreatmentMedications } from "@/features/personal-log/useTreatmentMedications";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import {
   attendanceOf,
   fluidRemovedKg,
@@ -24,6 +30,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
+  AsyncSection,
   Badge,
   buttonStyles,
   Card,
@@ -100,14 +107,38 @@ function DetailRow({
 }
 
 function TreatmentDetailContent() {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
+  const lang = language === "ES" ? "es" : "en";
   const dt = dictionary.dialysisTreatment;
   const searchParams = useSearchParams();
   const entryId = searchParams.get("id") ?? "";
-  const log = useTreatmentLog();
-  const found = log.entries.find((e) => e.id === entryId);
+  /* Read by id from the API: a failed read is an error (a 403 is "not
+     shared"), a 404 is "not in your log". */
+  const one = useTreatmentEntry(entryId || null);
+  const found = one.entry;
 
-  if (log.isPending) return <FallbackLoading />;
+  if (one.isPending) return <FallbackLoading />;
+  if (one.isError) {
+    return (
+      <div className="mx-auto w-full max-w-5xl py-12">
+        <AsyncSection
+          pending={false}
+          error={one.error}
+          onRetry={canRetry(one.error) ? one.refetch : undefined}
+          errorTitle={errorTitleFor(
+            one.error,
+            lang === "es"
+              ? "No se pudo cargar este tratamiento"
+              : "This treatment could not be loaded",
+            lang,
+          )}
+          errorMessage={errorMessageFor(one.error, undefined, lang)}
+        >
+          {null}
+        </AsyncSection>
+      </div>
+    );
+  }
   if (!found) {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-stack-md py-12 text-center">
@@ -127,10 +158,21 @@ function TreatmentDetailContent() {
 }
 
 function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
+  const lang = language === "ES" ? "es" : "en";
   const dt = dictionary.dialysisTreatment;
   const isHome = entry.modality === "home-hd";
   const removed = fluidRemovedKg(entry.preWeight, entry.postWeight);
+  /* Medications given are their own rows, linked by treatment id (or
+     charted for that day without one). */
+  const meds = useTreatmentMedications();
+  const medicationsGiven = meds.medications
+    .filter(
+      (m) =>
+        m.treatmentId === entry.id ||
+        (m.treatmentId === null && m.givenOn === entry.date),
+    )
+    .map((m) => `${m.medication} ${m.dose}`.trim());
 
   const preMoodConfig = MOOD_CONFIG[entry.preOverallFeel] || MOOD_CONFIG[4];
   const PreMoodIcon = preMoodConfig.icon;
@@ -441,6 +483,27 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
             />
           </div>
 
+          {/* Post-treatment symptoms (saved since Phase 7). */}
+          {entry.postSymptoms && entry.postSymptoms.length > 0 ? (
+            <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
+              <h3 className="text-heading-4 text-fg">
+                {lang === "es"
+                  ? "Síntomas después del tratamiento"
+                  : "Post-treatment symptoms"}
+              </h3>
+              <div className="flex flex-wrap gap-inline-md">
+                {entry.postSymptoms.map((sym) => (
+                  <span
+                    key={sym}
+                    className="rounded-control border border-transparent bg-primary-solid px-inset-sm py-1 text-label-sm text-primary-on-solid shadow-control"
+                  >
+                    {sym}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {/* Clinical Measurements (4 Vitals Cards from Form) */}
           <div className="space-y-3 pt-2">
             <h3 className="text-heading-4 text-fg">
@@ -505,8 +568,8 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               </span>
             </h3>
             <div className="flex flex-wrap gap-inline-md">
-              {entry.medicationsGiven && entry.medicationsGiven.length > 0 ? (
-                entry.medicationsGiven.map((med) => (
+              {medicationsGiven.length > 0 ? (
+                medicationsGiven.map((med) => (
                   <span
                     key={med}
                     className="rounded-control border border-transparent bg-primary-solid px-inset-sm py-1 text-label-sm text-primary-on-solid shadow-control"

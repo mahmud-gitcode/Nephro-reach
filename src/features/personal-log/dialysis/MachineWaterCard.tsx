@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Check } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   Card,
@@ -12,8 +13,16 @@ import {
   Input,
   SectionTitle,
   Select,
+  Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import { useHomeSystem } from "./useHomeHd";
+import { EquipmentEventsSection } from "./EquipmentEventsSection";
 import { MACHINE_TYPES, type DueState, type MachineType } from "./homeHd";
 
 /* ==========================================================================
@@ -25,6 +34,11 @@ import { MACHINE_TYPES, type DueState, type MachineType } from "./homeHd";
 
    An unrecorded date shows as unknown, not as fine. A green tick over a
    blank field is the kind of reassurance that gets somebody hurt.
+
+   Phase 7: the system is `/dialysis/home-system` on the server, which also
+   works out the two checks. The serial number is saved when the field is
+   left (one save, not one per key). The maintenance history below it
+   (equipment events) is new.
    ========================================================================== */
 
 const STATE_TONES: Record<
@@ -54,6 +68,9 @@ export default function MachineWaterCard() {
   const isEs = language === "ES";
   const log = useHomeSystem();
   const { system } = log;
+  const lang = isEs ? "es" : "en";
+  /* Typed locally; saved when the field is left. */
+  const [serialDraft, setSerialDraft] = useState<string | null>(null);
 
   /* Each dated job with its own "how often" and "done today" (client,
      2026-10-12): the warning asked the member to check dates there was
@@ -81,108 +98,138 @@ export default function MachineWaterCard() {
     <Card as="section" padding="small">
       <SectionTitle title={isEs ? "Máquina y Agua" : "Machine & Water"} />
 
-      {log.needsAttention ? (
-        <Alert tone="warning" className="mb-stack-md">
-          {isEs
-            ? "Anote cuándo hizo cada tarea de mantenimiento y cada cuánto toca; le recordaremos la próxima."
-            : "Record when you last did each maintenance job and how often it is due; we will remind you of the next one."}
-        </Alert>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-inline-md md:grid-cols-2">
-        <FormField label={isEs ? "Máquina" : "Machine"}>
-          {(field) => (
-            <Select
-              {...field}
-              selectSize="small"
-              value={system.machine}
-              onChange={(event) =>
-                log.save({ machine: event.target.value as MachineType })
-              }
-            >
-              {MACHINE_TYPES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {isEs ? option.labelEs : option.labelEn}
-                </option>
-              ))}
-            </Select>
-          )}
-        </FormField>
-        <FormField label={isEs ? "Número de serie" : "Serial number"}>
-          {(field) => (
-            <Input
-              {...field}
-              inputSize="small"
-              value={system.serial}
-              onChange={(event) => log.save({ serial: event.target.value })}
-            />
-          )}
-        </FormField>
-      </div>
-
-      <ul className="mt-stack-md space-y-stack-sm">
-        {jobs.map(({ check, last, every, setLast, setEvery }) => (
-          <li
-            key={check.id}
-            className="space-y-stack-sm rounded-card-nested border border-line bg-surface p-inset-sm"
+      <AsyncSection
+        pending={log.isPending}
+        error={log.error}
+        onRetry={canRetry(log.error) ? log.refetch : undefined}
+        errorTitle={errorTitleFor(
+          log.error,
+          isEs ? "Tu máquina no se cargó" : "Your machine details did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(log.error, undefined, lang)}
+        skeleton={<Skeleton height={160} />}
+      >
+        {log.saveError ? (
+          <Alert
+            tone="danger"
+            className="mb-stack-md"
+            onDismiss={log.dismissSaveError}
           >
-            <div className="flex flex-wrap items-center justify-between gap-inline-md">
-              <h3 className="text-label-md text-fg">
-                {checkLabel(check.id, isEs)}
-              </h3>
-              <span className="flex flex-wrap items-center gap-inline-md">
-                {check.dueIso ? (
-                  <span className="text-body-sm text-fg-muted tabular-nums">
-                    {isEs ? "Próxima" : "Next due"} {check.dueIso}
-                  </span>
-                ) : null}
-                <Badge tone={STATE_TONES[check.state]} variant="soft">
-                  {stateLabel(check.state, isEs)}
-                </Badge>
-              </span>
-            </div>
-            <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-              <FormField label={isEs ? "Última vez" : "Last done"}>
-                {(field) => (
-                  <Input
-                    {...field}
-                    type="date"
-                    inputSize="small"
-                    value={last}
-                    onChange={(event) => setLast(event.target.value)}
-                  />
-                )}
-              </FormField>
-              <FormField label={isEs ? "Cada (días)" : "Every (days)"}>
-                {(field) => (
-                  <Input
-                    {...field}
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={365}
-                    inputSize="small"
-                    value={String(every)}
-                    onChange={(event) => {
-                      const days = Math.round(Number(event.target.value));
-                      if (days >= 1 && days <= 365) setEvery(days);
-                    }}
-                  />
-                )}
-              </FormField>
-              <Button
-                size="small"
-                variant="neutral"
-                appearance="fill-stroke"
-                leadingIcon={<Check />}
-                onClick={() => setLast(log.today)}
+            {saveErrorText(log.saveError, lang)}
+          </Alert>
+        ) : null}
+
+        {log.needsAttention ? (
+          <Alert tone="warning" className="mb-stack-md">
+            {isEs
+              ? "Anote cuándo hizo cada tarea de mantenimiento y cada cuánto toca; le recordaremos la próxima."
+              : "Record when you last did each maintenance job and how often it is due; we will remind you of the next one."}
+          </Alert>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-inline-md md:grid-cols-2">
+          <FormField label={isEs ? "Máquina" : "Machine"}>
+            {(field) => (
+              <Select
+                {...field}
+                selectSize="small"
+                value={system.machine}
+                onChange={(event) =>
+                  log.save({ machine: event.target.value as MachineType })
+                }
               >
-                {isEs ? "Hecho hoy" : "Done today"}
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+                {MACHINE_TYPES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {isEs ? option.labelEs : option.labelEn}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+          <FormField label={isEs ? "Número de serie" : "Serial number"}>
+            {(field) => (
+              <Input
+                {...field}
+                inputSize="small"
+                value={serialDraft ?? system.serial}
+                onChange={(event) => setSerialDraft(event.target.value)}
+                onBlur={() => {
+                  if (serialDraft !== null && serialDraft !== system.serial)
+                    log.save({ serial: serialDraft });
+                  setSerialDraft(null);
+                }}
+              />
+            )}
+          </FormField>
+        </div>
+
+        <ul className="mt-stack-md space-y-stack-sm">
+          {jobs.map(({ check, last, every, setLast, setEvery }) => (
+            <li
+              key={check.id}
+              className="space-y-stack-sm rounded-card-nested border border-line bg-surface p-inset-sm"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-inline-md">
+                <h3 className="text-label-md text-fg">
+                  {checkLabel(check.id, isEs)}
+                </h3>
+                <span className="flex flex-wrap items-center gap-inline-md">
+                  {check.dueIso ? (
+                    <span className="text-body-sm text-fg-muted tabular-nums">
+                      {isEs ? "Próxima" : "Next due"} {check.dueIso}
+                    </span>
+                  ) : null}
+                  <Badge tone={STATE_TONES[check.state]} variant="soft">
+                    {stateLabel(check.state, isEs)}
+                  </Badge>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                <FormField label={isEs ? "Última vez" : "Last done"}>
+                  {(field) => (
+                    <Input
+                      {...field}
+                      type="date"
+                      inputSize="small"
+                      value={last}
+                      onChange={(event) => setLast(event.target.value)}
+                    />
+                  )}
+                </FormField>
+                <FormField label={isEs ? "Cada (días)" : "Every (days)"}>
+                  {(field) => (
+                    <Input
+                      {...field}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={365}
+                      inputSize="small"
+                      value={String(every)}
+                      onChange={(event) => {
+                        const days = Math.round(Number(event.target.value));
+                        if (days >= 1 && days <= 365) setEvery(days);
+                      }}
+                    />
+                  )}
+                </FormField>
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  leadingIcon={<Check />}
+                  onClick={() => setLast(log.today)}
+                >
+                  {isEs ? "Hecho hoy" : "Done today"}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </AsyncSection>
+
+      <EquipmentEventsSection isEs={isEs} />
     </Card>
   );
 }

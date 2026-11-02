@@ -258,7 +258,10 @@ function MemberNotifications() {
   const treatments = useTreatmentLog();
   const schedule = useDialysisSchedule();
   const unchartedDay =
-    modality.modality !== "pd" && !treatments.isPending && !schedule.isPending
+    modality.modality !== "pd" &&
+    !treatments.isPending &&
+    !schedule.isPending &&
+    !schedule.isDefault
       ? uncharted(schedule.periods, treatments.entries, homeSystem.today)[0]
       : undefined;
   const maintenanceDue =

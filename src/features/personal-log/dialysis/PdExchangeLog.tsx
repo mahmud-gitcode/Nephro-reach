@@ -3,7 +3,21 @@
 import React, { useState } from "react";
 import { Droplets, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Alert, Button, Card, EmptyState, Select } from "@/components/ui";
+import {
+  Alert,
+  AsyncSection,
+  Button,
+  Card,
+  EmptyState,
+  Select,
+  Skeleton,
+} from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import {
   CLARITY_OPTIONS,
   DEXTROSE_OPTIONS,
@@ -17,7 +31,7 @@ import {
   type PdExchangeDraft,
   type PdExchangeError,
 } from "./pdExchange";
-import type { DialysisModalityLog } from "./useDialysisModality";
+import { usePdExchanges } from "./usePdExchanges";
 
 /* ==========================================================================
    PD exchange log
@@ -91,11 +105,9 @@ function formatMl(value: number, isEs: boolean): string {
 }
 
 export default function PdExchangeLog({
-  log,
   date,
   dayLabel,
 }: {
-  log: DialysisModalityLog;
   /** ISO `yyyy-mm-dd` the exchanges belong to. */
   date: string;
   dayLabel: string;
@@ -107,9 +119,11 @@ export default function PdExchangeLog({
   const [row, setRow] = useState<Row>(emptyRow);
   const [error, setError] = useState<PdExchangeError | null>(null);
 
-  const exchanges = log.exchangesOn(date);
-  const dailyUf = log.dailyUltrafiltrationMl(date);
-  const urgent = log.urgentExchangesOn(date);
+  /* The day's exchanges, read from the API for that day. */
+  const pd = usePdExchanges(date);
+  const exchanges = pd.exchanges;
+  const dailyUf = pd.dailyUltrafiltrationMl;
+  const urgent = pd.urgent;
 
   const update = (patch: Partial<Row>) => {
     setRow((current) => ({ ...current, ...patch }));
@@ -128,8 +142,10 @@ export default function PdExchangeLog({
       setError(problem);
       return;
     }
-    log.saveExchange(draft);
-    setRow(emptyRow());
+    void pd
+      .saveExchange(draft)
+      .then(() => setRow(emptyRow()))
+      .catch(() => {});
   };
 
   return (
@@ -384,7 +400,7 @@ export default function PdExchangeLog({
             >
               {isEs ? "Cancelar" : "Cancel"}
             </Button>
-            <Button type="submit" size="small" disabled={log.isSaving}>
+            <Button type="submit" size="small" disabled={pd.isSaving}>
               <Plus aria-hidden="true" />
               {isEs ? "Guardar intercambio" : "Save exchange"}
             </Button>
@@ -392,91 +408,118 @@ export default function PdExchangeLog({
         </form>
       ) : null}
 
-      {exchanges.length === 0 ? (
-        <div className="mt-stack-md">
-          <EmptyState
-            icon={<Droplets aria-hidden="true" />}
-            title={
-              isEs
-                ? "Aún no hay intercambios este día"
-                : "No exchanges logged on this day"
-            }
-            description={
-              isEs
-                ? "Registra cada intercambio para llevar la cuenta de cuánto líquido retiras."
-                : "Log each exchange to keep track of how much fluid you are taking off."
-            }
-          />
-        </div>
-      ) : (
-        <ul className="mt-stack-md space-y-stack-sm">
-          {exchanges.map((exchange) => {
-            const uf = ultrafiltrationMl(exchange);
-            return (
-              <li
-                key={exchange.id}
-                className="flex flex-col gap-inline-md rounded-control border border-line bg-surface p-inset-sm sm:flex-row sm:items-center"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-x-inline-md text-label-md text-fg">
-                    <span>{exchange.startTime || "—"}</span>
-                    <span className="text-fg-muted">
-                      {dextroseLabel(exchange.dextrose, isEs)}
-                    </span>
-                    <span
-                      className={
-                        isUrgentClarity(exchange.clarity)
-                          ? "text-danger"
-                          : "text-fg-muted"
-                      }
-                    >
-                      {clarityLabel(exchange.clarity, isEs)}
-                    </span>
-                    {!exchange.exitSiteOk ? (
-                      <span className="text-warning">
-                        {isEs ? "Sitio de salida" : "Exit site"}
+      {pd.saveError ? (
+        <Alert
+          tone="danger"
+          className="mt-stack-md"
+          onDismiss={pd.dismissSaveError}
+        >
+          {saveErrorText(pd.saveError, isEs ? "es" : "en")}
+        </Alert>
+      ) : null}
+
+      <AsyncSection
+        pending={pd.isPending}
+        error={pd.error}
+        onRetry={canRetry(pd.error) ? pd.refetch : undefined}
+        errorTitle={errorTitleFor(
+          pd.error,
+          isEs
+            ? "Tus intercambios no se cargaron"
+            : "Your exchanges did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(pd.error, undefined, isEs ? "es" : "en")}
+        skeleton={<Skeleton height={96} className="mt-stack-md" />}
+      >
+        {exchanges.length === 0 ? (
+          <div className="mt-stack-md">
+            <EmptyState
+              icon={<Droplets aria-hidden="true" />}
+              title={
+                isEs
+                  ? "Aún no hay intercambios este día"
+                  : "No exchanges logged on this day"
+              }
+              description={
+                isEs
+                  ? "Registra cada intercambio para llevar la cuenta de cuánto líquido retiras."
+                  : "Log each exchange to keep track of how much fluid you are taking off."
+              }
+            />
+          </div>
+        ) : (
+          <ul className="mt-stack-md space-y-stack-sm">
+            {exchanges.map((exchange) => {
+              /* The server's figure, not worked out again here. */
+              const uf = exchange.ultrafiltrationMl;
+              return (
+                <li
+                  key={exchange.id}
+                  className="flex flex-col gap-inline-md rounded-control border border-line bg-surface p-inset-sm sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-x-inline-md text-label-md text-fg">
+                      <span>{exchange.startTime || "—"}</span>
+                      <span className="text-fg-muted">
+                        {dextroseLabel(exchange.dextrose, isEs)}
                       </span>
-                    ) : null}
-                  </p>
-                  <p className="mt-0.5 text-body-sm text-fg-secondary">
-                    {isEs ? "Entró" : "In"} {formatMl(exchange.fillMl, isEs)} ·{" "}
-                    {isEs ? "salió" : "out"} {formatMl(exchange.drainMl, isEs)}{" "}
-                    · {exchange.dwellMinutes} {isEs ? "min" : "min"}
-                  </p>
-                  {exchange.notes ? (
-                    <p className="mt-0.5 text-body-sm text-fg-muted">
-                      {exchange.notes}
+                      <span
+                        className={
+                          exchange.urgentClarity
+                            ? "text-danger"
+                            : "text-fg-muted"
+                        }
+                      >
+                        {clarityLabel(exchange.clarity, isEs)}
+                      </span>
+                      {!exchange.exitSiteOk ? (
+                        <span className="text-warning">
+                          {isEs ? "Sitio de salida" : "Exit site"}
+                        </span>
+                      ) : null}
                     </p>
-                  ) : null}
-                </div>
+                    <p className="mt-0.5 text-body-sm text-fg-secondary">
+                      {isEs ? "Entró" : "In"} {formatMl(exchange.fillMl, isEs)}{" "}
+                      · {isEs ? "salió" : "out"}{" "}
+                      {formatMl(exchange.drainMl, isEs)} ·{" "}
+                      {exchange.dwellMinutes} {isEs ? "min" : "min"}
+                    </p>
+                    {exchange.notes ? (
+                      <p className="mt-0.5 text-body-sm text-fg-muted">
+                        {exchange.notes}
+                      </p>
+                    ) : null}
+                  </div>
 
-                <p
-                  className={`shrink-0 text-label-lg ${
-                    uf < 0 ? "text-warning" : "text-fg"
-                  }`}
-                >
-                  {formatMl(uf, isEs)}
-                </p>
+                  <p
+                    className={`shrink-0 text-label-lg ${
+                      uf < 0 ? "text-warning" : "text-fg"
+                    }`}
+                  >
+                    {formatMl(uf, isEs)}
+                  </p>
 
-                <Button
-                  variant="danger"
-                  appearance="stroke"
-                  size="small"
-                  iconOnly
-                  onClick={() => log.deleteExchange(exchange.id)}
-                  aria-label={
-                    isEs
-                      ? `Eliminar el intercambio de las ${exchange.startTime}`
-                      : `Delete the exchange at ${exchange.startTime}`
-                  }
-                >
-                  <Trash2 aria-hidden="true" />
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <Button
+                    variant="danger"
+                    appearance="stroke"
+                    size="small"
+                    iconOnly
+                    onClick={() => pd.deleteExchange(exchange.id)}
+                    aria-label={
+                      isEs
+                        ? `Eliminar el intercambio de las ${exchange.startTime}`
+                        : `Delete the exchange at ${exchange.startTime}`
+                    }
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </AsyncSection>
     </Card>
   );
 }
