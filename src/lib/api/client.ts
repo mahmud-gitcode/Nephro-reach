@@ -7,10 +7,14 @@
 
    - Web auth is httpOnly cookies set by the API, so every request sends
      credentials and no token is ever visible to JavaScript.
-   - An expired access cookie (401) triggers one refresh, shared by every
-     request that failed at the same time, then the request is retried once.
-     Code and password routes never refresh: there a 401 means "wrong code",
-     and a retry would resubmit a one-time code.
+   - An expired access cookie (401 with no code: the API's auth guard sends
+     a bare 401) triggers one refresh, shared by every request that failed
+     at the same time, then the request is retried once. A 401 that carries
+     any other code (`auth.code_invalid_or_expired`,
+     `auth.invalid_credentials`, ...) is an answer, not an expired session:
+     it is thrown as is, with no refresh and no retry. Code and password
+     routes (NO_REFRESH) never refresh whatever the 401 says: a retry would
+     resubmit a one-time code.
    - X-Organization-Id is sent only in office mode (INT-6). A patient or a
      caregiver call that carried it would be judged as staff, and audited
      as staff. Office mode is switched on explicitly with
@@ -66,6 +70,21 @@ export type ApiEnvelope<T, Root extends object = object> = {
 
 /** The code the API sends when a session has ended for good. */
 export const SESSION_ENDED_CODE = "auth.session_no_longer_active";
+
+/* 401 codes that end the session: no refresh can bring it back. */
+const SESSION_END_CODES: readonly string[] = [
+  SESSION_ENDED_CODE,
+  "auth.account_no_longer_available",
+];
+
+/* 401 codes that mean "the access cookie is missing or expired", so a
+   refresh may help. The API's guard sends a bare 401 (code null) today;
+   `auth.access_token_required` is the strategy's own message, kept in case
+   the guard starts passing it through. */
+const REFRESHABLE_CODES: readonly (string | null)[] = [
+  null,
+  "auth.access_token_required",
+];
 
 export class ApiError extends Error {
   readonly status: number;
@@ -170,7 +189,10 @@ export function resetApiClientState(): void {
 }
 
 /* Routes where a 401 means "wrong code or password", not "expired session":
-   retrying them after a refresh would resubmit a one-time code. */
+   retrying them after a refresh would resubmit a one-time code. The code
+   rule above already covers them; this list holds even if a route's 401
+   ever arrives without a code. Kept in step with the API's 401-throwing
+   routes (backend src/core/auth/controllers, src/modules/sharing). */
 export const NO_REFRESH = [
   "/auth/login",
   "/auth/register",
@@ -182,6 +204,14 @@ export const NO_REFRESH = [
   "/auth/oauth/",
   "/auth/email/",
   "/auth/phone/",
+  /* Adding an email or phone: confirm by link token or one-time code. */
+  "/auth/identifiers/email/confirm",
+  "/auth/identifiers/phone/confirm",
+  /* Sudo-consuming, one shot. */
+  "/auth/account/deactivate",
+  /* Outside-share links: public, verified by a one-time code, never by
+     the member's session. */
+  "/shared/",
 ] as const;
 
 function isNoRefreshRoute(path: string): boolean {
@@ -252,6 +282,15 @@ function errorCode(json: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+function endsSession(json: unknown): boolean {
+  const code = errorCode(json);
+  return code !== null && SESSION_END_CODES.includes(code);
+}
+
+function mayRefresh(json: unknown): boolean {
+  return REFRESHABLE_CODES.includes(errorCode(json));
+}
+
 /** Full envelope: use when you need `pagination`, the server's message, or
  *  fields the API puts at the root (the 2FA challenge on sign-in). */
 export async function apiRequest<T, Root extends object = object>(
@@ -261,15 +300,19 @@ export async function apiRequest<T, Root extends object = object>(
   let res = await send(path, options);
   let json = await readBody(res);
 
+  /* A 401 with any other code (a wrong code or password) is thrown as is. */
   if (res.status === 401 && !isNoRefreshRoute(path)) {
-    if (errorCode(json) === SESSION_ENDED_CODE) {
+    if (endsSession(json)) {
       endSession("expired");
-    } else if (await refreshSession()) {
-      res = await send(path, options);
-      json = await readBody(res);
-      if (res.status === 401) endSession("expired");
-    } else {
-      endSession("expired");
+    } else if (mayRefresh(json)) {
+      if (await refreshSession()) {
+        res = await send(path, options);
+        json = await readBody(res);
+        if (res.status === 401 && (endsSession(json) || mayRefresh(json)))
+          endSession("expired");
+      } else {
+        endSession("expired");
+      }
     }
   }
 

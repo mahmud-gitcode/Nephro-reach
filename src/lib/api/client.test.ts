@@ -210,7 +210,135 @@ describe("refresh", () => {
   });
 });
 
+/* Every API route that answers a wrong code, link or password with a 401
+   (backend src/core/auth/controllers/*, src/modules/sharing
+   shared-links.controller.ts, as of beta cee89b6). Pinned by path, not by
+   iterating NO_REFRESH, so a route missing from the list fails here. */
+const BACKEND_401_CODE_ROUTES = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/oauth/google",
+  "/auth/oauth/apple",
+  "/auth/2fa/enroll/totp/confirm",
+  "/auth/2fa/enroll/email/confirm",
+  "/auth/2fa/enroll/sms/confirm",
+  "/auth/2fa/challenge/verify",
+  "/auth/sudo/password",
+  "/auth/sudo/otp/confirm",
+  "/auth/sudo/2fa",
+  "/auth/password/reset",
+  "/auth/password/reset/otp",
+  "/auth/password/change",
+  "/auth/password/set",
+  "/auth/email/verify",
+  "/auth/email/verify/otp",
+  "/auth/email/verify/confirm",
+  "/auth/phone/verify/otp",
+  "/auth/phone/verify/confirm",
+  "/auth/email/change/confirm",
+  "/auth/email/change/confirm/otp",
+  "/auth/phone/change/confirm",
+  "/auth/identifiers/email/confirm",
+  "/auth/identifiers/email/confirm/otp",
+  "/auth/identifiers/phone/confirm",
+  "/auth/account/deactivate",
+  "/shared/synthetic-token/verify",
+] as const;
+
+describe("a wrong code never refreshes, resubmits or ends the session", () => {
+  it.each(
+    BACKEND_401_CODE_ROUTES.flatMap((route) => [
+      [route, "auth.code_invalid_or_expired"],
+      [route, null],
+    ]),
+  )("%s with 401 code %s", async (route, code) => {
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    const { calls } = scriptFetch(() => ({
+      status: 401,
+      body: { success: false, statusCode: 401, message: "Invalid", code },
+    }));
+    const error = (await api(route, { method: "POST", body: {} }).catch(
+      (e: unknown) => e,
+    )) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(401);
+    expect(calls).toHaveLength(1);
+    expect(ended).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "auth.code_invalid_or_expired",
+    "auth.invalid_credentials",
+    "auth.current_password_incorrect",
+    "auth.session_not_found",
+    "sharing.code_invalid_or_expired",
+  ])(
+    "a 401 carrying %s is thrown as is on any route, with no refresh",
+    async (code) => {
+      const ended = vi.fn();
+      onSessionEnded(ended);
+      const { calls } = scriptFetch(() => ({
+        status: 401,
+        body: { success: false, statusCode: 401, message: "No", code },
+      }));
+      const error = (await api("/some/future/code-route", {
+        method: "POST",
+        body: {},
+      }).catch((e: unknown) => e)) as ApiError;
+      expect(error.code).toBe(code);
+      expect(calls).toHaveLength(1);
+      expect(ended).not.toHaveBeenCalled();
+    },
+  );
+
+  it("still refreshes a bare 401 on the identifier list", async () => {
+    let first = true;
+    const { calls } = scriptFetch((url) => {
+      if (url.endsWith("/auth/refresh")) return ok(null);
+      if (first) {
+        first = false;
+        return { status: 401, body: { success: false, code: null } };
+      }
+      return ok([]);
+    });
+    await expect(api("/auth/identifiers")).resolves.toEqual([]);
+    expect(calls).toHaveLength(3);
+  });
+
+  it("does not end the session when the retry is a coded answer", async () => {
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    let first = true;
+    scriptFetch((url) => {
+      if (url.endsWith("/auth/refresh")) return ok(null);
+      if (first) {
+        first = false;
+        return { status: 401, body: { success: false, code: null } };
+      }
+      return {
+        status: 401,
+        body: { success: false, code: "auth.invalid_credentials" },
+      };
+    });
+    await api("/x", { method: "POST", body: {} }).catch(() => undefined);
+    expect(ended).not.toHaveBeenCalled();
+  });
+});
+
 describe("onSessionEnded", () => {
+  it("fires on 401 account_no_longer_available without a refresh", async () => {
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    const { calls } = scriptFetch(() => ({
+      status: 401,
+      body: { success: false, code: "auth.account_no_longer_available" },
+    }));
+    await api("/me/context").catch(() => undefined);
+    expect(calls).toHaveLength(1);
+    expect(ended).toHaveBeenCalledWith("expired");
+  });
+
   it("fires once when the refresh fails, however many requests failed", async () => {
     const ended = vi.fn();
     onSessionEnded(ended);
