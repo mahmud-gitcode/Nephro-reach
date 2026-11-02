@@ -117,12 +117,13 @@ export function useHomeSystem(explicitScope?: PatientScope | null) {
         const previous =
           queryClient.getQueryData<Shown | null>(queryKey) ?? null;
         const next = { ...(previous?.system ?? system), ...patch };
-        queryClient.setQueryData<Shown | null>(queryKey, {
+        const shown: Shown = {
           checks: previous?.checks ?? [],
           needsAttention: previous?.needsAttention ?? true,
           isSet: true,
           system: next,
-        });
+        };
+        queryClient.setQueryData(queryKey, shown);
         mutate({ next, previous });
       },
       [mutate, system, queryClient, queryKey],

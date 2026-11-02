@@ -133,6 +133,7 @@ function TreatmentDetailContent() {
             lang,
           )}
           errorMessage={errorMessageFor(one.error, undefined, lang)}
+          skeleton={<FallbackLoading />}
         >
           {null}
         </AsyncSection>

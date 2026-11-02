@@ -145,7 +145,9 @@ describe("prescription (dialysis type)", () => {
     );
     const { result } = renderHook(() => useDialysisModality(), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect((result.current.error as { status: number }).status).toBe(403);
+    expect((result.current.error as unknown as { status: number }).status).toBe(
+      403,
+    );
   });
 
   it("the first choice is a POST with the modality; later ones PATCH", async () => {
