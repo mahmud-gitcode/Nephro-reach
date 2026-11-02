@@ -1,7 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { usePreferences } from "@/features/profile/usePreferences";
 
 /* ==========================================================================
    Fluid units — ounces by default
@@ -9,6 +8,8 @@ import { readJson, storageKey, writeJson } from "@/lib/data/storage";
    The client (2026-10-12): members in the US measure what they drink in
    ounces, so ounces come first and millilitres stay one tap away. The log
    itself keeps millilitres, so changing the unit never changes the record.
+   The choice is saved on the account (`/me/preferences` `fluidUnit`,
+   Phase 4); the server's default is ounces.
    ========================================================================== */
 
 export type FluidUnit = "oz" | "ml";
@@ -36,21 +37,16 @@ export function formatFluid(ml: number, unit: FluidUnit): string {
   return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${unit === "oz" ? "oz" : "ml"}`;
 }
 
-const KEY = storageKey("fluid-unit");
-const queryKey = ["nutrition", "fluid-unit"] as const;
-
+/** The account's fluid unit. Ounces while the preference loads or when it
+ *  could not be read: a display unit only, never a stored value. */
 export function useFluidUnit() {
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey,
-    queryFn: () => readJson<FluidUnit>(KEY, "oz"),
-  });
-  const write = useMutation({
-    mutationFn: (unit: FluidUnit) => writeJson(KEY, unit),
-    onSuccess: (unit) => queryClient.setQueryData(queryKey, unit),
-  });
+  const { preferences, update, error, isPending } = usePreferences();
   return {
-    unit: query.data === "ml" ? ("ml" as const) : ("oz" as const),
-    setUnit: (unit: FluidUnit) => write.mutate(unit),
+    unit: preferences?.fluidUnit === "ml" ? ("ml" as const) : ("oz" as const),
+    setUnit: (unit: FluidUnit) => update.mutate({ fluidUnit: unit }),
+    isPending,
+    isSaving: update.isPending,
+    error,
+    saveError: update.error,
   };
 }

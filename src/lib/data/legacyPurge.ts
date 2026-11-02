@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 2;
+export const STORAGE_VERSION = 4;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -54,6 +54,101 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "medication-mood",
     since: 1,
     why: "Mood section removed from the medications page (PROJECT_AUDIT §14). No component reads moodEntries/moodOn or calls saveMoodEntry; whether mood returns is D8, and it would come from the API, never from this key.",
+  },
+  {
+    name: "quick-actions",
+    since: 3,
+    why: "Phase 4: quick actions are saved on the account (GET/PUT /me/preferences quickActions). No screen reads this key.",
+  },
+  {
+    name: "fluid-unit",
+    since: 3,
+    why: "Phase 4: the fluid unit is the account preference (GET/PUT /me/preferences fluidUnit). No screen reads this key.",
+  },
+  {
+    name: "member-tour-done",
+    since: 3,
+    why: "Phase 4: the tour is finished on the account (POST /me/preferences/tour-completed, tourCompletedAt). No screen reads this key.",
+  },
+  {
+    name: "my-health",
+    since: 3,
+    why: "Phase 4: allergies and medical history come from /patients/:id/allergies and /medical-conditions; the sample record (health.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "profile-emergency-contact",
+    since: 3,
+    why: "Phase 4: the emergency contact is /patients/:id/emergency-contact (null = not set). No screen reads this key.",
+  },
+  {
+    name: "care-contacts",
+    since: 3,
+    why: "Phase 4: care offices are /patients/:id/care-contacts (one per kind); the sample offices are deleted. No screen reads this key.",
+  },
+  {
+    name: "dialysis-clinic",
+    since: 3,
+    why: "Phase 4: the home dialysis clinic is /patients/:id/home-dialysis-clinic (linked by organizationId, onNephroReach from the server). travel/useDialysisClinic delegates to the API hook; the demo clinic (clinic.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "healthcare-team",
+    since: 3,
+    why: "Phase 4: the team is /patients/:id/care-team-contacts (invite and remove only; no member accept, INT-14). No screen reads this key.",
+  },
+  {
+    name: "exercise-log",
+    since: 4,
+    why: "Phase 5: exercise notes are /patients/:id/exercise (one call per note). No screen reads this key.",
+  },
+  {
+    name: "care-team-questions",
+    since: 4,
+    why: "Phase 5: questions are /patients/:id/care-team-questions; the sample questions (questions.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "er-visits",
+    since: 4,
+    why: "Phase 5: weekly ER answers are /patients/:id/er-visits (the week from /summary, the server's calendar); the sample history is deleted. No screen reads this key.",
+  },
+  {
+    name: "blood-pressure-readings",
+    since: 4,
+    why: "Phase 5: readings are /patients/:id/blood-pressure (photos by file id through /files, never data: URLs); SEED_READINGS is deleted. No screen reads this key.",
+  },
+  {
+    name: "bp-reminders",
+    since: 4,
+    why: "Phase 5: check times are one BLOOD_PRESSURE reminder on /patients/:id/reminders. No screen reads this key.",
+  },
+  {
+    name: "nutrition-foods",
+    since: 4,
+    why: "Phase 5: foods are /patients/:id/nutrition/foods. No screen reads this key.",
+  },
+  {
+    name: "nutrition-fluids",
+    since: 4,
+    why: "Phase 5: fluids are /patients/:id/nutrition/fluids (sent in the unit tapped; the server's amountMl). No screen reads this key.",
+  },
+  {
+    name: "nutrition-goals",
+    since: 4,
+    why: "Phase 5: goals are /patients/:id/nutrition/goals (the server owns the defaults). No screen reads this key.",
+  },
+  {
+    name: "weight-fluid-log",
+    since: 4,
+    why: "Phase 5: one entry per day on /patients/:id/weight-fluid (PUT by date); the demo entries (fluid.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "between-treatment-check-ins",
+    since: 4,
+    why: "Phase 5: check-ins are /patients/:id/check-ins (id-based; 409 on a written day recovered as a PUT). No screen reads this key.",
+  },
+  {
+    name: "clinic-notices",
+    since: 4,
+    why: "Phase 5: the server builds each clinic notice from a check-in saved with notifyClinic and returns it on the check-in. No screen reads this key.",
   },
 ];
 

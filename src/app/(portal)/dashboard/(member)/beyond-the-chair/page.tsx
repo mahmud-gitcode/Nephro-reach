@@ -41,6 +41,13 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { saveErrorText } from "@/features/profile/saveError";
 
 /* ==========================================================================
    Between Treatment Check-in
@@ -217,6 +224,7 @@ export default function BetweenTreatmentPage() {
     isPending,
     error,
     refetch,
+    read,
     saveError,
     dismissSaveError,
     isSaving,
@@ -233,14 +241,20 @@ export default function BetweenTreatmentPage() {
   const openEntry = openDate ? getByDate(openDate) : undefined;
   const [pendingDelete, setPendingDelete] =
     useState<BetweenTreatmentCheckIn | null>(null);
+  /* The server's sentence after a delete: when the clinic already received
+     the day's notice, it says the clinic keeps it (Phase 5). */
+  const [deletedMessage, setDeletedMessage] = useState<string | null>(null);
 
+  /* One save: the check-in and the member's "tell my clinic" choice go
+     together; the server builds and holds the notice. The form closes only
+     once the server kept the day. */
   const handleSave = (
     entry: BetweenTreatmentCheckIn,
     notifyClinic: boolean,
   ) => {
-    saveCheckIn(entry);
-    notices.setNotify(entry, notifyClinic);
-    setOpenDate(null);
+    if (isSaving) return;
+    setDeletedMessage(null);
+    saveCheckIn(entry, notifyClinic, () => setOpenDate(null));
   };
 
   return (
@@ -267,37 +281,28 @@ export default function BetweenTreatmentPage() {
             }
             onDismiss={dismissSaveError}
           >
-            {isEs
-              ? "Nada se perdió de la pantalla. Inténtalo de nuevo."
-              : "Nothing was lost from the screen. Please try again."}
+            {saveErrorText(saveError, isEs ? "es" : "en")}
           </Alert>
         ) : null}
 
-        {notices.saveError ? (
-          <Alert
-            tone="danger"
-            title={
-              isEs
-                ? "No se envió el aviso a tu clínica"
-                : "Your clinic was not notified"
-            }
-            onDismiss={notices.dismissSaveError}
-          >
-            {isEs
-              ? "Tu registro se guardó, pero el aviso no salió. Abre el día y vuelve a intentarlo, o llama a tu clínica."
-              : "Your check-in saved, but the notice did not go out. Reopen the day to try again, or call your clinic."}
+        {deletedMessage ? (
+          <Alert tone="info" live onDismiss={() => setDeletedMessage(null)}>
+            {deletedMessage}
           </Alert>
         ) : null}
 
         <AsyncSection
           pending={isPending}
           error={error}
-          onRetry={refetch}
-          errorTitle={
+          onRetry={canRetry(error) ? refetch : undefined}
+          errorTitle={errorTitleFor(
+            error,
             isEs
               ? "Tus registros no se cargaron"
-              : "Your check-ins did not load"
-          }
+              : "Your check-ins did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           skeleton={
             <Card className="flex flex-col gap-stack-md">
               <Skeleton height={40} />
@@ -379,6 +384,7 @@ export default function BetweenTreatmentPage() {
                 ))}
               </ul>
             )}
+            <LoadMore read={read} />
           </div>
         </AsyncSection>
 
@@ -433,7 +439,7 @@ export default function BetweenTreatmentPage() {
             notice={notices.getByDate(openDate)}
             onSave={handleSave}
             onCancel={() => setOpenDate(null)}
-            saving={isSaving || notices.isSaving}
+            saving={isSaving}
           />
         ) : null}
 
@@ -461,8 +467,10 @@ export default function BetweenTreatmentPage() {
                 <Button
                   variant="danger"
                   onClick={() => {
-                    deleteCheckIn(pendingDelete.date);
-                    notices.dropNotice(pendingDelete.date);
+                    setDeletedMessage(null);
+                    deleteCheckIn(pendingDelete.date, (message) =>
+                      setDeletedMessage(message),
+                    );
                     setPendingDelete(null);
                   }}
                 >

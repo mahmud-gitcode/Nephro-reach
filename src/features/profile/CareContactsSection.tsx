@@ -12,21 +12,30 @@ import {
   Select,
   Skeleton,
 } from "@/components/ui";
-import { useDialysisClinic } from "@/features/travel/useDialysisClinic";
-import { isNetworkClinic } from "./clinicEnrollment";
 import {
-  networkOffices,
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
   type CareContactKind,
   type CareOffice,
+  type OfficeKind,
 } from "./careContacts";
+import { officesOfKind, useDirectory, type DirectoryOffice } from "./directory";
+import { EMPTY_CLINIC } from "./homeDialysisClinic";
+import { saveErrorText } from "./saveError";
 import { useCareContacts } from "./useCareContacts";
+import { useHomeDialysisClinic } from "./useHomeDialysisClinic";
 
 /* ==========================================================================
    My Care Offices — Member Settings
    --------------------------------------------------------------------------
-   Four offices, each saved on its own. Picking an office that is on
-   NephroReach links the member to it (for the dialysis center, that turns
-   on Message My Care Team); any other office is typed in.
+   Five offices, each saved on its own (Phase 4: the API). The pick list is
+   the NephroReach directory. Picking a dialysis center links the clinic by
+   its id (the server checks the patient is cared for there and sets
+   `onNephroReach`, which turns on Message My Care Team); any other office
+   is typed in.
    ========================================================================== */
 
 const OTHER = "__other__";
@@ -42,33 +51,42 @@ const LABEL: Record<CareContactKind, { en: string; es: string }> = {
   },
 };
 
+type OfficeDraft = CareOffice & { organizationId?: string | null };
+
 function OfficeForm({
   kind,
   saved,
+  savedOnNephroReach = false,
+  network,
   onSave,
   isEs,
 }: {
   kind: CareContactKind;
-  saved: CareOffice;
-  onSave: (office: CareOffice) => Promise<unknown>;
+  saved: OfficeDraft;
+  /** The server's `onNephroReach` for the saved dialysis clinic. */
+  savedOnNephroReach?: boolean;
+  network: DirectoryOffice[];
+  onSave: (office: OfficeDraft) => Promise<unknown>;
   isEs: boolean;
 }) {
-  const network = networkOffices(kind);
-  const [draft, setDraft] = useState<CareOffice>(saved);
-  const [choice, setChoice] = useState(
-    network.includes(saved.name) ? saved.name : OTHER,
-  );
+  const linkByCenter = kind === "dialysis";
+  const savedChoice = linkByCenter
+    ? (saved.organizationId ?? null)
+    : (network.find((o) => o.name === saved.name)?.id ?? null);
+  const [draft, setDraft] = useState<OfficeDraft>(saved);
+  const [choice, setChoice] = useState(savedChoice ?? OTHER);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
-  const set = (change: Partial<CareOffice>) => {
+  const [errorText, setErrorText] = useState("");
+  const set = (change: Partial<OfficeDraft>) => {
     setDraft((d) => ({ ...d, ...change }));
     setState("idle");
   };
-  const onNetwork =
-    kind === "dialysis"
-      ? isNetworkClinic(draft.name)
-      : network.includes(draft.name);
+  const onNetwork = linkByCenter
+    ? choice !== OTHER &&
+      (choice === saved.organizationId ? savedOnNephroReach : true)
+    : network.some((o) => o.name === draft.name);
   const label = isEs ? LABEL[kind].es : LABEL[kind].en;
 
   return (
@@ -76,11 +94,13 @@ function OfficeForm({
       className="space-y-stack-md rounded-card-nested border border-line p-inset-md max-sm:p-inset-sm"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (state === "saving") return;
         setState("saving");
         try {
           await onSave(draft);
           setState("saved");
-        } catch {
+        } catch (error) {
+          setErrorText(saveErrorText(error, isEs ? "es" : "en"));
           setState("error");
         }
       }}
@@ -107,13 +127,22 @@ function OfficeForm({
               {...field}
               value={choice}
               onChange={(e) => {
+                const picked = network.find((o) => o.id === e.target.value);
                 setChoice(e.target.value);
-                set({ name: e.target.value === OTHER ? "" : e.target.value });
+                set(
+                  picked
+                    ? {
+                        name: picked.name,
+                        address: draft.address || picked.address || "",
+                        organizationId: linkByCenter ? picked.id : null,
+                      }
+                    : { name: "", organizationId: null },
+                );
               }}
             >
-              {network.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+              {network.map((office) => (
+                <option key={office.id} value={office.id}>
+                  {office.name}
                 </option>
               ))}
               <option value={OTHER}>{isEs ? "Otro…" : "Other…"}</option>
@@ -158,13 +187,7 @@ function OfficeForm({
         </FormField>
       </div>
 
-      {state === "error" ? (
-        <Alert tone="danger">
-          {isEs
-            ? "No se guardó. Inténtelo de nuevo."
-            : "That did not save. Try again."}
-        </Alert>
-      ) : null}
+      {state === "error" ? <Alert tone="danger">{errorText}</Alert> : null}
 
       <div className="flex items-center justify-end gap-inline-md">
         {state === "saved" ? (
@@ -185,26 +208,42 @@ function OfficeForm({
 }
 
 export function CareContactsSection({ isEs }: { isEs: boolean }) {
-  const dialysis = useDialysisClinic();
+  const dialysis = useHomeDialysisClinic();
   const care = useCareContacts();
+  const directory = useDirectory();
+  const lang = isEs ? "es" : "en";
 
   /* error → loading → content: a failed read must not leave a skeleton
      forever, nor show empty forms that would save over real offices. */
-  const error = dialysis.error ?? care.error;
-  if (error || dialysis.isPending || care.isPending || !dialysis.clinic) {
+  const error = dialysis.error ?? care.error ?? directory.error;
+  if (
+    error ||
+    dialysis.isPending ||
+    care.isPending ||
+    directory.isPending ||
+    dialysis.clinic === undefined
+  ) {
     return (
       <AsyncSection
         pending
         error={error}
-        onRetry={() => {
-          dialysis.refetch();
-          care.refetch();
-        }}
-        errorTitle={
+        onRetry={
+          canRetry(error)
+            ? () => {
+                dialysis.refetch();
+                care.refetch();
+                directory.refetch();
+              }
+            : undefined
+        }
+        errorTitle={errorTitleFor(
+          error,
           isEs
             ? "No se pudieron cargar sus oficinas de atención"
-            : "Your care offices could not be loaded"
-        }
+            : "Your care offices could not be loaded",
+          lang,
+        )}
+        errorMessage={errorMessageFor(error, undefined, lang)}
         skeleton={<Skeleton height={320} />}
       >
         {null}
@@ -212,10 +251,19 @@ export function CareContactsSection({ isEs }: { isEs: boolean }) {
     );
   }
 
-  const saveOther =
-    (kind: "vascular" | "nephrology" | "transplant" | "primaryCare") =>
-    (office: CareOffice) =>
-      care.save({ ...care.contacts, [kind]: office });
+  const clinic = dialysis.clinic ?? EMPTY_CLINIC;
+  const saveOther = (kind: OfficeKind) => (office: CareOffice) =>
+    care.save(kind, office);
+  const form = (kind: OfficeKind) => (
+    <OfficeForm
+      key={`${kind}|${care.contacts[kind].name}`}
+      kind={kind}
+      isEs={isEs}
+      saved={care.contacts[kind]}
+      network={officesOfKind(directory.offices, kind)}
+      onSave={saveOther(kind)}
+    />
+  );
 
   return (
     <div className="space-y-stack-md">
@@ -225,35 +273,18 @@ export function CareContactsSection({ isEs }: { isEs: boolean }) {
           : "Your offices show up on the tabs that use them: travel, vascular access, Before the ER and messages."}
       </p>
       <OfficeForm
+        key={`dialysis|${clinic.organizationId ?? ""}|${clinic.name}`}
         kind="dialysis"
         isEs={isEs}
-        saved={dialysis.clinic}
+        saved={clinic}
+        savedOnNephroReach={clinic.onNephroReach}
+        network={officesOfKind(directory.offices, "dialysis")}
         onSave={(office) => dialysis.save.mutateAsync(office)}
       />
-      <OfficeForm
-        kind="vascular"
-        isEs={isEs}
-        saved={care.contacts.vascular}
-        onSave={saveOther("vascular")}
-      />
-      <OfficeForm
-        kind="nephrology"
-        isEs={isEs}
-        saved={care.contacts.nephrology}
-        onSave={saveOther("nephrology")}
-      />
-      <OfficeForm
-        kind="transplant"
-        isEs={isEs}
-        saved={care.contacts.transplant}
-        onSave={saveOther("transplant")}
-      />
-      <OfficeForm
-        kind="primaryCare"
-        isEs={isEs}
-        saved={care.contacts.primaryCare}
-        onSave={saveOther("primaryCare")}
-      />
+      {form("vascular")}
+      {form("nephrology")}
+      {form("transplant")}
+      {form("primaryCare")}
     </div>
   );
 }

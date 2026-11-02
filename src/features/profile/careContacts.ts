@@ -1,4 +1,3 @@
-import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
 import { ORGANIZATIONS } from "@/features/staff/staff";
 
 /* ==========================================================================
@@ -40,7 +39,9 @@ export const EMPTY_CONTACTS: CareContacts = {
   primaryCare: EMPTY_OFFICE,
 };
 
-/** The NephroReach offices a member can pick, by kind. */
+/** The staff demo list's office names, by kind. The member screens pick
+ *  from the API directory since Phase 4 (`directory.ts`); this stays only
+ *  for Share Outside (COLLAB lane) until that screen moves. */
 export function networkOffices(kind: CareContactKind): string[] {
   const portal =
     kind === "dialysis"
@@ -55,64 +56,68 @@ export function networkOffices(kind: CareContactKind): string[] {
     : [];
 }
 
-/** The demo patient's offices, so the sample account is filled in. */
-const SAMPLE: CareContacts = {
-  vascular: {
-    name: "Metro Vascular Access Center",
-    phone: "(803) 555-0142",
-    address: "450 Vein Way, Columbia, SC 29203",
-  },
-  nephrology: {
-    name: "Riverside Nephrology Associates",
-    phone: "(803) 555-0119",
-    address: "88 Kidney Court, Columbia, SC 29204",
-  },
-  /* Not on NephroReach: the demo's Free Recipient office. */
-  transplant: {
-    name: "Lakeside Transplant Center",
-    phone: "(803) 555-0166",
-    address: "12 Harbor View Drive, Columbia, SC 29205",
-  },
-  primaryCare: EMPTY_OFFICE,
+/* ---------------------------------------------------------------- API
+   `GET /patients/:id/care-contacts` answers an array of the kinds that are
+   saved; `PUT/DELETE …/care-contacts/:kind` writes one office. The screen
+   keeps its object of four offices; a missing kind is an empty office. */
+
+export type OfficeKind = keyof CareContacts;
+
+export type ApiCareContact = {
+  id: string;
+  patientId: string;
+  kind: "vascular" | "nephrology" | "transplant" | "primary-care";
+  name: string;
+  phone: string;
+  address: string;
+  updatedAt: string;
 };
 
-const KEY = storageKey("care-contacts");
+const API_KIND: Record<OfficeKind, ApiCareContact["kind"]> = {
+  vascular: "vascular",
+  nephrology: "nephrology",
+  transplant: "transplant",
+  primaryCare: "primary-care",
+};
 
-function office(value: unknown): CareOffice {
-  const raw = (value ?? {}) as Partial<CareOffice>;
-  return {
-    name: typeof raw.name === "string" ? raw.name : "",
-    phone: typeof raw.phone === "string" ? raw.phone : "",
-    address: typeof raw.address === "string" ? raw.address : "",
-  };
+export function toApiKind(kind: OfficeKind): ApiCareContact["kind"] {
+  return API_KIND[kind];
 }
 
-export async function readCareContacts(): Promise<CareContacts> {
-  const stored = await readJson<Partial<CareContacts> | null>(KEY, null);
-  if (!stored) return sampleOr(KEY, SAMPLE, EMPTY_CONTACTS);
-  return {
-    vascular: office(stored.vascular),
-    nephrology: office(stored.nephrology),
-    /* Saved before this office existed: the demo patient gets the sample. */
-    transplant: stored.transplant
-      ? office(stored.transplant)
-      : sampleOr(KEY, SAMPLE.transplant, EMPTY_OFFICE),
-    primaryCare: office(stored.primaryCare),
-  };
+export function fromApiCareContacts(
+  rows: readonly ApiCareContact[] | null,
+): CareContacts {
+  const contacts: CareContacts = { ...EMPTY_CONTACTS };
+  for (const row of rows ?? []) {
+    const kind = (Object.keys(API_KIND) as OfficeKind[]).find(
+      (k) => API_KIND[k] === row.kind,
+    );
+    if (!kind) continue;
+    contacts[kind] = {
+      name: row.name ?? "",
+      phone: row.phone ?? "",
+      address: row.address ?? "",
+    };
+  }
+  return contacts;
 }
 
-export async function writeCareContacts(
-  contacts: CareContacts,
-): Promise<CareContacts> {
-  const clean = (o: CareOffice) => ({
-    name: o.name.trim(),
-    phone: o.phone.trim(),
-    address: o.address.trim(),
-  });
-  return writeJson(KEY, {
-    vascular: clean(contacts.vascular),
-    nephrology: clean(contacts.nephrology),
-    transplant: clean(contacts.transplant),
-    primaryCare: clean(contacts.primaryCare),
-  });
+/** Saving one office: a PUT with a name, or a DELETE when it was cleared. */
+export function careContactWrite(
+  office: CareOffice,
+):
+  | { kind: "put"; body: { name: string; phone?: string; address?: string } }
+  | { kind: "delete" } {
+  const name = office.name.trim();
+  if (!name) return { kind: "delete" };
+  const phone = office.phone.trim();
+  const address = office.address.trim();
+  return {
+    kind: "put",
+    body: {
+      name,
+      ...(phone ? { phone } : {}),
+      ...(address ? { address } : {}),
+    },
+  };
 }

@@ -5,11 +5,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { axe } from "vitest-axe";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/features/auth/AuthContext";
+import { stubApi } from "@/features/profile/memberApiStub";
 
 /* INT-10: a failed read shows the error state, never empty or default
- * health data. The failure is simulated where every member page reads
- * today, the storage layer (localStorage refuses), so each page meets a
- * real rejected query, as it will when the API is down. */
+ * health data. The failure is simulated in both places member pages read
+ * today: the storage layer (localStorage refuses) for features still on
+ * this device, and the API (500) for features moved to it (Phases 4-5).
+ * The session is a signed-in synthetic member, so the API reads carry a
+ * patient id. */
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -52,6 +55,8 @@ beforeEach(() => {
   vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
     throw new DOMException("Storage is blocked", "SecurityError");
   });
+  /* Every API read fails; only the session itself answers. */
+  stubApi(() => ({ status: 500 }));
 });
 
 afterEach(() => {
@@ -142,10 +147,12 @@ describe("INT-10 error states", () => {
     async (_name, load, title) => {
       vi.mocked(Storage.prototype.getItem).mockRestore();
       window.localStorage.clear();
+      /* The API answers, with nothing saved yet. */
+      stubApi();
       const { default: Page } = await load();
       renderPage(Page);
-      /* Let every query settle. */
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      /* Let the session and every query settle. */
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(screen.queryByText(title)).not.toBeInTheDocument();
       expect(screen.queryByText(/could not be loaded/)).not.toBeInTheDocument();
     },

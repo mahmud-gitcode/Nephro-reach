@@ -14,7 +14,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
-import { severityBadge, statusBadge } from "./health.seed";
+import { severityBadge, statusBadge } from "./health.badges";
 import type { AllergyRow, HistoryRow } from "./health.types";
 
 /* The two tables and the pieces they share. */
@@ -155,14 +155,6 @@ export function AllergiesTable({
     return h?.allergies?.severities?.mild || "Mild";
   };
 
-  const getReaction = (key: string, fallback: string) => {
-    const reactions = h?.allergies?.reactions;
-    if (reactions && typeof reactions === "object" && key in reactions) {
-      return (reactions as Record<string, string>)[key] || fallback;
-    }
-    return fallback;
-  };
-
   const headers = [
     h?.allergies?.headers?.name || "Name",
     h?.allergies?.headers?.type || "Type",
@@ -183,11 +175,7 @@ export function AllergiesTable({
         </Badge>
       ),
       details: [
-        `${getTypeName(row.type)} · ${
-          row.reactionKey
-            ? getReaction(row.reactionKey, row.reactionDefault)
-            : row.reactionDefault
-        }`,
+        `${getTypeName(row.type)} · ${row.reactionDefault}`,
         row.notes || "",
       ],
       actions: (
@@ -223,9 +211,7 @@ export function AllergiesTable({
           </TableHead>
           <TableBody>
             {rows.map((row) => {
-              const reactionText = row.reactionKey
-                ? getReaction(row.reactionKey, row.reactionDefault)
-                : row.reactionDefault;
+              const reactionText = row.reactionDefault || "—";
               const notesText = row.notes || "—";
               const nameText = row.name || "—";
 
@@ -278,14 +264,6 @@ export function MedicalHistoryTable({
   const { dictionary } = useLanguage();
   const h = dictionary?.myHealth;
 
-  const getConditionName = (key: string, fallback: string) => {
-    const conditions = h?.history?.conditions;
-    if (conditions && typeof conditions === "object" && key in conditions) {
-      return (conditions as Record<string, string>)[key] || fallback;
-    }
-    return fallback;
-  };
-
   const getStatusName = (status: "Current" | "Past") => {
     if (status === "Current") return h?.history?.statuses?.current || "Current";
     return h?.history?.statuses?.past || "Past";
@@ -300,9 +278,7 @@ export function MedicalHistoryTable({
   ];
 
   const mobileItems = rows.map((row) => {
-    const conditionText = row.conditionKey
-      ? getConditionName(row.conditionKey, row.conditionDefault)
-      : row.conditionDefault;
+    const conditionText = row.conditionDefault;
     return {
       id: row.id,
       title: conditionText,
@@ -348,9 +324,7 @@ export function MedicalHistoryTable({
           </TableHead>
           <TableBody>
             {rows.map((row) => {
-              const conditionText = row.conditionKey
-                ? getConditionName(row.conditionKey, row.conditionDefault)
-                : row.conditionDefault;
+              const conditionText = row.conditionDefault;
               const notesText = row.notes || "—";
 
               return (

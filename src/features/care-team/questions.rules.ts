@@ -7,6 +7,10 @@ const NEXT_STATUS: Record<QuestionStatus, QuestionStatus> = {
   Answered: "Submitted",
 };
 
+/** The status after this one in the cycle. */
+export const nextStatus = (status: QuestionStatus): QuestionStatus =>
+  NEXT_STATUS[status] ?? "Answered";
+
 export const cycleStatusIn = (
   questions: CareTeamQuestion[],
   id: string,

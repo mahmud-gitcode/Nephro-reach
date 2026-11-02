@@ -401,7 +401,8 @@ export function AddWaterModal({
   /** The day the water is filed under, as the member reads it. */
   dayLabel: string;
   onClose: () => void;
-  onSave: (ml: number) => void;
+  /** What the member drank, in the unit they chose (the server converts). */
+  onSave: (amount: number, unit: FluidUnit) => void;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -414,7 +415,7 @@ export function AddWaterModal({
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const value = toNumber(amount);
-    if (value > 0) onSave(toMl(value, unit));
+    if (value > 0) onSave(value, unit);
   };
 
   return (

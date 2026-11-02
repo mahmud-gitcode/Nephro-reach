@@ -1,20 +1,16 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   canCall,
   describeContact,
   dialable,
+  emergencyContactWrite,
   emptyEmergencyContact,
-  readEmergencyContact,
-  writeEmergencyContact,
+  fromApiEmergencyContact,
 } from "./emergencyContact";
 
 /* The Before-the-ER screen dials whatever this returns. A member reaching
  * that screen is having the worst moment this app will be present for, so
  * the only failure that matters is offering a call that cannot be made. */
-
-beforeEach(() => {
-  window.localStorage.clear();
-});
 
 describe("whether there is somebody to call", () => {
   it("needs a number, not just a name", () => {
@@ -60,30 +56,55 @@ describe("who is about to be called", () => {
   });
 });
 
-describe("storage", () => {
-  it("starts empty rather than undefined", async () => {
-    expect(await readEmergencyContact()).toEqual(emptyEmergencyContact());
+describe("the API's emergency contact (Phase 4)", () => {
+  it("reads the server's null as not set: empty fields, never a sample", () => {
+    expect(fromApiEmergencyContact(null)).toEqual(emptyEmergencyContact());
   });
 
-  it("reads back what was written", async () => {
-    const contact = {
+  it("keeps the saved fields", () => {
+    expect(
+      fromApiEmergencyContact({
+        name: "Denise Park",
+        phone: "(555) 010-9920",
+        relationship: "Daughter",
+      }),
+    ).toEqual({
       name: "Denise Park",
       phone: "(555) 010-9920",
       relationship: "Daughter",
-    };
-    await writeEmergencyContact(contact);
-    expect(await readEmergencyContact()).toEqual(contact);
+    });
   });
 
-  it("fills in a field a partial older record is missing", async () => {
-    window.localStorage.setItem(
-      "nr:profile-emergency-contact",
-      JSON.stringify({ name: "Denise Park" }),
-    );
-    expect(await readEmergencyContact()).toEqual({
+  it("fills a field the server left out", () => {
+    expect(fromApiEmergencyContact({ name: "Denise Park" })).toEqual({
       name: "Denise Park",
       phone: "",
       relationship: "",
     });
+  });
+
+  it("saves a contact with a number as a PUT, trimmed", () => {
+    expect(
+      emergencyContactWrite({
+        name: " Denise Park ",
+        phone: " 555 ",
+        relationship: "Daughter ",
+      }),
+    ).toEqual({
+      kind: "put",
+      body: { name: "Denise Park", phone: "555", relationship: "Daughter" },
+    });
+  });
+
+  /* The API needs a number; a name alone cannot be dialled, so clearing
+     the number removes the contact rather than failing validation. */
+  it("removes the contact when the number is cleared", () => {
+    expect(
+      emergencyContactWrite({
+        name: "Denise Park",
+        phone: "  ",
+        relationship: "",
+      }),
+    ).toEqual({ kind: "delete" });
   });
 });

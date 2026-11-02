@@ -1,8 +1,23 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listQuestions, saveQuestions } from "./questions.repository";
-import { cycleStatusIn } from "./questions.rules";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { usePagedList } from "@/features/profile/usePagedList";
+import {
+  createQuestion,
+  fromApiQuestion,
+  listQuestions,
+  QUESTIONS_PAGE,
+  removeQuestion,
+  toQuestionBody,
+  updateQuestion,
+} from "./questions.repository";
+import { nextStatus } from "./questions.rules";
 import type { CareTeamQuestion } from "./questions.types";
 
 export type {
@@ -12,47 +27,75 @@ export type {
 } from "./questions.types";
 export { statusForNew } from "./questions.rules";
 
-export const careTeamQuestionsKey = ["care-team", "questions"] as const;
-
-export function useCareTeamQuestions() {
+/** The member's questions for their care team, from the API (Phase 5).
+ *  `add` keeps its signature for the lesson activities (EDU-BIZ); the id
+ *  it is given is ignored: the server assigns one. */
+export function useCareTeamQuestions(explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: careTeamQuestionsKey,
-    queryFn: listQuestions,
+  const queryKey = scopedKey(scope, "care-team-questions");
+  const read = usePagedList({
+    scope,
+    queryKey,
+    params: QUESTIONS_PAGE,
+    fetch: listQuestions,
+    map: fromApiQuestion,
   });
+  const refresh = () => queryClient.invalidateQueries({ queryKey });
 
-  const write = useMutation({
-    mutationFn: async (
-      transform: (current: CareTeamQuestion[]) => CareTeamQuestion[],
-    ) => saveQuestions(transform(await listQuestions())),
-    onSuccess: (questions) =>
-      queryClient.setQueryData(careTeamQuestionsKey, questions),
+  const create = useMutation({
+    mutationFn: (question: CareTeamQuestion) => {
+      const { id: _ignored, ...fields } = question;
+      void _ignored;
+      return createQuestion(requireScope(scope), toQuestionBody(fields));
+    },
+    onSuccess: refresh,
+  });
+  const change = useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Partial<CareTeamQuestion>;
+    }) => {
+      const { id: _ignored, ...fields } = patch;
+      void _ignored;
+      return updateQuestion(requireScope(scope), id, toQuestionBody(fields));
+    },
+    onSuccess: refresh,
+  });
+  const drop = useMutation({
+    mutationFn: (id: string) => removeQuestion(requireScope(scope), id),
+    onSuccess: refresh,
   });
 
   return {
-    questions: query.data ?? [],
-    isPending: query.isPending,
-    error: query.error,
-    refetch: () => void query.refetch(),
+    questions: read.items,
+    isPending: read.isPending,
+    error: read.error,
+    refetch: read.refetch,
+    read,
 
-    add: (question: CareTeamQuestion) =>
-      write.mutateAsync((current) => [question, ...current]),
+    add: (question: CareTeamQuestion) => create.mutateAsync(question),
     update: (id: string, patch: Partial<CareTeamQuestion>) =>
-      write.mutateAsync((current) =>
-        current.map((question) =>
-          question.id === id ? { ...question, ...patch } : question,
-        ),
-      ),
-    remove: (id: string) =>
-      write.mutateAsync((current) =>
-        current.filter((question) => question.id !== id),
-      ),
-    cycleStatus: (id: string) =>
-      write.mutateAsync((current) => cycleStatusIn(current, id)),
+      change.mutateAsync({ id, patch }),
+    remove: (id: string) => drop.mutateAsync(id),
+    cycleStatus: (id: string) => {
+      const current = read.items.find((q) => q.id === id);
+      if (!current) return Promise.resolve(undefined);
+      return change.mutateAsync({
+        id,
+        patch: { status: nextStatus(current.status) },
+      });
+    },
 
-    isSaving: write.isPending,
-    saveError: write.error,
-    dismissSaveError: () => write.reset(),
+    isSaving: create.isPending || change.isPending || drop.isPending,
+    saveError: create.error ?? change.error ?? drop.error,
+    dismissSaveError: () => {
+      create.reset();
+      change.reset();
+      drop.reset();
+    },
   };
 }

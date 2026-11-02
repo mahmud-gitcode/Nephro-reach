@@ -8,10 +8,9 @@ import { ORGANIZATIONS } from "@/features/staff/staff";
    only when the member's clinic is enrolled. Members whose clinic is not
    in the network export their logs by email instead.
 
-   The member's dialysis center is the one on their profile (the same
-   record the travel planner uses). It is "enrolled" when it is one of the
-   dialysis centers with a NephroReach portal. With a server, the clinic's
-   own enrollment of the patient decides this.
+   Since Phase 4 the member screens read the server's `onNephroReach` flag
+   (useClinicEnrollment). This name match on the staff demo list is kept
+   only for Share Outside (COLLAB lane) until that screen moves to the API.
    ========================================================================== */
 
 /** The dialysis centers that have a NephroReach portal. */

@@ -1,142 +1,160 @@
 "use client";
 
+/* ==========================================================================
+   The member's food, fluid and goals for one day, from the API (Phase 5)
+   --------------------------------------------------------------------------
+   Reads: the day's foods, the goals and the day's `/summary` (totals and
+   fluid, summed by the server). Writes: one call each. Two quick taps on
+   "Add Fluid" are two POSTs, and the server adds them: no
+   read-modify-write. Goals show only after a successful read (the server
+   owns the defaults and says when they are defaults).
+   ========================================================================== */
+
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEFAULT_GOALS } from "./nutrition.constants";
+import type { PatientScope } from "@/lib/data/queryKeys";
 import {
-  listFoods,
-  readFluids,
-  readGoals,
-  saveFluids,
-  saveFoods,
-  saveGoals,
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import type { FluidUnit } from "./fluidUnit";
+import {
+  addFluid,
+  createFood,
+  fromApiFood,
+  fromApiGoals,
+  getDaySummary,
+  getGoals,
+  listFoodsOn,
+  removeFood as removeFoodCall,
+  saveGoals as saveGoalsCall,
+  toFoodBody,
+  totalsFromSummary,
 } from "./nutrition.repository";
-import * as rules from "./nutrition.rules";
-import type { FluidByDate, FoodEntry } from "./nutrition.types";
+import type { FoodEntry, Goals } from "./nutrition.types";
 
-export const nutritionFoodsKey = [
-  "personal-log",
-  "nutrition",
-  "foods",
-] as const;
-export const nutritionFluidsKey = [
-  "personal-log",
-  "nutrition",
-  "fluids",
-] as const;
-export const nutritionGoalsKey = [
-  "personal-log",
-  "nutrition",
-  "goals",
-] as const;
-
-/* Stable empties, so a render before the read lands does not hand every
-   memo below a new array and re-run it. */
 const NO_FOODS: FoodEntry[] = [];
-const NO_FLUIDS: FluidByDate = {};
 
-/**
- * The member's food, fluid and goals, read for one day at a time.
- *
- * Same read-modify-write shape as `useCheckIns`: every write applies to
- * what is stored rather than the cache, so two quick taps on "Add Water"
- * both count.
- */
-export function useNutritionLog(date: string) {
+/** Shown only while the reads are pending (the page shows its skeleton). */
+const PENDING_GOALS: Goals = {
+  sodium: 0,
+  potassium: 0,
+  phosphorus: 0,
+  protein: 0,
+  calories: 0,
+  carbs: 0,
+  fats: 0,
+  fiber: 0,
+  fluid: 0,
+};
+
+export function useNutritionLog(
+  date: string,
+  explicitScope?: PatientScope | null,
+) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
+  const featureKey = scopedKey(scope, "nutrition");
 
   const foodsQuery = useQuery({
-    queryKey: nutritionFoodsKey,
-    queryFn: listFoods,
-  });
-  const fluidsQuery = useQuery({
-    queryKey: nutritionFluidsKey,
-    queryFn: readFluids,
+    queryKey: scopedKey(scope, "nutrition", "foods", date),
+    queryFn: async () =>
+      (await listFoodsOn(requireScope(scope), date)).items.map(fromApiFood),
   });
   const goalsQuery = useQuery({
-    queryKey: nutritionGoalsKey,
-    queryFn: readGoals,
+    queryKey: scopedKey(scope, "nutrition", "goals"),
+    queryFn: () => getGoals(requireScope(scope)),
+  });
+  const summaryQuery = useQuery({
+    queryKey: scopedKey(scope, "nutrition", "summary", date),
+    queryFn: () => getDaySummary(requireScope(scope), date),
   });
 
-  const foodsWrite = useMutation({
-    mutationFn: async (transform: (current: FoodEntry[]) => FoodEntry[]) =>
-      saveFoods(transform(await listFoods())),
-    onSuccess: (foods) => queryClient.setQueryData(nutritionFoodsKey, foods),
+  const refresh = () => queryClient.invalidateQueries({ queryKey: featureKey });
+
+  const foodAdd = useMutation({
+    mutationFn: (food: Omit<FoodEntry, "id" | "date">) =>
+      createFood(requireScope(scope), toFoodBody(food, date)),
+    onSuccess: refresh,
   });
-  const fluidsWrite = useMutation({
-    mutationFn: async (transform: (current: FluidByDate) => FluidByDate) =>
-      saveFluids(transform(await readFluids())),
-    onSuccess: (fluids) => queryClient.setQueryData(nutritionFluidsKey, fluids),
+  const foodRemove = useMutation({
+    mutationFn: (id: string) => removeFoodCall(requireScope(scope), id),
+    onSuccess: refresh,
   });
-  const goalsWrite = useMutation({
-    mutationFn: saveGoals,
-    onSuccess: (goals) => queryClient.setQueryData(nutritionGoalsKey, goals),
+  const fluidAdd = useMutation({
+    mutationFn: ({ amount, unit }: { amount: number; unit: FluidUnit }) =>
+      addFluid(requireScope(scope), date, amount, unit),
+    onSuccess: refresh,
+  });
+  const goalsSave = useMutation({
+    mutationFn: (goals: Goals) => saveGoalsCall(requireScope(scope), goals),
+    onSuccess: refresh,
   });
 
-  const allFoods = foodsQuery.data ?? NO_FOODS;
-  const fluids = fluidsQuery.data ?? NO_FLUIDS;
+  const foods = foodsQuery.data ?? NO_FOODS;
+  const day = summaryQuery.data?.days.find((d) => d.date === date);
+  const totals = useMemo(() => totalsFromSummary(day), [day]);
 
-  const foods = useMemo(() => rules.foodsOn(allFoods, date), [allFoods, date]);
-  const totals = useMemo(() => rules.totalsFor(foods), [foods]);
+  const { mutate: addFoodMutate, reset: resetFoodAdd } = foodAdd;
+  const { mutate: removeFoodMutate, reset: resetFoodRemove } = foodRemove;
+  const { mutate: addFluidMutate, reset: resetFluid } = fluidAdd;
+  const { reset: resetGoals } = goalsSave;
 
-  const { mutate: mutateFoods, reset: resetFoods } = foodsWrite;
-  const { mutate: mutateFluids, reset: resetFluids } = fluidsWrite;
-  const { reset: resetGoals } = goalsWrite;
-
-  /* The day is taken from the hook, not the form, so a food is always filed
-     under the day the member is looking at. */
   const addFood = useCallback(
-    (food: Omit<FoodEntry, "id" | "date">) =>
-      mutateFoods((current) =>
-        rules.addFood(current, {
-          ...food,
-          id: `food-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          date,
-        }),
-      ),
-    [mutateFoods, date],
+    (food: Omit<FoodEntry, "id" | "date">, onSaved?: () => void) =>
+      addFoodMutate(food, { onSuccess: () => onSaved?.() }),
+    [addFoodMutate],
   );
-
   const removeFood = useCallback(
-    (id: string) => mutateFoods((current) => rules.removeFood(current, id)),
-    [mutateFoods],
+    (id: string) => removeFoodMutate(id),
+    [removeFoodMutate],
   );
-
+  /** Adds what the member drank, in the unit they used. */
   const addWater = useCallback(
-    (ml: number) =>
-      mutateFluids((current) => rules.addFluid(current, date, ml)),
-    [mutateFluids, date],
+    (amount: number, unit: FluidUnit, onSaved?: () => void) =>
+      addFluidMutate({ amount, unit }, { onSuccess: () => onSaved?.() }),
+    [addFluidMutate],
   );
 
   const dismissSaveError = useCallback(() => {
-    resetFoods();
-    resetFluids();
+    resetFoodAdd();
+    resetFoodRemove();
+    resetFluid();
     resetGoals();
-  }, [resetFoods, resetFluids, resetGoals]);
+  }, [resetFoodAdd, resetFoodRemove, resetFluid, resetGoals]);
 
   return {
     foods,
     totals,
-    fluidMl: rules.fluidOn(fluids, date),
-    goals: goalsQuery.data ?? DEFAULT_GOALS,
+    /** Millilitres drunk that day, as the server summed them. */
+    fluidMl: day?.fluid.consumedMl ?? 0,
+    goals: goalsQuery.data ? fromApiGoals(goalsQuery.data) : PENDING_GOALS,
+    /** The server's default goals, not ones the member or a dietitian set. */
+    goalsAreDefault: goalsQuery.data?.isDefault === true,
 
     addFood,
     removeFood,
     addWater,
-    saveGoals: goalsWrite.mutate,
+    saveGoals: (goals: Goals, onSaved?: () => void) =>
+      goalsSave.mutate(goals, { onSuccess: () => onSaved?.() }),
 
     isPending:
-      foodsQuery.isPending || fluidsQuery.isPending || goalsQuery.isPending,
-    error: foodsQuery.error ?? fluidsQuery.error ?? goalsQuery.error,
-    isError: foodsQuery.isError || fluidsQuery.isError || goalsQuery.isError,
+      foodsQuery.isPending || goalsQuery.isPending || summaryQuery.isPending,
+    error: foodsQuery.error ?? goalsQuery.error ?? summaryQuery.error,
+    isError: foodsQuery.isError || goalsQuery.isError || summaryQuery.isError,
     refetch: () => {
       void foodsQuery.refetch();
-      void fluidsQuery.refetch();
       void goalsQuery.refetch();
+      void summaryQuery.refetch();
     },
-    saveError: foodsWrite.error ?? fluidsWrite.error ?? goalsWrite.error,
+    saveError:
+      foodAdd.error ?? foodRemove.error ?? fluidAdd.error ?? goalsSave.error,
     dismissSaveError,
     isSaving:
-      foodsWrite.isPending || fluidsWrite.isPending || goalsWrite.isPending,
+      foodAdd.isPending ||
+      foodRemove.isPending ||
+      fluidAdd.isPending ||
+      goalsSave.isPending,
   };
 }

@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   buttonStyles,
@@ -37,6 +38,23 @@ import {
 } from "@/features/personal-log/blood-pressure/bloodPressure";
 import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
 import { useNow } from "@/lib/utils/useNow";
+import { isApiError } from "@/lib/api/client";
+import { UploadError, uploadErrorMessage } from "@/lib/api/upload";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+
+/** Why a save failed, when the server or the upload said why. */
+function uploadErrorOrServer(error: unknown, isEs: boolean): string | null {
+  if (error instanceof UploadError) return uploadErrorMessage(error);
+  if (isApiError(error) && error.status === 403)
+    return String(errorMessageFor(error, "", isEs ? "es" : "en"));
+  if (isApiError(error) && error.status === 400 && error.messages.length > 0)
+    return error.messages.join(" ");
+  return null;
+}
 
 const LIST = "/dashboard/personal-log/blood-pressure";
 
@@ -87,7 +105,19 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
     reading?.medication ?? "Taken",
   );
   const [notes, setNotes] = useState(reading?.notes ?? "");
-  const [photo, setPhoto] = useState<string | null>(reading?.photo ?? null);
+  /* The photo: kept (undefined), a newly picked file, or removed (null).
+     A new file is uploaded through /files on save; only its id is sent. */
+  const [photoChange, setPhotoChange] = useState<File | null | undefined>(
+    undefined,
+  );
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const hasPhoto =
+    photoChange === undefined ? !!reading?.photoFileId : photoChange !== null;
+  const pickPhoto = (file: File | null) => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+    setPhotoChange(file);
+  };
   const [tried, setTried] = useState(false);
 
   const draft: BpDraft = {
@@ -101,7 +131,6 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
     medication,
     mood,
     notes,
-    ...(photo ? { photo } : {}),
   };
   const error = bpError(draft, today);
   const show = (field: BpError) =>
@@ -116,9 +145,16 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
 
   async function save() {
     setTried(true);
-    if (error) return;
-    if (reading) await bp.update(reading.id, draft);
-    else await bp.add(draft);
+    if (error || bp.isSaving) return;
+    /* Back to the list only once the server kept it; a failure shows below
+       and the form keeps what was typed. */
+    try {
+      if (reading) await bp.update(reading.id, draft, photoChange);
+      else await bp.add(draft, photoChange);
+    } catch {
+      return;
+    }
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
     router.push(LIST);
   }
 
@@ -156,7 +192,10 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
         <Alert tone="danger" className="mt-stack-md">
           {isEs
             ? "No se pudo guardar. Intenta de nuevo."
-            : "That did not save. Try again."}
+            : "That did not save. Try again."}{" "}
+          {isApiError(bp.saveError) || bp.saveError instanceof UploadError
+            ? uploadErrorOrServer(bp.saveError, isEs)
+            : null}
         </Alert>
       ) : null}
 
@@ -344,8 +383,9 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
             onDictated={(text) =>
               setNotes((current) => appendText(current, text))
             }
-            photo={photo}
-            onPhoto={setPhoto}
+            onPhotoFile={pickPhoto}
+            hasPhoto={hasPhoto}
+            photoPreview={photoPreview}
           />
         </div>
       </Card>
@@ -384,7 +424,33 @@ function AddOrEdit() {
   const bp = useBloodPressure();
   if (id && bp.isPending)
     return <Skeleton height={640} className="rounded-card" />;
+  /* Editing needs the reading; a failed read is an error, never a blank
+     form that would save over it. */
+  if (id && bp.error)
+    return (
+      <AsyncSection
+        pending={false}
+        skeleton={null}
+        error={bp.error}
+        onRetry={canRetry(bp.error) ? bp.refetch : undefined}
+        errorTitle={errorTitleFor(
+          bp.error,
+          "Your readings could not be loaded",
+        )}
+        errorMessage={errorMessageFor(bp.error, undefined)}
+      >
+        {null}
+      </AsyncSection>
+    );
   const reading = id ? bp.readings.find((r) => r.id === id) : undefined;
+  /* An id outside the loaded window (or someone else's) is not a new
+     reading: saying so beats a blank form that would add a duplicate. */
+  if (id && !reading)
+    return (
+      <Alert tone="warning">
+        That reading was not found in your recent log.
+      </Alert>
+    );
   return <ReadingForm key={reading?.id ?? "new"} reading={reading} />;
 }
 

@@ -13,6 +13,11 @@ import {
   Input,
   Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* ==========================================================================
    Emergency contact — the form
@@ -55,8 +60,10 @@ function EmergencyContactForm({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        save(draft);
-        setSaved(true);
+        if (isSaving) return;
+        setSaved(false);
+        /* "Saved" only once the server kept it. */
+        save(draft, () => setSaved(true));
       }}
     >
       {saveError ? (
@@ -157,6 +164,7 @@ function EmergencyContactForm({
 
 export function EmergencyContactSection() {
   const { language } = useLanguage();
+  const lang = language === "ES" ? "es" : "en";
   const { contact, isPending, error, refetch } = useEmergencyContact();
 
   /* Nothing to seed the fields with yet. Rendering them empty and filling
@@ -167,12 +175,15 @@ export function EmergencyContactSection() {
     <AsyncSection
       pending={isPending}
       error={error}
-      onRetry={refetch}
-      errorTitle={
+      onRetry={canRetry(error) ? refetch : undefined}
+      errorTitle={errorTitleFor(
+        error,
         language === "ES"
           ? "No se pudo cargar su contacto de emergencia"
-          : "Your emergency contact could not be loaded"
-      }
+          : "Your emergency contact could not be loaded",
+        lang,
+      )}
+      errorMessage={errorMessageFor(error, undefined, lang)}
       skeleton={<Skeleton height={220} />}
     >
       <EmergencyContactForm

@@ -9,7 +9,8 @@
    A log of what the member says, nothing more: it is never read for
    symptoms or used to advise anything (see beforeTheEr.topics.ts).
 
-   Pure: state in, state out. Storage lives in useErVisits.ts.
+   Pure: state in, state out. The record lives on the API (useErVisits.ts,
+   Phase 5); these helpers stay for the screens that read the log.
    ========================================================================== */
 
 export type ErAnswer = "yes" | "no";
@@ -84,18 +85,5 @@ export function monthlyVisits(
   return Array.from({ length: count }, (_, i) => {
     const month = monthKey(now, count - 1 - i);
     return { month, visits: visitsIn(log, month) };
-  });
-}
-
-/** The demo patient's history: a few months of weekly answers. */
-export function seedErVisits(now: number): ErVisitReport[] {
-  const yesWeeks = new Set([3, 9, 10, 18]);
-  return Array.from({ length: 20 }, (_, i) => {
-    const at = now - (i + 1) * 7 * 86_400_000;
-    return {
-      weekOf: weekOf(at),
-      answer: (yesWeeks.has(i) ? "yes" : "no") as ErAnswer,
-      reportedAt: new Date(at).toISOString(),
-    };
   });
 }

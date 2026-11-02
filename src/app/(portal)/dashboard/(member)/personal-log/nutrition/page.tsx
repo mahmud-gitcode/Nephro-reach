@@ -38,6 +38,12 @@ import {
   ExerciseModal,
 } from "@/features/personal-log/exercise/ExerciseLog";
 import { useExerciseLog } from "@/features/personal-log/exercise/useExerciseLog";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import type { ExerciseEntry } from "@/features/personal-log/exercise/exercise.types";
 export default function NutritionPage() {
   const { language, dictionary } = useLanguage();
@@ -202,24 +208,33 @@ export default function NutritionPage() {
             exercise.dismissSaveError();
           }}
         >
-          {isEs
-            ? "Inténtalo de nuevo. Si sigue pasando, tu navegador puede estar bloqueando el almacenamiento."
-            : "Please try again. If it keeps happening, your browser may be blocking saved data."}
+          {saveErrorText(saveError ?? exercise.saveError, isEs ? "es" : "en")}
         </Alert>
       ) : null}
 
       <AsyncSection
         pending={isPending || exercise.isPending}
         error={error ?? exercise.error}
-        onRetry={() => {
-          refetch();
-          exercise.refetch();
-        }}
-        errorTitle={
+        onRetry={
+          canRetry(error ?? exercise.error)
+            ? () => {
+                refetch();
+                exercise.refetch();
+              }
+            : undefined
+        }
+        errorTitle={errorTitleFor(
+          error ?? exercise.error,
           isEs
             ? "Tu registro de nutrición no se cargó"
-            : "Your nutrition log did not load"
-        }
+            : "Your nutrition log did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          error ?? exercise.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         skeleton={
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -286,8 +301,8 @@ export default function NutritionPage() {
           mealLabels={mealLabels}
           onClose={() => setAddFoodMeal(null)}
           onSave={(food) => {
-            addFood(food);
-            setAddFoodMeal(null);
+            /* Closed once the server kept it; a failure shows above. */
+            addFood(food, () => setAddFoodMeal(null));
           }}
         />
       ) : null}
@@ -297,8 +312,7 @@ export default function NutritionPage() {
           goals={goals}
           onClose={() => setIsGoalsOpen(false)}
           onSave={(next) => {
-            saveGoals(next);
-            setIsGoalsOpen(false);
+            saveGoals(next, () => setIsGoalsOpen(false));
           }}
         />
       ) : null}
@@ -307,9 +321,10 @@ export default function NutritionPage() {
         <AddWaterModal
           dayLabel={dayLabel}
           onClose={() => setIsWaterOpen(false)}
-          onSave={(ml) => {
-            addWater(ml);
-            setIsWaterOpen(false);
+          onSave={(amount, unit) => {
+            /* Sent in the unit tapped: the server's amountMl is the one
+               conversion (Phase 5). */
+            addWater(amount, unit, () => setIsWaterOpen(false));
           }}
         />
       ) : null}
@@ -322,8 +337,9 @@ export default function NutritionPage() {
           dayLabel={relativeDayLabel(exerciseEdit.date, isEs)}
           onClose={() => setExerciseEdit(null)}
           onSave={(drafts) => {
-            exercise.saveEntries(drafts, exerciseEdit.id);
-            setExerciseEdit(null);
+            exercise.saveEntries(drafts, exerciseEdit.id, () =>
+              setExerciseEdit(null),
+            );
           }}
         />
       ) : null}

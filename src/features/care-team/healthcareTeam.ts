@@ -1,5 +1,3 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-
 /* ==========================================================================
    My Healthcare Team — the people a member shares with
    --------------------------------------------------------------------------
@@ -9,8 +7,11 @@ import { readJson, storageKey, writeJson } from "@/lib/data/storage";
    network (HIPAA) — no social-media share sheet — so the export pickers
    read their recipients from here rather than from a fixed list.
 
-   In this frontend phase the invitation is not emailed; the member can
-   mark it accepted to see how the list behaves once the backend sends it.
+   The team lives on the API (`/patients/:id/care-team-contacts`, Phase 4).
+   Invitations are not emailed yet, and the member can no longer mark
+   someone as accepted on their behalf (INT-14; the API refuses it, spec
+   040): every contact stays "invited" until a real invitation flow lets the
+   person accept for themselves, so the share pickers have no recipients.
    ========================================================================== */
 
 export const TEAM_ROLES = [
@@ -60,30 +61,44 @@ export function teamError(
   return null;
 }
 
-export function invite(
-  list: TeamMember[],
-  draft: TeamDraft,
-  now: number,
-): TeamMember[] {
-  return [
-    ...list,
-    {
-      id: `team-${now}`,
-      email: draft.email.trim().toLowerCase(),
-      name: draft.name.trim(),
-      role: draft.role,
-      status: "invited",
-      invitedAt: new Date(now).toISOString(),
-    },
-  ];
+/** `GET /patients/:id/care-team-contacts` row. */
+export type ApiTeamMember = {
+  id: string;
+  patientId: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  invitedAt: string;
+};
+
+export function fromApiTeamMember(row: ApiTeamMember): TeamMember {
+  const role = TEAM_ROLES.some((r) => r.value === row.role)
+    ? (row.role as TeamRole)
+    : "other";
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name ?? "",
+    role,
+    status: row.status === "accepted" ? "accepted" : "invited",
+    invitedAt: row.invitedAt,
+  };
 }
 
-export function accept(list: TeamMember[], id: string): TeamMember[] {
-  return list.map((m) => (m.id === id ? { ...m, status: "accepted" } : m));
-}
-
-export function removeMember(list: TeamMember[], id: string): TeamMember[] {
-  return list.filter((m) => m.id !== id);
+/** `POST /patients/:id/care-team-contacts`: trimmed, email lower-case,
+ *  no empty name. */
+export function toInviteBody(draft: TeamDraft): {
+  email: string;
+  name?: string;
+  role: TeamRole;
+} {
+  const name = draft.name.trim();
+  return {
+    email: draft.email.trim().toLowerCase(),
+    ...(name ? { name } : {}),
+    role: draft.role,
+  };
 }
 
 /** Who a log can be sent to: only people who accepted the invitation. */
@@ -95,15 +110,4 @@ export function recipients(list: TeamMember[]): TeamMember[] {
 export function recipientLabel(member: TeamMember, isEs: boolean): string {
   const who = member.name || member.email;
   return `${who} · ${roleLabel(member.role, isEs)}`;
-}
-
-const KEY = storageKey("healthcare-team");
-
-export async function readTeam(): Promise<TeamMember[]> {
-  const stored = await readJson<TeamMember[] | null>(KEY, null);
-  return Array.isArray(stored) ? stored : [];
-}
-
-export async function writeTeam(list: TeamMember[]): Promise<TeamMember[]> {
-  return writeJson(KEY, list);
 }

@@ -1,72 +1,117 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
-import { rawAllergyRows, rawHistoryRows } from "./health.seed";
+/* ==========================================================================
+   The member's allergies and medical history, from the API (Phase 4)
+   --------------------------------------------------------------------------
+   Two collections, one mutation per server operation (ADR 0007 §1); every
+   write invalidates its list, so what shows is what the server kept. No
+   sample record: a member with no allergies sees an empty table.
+   ========================================================================== */
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { usePagedList } from "@/features/profile/usePagedList";
+import {
+  changedFields,
+  fromApiAllergy,
+  fromApiCondition,
+  toAllergyBody,
+  toConditionBody,
+} from "./health.mapper";
+import {
+  createAllergy,
+  createCondition,
+  listAllergies,
+  listConditions,
+  PROFILE_LIST_PAGE,
+  removeAllergy,
+  removeCondition,
+  updateAllergy,
+  updateCondition,
+} from "./health.repository";
 import type { AllergyRow, HistoryRow } from "./health.types";
 
-/* The member's allergies and medical history, kept on this device
-   (member-owned, see lib/data/storage). They lived only in page state
-   before, so an allergy added was gone on the next visit. */
-type HealthRecord = { allergies: AllergyRow[]; history: HistoryRow[] };
+type Edit<T> = { before: T; next: Omit<T, "id"> };
 
-const KEY = storageKey("my-health");
-const queryKey = ["my-health"] as const;
-
-const SAMPLE: HealthRecord = {
-  allergies: rawAllergyRows.map((row, i) => ({
-    ...row,
-    id: `allergy-seed-${i}`,
-  })),
-  history: rawHistoryRows.map((row, i) => ({
-    ...row,
-    id: `history-seed-${i}`,
-  })),
-};
-
-async function read(): Promise<HealthRecord> {
-  const stored = await readJson<Partial<HealthRecord> | null>(KEY, null);
-  if (
-    stored &&
-    Array.isArray(stored.allergies) &&
-    Array.isArray(stored.history)
-  ) {
-    return { allergies: stored.allergies, history: stored.history };
-  }
-  return sampleOr(KEY, SAMPLE, { allergies: [], history: [] });
-}
-
-export function useMyHealth() {
+export function useMyHealth(explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey, queryFn: read });
-  const write = useMutation({
-    mutationFn: async (transform: (r: HealthRecord) => HealthRecord) =>
-      writeJson(KEY, transform(await read())),
-    onSuccess: (record) => queryClient.setQueryData(queryKey, record),
+  const allergyKey = scopedKey(scope, "allergies");
+  const conditionKey = scopedKey(scope, "medical-conditions");
+
+  const allergies = usePagedList({
+    scope,
+    queryKey: allergyKey,
+    params: PROFILE_LIST_PAGE,
+    fetch: listAllergies,
+    map: fromApiAllergy,
   });
-  const { mutate } = write;
-  const record = useMemo(
-    () => query.data ?? { allergies: [], history: [] },
-    [query.data],
-  );
+  const history = usePagedList({
+    scope,
+    queryKey: conditionKey,
+    params: PROFILE_LIST_PAGE,
+    fetch: listConditions,
+    map: fromApiCondition,
+  });
+
+  const refreshAllergies = () =>
+    queryClient.invalidateQueries({ queryKey: allergyKey });
+  const refreshConditions = () =>
+    queryClient.invalidateQueries({ queryKey: conditionKey });
+
+  const addAllergy = useMutation({
+    mutationFn: (row: Omit<AllergyRow, "id">) =>
+      createAllergy(requireScope(scope), toAllergyBody(row)),
+    onSuccess: refreshAllergies,
+  });
+  const editAllergy = useMutation({
+    mutationFn: ({ before, next }: Edit<AllergyRow>) =>
+      updateAllergy(
+        requireScope(scope),
+        before.id,
+        changedFields(toAllergyBody(before), toAllergyBody(next)),
+      ),
+    onSuccess: refreshAllergies,
+  });
+  const deleteAllergy = useMutation({
+    mutationFn: (id: string) => removeAllergy(requireScope(scope), id),
+    onSuccess: refreshAllergies,
+  });
+
+  const addCondition = useMutation({
+    mutationFn: (row: Omit<HistoryRow, "id">) =>
+      createCondition(requireScope(scope), toConditionBody(row)),
+    onSuccess: refreshConditions,
+  });
+  const editCondition = useMutation({
+    mutationFn: ({ before, next }: Edit<HistoryRow>) =>
+      updateCondition(
+        requireScope(scope),
+        before.id,
+        changedFields(toConditionBody(before), toConditionBody(next)),
+      ),
+    onSuccess: refreshConditions,
+  });
+  const deleteCondition = useMutation({
+    mutationFn: (id: string) => removeCondition(requireScope(scope), id),
+    onSuccess: refreshConditions,
+  });
+
   return {
-    allergies: record.allergies,
-    history: record.history,
-    isPending: query.isPending,
-    error: query.error,
-    isError: query.isError,
-    refetch: () => void query.refetch(),
-    saveError: write.error,
-    setAllergies: useCallback(
-      (fn: (rows: AllergyRow[]) => AllergyRow[]) =>
-        mutate((r) => ({ ...r, allergies: fn(r.allergies) })),
-      [mutate],
-    ),
-    setHistory: useCallback(
-      (fn: (rows: HistoryRow[]) => HistoryRow[]) =>
-        mutate((r) => ({ ...r, history: fn(r.history) })),
-      [mutate],
-    ),
+    allergies: allergies.items,
+    history: history.items,
+    allergiesRead: allergies,
+    historyRead: history,
+    addAllergy,
+    editAllergy,
+    deleteAllergy,
+    addCondition,
+    editCondition,
+    deleteCondition,
   };
 }

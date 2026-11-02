@@ -106,6 +106,8 @@ export function isHeldForClosure(notice: ClinicNotice): boolean {
 
 /** Past the point where it can be taken back. */
 export function isDelivered(notice: ClinicNotice, now = new Date()): boolean {
+  /* The server's word when there is one (Phase 5). */
+  if (notice.status) return notice.status === "delivered";
   return notice.deliverOn <= todayIso(now);
 }
 
@@ -115,6 +117,7 @@ export function noticeStatus(
   notice: ClinicNotice,
   now = new Date(),
 ): ClinicNoticeStatus {
+  if (notice.status) return notice.status;
   if (isDelivered(notice, now)) return "delivered";
   return isHeldForClosure(notice) ? "held" : "sending";
 }

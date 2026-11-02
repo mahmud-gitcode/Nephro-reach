@@ -1,5 +1,3 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-
 /* ==========================================================================
    The member's emergency contact
    --------------------------------------------------------------------------
@@ -51,18 +49,34 @@ export function describeContact(contact: ProfileEmergencyContact): string {
     .join(" · ");
 }
 
-const KEY = storageKey("profile-emergency-contact");
-
-export async function readEmergencyContact(): Promise<ProfileEmergencyContact> {
-  const stored = await readJson<Partial<ProfileEmergencyContact> | null>(
-    KEY,
-    null,
-  );
-  return { ...emptyEmergencyContact(), ...(stored ?? {}) };
+/** `GET /patients/:id/emergency-contact` answers null when none is saved:
+ *  "not set", shown as empty fields, never a sample. */
+export function fromApiEmergencyContact(
+  raw: Partial<ProfileEmergencyContact> | null,
+): ProfileEmergencyContact {
+  if (!raw) return emptyEmergencyContact();
+  return {
+    name: raw.name ?? "",
+    phone: raw.phone ?? "",
+    relationship: raw.relationship ?? "",
+  };
 }
 
-export async function writeEmergencyContact(
-  contact: ProfileEmergencyContact,
-): Promise<ProfileEmergencyContact> {
-  return writeJson(KEY, contact);
+/** What a save does: the API needs a number, so a contact with no number
+ *  is removed (a name alone cannot be dialled; `canCall`). */
+export type EmergencyContactWrite =
+  { kind: "put"; body: ProfileEmergencyContact } | { kind: "delete" };
+
+export function emergencyContactWrite(
+  draft: ProfileEmergencyContact,
+): EmergencyContactWrite {
+  if (!canCall(draft)) return { kind: "delete" };
+  return {
+    kind: "put",
+    body: {
+      name: draft.name.trim(),
+      phone: draft.phone.trim(),
+      relationship: draft.relationship.trim(),
+    },
+  };
 }

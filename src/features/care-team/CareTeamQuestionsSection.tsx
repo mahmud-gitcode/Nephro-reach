@@ -22,6 +22,13 @@ import {
   type CareTeamRole,
   type QuestionStatus,
 } from "@/features/care-team/useCareTeamQuestions";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { saveErrorText } from "@/features/profile/saveError";
 
 interface CareTeamQuestionsSectionProps {
   hideTitle?: boolean;
@@ -37,6 +44,7 @@ export default function CareTeamQuestionsSection({
     isPending,
     error,
     refetch,
+    read,
     add,
     update,
     remove,
@@ -123,13 +131,7 @@ export default function CareTeamQuestionsSection({
     void written
       .then(() => setIsModalOpen(false))
       .catch((cause: unknown) =>
-        setFormError(
-          cause instanceof Error
-            ? cause.message
-            : language === "ES"
-              ? "No se pudo guardar."
-              : "That could not be saved.",
-        ),
+        setFormError(saveErrorText(cause, language === "ES" ? "es" : "en")),
       );
   };
 
@@ -321,12 +323,19 @@ export default function CareTeamQuestionsSection({
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle={
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
           language === "ES"
             ? "Sus preguntas no se cargaron"
-            : "Your questions did not load"
-        }
+            : "Your questions did not load",
+          language === "ES" ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          error,
+          undefined,
+          language === "ES" ? "es" : "en",
+        )}
         skeleton={
           <div className="space-y-3.5">
             <Skeleton height={130} />
@@ -480,6 +489,7 @@ export default function CareTeamQuestionsSection({
               </Button>
             </nav>
           ) : null}
+          <LoadMore read={read} />
         </div>
       </AsyncSection>
 
