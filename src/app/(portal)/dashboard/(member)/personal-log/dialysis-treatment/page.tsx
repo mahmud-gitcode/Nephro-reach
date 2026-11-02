@@ -29,6 +29,7 @@ import {
   uncharted,
 } from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
+import { combineReads } from "@/lib/data/asyncState";
 import MedicationsGivenSection from "@/features/personal-log/MedicationsGivenSection";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
@@ -38,6 +39,7 @@ import PdExchangeLog from "@/features/personal-log/dialysis/PdExchangeLog";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   DonutChart,
@@ -45,6 +47,7 @@ import {
   Card,
   EmptyState,
   Input,
+  SkeletonText,
   Table,
   TableBody,
   TableCell,
@@ -318,6 +321,7 @@ export default function DialysisTreatmentPage() {
   const modalityLog = useDialysisModality();
   const log = useTreatmentLog();
   const schedule = useDialysisSchedule();
+  const reads = combineReads(modalityLog, log, schedule);
   const todayIso = toDateInputValue(new Date());
   /* Null shows every date; the page opens on all of them. */
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -349,148 +353,163 @@ export default function DialysisTreatmentPage() {
       {/* Which kind of dialysis this member is on. Everything below is
           written for a chair at a centre, so a member on PD needs to be
           able to say so before the page asks them for a chair time. */}
-      <ModalityTabs log={modalityLog} showPdRhythm />
+      {/* The dialysis type, the log and the schedule decide everything
+          below; a failed read of any of them is an error, never the
+          default type or week (INT-10). */}
+      <AsyncSection
+        pending={reads.pending}
+        error={reads.error}
+        onRetry={reads.onRetry}
+        errorTitle={
+          isEs
+            ? "No se pudo cargar tu registro de diálisis"
+            : "Your dialysis log could not be loaded"
+        }
+        skeleton={<SkeletonText lines={6} />}
+      >
+        <ModalityTabs log={modalityLog} showPdRhythm />
 
-      {modalityLog.modality === "pd" ? (
-        <PdExchangeLog
-          log={modalityLog}
-          date={selectedDate ?? todayIso}
-          dayLabel={formatPdDayLabel(selectedDate ?? todayIso, isEs)}
-        />
-      ) : (
-        <>
-          {/* MONTH PICKER & ADD ENTRY BUTTON */}
-          <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
-            {/* Wraps on a phone: on one line it pushed Add Treatment off
-                the screen (client review, 2026-10-08). */}
-            <div className="flex flex-wrap items-center gap-inline-md sm:shrink-0 sm:flex-nowrap">
-              {/* A fixed width: Safari on iPad and iPhone draws a date field
-                  wider than its box and it slid over the Today button
-                  beside it (client screenshot, 2026-10-04). */}
-              <Input
-                type="date"
-                inputSize="small"
-                className="w-44 min-w-0 appearance-none"
-                value={selectedDate ?? ""}
-                aria-label={isEs ? "Elegir fecha" : "Pick a date"}
-                leadingIcon={<Calendar />}
-                onChange={(event) =>
-                  setSelectedDate(event.target.value || null)
-                }
-                onClick={(event) => {
-                  // Tapping anywhere on the field opens the calendar, not just
-                  // the browser's own small icon.
-                  const input = event.currentTarget;
-                  if (typeof input.showPicker === "function") {
-                    try {
-                      input.showPicker();
-                    } catch {
-                      // Some browsers refuse outside a user gesture; focusing
-                      // still lets the field be typed into.
-                    }
+        {modalityLog.modality === "pd" ? (
+          <PdExchangeLog
+            log={modalityLog}
+            date={selectedDate ?? todayIso}
+            dayLabel={formatPdDayLabel(selectedDate ?? todayIso, isEs)}
+          />
+        ) : (
+          <>
+            {/* MONTH PICKER & ADD ENTRY BUTTON */}
+            <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-end">
+              {/* Wraps on a phone: on one line it pushed Add Treatment off
+                  the screen (client review, 2026-10-08). */}
+              <div className="flex flex-wrap items-center gap-inline-md sm:shrink-0 sm:flex-nowrap">
+                {/* A fixed width: Safari on iPad and iPhone draws a date field
+                    wider than its box and it slid over the Today button
+                    beside it (client screenshot, 2026-10-04). */}
+                <Input
+                  type="date"
+                  inputSize="small"
+                  className="w-44 min-w-0 appearance-none"
+                  value={selectedDate ?? ""}
+                  aria-label={isEs ? "Elegir fecha" : "Pick a date"}
+                  leadingIcon={<Calendar />}
+                  onChange={(event) =>
+                    setSelectedDate(event.target.value || null)
                   }
-                }}
-              />
-
-              <Button
-                size="small"
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setSelectedDate(toDateInputValue(new Date()))}
-              >
-                {isEs ? "Hoy" : "Today"}
-              </Button>
-
-              <Link
-                href="/dashboard/personal-log/dialysis-treatment/add"
-                className={buttonStyles({ size: "small" })}
-              >
-                <Plus />
-                <span>{dt?.addEntry || "Add Treatment"}</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* "Did you miss a treatment?" — a scheduled day with nothing
-              charted (client, 2026-10-12). */}
-          {notCharted.length > 0 ? (
-            <Alert
-              tone="info"
-              title={
-                isEs
-                  ? "¿Tuvo estos tratamientos?"
-                  : "Did you have these treatments?"
-              }
-            >
-              <ul className="mt-stack-xs space-y-stack-sm">
-                {notCharted.slice(0, 3).map((day) => (
-                  <li
-                    key={day.date}
-                    className="flex flex-wrap items-center gap-inline-md"
-                  >
-                    <span className="min-w-40 text-body-sm">
-                      {formatPdDayLabel(day.date, isEs)}
-                    </span>
-                    <Link
-                      href={`/dashboard/personal-log/dialysis-treatment/add?date=${day.date}`}
-                      className={buttonStyles({ size: "small" })}
-                    >
-                      {isEs ? "Registrarlo" : "Chart it"}
-                    </Link>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() =>
-                        log.markMissed(
-                          day.date,
-                          isHome ? "home-hd" : "in-center-hd",
-                        )
+                  onClick={(event) => {
+                    // Tapping anywhere on the field opens the calendar, not just
+                    // the browser's own small icon.
+                    const input = event.currentTarget;
+                    if (typeof input.showPicker === "function") {
+                      try {
+                        input.showPicker();
+                      } catch {
+                        // Some browsers refuse outside a user gesture; focusing
+                        // still lets the field be typed into.
                       }
+                    }
+                  }}
+                />
+
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => setSelectedDate(toDateInputValue(new Date()))}
+                >
+                  {isEs ? "Hoy" : "Today"}
+                </Button>
+
+                <Link
+                  href="/dashboard/personal-log/dialysis-treatment/add"
+                  className={buttonStyles({ size: "small" })}
+                >
+                  <Plus />
+                  <span>{dt?.addEntry || "Add Treatment"}</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* "Did you miss a treatment?" — a scheduled day with nothing
+                charted (client, 2026-10-12). */}
+            {notCharted.length > 0 ? (
+              <Alert
+                tone="info"
+                title={
+                  isEs
+                    ? "¿Tuvo estos tratamientos?"
+                    : "Did you have these treatments?"
+                }
+              >
+                <ul className="mt-stack-xs space-y-stack-sm">
+                  {notCharted.slice(0, 3).map((day) => (
+                    <li
+                      key={day.date}
+                      className="flex flex-wrap items-center gap-inline-md"
                     >
-                      {isEs ? "Lo perdí" : "I missed it"}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </Alert>
-          ) : null}
+                      <span className="min-w-40 text-body-sm">
+                        {formatPdDayLabel(day.date, isEs)}
+                      </span>
+                      <Link
+                        href={`/dashboard/personal-log/dialysis-treatment/add?date=${day.date}`}
+                        className={buttonStyles({ size: "small" })}
+                      >
+                        {isEs ? "Registrarlo" : "Chart it"}
+                      </Link>
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() =>
+                          log.markMissed(
+                            day.date,
+                            isHome ? "home-hd" : "in-center-hd",
+                          )
+                        }
+                      >
+                        {isEs ? "Lo perdí" : "I missed it"}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </Alert>
+            ) : null}
 
-          {/* THIS MONTH'S ATTENDANCE */}
-          <SummaryCards
-            entries={entries}
-            monthKey={todayIso.slice(0, 7)}
-            isHome={isHome}
-          />
+            {/* THIS MONTH'S ATTENDANCE */}
+            <SummaryCards
+              entries={entries}
+              monthKey={todayIso.slice(0, 7)}
+              isHome={isHome}
+            />
 
-          {/* At home the member owns the machine, so its maintenance is
-              tracked here. The session's vitals are charted with the
-              treatment itself — pre and post — rather than in a second
-              card that asked for the same numbers (client, 2026-10-12). */}
-          {isHome ? <MachineWaterCard /> : null}
+            {/* At home the member owns the machine, so its maintenance is
+                tracked here. The session's vitals are charted with the
+                treatment itself — pre and post — rather than in a second
+                card that asked for the same numbers (client, 2026-10-12). */}
+            {isHome ? <MachineWaterCard /> : null}
 
-          {/* CLINICAL MEASUREMENTS */}
-          <ClinicalMeasurementsCards entry={latestAttended} />
+            {/* CLINICAL MEASUREMENTS */}
+            <ClinicalMeasurementsCards entry={latestAttended} />
 
-          {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
-          <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12 [&>*]:min-w-0">
-            <div className="xl:col-span-8">
-              <MedicationsGivenSection
-                treatmentDate={latestAttended?.date ?? todayIso}
-              />
-            </div>
-            <div className="xl:col-span-4">
-              <SymptomsDonut entries={entries} />
-            </div>
-          </section>
+            {/* MEDICATIONS GIVEN DURING DIALYSIS & SYMPTOMS DONUT */}
+            <section className="grid grid-cols-1 items-stretch gap-inline-lg xl:grid-cols-12 [&>*]:min-w-0">
+              <div className="xl:col-span-8">
+                <MedicationsGivenSection
+                  treatmentDate={latestAttended?.date ?? todayIso}
+                />
+              </div>
+              <div className="xl:col-span-4">
+                <SymptomsDonut entries={entries} />
+              </div>
+            </section>
 
-          {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
-          <TreatmentEntriesTable
-            entries={visibleEntries}
-            onShowAll={() => setSelectedDate(null)}
-          />
-        </>
-      )}
+            {/* DIALYSIS TREATMENT LOG ENTRIES TABLE */}
+            <TreatmentEntriesTable
+              entries={visibleEntries}
+              onShowAll={() => setSelectedDate(null)}
+            />
+          </>
+        )}
+      </AsyncSection>
 
       {/* Advice last, below the fields: a member opening this came to record
           a session, not to read. */}

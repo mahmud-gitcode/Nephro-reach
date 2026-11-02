@@ -47,6 +47,8 @@ export function useTreatmentLog() {
     entries,
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
     isSaving: write.isPending,
     saveError: write.error,
     save: useCallback(

@@ -17,7 +17,13 @@ import type {
   HealthTab,
   HistoryRow,
 } from "@/features/my-health/health.types";
-import { Card, Tabs, TabPanel } from "@/components/ui";
+import {
+  AsyncSection,
+  Card,
+  SkeletonText,
+  Tabs,
+  TabPanel,
+} from "@/components/ui";
 import type { TabItem } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 
@@ -132,11 +138,23 @@ export default function MyHealthPage() {
             buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
             onAddClick={handleOpenAddAllergy}
           />
-          <AllergiesTable
-            rows={allergyRows}
-            onEdit={handleOpenEditAllergy}
-            onDelete={handleDeleteAllergy}
-          />
+          <AsyncSection
+            pending={health.isPending}
+            error={health.error}
+            onRetry={health.refetch}
+            errorTitle={
+              language === "ES"
+                ? "No se pudieron cargar sus alergias"
+                : "Your allergies could not be loaded"
+            }
+            skeleton={<SkeletonText lines={4} />}
+          >
+            <AllergiesTable
+              rows={allergyRows}
+              onEdit={handleOpenEditAllergy}
+              onDelete={handleDeleteAllergy}
+            />
+          </AsyncSection>
         </Card>
       </TabPanel>
 
@@ -151,11 +169,23 @@ export default function MyHealthPage() {
             buttonLabel={h?.history?.addBtn || "Add Condition"}
             onAddClick={handleOpenAddCondition}
           />
-          <MedicalHistoryTable
-            rows={historyRows}
-            onEdit={handleOpenEditCondition}
-            onDelete={handleDeleteCondition}
-          />
+          <AsyncSection
+            pending={health.isPending}
+            error={health.error}
+            onRetry={health.refetch}
+            errorTitle={
+              language === "ES"
+                ? "No se pudo cargar su historial médico"
+                : "Your medical history could not be loaded"
+            }
+            skeleton={<SkeletonText lines={4} />}
+          >
+            <MedicalHistoryTable
+              rows={historyRows}
+              onEdit={handleOpenEditCondition}
+              onDelete={handleDeleteCondition}
+            />
+          </AsyncSection>
         </Card>
       </TabPanel>
 

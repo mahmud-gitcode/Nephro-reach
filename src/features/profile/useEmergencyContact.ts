@@ -37,6 +37,7 @@ export function useEmergencyContact() {
 
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
     refetch: () => void query.refetch(),
     /* Worth surfacing loudly: a member who believes this is saved will not
        check it again until the day they need it. */

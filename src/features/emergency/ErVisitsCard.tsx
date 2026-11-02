@@ -1,7 +1,14 @@
 "use client";
 
 import React from "react";
-import { Alert, BarChart, Button, Card, Skeleton } from "@/components/ui";
+import {
+  Alert,
+  AsyncSection,
+  BarChart,
+  Button,
+  Card,
+  Skeleton,
+} from "@/components/ui";
 import { useNow } from "@/lib/utils/useNow";
 import {
   answerFor,
@@ -30,7 +37,8 @@ function monthName(month: string, isEs: boolean) {
 
 export function ErVisitsCard({ isEs }: { isEs: boolean }) {
   const now = useNow();
-  const { log, isPending, answer, isSaving, saveError } = useErVisits();
+  const { log, isPending, error, refetch, answer, isSaving, saveError } =
+    useErVisits();
   const thisWeek = answerFor(log, weekOf(now));
   const thisMonth = visitsIn(log, monthKey(now));
   const lastMonth = visitsIn(log, monthKey(now, 1));
@@ -59,9 +67,18 @@ export function ErVisitsCard({ isEs }: { isEs: boolean }) {
         </Alert>
       ) : null}
 
-      {isPending ? (
-        <Skeleton height={160} />
-      ) : (
+      {/* error → loading → content: a failed read is never "no visits". */}
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={refetch}
+        errorTitle={
+          isEs
+            ? "No se pudieron cargar sus visitas a urgencias"
+            : "Your ER visits could not be loaded"
+        }
+        skeleton={<Skeleton height={160} />}
+      >
         <>
           <div className="flex flex-col gap-inline-md rounded-card-nested bg-surface-sunken p-inset-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="text-label-lg text-fg">
@@ -137,7 +154,7 @@ export function ErVisitsCard({ isEs }: { isEs: boolean }) {
             height={160}
           />
         </>
-      )}
+      </AsyncSection>
     </Card>
   );
 }

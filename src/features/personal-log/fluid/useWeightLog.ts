@@ -33,6 +33,9 @@ export function useWeightLog() {
   return {
     entries,
     isPending: query.isPending,
+    error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
     saveError: write.error,
     /** Newest first, as the page lists them. */
     add: useCallback(

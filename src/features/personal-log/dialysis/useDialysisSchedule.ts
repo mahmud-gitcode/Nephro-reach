@@ -37,6 +37,8 @@ export const DEFAULT_SCHEDULE: SchedulePeriod[] = [
   },
 ];
 
+const NO_PERIODS: SchedulePeriod[] = [];
+
 async function readSchedule(): Promise<SchedulePeriod[]> {
   const stored = await readJson<unknown>(KEY, null);
   if (!Array.isArray(stored) || stored.length === 0) return DEFAULT_SCHEDULE;
@@ -57,11 +59,20 @@ export function useDialysisSchedule() {
       writeJson(KEY, appendSchedulePeriod(await readSchedule(), period)),
     onSuccess: (periods) => queryClient.setQueryData(scheduleKey, periods),
   });
-  const periods = useMemo(() => query.data ?? DEFAULT_SCHEDULE, [query.data]);
+  /* The typical week stands in only while the read is in flight (pages
+     show a skeleton then) or when nothing was ever saved. A failed read is
+     an error, never the default week (INT-10). */
+  const periods = useMemo(
+    () => query.data ?? (query.isError ? NO_PERIODS : DEFAULT_SCHEDULE),
+    [query.data, query.isError],
+  );
   const { mutate } = write;
   return {
     periods,
     isPending: query.isPending,
+    error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
     /** Appends a dated period: past treatments keep their schedule. */
     append: useCallback((period: SchedulePeriod) => mutate(period), [mutate]),
   };

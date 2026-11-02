@@ -60,6 +60,7 @@ export function useErVisits() {
     log: query.data ?? [],
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
     refetch: () => void query.refetch(),
     answer: useCallback((answer: ErAnswer) => mutate(answer), [mutate]),
     isSaving: write.isPending,

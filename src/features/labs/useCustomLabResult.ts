@@ -22,6 +22,7 @@ export function useCustomLabResult() {
     result: query.data ?? null,
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
     refetch: () => void query.refetch(),
   };
 }

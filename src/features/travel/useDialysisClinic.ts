@@ -32,6 +32,7 @@ export function useDialysisClinic() {
     clinic: query.data,
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
     refetch: () => void query.refetch(),
     save,
     isSaving: save.isPending,

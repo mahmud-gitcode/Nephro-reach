@@ -25,6 +25,9 @@ export function useCareContacts() {
   return {
     contacts: query.data ?? EMPTY_CONTACTS,
     isPending: query.isPending,
+    error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
     save: (contacts: CareContacts) => write.mutateAsync(contacts),
     isSaving: write.isPending,
     saveError: write.error,

@@ -25,6 +25,7 @@ export function useBloodPressure() {
     readings,
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
     refetch: () => void query.refetch(),
     saveError: write.error,
     isSaving: write.isPending,
