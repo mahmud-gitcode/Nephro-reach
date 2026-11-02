@@ -141,6 +141,9 @@ export type ApiOptions = {
    */
   organizationId?: string | null;
   signal?: AbortSignal;
+  /** Lets the request outlive the page (sign-out navigates right away).
+   *  Send no body with it, so the cross-origin request needs no preflight. */
+  keepalive?: boolean;
 };
 
 /* Office mode: the office membership the user is acting for. null means
@@ -264,6 +267,7 @@ async function send(path: string, options: ApiOptions): Promise<Response> {
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
+    ...(options.keepalive ? { keepalive: true } : {}),
   });
 }
 

@@ -98,7 +98,13 @@ describe("signOut", () => {
     window.localStorage.setItem("preferred_language", "EN");
     setActiveOrganization("org-1");
 
-    await signOut({ clearDemoSession });
+    const loggedOut = signOut({ clearDemoSession });
+
+    /* Everything is cleared and the page is leaving before the API has
+       answered: no screen can refetch and re-show data in between. */
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+    expect(assign).toHaveBeenCalledWith("/");
+    await expect(loggedOut).resolves.toBe(true);
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [
       string,
@@ -106,6 +112,12 @@ describe("signOut", () => {
     ];
     expect(new URL(url).pathname).toBe("/api/v1/auth/logout");
     expect(init.method).toBe("POST");
+    expect(init.keepalive).toBe(true);
+    /* No body, no Content-Type: a simple request, no CORS preflight. */
+    expect(init.body).toBeUndefined();
+    expect(
+      (init.headers as Record<string, string>)["Content-Type"],
+    ).toBeUndefined();
     expect(
       (init.headers as Record<string, string>)["X-Organization-Id"],
     ).toBeUndefined();
@@ -124,7 +136,17 @@ describe("signOut", () => {
       "fetch",
       vi.fn(async () => Promise.reject(new TypeError("offline"))),
     );
-    await signOut();
+    await expect(signOut()).resolves.toBe(false);
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+    expect(assign).toHaveBeenCalledWith("/");
+  });
+
+  it("does not wait for a slow API before leaving the page", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    void signOut();
     expect(client.getQueryCache().getAll()).toHaveLength(0);
     expect(assign).toHaveBeenCalledWith("/");
   });

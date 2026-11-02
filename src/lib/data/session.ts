@@ -3,9 +3,12 @@
    --------------------------------------------------------------------------
    Two ways a session stops, one clean-up:
 
-   - Sign-out (the user asked): tell the API (POST /auth/logout, best
-     effort), drop the query caches, purge retired storage, tell the other
-     tabs, and do a full page load so nothing stays in memory.
+   - Sign-out (the user asked): start POST /auth/logout (best effort,
+     keepalive so it outlives the page), then at once drop the query caches,
+     purge retired storage, tell the other tabs, and do a full page load so
+     nothing stays in memory. Nothing waits on the network between clearing
+     the caches and leaving the page, so no screen can refetch and re-show
+     data in between.
    - Session end (the API said so: 401 `auth.session_no_longer_active`, or
      the refresh failed): the API client calls the handler registered with
      `onSessionEnded`. Same clean-up, then /login?reason=expired.
@@ -59,26 +62,20 @@ export function announceSignOut(): void {
   }
 }
 
-/** Tell the API to end this session. Never throws, never waits long:
- *  sign-out must work even when the API is down. */
-export async function logoutOnServer(timeoutMs = 3000): Promise<boolean> {
-  const controller =
-    typeof AbortController === "undefined" ? null : new AbortController();
-  const timer = controller
-    ? setTimeout(() => controller.abort(), timeoutMs)
-    : null;
+/** Tell the API to end this session. Never throws: sign-out must work
+ *  even when the API is down. keepalive lets the request finish after the
+ *  page has gone; with no body it is a simple CORS request (no preflight),
+ *  and the API reads the refresh token from its cookie. */
+export async function logoutOnServer(): Promise<boolean> {
   try {
     await api<unknown>("/auth/logout", {
       method: "POST",
-      body: {},
       organizationId: null,
-      signal: controller?.signal,
+      keepalive: true,
     });
     return true;
   } catch {
     return false;
-  } finally {
-    if (timer) clearTimeout(timer);
   }
 }
 
@@ -91,16 +88,18 @@ export function clearLocalSession(clearDemoSession?: () => void): void {
 
 /** The whole sign-out. `clearDemoSession` drops the prototype's session
  *  cookie until Phase 2 replaces demo auth. */
-export async function signOut(
+export function signOut(
   options: { clearDemoSession?: () => void; destination?: string } = {},
-): Promise<void> {
-  /* Off the screen first: nothing waits on the network with data showing. */
-  clearQueryCaches();
-  await logoutOnServer();
+): Promise<boolean> {
+  /* Sent first, while the client still holds this session's state; not
+     awaited, so the clean-up and the page load follow at once. */
+  const loggedOut = logoutOnServer();
   resetApiClientState();
   clearLocalSession(options.clearDemoSession);
   announceSignOut();
   browser.assign(options.destination ?? "/");
+  /* For callers that care (tests): whether the API confirmed. */
+  return loggedOut;
 }
 
 /** Registers the API client's session-end handler; returns the cleanup. */
