@@ -40,6 +40,11 @@ import {
   Select,
   Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* ==========================================================================
    Table Talk Management
@@ -296,6 +301,7 @@ export default function ManageTableTalkPage() {
     questions,
     newQuestionCount,
     saveEpisode,
+    openEpisode,
     deleteEpisode,
     setStatus,
     setFeatured,
@@ -313,6 +319,7 @@ export default function ManageTableTalkPage() {
   } = useTableTalkAdmin();
 
   const [editing, setEditing] = useState<TableTalkEpisode | null>(null);
+  const [openError, setOpenError] = useState<unknown>(null);
   const [creating, setCreating] = useState(false);
   const [managingTopics, setManagingTopics] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TableTalkEpisode | null>(
@@ -416,8 +423,22 @@ export default function ManageTableTalkPage() {
           onDismiss={dismissSaveError}
           className="mt-stack-lg"
         >
-          Table Talk is unchanged. Try again — if it keeps failing, the browser
-          may be blocking saved data.
+          {saveError instanceof Error && saveError.message
+            ? saveError.message
+            : "Table Talk is unchanged. Please try again."}
+        </Alert>
+      ) : null}
+
+      {openError ? (
+        <Alert
+          tone="danger"
+          title="That episode did not open"
+          onDismiss={() => setOpenError(null)}
+          className="mt-stack-lg"
+        >
+          {openError instanceof Error && openError.message
+            ? openError.message
+            : "Please try again."}
         </Alert>
       ) : null}
 
@@ -431,9 +452,10 @@ export default function ManageTableTalkPage() {
         <AsyncSection
           pending={isPending}
           error={error}
-          onRetry={refetch}
+          onRetry={canRetry(error) ? refetch : undefined}
           isEmpty={episodes.length === 0}
-          errorTitle="Table Talk did not load"
+          errorTitle={errorTitleFor(error, "Table Talk did not load")}
+          errorMessage={errorMessageFor(error, undefined)}
           skeleton={
             <div className="mt-6 space-y-stack-sm">
               {Array.from({ length: 3 }).map((_, index) => (
@@ -465,7 +487,13 @@ export default function ManageTableTalkPage() {
                   .map((id) => categoryLabel(categories, id, false))
                   .filter(Boolean)
                   .join(", ")}
-                onEdit={() => setEditing(episode)}
+                onEdit={() =>
+                  /* The list holds summaries; the editor needs the whole
+                     episode (captions, transcripts). */
+                  void openEpisode(episode.id)
+                    .then(setEditing)
+                    .catch((cause: unknown) => setOpenError(cause))
+                }
                 onDelete={() => setPendingDelete(episode)}
                 onFeature={() => setFeatured(episode.id)}
                 onStatus={(status) => setStatus(episode.id, status)}
@@ -514,7 +542,7 @@ export default function ManageTableTalkPage() {
           categories={categories.filter((entry) => !entry.archived)}
           nextOrder={episodes.length}
           onSave={(episode) => {
-            saveEpisode(episode);
+            saveEpisode(episode, editing ?? undefined);
             closeEditor();
           }}
           onClose={closeEditor}

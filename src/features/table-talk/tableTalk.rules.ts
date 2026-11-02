@@ -519,7 +519,9 @@ export function popularTopics(
   return activeCategories(categories)
     .map((category) => ({
       category,
-      count: episodeCountFor(episodes, category.id),
+      /* The server's count when it sent one (Phase 12: the list is paged,
+         so the loaded page is not the whole shelf). */
+      count: category.episodeCount ?? episodeCountFor(episodes, category.id),
     }))
     .filter((entry) => entry.count > 0)
     .sort((a, b) => b.count - a.count || a.category.order - b.category.order)

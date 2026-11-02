@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { CircleAlert, Phone } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useAuth } from "@/features/auth/AuthContext";
-import { createId, questionError } from "./tableTalk.rules";
+import { isApiError } from "@/lib/api/client";
+import { questionError } from "./tableTalk.rules";
 import { Alert, Button, FormField, Modal, Textarea } from "@/components/ui";
 
 /* ==========================================================================
@@ -17,6 +17,12 @@ import { Alert, Button, FormField, Modal, Textarea } from "@/components/ui";
    The urgent-words check is the part that matters. Someone typing "chest
    pain" into a suggestion box is a person who needs help now, and quietly
    filing that as a topic idea would be the worst thing this screen could do.
+
+   Phase 12: the check here is a hint before sending; the server checks the
+   wording again and answers urgent words with a 400 and its guidance, which
+   is shown in the same place. "Received" appears only after the server has
+   the question. The question carries no name or email: the server knows
+   who asked.
    ========================================================================== */
 
 export function SuggestQuestionModal({
@@ -25,42 +31,33 @@ export function SuggestQuestionModal({
   saving = false,
 }: {
   onClose: () => void;
-  onSubmit: (question: {
-    id: string;
-    body: string;
-    askedByName: string;
-    askedByEmail: string;
-    submittedAt: string;
-    status: "new";
-    adminNote: string;
-  }) => void;
+  /** Resolves once the server has the question. */
+  onSubmit: (body: string) => Promise<void>;
   saving?: boolean;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { user } = useAuth();
-
   const [body, setBody] = useState("");
   const [touched, setTouched] = useState(false);
   const [sent, setSent] = useState(false);
+  /* What the server said when it refused the question. */
+  const [serverError, setServerError] = useState<unknown>(null);
 
   const error = questionError(body);
-  const urgent = touched && error === "urgent";
+  const serverUrgent = isApiError(serverError, {
+    status: 400,
+    code: "content.question_urgent",
+  });
+  const urgent = (touched && error === "urgent") || serverUrgent;
 
   const send = () => {
     setTouched(true);
+    setServerError(null);
     if (error) return;
 
-    onSubmit({
-      id: createId("q"),
-      body: body.trim(),
-      askedByName: user?.name ?? "",
-      askedByEmail: user?.email ?? "",
-      submittedAt: new Date().toISOString(),
-      status: "new",
-      adminNote: "",
-    });
-    setSent(true);
+    onSubmit(body.trim())
+      .then(() => setSent(true))
+      .catch((cause: unknown) => setServerError(cause));
   };
 
   return (
@@ -135,9 +132,11 @@ export function SuggestQuestionModal({
                 {...props}
                 rows={5}
                 value={body}
+                maxLength={1000}
                 onChange={(event) => {
                   setBody(event.target.value);
                   if (touched) setTouched(false);
+                  if (serverError) setServerError(null);
                 }}
                 placeholder={
                   isEs
@@ -159,9 +158,22 @@ export function SuggestQuestionModal({
               }
               icon={<Phone aria-hidden="true" />}
             >
-              {isEs
-                ? "Lo que escribiste menciona algo urgente. Llama al 911 o a tu clínica de diálisis ahora mismo. Nadie revisa este formulario en tiempo real."
-                : "What you wrote mentions something urgent. Call 911 or your dialysis clinic now. Nobody reads this form in real time."}
+              {serverUrgent && !isEs && isApiError(serverError)
+                ? serverError.message
+                : isEs
+                  ? "Lo que escribiste menciona algo urgente. Llama al 911 o a tu clínica de diálisis ahora mismo. Nadie revisa este formulario en tiempo real."
+                  : "What you wrote mentions something urgent. Call 911 or your dialysis clinic now. Nobody reads this form in real time."}
+            </Alert>
+          ) : serverError ? (
+            <Alert
+              tone="danger"
+              title={isEs ? "No se envió" : "Your question was not sent"}
+            >
+              {isApiError(serverError) && serverError.status === 400
+                ? serverError.message
+                : isEs
+                  ? "Inténtalo de nuevo."
+                  : "Please try again."}
             </Alert>
           ) : null}
         </div>

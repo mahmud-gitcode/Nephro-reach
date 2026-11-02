@@ -79,6 +79,9 @@ export interface TableTalkEpisode {
 
   /** Admin ordering. Lower comes first within the same status. */
   order: number;
+
+  /** Member view only: the signed-in member saved it (the server's answer). */
+  favorite?: boolean;
 }
 
 export interface TableTalkCategory {
@@ -88,6 +91,8 @@ export interface TableTalkCategory {
   order: number;
   /** Archived categories keep existing episodes but take no new ones. */
   archived: boolean;
+  /** The server's count: live episodes for members, every one for the team. */
+  episodeCount?: number;
 }
 
 /* ==========================================================================
