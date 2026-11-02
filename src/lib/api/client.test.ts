@@ -167,9 +167,11 @@ describe("refresh", () => {
     ]);
   });
 
-  it.each(NO_REFRESH.map((p) => [p]))(
+  /* An entry ending in "/" covers the paths under it; any other entry is
+     exactly that path. */
+  it.each(NO_REFRESH.map((p) => [p.endsWith("/") ? `${p}x` : p]))(
     "never refreshes on %s (a 401 there is a wrong code or password)",
-    async (prefix) => {
+    async (route) => {
       const ended = vi.fn();
       onSessionEnded(ended);
       const { calls } = scriptFetch(() => ({
@@ -180,16 +182,65 @@ describe("refresh", () => {
           code: "auth.invalid_code",
         },
       }));
-      const error = (await api(`${prefix}x`, {
+      const error = (await api(route, {
         method: "POST",
         body: {},
       }).catch((e: unknown) => e)) as ApiError;
       expect(error.code).toBe("auth.invalid_code");
+      /* One call: the route itself (which, for /auth/refresh, is the
+         refresh), and no refresh after it. */
       expect(calls).toHaveLength(1);
-      expect(calls.some((c) => c.url.endsWith("/auth/refresh"))).toBe(false);
+      expect(new URL(calls[0].url).pathname).toBe(`/api/v1${route}`);
       expect(ended).not.toHaveBeenCalled();
     },
   );
+
+  /* Phase 2 (B6): the old prefixes "/auth/2fa/" and "/auth/sudo" also
+     caught authenticated reads, so an MFA or sudo page left open longer than
+     the access token's life got an unrefreshed 401. */
+  it.each([
+    "/auth/2fa/methods",
+    "/auth/2fa/backup-codes",
+    "/auth/sudo",
+    "/auth/sudo/options",
+    "/auth/sessions",
+    "/auth/me",
+    "/auth/email/verify/resend/me",
+  ])("refreshes a bare 401 on the authenticated read %s", async (route) => {
+    let first = true;
+    const { calls } = scriptFetch((url) => {
+      if (url.endsWith("/auth/refresh")) return ok(null);
+      if (first) {
+        first = false;
+        return { status: 401, body: { success: false, code: null } };
+      }
+      return ok({});
+    });
+    await expect(api(route)).resolves.toEqual({});
+    expect(calls.map((c) => new URL(c.url).pathname)).toEqual([
+      `/api/v1${route}`,
+      "/api/v1/auth/refresh",
+      `/api/v1${route}`,
+    ]);
+  });
+
+  /* Spec 025 §5: a refresh is activity. The idle timer reads GET
+     /auth/session; if that read could refresh, an idle tab would keep its
+     session alive for ever. */
+  it("never refreshes or ends the session on the passive GET /auth/session", async () => {
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    const { calls } = scriptFetch(() => ({
+      status: 401,
+      body: { success: false, code: null },
+    }));
+    const error = (await api("/auth/session").catch(
+      (e: unknown) => e,
+    )) as ApiError;
+    expect(error.status).toBe(401);
+    expect(calls).toHaveLength(1);
+    expect(ended).not.toHaveBeenCalled();
+  });
 
   it("shares one refresh between requests that fail together", async () => {
     let refreshes = 0;

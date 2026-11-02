@@ -191,35 +191,73 @@ export function resetApiClientState(): void {
   sessionEnded = false;
 }
 
-/* Routes where a 401 means "wrong code or password", not "expired session":
-   retrying them after a refresh would resubmit a one-time code. The code
-   rule above already covers them; this list holds even if a route's 401
-   ever arrives without a code. Kept in step with the API's 401-throwing
-   routes (backend src/core/auth/controllers, src/modules/sharing). */
+/* Routes that must never refresh. An entry ending in "/" covers every path
+   under it; any other entry is that exact path (query strings aside).
+
+   - Code and password routes: a 401 there means "wrong code or password",
+     not "expired session", and retrying after a refresh would resubmit a
+     one-time code. The code rule above already covers them; this list holds
+     even if a route's 401 ever arrives without a code. Kept in step with the
+     API's 401-throwing routes (backend src/core/auth/controllers,
+     src/modules/sharing).
+   - Sudo-consuming routes (one shot).
+   - `GET /auth/session`: the one passive read (spec 025 §4-§5). A refresh
+     counts as activity and moves the idle deadline, so the idle timer's
+     status read must never trigger one, or an idle tab would keep its
+     session alive for ever (D2).
+
+   Authenticated reads (`GET /auth/2fa/methods`, `GET /auth/sudo`,
+   `GET /auth/sudo/options`, `GET /auth/2fa/backup-codes`, the resend and
+   enrol-request routes) are NOT here: they refresh like any other read, so
+   a page open longer than the access token's life still works (Phase 2). */
 export const NO_REFRESH = [
   "/auth/login",
   "/auth/register",
   "/auth/refresh",
   "/auth/logout",
-  "/auth/2fa/",
-  "/auth/sudo",
-  "/auth/password/",
+  "/auth/session",
   "/auth/oauth/",
-  "/auth/email/",
-  "/auth/phone/",
+  /* Two-factor: the sign-in challenge (public) and the code confirmations. */
+  "/auth/2fa/challenge/",
+  "/auth/2fa/enroll/totp/confirm",
+  "/auth/2fa/enroll/email/confirm",
+  "/auth/2fa/enroll/sms/confirm",
+  /* Sudo-consuming, one shot. */
+  "/auth/2fa/methods/",
+  "/auth/2fa/backup-codes/regenerate",
+  "/auth/account/deactivate",
+  /* Re-authentication: password or code. */
+  "/auth/sudo/password",
+  "/auth/sudo/otp/confirm",
+  "/auth/sudo/2fa",
+  /* Passwords: forgot, reset (link or code), change, set. */
+  "/auth/password/",
+  /* Email and phone: links and codes. */
+  "/auth/email/verify",
+  "/auth/email/verify/otp",
+  "/auth/email/verify/confirm",
+  "/auth/email/verify/resend",
+  "/auth/email/change/confirm",
+  "/auth/email/change/confirm/otp",
+  "/auth/phone/verify/otp",
+  "/auth/phone/verify/confirm",
+  "/auth/phone/verify/resend",
+  "/auth/phone/change/confirm",
   /* Adding an email or phone: confirm by link token or one-time code. */
   "/auth/identifiers/email/confirm",
+  "/auth/identifiers/email/confirm/otp",
   "/auth/identifiers/phone/confirm",
-  /* Sudo-consuming, one shot. */
-  "/auth/account/deactivate",
   /* Outside-share links: public, verified by a one-time code, never by
      the member's session. */
   "/shared/",
 ] as const;
 
-function isNoRefreshRoute(path: string): boolean {
-  const normalised = path.startsWith("/") ? path : `/${path}`;
-  return NO_REFRESH.some((p) => normalised.startsWith(p));
+export function isNoRefreshRoute(path: string): boolean {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  const normalised = withSlash.split("?")[0];
+  return NO_REFRESH.some((entry) =>
+    entry.endsWith("/") ? normalised.startsWith(entry) : normalised === entry,
+  );
 }
 
 let refreshing: Promise<boolean> | null = null;
