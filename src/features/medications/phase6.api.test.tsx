@@ -583,6 +583,89 @@ describe("member labs on the API", () => {
   });
 });
 
+describe("My Labs page", () => {
+  const rows = [
+    lab({ id: "own-k", collectedOn: "2026-10-01" }),
+    lab({
+      id: "clinic-p",
+      collectedOn: "2026-10-01",
+      testCode: "phosphorus",
+      testName: "Phosphorus",
+      value: "5.9",
+      valueNumeric: 5.9,
+      unit: "mg/dL",
+      referenceRange: "2.5 – 4.5",
+      referenceLow: 2.5,
+      referenceHigh: 4.5,
+      source: "FACILITY_CSV_IMPORT",
+      organizationId: "org-1",
+    }),
+  ];
+  const handler = (call: { method: string; path: string }) => {
+    if (call.method === "POST") return { data: { markedCount: 1 } };
+    if (call.path === `${BASE}/labs`) return pageOf(rows);
+    if (call.path === `${BASE}/labs/trends`) return { data: [] };
+    return undefined;
+  };
+
+  async function renderLabs(context?: MeContext) {
+    const { default: Page } =
+      await import("@/app/(portal)/dashboard/(member)/personal-log/lab-tracking/page");
+    const stub = stubApi(handler, context);
+    render(<Page />, { wrapper });
+    await screen.findByText(
+      "New results from your clinic",
+      {},
+      { timeout: 4000 },
+    );
+    return stub;
+  }
+
+  it("shows the clinic's results read-only and the patient marks them seen", async () => {
+    const { calls } = await renderLabs();
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) => c.method === "POST" && c.path === `${BASE}/labs/seen`,
+        ),
+      ).toBe(true),
+    );
+    act(() => screen.getByRole("tab", { name: "History" }).click());
+    expect(
+      screen.getByRole("button", { name: "Edit Potassium" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit Phosphorus" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Delete Phosphorus" }),
+    ).not.toBeInTheDocument();
+    /* No sample readings: a test with no result shows a dash. */
+    expect(screen.queryByText("48 mg/dL")).not.toBeInTheDocument();
+  }, 15_000);
+
+  it("a caregiver reads them without marking them seen", async () => {
+    const caregiver: MeContext = {
+      ...memberContext(),
+      patient: null,
+      caregiving: [
+        {
+          grantId: "g-1",
+          patientId: JOHN_ID,
+          firstName: "John",
+          lastName: "Test",
+          relationship: "Family",
+          preset: "full",
+          permissions: { labs: 2 },
+        },
+      ],
+    };
+    const { calls } = await renderLabs(caregiver);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  }, 15_000);
+});
+
 describe("lab result actions", () => {
   it("edits and removes by the caller's callbacks, and is accessible", async () => {
     const onSave = vi.fn(async () => undefined);

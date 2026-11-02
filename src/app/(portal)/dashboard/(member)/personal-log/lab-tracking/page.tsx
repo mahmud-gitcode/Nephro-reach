@@ -114,19 +114,26 @@ export default function MyLabsPage() {
   const draws = useMemo(() => drawsOf(labs.rows), [labs.rows]);
   const pastDraws = useMemo(() => compareDays(labs.rows), [labs.rows]);
 
-  /* New results from the care team: said once, and opening this page counts
-     as the patient seeing them (the patient only: a caregiver reading them
-     is not the member seeing them). */
-  const unseen = useMemo(() => unseenClinicRows(labs.rows), [labs.rows]);
-  const clinicDate = unseen.length
-    ? unseen
+  /* What the care team uploaded fills in the panels as the latest results
+     (client, 2026-10-12), and the page names the newest upload's day.
+     Opening this page counts as the patient seeing them (the patient only:
+     a caregiver reading them is not the member seeing them). */
+  const clinicDate = useMemo(
+    () =>
+      labs.rows
+        .filter((r) => r.source !== "PATIENT_ENTERED")
         .map((r) => r.collectedOn.slice(0, 10))
-        .reduce((a, b) => (b > a ? b : a))
-    : null;
+        .reduce<string | null>((a, b) => (!a || b > a ? b : a), null),
+    [labs.rows],
+  );
+  const hasUnseen = useMemo(
+    () => unseenClinicRows(labs.rows).length > 0,
+    [labs.rows],
+  );
   const { canMarkSeen, markSeen } = labs;
   useEffect(() => {
-    if (clinicDate && canMarkSeen) markSeen();
-  }, [clinicDate, canMarkSeen, markSeen]);
+    if (hasUnseen && canMarkSeen) markSeen();
+  }, [hasUnseen, canMarkSeen, markSeen]);
 
   const presets = [
     {
