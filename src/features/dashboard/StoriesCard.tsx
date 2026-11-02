@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Pencil, Play, Trash2, Video } from "lucide-react";
-import { Badge, Button, Card, Modal, Skeleton } from "@/components/ui";
+import React, { useState } from "react";
+import { Play, Video } from "lucide-react";
+import { Badge, Button, Card, Skeleton } from "@/components/ui";
 import { useAuth } from "@/features/auth/AuthContext";
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import {
-  approvedTestimonials as onlyApproved,
-  testimonialsByAuthor,
-  useTestimonials,
+  useMyTestimonials,
+  usePublicTestimonials,
   type Testimonial,
 } from "@/features/testimonials/useTestimonials";
-import { isRevisable } from "@/features/testimonials/testimonials.rules";
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
 import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
 
@@ -21,6 +20,11 @@ import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialMod
    place a member watches them, shares their own and follows its review —
    but as one card at the foot of the page, so the member's day comes first.
    Two stories show; the rest open in place.
+
+   Phase 12: published stories are GET /public/testimonials and the member's
+   own GET /me/testimonials. A failed read says so instead of "no stories".
+   There is no API route to edit or delete a story yet, so those two buttons
+   are gone (recorded as a decision for the Lead/user).
    ========================================================================== */
 
 const PREVIEW = 2;
@@ -42,7 +46,11 @@ function StoryTile({
         {/* A member-submitted thumbnail: any host, so not next/image. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={story.thumbnailUrl || "/images/user-dashboard/testimonial.jpg"}
+          src={
+            isSafeFileUrl(story.thumbnailUrl)
+              ? story.thumbnailUrl
+              : "/images/user-dashboard/testimonial.jpg"
+          }
           alt=""
           className="h-full w-full object-cover"
         />
@@ -67,18 +75,15 @@ function StoryTile({
 
 export function StoriesCard({ isEs }: { isEs: boolean }) {
   const { user } = useAuth();
-  const { testimonials, isPending, refetch, remove } = useTestimonials();
-  const approved = useMemo(() => onlyApproved(testimonials), [testimonials]);
-  const mine = useMemo(
-    () => testimonialsByAuthor(testimonials, user?.email || ""),
-    [testimonials, user?.email],
-  );
+  const published = usePublicTestimonials();
+  const own = useMyTestimonials();
+  const approved = published.items;
+  const mine = own.items;
+  const isPending = published.isPending;
 
   const [showAll, setShowAll] = useState(false);
   const [playing, setPlaying] = useState<Testimonial | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
-  const [editing, setEditing] = useState<Testimonial | null>(null);
-  const [deleting, setDeleting] = useState<Testimonial | null>(null);
   const shown = showAll ? approved : approved.slice(0, PREVIEW);
 
   const statusLabel = (story: Testimonial) =>
@@ -105,10 +110,7 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
           variant="primary"
           appearance="fill-stroke"
           leadingIcon={<Video aria-hidden="true" />}
-          onClick={() => {
-            setEditing(null);
-            setSubmitOpen(true);
-          }}
+          onClick={() => setSubmitOpen(true)}
         >
           {isEs ? "Compartir mi historia" : "Share your story"}
         </Button>
@@ -135,42 +137,37 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
                 }
               >
                 {statusLabel(story)}
-              </Badge>
-              {isRevisable(story) ? (
-                <Button
-                  size="small"
-                  variant="neutral"
-                  appearance="ghost"
-                  iconOnly
-                  aria-label={
-                    isEs ? `Editar ${story.title}` : `Edit ${story.title}`
-                  }
-                  onClick={() => {
-                    setEditing(story);
-                    setSubmitOpen(true);
-                  }}
-                >
-                  <Pencil />
-                </Button>
-              ) : null}
-              <Button
-                size="small"
-                variant="danger"
-                appearance="ghost"
-                iconOnly
-                aria-label={
-                  isEs ? `Eliminar ${story.title}` : `Delete ${story.title}`
-                }
-                onClick={() => setDeleting(story)}
-              >
-                <Trash2 />
-              </Button>
+              </Badge>{" "}
             </li>
           ))}
         </ul>
       ) : null}
 
-      {isPending ? (
+      {own.error ? (
+        <p role="alert" className="text-body-sm text-danger">
+          {isEs
+            ? "Sus historias no se cargaron."
+            : "Your stories did not load."}
+        </p>
+      ) : null}
+
+      {published.error ? (
+        <div className="flex flex-wrap items-center gap-inline-md">
+          <p role="alert" className="text-body-sm text-danger">
+            {isEs
+              ? "Las historias no se cargaron."
+              : "The stories did not load."}
+          </p>
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={published.refetch}
+          >
+            {isEs ? "Reintentar" : "Try again"}
+          </Button>
+        </div>
+      ) : isPending ? (
         <Skeleton height={140} />
       ) : approved.length === 0 ? (
         <p className="text-body-sm text-fg-muted">
@@ -189,6 +186,17 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
               />
             ))}
           </div>
+          {showAll && published.hasMore ? (
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={published.loadMore}
+              loading={published.isLoadingMore}
+            >
+              {isEs ? "Ver más" : "Load more"}
+            </Button>
+          ) : null}
           {approved.length > PREVIEW ? (
             <Button
               size="small"
@@ -215,51 +223,12 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
         onClose={() => setPlaying(null)}
       />
 
-      {deleting ? (
-        <Modal
-          open
-          size="small"
-          closeOnBackdrop={false}
-          onClose={() => setDeleting(null)}
-          title={isEs ? "¿Eliminar su historia?" : "Delete your story?"}
-          description={
-            isEs
-              ? `"${deleting.title}" se eliminará. Si ya estaba publicada, dejará de aparecer para los demás.`
-              : `"${deleting.title}" will be removed. If it was published, it stops showing for everyone else.`
-          }
-          footer={
-            <>
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => setDeleting(null)}
-              >
-                {isEs ? "Conservar" : "Keep it"}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  void remove(deleting.id);
-                  setDeleting(null);
-                }}
-              >
-                {isEs ? "Eliminar" : "Delete"}
-              </Button>
-            </>
-          }
-        />
-      ) : null}
-
       <SubmitTestimonialModal
-        key={editing ? `story-${editing.id}` : "story-new"}
+        key={submitOpen ? "story-open" : "story-closed"}
         open={submitOpen}
-        onClose={() => {
-          setSubmitOpen(false);
-          setEditing(null);
-        }}
+        onClose={() => setSubmitOpen(false)}
         user={user}
-        editing={editing}
-        onSubmitted={refetch}
+        onSubmitted={own.refetch}
       />
     </Card>
   );

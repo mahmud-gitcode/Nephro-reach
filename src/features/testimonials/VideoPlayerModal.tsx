@@ -2,13 +2,17 @@
 
 import React from "react";
 import { Clock, ShieldCheck } from "lucide-react";
-import { Modal, Badge, Button } from "@/components/ui";
+import { Modal, Badge, Button, Skeleton } from "@/components/ui";
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { Testimonial } from "./testimonials.types";
+import { useTestimonialVideo } from "./useTestimonials";
 
 interface VideoPlayerModalProps {
   testimonial: Testimonial | null;
   open: boolean;
   onClose: () => void;
+  /** Moderators read the video through the platform route (any status). */
+  moderator?: boolean;
 }
 
 function getEmbedUrl(url: string): string | null {
@@ -32,10 +36,26 @@ export default function VideoPlayerModal({
   testimonial,
   open,
   onClose,
+  moderator = false,
 }: VideoPlayerModalProps) {
+  /* An uploaded video plays from a short-lived link fetched on open
+     (Phase 12); an external link (YouTube, Vimeo) embeds as before. */
+  const uploaded = Boolean(
+    testimonial?.hasUploadedVideo && !testimonial.videoUrl,
+  );
+  const link = useTestimonialVideo(testimonial?.id ?? null, {
+    enabled: open && uploaded,
+    moderator,
+  });
+
   if (!testimonial) return null;
 
   const embedUrl = getEmbedUrl(testimonial.videoUrl);
+  const fileUrl = uploaded ? link.data?.url : testimonial.videoUrl;
+  const playable = isSafeFileUrl(fileUrl) ? fileUrl : null;
+  const poster = isSafeFileUrl(testimonial.thumbnailUrl)
+    ? testimonial.thumbnailUrl
+    : undefined;
 
   return (
     <Modal
@@ -60,17 +80,23 @@ export default function VideoPlayerModal({
               allowFullScreen
               className="h-full w-full border-0"
             />
-          ) : (
+          ) : playable ? (
             <div className="relative flex h-full w-full flex-col items-center justify-center bg-surface-inverse p-6 text-center text-white">
               <video
-                src={testimonial.videoUrl}
+                src={playable}
                 controls
                 autoPlay
                 className="h-full w-full object-cover"
-                poster={testimonial.thumbnailUrl}
+                poster={poster}
               >
                 Your browser does not support HTML video playback.
               </video>
+            </div>
+          ) : uploaded && link.isPending ? (
+            <Skeleton height="100%" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-surface-inverse p-6 text-center text-body-sm text-fg-inverse">
+              This video could not be loaded. Please try again later.
             </div>
           )}
         </div>

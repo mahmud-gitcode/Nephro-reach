@@ -7,7 +7,6 @@ import {
   AsyncSection,
   Button,
   EmptyState,
-  Modal,
   Skeleton,
   Tabs,
   Textarea,
@@ -15,40 +14,55 @@ import {
   Card,
 } from "@/components/ui";
 import {
-  useTestimonials,
+  useTestimonialModeration,
   type Testimonial,
 } from "@/features/testimonials/useTestimonials";
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import {
   Video,
   CheckCircle2,
   Clock,
   XCircle,
   Play,
-  Trash2,
   Check,
   X,
 } from "lucide-react";
+
+/* Phase 12: the queue is the server's (GET /platform/content/testimonials,
+   platform content Manage). Approve and decline (with a reason the member
+   sees) are its two decisions. There is no API route to delete a story or
+   move it back to pending, so those buttons are gone (recorded as a
+   decision for the Lead/user); an approved story is taken down with
+   "Decline", which the server allows. */
 export default function AdminTestimonialsPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const {
-    testimonials,
-    isPending,
-    error,
-    refetch,
-    setStatus,
-    remove,
-    isSaving,
-    saveError,
-    dismissSaveError,
-  } = useTestimonials();
-
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "approved" | "declined"
   >("all");
+  const {
+    testimonials,
+    counts,
+    isPending,
+    error,
+    refetch,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+    approve,
+    decline,
+    isSaving,
+    saveError,
+    dismissSaveError,
+  } = useTestimonialModeration(activeTab);
+
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineFeedback, setDeclineFeedback] = useState<string>("");
   const [previewTestimonial, setPreviewTestimonial] =
@@ -57,7 +71,7 @@ export default function AdminTestimonialsPage() {
   /* Approving publishes someone's video. A failure that only reached the
      console would leave a moderator sure they had published it. */
   const handleApprove = (id: string) => {
-    void setStatus(id, "approved").catch(() => {});
+    void approve(id).catch(() => {});
   };
 
   const handleStartDecline = (id: string) => {
@@ -66,7 +80,8 @@ export default function AdminTestimonialsPage() {
   };
 
   const handleConfirmDecline = (id: string) => {
-    void setStatus(id, "declined", declineFeedback)
+    if (!declineFeedback.trim()) return;
+    void decline(id, declineFeedback)
       .then(() => {
         setDeclineId(null);
         setDeclineFeedback("");
@@ -74,27 +89,12 @@ export default function AdminTestimonialsPage() {
       .catch(() => {});
   };
 
-  const handleDelete = () => {
-    if (!pendingDeleteId) return;
-    void remove(pendingDeleteId)
-      .then(() => setPendingDeleteId(null))
-      .catch(() => {});
-  };
-
-  const filtered = testimonials.filter((t) => {
-    if (activeTab === "all") return true;
-    return t.status === activeTab;
-  });
-
-  const pendingCount = testimonials.filter(
-    (t) => t.status === "pending",
-  ).length;
-  const approvedCount = testimonials.filter(
-    (t) => t.status === "approved",
-  ).length;
-  const declinedCount = testimonials.filter(
-    (t) => t.status === "declined",
-  ).length;
+  /* The server filters by tab; the counts are its totals. */
+  const filtered = testimonials;
+  const totalCount = counts?.all ?? 0;
+  const pendingCount = counts?.pending ?? 0;
+  const approvedCount = counts?.approved ?? 0;
+  const declinedCount = counts?.declined ?? 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
@@ -116,7 +116,7 @@ export default function AdminTestimonialsPage() {
         {/* Count Pills */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-caption font-bold text-fg-secondary shadow-control">
-            Total: {testimonials.length}
+            Total: {totalCount}
           </span>
           {pendingCount > 0 && (
             <span className="bg-warning-soft text-warning-fg inline-flex items-center gap-1.5 rounded-control border border-warning-line px-3 py-1.5 text-caption font-bold">
@@ -135,9 +135,7 @@ export default function AdminTestimonialsPage() {
         items={[
           {
             id: "all",
-            label: isEs
-              ? `Todos (${testimonials.length})`
-              : `All (${testimonials.length})`,
+            label: isEs ? `Todos (${totalCount})` : `All (${totalCount})`,
           },
           {
             id: "pending",
@@ -178,12 +176,15 @@ export default function AdminTestimonialsPage() {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle={
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
           isEs
             ? "Los testimonios no se cargaron"
-            : "The testimonials did not load"
-        }
+            : "The testimonials did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         skeleton={
           <div className="space-y-4">
             <Skeleton height={180} />
@@ -234,8 +235,9 @@ export default function AdminTestimonialsPage() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={
-                            item.thumbnailUrl ||
-                            "/images/user-dashboard/testimonial.jpg"
+                            isSafeFileUrl(item.thumbnailUrl)
+                              ? item.thumbnailUrl
+                              : "/images/user-dashboard/testimonial.jpg"
                           }
                           alt=""
                           className="h-full w-full object-cover opacity-90 transition-transform duration-200 group-hover:scale-105"
@@ -296,12 +298,18 @@ export default function AdminTestimonialsPage() {
                           <span>•</span>
                           <span>{item.role}</span>
                           <span>•</span>
-                          <span>{item.memberEmail}</span>
-                          <span>•</span>
                           <span>
                             {new Date(item.createdAt).toLocaleDateString()}
                           </span>
                         </div>
+
+                        {item.personalInfoDetected ? (
+                          <Badge tone="warning">
+                            {isEs
+                              ? "Posibles datos personales"
+                              : "Possible personal details"}
+                          </Badge>
+                        ) : null}
 
                         <p className="line-clamp-3 text-body-sm text-fg-secondary italic">
                           &ldquo;{item.summary}&rdquo;
@@ -353,11 +361,12 @@ export default function AdminTestimonialsPage() {
                       {isApproved && (
                         <Button
                           size="small"
-                          variant="neutral"
-                          appearance="stroke"
-                          onClick={() => void setStatus(item.id, "pending")}
+                          variant="danger"
+                          appearance="fill-stroke"
+                          leadingIcon={<X className="size-3.5" />}
+                          onClick={() => handleStartDecline(item.id)}
                         >
-                          {isEs ? "Retirar a Pendiente" : "Unpublish"}
+                          {isEs ? "Rechazar" : "Decline"}
                         </Button>
                       )}
 
@@ -371,18 +380,6 @@ export default function AdminTestimonialsPage() {
                           {isEs ? "Reconsiderar y Aprobar" : "Re-approve"}
                         </Button>
                       )}
-
-                      <Button
-                        size="small"
-                        variant="danger"
-                        appearance="stroke"
-                        iconOnly
-                        onClick={() => setPendingDeleteId(item.id)}
-                        title={isEs ? "Eliminar" : "Delete"}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
                     </div>
                   </div>
 
@@ -391,11 +388,15 @@ export default function AdminTestimonialsPage() {
                     <div className="mt-4 space-y-3 rounded-panel border border-danger-line bg-surface-sunken p-4">
                       <p className="text-body-sm font-semibold text-fg">
                         {isEs
-                          ? "Proporcione retroalimentación para el rechazo (opcional):"
-                          : "Reason for declining (optional private feedback for member):"}
+                          ? "Motivo del rechazo (el miembro lo verá):"
+                          : "Reason for declining (required; the member sees it):"}
                       </p>
                       <Textarea
                         rows={2}
+                        maxLength={1000}
+                        aria-label={
+                          isEs ? "Motivo del rechazo" : "Reason for declining"
+                        }
                         value={declineFeedback}
                         onChange={(e) => setDeclineFeedback(e.target.value)}
                         placeholder={
@@ -416,6 +417,8 @@ export default function AdminTestimonialsPage() {
                         <Button
                           size="small"
                           variant="danger"
+                          disabled={!declineFeedback.trim()}
+                          loading={isSaving}
                           onClick={() => handleConfirmDecline(item.id)}
                         >
                           {isEs ? "Confirmar Rechazo" : "Confirm Decline"}
@@ -426,45 +429,26 @@ export default function AdminTestimonialsPage() {
                 </Card>
               );
             })}
+            {hasMore ? (
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                onClick={loadMore}
+                loading={isLoadingMore}
+              >
+                {isEs ? "Ver más" : "Load more"}
+              </Button>
+            ) : null}
           </div>
         )}
       </AsyncSection>
-
-      {/* window.confirm blocks the page and leaves a failed delete nowhere
-          to report itself. */}
-      <Modal
-        open={pendingDeleteId !== null}
-        onClose={() => setPendingDeleteId(null)}
-        size="small"
-        title={isEs ? "Eliminar testimonio" : "Delete testimonial"}
-        footer={
-          <>
-            <Button
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => setPendingDeleteId(null)}
-              disabled={isSaving}
-            >
-              {isEs ? "Cancelar" : "Cancel"}
-            </Button>
-            <Button variant="danger" onClick={handleDelete} loading={isSaving}>
-              {isEs ? "Eliminar" : "Delete"}
-            </Button>
-          </>
-        }
-      >
-        <p className="text-body-md text-fg-secondary">
-          {isEs
-            ? "Este testimonio en video se eliminará de forma permanente."
-            : "This video testimonial will be permanently removed."}
-        </p>
-      </Modal>
 
       {/* Video Preview Modal */}
       <VideoPlayerModal
         testimonial={previewTestimonial}
         open={Boolean(previewTestimonial)}
         onClose={() => setPreviewTestimonial(null)}
+        moderator
       />
     </div>
   );
