@@ -2,18 +2,26 @@
    API client
    --------------------------------------------------------------------------
    The one place the frontend talks to the NephroReach API. Repositories call
-   `api()` instead of reading localStorage (ADR 0001); nothing else should
-   call fetch.
+   `api()` instead of reading localStorage (ADR 0001, amended by ADR 0007);
+   nothing else should call fetch, except `uploadFile` for the storage PUT.
 
    - Web auth is httpOnly cookies set by the API, so every request sends
      credentials and no token is ever visible to JavaScript.
    - An expired access cookie (401) triggers one refresh, shared by every
      request that failed at the same time, then the request is retried once.
-   - Staff send X-Organization-Id on patient routes; the portal sets the
-     active organization after login.
+     Code and password routes never refresh: there a 401 means "wrong code",
+     and a retry would resubmit a one-time code.
+   - X-Organization-Id is sent only in office mode (INT-6). A patient or a
+     caregiver call that carried it would be judged as staff, and audited
+     as staff. Office mode is switched on explicitly with
+     `setActiveOrganization(id)` when the user picks an office membership,
+     and off with `setActiveOrganization(null)`.
+   - Errors keep the server's machine-readable `code` (spec 019 §4), so
+     screens branch on `code` where it exists and on the status otherwise.
    - When the session cannot be renewed (idle or absolute limit, revoked,
-     signed out elsewhere) the registered `onSessionEnded` handler runs once,
-     so the app can clear cached patient data and send the user to sign in.
+     signed out elsewhere: 401 `auth.session_no_longer_active`, or a failed
+     refresh) the registered `onSessionEnded` handler runs once, so the app
+     can clear cached patient data and send the user to sign in.
    ========================================================================== */
 
 const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
@@ -43,20 +51,34 @@ export type Pagination =
       hasNext: boolean;
     };
 
-export type ApiEnvelope<T> = {
+/** The API's envelope (spec 019 §4). Some routes add fields at the root,
+ *  e.g. the 2FA challenge `{ challengeId, methods }` on sign-in; `Root`
+ *  types them. */
+export type ApiEnvelope<T, Root extends object = object> = {
   success: boolean;
   message: string | string[];
   statusCode: number;
+  code?: string | null;
   data: T;
   metadata?: unknown;
   pagination?: Pagination;
-};
+} & Partial<Root>;
+
+/** The code the API sends when a session has ended for good. */
+export const SESSION_ENDED_CODE = "auth.session_no_longer_active";
 
 export class ApiError extends Error {
   readonly status: number;
   readonly messages: string[];
+  /** The server's stable error code (`dialysis.dialysis_not_shared`), or
+   *  null for validation lists and bare framework errors (spec 019 §4). */
+  readonly code: string | null;
 
-  constructor(status: number, message: string | string[] | undefined) {
+  constructor(
+    status: number,
+    message: string | string[] | undefined,
+    code: string | null = null,
+  ) {
     const messages = Array.isArray(message)
       ? message
       : message
@@ -66,7 +88,25 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.messages = messages;
+    this.code = code;
   }
+
+  /** 403: not shared with this user, or no access. Never show cached data. */
+  get isForbidden(): boolean {
+    return this.status === 403;
+  }
+}
+
+/** True for an ApiError, optionally with this status and/or code. */
+export function isApiError(
+  error: unknown,
+  match?: { status?: number; code?: string },
+): error is ApiError {
+  if (!(error instanceof ApiError)) return false;
+  if (match?.status !== undefined && error.status !== match.status)
+    return false;
+  if (match?.code !== undefined && error.code !== match.code) return false;
+  return true;
 }
 
 type Query = Record<string, string | number | boolean | null | undefined>;
@@ -75,34 +115,63 @@ export type ApiOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   query?: Query;
-  /** Overrides the active organization for this call; null sends none. */
+  /**
+   * Office calls only. A string sends that organization for this call;
+   * null sends none even in office mode. Leave it out to follow the mode:
+   * the active office in office mode, nothing otherwise.
+   */
   organizationId?: string | null;
   signal?: AbortSignal;
 };
 
+/* Office mode: the office membership the user is acting for. null means
+   patient or caregiver mode, where no organization header is ever sent. */
 let activeOrganizationId: string | null = null;
 
+/** Enter office mode for this membership, or leave it with null. Callers in
+ *  the app use `switchPortalContext` (lib/data/queryCache), which also
+ *  clears the query cache so one context never shows another's data. */
 export function setActiveOrganization(id: string | null): void {
   activeOrganizationId = id;
 }
 
-type SessionEndedHandler = (reason: "expired" | "signed-out") => void;
+/** The office the user is acting for, or null outside office mode. */
+export function activeOrganization(): string | null {
+  return activeOrganizationId;
+}
+
+export type SessionEndReason = "expired" | "signed-out";
+type SessionEndedHandler = (reason: SessionEndReason) => void;
 let sessionEndedHandler: SessionEndedHandler | null = null;
+/* Several requests can fail together; the app hears about it once. */
+let sessionEnded = false;
 
 /** The app registers one handler: clear caches, then route to sign-in. */
 export function onSessionEnded(handler: SessionEndedHandler | null): void {
   sessionEndedHandler = handler;
 }
 
-/** Forget everything tied to the signed-in user (call on sign-out). */
+/** Whether a handler is registered. */
+export function hasSessionEndedHandler(): boolean {
+  return sessionEndedHandler !== null;
+}
+
+function endSession(reason: SessionEndReason) {
+  if (sessionEnded) return;
+  sessionEnded = true;
+  sessionEndedHandler?.(reason);
+}
+
+/** Forget everything tied to the signed-in user (sign-in and sign-out). */
 export function resetApiClientState(): void {
   activeOrganizationId = null;
   refreshing = null;
+  sessionEnded = false;
 }
 
 /* Routes where a 401 means "wrong code or password", not "expired session":
    retrying them after a refresh would resubmit a one-time code. */
-const NO_REFRESH = [
+export const NO_REFRESH = [
   "/auth/login",
   "/auth/register",
   "/auth/refresh",
@@ -113,14 +182,20 @@ const NO_REFRESH = [
   "/auth/oauth/",
   "/auth/email/",
   "/auth/phone/",
-];
+] as const;
+
+function isNoRefreshRoute(path: string): boolean {
+  const normalised = path.startsWith("/") ? path : `/${path}`;
+  return NO_REFRESH.some((p) => normalised.startsWith(p));
+}
 
 let refreshing: Promise<boolean> | null = null;
 
 function refreshSession(): Promise<boolean> {
-  refreshing ??= fetch(`${API_URL}/auth/refresh`, {
+  refreshing ??= fetch(buildUrl("/auth/refresh"), {
     method: "POST",
     credentials: "include",
+    headers: { Accept: "application/json" },
   })
     .then((res) => res.ok)
     .catch(() => false)
@@ -130,7 +205,7 @@ function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
-function buildUrl(path: string, query?: Query): string {
+export function buildUrl(path: string, query?: Query): string {
   if (!API_URL) {
     throw new Error("NEXT_PUBLIC_API_URL is not set for this build.");
   }
@@ -142,12 +217,14 @@ function buildUrl(path: string, query?: Query): string {
   return url.toString();
 }
 
+function organizationHeader(options: ApiOptions): string | null {
+  if (options.organizationId !== undefined) return options.organizationId;
+  return activeOrganizationId;
+}
+
 async function send(path: string, options: ApiOptions): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  const organizationId =
-    options.organizationId === undefined
-      ? activeOrganizationId
-      : options.organizationId;
+  const organizationId = organizationHeader(options);
   if (organizationId) headers["X-Organization-Id"] = organizationId;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -160,26 +237,47 @@ async function send(path: string, options: ApiOptions): Promise<Response> {
   });
 }
 
-/** Full envelope: use when you need `pagination` or the server's message. */
-export async function apiRequest<T>(
+type ErrorBody = {
+  success?: boolean;
+  message?: string | string[];
+  code?: string | null;
+};
+
+function readBody(res: Response): Promise<unknown> {
+  return res.json().catch(() => null);
+}
+
+function errorCode(json: unknown): string | null {
+  const code = (json as ErrorBody | null)?.code;
+  return typeof code === "string" ? code : null;
+}
+
+/** Full envelope: use when you need `pagination`, the server's message, or
+ *  fields the API puts at the root (the 2FA challenge on sign-in). */
+export async function apiRequest<T, Root extends object = object>(
   path: string,
   options: ApiOptions = {},
-): Promise<ApiEnvelope<T>> {
+): Promise<ApiEnvelope<T, Root>> {
   let res = await send(path, options);
+  let json = await readBody(res);
 
-  if (res.status === 401 && !NO_REFRESH.some((p) => path.startsWith(p))) {
-    if (await refreshSession()) {
+  if (res.status === 401 && !isNoRefreshRoute(path)) {
+    if (errorCode(json) === SESSION_ENDED_CODE) {
+      endSession("expired");
+    } else if (await refreshSession()) {
       res = await send(path, options);
+      json = await readBody(res);
+      if (res.status === 401) endSession("expired");
     } else {
-      sessionEndedHandler?.("expired");
+      endSession("expired");
     }
   }
 
-  const json = (await res.json().catch(() => null)) as ApiEnvelope<T> | null;
-  if (!res.ok || !json || json.success === false) {
-    throw new ApiError(res.status, json?.message);
+  const body = json as (ApiEnvelope<T, Root> & ErrorBody) | null;
+  if (!res.ok || !body || body.success === false) {
+    throw new ApiError(res.status, body?.message, errorCode(json));
   }
-  return json;
+  return body;
 }
 
 /** The `data` of a successful response. */
