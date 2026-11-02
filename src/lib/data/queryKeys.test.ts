@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { orgKey, patientKey, patientScopeKey, SELF_CONTEXT } from "./queryKeys";
+import {
+  orgKey,
+  patientKey,
+  patientScopeKey,
+  platformKey,
+  SELF_CONTEXT,
+} from "./queryKeys";
 
 describe("query keys", () => {
   it("always hold the patient and the organization", () => {
@@ -48,5 +54,10 @@ describe("query keys", () => {
       "roster",
       { page: 2 },
     ]);
+  });
+
+  it("files platform-console reads apart from patient and office data", () => {
+    expect(platformKey("course", "c1")).toEqual(["platform", "course", "c1"]);
+    expect(() => platformKey("")).toThrow();
   });
 });

@@ -69,3 +69,11 @@ export function orgKey(
     ...rest,
   ];
 }
+
+/** The key for a platform-console read (the NephroReach team: courses,
+ *  live classes, settings). Never patient data; never shared with a member
+ *  screen's key, so the full course (with answer keys) a content editor
+ *  reads can never stand in for the blinded member copy. */
+export function platformKey(feature: string, ...rest: KeyPart[]) {
+  return ["platform", requireId(feature, "feature"), ...rest];
+}
