@@ -42,7 +42,7 @@ import {
   setActiveOrganization,
 } from "@/lib/api/client";
 import { purgeLegacyStorage } from "@/lib/data/legacyPurge";
-import { clearQueryCaches } from "@/lib/data/queryCache";
+import { clearQueryCaches, switchPortalContext } from "@/lib/data/queryCache";
 import { setLocalScope } from "@/lib/data/storage";
 import {
   announceSignOut,
@@ -53,16 +53,16 @@ import {
   signOut,
 } from "@/lib/data/session";
 
-/* Loaded with the session so every permission check reads what each
-   organisation turned on or off for its roles (2026-10-13). Phase 3
-   replaces it with the membership's server permissions. */
-import "@/features/staff/rolePermissions";
 import type { AuthUser } from "@/features/auth/auth";
 import * as authApi from "./auth.api";
 import {
+  choiceKey,
   contextToUser,
   defaultContext,
+  holdsChoice,
   localScopeFor,
+  needsPicker,
+  reconcileChoice,
   type PortalChoice,
   type RegisterForm,
 } from "./auth.mapping";
@@ -89,8 +89,16 @@ type AuthContextValue = {
   user: AuthUser | null;
   /** The raw /me/context, for the guard and Phase 3. */
   context: MeContext | null;
-  /** Which context Phase 2 landed on. */
+  /** The portal context in use (Phase 3, D5): office, platform, patient or
+   *  caregiver (with the patient picked). */
   choice: PortalChoice | null;
+  /** The account holds several portals and none was picked in this tab for
+   *  the page being opened: the guard sends it to /select-portal. */
+  pickerNeeded: boolean;
+  /** Enter a context the account holds: sets the office header only in
+   *  office mode and clears every cached query (INT-6). Returns false for a
+   *  choice the account does not hold. */
+  enterContext: (choice: PortalChoice) => boolean;
   /** Why the context read failed (status "error"). */
   error: unknown;
   login: (identifier: string, password: string) => Promise<SignInOutcome>;
@@ -121,7 +129,8 @@ const SESSION_PATHS = [
   "/two-factor",
   "/verify-email",
   "/setup",
-  "/caregiver-invite",
+  "/select-portal",
+  "/invitations",
 ];
 
 export function needsSession(pathname: string | null): boolean {
@@ -158,6 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatusState] = useState<AuthStatus>("loading");
   const [context, setContext] = useState<MeContext | null>(null);
   const [choice, setChoice] = useState<PortalChoice | null>(null);
+  const [pickerNeeded, setPickerNeeded] = useState(false);
+  const choiceRef = useRef<PortalChoice | null>(null);
+  const pickedRef = useRef(false);
   const [error, setError] = useState<unknown>(null);
   const statusRef = useRef<AuthStatus>("loading");
   const loadedOnce = useRef(false);
@@ -173,27 +185,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [context, choice],
   );
 
+  /** Make `next` the context in use: the office header only in office mode,
+   *  and the caches cleared whenever the context changes, so one portal,
+   *  office or patient never shows data read in another (INT-6, D5). */
+  const adopt = useCallback(
+    (ctx: MeContext, next: PortalChoice, explicit = false) => {
+      const before = choiceRef.current;
+      const office =
+        next.kind === "office" ? next.membership.organizationId : null;
+      /* An explicit pick always starts clean, even into the same context. */
+      if (explicit || !before || choiceKey(before) !== choiceKey(next)) {
+        switchPortalContext(office);
+      } else {
+        setActiveOrganization(office);
+      }
+      choiceRef.current = next;
+      setChoice(next);
+      setLocalScope(localScopeFor(contextToUser(ctx, next)));
+    },
+    [],
+  );
+
   const applyContext = useCallback(
     (next: MeContext) => {
-      const landing = defaultContext(
-        next,
+      const page =
         currentNext() ??
-          (typeof window === "undefined" ? null : window.location.pathname),
-      );
+        (typeof window === "undefined" ? null : window.location.pathname);
+      /* A re-read keeps the context in use while the account still holds
+         it (with the server's new levels); otherwise it lands again. */
+      const kept = choiceRef.current
+        ? reconcileChoice(next, choiceRef.current)
+        : null;
+      const landing = kept ?? defaultContext(next, page);
+      if (!kept) pickedRef.current = false;
+      const picker = !pickedRef.current && needsPicker(next, page);
       setContext(next);
-      setChoice(landing);
-      setLocalScope(localScopeFor(contextToUser(next, landing)));
+      adopt(next, landing);
+      /* Until the user picks, no office is entered: no header is sent. */
+      if (picker) setActiveOrganization(null);
+      setPickerNeeded(picker);
       setError(null);
       setStatus("signed-in");
     },
-    [setStatus],
+    [adopt, setStatus],
   );
 
   const forget = useCallback(() => {
     setContext(null);
     setChoice(null);
+    choiceRef.current = null;
+    pickedRef.current = false;
+    setPickerNeeded(false);
+    setActiveOrganization(null);
     setLocalScope(null);
   }, []);
+
+  const enterContext = useCallback(
+    (next: PortalChoice): boolean => {
+      if (!context || !holdsChoice(context, next)) return false;
+      pickedRef.current = true;
+      setPickerNeeded(false);
+      adopt(context, next, true);
+      return true;
+    },
+    [adopt, context],
+  );
 
   /** Clear everything for this user and go to /login?reason=expired. */
   const expire = useCallback(() => {
@@ -320,7 +376,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (form: RegisterForm, agreed: boolean): Promise<MeContext> => {
       startSignIn();
-      await authApi.register(form, registrationConsent(agreed));
+      await authApi.register(form, await registrationConsent(agreed));
       return (await finishSignIn()).context;
     },
     [finishSignIn, startSignIn],
@@ -341,6 +397,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       context,
       choice,
+      pickerNeeded,
+      enterContext,
       error,
       login,
       loginWithGoogle,
@@ -355,6 +413,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       context,
       choice,
+      pickerNeeded,
+      enterContext,
       error,
       login,
       loginWithGoogle,

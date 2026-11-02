@@ -169,9 +169,29 @@ export async function json(res: APIResponse, what: string): Promise<Json> {
   return (await res.json()) as Json;
 }
 
-/** Register a synthetic account through the API. D6: no consent field until
- *  BE-AUTH-2 (spec 030) defines one; the API refuses unknown fields. */
+/** The current Terms and Privacy versions (public route, spec 032). */
+export async function currentConsent(): Promise<{
+  termsVersion: string;
+  privacyVersion: string;
+}> {
+  const ctx = await request.newContext();
+  try {
+    const body = await json(
+      await ctx.get(`${env.apiURL}/legal/documents/current`),
+      "legal documents",
+    );
+    const docs = body.data as Array<{ type: string; version: string }>;
+    const v = (t: string) => docs.find((d) => d.type === t)?.version ?? "";
+    return { termsVersion: v("TERMS"), privacyVersion: v("PRIVACY") };
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+/** Register a synthetic account through the API with the D6 consent for the
+ *  current documents (spec 030: registration without it is refused). */
 export async function registerViaApi(account: Account): Promise<APIResponse> {
+  const consent = await currentConsent();
   await pace("register");
   const ctx = await request.newContext();
   try {
@@ -181,6 +201,7 @@ export async function registerViaApi(account: Account): Promise<APIResponse> {
         email: account.email,
         password: account.password,
         name: account.name,
+        consent,
       },
     });
     await res.body();

@@ -55,7 +55,8 @@ export default function DashboardGuard({
 }: {
   children: React.ReactNode;
 }) {
-  const { status, user, context, choice, refreshContext } = useAuth();
+  const { status, user, context, choice, pickerNeeded, refreshContext } =
+    useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const t = useAuthText();
@@ -74,6 +75,12 @@ export default function DashboardGuard({
       return {
         kind: "go",
         to: `/setup/mfa?next=${encodeURIComponent(pathname)}`,
+      };
+    /* Several portals and this page names none of them (D5, Phase 3). */
+    if (pickerNeeded)
+      return {
+        kind: "go",
+        to: `/select-portal?next=${encodeURIComponent(pathname)}`,
       };
     if (choice.kind === "none") return { kind: "go", to: "/setup/patient" };
     if (choice.kind === "no-portal" || !user) return { kind: "no-portal" };

@@ -2,234 +2,251 @@
 
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CAREGIVER_GRANTS_KEY,
-  caregiverViewing,
-  readJson,
-  setCaregiverViewing,
-  writeJson,
-} from "@/lib/data/storage";
 import { useAuth, useOptionalAuth } from "@/features/auth/AuthContext";
-import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
-import * as rules from "./caregivers.data";
-import type { CaregiverState } from "./caregivers.data";
+import { patientKey, type PatientScope } from "@/lib/data/queryKeys";
+import * as api from "./caregivers.api";
+import {
+  customMapFor,
+  fromContext,
+  journalMap,
+  type CaregivingPatient,
+} from "./caregivers.mapping";
 
 /* ==========================================================================
-   Caregivers — storage
+   Caregivers: hooks on the API (Phase 3, D1; ADR 0007)
    --------------------------------------------------------------------------
-   One shared record: the patient writes the invites, the caregiver
-   accepts. Here the screens filter; with a server the grant is checked on
-   every request the caregiver makes.
+   - The patient (their own portal) reads and changes their caregivers and
+     waiting invitations, one server operation per action; every write
+     invalidates the lists so the server's answer is what shows.
+   - The caregiver's patients come from `GET /me/context` (`caregiving[]`):
+     the patient they act for is the portal context, chosen through
+     AuthContext.enterContext, which clears every cached query, so a switch
+     never shows the previous patient's data.
+   Nothing is kept in browser storage (the old `nr:caregiver-grants` and
+   `nr:caregiver-viewing:*` keys are retired and purged).
    ========================================================================== */
 
-const KEY = CAREGIVER_GRANTS_KEY;
-export const caregiversKey = ["caregivers", "grants"] as const;
-/* 2: full access and several patients (2026-10-14). 3: Grace has a login. */
-const VERSION = 4;
+/** The signed-in patient's own scope, or null in any other context. */
+function useOwnPatientScope(): PatientScope | null {
+  const user = useOptionalAuth()?.user;
+  return user?.role === "user" && user.patientId
+    ? { patientId: user.patientId, organizationId: null }
+    : null;
+}
 
-type Envelope = { version: number; state: CaregiverState };
-
-const CAREGIVER = {
-  caregiverEmail: "caregiver@nephroreach.com",
-  caregiverName: "Sarah Taylor",
+export const caregiverKeys = {
+  grants: (scope: PatientScope) =>
+    patientKey(scope, "caregivers", { status: "ACTIVE" }),
+  invitations: (scope: PatientScope) =>
+    patientKey(scope, "caregiver-invitations", { status: "PENDING" }),
+  activity: (scope: PatientScope, grantId: string, page: number) =>
+    patientKey(scope, "caregivers", grantId, "activity", { page }),
+  all: (scope: PatientScope) => patientKey(scope, "caregivers"),
+  allInvitations: (scope: PatientScope) =>
+    patientKey(scope, "caregiver-invitations"),
 };
 
-/** The demo: Sarah looks after her father John and her grandmother. */
-function seed(now: number): CaregiverState {
-  const day = 24 * 60 * 60 * 1000;
-  const at = (days: number) => new Date(now - days * day).toISOString();
-  return {
-    grants: [
-      {
-        ...CAREGIVER,
-        id: "cg-demo-john",
-        patientEmail: DEMO_MEMBER_EMAIL,
-        patientName: DEMO_MEMBER_NAME,
-        relationship: "Daughter",
-        status: "active",
-        invitedAt: at(9),
-        acceptedAt: at(8.9),
-        activity: [
-          { at: at(2), action: "Opened Medications" },
-          { at: at(8.9), action: "Accepted" },
-          { at: at(9), action: "Invited" },
-        ],
-      },
-      {
-        ...CAREGIVER,
-        id: "cg-demo-grace",
-        patientEmail: "grace@nephroreach.com",
-        patientName: "Grace Taylor",
-        relationship: "Grandchild",
-        status: "active",
-        invitedAt: at(20),
-        acceptedAt: at(19),
-        activity: [
-          { at: at(19), action: "Accepted" },
-          { at: at(20), action: "Invited" },
-        ],
-      },
-    ],
-  };
-}
-
-async function readState(): Promise<CaregiverState> {
-  const stored = await readJson<Partial<Envelope> | null>(KEY, null);
-  if (
-    stored &&
-    stored.version === VERSION &&
-    Array.isArray(stored.state?.grants)
-  ) {
-    return stored.state;
-  }
-  const seeded = seed(Date.now());
-  await writeJson(KEY, { version: VERSION, state: seeded });
-  return seeded;
-}
-
-const EMPTY: CaregiverState = { grants: [] };
-
-function useCaregiverStore() {
+/** The signed-in patient's caregivers: invite, change, revoke. */
+export function useMyCaregivers() {
+  const scope = useOwnPatientScope();
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: caregiversKey, queryFn: readState });
-  const write = useMutation({
-    mutationFn: async (transform: (s: CaregiverState) => CaregiverState) => {
-      const next = transform(await readState());
-      await writeJson(KEY, { version: VERSION, state: next });
-      return next;
-    },
-    onSuccess: (state) => queryClient.setQueryData(caregiversKey, state),
+  const enabled = scope !== null;
+
+  const grants = useQuery({
+    queryKey: scope ? caregiverKeys.grants(scope) : ["caregivers", "none"],
+    queryFn: () => api.listCaregivers(scope!.patientId, { status: "ACTIVE" }),
+    enabled,
   });
+  const invitations = useQuery({
+    queryKey: scope
+      ? caregiverKeys.invitations(scope)
+      : ["caregiver-invitations", "none"],
+    queryFn: () =>
+      api.listCaregiverInvitations(scope!.patientId, { status: "PENDING" }),
+    enabled,
+  });
+
+  const refresh = useCallback(async () => {
+    if (!scope) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: caregiverKeys.all(scope) }),
+      queryClient.invalidateQueries({
+        queryKey: caregiverKeys.allInvitations(scope),
+      }),
+    ]);
+  }, [queryClient, scope]);
+
+  const write = useMutation({
+    mutationFn: async (action: (patientId: string) => Promise<unknown>) => {
+      if (!scope) throw new Error("No patient record in this context.");
+      return action(scope.patientId);
+    },
+    onSettled: refresh,
+  });
+  const { mutateAsync } = write;
+
   return {
-    state: query.data ?? EMPTY,
-    isPending: query.isPending,
-    mutate: write.mutate,
-    mutateAsync: write.mutateAsync,
+    scope,
+    grants: useMemo(() => grants.data?.items ?? [], [grants.data]),
+    invitations: useMemo(
+      () => invitations.data?.items ?? [],
+      [invitations.data],
+    ),
+    isPending: enabled && (grants.isPending || invitations.isPending),
+    error: grants.error ?? invitations.error,
+    refetch: () => {
+      void grants.refetch();
+      void invitations.refetch();
+    },
     isSaving: write.isPending,
     saveError: write.error,
-  };
-}
-
-/** The signed-in patient's caregivers: invite and remove. */
-export function useMyCaregivers() {
-  const { user } = useAuth();
-  const store = useCaregiverStore();
-  const { mutate, mutateAsync } = store;
-  const email = user?.role === "user" ? user.email : "";
-  const patient = useMemo(
-    () => ({ email, name: user?.name ?? "" }),
-    [email, user?.name],
-  );
-
-  return {
-    isPending: store.isPending,
-    isSaving: store.isSaving,
-    saveError: store.saveError,
-    state: store.state,
-    patientEmail: email,
-    caregivers: useMemo(
-      () => (email ? rules.grantsForPatient(store.state, email) : []),
-      [store.state, email],
-    ),
+    clearSaveError: write.reset,
     invite: useCallback(
-      async (draft: rules.InviteDraft) => {
-        let id = "";
-        await mutateAsync((s) => {
-          const result = rules.invite(s, patient, draft, Date.now());
-          id = result.grant.id;
-          return result.state;
-        });
-        return id;
-      },
-      [mutateAsync, patient],
-    ),
-    remove: useCallback(
-      (id: string) => mutate((s) => rules.remove(s, id, Date.now())),
-      [mutate],
-    ),
-  };
-}
-
-/* The patient this caregiver is acting for. A query, so the switcher, the
-   menu and every page read one answer, and a switch reaches all of them. */
-const viewingKey = (email: string) => ["caregivers", "viewing", email] as const;
-
-/** The signed-in caregiver: their patients, invites, and who they act for. */
-export function useCaregiverView() {
-  const user = useOptionalAuth()?.user;
-  const queryClient = useQueryClient();
-  const store = useCaregiverStore();
-  const { mutate, mutateAsync } = store;
-  const email = user?.role === "caregiver" ? user.email : "";
-
-  const viewingQuery = useQuery({
-    queryKey: viewingKey(email),
-    queryFn: () => (email ? caregiverViewing(email) : null),
-    enabled: !!email,
-  });
-
-  const grants = useMemo(
-    () => (email ? rules.grantsForCaregiver(store.state, email) : []),
-    [store.state, email],
-  );
-  const grant = rules.activeGrant(
-    store.state,
-    email,
-    viewingQuery.data ?? null,
-  );
-
-  /** Switches patient: every screen's cached data belonged to the last one. */
-  const choose = useCallback(
-    async (patientEmail: string | null) => {
-      if (!email) return;
-      setCaregiverViewing(email, patientEmail);
-      await queryClient.resetQueries();
-    },
-    [email, queryClient],
-  );
-
-  return {
-    isCaregiver: !!email,
-    isPending: !!email && (store.isPending || viewingQuery.isPending),
-    isSaving: store.isSaving,
-    saveError: store.saveError,
-    pending: useMemo(
-      () => grants.filter((g) => g.status === "pending"),
-      [grants],
-    ),
-    patients: useMemo(
-      () => grants.filter((g) => g.status === "active"),
-      [grants],
-    ),
-    grant,
-    choose,
-    accept: useCallback(
-      (id: string) => mutateAsync((s) => rules.accept(s, id, Date.now())),
+      (body: api.InviteCaregiverBody) =>
+        mutateAsync((pid) => api.inviteCaregiver(pid, body)),
       [mutateAsync],
     ),
-    decline: useCallback(
-      (id: string) =>
-        mutate((s) => rules.remove(s, id, Date.now(), "Declined")),
-      [mutate],
+    revokeGrant: useCallback(
+      (grantId: string) =>
+        mutateAsync((pid) => api.revokeCaregiver(pid, grantId)),
+      [mutateAsync],
     ),
-    log: useCallback(
-      (id: string, action: string) =>
-        mutate((s) => rules.logActivity(s, id, action, Date.now())),
-      [mutate],
+    revokeInvitation: useCallback(
+      (id: string) =>
+        mutateAsync((pid) => api.revokeCaregiverInvitation(pid, id)),
+      [mutateAsync],
+    ),
+    resendInvitation: useCallback(
+      (id: string) =>
+        mutateAsync((pid) => api.resendCaregiverInvitation(pid, id)),
+      [mutateAsync],
+    ),
+    /** A named preset, or a custom map (other keys kept as they are). */
+    changeAccess: useCallback(
+      (
+        grant: api.CaregiverGrant,
+        preset: api.CaregiverPreset,
+        edited?: api.CaregiverPermissions,
+      ) =>
+        mutateAsync((pid) =>
+          api.updateCaregiver(
+            pid,
+            grant.id,
+            preset,
+            preset === "custom"
+              ? customMapFor(grant.permissions, edited ?? {})
+              : undefined,
+          ),
+        ),
+      [mutateAsync],
+    ),
+    /** The separate journal permission (D1): always a custom map. */
+    setJournal: useCallback(
+      (grant: api.CaregiverGrant, open: boolean) =>
+        mutateAsync((pid) =>
+          api.updateCaregiver(
+            pid,
+            grant.id,
+            "custom",
+            journalMap(grant.permissions, open),
+          ),
+        ),
+      [mutateAsync],
     ),
   };
 }
 
-/** An invite, read by its id from the link the patient sent. */
-export function useCaregiverInvite(id: string) {
-  const store = useCaregiverStore();
-  const { mutateAsync } = store;
+/** One page of what a caregiver did in the patient's records (server audit,
+ *  recorded under the caregiver's own identity). */
+export function useCaregiverActivity(grantId: string, page = 1) {
+  const scope = useOwnPatientScope();
+  const query = useQuery({
+    queryKey: scope
+      ? caregiverKeys.activity(scope, grantId, page)
+      : ["caregiver-activity", "none"],
+    queryFn: () =>
+      api.caregiverActivity(scope!.patientId, grantId, { page, limit: 5 }),
+    enabled: scope !== null,
+  });
   return {
-    isPending: store.isPending,
-    grant: store.state.grants.find((g) => g.id === id),
-    accept: useCallback(
-      () => mutateAsync((s) => rules.accept(s, id, Date.now())),
-      [mutateAsync, id],
-    ),
+    rows: query.data?.items ?? [],
+    hasMore: query.data?.pagination?.hasNext ?? false,
+    isPending: scope !== null && query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+  };
+}
+
+/**
+ * The signed-in caregiver: the patients they look after (from
+ * `/me/context`), the one they are acting for (the portal context), and the
+ * switch. Outside a caregiver context everything is empty.
+ */
+export function useCaregiverView() {
+  const auth = useOptionalAuth();
+  const context = auth?.context ?? null;
+  const choice = auth?.choice ?? null;
+  const enterContext = auth?.enterContext;
+  const isCaregiver = auth?.user?.role === "caregiver";
+
+  const patients = useMemo<CaregivingPatient[]>(
+    () => (isCaregiver && context ? context.caregiving.map(fromContext) : []),
+    [isCaregiver, context],
+  );
+  const grant = useMemo(() => {
+    if (!isCaregiver || choice?.kind !== "caregiver" || !choice.grantId)
+      return null;
+    return patients.find((p) => p.grantId === choice.grantId) ?? null;
+  }, [isCaregiver, choice, patients]);
+
+  /** Act for this patient: a new portal context, with the caches cleared. */
+  const choose = useCallback(
+    (grantId: string | null): boolean =>
+      enterContext ? enterContext({ kind: "caregiver", grantId }) : false,
+    [enterContext],
+  );
+
+  /** Re-read `/me/context` (after accepting an invitation). */
+  const refreshContext = auth?.refreshContext;
+  const refresh = useCallback(
+    async () => (refreshContext ? refreshContext() : null),
+    [refreshContext],
+  );
+
+  return { isCaregiver, isPending: false, patients, grant, choose, refresh };
+}
+
+/** The caregiver leaves a patient's care (their own choice). */
+export function useLeaveCaregiving() {
+  const { refreshContext } = useAuth();
+  return useMutation({
+    mutationFn: (grantId: string) => api.leaveCaregiving(grantId),
+    onSuccess: async () => {
+      await refreshContext();
+    },
+  });
+}
+
+/** Invitations addressed to the signed-in account's verified email. */
+export function useMyInvitations() {
+  const auth = useOptionalAuth();
+  const queryClient = useQueryClient();
+  const signedIn = auth?.status === "signed-in";
+  const query = useQuery({
+    queryKey: ["me", "invitations"],
+    queryFn: api.myInvitations,
+    enabled: signedIn,
+  });
+  const respond = useMutation({
+    mutationFn: ({ id, accept }: { id: string; accept: boolean }) =>
+      accept ? api.acceptMyInvitation(id) : api.declineMyInvitation(id),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["me", "invitations"] }),
+  });
+  return {
+    invitations: (query.data ?? []).filter((i) => i.status === "PENDING"),
+    isPending: signedIn && query.isPending,
+    error: query.error,
+    respond,
   };
 }

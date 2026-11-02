@@ -191,6 +191,8 @@
       "codeExpired": "That code has expired or was already used. Request a new one.",
       "challengeEnded": "This sign-in has expired. Sign in again.",
       "linkInvalid": "This link is invalid or has expired.",
+      "consentRequired": "Accept the Terms of Service and Privacy Notice to create your account.",
+      "consentOutdated": "The Terms of Service or Privacy Notice changed. Review the current version and try again.",
       "registrationUnavailable": "Registration is not available right now. Try again later.",
       "googleUnavailable": "Google sign-in is not available.",
       "googleConflict": "An account already uses this email. Sign in with your password, then link Google in your security settings.",
@@ -1749,6 +1751,71 @@
       "passwordMismatch": "Passwords do not match.",
       "termsRequired": "Please agree to the terms to continue.",
       "emailExists": "That email is already registered. Sign in instead."
+    }
+  },
+  "portal": {
+    "pickerTitle": "Choose where to work",
+    "pickerBody": "Your account opens more than one portal. Each one shows only its own information.",
+    "pickerList": "Your portals",
+    "office": "Office",
+    "platform": "NephroReach team",
+    "patient": "My health",
+    "patientDetail": "Your own records",
+    "caregiver": "Caring for {name}",
+    "caregiverDetail": "Caregiver · {relationship}",
+    "owner": "Owner",
+    "suspended": "Suspended: read only",
+    "enter": "Open",
+    "current": "Current",
+    "switchLabel": "You are working in {name}",
+    "switch": "Switch portal",
+    "notHeld": "That portal is no longer available to your account. Choose another one.",
+    "orgTypes": {
+      "DIALYSIS_CENTER": "Dialysis center",
+      "ACCESS_CENTER": "Vascular access center",
+      "NEPHROLOGY_OFFICE": "Nephrology office",
+      "HOSPITAL": "Hospital",
+      "PLATFORM": "Platform team"
+    },
+    "invitation": {
+      "loading": "Checking your invitation...",
+      "invalidTitle": "This invitation link does not work",
+      "invalidBody": "The link is incomplete or was replaced by a newer one. Ask the person who invited you to send it again.",
+      "staffTitle": "Join {organization}",
+      "staffBody": "You are invited to join {organization} as {role}.",
+      "caregiverTitle": "Become a caregiver",
+      "caregiverBody": "{inviter} invited you to help with their care on NephroReach ({preset}).",
+      "caregiverBodyNoName": "You are invited to help with someone's care on NephroReach ({preset}).",
+      "expires": "This invitation expires on {date}.",
+      "signedOut": "Sign in with the email address this invitation was sent to, or create an account with it.",
+      "signIn": "Sign in",
+      "createAccount": "Create account",
+      "accept": "Accept invitation",
+      "decline": "Decline",
+      "declined": "You declined this invitation.",
+      "status": {
+        "EXPIRED": "This invitation has expired. Ask for a new one.",
+        "REVOKED": "This invitation was withdrawn.",
+        "DECLINED": "This invitation was declined.",
+        "ACCEPTED": "This invitation was already accepted."
+      },
+      "errors": {
+        "otherEmail": "This invitation was sent to a different email address. Sign out and sign in with that address.",
+        "expired": "This invitation has expired. Ask for a new one.",
+        "noLongerValid": "This invitation can no longer be used.",
+        "alreadyMember": "You are already a member of this organization.",
+        "alreadyCaregiver": "You are already a caregiver for this person.",
+        "organizationClosed": "This organization is not accepting new members.",
+        "ownCaregiver": "You can't be your own caregiver.",
+        "generic": "Something went wrong. Try again."
+      },
+      "staffAccepted": "You joined the organization. Sign in again to open its portal."
+    },
+    "presets": {
+      "full": "Full access",
+      "view-only": "View only",
+      "support": "Support",
+      "custom": "Custom access"
     }
   }
 }

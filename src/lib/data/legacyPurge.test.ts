@@ -15,7 +15,6 @@ import {
 const LIVE = [
   /* Still live until their phase (7) moves them to the API. */
   "nr:member:new.member@example.test:dialysis-treatments",
-  "nr:caregiver-grants",
   "nr:dialysis-schedule",
 ];
 
@@ -28,6 +27,11 @@ const RETIRED = [
   /* Phase 6: medications and member labs moved to the API. */
   "nr:member-medications",
   "nr:medication-doses",
+  /* Phase 3: client RBAC, staff list, caregiver grants and viewing. */
+  "nr:role-permissions",
+  "nr:staff-accounts",
+  "nr:caregiver-grants",
+  "nr:caregiver-viewing:caregiver@example.test",
 ];
 
 beforeEach(() => {
@@ -125,22 +129,16 @@ describe("Phase 2: demo credentials and the demo session", () => {
   function assertClean() {
     expect(document.cookie).not.toContain(`${LEGACY_SESSION_COOKIE}=`);
     expect(window.localStorage.getItem("nr-registered-users")).toBeNull();
-    const staff = window.localStorage.getItem("nr:staff-accounts") ?? "";
-    expect(staff).not.toContain("password");
-    expect(staff).not.toContain("staff-pass");
-    /* The live roster itself stays for the staff screen (Phase 3). */
-    expect(JSON.parse(staff)).toEqual([
-      { id: "s1", email: "s1@example.test" },
-      { id: "s2", email: "s2@example.test" },
-    ]);
+    /* Phase 3 retired the whole staff list (it was stripped in Phase 2). */
+    expect(window.localStorage.getItem("nr:staff-accounts")).toBeNull();
   }
 
-  it("expires the cookie, drops stored accounts and strips staff passwords", () => {
+  it("expires the cookie, drops stored accounts and the staff list", () => {
     seedLegacy();
     const result = purgeLegacyStorage();
     assertClean();
     expect(result.removed).toContain("nr-registered-users");
-    expect(result.removed).toContain("nr:staff-accounts#fields");
+    expect(result.removed).toContain("nr:staff-accounts");
     expect(result.version).toBe(STORAGE_VERSION);
   });
 

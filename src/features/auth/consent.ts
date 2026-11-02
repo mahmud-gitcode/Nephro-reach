@@ -1,43 +1,81 @@
 /* ==========================================================================
-   D6 registration consent: the adapter point (PENDING BACKEND SUPPORT)
+   D6 registration consent (backend spec 030, legal documents spec 032)
    --------------------------------------------------------------------------
    Decision D6 (user, 2026-11-02): registration requires explicit acceptance
    of the current Terms of Service and Privacy Notice, recorded server-side
    with the document versions, the timestamp and the account. Marketing
-   consent is optional and separate.
+   consent is optional and separate, and registration consent is never
+   permission for any health-data disclosure.
 
-   The backend does not accept a consent field yet (BE-AUTH-2, spec 030). It
-   refuses unknown fields (`forbidNonWhitelisted`), so until it does the
-   registration page keeps its terms checkbox as a client-side gate and
-   sends NO consent field. This file is the one place that changes when the
-   contract lands:
+   The contract (spec 030 §1, §4):
+   - the versions are the ones the form showed, read from the public
+     `GET /legal/documents/current` (never from a build-time variable, so a
+     newly published version can't be accepted under an old number);
+   - the body carries `consent: { termsVersion, privacyVersion }`. The
+     existing registration form has one checkbox (Terms) and no marketing
+     box, so no marketing choice is sent: left out, the server records none,
+     which reads as opted out. A marketing opt-in is a separate, later choice
+     (`PUT /me/consents/marketing`), never bundled with registration;
+   - unticked means no consent object at all: the server refuses with
+     `auth.consent_required` and creates no account.
 
-   1. set `CONSENT_SUPPORTED` to true;
-   2. return the versions from the agreed source (D6: "confirm with Joni"
-      the document versioning source) in `registrationConsent()`;
-   3. match the field names to spec 030.
-
-   Pending acceptance item: "consent record written at registration".
+   Server answers the page maps (authErrors.ts): `auth.consent_required`,
+   `legal.consent_version_outdated` (reload and ask again), 503
+   `legal.legal_documents_unavailable`.
    ========================================================================== */
 
-/** Flip when BE-AUTH-2 (spec 030) is merged. */
-export const CONSENT_SUPPORTED = false;
+import { api } from "@/lib/api/client";
+
+/** On since BE-AUTH-2 (spec 030) was merged into int/lead (15dedc3). */
+export const CONSENT_SUPPORTED = true;
+
+export type LegalDocumentType = "TERMS" | "PRIVACY";
+
+/** One current document, as `GET /legal/documents/current` lists it. */
+export type CurrentLegalDocument = {
+  type: LegalDocumentType | string;
+  version: string;
+  title: string;
+  effectiveAt: string;
+  contentUrl: string | null;
+};
 
 export type RegistrationConsent = {
   termsVersion: string;
   privacyVersion: string;
-  marketingOptIn: boolean;
 };
 
-/** The consent object to send with registration, or undefined while the
- *  backend has no consent contract. `agreed` is the terms checkbox. */
-export function registrationConsent(
+/** `GET /legal/documents/current` (public, no office header). */
+export function fetchCurrentLegalDocuments(): Promise<CurrentLegalDocument[]> {
+  return api<CurrentLegalDocument[]>("/legal/documents/current", {
+    organizationId: null,
+  });
+}
+
+/** The consent body for the current documents, or null when Terms or
+ *  Privacy is missing (the server would answer 503 anyway). Pure. */
+export function consentFor(
+  documents: readonly CurrentLegalDocument[],
+): RegistrationConsent | null {
+  const version = (type: LegalDocumentType) =>
+    documents.find((d) => d.type === type)?.version?.trim() || null;
+  const termsVersion = version("TERMS");
+  const privacyVersion = version("PRIVACY");
+  if (!termsVersion || !privacyVersion) return null;
+  return { termsVersion, privacyVersion };
+}
+
+/**
+ * The consent object to send with registration. `agreed` is the terms
+ * checkbox: unticked sends nothing, so the server refuses the sign-up.
+ * Reads the current versions at submit time; when no current Terms or
+ * Privacy is published it sends nothing and the server answers with its
+ * own refusal (shown by the page), never a guessed version.
+ */
+export async function registrationConsent(
   agreed: boolean,
-): RegistrationConsent | undefined {
+  read: () => Promise<CurrentLegalDocument[]> = fetchCurrentLegalDocuments,
+): Promise<RegistrationConsent | undefined> {
   if (!CONSENT_SUPPORTED || !agreed) return undefined;
-  return {
-    termsVersion: process.env.NEXT_PUBLIC_TERMS_VERSION ?? "",
-    privacyVersion: process.env.NEXT_PUBLIC_PRIVACY_VERSION ?? "",
-    marketingOptIn: false,
-  };
+  return consentFor(await read()) ?? undefined;
 }
