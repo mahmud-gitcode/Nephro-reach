@@ -128,6 +128,7 @@ export function useNutritionLog(date: string) {
     isPending:
       foodsQuery.isPending || fluidsQuery.isPending || goalsQuery.isPending,
     error: foodsQuery.error ?? fluidsQuery.error ?? goalsQuery.error,
+    isError: foodsQuery.isError || fluidsQuery.isError || goalsQuery.isError,
     refetch: () => {
       void foodsQuery.refetch();
       void fluidsQuery.refetch();

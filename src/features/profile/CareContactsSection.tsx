@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Check } from "lucide-react";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   FormField,
@@ -187,8 +188,28 @@ export function CareContactsSection({ isEs }: { isEs: boolean }) {
   const dialysis = useDialysisClinic();
   const care = useCareContacts();
 
-  if (dialysis.isPending || care.isPending || !dialysis.clinic) {
-    return <Skeleton height={320} />;
+  /* error → loading → content: a failed read must not leave a skeleton
+     forever, nor show empty forms that would save over real offices. */
+  const error = dialysis.error ?? care.error;
+  if (error || dialysis.isPending || care.isPending || !dialysis.clinic) {
+    return (
+      <AsyncSection
+        pending
+        error={error}
+        onRetry={() => {
+          dialysis.refetch();
+          care.refetch();
+        }}
+        errorTitle={
+          isEs
+            ? "No se pudieron cargar sus oficinas de atención"
+            : "Your care offices could not be loaded"
+        }
+        skeleton={<Skeleton height={320} />}
+      >
+        {null}
+      </AsyncSection>
+    );
   }
 
   const saveOther =

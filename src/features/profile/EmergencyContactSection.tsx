@@ -5,7 +5,14 @@ import { useLanguage } from "@/context/LanguageContext";
 import { canCall } from "./emergencyContact";
 import type { ProfileEmergencyContact } from "./emergencyContact";
 import { useEmergencyContact } from "./useEmergencyContact";
-import { Alert, Button, FormField, Input, Skeleton } from "@/components/ui";
+import {
+  Alert,
+  AsyncSection,
+  Button,
+  FormField,
+  Input,
+  Skeleton,
+} from "@/components/ui";
 
 /* ==========================================================================
    Emergency contact — the form
@@ -149,18 +156,30 @@ function EmergencyContactForm({
 }
 
 export function EmergencyContactSection() {
-  const { contact, isPending } = useEmergencyContact();
+  const { language } = useLanguage();
+  const { contact, isPending, error, refetch } = useEmergencyContact();
 
   /* Nothing to seed the fields with yet. Rendering them empty and filling
      them a moment later is how a member starts typing into a box that is
-     about to be replaced. */
-  if (isPending) return <Skeleton height={220} />;
-
+     about to be replaced. A failed read is worse: an empty form saved over
+     a contact that is really there (INT-10). */
   return (
-    <EmergencyContactForm
-      key={`${contact.name}|${contact.phone}|${contact.relationship}`}
-      initial={contact}
-    />
+    <AsyncSection
+      pending={isPending}
+      error={error}
+      onRetry={refetch}
+      errorTitle={
+        language === "ES"
+          ? "No se pudo cargar su contacto de emergencia"
+          : "Your emergency contact could not be loaded"
+      }
+      skeleton={<Skeleton height={220} />}
+    >
+      <EmergencyContactForm
+        key={`${contact.name}|${contact.phone}|${contact.relationship}`}
+        initial={contact}
+      />
+    </AsyncSection>
   );
 }
 

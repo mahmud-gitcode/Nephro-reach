@@ -7,9 +7,13 @@ import { isNetworkClinic } from "./clinicEnrollment";
  *  `ready` is false while the clinic record loads, so a caller can wait
  *  rather than flash the wrong thing. */
 export function useClinicEnrollment() {
-  const { clinic, isPending } = useDialysisClinic();
+  const { clinic, isPending, error, refetch } = useDialysisClinic();
   return {
     ready: !isPending,
+    isPending,
+    error,
+    isError: !!error,
+    refetch,
     enrolled: isNetworkClinic(clinic?.name),
     clinic,
   };

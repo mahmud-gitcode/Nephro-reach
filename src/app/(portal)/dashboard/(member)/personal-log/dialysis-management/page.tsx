@@ -31,6 +31,7 @@ import {
   treatmentNumberInMonth,
   type ApplyScope,
   type ExtraTreatment,
+  type SchedulePeriod,
 } from "@/features/personal-log/dialysis/schedule";
 import {
   EditWeekModal,
@@ -54,8 +55,22 @@ import ModalityTabs from "@/features/personal-log/dialysis/ModalityTabs";
 import { useDialysisSchedule } from "@/features/personal-log/dialysis/useDialysisSchedule";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
-import { Alert, SectionTitle } from "@/components/ui";
+import {
+  Alert,
+  AsyncSection,
+  SectionTitle,
+  SkeletonText,
+} from "@/components/ui";
+import { combineReads } from "@/lib/data/asyncState";
 import { PageTitle } from "@/components/layout/PageTitle";
+
+const NO_SCHEDULE: SchedulePeriod = {
+  fromKey: "0000-01-01",
+  days: [],
+  chairTimes: {},
+  reminderLeadMinutes: 0,
+  durations: {},
+};
 
 function DialysisManagementDashboard() {
   const { language } = useLanguage();
@@ -68,7 +83,11 @@ function DialysisManagementDashboard() {
   // Dated schedule history, stored. The last period is the one in force.
   const schedule = useDialysisSchedule();
   const schedulePeriods = schedule.periods;
-  const currentSchedule = schedulePeriods[schedulePeriods.length - 1];
+  /* NO_SCHEDULE only after a failed read, when the page shows the error
+     instead; it keeps the closed modals below from reading undefined. */
+  const currentSchedule =
+    schedulePeriods[schedulePeriods.length - 1] ?? NO_SCHEDULE;
+  const reads = combineReads(modalityLog, enrollment, schedule);
   const selectedDays = currentSchedule.days;
   // Display option: drop the empty placeholder tiles for non-treatment days.
   const [hideBlankDays, setHideBlankDays] = useState(false);
@@ -372,163 +391,178 @@ function DialysisManagementDashboard() {
         {/* The modality comes first: it decides whether the schedule below
             makes sense at all. The weekly grid describes runs with gaps
             between them, which is not how PD works. */}
-        <ModalityTabs log={modalityLog} />
+        {/* The dialysis type, the schedule and the clinic decide what this
+            page says; a failed read of any of them is an error, never the
+            default type or week (INT-10). */}
+        <AsyncSection
+          pending={reads.pending}
+          error={reads.error}
+          onRetry={reads.onRetry}
+          errorTitle={
+            isEs
+              ? "No se pudo cargar tu información de diálisis"
+              : "Your dialysis details could not be loaded"
+          }
+          skeleton={<SkeletonText lines={6} />}
+        >
+          <ModalityTabs log={modalityLog} />
 
-        <DialysisClinicCard />
+          <DialysisClinicCard />
 
-        {/* Said plainly rather than by quietly hiding the schedule: a
-            member who switched to PD should know why the week below still
-            looks the way it does, not wonder whether the app lost it. */}
-        {!modalityLog.hasIntervals ? (
-          <Alert
-            tone="info"
-            title={
-              isEs
-                ? "Tu horario semanal es para hemodiálisis"
-                : "The weekly schedule below is for hemodialysis"
-            }
-          >
-            {isEs
-              ? "En diálisis peritoneal haces intercambios todos los días, así que no hay días de tratamiento ni tiempo entre ellos. Registra cada intercambio en Tratamiento de Diálisis."
-              : "On peritoneal dialysis you exchange every day, so there are no treatment days with gaps between them. Log each exchange under Dialysis Treatment instead."}
-          </Alert>
-        ) : null}
-
-        {/* ========================================================================= */}
-        {/* ========================================================================= */}
-        {/* 2-COLUMN ROW: CURRENT TREATMENT (COL 1) & WEEK SETTING (COL 2)            */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
-          <section className="flex flex-col rounded-card border border-line bg-surface p-6 sm:p-6 xl:col-span-12">
-            {/* Card head: title on the left, Edit Week on the right */}
-            <SectionTitle
-              title={isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
-              action={
-                <button
-                  type="button"
-                  onClick={handleOpenEditWeek}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-body-sm"
-                >
-                  <Settings className="h-4 w-4 text-fg-muted" />
-                  <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
-                </button>
+          {/* Said plainly rather than by quietly hiding the schedule: a
+              member who switched to PD should know why the week below still
+              looks the way it does, not wonder whether the app lost it. */}
+          {!modalityLog.hasIntervals ? (
+            <Alert
+              tone="info"
+              title={
+                isEs
+                  ? "Tu horario semanal es para hemodiálisis"
+                  : "The weekly schedule below is for hemodialysis"
               }
-            />
+            >
+              {isEs
+                ? "En diálisis peritoneal haces intercambios todos los días, así que no hay días de tratamiento ni tiempo entre ellos. Registra cada intercambio en Tratamiento de Diálisis."
+                : "On peritoneal dialysis you exchange every day, so there are no treatment days with gaps between them. Log each exchange under Dialysis Treatment instead."}
+            </Alert>
+          ) : null}
 
-            <div>
-              {/* One card per treatment day, in an even grid: the day as the
-                card's title, then how long, then when. Only treatment days
-                are listed.
-
-                At home there is no chair time — no machine or nurse is
-                being shared, so the member starts when it suits them. That
-                row drops out and the reminder becomes a time of its own
-                rather than a subtraction from a slot. */}
-              {/* As many day cards per row as fit at a readable width, not
-                  a column count per screen size — the card's own width is
-                  what decides whether "5:30 AM" fits. */}
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-inline-md">
-                {visibleWeekdays.map((day) => (
-                  <li
-                    key={day}
-                    className="flex min-w-0 flex-col gap-stack-sm rounded-card-nested border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-sm shadow-card transition-all hover:border-line-strong hover:shadow-md"
+          {/* ========================================================================= */}
+          {/* ========================================================================= */}
+          {/* 2-COLUMN ROW: CURRENT TREATMENT (COL 1) & WEEK SETTING (COL 2)            */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            {/* CARD 2: DIALYSIS SCHEDULE — day rows on the left, freeform note on the right */}
+            <section className="flex flex-col rounded-card border border-line bg-surface p-6 sm:p-6 xl:col-span-12">
+              {/* Card head: title on the left, Edit Week on the right */}
+              <SectionTitle
+                title={isEs ? "Horario de Diálisis" : "Dialysis Schedule"}
+                action={
+                  <button
+                    type="button"
+                    onClick={handleOpenEditWeek}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken sm:px-4 sm:py-2.5 sm:text-body-sm"
                   >
-                    <span className="truncate text-label-md text-fg-brand select-none">
-                      {isEs ? WEEKDAY_ES[day] : day}
-                    </span>
+                    <Settings className="h-4 w-4 text-fg-muted" />
+                    <span>{isEs ? "Editar Semana" : "Edit Week"}</span>
+                  </button>
+                }
+              />
 
-                    <dl className="flex flex-col gap-stack-xs text-body-sm">
-                      <div className="flex items-center justify-between gap-inline-md">
-                        <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
-                          <Hourglass
-                            aria-hidden="true"
-                            className="h-3.5 w-3.5 shrink-0"
-                          />
-                          {isEs ? "Tiempo de sesión" : "Run time"}
-                        </dt>
-                        <dd className="font-semibold whitespace-nowrap text-fg tabular-nums">
-                          {formatDuration(durationFor(currentSchedule, day))}
-                        </dd>
-                      </div>
-                      {modalityLog.hasChair ? (
+              <div>
+                {/* One card per treatment day, in an even grid: the day as the
+                  card's title, then how long, then when. Only treatment days
+                  are listed.
+
+                  At home there is no chair time — no machine or nurse is
+                  being shared, so the member starts when it suits them. That
+                  row drops out and the reminder becomes a time of its own
+                  rather than a subtraction from a slot. */}
+                {/* As many day cards per row as fit at a readable width, not
+                    a column count per screen size — the card's own width is
+                    what decides whether "5:30 AM" fits. */}
+                <ul className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-inline-md">
+                  {visibleWeekdays.map((day) => (
+                    <li
+                      key={day}
+                      className="flex min-w-0 flex-col gap-stack-sm rounded-card-nested border border-line bg-gradient-to-r from-primary-soft via-surface to-surface p-inset-sm shadow-card transition-all hover:border-line-strong hover:shadow-md"
+                    >
+                      <span className="truncate text-label-md text-fg-brand select-none">
+                        {isEs ? WEEKDAY_ES[day] : day}
+                      </span>
+
+                      <dl className="flex flex-col gap-stack-xs text-body-sm">
                         <div className="flex items-center justify-between gap-inline-md">
                           <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
-                            <Clock
+                            <Hourglass
                               aria-hidden="true"
                               className="h-3.5 w-3.5 shrink-0"
                             />
-                            {isEs ? "Hora del sillón" : "Chair time"}
+                            {isEs ? "Tiempo de sesión" : "Run time"}
+                          </dt>
+                          <dd className="font-semibold whitespace-nowrap text-fg tabular-nums">
+                            {formatDuration(durationFor(currentSchedule, day))}
+                          </dd>
+                        </div>
+                        {modalityLog.hasChair ? (
+                          <div className="flex items-center justify-between gap-inline-md">
+                            <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
+                              <Clock
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5 shrink-0"
+                              />
+                              {isEs ? "Hora del sillón" : "Chair time"}
+                            </dt>
+                            <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold whitespace-nowrap text-fg tabular-nums">
+                              {formatReminder(
+                                currentSchedule.chairTimes[day] ??
+                                  DEFAULT_CHAIR_TIME,
+                                isEs,
+                              )}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {/* When the alarm goes off. */}
+                        <div className="flex items-center justify-between gap-inline-md">
+                          <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
+                            <Bell
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 shrink-0"
+                            />
+                            {isEs ? "Recordatorio" : "Reminder"}
                           </dt>
                           <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold whitespace-nowrap text-fg tabular-nums">
                             {formatReminder(
-                              currentSchedule.chairTimes[day] ??
-                                DEFAULT_CHAIR_TIME,
+                              reminderTimeFor(
+                                currentSchedule,
+                                day,
+                                modalityLog.hasChair,
+                              ),
                               isEs,
                             )}
                           </dd>
                         </div>
-                      ) : null}
-                      {/* When the alarm goes off. */}
-                      <div className="flex items-center justify-between gap-inline-md">
-                        <dt className="inline-flex items-center gap-inline-xs whitespace-nowrap text-fg-muted">
-                          <Bell
-                            aria-hidden="true"
-                            className="h-3.5 w-3.5 shrink-0"
-                          />
-                          {isEs ? "Recordatorio" : "Reminder"}
-                        </dt>
-                        <dd className="rounded-control border border-line bg-surface-sunken px-2 py-0.5 font-bold whitespace-nowrap text-fg tabular-nums">
-                          {formatReminder(
-                            reminderTimeFor(
-                              currentSchedule,
-                              day,
-                              modalityLog.hasChair,
-                            ),
-                            isEs,
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          </div>
 
-        <div className="xl:hidden">{notesCard}</div>
+          <div className="xl:hidden">{notesCard}</div>
 
-        {/* 2. Provider orders and instructions */}
-        <ProviderOrdersSection />
+          {/* 2. Provider orders and instructions */}
+          <ProviderOrdersSection />
 
-        {/* 3. Appointments at the member's own home. Home members only. */}
-        <HomeVisitsSection modalityLog={modalityLog} />
+          {/* 3. Appointments at the member's own home. Home members only. */}
+          <HomeVisitsSection modalityLog={modalityLog} />
 
-        {/* 4. What is in the cupboard this month. Home members only — the
-            section takes itself away for in-center. */}
-        <SupplyChecklistSection modalityLog={modalityLog} />
+          {/* 4. What is in the cupboard this month. Home members only — the
+              section takes itself away for in-center. */}
+          <SupplyChecklistSection modalityLog={modalityLog} />
 
-        {/* 5. Reaching the nurse, and showing them what the phone cannot
-            describe. Side by side because a photo is usually sent with a
-            message about it. Messaging shows only when the member's clinic
-            is on NephroReach (client, 2026-10-05): nobody else would read
-            it. The Urine Output section was removed the same day. */}
-        <div
-          className={
-            enrollment.enrolled
-              ? "grid grid-cols-1 gap-6 xl:grid-cols-2"
-              : "grid grid-cols-1 gap-6"
-          }
-        >
-          {enrollment.enrolled ? (
-            <CareTeamContactSection isHome={modalityLog.isHome} />
-          ) : null}
-          <AccessPhotosSection />
-        </div>
+          {/* 5. Reaching the nurse, and showing them what the phone cannot
+              describe. Side by side because a photo is usually sent with a
+              message about it. Messaging shows only when the member's clinic
+              is on NephroReach (client, 2026-10-05): nobody else would read
+              it. The Urine Output section was removed the same day. */}
+          <div
+            className={
+              enrollment.enrolled
+                ? "grid grid-cols-1 gap-6 xl:grid-cols-2"
+                : "grid grid-cols-1 gap-6"
+            }
+          >
+            {enrollment.enrolled ? (
+              <CareTeamContactSection isHome={modalityLog.isHome} />
+            ) : null}
+            <AccessPhotosSection />
+          </div>
 
-        {/* 4. Questions for the care team */}
-        <CareTeamQuestionsSection />
+          {/* 4. Questions for the care team */}
+          <CareTeamQuestionsSection />
+        </AsyncSection>
 
         {/* ========================================================================= */}
         {/* MODAL 1: EDIT WEEK SETTING                                                */}

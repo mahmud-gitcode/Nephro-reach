@@ -55,6 +55,8 @@ export function useMyHealth() {
     history: record.history,
     isPending: query.isPending,
     error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
     saveError: write.error,
     setAllergies: useCallback(
       (fn: (rows: AllergyRow[]) => AllergyRow[]) =>

@@ -16,6 +16,7 @@ import { UrinaryOutput } from "@/features/personal-log/fluid/panels/UrinaryOutpu
 import { FluidSymptomTracker } from "@/features/personal-log/fluid/panels/FluidSymptomTracker";
 import { AlertsInsights } from "@/features/personal-log/fluid/panels/AlertsInsights";
 import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
+import { AsyncSection, SkeletonText } from "@/components/ui";
 import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
 
 /* ==========================================================================
@@ -337,54 +338,68 @@ export default function FluidTrackerPage() {
         onOpenEdwModal={() => setIsEdwModalOpen(true)}
       />
 
-      <FluidSymptomTracker entries={entries} isEs={language === "ES"} />
-
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <WeightTrendChart />
-        <GoalProgress />
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,540px)_minmax(240px,262px)_minmax(240px,1fr)]">
-        <FluidIntakeTrend />
-        <UrinaryOutput />
-        <AlertsInsights />
-      </section>
-
-      <RecentEntries
-        entries={entries}
-        onOpenAddModal={() => setIsModalOpen(true)}
-      />
-
-      {/* Export and share this log (client, 2026-10-05). */}
-      <ShareLogCard
-        isEs={language === "ES"}
-        title={
+      {/* Everything that reads the stored log: error → loading → content.
+          A failed read is never shown as an empty log (INT-10). */}
+      <AsyncSection
+        pending={weightLog.isPending}
+        error={weightLog.error}
+        onRetry={weightLog.refetch}
+        errorTitle={
           language === "ES"
-            ? "Mi registro de peso y líquidos"
-            : "My weight & fluid log"
+            ? "No se pudo cargar tu registro de peso y líquidos"
+            : "Your weight & fluid log could not be loaded"
         }
-        fileName="weight-fluid-log"
-        table={{
-          header: [
-            "Date",
-            "Morning weight",
-            "Evening weight",
-            "Fluid intake",
-            "Fluid goal",
-            "Urine output",
-            "Notes",
-          ],
-          rows: entries.map((e) => [
-            e.date ?? e.dateEn,
-            e.morning,
-            e.evening,
-            e.intake,
-            e.goal,
-            e.uo,
-            e.notes,
-          ]),
-        }}
-      />
+        skeleton={<SkeletonText lines={6} />}
+      >
+        <FluidSymptomTracker entries={entries} isEs={language === "ES"} />
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <WeightTrendChart />
+          <GoalProgress />
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,540px)_minmax(240px,262px)_minmax(240px,1fr)]">
+          <FluidIntakeTrend />
+          <UrinaryOutput />
+          <AlertsInsights />
+        </section>
+
+        <RecentEntries
+          entries={entries}
+          onOpenAddModal={() => setIsModalOpen(true)}
+        />
+
+        {/* Export and share this log (client, 2026-10-05). */}
+        <ShareLogCard
+          isEs={language === "ES"}
+          title={
+            language === "ES"
+              ? "Mi registro de peso y líquidos"
+              : "My weight & fluid log"
+          }
+          fileName="weight-fluid-log"
+          table={{
+            header: [
+              "Date",
+              "Morning weight",
+              "Evening weight",
+              "Fluid intake",
+              "Fluid goal",
+              "Urine output",
+              "Notes",
+            ],
+            rows: entries.map((e) => [
+              e.date ?? e.dateEn,
+              e.morning,
+              e.evening,
+              e.intake,
+              e.goal,
+              e.uo,
+              e.notes,
+            ]),
+          }}
+        />
+      </AsyncSection>
 
       {/* Entry New Weight Log Modal */}
       <AddWeightLogModal

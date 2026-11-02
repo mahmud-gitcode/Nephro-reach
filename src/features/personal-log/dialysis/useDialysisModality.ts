@@ -129,6 +129,7 @@ export function useDialysisModality() {
 
     isPending: settingsQuery.isPending || exchangesQuery.isPending,
     error: settingsQuery.error ?? exchangesQuery.error,
+    isError: settingsQuery.isError || exchangesQuery.isError,
     refetch: () => {
       void settingsQuery.refetch();
       void exchangesQuery.refetch();

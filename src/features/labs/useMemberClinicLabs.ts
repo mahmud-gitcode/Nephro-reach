@@ -47,6 +47,12 @@ export function useMemberClinicLabs() {
     newest,
     unseen,
     isPending: store.isPending,
+    error: store.error ?? seen.error,
+    isError: !!(store.error ?? seen.error),
+    refetch: () => {
+      store.refetch();
+      void seen.refetch();
+    },
     markSeen: useCallback(() => {
       if (newest) mutate(newest.uploadedAt);
     }, [mutate, newest]),

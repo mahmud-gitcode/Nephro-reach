@@ -9,14 +9,15 @@ import { ShareLogCard } from "@/features/personal-log/ShareLogCard";
 import { BpReminderCard } from "@/features/personal-log/blood-pressure/BpReminderCard";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
+  AsyncSection,
   Badge,
   Button,
   buttonStyles,
   Card,
   EmptyState,
-  ErrorState,
   LineChart,
   Modal,
+  SkeletonText,
   Table,
   TableBody,
   TableCell,
@@ -112,27 +113,30 @@ function DailyBloodPressureList() {
         </div>
       </div>
 
-      {bp.error ? (
-        <ErrorState
-          title={
-            isEs
-              ? "No se pudieron cargar tus lecturas"
-              : "Your readings could not be loaded"
-          }
-          error={bp.error}
-          onRetry={bp.refetch}
-        />
-      ) : !bp.isPending && bp.readings.length === 0 ? (
-        <EmptyState
-          icon={<HeartPulse />}
-          title={isEs ? "Aún no hay lecturas" : "No readings yet"}
-          description={
-            isEs
-              ? "Agrega tu primera lectura de presión arterial."
-              : "Add your first blood pressure reading."
-          }
-        />
-      ) : (
+      {/* error → loading → empty → readings (INT-10). */}
+      <AsyncSection
+        pending={bp.isPending}
+        error={bp.error}
+        onRetry={bp.refetch}
+        errorTitle={
+          isEs
+            ? "No se pudieron cargar tus lecturas"
+            : "Your readings could not be loaded"
+        }
+        isEmpty={bp.readings.length === 0}
+        skeleton={<SkeletonText lines={4} />}
+        empty={
+          <EmptyState
+            icon={<HeartPulse />}
+            title={isEs ? "Aún no hay lecturas" : "No readings yet"}
+            description={
+              isEs
+                ? "Agrega tu primera lectura de presión arterial."
+                : "Add your first blood pressure reading."
+            }
+          />
+        }
+      >
         <>
           {/* On a phone the 1080px table showed only the date and time; the
               readings themselves sat off-screen (client review, 2026-10-08).
@@ -334,7 +338,7 @@ function DailyBloodPressureList() {
             </Table>
           </Card>
         </>
-      )}
+      </AsyncSection>
 
       <Modal
         open={deleting !== null}
@@ -388,7 +392,13 @@ function TrendChart() {
       </h2>
 
       <div className="mt-stack-xl">
-        {points.length < 2 ? (
+        {bp.isError ? (
+          <p className="text-body-sm text-fg-muted">
+            {isEs
+              ? "La tendencia no está disponible porque tus lecturas no se cargaron."
+              : "The trend is not available because your readings did not load."}
+          </p>
+        ) : points.length < 2 ? (
           <p className="text-body-sm text-fg-muted">
             {isEs
               ? "La tendencia aparece con dos o más lecturas."
@@ -509,6 +519,8 @@ function ShareReadings() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const bp = useBloodPressure();
+  /* A failed read must not be shared as an empty log. */
+  if (bp.isError) return null;
   return (
     <ShareLogCard
       isEs={isEs}

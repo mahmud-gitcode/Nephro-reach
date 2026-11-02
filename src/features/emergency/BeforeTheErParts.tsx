@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { MessageSquareText, Phone, TriangleAlert } from "lucide-react";
-import { buttonStyles, Card } from "@/components/ui";
+import { buttonStyles, Card, ErrorState } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { useClinicEnrollment } from "@/features/profile/useClinicEnrollment";
 import { toTelHref } from "@/features/travel/useDialysisClinic";
@@ -61,7 +61,21 @@ export function EmergencyInformationCard({
  * NephroReach (someone there reads them); the clinic's phone either way.
  */
 export function ContactClinic({ isEs }: { isEs: boolean }) {
-  const { enrolled, clinic, ready } = useClinicEnrollment();
+  const { enrolled, clinic, ready, error, refetch } = useClinicEnrollment();
+  /* A failed read is not "no clinic": offering "Add my dialysis clinic"
+     would tell the member theirs is gone (INT-10). */
+  if (error)
+    return (
+      <ErrorState
+        title={
+          isEs
+            ? "No se pudo cargar su clínica de diálisis"
+            : "Your dialysis clinic could not be loaded"
+        }
+        error={error}
+        onRetry={refetch}
+      />
+    );
   if (!ready) return null;
   const phone = clinic?.phone.trim();
 
