@@ -1736,5 +1736,70 @@
       "termsRequired": "Por favor acepte los términos para continuar.",
       "emailExists": "Ese correo ya está registrado. Inicie sesión en su lugar."
     }
+  },
+  "portal": {
+    "pickerTitle": "Elige dónde trabajar",
+    "pickerBody": "Tu cuenta abre más de un portal. Cada uno muestra solo su propia información.",
+    "pickerList": "Tus portales",
+    "office": "Oficina",
+    "platform": "Equipo de NephroReach",
+    "patient": "Mi salud",
+    "patientDetail": "Tus propios registros",
+    "caregiver": "Cuidando a {name}",
+    "caregiverDetail": "Cuidador · {relationship}",
+    "owner": "Propietario",
+    "suspended": "Suspendida: solo lectura",
+    "enter": "Abrir",
+    "current": "Actual",
+    "switchLabel": "Estás trabajando en {name}",
+    "switch": "Cambiar de portal",
+    "notHeld": "Ese portal ya no está disponible para tu cuenta. Elige otro.",
+    "orgTypes": {
+      "DIALYSIS_CENTER": "Centro de diálisis",
+      "ACCESS_CENTER": "Centro de acceso vascular",
+      "NEPHROLOGY_OFFICE": "Consultorio de nefrología",
+      "HOSPITAL": "Hospital",
+      "PLATFORM": "Equipo de la plataforma"
+    },
+    "invitation": {
+      "loading": "Revisando tu invitación...",
+      "invalidTitle": "Este enlace de invitación no funciona",
+      "invalidBody": "El enlace está incompleto o fue reemplazado por uno más nuevo. Pide a quien te invitó que lo envíe de nuevo.",
+      "staffTitle": "Únete a {organization}",
+      "staffBody": "Te invitaron a unirte a {organization} como {role}.",
+      "caregiverTitle": "Conviértete en cuidador",
+      "caregiverBody": "{inviter} te invitó a ayudar con su cuidado en NephroReach ({preset}).",
+      "caregiverBodyNoName": "Te invitaron a ayudar con el cuidado de alguien en NephroReach ({preset}).",
+      "expires": "Esta invitación vence el {date}.",
+      "signedOut": "Inicia sesión con el correo al que se envió esta invitación, o crea una cuenta con él.",
+      "signIn": "Iniciar sesión",
+      "createAccount": "Crear cuenta",
+      "accept": "Aceptar invitación",
+      "decline": "Rechazar",
+      "declined": "Rechazaste esta invitación.",
+      "status": {
+        "EXPIRED": "Esta invitación venció. Pide una nueva.",
+        "REVOKED": "Esta invitación fue retirada.",
+        "DECLINED": "Esta invitación fue rechazada.",
+        "ACCEPTED": "Esta invitación ya fue aceptada."
+      },
+      "errors": {
+        "otherEmail": "Esta invitación se envió a otro correo. Cierra sesión e inicia sesión con ese correo.",
+        "expired": "Esta invitación venció. Pide una nueva.",
+        "noLongerValid": "Esta invitación ya no se puede usar.",
+        "alreadyMember": "Ya eres miembro de esta organización.",
+        "alreadyCaregiver": "Ya eres cuidador de esta persona.",
+        "organizationClosed": "Esta organización no acepta nuevos miembros.",
+        "ownCaregiver": "No puedes ser tu propio cuidador.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
+      },
+      "staffAccepted": "Te uniste a la organización. Inicia sesión de nuevo para abrir su portal."
+    },
+    "presets": {
+      "full": "Acceso completo",
+      "view-only": "Solo lectura",
+      "support": "Apoyo",
+      "custom": "Acceso personalizado"
+    }
   }
 }

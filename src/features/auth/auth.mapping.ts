@@ -84,7 +84,10 @@ export type PortalChoice =
   | { kind: "platform"; membership: ContextMembership }
   | { kind: "office"; membership: ContextMembership }
   | { kind: "patient" }
-  | { kind: "caregiver"; grantIndex: number }
+  /** A caregiving context. `grantId` null: the caregiver looks after
+   *  several patients and has not picked one yet (member pages read
+   *  nothing until they do). */
+  | { kind: "caregiver"; grantId: string | null }
   /** Only memberships of an organization type with no portal. */
   | { kind: "no-portal"; membership: ContextMembership }
   | { kind: "none" };
@@ -114,8 +117,19 @@ function roleOf(choice: PortalChoice): UserRole | null {
   }
 }
 
-/** Every context the account holds, in Phase 2's fixed priority:
- *  platform, then offices, then the patient, then caregiving. */
+/** The caregiving context to land on: the only patient, or none picked
+ *  yet when there are several (the caregiver chooses on My Patients). */
+function caregiverLanding(context: MeContext): PortalChoice {
+  return {
+    kind: "caregiver",
+    grantId:
+      context.caregiving.length === 1 ? context.caregiving[0].grantId : null,
+  };
+}
+
+/** One entry per portal the account can enter, in a fixed priority:
+ *  platform, then offices, then the patient, then caregiving (one entry:
+ *  the patient is picked inside the caregiver portal). */
 export function availableContexts(context: MeContext): PortalChoice[] {
   const choices: PortalChoice[] = [];
   if (context.platform && isActive(context.platform))
@@ -123,9 +137,95 @@ export function availableContexts(context: MeContext): PortalChoice[] {
   for (const membership of officeMemberships(context))
     choices.push({ kind: "office", membership });
   if (context.patient) choices.push({ kind: "patient" });
-  if (context.caregiving.length > 0)
-    choices.push({ kind: "caregiver", grantIndex: 0 });
+  if (context.caregiving.length > 0) choices.push(caregiverLanding(context));
   return choices;
+}
+
+/** Every context including each caregiving patient: what the portal picker
+ *  lists (Phase 3, D5). */
+export function portalChoices(context: MeContext): PortalChoice[] {
+  const choices: PortalChoice[] = availableContexts(context).filter(
+    (c) => c.kind !== "caregiver",
+  );
+  for (const grant of context.caregiving)
+    choices.push({ kind: "caregiver", grantId: grant.grantId });
+  return choices;
+}
+
+/** A stable id for a choice (the picker's keys and comparisons). */
+export function choiceKey(choice: PortalChoice): string {
+  switch (choice.kind) {
+    case "platform":
+      return `platform:${choice.membership.organizationId}`;
+    case "office":
+      return `office:${choice.membership.organizationId}`;
+    case "caregiver":
+      return `caregiver:${choice.grantId ?? "none"}`;
+    case "no-portal":
+      return `no-portal:${choice.membership.organizationId}`;
+    default:
+      return choice.kind;
+  }
+}
+
+/**
+ * The same choice read against a fresh context: an office or platform
+ * choice takes the membership's new levels; a caregiver choice keeps its
+ * patient only while that grant is still listed. Null when the context no
+ * longer holds it (a revoked grant, a removed membership): the caller then
+ * lands again, never on stale access.
+ */
+export function reconcileChoice(
+  context: MeContext,
+  choice: PortalChoice,
+): PortalChoice | null {
+  switch (choice.kind) {
+    case "platform":
+    case "office": {
+      const id = choice.membership.organizationId;
+      const found = availableContexts(context).find(
+        (c) =>
+          c.kind === choice.kind &&
+          (c.kind === "platform" || c.kind === "office") &&
+          c.membership.organizationId === id,
+      );
+      return found ?? null;
+    }
+    case "patient":
+      return context.patient ? choice : null;
+    case "caregiver": {
+      if (context.caregiving.length === 0) return null;
+      if (choice.grantId === null) return caregiverLanding(context);
+      return context.caregiving.some((g) => g.grantId === choice.grantId)
+        ? choice
+        : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/** Whether a choice is one the context holds (the picker's guard). */
+export function holdsChoice(context: MeContext, choice: PortalChoice): boolean {
+  return portalChoices(context).some((c) => choiceKey(c) === choiceKey(choice));
+}
+
+/**
+ * Whether the account must pick a portal: it holds more than one, and
+ * `next` (or the page being opened) does not name exactly one of them.
+ * Single-portal accounts never see the picker.
+ */
+export function needsPicker(context: MeContext, next?: string | null): boolean {
+  const choices = availableContexts(context);
+  if (choices.length <= 1) return false;
+  const path = pathOf(next);
+  if (!path || !path.startsWith("/dashboard") || path === "/dashboard")
+    return true;
+  const fits = choices.filter((choice) => {
+    const role = roleOf(choice);
+    return role !== null && canAccessPath(role, path);
+  });
+  return fits.length !== 1;
 }
 
 /**
@@ -210,7 +310,7 @@ export function contextToUser(
     };
   }
   if (choice.kind === "caregiver") {
-    const grant = context.caregiving[choice.grantIndex];
+    const grant = context.caregiving.find((g) => g.grantId === choice.grantId);
     return {
       ...base,
       name: user.name ?? email,
@@ -247,14 +347,14 @@ function pathOf(next: string | null | undefined): string | null {
 
 const NEXT_PREFIXES = [
   "/dashboard",
+  "/select-portal",
   "/invitations/",
-  "/caregiver-invite/",
   "/setup/",
 ];
 
 /** Pages a new account opens to accept an invitation: patient setup is
  *  skipped for them (the invitation gives the account its context). */
-const INVITE_PREFIXES = ["/invitations/", "/caregiver-invite/"];
+const INVITE_PREFIXES = ["/invitations/"];
 
 /**
  * A `next` the signed-in role may follow, or null. Only same-origin paths
@@ -291,8 +391,14 @@ export function routeAfterSignIn(
   const carry = next && pathOf(next) ? `?next=${encodeURIComponent(next)}` : "";
   if (!context.user.isAccountVerified) return `/verify-email${carry}`;
   const choice = defaultContext(context, next);
-  if (isStaffChoice(choice) && context.user.mfaSetupRequired)
+  if (
+    context.user.mfaSetupRequired &&
+    (isStaffChoice(choice) ||
+      availableContexts(context).some((c) => isStaffChoice(c)))
+  )
     return `/setup/mfa${carry}`;
+  /* Several portals and no page that names one: the picker (D5). */
+  if (needsPicker(context, next)) return `/select-portal${carry}`;
   if (choice.kind === "none") {
     const path = pathOf(next);
     const invited = path && INVITE_PREFIXES.some((p) => path.startsWith(p));
