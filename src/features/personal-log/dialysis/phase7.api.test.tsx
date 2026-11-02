@@ -30,7 +30,10 @@ import {
   type StubCall,
 } from "@/features/profile/memberApiStub";
 import { uploadFile } from "@/lib/api/upload";
-import { useDialysisModality } from "./useDialysisModality";
+import {
+  PrescriptionNotEditableError,
+  useDialysisModality,
+} from "./useDialysisModality";
 import { DEFAULT_SCHEDULE, useDialysisSchedule } from "./useDialysisSchedule";
 import { useTreatmentLog } from "./useTreatmentLog";
 import { usePdExchanges } from "./usePdExchanges";
@@ -148,6 +151,71 @@ describe("prescription (dialysis type)", () => {
     expect((result.current.error as unknown as { status: number }).status).toBe(
       403,
     );
+  });
+
+  it("fails closed while the read is pending: memberCanEdit false, nothing sent (QA L5)", async () => {
+    const { calls } = stubApi((call) =>
+      call.path === `${BASE}/prescription` && call.method === "GET"
+        ? apiError(404, "dialysis.prescription_not_found")
+        : undefined,
+    );
+    const { result } = renderHook(() => useDialysisModality(), { wrapper });
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.isLoaded).toBe(false);
+    expect(result.current.memberCanEdit).toBe(false);
+    act(() => result.current.setModality("pd"));
+    await waitFor(() =>
+      expect(result.current.saveError).toBeInstanceOf(
+        PrescriptionNotEditableError,
+      ),
+    );
+    expect(calls.filter((c) => c.method !== "GET")).toEqual([]);
+    /* Once the 404 arrives ("not set"), the member may make the first choice. */
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    expect(result.current.memberCanEdit).toBe(true);
+  });
+
+  for (const [status, code] of [
+    [500, null],
+    [403, "dialysis.dialysis_not_shared"],
+  ] as const)
+    it(`fails closed after a failed read (${status}): memberCanEdit false, no POST of the default (QA L5)`, async () => {
+      const { calls } = stubApi((call) =>
+        call.path === `${BASE}/prescription` && call.method === "GET"
+          ? apiError(status, code)
+          : undefined,
+      );
+      const { result } = renderHook(() => useDialysisModality(), { wrapper });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.isLoaded).toBe(false);
+      expect(result.current.memberCanEdit).toBe(false);
+      act(() => result.current.saveSettings({ exchangesPerDay: 4 }));
+      await waitFor(() =>
+        expect(result.current.saveError).toBeInstanceOf(
+          PrescriptionNotEditableError,
+        ),
+      );
+      expect(calls.filter((c) => c.method !== "GET")).toEqual([]);
+    });
+
+  it("a refetch that fails turns editing off again until a read succeeds (QA L5)", async () => {
+    let fail = false;
+    stubApi((call) =>
+      call.path === `${BASE}/prescription` && call.method === "GET"
+        ? fail
+          ? apiError(500, null)
+          : { data: prescription() }
+        : undefined,
+    );
+    const { result } = renderHook(() => useDialysisModality(), { wrapper });
+    await waitFor(() => expect(result.current.memberCanEdit).toBe(true));
+    fail = true;
+    act(() => result.current.refetch());
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.memberCanEdit).toBe(false);
+    fail = false;
+    act(() => result.current.refetch());
+    await waitFor(() => expect(result.current.memberCanEdit).toBe(true));
   });
 
   it("the first choice is a POST with the modality; later ones PATCH", async () => {
@@ -357,6 +425,35 @@ describe("treatments", () => {
       symptoms: { postSymptoms: ["Dizziness"], postSeverity: { Overall: 2 } },
     });
     expect(post.body).not.toHaveProperty("careTeam");
+  });
+
+  it("an edit PATCHes without location, so a location set elsewhere stays (QA L2)", async () => {
+    const { calls } = stubApi((call) => {
+      if (call.path === `${BASE}/treatments` && call.method === "GET")
+        return pageOf([]);
+      if (call.path === `${BASE}/treatments/t1` && call.method === "PATCH")
+        return {
+          data: {
+            id: "t1",
+            treatmentDate: "2026-11-02",
+            modality: "IN_CENTER_HD",
+            status: "ATTENDED",
+            location: "Synthetic Center, chair 4",
+            startTime: "07:30",
+            endTime: "11:30",
+            notes: "",
+          },
+        };
+      return undefined;
+    });
+    const { result } = renderHook(() => useTreatmentLog(), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    await act(() =>
+      result.current.save({ ...draft, modality: "in-center-hd" }, "t1"),
+    );
+    const patch = calls.find((c) => c.method === "PATCH")!;
+    expect(patch.path).toBe(`${BASE}/treatments/t1`);
+    expect(patch.body).not.toHaveProperty("location");
   });
 
   it('"165 lb" is refused before anything is sent', async () => {
