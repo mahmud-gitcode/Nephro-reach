@@ -4,6 +4,10 @@ import { useOptionalAuth } from "./AuthContext";
 import { useCaregiverView } from "@/features/caregivers/useCaregivers";
 
 export type ActingMember = {
+  /** The patient record the member screens read (the server's id). */
+  patientId: string | null;
+  /** The member's own email. Empty for a caregiver: the server does not
+   *  give a caregiver the patient's email, and no screen may key on it. */
   email: string;
   name: string;
   /** True when a caregiver is signed in, acting for this patient. */
@@ -14,17 +18,24 @@ export type ActingMember = {
  * The patient whose records the member screens show and change: the
  * signed-in member, or — for a caregiver — the patient they switched to
  * (2026-10-14). Null for every other role, and for a caregiver who has not
- * picked a patient yet.
+ * picked a patient yet. A caregiver's patient is the portal context
+ * (Phase 3), never anything stored in this browser.
  */
 export function useMember(): ActingMember | null {
   const user = useOptionalAuth()?.user;
   const { grant } = useCaregiverView();
   if (user?.role === "user") {
-    return { email: user.email, name: user.name, byCaregiver: false };
+    return {
+      patientId: user.patientId ?? null,
+      email: user.email,
+      name: user.name,
+      byCaregiver: false,
+    };
   }
   if (user?.role === "caregiver" && grant) {
     return {
-      email: grant.patientEmail,
+      patientId: grant.patientId,
+      email: "",
       name: grant.patientName,
       byCaregiver: true,
     };

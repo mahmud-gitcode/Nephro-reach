@@ -1,29 +1,38 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeftRight, Check, ChevronDown, Users } from "lucide-react";
-import { Button, Card, menuItemStyles, menuStyles } from "@/components/ui";
-import { getBreadcrumb } from "@/components/layout/navigation";
+import {
+  Button,
+  Card,
+  buttonStyles,
+  menuItemStyles,
+  menuStyles,
+} from "@/components/ui";
 import { CAREGIVER_HOME } from "@/features/auth/auth";
 import { useAuth } from "@/features/auth/AuthContext";
+import { availableContexts } from "@/features/auth/auth.mapping";
+import { labelFor } from "@/features/portal/portalContext";
+import { usePortalText } from "@/features/portal/portalText";
 import { useDismiss } from "@/lib/utils/useDismiss";
 import { cn } from "@/lib/utils/cn";
 import { useCaregiverView } from "./useCaregivers";
 
 /* ==========================================================================
-   The caregiver's bar — whose account this is, and the switch
+   The bar above every portal page (Phase 3)
    --------------------------------------------------------------------------
-   Above every page a caregiver opens (2026-10-14): the patient they are
-   acting for, by name and initials, so it is never in doubt whose account
-   they are changing — and, when they look after more than one, a switch
-   that lists each patient with the current one ticked. With no patient
-   chosen, every member page sends them to My Patients first. Each page
-   they open goes into the patient's caregiver activity.
+   - A caregiver: the patient they are acting for, by name, so it is never
+     in doubt whose account they are changing, and the switch between the
+     patients they look after. A switch is a new portal context
+     (AuthContext.enterContext): every cached query is cleared first. With
+     no patient chosen, member pages send them to My Patients.
+   - An account with several portals (D5): which one is open, and the way to
+     /select-portal. The sidebar and header are protected UI, so the switch
+     lives here.
+   What a caregiver opens is recorded by the server, under their own name.
    ========================================================================== */
-
-const HOUR = 60 * 60 * 1000;
 
 const initials = (name: string) =>
   name
@@ -53,10 +62,43 @@ export function PatientAvatar({
   );
 }
 
+/** "You are working in …" with a link to the picker, for accounts that
+ *  hold more than one portal. */
+function PortalLine() {
+  const { context, choice } = useAuth();
+  const t = usePortalText();
+  const pathname = usePathname();
+  if (!context || !choice || availableContexts(context).length <= 1)
+    return null;
+  const label = labelFor(context, choice, t);
+  const name =
+    choice.kind === "caregiver" && !choice.grantId
+      ? t("caregiver", { name: "" }).trim()
+      : label.title;
+  return (
+    <div className="mb-stack-md flex flex-wrap items-center justify-between gap-inline-sm text-body-sm text-fg-muted">
+      <p className="min-w-0 truncate">
+        {t("switchLabel", { name })}
+        {label.suspended ? ` · ${t("suspended")}` : ""}
+      </p>
+      <Link
+        href={`/select-portal?next=${encodeURIComponent(pathname)}`}
+        className={buttonStyles({
+          size: "small",
+          variant: "neutral",
+          appearance: "fill-stroke",
+        })}
+      >
+        <ArrowLeftRight aria-hidden="true" className="size-4" />
+        {t("switch")}
+      </Link>
+    </div>
+  );
+}
+
 export function CaregiverBar() {
   const { user } = useAuth();
-  const view = useCaregiverView();
-  const { grant, patients, choose, log, isCaregiver, isPending } = view;
+  const { grant, patients, choose, isCaregiver } = useCaregiverView();
   const pathname = usePathname();
   const router = useRouter();
   const onHome = pathname === CAREGIVER_HOME;
@@ -65,135 +107,123 @@ export function CaregiverBar() {
   const wrapRef = useDismiss<HTMLDivElement>(open, close);
 
   useEffect(() => {
-    if (isCaregiver && !isPending && !grant && !onHome) {
-      router.replace(CAREGIVER_HOME);
-    }
-  }, [isCaregiver, isPending, grant, onHome, router]);
-
-  /* The patient sees what their caregiver opened, at most once an hour
-     per page. */
-  const logged = useRef("");
-  useEffect(() => {
-    if (!grant || onHome) return;
-    const action = `Opened ${getBreadcrumb(pathname)}`;
-    const key = `${grant.id}:${action}`;
-    if (logged.current === key) return;
-    logged.current = key;
-    const recent = grant.activity.some(
-      (a) => a.action === action && Date.now() - Date.parse(a.at) < HOUR,
-    );
-    if (!recent) log(grant.id, action);
-  }, [grant, pathname, onHome, log]);
-
-  if (!isCaregiver || !grant) return null;
+    if (isCaregiver && !grant && !onHome) router.replace(CAREGIVER_HOME);
+  }, [isCaregiver, grant, onHome, router]);
 
   return (
-    <Card
-      as="section"
-      padding="small"
-      aria-label="Patient you are caring for"
-      className="mb-stack-lg flex items-center gap-inline-md"
-    >
-      <PatientAvatar name={grant.patientName} />
-      <div className="min-w-0 flex-1">
-        <p className="text-caption text-fg-muted">You are caring for</p>
-        <p className="truncate text-label-lg text-fg">{grant.patientName}</p>
-        <p className="hidden truncate text-caption text-fg-muted sm:block">
-          Signed in as {user?.name} · changes save to {grant.patientName}
-          &apos;s account
-        </p>
-      </div>
+    <>
+      <PortalLine />
+      {isCaregiver && grant ? (
+        <Card
+          as="section"
+          padding="small"
+          aria-label="Patient you are caring for"
+          className="mb-stack-lg flex items-center gap-inline-md"
+        >
+          <PatientAvatar name={grant.patientName} />
+          <div className="min-w-0 flex-1">
+            <p className="text-caption text-fg-muted">You are caring for</p>
+            <p className="truncate text-label-lg text-fg">
+              {grant.patientName}
+            </p>
+            <p className="hidden truncate text-caption text-fg-muted sm:block">
+              Signed in as {user?.name} · changes save to {grant.patientName}
+              &apos;s account, under your name
+            </p>
+          </div>
 
-      {patients.length > 1 ? (
-        <div ref={wrapRef} className="relative shrink-0">
-          <Button
-            size="small"
-            variant="neutral"
-            appearance="fill-stroke"
-            leadingIcon={<ArrowLeftRight />}
-            trailingIcon={
-              <ChevronDown
-                className={cn(
-                  "transition-transform duration-150 ease-standard",
-                  open && "rotate-180",
-                )}
-              />
-            }
-            aria-haspopup="menu"
-            aria-expanded={open}
-            onClick={() => setOpen((current) => !current)}
-          >
-            <span>
-              Switch<span className="max-sm:hidden"> patient</span>
-            </span>
-          </Button>
-
-          {open ? (
-            <div
-              role="menu"
-              aria-label="Switch patient"
-              className={cn(
-                menuStyles,
-                "right-0 w-72 max-w-[calc(100vw-2rem)]",
-              )}
-            >
-              <p className="px-3 pt-1.5 pb-2 text-caption text-fg-muted">
-                Switch to
-              </p>
-              {patients.map((p) => {
-                const current = p.id === grant.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={current}
-                    onClick={() => {
-                      setOpen(false);
-                      if (!current) void choose(p.patientEmail);
-                    }}
+          {patients.length > 1 ? (
+            <div ref={wrapRef} className="relative shrink-0">
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                leadingIcon={<ArrowLeftRight />}
+                trailingIcon={
+                  <ChevronDown
                     className={cn(
-                      menuItemStyles,
-                      "text-fg hover:bg-surface-sunken",
-                      current && "bg-surface-sunken",
+                      "transition-transform duration-150 ease-standard",
+                      open && "rotate-180",
                     )}
-                  >
-                    <PatientAvatar name={p.patientName} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-label-md">
-                        {p.patientName}
-                      </span>
-                      <span className="block truncate text-caption text-fg-muted">
-                        {p.relationship}
-                      </span>
-                    </span>
-                    {current ? (
-                      <Check
-                        aria-hidden="true"
-                        className="size-4 shrink-0 text-fg-brand"
-                      />
-                    ) : null}
-                  </button>
-                );
-              })}
-              <div className="mt-1.5 border-t border-line pt-1.5">
-                <Link
-                  href={CAREGIVER_HOME}
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
+                  />
+                }
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onClick={() => setOpen((current) => !current)}
+              >
+                <span>
+                  Switch<span className="max-sm:hidden"> patient</span>
+                </span>
+              </Button>
+
+              {open ? (
+                <div
+                  role="menu"
+                  aria-label="Switch patient"
                   className={cn(
-                    menuItemStyles,
-                    "text-fg hover:bg-surface-sunken",
+                    menuStyles,
+                    "right-0 w-72 max-w-[calc(100vw-2rem)]",
                   )}
                 >
-                  <Users aria-hidden="true" className="size-4 shrink-0" />
-                  My Patients
-                </Link>
-              </div>
+                  <p className="px-3 pt-1.5 pb-2 text-caption text-fg-muted">
+                    Switch to
+                  </p>
+                  {patients.map((p) => {
+                    const current = p.grantId === grant.grantId;
+                    return (
+                      <button
+                        key={p.grantId}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={current}
+                        onClick={() => {
+                          setOpen(false);
+                          if (!current) choose(p.grantId);
+                        }}
+                        className={cn(
+                          menuItemStyles,
+                          "text-fg hover:bg-surface-sunken",
+                          current && "bg-surface-sunken",
+                        )}
+                      >
+                        <PatientAvatar name={p.patientName} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-label-md">
+                            {p.patientName}
+                          </span>
+                          <span className="block truncate text-caption text-fg-muted">
+                            {p.relationship}
+                          </span>
+                        </span>
+                        {current ? (
+                          <Check
+                            aria-hidden="true"
+                            className="size-4 shrink-0 text-fg-brand"
+                          />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                  <div className="mt-1.5 border-t border-line pt-1.5">
+                    <Link
+                      href={CAREGIVER_HOME}
+                      role="menuitem"
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        menuItemStyles,
+                        "text-fg hover:bg-surface-sunken",
+                      )}
+                    >
+                      <Users aria-hidden="true" className="size-4 shrink-0" />
+                      My Patients
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
-        </div>
+        </Card>
       ) : null}
-    </Card>
+    </>
   );
 }
