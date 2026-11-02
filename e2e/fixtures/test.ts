@@ -79,3 +79,8 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect };
+
+/** Skip a test whose env need is not met, saying which. */
+export function requireEnv(flag: boolean, why: string): void {
+  test.skip(!flag, why);
+}

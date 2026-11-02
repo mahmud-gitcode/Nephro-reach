@@ -69,6 +69,7 @@ export class ApiClient {
     let tokens = body.tokens as Json | undefined;
     if (!tokens && body.challengeId) {
       if (!opts.totp) throw new Error(`${account.email} needs 2FA`);
+      await pace("twofa");
       const v = await ctx.post(`${env.apiURL}/auth/2fa/challenge/verify`, {
         headers: { "X-Auth-Transport": "bearer" },
         data: {
@@ -115,6 +116,39 @@ export class ApiClient {
       .data as MeContext;
   }
 
+  patch(path: string, data?: unknown, orgId?: string) {
+    return this.ctx.patch(`${env.apiURL}${path}`, {
+      headers: this.headers(orgId),
+      data,
+    });
+  }
+
+  /** Org id of this staff user's membership by organization type. */
+  async orgId(type: string): Promise<string> {
+    const m = (await this.context()).memberships.find(
+      (x) => x.organizationType === type,
+    );
+    if (!m) throw new Error(`${this.account?.email} has no ${type} membership`);
+    return m.organizationId;
+  }
+
+  async patientId(): Promise<string> {
+    const p = (await this.context()).patient;
+    if (!p) throw new Error(`${this.account?.email} has no patient record`);
+    return p.id;
+  }
+
+  /** Re-auth for sudo routes (2FA enrolment). */
+  async sudoPassword(): Promise<void> {
+    if (!this.account) throw new Error("anonymous client");
+    await json(
+      await this.post("/auth/sudo/password", {
+        password: this.account.password,
+      }),
+      "sudo",
+    );
+  }
+
   async logout(): Promise<void> {
     if (!this.access) return;
     await this.post(
@@ -133,4 +167,25 @@ export class ApiClient {
 export async function json(res: APIResponse, what: string): Promise<Json> {
   if (!res.ok()) throw new Error(`${what}: HTTP ${res.status()}`);
   return (await res.json()) as Json;
+}
+
+/** Register a synthetic account through the API. D6: no consent field until
+ *  BE-AUTH-2 (spec 030) defines one; the API refuses unknown fields. */
+export async function registerViaApi(account: Account): Promise<APIResponse> {
+  await pace("register");
+  const ctx = await request.newContext();
+  try {
+    const res = await ctx.post(`${env.apiURL}/auth/register`, {
+      headers: { "X-Auth-Transport": "bearer", Origin: appOrigin },
+      data: {
+        email: account.email,
+        password: account.password,
+        name: account.name,
+      },
+    });
+    await res.body();
+    return res;
+  } finally {
+    await ctx.dispose();
+  }
 }

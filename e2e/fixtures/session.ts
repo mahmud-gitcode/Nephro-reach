@@ -30,6 +30,7 @@ export async function cookieSession(
   expect(body.tokens, "cookie login put tokens in the body").toBeUndefined();
   if (body.challengeId) {
     if (!opts.totpSecret) throw new Error(`${account.email} has 2FA`);
+    await pace("twofa");
     const v = await context.request.post(
       `${env.apiURL}/auth/2fa/challenge/verify`,
       {
