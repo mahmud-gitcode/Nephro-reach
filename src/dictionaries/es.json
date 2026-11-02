@@ -1801,5 +1801,84 @@
       "support": "Apoyo",
       "custom": "Acceso personalizado"
     }
+  },
+  "memberDialysis": {
+    "treatmentType": {
+      "inCenterHd": "Hemodiálisis en centro",
+      "homeHd": "Hemodiálisis en casa"
+    },
+    "common": {
+      "showMore": "Ver más"
+    },
+    "errors": {
+      "managedByFacility": "Su centro de diálisis maneja su receta y su horario, así que no se cambió. Pídales cualquier cambio."
+    },
+    "prescription": {
+      "notOnDialysis": "Tu receta dice que no estás en diálisis. Tu equipo de atención la actualiza.",
+      "managedByNamed": "Tu centro de diálisis ({facility}) maneja tu receta y tu horario. Pídeles cualquier cambio.",
+      "managedBy": "Tu centro de diálisis maneja tu receta y tu horario. Pídeles cualquier cambio."
+    },
+    "schedule": {
+      "managedTitle": "Tu centro de diálisis maneja tu horario",
+      "typicalWeekEditable": "Esta es una semana típica, no tu horario. Usa Editar Semana para guardar el tuyo.",
+      "typicalWeekFacility": "Esta es una semana típica, no tu horario. Tu centro de diálisis guarda tu horario."
+    },
+    "treatment": {
+      "loadFailed": "No se pudo cargar este tratamiento",
+      "postSymptoms": "Síntomas después del tratamiento",
+      "logLoadFailed": "No se pudo cargar su registro de diálisis",
+      "weightKgOnly": "Anote el peso en kilogramos como número, por ejemplo 72.4. No se aceptan libras.",
+      "timesAgain": "Vuelva a anotar la hora de inicio y de fin."
+    },
+    "medicationsGiven": {
+      "dateFormat": "Escriba la fecha como May 31, 2024."
+    },
+    "accessPhotos": {
+      "uploadFailed": "No se pudo subir esa imagen.",
+      "loadFailed": "Tus fotos no se cargaron"
+    },
+    "homeVisits": {
+      "loadFailed": "Tus visitas no se cargaron"
+    },
+    "machine": {
+      "loadFailed": "Tu máquina no se cargó"
+    },
+    "pd": {
+      "loadFailed": "Tus intercambios no se cargaron"
+    },
+    "supplies": {
+      "loadFailed": "Tu lista no se cargó"
+    },
+    "equipment": {
+      "title": "Historial de mantenimiento",
+      "add": "Anotar mantenimiento",
+      "what": "Qué",
+      "day": "Día",
+      "note": "Nota",
+      "save": "Guardar",
+      "loadFailed": "Tu historial de mantenimiento no se cargó",
+      "emptyTitle": "Sin mantenimiento anotado",
+      "emptyBody": "Anota cada desinfección, cambio de filtro, servicio o alarma.",
+      "deleteLabel": "Eliminar {kind} del {date}",
+      "kinds": {
+        "disinfection": "Desinfección",
+        "filterChange": "Cambio de filtro",
+        "service": "Servicio técnico",
+        "alarm": "Alarma"
+      }
+    },
+    "extras": {
+      "title": "Tratamientos extra",
+      "take": "Tomar tratamiento extra",
+      "emptyTitle": "Sin tratamientos extra",
+      "emptyBody": "Una sesión fuera de tu horario aparece aquí.",
+      "deleteLabel": "Eliminar el tratamiento extra del {date}",
+      "reasons": {
+        "fluidOverload": "Exceso de líquido",
+        "highPotassium": "Potasio alto",
+        "doctorOrder": "Orden médica",
+        "missedSession": "Sesión perdida"
+      }
+    }
   }
 }

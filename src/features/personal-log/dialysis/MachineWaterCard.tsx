@@ -24,6 +24,7 @@ import { saveErrorText } from "@/features/profile/saveError";
 import { useHomeSystem } from "./useHomeHd";
 import { EquipmentEventsSection } from "./EquipmentEventsSection";
 import { MACHINE_TYPES, type DueState, type MachineType } from "./homeHd";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Machine & water system
@@ -104,7 +105,7 @@ export default function MachineWaterCard() {
         onRetry={canRetry(log.error) ? log.refetch : undefined}
         errorTitle={errorTitleFor(
           log.error,
-          isEs ? "Tu máquina no se cargó" : "Your machine details did not load",
+          dialysisText(isEs, "machine.loadFailed"),
           lang,
         )}
         errorMessage={errorMessageFor(log.error, undefined, lang)}

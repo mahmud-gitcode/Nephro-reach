@@ -30,6 +30,7 @@ import {
   subjectLabel,
   type PhotoSubject,
 } from "./accessPhotos";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Access / site / equipment photos
@@ -151,7 +152,7 @@ export default function AccessPhotosSection() {
           onDismiss={log.dismissErrors}
         >
           {isEs
-            ? "No se pudo subir esa imagen."
+            ? dialysisText(isEs, "accessPhotos.uploadFailed")
             : uploadErrorMessage(log.encodeError)}
         </Alert>
       ) : null}
@@ -172,7 +173,7 @@ export default function AccessPhotosSection() {
         onRetry={canRetry(log.error) ? log.refetch : undefined}
         errorTitle={errorTitleFor(
           log.error,
-          isEs ? "Tus fotos no se cargaron" : "Your photos did not load",
+          dialysisText(isEs, "accessPhotos.loadFailed"),
           isEs ? "es" : "en",
         )}
         errorMessage={errorMessageFor(log.error, undefined, isEs ? "es" : "en")}

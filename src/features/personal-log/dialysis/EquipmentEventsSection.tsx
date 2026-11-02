@@ -24,6 +24,7 @@ import {
   type EquipmentEventKind,
 } from "./homeDialysis.mapper";
 import { useEquipmentEvents } from "./useEquipmentEvents";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Home machine maintenance history (Phase 7, new)
@@ -34,11 +35,12 @@ import { useEquipmentEvents } from "./useEquipmentEvents";
    does it). The last 90 days are listed, newest first.
    ========================================================================== */
 
-const KIND_LABEL: Record<EquipmentEventKind, { en: string; es: string }> = {
-  disinfection: { en: "Disinfection", es: "Desinfección" },
-  "filter-change": { en: "Filter change", es: "Cambio de filtro" },
-  service: { en: "Service visit", es: "Servicio técnico" },
-  alarm: { en: "Alarm", es: "Alarma" },
+/** Dictionary key of each kind (memberDialysis.equipment.kinds). */
+const KIND_KEY: Record<EquipmentEventKind, string> = {
+  disinfection: "disinfection",
+  "filter-change": "filterChange",
+  service: "service",
+  alarm: "alarm",
 };
 
 export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
@@ -48,8 +50,9 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
   const [kind, setKind] = useState<EquipmentEventKind>("disinfection");
   const [performedOn, setPerformedOn] = useState(() => toDay(new Date()));
   const [notes, setNotes] = useState("");
-  const label = (k: EquipmentEventKind) =>
-    isEs ? KIND_LABEL[k].es : KIND_LABEL[k].en;
+  const t = (path: string, vars?: Record<string, string>) =>
+    dialysisText(isEs, `equipment.${path}`, vars);
+  const label = (k: EquipmentEventKind) => t(`kinds.${KIND_KEY[k]}`);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -70,7 +73,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-inline-md">
         <h3 id="equipment-events-title" className="text-label-md text-fg">
-          {isEs ? "Historial de mantenimiento" : "Maintenance history"}
+          {t("title")}
         </h3>
         <Button
           size="small"
@@ -80,7 +83,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
         >
-          {isEs ? "Anotar mantenimiento" : "Log maintenance"}
+          {t("add")}
         </Button>
       </div>
 
@@ -95,7 +98,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
           onSubmit={submit}
           className="grid grid-cols-1 gap-inline-md rounded-card-nested border border-line bg-surface p-inset-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end"
         >
-          <FormField label={isEs ? "Qué" : "What"}>
+          <FormField label={t("what")}>
             {(field) => (
               <Select
                 {...field}
@@ -113,7 +116,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
               </Select>
             )}
           </FormField>
-          <FormField label={isEs ? "Día" : "Day"}>
+          <FormField label={t("day")}>
             {(field) => (
               <Input
                 {...field}
@@ -126,7 +129,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
               />
             )}
           </FormField>
-          <FormField label={isEs ? "Nota" : "Note"}>
+          <FormField label={t("note")}>
             {(field) => (
               <Input
                 {...field}
@@ -138,7 +141,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
             )}
           </FormField>
           <Button type="submit" size="small" disabled={log.isSaving}>
-            {isEs ? "Guardar" : "Save"}
+            {t("save")}
           </Button>
         </form>
       ) : null}
@@ -147,25 +150,15 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
         pending={log.isPending}
         error={log.error}
         onRetry={canRetry(log.error) ? log.refetch : undefined}
-        errorTitle={errorTitleFor(
-          log.error,
-          isEs
-            ? "Tu historial de mantenimiento no se cargó"
-            : "Your maintenance history did not load",
-          lang,
-        )}
+        errorTitle={errorTitleFor(log.error, t("loadFailed"), lang)}
         errorMessage={errorMessageFor(log.error, undefined, lang)}
         skeleton={<Skeleton height={80} />}
         isEmpty={log.events.length === 0}
         empty={
           <EmptyState
             icon={<Wrench aria-hidden="true" />}
-            title={isEs ? "Sin mantenimiento anotado" : "No maintenance logged"}
-            description={
-              isEs
-                ? "Anota cada desinfección, cambio de filtro, servicio o alarma."
-                : "Log each disinfection, filter change, service visit or alarm."
-            }
+            title={t("emptyTitle")}
+            description={t("emptyBody")}
           />
         }
       >
@@ -194,11 +187,10 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
                 iconOnly
                 disabled={log.isSaving}
                 onClick={() => log.remove(event.id)}
-                aria-label={
-                  isEs
-                    ? `Eliminar ${label(event.kind)} del ${event.performedOn}`
-                    : `Delete ${label(event.kind)} on ${event.performedOn}`
-                }
+                aria-label={t("deleteLabel", {
+                  kind: label(event.kind),
+                  date: event.performedOn,
+                })}
               >
                 <Trash2 aria-hidden="true" />
               </Button>
@@ -212,7 +204,7 @@ export function EquipmentEventsSection({ isEs }: { isEs: boolean }) {
             appearance="ghost"
             onClick={log.loadMore}
           >
-            {isEs ? "Ver más" : "Show more"}
+            {dialysisText(isEs, "common.showMore")}
           </Button>
         ) : null}
       </AsyncSection>

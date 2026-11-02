@@ -11,6 +11,7 @@ import {
   type PdSchedule,
 } from "./modality";
 import type { DialysisModalityLog } from "./useDialysisModality";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Which dialysis this member is on
@@ -91,19 +92,18 @@ export default function ModalityTabs({
 
       {log.notOnDialysis ? (
         <Alert tone="info" className="mt-stack-md">
-          {isEs
-            ? "Tu receta dice que no estás en diálisis. Tu equipo de atención la actualiza."
-            : "Your prescription says you are not on dialysis. Your care team updates it."}
+          {dialysisText(isEs, "prescription.notOnDialysis")}
         </Alert>
-      ) : !log.memberCanEdit ? (
+      ) : log.isLoaded && !log.memberCanEdit ? (
+        /* Only a read that succeeded can say a center manages it; while the
+           read is pending or failed the strip is read-only without a reason
+           (the page shows the load error). */
         <Alert tone="info" className="mt-stack-md">
           {log.facilityName
-            ? isEs
-              ? `Tu centro de diálisis (${log.facilityName}) maneja tu receta y tu horario. Pídeles cualquier cambio.`
-              : `Your dialysis center (${log.facilityName}) manages your prescription and schedule. Ask them for any change.`
-            : isEs
-              ? "Tu centro de diálisis maneja tu receta y tu horario. Pídeles cualquier cambio."
-              : "Your dialysis center manages your prescription and schedule. Ask them for any change."}
+            ? dialysisText(isEs, "prescription.managedByNamed", {
+                facility: log.facilityName,
+              })
+            : dialysisText(isEs, "prescription.managedBy")}
         </Alert>
       ) : null}
 

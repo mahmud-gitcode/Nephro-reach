@@ -1817,5 +1817,84 @@
       "support": "Support",
       "custom": "Custom access"
     }
+  },
+  "memberDialysis": {
+    "treatmentType": {
+      "inCenterHd": "In-center hemodialysis",
+      "homeHd": "Home hemodialysis"
+    },
+    "common": {
+      "showMore": "Show more"
+    },
+    "errors": {
+      "managedByFacility": "Your dialysis center manages your prescription and schedule, so this was not changed. Ask them for any change."
+    },
+    "prescription": {
+      "notOnDialysis": "Your prescription says you are not on dialysis. Your care team updates it.",
+      "managedByNamed": "Your dialysis center ({facility}) manages your prescription and schedule. Ask them for any change.",
+      "managedBy": "Your dialysis center manages your prescription and schedule. Ask them for any change."
+    },
+    "schedule": {
+      "managedTitle": "Your dialysis center manages your schedule",
+      "typicalWeekEditable": "This is a typical week, not your schedule. Use Edit Week to save yours.",
+      "typicalWeekFacility": "This is a typical week, not your schedule. Your dialysis center saves your schedule."
+    },
+    "treatment": {
+      "loadFailed": "This treatment could not be loaded",
+      "postSymptoms": "Post-treatment symptoms",
+      "logLoadFailed": "Your dialysis log could not be loaded",
+      "weightKgOnly": "Enter weights in kilograms as a number, like 72.4. Pounds are not accepted.",
+      "timesAgain": "Enter the start and end times again."
+    },
+    "medicationsGiven": {
+      "dateFormat": "Enter the date like May 31, 2024."
+    },
+    "accessPhotos": {
+      "uploadFailed": "That image could not be uploaded.",
+      "loadFailed": "Your photos did not load"
+    },
+    "homeVisits": {
+      "loadFailed": "Your visits did not load"
+    },
+    "machine": {
+      "loadFailed": "Your machine details did not load"
+    },
+    "pd": {
+      "loadFailed": "Your exchanges did not load"
+    },
+    "supplies": {
+      "loadFailed": "Your checklist did not load"
+    },
+    "equipment": {
+      "title": "Maintenance history",
+      "add": "Log maintenance",
+      "what": "What",
+      "day": "Day",
+      "note": "Note",
+      "save": "Save",
+      "loadFailed": "Your maintenance history did not load",
+      "emptyTitle": "No maintenance logged",
+      "emptyBody": "Log each disinfection, filter change, service visit or alarm.",
+      "deleteLabel": "Delete {kind} on {date}",
+      "kinds": {
+        "disinfection": "Disinfection",
+        "filterChange": "Filter change",
+        "service": "Service visit",
+        "alarm": "Alarm"
+      }
+    },
+    "extras": {
+      "title": "Extra Treatments",
+      "take": "Take extra treatment",
+      "emptyTitle": "No extra treatments",
+      "emptyBody": "A session outside your schedule shows here.",
+      "deleteLabel": "Delete the extra treatment on {date}",
+      "reasons": {
+        "fluidOverload": "Fluid Overload",
+        "highPotassium": "High Potassium",
+        "doctorOrder": "Doctor Order",
+        "missedSession": "Missed Session"
+      }
+    }
   }
 }

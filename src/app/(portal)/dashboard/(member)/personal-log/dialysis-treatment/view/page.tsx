@@ -41,6 +41,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import { dialysisText } from "@/features/personal-log/dialysis/dialysisText";
 
 const MOOD_CONFIG: Record<
   number,
@@ -127,9 +128,7 @@ function TreatmentDetailContent() {
           onRetry={canRetry(one.error) ? one.refetch : undefined}
           errorTitle={errorTitleFor(
             one.error,
-            lang === "es"
-              ? "No se pudo cargar este tratamiento"
-              : "This treatment could not be loaded",
+            dialysisText(lang, "treatment.loadFailed"),
             lang,
           )}
           errorMessage={errorMessageFor(one.error, undefined, lang)}
@@ -488,9 +487,7 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
           {entry.postSymptoms && entry.postSymptoms.length > 0 ? (
             <div className="space-y-stack-sm rounded-card border border-line-subtle bg-surface-sunken p-inset-md">
               <h3 className="text-heading-4 text-fg">
-                {lang === "es"
-                  ? "Síntomas después del tratamiento"
-                  : "Post-treatment symptoms"}
+                {dialysisText(lang, "treatment.postSymptoms")}
               </h3>
               <div className="flex flex-wrap gap-inline-md">
                 {entry.postSymptoms.map((sym) => (

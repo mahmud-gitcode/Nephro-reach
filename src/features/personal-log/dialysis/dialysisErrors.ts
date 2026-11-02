@@ -10,19 +10,15 @@
 
 import { isApiError } from "@/lib/api/client";
 import { saveErrorText } from "@/features/profile/saveError";
+import { dialysisText } from "./dialysisText";
 
 export const MANAGED_BY_FACILITY = "dialysis.prescription_managed_by_facility";
-
-const MANAGED = {
-  en: "Your dialysis center manages your prescription and schedule, so this was not changed. Ask them for any change.",
-  es: "Su centro de diálisis maneja su receta y su horario, así que no se cambió. Pídales cualquier cambio.",
-} as const;
 
 export function dialysisSaveErrorText(
   error: unknown,
   lang: "en" | "es" = "en",
 ): string {
   if (isApiError(error, { status: 403, code: MANAGED_BY_FACILITY }))
-    return MANAGED[lang];
+    return dialysisText(lang, "errors.managedByFacility");
   return saveErrorText(error, lang);
 }

@@ -70,6 +70,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { dialysisText } from "@/features/personal-log/dialysis/dialysisText";
 
 const NO_SCHEDULE: SchedulePeriod = {
   fromKey: "0000-01-01",
@@ -451,9 +452,7 @@ function DialysisManagementDashboard() {
                     title={
                       canEditSchedule
                         ? undefined
-                        : isEs
-                          ? "Tu centro de diálisis maneja tu horario"
-                          : "Your dialysis center manages your schedule"
+                        : dialysisText(isEs, "schedule.managedTitle")
                     }
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-card border border-line bg-surface px-3.5 py-2 text-caption font-bold text-fg-secondary shadow-control transition-colors hover:border-line-strong hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:py-2.5 sm:text-body-sm"
                   >
@@ -465,13 +464,12 @@ function DialysisManagementDashboard() {
 
               {schedule.isDefault ? (
                 <Alert tone="info" className="mb-stack-md">
-                  {canEditSchedule
-                    ? isEs
-                      ? "Esta es una semana típica, no tu horario. Usa Editar Semana para guardar el tuyo."
-                      : "This is a typical week, not your schedule. Use Edit Week to save yours."
-                    : isEs
-                      ? "Esta es una semana típica, no tu horario. Tu centro de diálisis guarda tu horario."
-                      : "This is a typical week, not your schedule. Your dialysis center saves your schedule."}
+                  {dialysisText(
+                    isEs,
+                    canEditSchedule
+                      ? "schedule.typicalWeekEditable"
+                      : "schedule.typicalWeekFacility",
+                  )}
                 </Alert>
               ) : null}
               {schedule.saveError ? (

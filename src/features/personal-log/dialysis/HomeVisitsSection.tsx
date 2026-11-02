@@ -36,6 +36,7 @@ import {
   type VisitStatus,
 } from "./homeVisits";
 import type { DialysisModalityLog } from "./useDialysisModality";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Home visits
@@ -145,7 +146,7 @@ export default function HomeVisitsSection({
         onRetry={canRetry(log.error) ? log.refetch : undefined}
         errorTitle={errorTitleFor(
           log.error,
-          isEs ? "Tus visitas no se cargaron" : "Your visits did not load",
+          dialysisText(isEs, "homeVisits.loadFailed"),
           isEs ? "es" : "en",
         )}
         errorMessage={errorMessageFor(log.error, undefined, isEs ? "es" : "en")}

@@ -31,6 +31,7 @@ import {
   type SupplyStatus,
 } from "./supplies";
 import type { DialysisModalityLog } from "./useDialysisModality";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Monthly supply checklist
@@ -150,7 +151,7 @@ export default function SupplyChecklistSection({
           onRetry={canRetry(checklist.error) ? checklist.refetch : undefined}
           errorTitle={errorTitleFor(
             checklist.error,
-            isEs ? "Tu lista no se cargó" : "Your checklist did not load",
+            dialysisText(isEs, "supplies.loadFailed"),
             lang,
           )}
           errorMessage={errorMessageFor(checklist.error, undefined, lang)}

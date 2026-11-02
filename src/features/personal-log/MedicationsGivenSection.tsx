@@ -30,6 +30,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { saveErrorText } from "@/features/profile/saveError";
+import { dialysisText } from "./dialysis/dialysisText";
 
 const OTHER_MEDICATION = "__other__";
 
@@ -232,11 +233,7 @@ export default function MedicationsGivenSection({
        treatment's own day. */
     const givenOn = formDate.trim() ? parseGivenOn(formDate) : treatmentDate;
     if (!givenOn) {
-      setFormMedError(
-        language === "ES"
-          ? "Escriba la fecha como May 31, 2024."
-          : "Enter the date like May 31, 2024.",
-      );
+      setFormMedError(dialysisText(language, "medicationsGiven.dateFormat"));
       return;
     }
 
