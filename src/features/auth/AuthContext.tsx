@@ -320,7 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (form: RegisterForm, agreed: boolean): Promise<MeContext> => {
       startSignIn();
-      await authApi.register(form, registrationConsent(agreed));
+      await authApi.register(form, await registrationConsent(agreed));
       return (await finishSignIn()).context;
     },
     [finishSignIn, startSignIn],

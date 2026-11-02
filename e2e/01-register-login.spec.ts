@@ -5,11 +5,14 @@
    - registration creates the account, verifies the email with the code
      from the local mail sink, sets up the patient record and lands on the
      member dashboard;
-   - D6 (consent record) waits for BE-AUTH-2: fixme with the reason. */
-import { ACCOUNTS, throwawayAccount, type Account } from "./fixtures/env";
+   - D6: registration records the Terms and Privacy consent (spec 030), and
+     a sign-up without it is refused with the server's message. */
+import { ApiClient, currentConsent, json } from "./fixtures/api";
+import { ACCOUNTS, env, throwawayAccount, type Account } from "./fixtures/env";
 import { extractOtp, mailMark, waitForMail } from "./fixtures/mail";
 import { HOME, loginViaUi } from "./fixtures/session";
 import { expect, test } from "./fixtures/test";
+import { pace } from "./fixtures/throttle";
 
 const ROLES: Array<[string, Account, RegExp]> = [
   ["patient John", ACCOUNTS.john, HOME.member],
@@ -94,7 +97,94 @@ test("registration refuses an email already in use @phase2", async ({
   await expect(page).toHaveURL(/\/registration/);
 });
 
-test.fixme("D6: registration records Terms and Privacy consent @phase2 @needs-d6", async () => {
-  /* Waits for BE-AUTH-2 (spec 030): the API has no consent field yet and
-       refuses unknown fields. The adapter is features/auth/consent.ts. */
+test("D6: registration records Terms and Privacy consent @phase3 @needs-mail", async ({
+  page,
+  api,
+}) => {
+  const account = throwawayAccount("consent");
+  const expected = await currentConsent();
+  const since = mailMark();
+  let sent: unknown = null;
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().endsWith("/auth/register"))
+      sent = req.postDataJSON();
+  });
+  await page.goto("/registration");
+  await page.locator("#full-name").fill(account.name);
+  await page.locator("#email").fill(account.email);
+  await page.locator("#password").fill(account.password);
+  await page.locator("#confirm-password").fill(account.password);
+  await page.getByRole("checkbox").click();
+  await page.getByRole("button", { name: /^sign up$/i }).click();
+  await expect(page).toHaveURL(/\/verify-email/, { timeout: 20_000 });
+
+  /* The body carried the current versions and no bundled marketing choice. */
+  expect((sent as { consent?: unknown } | null)?.consent).toEqual(expected);
+
+  /* /me routes need a verified account: verify with the sink's code. */
+  const mail = await waitForMail(account.email, { since });
+  await page.getByLabel("Code").fill(extractOtp(mail));
+  await page.getByRole("button", { name: "Verify email" }).click();
+  await expect(page).toHaveURL(/\/setup\/patient/, { timeout: 20_000 });
+
+  /* The server kept the record: both documents, source register. */
+  const client = await api(account);
+  const consents = (await json(await client.get("/me/consents"), "consents"))
+    .data as {
+    records: Array<{
+      documentType: string;
+      documentVersion: string;
+      source: string;
+    }>;
+    outstanding: unknown[];
+    marketing: { optedIn: boolean } | null;
+  };
+  const kept = consents.records
+    .map((r) => `${r.documentType}@${r.documentVersion}/${r.source}`)
+    .sort();
+  expect(kept).toEqual([
+    `PRIVACY@${expected.privacyVersion}/register`,
+    `TERMS@${expected.termsVersion}/register`,
+  ]);
+  expect(consents.outstanding).toEqual([]);
+  expect(consents.marketing?.optedIn ?? false).toBe(false);
+});
+
+test("D6: a sign-up without consent is refused with the server's message and no account @phase3", async ({
+  page,
+}) => {
+  const account = throwawayAccount("noconsent");
+  /* The page never sends a sign-up without the box ticked, so strip the
+     consent on the wire to see what the server does with one. */
+  await page.route("**/auth/register", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    delete body.consent;
+    await route.continue({ postData: JSON.stringify(body) });
+  });
+  await page.goto("/registration");
+  await page.locator("#full-name").fill(account.name);
+  await page.locator("#email").fill(account.email);
+  await page.locator("#password").fill(account.password);
+  await page.locator("#confirm-password").fill(account.password);
+  await page.getByRole("checkbox").click();
+  await page.getByRole("button", { name: /^sign up$/i }).click();
+  await expect(
+    page.getByText(
+      "Accept the Terms of Service and Privacy Notice to create your account.",
+    ),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/registration/);
+
+  /* No account was created: the same email can't sign in. */
+  const anon = await ApiClient.anonymous();
+  try {
+    await pace("login");
+    const res = await anon.ctx.post(`${env.apiURL}/auth/login`, {
+      headers: { "X-Auth-Transport": "bearer" },
+      data: { email: account.email, password: account.password },
+    });
+    expect(res.status()).toBe(401);
+  } finally {
+    await anon.dispose();
+  }
 });

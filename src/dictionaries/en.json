@@ -191,6 +191,8 @@
       "codeExpired": "That code has expired or was already used. Request a new one.",
       "challengeEnded": "This sign-in has expired. Sign in again.",
       "linkInvalid": "This link is invalid or has expired.",
+      "consentRequired": "Accept the Terms of Service and Privacy Notice to create your account.",
+      "consentOutdated": "The Terms of Service or Privacy Notice changed. Review the current version and try again.",
       "registrationUnavailable": "Registration is not available right now. Try again later.",
       "googleUnavailable": "Google sign-in is not available.",
       "googleConflict": "An account already uses this email. Sign in with your password, then link Google in your security settings.",

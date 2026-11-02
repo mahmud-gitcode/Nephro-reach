@@ -22,6 +22,9 @@ export type AuthErrorKind =
   | "google-unverified"
   | "mfa-last-method"
   | "sudo-required"
+  | "consent-required"
+  | "consent-outdated"
+  | "registration-unavailable"
   | "network"
   | "generic";
 
@@ -47,6 +50,12 @@ const BY_CODE: Record<string, AuthErrorKind> = {
   "auth.oauth_email_unverified": "google-unverified",
   "auth.mfa_required_cannot_disable": "mfa-last-method",
   "auth.sudo_required": "sudo-required",
+  /* D6 (spec 030): registration without the current Terms and Privacy
+     acceptance, with versions that are no longer current, or while no
+     current documents are published. */
+  "auth.consent_required": "consent-required",
+  "legal.consent_version_outdated": "consent-outdated",
+  "legal.legal_documents_unavailable": "registration-unavailable",
 };
 
 export function authErrorKind(error: unknown): AuthErrorKind {
@@ -77,6 +86,9 @@ const TEXT: Record<AuthErrorKind, string> = {
   "google-unverified": "errors.googleUnverified",
   "mfa-last-method": "errors.mfaLastMethod",
   "sudo-required": "errors.generic",
+  "consent-required": "errors.consentRequired",
+  "consent-outdated": "errors.consentOutdated",
+  "registration-unavailable": "errors.registrationUnavailable",
   network: "errors.network",
   generic: "errors.generic",
 };

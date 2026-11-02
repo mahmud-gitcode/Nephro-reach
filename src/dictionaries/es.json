@@ -175,6 +175,8 @@
       "codeExpired": "Ese código ha caducado o ya se usó. Pide uno nuevo.",
       "challengeEnded": "Este inicio de sesión ha caducado. Inicia sesión de nuevo.",
       "linkInvalid": "Este enlace no es válido o ha caducado.",
+      "consentRequired": "Acepta los Términos del servicio y el Aviso de privacidad para crear tu cuenta.",
+      "consentOutdated": "Los Términos del servicio o el Aviso de privacidad cambiaron. Revisa la versión actual e inténtalo de nuevo.",
       "registrationUnavailable": "El registro no está disponible ahora. Inténtalo más tarde.",
       "googleUnavailable": "El inicio de sesión con Google no está disponible.",
       "googleConflict": "Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y luego vincula Google en tu configuración de seguridad.",
