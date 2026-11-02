@@ -1,40 +1,29 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import {
-  AUTH_COOKIE,
-  canAccessPath,
-  homeForRole,
-  parseSession,
-} from "@/features/auth/auth";
+import { RETIRED_COOKIES } from "@/lib/data/legacyPurge";
+
+/* ==========================================================================
+   The proxy makes no auth decision (Phase 2, INT-1)
+   --------------------------------------------------------------------------
+   Who is signed in is the API's answer to GET /me/context, read in the
+   browser by AuthProvider and DashboardGuard. The proxy cannot know it:
+   - the API's `access_token` cookie lives at most 15 minutes and may have
+     expired while the refresh cookie (Path=/api/v1/auth) is still good;
+   - in production the API cookie belongs to the API host and is not sent
+     here at all.
+   So the proxy never redirects on a cookie. Its one job is to expire the
+   prototype's retired session cookie if a request still carries one: the
+   server-side twin of the client purge (lib/data/legacyPurge.ts).
+   ========================================================================== */
 
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const session = parseSession(request.cookies.get(AUTH_COOKIE)?.value);
-
-  if (pathname.startsWith("/dashboard")) {
-    if (!session) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.searchParams.set("next", pathname);
-      return NextResponse.redirect(loginUrl);
+  const response = NextResponse.next();
+  for (const name of RETIRED_COOKIES) {
+    if (request.cookies.has(name)) {
+      response.cookies.set({ name, value: "", path: "/", maxAge: 0 });
     }
-
-    if (!canAccessPath(session.role, pathname)) {
-      return NextResponse.redirect(
-        new URL(homeForRole(session.role), request.url),
-      );
-    }
-
-    return NextResponse.next();
   }
-
-  if ((pathname === "/login" || pathname === "/registration") && session) {
-    return NextResponse.redirect(
-      new URL(homeForRole(session.role), request.url),
-    );
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

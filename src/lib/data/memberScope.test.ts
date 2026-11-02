@@ -1,15 +1,22 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { readJson, resolveKey, storageKey, writeJson } from "./storage";
+import {
+  readJson,
+  resolveKey,
+  setLocalScope,
+  storageKey,
+  writeJson,
+} from "./storage";
 import { DEMO_MEMBER_EMAIL } from "./demoIdentity";
+import { LEGACY_SESSION_COOKIE } from "./legacyPurge";
 
+/* The scope comes from the server's /me/context (AuthContext), not from a
+   cookie the browser can edit (Phase 2, INT-2). */
 function signIn(role: string, email: string) {
-  document.cookie = `nr-session=${encodeURIComponent(
-    JSON.stringify({ role, email, name: "x" }),
-  )}; path=/`;
+  setLocalScope({ role, email });
 }
 
 afterEach(() => {
-  document.cookie = "nr-session=; path=/; max-age=0";
+  setLocalScope(null);
   window.localStorage.clear();
 });
 
@@ -40,5 +47,26 @@ describe("whose data a key holds", () => {
     expect(await readJson(LOG, [])).toEqual([]);
     signIn("user", "ana@example.com");
     expect(await readJson(LOG, [])).toEqual(["ana's walk"]);
+  });
+});
+
+describe("the scope cannot be forged from the browser (INT-2)", () => {
+  it("ignores a hand-written session cookie", () => {
+    const LOG = storageKey("exercise-log");
+    document.cookie = `${LEGACY_SESSION_COOKIE}=${encodeURIComponent(
+      JSON.stringify({ role: "user", email: "victim@example.com", name: "x" }),
+    )}; path=/`;
+    /* Signed out: the plain key, never the victim's. */
+    expect(resolveKey(LOG)).toBe(LOG);
+    signIn("user", "ana@example.com");
+    expect(resolveKey(LOG)).toBe("nr:member:ana@example.com:exercise-log");
+    document.cookie = `${LEGACY_SESSION_COOKIE}=; path=/; max-age=0`;
+  });
+
+  it("normalises the email the server reports", () => {
+    signIn("user", " Ana@Example.com ");
+    expect(resolveKey(storageKey("exercise-log"))).toBe(
+      "nr:member:ana@example.com:exercise-log",
+    );
   });
 });

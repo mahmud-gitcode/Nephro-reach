@@ -4,19 +4,32 @@ import {
   isCustomRole,
   organization,
   portalRole,
-  seedStaff,
+  sampleStaffRoster,
   type StaffAccount,
 } from "./staff";
 
 /* ==========================================================================
    Staff accounts — storage
    --------------------------------------------------------------------------
-   Demo only: passwords sit in this browser's storage beside the accounts.
-   With a server, accounts and credentials live there, invitations go out
-   by email, and nothing here keeps a password.
+   Demo roster for the staff team screen until FE-ORG moves it to the API
+   (Phase 3). Since Phase 2 nothing here keeps a password and nobody signs in
+   with it: accounts and credentials live on the server. Every read and
+   write strips a `password` field an older version may have stored.
    ========================================================================== */
 
 export const STAFF_KEY = storageKey("staff-accounts");
+
+/** Drops any `password` an older version stored (Phase 2). */
+function withoutPasswords(accounts: StaffAccount[]): StaffAccount[] {
+  if (!accounts.some((account) => "password" in account)) return accounts;
+  return accounts.map((account) => {
+    const { password: _dropped, ...kept } = account as StaffAccount & {
+      password?: unknown;
+    };
+    void _dropped;
+    return kept;
+  });
+}
 
 function isAccounts(value: unknown): value is StaffAccount[] {
   return (
@@ -32,12 +45,12 @@ function isAccounts(value: unknown): value is StaffAccount[] {
 }
 
 /** A list saved before a demo account existed (a new office, a new role)
- *  gets that account, so it can sign in without wiping anyone's edits.
+ *  gets that account, so it shows without wiping anyone's edits.
  *  Seed accounts are matched by id: one the admin edited stays as edited. */
 function withNewOrganizations(stored: StaffAccount[]): StaffAccount[] {
   const ids = new Set(stored.map((account) => account.id));
   const emails = new Set(stored.map((account) => account.email));
-  const added = seedStaff(Date.now()).filter(
+  const added = sampleStaffRoster(Date.now()).filter(
     (account) =>
       !ids.has(account.id) &&
       !emails.has(account.email) &&
@@ -64,11 +77,12 @@ function withNewOrganizations(stored: StaffAccount[]): StaffAccount[] {
 export async function listStaff(): Promise<StaffAccount[]> {
   const stored = await readJson<unknown>(STAFF_KEY, null);
   if (isAccounts(stored)) {
-    const full = withNewOrganizations(stored);
+    const clean = withoutPasswords(stored);
+    const full = withNewOrganizations(clean);
     if (full !== stored) await writeJson(STAFF_KEY, full);
     return full;
   }
-  const seeded = seedStaff(Date.now());
+  const seeded = sampleStaffRoster(Date.now());
   await writeJson(STAFF_KEY, seeded);
   return seeded;
 }
@@ -76,24 +90,5 @@ export async function listStaff(): Promise<StaffAccount[]> {
 export async function saveStaff(
   accounts: StaffAccount[],
 ): Promise<StaffAccount[]> {
-  return writeJson(STAFF_KEY, accounts);
-}
-
-/**
- * The accounts, read synchronously for sign-in (which runs in a click
- * handler and has no loading state). The seed stands in until the admin
- * page has saved a list, so the demo staff can sign in on a fresh browser.
- */
-export function readStaffForLogin(): StaffAccount[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored: unknown = JSON.parse(
-      window.localStorage.getItem(STAFF_KEY) ?? "null",
-    );
-    return isAccounts(stored)
-      ? withNewOrganizations(stored)
-      : seedStaff(Date.now());
-  } catch {
-    return seedStaff(Date.now());
-  }
+  return writeJson(STAFF_KEY, withoutPasswords(accounts));
 }

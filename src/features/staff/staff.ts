@@ -930,16 +930,19 @@ export type StaffAccount = {
   orgId: string;
   role: StaffRole;
   status: StaffStatus;
-  /** Demo only: kept in the browser until a server holds real credentials. */
-  password: string;
   /** ISO 8601 */
   createdAt: string;
 };
 
+/** The add-staff form. Its temporary password is never stored (Phase 2):
+ *  the screen keeps it until FE-ORG replaces admin-set passwords with D3
+ *  invitations in Phase 3. */
 export type StaffDraft = Pick<
   StaffAccount,
-  "name" | "email" | "orgId" | "role" | "password"
->;
+  "name" | "email" | "orgId" | "role"
+> & {
+  password: string;
+};
 
 export const MIN_PASSWORD = 8;
 
@@ -982,42 +985,30 @@ export function addStaff(
       orgId: draft.orgId,
       role: draft.role,
       status: "Active",
-      password: draft.password,
       createdAt: new Date(now).toISOString(),
     },
   ];
 }
 
+/** `password` is accepted from the edit form and dropped: no password is
+ *  stored in this browser (Phase 2). */
 export function updateStaff(
   accounts: StaffAccount[],
   id: string,
-  change: Partial<Pick<StaffAccount, "name" | "role" | "status" | "password">>,
+  change: Partial<Pick<StaffAccount, "name" | "role" | "status">> & {
+    password?: string;
+  },
 ): StaffAccount[] {
+  const { password: _dropped, ...kept } = change;
+  void _dropped;
   return accounts.map((account) =>
     account.id === id
       ? {
           ...account,
-          ...change,
-          ...(change.name !== undefined ? { name: change.name.trim() } : {}),
+          ...kept,
+          ...(kept.name !== undefined ? { name: kept.name.trim() } : {}),
         }
       : account,
-  );
-}
-
-/** An active account matching the credentials, or null. */
-export function findLogin(
-  accounts: StaffAccount[],
-  email: string,
-  password: string,
-): StaffAccount | null {
-  const wanted = normalEmail(email);
-  return (
-    accounts.find(
-      (account) =>
-        account.email === wanted &&
-        account.password === password &&
-        account.status === "Active",
-    ) ?? null
   );
 }
 
@@ -1047,10 +1038,10 @@ export function filterStaff(
 
 /* ------------------------------------------------------------------ seed */
 
-/** One password for every seeded staff account, so the demo is easy. */
-export const DEMO_STAFF_PASSWORD = "staff123";
-
-export function seedStaff(now: number): StaffAccount[] {
+/** The sample roster the staff team screen shows until FE-ORG moves it to
+ *  the API (Phase 3). It is display data only: no password, and nobody
+ *  signs in with it (sign-in is POST /auth/login since Phase 2). */
+export function sampleStaffRoster(now: number): StaffAccount[] {
   const at = new Date(now).toISOString();
   const person = (
     id: string,
@@ -1065,7 +1056,6 @@ export function seedStaff(now: number): StaffAccount[] {
     orgId,
     role,
     status: "Active",
-    password: DEMO_STAFF_PASSWORD,
     createdAt: at,
   });
   return [

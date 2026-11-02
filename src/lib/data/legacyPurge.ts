@@ -10,8 +10,9 @@
    localStorage key IS its data, so purging every `nr:*` key now would break
    live screens. Instead:
    - a registry lists RETIRED keys; a phase adds its feature's keys in the
-     same change that moves the feature to the API (Phase 2 adds the demo
-     credentials and the `nr-session` cookie);
+     same change that moves the feature to the API (Phase 2 added the demo
+     credentials and the demo session cookie, and strips the demo passwords
+     from the staff accounts that stay live until Phase 3);
    - the purge removes only retired keys, in every per-member and
      per-caregiver variant, and never a live one;
    - `preferred_language` and the version marker are always kept.
@@ -26,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 1;
+export const STORAGE_VERSION = 2;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -56,12 +57,30 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
   },
 ];
 
-/** Exact keys (not member stores) that are retired. Phase 2 adds the demo
- *  credentials here (`nr-registered-users`, staff accounts). */
-export const RETIRED_KEYS: readonly string[] = [];
+/** The prototype's demo session: an unsigned, editable JSON cookie that
+ *  decided who was signed in. Retired in Phase 2 (`GET /me/context` is the
+ *  session source); expired here and by the proxy. */
+export const LEGACY_SESSION_COOKIE = "nr-session";
 
-/** Cookies to expire. Phase 2 adds `nr-session` when demo auth goes. */
-export const RETIRED_COOKIES: readonly string[] = [];
+/** Exact keys (not member stores) that are retired. */
+export const RETIRED_KEYS: readonly string[] = [
+  /* Phase 2: the prototype's registered accounts, with plain-text
+     passwords. Sign-up goes to POST /auth/register now. */
+  "nr-registered-users",
+];
+
+/** Cookies to expire. */
+export const RETIRED_COOKIES: readonly string[] = [LEGACY_SESSION_COOKIE];
+
+/**
+ * Stores that stay live but must lose fields: `nr:staff-accounts` still
+ * feeds the staff team screen until FE-ORG moves it to the API in Phase 3,
+ * but its demo `password` fields go now (Phase 2). Each entry names the key
+ * and the fields stripped from every object in its array.
+ */
+export const STRIPPED_FIELDS: readonly { key: string; fields: string[] }[] = [
+  { key: "nr:staff-accounts", fields: ["password"] },
+];
 
 /** Whether a localStorage key belongs to a retired store or is retired. */
 export function isRetiredKey(key: string): boolean {
@@ -77,6 +96,39 @@ export function isRetiredKey(key: string): boolean {
 }
 
 export type PurgeResult = { removed: string[]; version: number };
+
+/** Removes `fields` from each object in the JSON array at `key`. Returns
+ *  whether anything changed. Unreadable data is removed outright: it may
+ *  hold a field this cannot see. */
+function stripFields(storage: Storage, key: string, fields: string[]): boolean {
+  const raw = storage.getItem(key);
+  if (raw === null) return false;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    storage.removeItem(key);
+    return true;
+  }
+  if (!Array.isArray(parsed)) {
+    storage.removeItem(key);
+    return true;
+  }
+  let changed = false;
+  const cleaned = parsed.map((item: unknown) => {
+    if (!item || typeof item !== "object") return item;
+    const copy = { ...(item as Record<string, unknown>) };
+    for (const field of fields) {
+      if (field in copy) {
+        delete copy[field];
+        changed = true;
+      }
+    }
+    return copy;
+  });
+  if (changed) storage.setItem(key, JSON.stringify(cleaned));
+  return changed;
+}
 
 function storageOrNull(): Storage | null {
   try {
@@ -106,6 +158,9 @@ export function purgeLegacyStorage(
           storage.removeItem(key);
           removed.push(key);
         }
+      }
+      for (const { key, fields } of STRIPPED_FIELDS) {
+        if (stripFields(storage, key, fields)) removed.push(`${key}#fields`);
       }
       storage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
     } catch {

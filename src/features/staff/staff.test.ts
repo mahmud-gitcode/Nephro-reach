@@ -1,25 +1,29 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { authenticate, canAccessPath } from "@/features/auth/auth";
+import { canAccessPath } from "@/features/auth/auth";
+import { contextToUser, defaultContext } from "@/features/auth/auth.mapping";
+import type {
+  ContextMembership,
+  MeContext,
+  OrganizationType,
+} from "@/features/auth/auth.types";
 import {
   ALL,
-  DEMO_STAFF_PASSWORD,
   addStaff,
   filterStaff,
-  findLogin,
   organizationFor,
   roleCan,
   rolesFor,
   portalRole,
-  seedStaff,
+  sampleStaffRoster,
   staffError,
   updateStaff,
   userCan,
   type StaffDraft,
 } from "./staff";
-import { STAFF_KEY } from "./staff.repository";
+import { listStaff, saveStaff, STAFF_KEY } from "./staff.repository";
 
 const NOW = new Date(2026, 8, 30, 10).getTime();
-const seed = seedStaff(NOW);
+const seed = sampleStaffRoster(NOW);
 
 const draft: StaffDraft = {
   name: "Ana Ruiz, RN",
@@ -108,12 +112,26 @@ describe("accounts", () => {
     expect(staffError(draft, [])).toBeNull();
   });
 
-  it("a deactivated account cannot sign in", () => {
-    const email = seed[0].email;
-    expect(findLogin(seed, email, DEMO_STAFF_PASSWORD)).not.toBeNull();
-    const off = updateStaff(seed, seed[0].id, { status: "Deactivated" });
-    expect(findLogin(off, email, DEMO_STAFF_PASSWORD)).toBeNull();
-    expect(findLogin(seed, email, "wrong")).toBeNull();
+  /* Phase 2: the roster is display data. Sign-in is the API's, and no
+     password is kept in this browser. */
+  it("keeps no password, even when the form or an old list has one", async () => {
+    expect(JSON.stringify(seed)).not.toContain("password");
+    const added = addStaff(seed, draft, NOW);
+    expect(added.at(-1)).not.toHaveProperty("password");
+    const edited = updateStaff(added, added[0].id, { password: "NewPass123" });
+    expect(edited[0]).not.toHaveProperty("password");
+    await saveStaff([
+      { ...seed[0], password: "old-demo" } as (typeof seed)[number],
+    ]);
+    expect(window.localStorage.getItem(STAFF_KEY)).not.toContain("password");
+    window.localStorage.setItem(
+      STAFF_KEY,
+      JSON.stringify([{ ...seed[0], password: "old-demo" }]),
+    );
+    const listed = await listStaff();
+    expect(JSON.stringify(listed)).not.toContain("old-demo");
+    expect(window.localStorage.getItem(STAFF_KEY)).not.toContain("old-demo");
+    window.localStorage.removeItem(STAFF_KEY);
   });
 
   it("filters by organisation and lists active people first", () => {
@@ -128,13 +146,58 @@ describe("accounts", () => {
   });
 });
 
+/* Staff sign in through the API (Phase 2). Their portal comes from their
+   membership in GET /me/context; these pin that mapping and the pages each
+   portal may open. */
+function staffContext(
+  type: OrganizationType,
+  organizationName: string,
+  role: string,
+  isOwner = false,
+): MeContext {
+  const membership: ContextMembership = {
+    organizationId: `org-${type}`,
+    organizationName,
+    organizationType: type,
+    organizationStatus: "ACTIVE",
+    role,
+    title: null,
+    isOwner,
+    permissions: {},
+  };
+  return {
+    user: {
+      id: "u1",
+      name: "Linda Moore, LMSW",
+      email: "socialworker@nephroreach.com",
+      phone: null,
+      avatarUrl: null,
+      language: "EN",
+      timeZone: null,
+      isAccountVerified: true,
+      mfaEnabled: true,
+      mfaSetupRequired: false,
+    },
+    patient: null,
+    caregiving: [],
+    memberships: [membership],
+    platform: null,
+  };
+}
+
+const staffUser = (context: MeContext) =>
+  contextToUser(context, defaultContext(context))!;
+
 describe("signing in as staff", () => {
   afterEach(() => window.localStorage.removeItem(STAFF_KEY));
 
   it("lands in the organisation's portal, as that person with that role", () => {
-    const user = authenticate(
-      "socialworker@nephroreach.com",
-      DEMO_STAFF_PASSWORD,
+    const user = staffUser(
+      staffContext(
+        "DIALYSIS_CENTER",
+        "Riverside Dialysis Center",
+        "Social Worker",
+      ),
     );
     expect(user).toMatchObject({
       name: "Linda Moore, LMSW",
@@ -142,25 +205,32 @@ describe("signing in as staff", () => {
       org: "Riverside Dialysis Center",
       staffRole: "Social Worker",
     });
-    expect(canAccessPath(user!.role, "/dashboard/clinic/vascular-access")).toBe(
+    expect(canAccessPath(user.role, "/dashboard/clinic/vascular-access")).toBe(
       true,
     );
+    expect(organizationFor(user)?.id).toBe("riverside");
   });
 
   it("an access-center person signs into the access portal only", () => {
-    const user = authenticate("surgeon@nephroreach.com", DEMO_STAFF_PASSWORD);
-    expect(user?.role).toBe("access");
+    const user = staffUser(
+      staffContext(
+        "ACCESS_CENTER",
+        "Metro Vascular Access Center",
+        "Physician / APP",
+      ),
+    );
+    expect(user.role).toBe("access");
     expect(canAccessPath("access", "/dashboard/access-center")).toBe(true);
     expect(canAccessPath("access", "/dashboard/clinic")).toBe(false);
   });
 
-  it("a nephrology office has its own login and portal, and nothing else", () => {
-    expect(
-      authenticate("nephrology@nephroreach.com", "nephrology123"),
-    ).toMatchObject({ role: "nephrology" });
-    const user = authenticate(
-      "nephrologist@nephroreach.com",
-      DEMO_STAFF_PASSWORD,
+  it("a nephrology office has its own portal, and nothing else", () => {
+    const user = staffUser(
+      staffContext(
+        "NEPHROLOGY_OFFICE",
+        "Riverside Nephrology Associates",
+        "Physician",
+      ),
     );
     expect(user).toMatchObject({
       role: "nephrology",
@@ -190,20 +260,33 @@ describe("signing in as staff", () => {
     expect(canAccessPath("user", "/dashboard/nephrology")).toBe(false);
   });
 
-  it("a list saved before the nephrology office existed still lets its staff in", () => {
-    const old = seed.filter((a) => a.orgId !== "riverside-nephrology");
-    window.localStorage.setItem(STAFF_KEY, JSON.stringify(old));
-    expect(authenticate("ccm@nephroreach.com", DEMO_STAFF_PASSWORD)?.role).toBe(
-      "nephrology",
+  /* The owner's membership role is "Owner", which the client matrix does
+     not know: mapping it to a staff role would lock the owner out of every
+     page (Phase 2 bridge until Phase 3 reads membership permissions). */
+  it("an organisation's owner keeps every page", () => {
+    const owner = staffUser(
+      staffContext(
+        "DIALYSIS_CENTER",
+        "Riverside Dialysis Center",
+        "Owner",
+        true,
+      ),
     );
+    expect(owner.staffRole).toBeUndefined();
+    expect(owner.isOwner).toBe(true);
+    expect(userCan(owner, "staff.manage")).toBe(true);
+    expect(userCan(owner, "settings.manage")).toBe(true);
   });
 
-  it("uses the accounts the admin saved, including a deactivation", () => {
-    const off = updateStaff(seed, seed[0].id, { status: "Deactivated" });
-    window.localStorage.setItem(STAFF_KEY, JSON.stringify(off));
-    expect(
-      authenticate("socialworker@nephroreach.com", DEMO_STAFF_PASSWORD),
-    ).toBeNull();
+  it("a custom role the client does not know gets nothing here (the server decides)", () => {
+    const user = staffUser(
+      staffContext(
+        "DIALYSIS_CENTER",
+        "Riverside Dialysis Center",
+        "Night Desk",
+      ),
+    );
+    expect(userCan(user, "staff.manage")).toBe(false);
   });
 });
 

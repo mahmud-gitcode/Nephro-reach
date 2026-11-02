@@ -56,7 +56,9 @@ function assertBrowser() {
    it, so without this two members on one device read each other's logs,
    and a newly registered member opened on the demo patient's.
 
-   So a member-owned key is filed under the signed-in member. The demo
+   So a member-owned key is filed under the signed-in member (the email
+   `GET /me/context` reports; caregiver grants in this browser are still
+   keyed by email until Phase 3). The demo
    patient keeps the plain key, which is also what the clinic reads for its
    linked patient (clinic/useMemberFeed), and staff and admin sessions read
    the plain key too. Shared records (messaging, vascular access, travel,
@@ -119,18 +121,24 @@ const MEMBER_OWNED = new Set([
   "clinic-labs-seen",
 ]);
 
-/** The signed-in session's role and email, read from the cookie. */
-function sessionOf(): { role?: string; email?: string } | null {
-  if (typeof document === "undefined") return null;
-  const row = document.cookie
-    .split("; ")
-    .find((part) => part.startsWith("nr-session="));
-  if (!row) return null;
-  try {
-    return JSON.parse(decodeURIComponent(row.slice("nr-session=".length)));
-  } catch {
-    return null;
-  }
+/* Whose local stores this tab reads: set by AuthContext from the server's
+   `GET /me/context` (Phase 2), never from anything the browser can edit.
+   It replaces the prototype's demo session cookie, which any user could
+   rewrite to read another member's local data. Null when signed out. */
+export type LocalScope = { role: string; email: string };
+let localScope: LocalScope | null = null;
+
+/** AuthContext calls this after every context read, and with null on
+ *  sign-out and session end. */
+export function setLocalScope(scope: LocalScope | null): void {
+  localScope = scope
+    ? { role: scope.role, email: scope.email.trim().toLowerCase() }
+    : null;
+}
+
+/** The signed-in user's role and email, as the server reported them. */
+function sessionOf(): LocalScope | null {
+  return localScope;
 }
 
 /* --------------------------------------------------------------------------
