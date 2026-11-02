@@ -125,14 +125,20 @@ test("post + moderation: held, screened by the server, decided by a moderator @p
       .click();
     await expect(routineCard).toHaveCount(0, { timeout: 20_000 });
 
-    // No "delete record" any more: a decision is the audit trail.
+    // "Delete record" stays visible but disabled (D52: a decision is the
+    // audit trail and there is no route), with its "not available yet" note.
     await adminPage.getByRole("tab", { name: /decided/i }).click();
     const decided = adminPage.getByRole("listitem").filter({ hasText: crisis });
     await expect(decided).toBeVisible({ timeout: 20_000 });
     await expect(decided.getByText(/you/)).toBeVisible();
+    const deleteRecord = decided.getByRole("button", {
+      name: /delete the record/i,
+    });
+    await expect(deleteRecord).toBeVisible();
+    await expect(deleteRecord).toBeDisabled();
     await expect(
-      adminPage.getByRole("button", { name: /delete the record/i }),
-    ).toHaveCount(0);
+      decided.getByText("Deleting a decided record is not available yet."),
+    ).toBeVisible();
 
     // Grace now sees the approved post and likes it; the count is the server's.
     await gracePage.reload();
@@ -205,16 +211,32 @@ test("review lifecycle: pending off the landing, approved on it, declined with a
     await landing.goto("/");
     await expect(landing.getByText(comment).first()).toHaveCount(0);
 
-    // The moderator approves it in the UI.
+    // The moderator approves it in the UI. The All tab is newest first, so
+    // the new review is on its first page however long the pending queue is
+    // (the Pending tab is oldest first, 20 a page: QA Phase 12 L1).
     const { page: adminPage } = await asUser(ACCOUNTS.admin);
     await adminPage.goto("/dashboard/admin-reviews");
-    await adminPage.getByRole("tab", { name: /pending/i }).click();
+    await adminPage.getByRole("tab", { name: /^all/i }).click();
     const card = adminPage
       .locator("div.rounded-card")
       .filter({ hasText: comment });
     await expect(card).toBeVisible({ timeout: 20_000 });
+    await expect(card.getByText("Pending Review")).toBeVisible();
     await card.getByRole("button", { name: /accept \(publish\)/i }).click();
-    await expect(card).toHaveCount(0, { timeout: 20_000 });
+    await expect(card.getByText("Approved (Live on site)")).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(
+      card.getByRole("button", { name: /accept \(publish\)/i }),
+    ).toHaveCount(0);
+    // Delete and Unpublish stay visible but disabled (D52), explained.
+    await expect(
+      card.getByRole("button", { name: "Unpublish" }),
+    ).toBeDisabled();
+    await expect(
+      card.getByRole("button", { name: /delete review by/i }),
+    ).toBeDisabled();
+    await expect(card.getByText(/not available yet/)).toBeVisible();
 
     // The landing page shows it once the server's public cache (60 s) turns.
     await expect
