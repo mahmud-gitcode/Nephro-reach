@@ -114,7 +114,6 @@ import {
   type WorklistSort,
 } from "./ccm.data";
 import { checkInTone, recentCheckIns, type CheckInRow } from "./checkIns.data";
-import { patients as roster } from "./enrollment.data";
 import { defaultClinicSettings } from "./settings.data";
 import { LINKED_MEMBER } from "./memberFeed";
 import { UpdatedBar } from "./UpdatedBar";
@@ -1904,7 +1903,11 @@ function PatientModal({
   const alerts = openInbox(store.state, row.mrn);
   const pending = pendingMinutesFor(store.state, row.mrn, month);
   const checkIns = checkInsFor(checkInRows, row.name);
-  const enrolment = roster.find((p) => p.mrn === row.mrn);
+  /* The office roster (API, Phase 8). CCM is still keyed by MRN until
+     Phase 9 moves it to the API by patientId. */
+  const enrolment = useClinicData().data?.patients.find(
+    (p) => p.mrn !== "" && p.mrn === row.mrn,
+  );
   const undocumentedCount = activities.filter((a) => !a.ehrDocumented).length;
 
   const count = (label: string, n: number) =>

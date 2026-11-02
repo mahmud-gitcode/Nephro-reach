@@ -9,16 +9,20 @@ import {
   Modal,
   Select,
 } from "@/components/ui";
-import { CONTRACT_SLOTS, type Patient } from "./enrollment.data";
 import {
   emptyDraft,
   enrollablePrograms,
+  enrollErrorText,
   ENROLL_SOURCES,
   validateEnrollment,
   type EnrollmentDraft,
 } from "./enrollment.store";
-import { useEnrollPatient } from "./useClinicData";
-import { useCourseLibrary } from "@/features/education/courseLibrary";
+import {
+  EnrollError,
+  useClinicData,
+  useEnrollPatient,
+  useProgramCourses,
+} from "./useClinicData";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { organizationFor } from "@/features/staff/staff";
@@ -29,8 +33,9 @@ import { useConditionLibrary } from "./useConditionLibrary";
 import { chronicCount, type CcmCondition } from "./ccmConditions";
 
 /** The nephrology office's own program (client, 2026-10-09). Not an
- *  education program: it uses no contract seat and goes straight onto the
- *  CCM dashboard as an enrolled patient. */
+ *  education program: it goes straight onto the CCM dashboard as an
+ *  enrolled patient. (Whether it takes a contract seat is NEW-3: the
+ *  backend counts one, so the form promises nothing either way.) */
 export const CCM_PROGRAM = "Chronic Care Management (CCM)";
 
 /* Enrolling is one form wherever it is started — Enroll Patients, the
@@ -38,11 +43,10 @@ export const CCM_PROGRAM = "Chronic Care Management (CCM)";
    each page opens it in place rather than sending the clinic elsewhere. */
 
 type EnrollProps = {
-  list: Patient[];
   onClose: () => void;
-  /** `ccm` when the patient went onto the CCM dashboard instead of the
-   *  education roster. */
-  onEnrolled: (name: string, mrn: string, ccm?: boolean) => void;
+  /** The new patient's name and patientId; `ccm` (no patientId yet) when
+   *  the patient went onto the CCM dashboard instead of the roster. */
+  onEnrolled: (name: string, patientId: string | null, ccm?: boolean) => void;
 };
 
 export function EnrollPatientModal(props: EnrollProps) {
@@ -66,7 +70,6 @@ function CcmEnrollForm(props: EnrollProps) {
  * reported here too, not lost.
  */
 function EnrollForm({
-  list,
   onClose,
   onEnrolled,
   ccm,
@@ -77,8 +80,18 @@ function EnrollForm({
   const [draft, setDraft] = useState<EnrollmentDraft>(emptyDraft);
   const [attempted, setAttempted] = useState(false);
   const enroll = useEnrollPatient();
-  const { courses } = useCourseLibrary();
+  const courses = useProgramCourses();
   const programs = useMemo(() => enrollablePrograms(courses), [courses]);
+  const seats = useClinicData().data?.seats ?? null;
+  const failure =
+    enroll.error instanceof EnrollError ? enroll.error.failure : null;
+  const serverError = (field: "name" | "mrn" | "program") =>
+    failure && !failure.partial && failure.field === field
+      ? enrollErrorText(
+          failure.code,
+          enroll.error instanceof Error ? enroll.error.message : "",
+        )
+      : undefined;
   const canEnroll = useCan("patients.enroll");
 
   const offersCcm = Boolean(ccm);
@@ -108,11 +121,18 @@ function EnrollForm({
     return out;
   }
 
-  const errors: Record<string, string | undefined> = attempted
+  const hints: Record<string, string | undefined> = attempted
     ? isCcm
       ? ccmErrors()
-      : validateEnrollment(draft, list, programs)
+      : validateEnrollment(draft, programs)
     : {};
+  /* The server's answer shows on its field (a taken MRN, a full contract). */
+  const errors: Record<string, string | undefined> = {
+    ...hints,
+    name: hints.name ?? serverError("name"),
+    mrn: hints.mrn ?? serverError("mrn"),
+    program: hints.program ?? serverError("program"),
+  };
   const set = (field: keyof EnrollmentDraft, value: string) =>
     setDraft((current) => ({ ...current, [field]: value }));
 
@@ -131,13 +151,16 @@ function EnrollForm({
         careManager,
         location,
       });
-      onEnrolled(draft.name.trim(), draft.mrn.trim(), true);
+      onEnrolled(draft.name.trim(), null, true);
       return;
     }
-    if (Object.keys(validateEnrollment(draft, list, programs)).length > 0)
-      return;
+    if (Object.keys(validateEnrollment(draft, programs)).length > 0) return;
     enroll.mutate(draft, {
-      onSuccess: (patient) => onEnrolled(patient.name, patient.mrn),
+      onSuccess: (enrollment) =>
+        onEnrolled(
+          draft.name.trim().replace(/\s+/g, " "),
+          enrollment.patientId,
+        ),
     });
   }
 
@@ -149,8 +172,10 @@ function EnrollForm({
       title="Enroll New Patient"
       description={
         isCcm
-          ? "Adds the patient to your CCM dashboard. CCM uses no contract seat."
-          : `${Math.max(0, CONTRACT_SLOTS - list.length)} of ${CONTRACT_SLOTS} contract seats open.`
+          ? "Adds the patient to your CCM dashboard."
+          : seats && seats.allowed !== null
+            ? `${Math.max(0, seats.available ?? seats.allowed - seats.used)} of ${seats.allowed} contract seats open.`
+            : undefined
       }
       footer={
         <>
@@ -184,9 +209,24 @@ function EnrollForm({
             or an administrator can.
           </Alert>
         ) : null}
-        {enroll.error ? (
+        {failure?.partial ? (
+          <Alert
+            tone="danger"
+            className="mb-stack-lg"
+            title="Patient added, program enrollment failed"
+          >
+            {enrollErrorText(
+              failure.code,
+              "The program enrollment did not save.",
+            )}{" "}
+            Press Enroll Patient to try the program again.
+          </Alert>
+        ) : enroll.error &&
+          failure?.field !== "name" &&
+          failure?.field !== "mrn" &&
+          failure?.field !== "program" ? (
           <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
-            {enroll.error.message}
+            {enrollErrorText(failure?.code ?? null, enroll.error.message)}
           </Alert>
         ) : null}
 

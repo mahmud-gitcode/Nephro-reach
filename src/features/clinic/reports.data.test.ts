@@ -11,7 +11,12 @@ import {
   reportRows,
   rosterReport,
 } from "./reports.data";
-import { roster } from "./members.data";
+import { rosterMemberFor } from "./members.data";
+import { rosterRows } from "./rosterTestData";
+
+const roster = rosterRows().map((p) =>
+  rosterMemberFor(p, new Date("2026-11-03T12:00:00Z")),
+);
 
 const all = { program: ALL_PROGRAMS_LABEL, status: ALL_MEMBERS_LABEL };
 

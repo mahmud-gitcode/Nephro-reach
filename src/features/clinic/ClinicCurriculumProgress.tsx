@@ -79,6 +79,11 @@ import {
 } from "./curriculumProgress.data";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData } from "./useClinicData";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { downloadText, toCsv } from "@/lib/utils/download";
 
 const MESSAGES = "/dashboard/clinic/messages";
@@ -321,7 +326,7 @@ function MemberTable({
   list: MemberProgress[];
   filters: Filters;
   onFilters: (change: Partial<Filters>) => void;
-  onView: (mrn: string) => void;
+  onView: (patientId: string) => void;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
@@ -341,7 +346,7 @@ function MemberTable({
     setPage(1);
   }
 
-  const pageMrns = view.rows.map((member) => member.mrn);
+  const pageMrns = view.rows.map((member) => member.id);
   const allOnPageSelected =
     pageMrns.length > 0 && pageMrns.every((mrn) => selected.has(mrn));
 
@@ -513,12 +518,12 @@ function MemberTable({
               </TableEmptyRow>
             ) : (
               view.rows.map((member) => (
-                <TableRow key={member.mrn}>
+                <TableRow key={member.id}>
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selected.has(member.mrn)}
-                      onChange={() => toggleOne(member.mrn)}
+                      checked={selected.has(member.id)}
+                      onChange={() => toggleOne(member.id)}
                       aria-label={`Select ${member.name}`}
                       className="h-4 w-4 cursor-pointer accent-brand-600"
                     />
@@ -526,7 +531,7 @@ function MemberTable({
                   <TableCell emphasis className="whitespace-nowrap">
                     <button
                       type="button"
-                      onClick={() => onView(member.mrn)}
+                      onClick={() => onView(member.id)}
                       className={cn(
                         "cursor-pointer rounded-control-small text-left hover:text-fg-brand hover:underline",
                         focusRing,
@@ -535,7 +540,7 @@ function MemberTable({
                       {member.name}
                     </button>
                     <span className="block text-caption font-normal text-fg-muted tabular-nums">
-                      MRN {member.mrn}
+                      MRN {member.mrn || "—"}
                     </span>
                   </TableCell>
                   <TableCell>{member.program}</TableCell>
@@ -566,7 +571,7 @@ function MemberTable({
                     <span className="flex justify-end gap-inline-xs">
                       <button
                         type="button"
-                        onClick={() => onView(member.mrn)}
+                        onClick={() => onView(member.id)}
                         className={iconControl}
                         aria-label={`View ${member.name}`}
                         title="View progress"
@@ -574,7 +579,7 @@ function MemberTable({
                         <Eye aria-hidden="true" />
                       </button>
                       <Link
-                        href={messageLink(member.mrn)}
+                        href={messageLink(member.id)}
                         className={iconControl}
                         aria-label={`Message ${member.name}`}
                         title="Send message"
@@ -658,15 +663,15 @@ function ProgressModal({
       onClose={onClose}
       size="wide"
       title={member.name}
-      description={`MRN ${member.mrn} · ${member.program}`}
+      description={`MRN ${member.mrn || "—"} · ${member.program}`}
       footer={
         <>
-          <Link href={messageLink(member.mrn)} className={outlineLink}>
+          <Link href={messageLink(member.id)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
             Send Message
           </Link>
           <Link
-            href={memberLink({ mrn: member.mrn })}
+            href={memberLink({ patientId: member.id })}
             className={buttonStyles({ size: "small" })}
           >
             Open Member Page
@@ -833,14 +838,17 @@ function RecentModuleActivity({
   onView,
 }: {
   list: MemberProgress[];
-  onView: (mrn: string) => void;
+  onView: (patientId: string) => void;
 }) {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Recent Module Activity" />
+      {recentActivity.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">No activity yet.</p>
+      ) : null}
       <ul className="divide-y divide-line-subtle">
         {recentActivity.map((entry) => {
-          const member = list.find((m) => m.name === entry.name);
+          const member = list.find((m) => m.id === entry.patientId);
           return (
             <li
               key={`${entry.name}-${entry.subject}`}
@@ -856,7 +864,7 @@ function RecentModuleActivity({
                 {member ? (
                   <button
                     type="button"
-                    onClick={() => onView(member.mrn)}
+                    onClick={() => onView(member.id)}
                     className={cn(
                       "cursor-pointer rounded-control-small text-left text-label-lg text-fg hover:text-fg-brand hover:underline",
                       focusRing,
@@ -1043,7 +1051,8 @@ function PageSkeleton() {
 
 /**
  * Filters and the open member live in the URL as well as in state
- * (?status=, ?program=, ?mrn=; ?q= is read from older links), so a link,
+ * (?status=, ?program=, ?patient=<patientId>; ?q= is read from older
+ * links; an old ?mrn= link opens the list, never a member), so a link,
  * Back or a refresh land on the same view. Values that are not on the
  * menus or the roster are ignored rather than trusted.
  */
@@ -1063,14 +1072,14 @@ function CurriculumView() {
       program: programOptions.includes(program) ? program : ALL_PROGRAMS,
     };
   });
-  const [openMrn, setOpenMrn] = useState<string | null>(params.get("mrn"));
-  const open = list.find((member) => member.mrn === openMrn) ?? null;
+  const [openId, setOpenId] = useState<string | null>(params.get("patient"));
+  const open = list.find((member) => member.id === openId) ?? null;
 
-  function writeUrl(next: Filters, mrn: string | null) {
+  function writeUrl(next: Filters, patientId: string | null) {
     const query = new URLSearchParams();
     if (next.status !== ALL_STATUSES) query.set("status", next.status);
     if (next.program !== ALL_PROGRAMS) query.set("program", next.program);
-    if (mrn) query.set("mrn", mrn);
+    if (patientId) query.set("patient", patientId);
     const qs = query.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
@@ -1079,25 +1088,29 @@ function CurriculumView() {
     const next = { ...filters, ...change };
     setFilters(next);
     /* Search stays out of the URL: it would rewrite history per keystroke. */
-    if ("status" in change || "program" in change) writeUrl(next, openMrn);
+    if ("status" in change || "program" in change) writeUrl(next, openId);
   }
 
-  function view(mrn: string) {
-    setOpenMrn(mrn);
-    writeUrl(filters, mrn);
+  function view(patientId: string) {
+    setOpenId(patientId);
+    writeUrl(filters, patientId);
   }
 
   function close() {
-    setOpenMrn(null);
+    setOpenId(null);
     writeUrl(filters, null);
   }
 
   if (clinic.error) {
     return (
       <ErrorState
-        title="Curriculum progress could not be loaded"
+        title={errorTitleFor(
+          clinic.error,
+          "Curriculum progress could not be loaded",
+        )}
+        message={errorMessageFor(clinic.error, undefined)}
         error={clinic.error}
-        onRetry={clinic.refetch}
+        onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
     );
   }

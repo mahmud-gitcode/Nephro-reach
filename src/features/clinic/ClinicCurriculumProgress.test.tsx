@@ -3,7 +3,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { COURSES, members } from "./curriculumProgress.data";
+import { COURSES, curriculumRowFor } from "./curriculumProgress.data";
+import { rosterRows, testPatientId } from "./rosterTestData";
+
+/* Phase 8: synthetic rows from the API roster's course progress. */
+const NOW = new Date();
+const members = rosterRows()
+  .filter((p) => p.programSlug !== null)
+  .map((p, i) =>
+    curriculumRowFor(
+      i === 0 ? { ...p, lastActivityAt: NOW.toISOString() } : p,
+      NOW,
+    ),
+  );
 
 /* The page reads one query and the URL; both are handed in, so these are
  * about what the clinic sees and where the address bar ends up. */
@@ -71,10 +83,10 @@ describe("states", () => {
 describe("filtering", () => {
   it("narrows the table from the status select, and writes it to the URL", async () => {
     render();
-    expect(showing()).toHaveTextContent("of 23 members");
+    expect(showing()).toHaveTextContent("of 4 members");
 
     await userEvent.selectOptions(screen.getByLabelText("Status"), "Completed");
-    expect(showing()).toHaveTextContent("of 7 members");
+    expect(showing()).toHaveTextContent("of 1 members");
     expect(replace).toHaveBeenLastCalledWith(
       "/dashboard/clinic/curriculum-progress?status=Completed",
       { scroll: false },
@@ -95,7 +107,7 @@ describe("filtering", () => {
         name: "Crash Dialysis",
       }),
     );
-    expect(showing()).toHaveTextContent("of 6 members");
+    expect(showing()).toHaveTextContent("of 1 members");
   });
 
   it("narrows the overview to the chosen course, and widens again", async () => {
@@ -136,7 +148,7 @@ describe("filtering", () => {
 
   it("starts filtered from the dashboard's Completed link", () => {
     render("status=Completed");
-    expect(showing()).toHaveTextContent("of 7 members");
+    expect(showing()).toHaveTextContent("of 1 members");
   });
 });
 
@@ -144,29 +156,43 @@ describe("a member's progress popup", () => {
   it("opens from a row, links to the Member page, and closes", async () => {
     render();
     await userEvent.click(
-      screen.getByRole("button", { name: "View Angela T. Brown" }),
+      screen.getByRole("button", { name: "View Avery Testpatient" }),
     );
-    const dialog = screen.getByRole("dialog", { name: "Angela T. Brown" });
-    expect(dialog).toHaveTextContent("Day 12 of 21");
+    const dialog = screen.getByRole("dialog", { name: "Avery Testpatient" });
+    expect(dialog).toHaveTextContent("Day 8 of 21");
     expect(
       within(dialog).getByRole("link", { name: "Open Member Page" }),
-    ).toHaveAttribute("href", "/dashboard/clinic/members?mrn=901234");
+    ).toHaveAttribute(
+      "href",
+      `/dashboard/clinic/members?patient=${testPatientId(1)}`,
+    );
+    expect(replace).toHaveBeenLastCalledWith(
+      `/dashboard/clinic/curriculum-progress?patient=${testPatientId(1)}`,
+      { scroll: false },
+    );
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("opens from a name in the recent activity", async () => {
+  it("opens on the patientId a link names; an old ?mrn= link opens nothing", () => {
+    render(`patient=${testPatientId(2)}`);
+    expect(
+      screen.getByRole("dialog", { name: "Blake Sample" }),
+    ).toBeInTheDocument();
+  });
+
+  it("ignores an MRN in the URL", () => {
+    render("mrn=900002");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows no demo activity: there is no source yet (NEW-2)", () => {
     render();
     const activity = screen
       .getByRole("heading", { name: "Recent Module Activity" })
       .closest("section")!;
-    await userEvent.click(
-      within(activity).getByRole("button", { name: "Robert L. Davis" }),
-    );
-    expect(
-      screen.getByRole("dialog", { name: "Robert L. Davis" }),
-    ).toBeInTheDocument();
+    expect(within(activity).getByText("No activity yet.")).toBeInTheDocument();
   });
 });
 
@@ -189,10 +215,10 @@ describe("the course tabs", () => {
       "aria-selected",
       "true",
     );
-    expect(showing()).toHaveTextContent("of 23 members");
+    expect(showing()).toHaveTextContent("of 4 members");
 
     await userEvent.click(strip().getByRole("tab", { name: "Crash Dialysis" }));
-    expect(showing()).not.toHaveTextContent("of 23 members");
+    expect(showing()).not.toHaveTextContent("of 4 members");
   });
 
   it("writes the chosen course to the URL", async () => {

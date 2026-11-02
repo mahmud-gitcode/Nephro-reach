@@ -1,145 +1,82 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { CONTRACT_SLOTS, CRASH, JOURNEY, patients } from "./enrollment.data";
+import { describe, expect, it } from "vitest";
 import {
   emptyDraft,
-  enrollPatient,
-  readAllPatients,
-  readEnrolled,
-  toPatient,
   enrollablePrograms,
+  enrollErrorText,
   validateEnrollment,
   type EnrollmentDraft,
 } from "./enrollment.store";
-import { rosterMemberFor } from "./members.data";
+import { CRASH, JOURNEY } from "./enrollment.data";
 
-beforeEach(() => window.localStorage.clear());
-
-const draft = (overrides: Partial<EnrollmentDraft> = {}): EnrollmentDraft => ({
+const draft = (patch: Partial<EnrollmentDraft> = {}): EnrollmentDraft => ({
   ...emptyDraft(),
-  name: "Maria L. Gomez",
-  mrn: "700001",
-  ...overrides,
+  name: "Avery Testpatient",
+  mrn: "900001",
+  ...patch,
 });
 
-describe("validating an enrollment", () => {
+describe("validating an enrollment (client hints only)", () => {
   it("accepts a complete draft", () => {
-    expect(validateEnrollment(draft(), patients)).toEqual({});
+    expect(validateEnrollment(draft())).toEqual({});
   });
 
   it("needs a name and a six-digit MRN", () => {
-    const errors = validateEnrollment(
-      draft({ name: " ", mrn: "12a" }),
-      patients,
-    );
-    expect(errors.name).toBeDefined();
+    const errors = validateEnrollment(draft({ name: " ", mrn: "12" }));
+    expect(errors.name).toBe("Enter the patient's full name.");
     expect(errors.mrn).toBe("An MRN is 6 digits.");
   });
 
-  it("refuses an MRN that is already enrolled", () => {
+  it("asks for first and last name: the API needs both", () => {
+    expect(validateEnrollment(draft({ name: "Avery" })).name).toBe(
+      "Enter first and last name.",
+    );
+  });
+
+  /* Phase 8: a taken MRN and a full contract are the server's answers
+     (409 mrn_taken, seats_full), never decided from a local list. */
+  it("does not gate on MRN uniqueness or seats any more", () => {
+    expect(validateEnrollment(draft({ mrn: "123456" }))).toEqual({});
+  });
+
+  it("refuses a program or source that is not offered", () => {
     const errors = validateEnrollment(
-      draft({ mrn: patients[0].mrn }),
-      patients,
+      draft({ program: "Made Up", source: "Billboard" }),
     );
-    expect(errors.mrn).toMatch(/already enrolled/);
-  });
-
-  it("refuses anyone once every contract seat is taken", () => {
-    const full = Array.from({ length: CONTRACT_SLOTS }, (_, i) => ({
-      mrn: String(800000 + i),
-    }));
-    expect(validateEnrollment(draft(), full).name).toMatch(/seats are filled/);
+    expect(errors.program).toBe("Choose a program.");
+    expect(errors.source).toBe("Choose how they were referred.");
   });
 });
 
-describe("the new patient's row", () => {
-  const today = new Date(2026, 8, 21);
-
-  it("is dated today, at 0%, Not Started without a start date", () => {
-    expect(toPatient(draft(), today)).toMatchObject({
-      name: "Maria L. Gomez",
-      enrolledOn: "09/21/2026",
-      status: "Not Started",
-      startDate: "—",
-      progress: 0,
-    });
-  });
-
-  it("is Pending Start once a start date is set, read as a local day", () => {
-    const row = toPatient(draft({ startDate: "2026-10-01" }), today);
-    expect(row.status).toBe("Pending Start");
-    expect(row.startDate).toBe("10/01/2026");
-  });
-
-  it("tidies stray spaces in the name", () => {
-    expect(toPatient(draft({ name: "  Maria   Gomez " }), today).name).toBe(
-      "Maria Gomez",
-    );
-  });
-
-  it("shows on the Member page as just enrolled, with no invented activity", () => {
-    const member = rosterMemberFor(toPatient(draft({ program: CRASH }), today));
-    expect(member).toMatchObject({
-      status: "Not Started",
-      progress: 0,
-      lastActivity: "No activity yet",
-      liveClasses: [0, 0],
-    });
-  });
-});
-
-describe("saving", () => {
-  it("adds the patient after the demo roster", async () => {
-    await enrollPatient(draft({ program: JOURNEY }));
-    expect(await readEnrolled()).toHaveLength(1);
-    const all = await readAllPatients();
-    expect(all).toHaveLength(patients.length + 1);
-    expect(all.at(-1)?.mrn).toBe("700001");
-  });
-
-  it("checks the stored list again, so an MRN cannot be taken twice", async () => {
-    await enrollPatient(draft());
-    await expect(
-      enrollPatient(draft({ name: "Someone Else" })),
-    ).rejects.toThrow(/already enrolled/);
-    expect(await readEnrolled()).toHaveLength(1);
-  });
-
-  it("stops at the last contract seat", async () => {
-    const open = CONTRACT_SLOTS - patients.length;
-    for (let i = 0; i < open; i++)
-      await enrollPatient(draft({ mrn: String(700100 + i) }));
-    await expect(enrollPatient(draft({ mrn: "799999" }))).rejects.toThrow(
-      /seats are filled/,
-    );
-  });
-});
-
-describe("programs the admin adds", () => {
-  it("are offered after the two contracted ones, once each", () => {
+describe("programs offered", () => {
+  it("are the two contracted ones, then each published course once", () => {
     expect(
       enrollablePrograms([
-        { titleEn: "21-Day Dialysis Journey", seeded: true },
-        { titleEn: " Home Dialysis Basics ", seeded: false },
-        { titleEn: JOURNEY, seeded: false },
-        { titleEn: "", seeded: false },
+        { titleEn: "Understanding Dialysis" },
+        { titleEn: "Understanding Dialysis" },
+        { titleEn: " " },
       ]),
-    ).toEqual([JOURNEY, CRASH, "Home Dialysis Basics"]);
+    ).toEqual([JOURNEY, CRASH, "Understanding Dialysis"]);
   });
 
-  it("can be enrolled in", () => {
-    const programs = enrollablePrograms([
-      { titleEn: "Home Dialysis Basics", seeded: false },
-    ]);
+  it("accepts a published course as a program", () => {
+    const programs = enrollablePrograms([{ titleEn: "Kidney Basics" }]);
     expect(
-      validateEnrollment(
-        draft({ program: "Home Dialysis Basics" }),
-        [],
-        programs,
-      ).program,
-    ).toBeUndefined();
-    expect(
-      validateEnrollment(draft({ program: "Home Dialysis Basics" }), [])
-        .program,
-    ).toBe("Choose a program.");
+      validateEnrollment(draft({ program: "Kidney Basics" }), programs),
+    ).toEqual({});
+  });
+});
+
+describe("the server's refusals, in words", () => {
+  it.each([
+    ["patients.mrn_taken", "A patient with this MRN is already enrolled."],
+    ["patients.seats_full", "All contract seats are filled."],
+    ["patients.patient_already_enrolled", "This patient is already enrolled."],
+    ["education.enrollment_exists", "This patient is already enrolled."],
+  ])("%s", (code, text) => {
+    expect(enrollErrorText(code, "fallback")).toBe(text);
+  });
+
+  it("keeps the server's own message for anything else", () => {
+    expect(enrollErrorText(null, "Server said no")).toBe("Server said no");
   });
 });

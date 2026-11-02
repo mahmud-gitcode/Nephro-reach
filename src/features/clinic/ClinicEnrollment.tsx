@@ -53,7 +53,6 @@ import {
   ALL_PROGRAMS,
   ALL_SOURCES,
   ALL_STATUSES,
-  CONTRACT_SLOTS,
   countBy,
   filterPatients,
   paginate,
@@ -69,7 +68,12 @@ import {
 } from "./enrollment.data";
 import { EnrollPatientModal } from "./EnrollPatientModal";
 import { UpdatedBar } from "./UpdatedBar";
-import { useClinicData } from "./useClinicData";
+import { useClinicData, type ClinicData } from "./useClinicData";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { downloadText, toCsv } from "@/lib/utils/download";
 
 const MESSAGES = "/dashboard/clinic/messages";
@@ -142,14 +146,22 @@ function PanelHeading({
 
 function SummaryCards({
   list,
+  seats,
   onEnroll,
 }: {
   list: Patient[];
+  /** The contract's seats (null: unknown to this role). */
+  seats: ClinicData["seats"];
   onEnroll: () => void;
 }) {
   const enrolled = list.length;
-  const remaining = Math.max(0, CONTRACT_SLOTS - enrolled);
-  const goalPct = Math.round((enrolled / CONTRACT_SLOTS) * 100);
+  /* The contract decides (allowed null: no seat limit). Unknown shows "—";
+     the server refuses a full contract either way (409 seats_full). */
+  const slots = seats?.allowed ?? null;
+  const used = seats?.used ?? enrolled;
+  const remaining =
+    slots === null ? null : Math.max(0, seats?.available ?? slots - used);
+  const goalPct = slots ? Math.round((used / slots) * 100) : null;
   const full = remaining === 0;
 
   return (
@@ -160,20 +172,19 @@ function SummaryCards({
         value={
           <>
             {enrolled}
-            <span className="text-heading-4 text-fg-muted">
-              {" "}
-              / {CONTRACT_SLOTS}
-            </span>
+            {slots !== null ? (
+              <span className="text-heading-4 text-fg-muted"> / {slots}</span>
+            ) : null}
           </>
         }
         label="Patients Enrolled"
-        note={`${remaining} slots remaining`}
+        note={remaining === null ? undefined : `${remaining} slots remaining`}
       />
 
       <KeyCard
         tone="neutral"
         icon={<FileTextSolid />}
-        value={CONTRACT_SLOTS}
+        value={slots ?? "—"}
         label="Total Contract Slots"
       >
         <Link href={BILLING} className={cn(outlineLink, "w-full")}>
@@ -184,9 +195,9 @@ function SummaryCards({
       <KeyCard
         tone="success"
         icon={<TargetSolid />}
-        value={`${goalPct}%`}
+        value={goalPct === null ? "—" : `${goalPct}%`}
         label="Enrollment Goal"
-        note={`${enrolled} of ${CONTRACT_SLOTS} enrolled`}
+        note={slots === null ? undefined : `${used} of ${slots} enrolled`}
       />
 
       {/* Not a figure, so not a KeyCard: this one is the action, and the
@@ -226,12 +237,12 @@ function PatientTable({
   list,
   filters,
   onFilters,
-  highlightMrn,
+  highlightId,
 }: {
   list: Patient[];
   filters: Filters;
   onFilters: (change: Partial<Filters>) => void;
-  highlightMrn: string | null;
+  highlightId: string | null;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
@@ -254,7 +265,7 @@ function PatientTable({
     setPage(1);
   }
 
-  const pageMrns = view.rows.map((patient) => patient.mrn);
+  const pageMrns = view.rows.map((patient) => patient.id);
   const allOnPageSelected =
     pageMrns.length > 0 && pageMrns.every((mrn) => selected.has(mrn));
 
@@ -441,9 +452,9 @@ function PatientTable({
             ) : (
               view.rows.map((patient) => (
                 <TableRow
-                  key={patient.mrn}
+                  key={patient.id}
                   className={
-                    patient.mrn === highlightMrn
+                    patient.id === highlightId
                       ? "bg-success-surface"
                       : undefined
                   }
@@ -451,8 +462,8 @@ function PatientTable({
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selected.has(patient.mrn)}
-                      onChange={() => toggleOne(patient.mrn)}
+                      checked={selected.has(patient.id)}
+                      onChange={() => toggleOne(patient.id)}
                       aria-label={`Select ${patient.name}`}
                       className="h-4 w-4 cursor-pointer accent-brand-600"
                     />
@@ -460,7 +471,7 @@ function PatientTable({
                   <TableCell emphasis className="whitespace-nowrap">
                     {patient.name}
                     <span className="block text-caption font-normal text-fg-muted tabular-nums">
-                      MRN {patient.mrn}
+                      MRN {patient.mrn || "—"}
                     </span>
                   </TableCell>
                   <TableCell>{shortProgram(patient.program)}</TableCell>
@@ -492,7 +503,7 @@ function PatientTable({
                   <TableCell>
                     <span className="flex justify-end gap-inline-xs">
                       <Link
-                        href={memberLink({ mrn: patient.mrn })}
+                        href={memberLink({ patientId: patient.id })}
                         className={iconControl}
                         aria-label={`View ${patient.name} on the Member page`}
                         title="View member"
@@ -500,7 +511,7 @@ function PatientTable({
                         <Eye aria-hidden="true" />
                       </Link>
                       <Link
-                        href={messageLink(patient.mrn)}
+                        href={messageLink(patient.id)}
                         className={iconControl}
                         aria-label={`Message ${patient.name}`}
                         title="Send message"
@@ -759,7 +770,7 @@ function EnrollmentView() {
   const [enrolling, setEnrolling] = useState(false);
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
-    mrn: string;
+    patientId: string | null;
     ccm?: boolean;
   } | null>(null);
 
@@ -776,9 +787,9 @@ function EnrollmentView() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  function enrolled(name: string, mrn: string, ccm?: boolean) {
+  function enrolled(name: string, patientId: string | null, ccm?: boolean) {
     setEnrolling(false);
-    setJustEnrolled({ name, mrn, ccm });
+    setJustEnrolled({ name, patientId, ccm });
     /* Clear the filters so the new patient is in view, not hidden by a
        status filter they do not match. */
     updateFilters({ query: "", ...NO_FILTERS });
@@ -787,9 +798,10 @@ function EnrollmentView() {
   if (clinic.error) {
     return (
       <ErrorState
-        title="Enrollments could not be loaded"
+        title={errorTitleFor(clinic.error, "Enrollments could not be loaded")}
+        message={errorMessageFor(clinic.error, undefined)}
         error={clinic.error}
-        onRetry={clinic.refetch}
+        onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
     );
   }
@@ -811,9 +823,9 @@ function EnrollmentView() {
           action={
             <Link
               href={
-                justEnrolled.ccm
+                justEnrolled.ccm || !justEnrolled.patientId
                   ? "/dashboard/nephrology"
-                  : memberLink({ mrn: justEnrolled.mrn })
+                  : memberLink({ patientId: justEnrolled.patientId })
               }
               className={outlineLink}
             >
@@ -824,12 +836,16 @@ function EnrollmentView() {
           }
         >
           {justEnrolled.ccm
-            ? "They are on your CCM dashboard now. CCM uses no contract seat."
+            ? "They are on your CCM dashboard now."
             : "They are highlighted in the list below and count toward your contract seats."}
         </Alert>
       ) : null}
 
-      <SummaryCards list={list} onEnroll={() => setEnrolling(true)} />
+      <SummaryCards
+        list={list}
+        seats={clinic.data?.seats ?? null}
+        onEnroll={() => setEnrolling(true)}
+      />
 
       {list.length === 0 ? (
         <EmptyState
@@ -849,7 +865,7 @@ function EnrollmentView() {
             list={list}
             filters={filters}
             onFilters={updateFilters}
-            highlightMrn={justEnrolled?.mrn ?? null}
+            highlightId={justEnrolled?.patientId ?? null}
           />
 
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -874,7 +890,6 @@ function EnrollmentView() {
 
       {enrolling ? (
         <EnrollPatientModal
-          list={list}
           onClose={() => setEnrolling(false)}
           onEnrolled={enrolled}
         />

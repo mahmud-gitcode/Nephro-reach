@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { recentActivity, roster } from "./members.data";
+import { rosterMemberFor } from "./members.data";
 import { upcomingClasses } from "./liveClass.data";
+import { rosterRows, testPatientId } from "./rosterTestData";
+import { ApiError } from "@/lib/api/client";
 
 /* The dashboard's four states — loading, failed, empty, loaded — are driven
  * by one query. These pin each by handing the page that query's result
@@ -28,17 +30,37 @@ vi.mock("@/features/emergency/useErVisits", () => ({
 vi.mock("./useClinicData", () => ({
   useClinicData: () => state,
   useEnrollPatient: () => ({ mutate: vi.fn(), isPending: false, error: null }),
-}));
-
-/* The enroll form lists the admin's added courses as programs. */
-vi.mock("@/features/education/courseLibrary", () => ({
-  useCourseLibrary: () => ({ courses: [] }),
-  listCourses: async () => [],
+  /* The enroll form lists the published courses as programs. */
+  useProgramCourses: () => [],
+  EnrollError: class extends Error {},
 }));
 
 const { default: ClinicDashboard } = await import("./ClinicDashboard");
 
-const loaded = { roster, activity: recentActivity, classes: upcomingClasses };
+/* Phase 8: synthetic rows through the app's own mapping. */
+const NOW = new Date();
+const roster = rosterRows().map((p, i) =>
+  rosterMemberFor(
+    i === 1
+      ? {
+          ...p,
+          lastActivityAt: new Date(
+            NOW.getTime() - 9 * 86_400_000,
+          ).toISOString(),
+        }
+      : i === 0
+        ? { ...p, lastActivityAt: NOW.toISOString() }
+        : p,
+    NOW,
+  ),
+);
+const loaded = {
+  roster,
+  patients: [],
+  activity: [],
+  classes: upcomingClasses,
+  seats: { used: 5, allowed: 30, available: 25 },
+};
 
 function set(partial: Partial<typeof state>) {
   Object.assign(state, {
@@ -91,7 +113,7 @@ describe("when the read fails", () => {
 
 describe("when there is nothing to show", () => {
   it("says so plainly, with a way to fill it", () => {
-    set({ data: { roster: [], activity: [], classes: [] } });
+    set({ data: { roster: [], activity: [], classes: [], seats: null } });
     render(<ClinicDashboard />);
     expect(
       screen.getByText("Nobody needs attention today"),
@@ -107,10 +129,10 @@ describe("once loaded", () => {
     set({ data: loaded, updatedAt: Date.now() });
     render(<ClinicDashboard />);
     const attention = within(panel(/^Needs Attention Today/));
-    const james = attention.getByRole("link", { name: "James K. Wilson" });
-    expect(james).toHaveAttribute(
+    const blake = attention.getByRole("link", { name: "Blake Sample" });
+    expect(blake).toHaveAttribute(
       "href",
-      "/dashboard/clinic/members?mrn=567890",
+      `/dashboard/clinic/members?patient=${testPatientId(2)}`,
     );
     expect(screen.getByText(/^Last updated/)).toBeInTheDocument();
   });
@@ -119,13 +141,42 @@ describe("once loaded", () => {
     set({ data: loaded });
     render(<ClinicDashboard />);
     const members = within(panel("Members"));
-    expect(members.getByText("Showing 1–8 of 23 members")).toBeInTheDocument();
+    expect(members.getByText("Showing 1–5 of 5 members")).toBeInTheDocument();
 
     await userEvent.selectOptions(
       members.getByRole("combobox", { name: "Status" }),
-      "Attention Needed",
+      "Need Follow-Up",
     );
-    expect(members.getByText("Showing 1–2 of 2 members")).toBeInTheDocument();
+    expect(members.getByText("Showing 1–1 of 1 members")).toBeInTheDocument();
+  });
+
+  it("counts the status cards from the roster, '—' where there is no source", () => {
+    set({ data: loaded });
+    render(<ClinicDashboard />);
+    /* 5 members, 30 contract seats from the server's contract. */
+    expect(screen.getByText("Members Enrolled")).toBeInTheDocument();
+    expect(screen.getByText("17% taken · 25 left")).toBeInTheDocument();
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("links members by patientId only, never by MRN", () => {
+    set({ data: loaded });
+    const { container } = render(<ClinicDashboard />);
+    for (const a of container.querySelectorAll("a[href]"))
+      expect(a.getAttribute("href")).not.toMatch(/mrn=|[?&]to=/);
+  });
+});
+
+describe("without access", () => {
+  it("shows the no-access words for a 403, and no retry", () => {
+    set({ error: new ApiError(403, "Forbidden") });
+    render(<ClinicDashboard />);
+    expect(
+      screen.getAllByText("This has not been shared with you").length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument();
   });
 });
 

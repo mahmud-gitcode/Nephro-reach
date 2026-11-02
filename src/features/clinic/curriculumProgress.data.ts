@@ -1,5 +1,7 @@
 import type { BadgeTone, SeriesTone } from "@/components/ui";
-import { patients, type Patient } from "./enrollment.data";
+import type { Patient } from "./enrollment.data";
+import { relativeActivity } from "./enrollment.mapping";
+import { FOLLOW_UP_AFTER_DAYS, daysInactive } from "./members.data";
 
 /* ==========================================================================
    Member curriculum progress — demo data
@@ -91,42 +93,13 @@ export function courseFor(id: string): Course | undefined {
   return COURSES.find((course) => course.id === id);
 }
 
-/** Length in days for a course, in modules for a library. */
-const LENGTH: Record<Program, number> = Object.fromEntries(
-  COURSES.map((course) => [course.id, course.length]),
-) as Record<Program, number>;
-
-/* Module titles by position. The client named eleven of them across the
-   eight rows; the rest are written to fill the gaps. */
-const MODULES: Record<Program, Record<number, string>> = {
-  [JOURNEY]: {
-    1: "Life on Dialysis",
-    3: "Understanding Kidney Failure",
-    5: "Choosing a Treatment",
-    8: "Transplant Options",
-    10: "Coping and Support",
-    12: "Medications in Dialysis",
-    14: "Diet and Fluid Management",
-    17: "Working with Your Care Team",
-    19: "Travel and Dialysis",
-    21: "Access Options",
-  },
-  [CRASH]: {
-    1: "Your First Treatment",
-    2: "Understanding Your Access",
-    3: "Treatment Day Prep",
-    4: "Diet and Fluid Basics",
-    5: "What to Expect",
-  },
-  [LIBRARY]: {
-    4: "Lab Results Explained",
-  },
-};
-
 export type MemberProgress = {
+  /** The server's patientId: the row's identity (never the MRN). */
+  id: string;
   name: string;
   mrn: string;
-  program: Program;
+  /** A curriculum name, or a course-backed program's own label. */
+  program: Program | string;
   module: string;
   /** Position in the program: a day for the courses, a module for the library. */
   step: number;
@@ -136,64 +109,6 @@ export type MemberProgress = {
   lastActivity: string;
 };
 
-type Row = [
-  name: string,
-  program: Program,
-  step: number,
-  status: ProgressStatus,
-  lastActivity: string,
-];
-
-/* The eight as specified, then the fifteen filler patients in roster order.
-   Filler statuses are 5 / 5 / 2 / 3, which with the named eight makes
-   3 Needs Follow-Up — the one status count that can match the client's. */
-const rows: Row[] = [
-  ["John D. Smith", JOURNEY, 14, "In Progress", "Today"],
-  ["Mary S. Johnson", CRASH, 3, "In Progress", "2 days ago"],
-  ["Robert L. Davis", JOURNEY, 21, "Completed", "1 day ago"],
-  ["Angela T. Brown", JOURNEY, 12, "In Progress", "Today"],
-  ["James K. Wilson", CRASH, 5, "Completed", "3 days ago"],
-  ["Patricia M. Allen", JOURNEY, 8, "Needs Follow-Up", "5 days ago"],
-  ["David R. Carter", LIBRARY, 4, "In Progress", "2 days ago"],
-  ["Lisa W. Thomas", JOURNEY, 1, "Not Started", "1 week ago"],
-
-  ["Sandra Phillips", JOURNEY, 21, "Completed", "1 day ago"],
-  ["John Taylor", JOURNEY, 21, "Completed", "4 days ago"],
-  ["Marcus White", CRASH, 5, "Completed", "1 week ago"],
-  ["Lisa Reynolds", JOURNEY, 10, "In Progress", "Today"],
-  ["Daniel Brooks", JOURNEY, 5, "Needs Follow-Up", "6 days ago"],
-  ["Maria Clark", CRASH, 5, "Completed", "2 days ago"],
-  ["Robert Turner", JOURNEY, 3, "Needs Follow-Up", "1 week ago"],
-  ["Evelyn Green", JOURNEY, 17, "In Progress", "1 day ago"],
-  ["Kevin Walker", CRASH, 4, "In Progress", "Today"],
-  ["Tiffany Moore", JOURNEY, 21, "Completed", "5 days ago"],
-  ["Teresa J. Fields", JOURNEY, 12, "In Progress", "2 days ago"],
-  ["Nathan R. Webb", JOURNEY, 19, "In Progress", "1 day ago"],
-  ["Camille D. Ortiz", JOURNEY, 1, "Not Started", "2 weeks ago"],
-  ["Gerald F. Moss", CRASH, 1, "Not Started", "10 days ago"],
-  ["Brenda K. Vaughn", JOURNEY, 1, "Not Started", "2 weeks ago"],
-];
-
-function mrnFor(name: string): string {
-  const patient = patients.find((p) => p.name === name);
-  if (!patient) throw new Error(`${name} is not on the enrollment roster.`);
-  return patient.mrn;
-}
-
-export const members: MemberProgress[] = rows.map(
-  ([name, program, step, status, lastActivity]) => ({
-    name,
-    mrn: mrnFor(name),
-    program,
-    module: MODULES[program][step],
-    step,
-    length: LENGTH[program],
-    progress: Math.round((step / LENGTH[program]) * 100),
-    status,
-    lastActivity,
-  }),
-);
-
 /** "Day 14 of 21", or "Module 4 of 8" for the library; "Not started"
     for a member who has not opened the first one. */
 export function stepLabel(member: MemberProgress): string {
@@ -202,35 +117,53 @@ export function stepLabel(member: MemberProgress): string {
   return `${unit} ${member.step} of ${member.length}`;
 }
 
-const byMrn = new Map(members.map((member) => [member.mrn, member]));
-
 /** The enrollment program "Journey to Dialysis (21-Day)" is the
-    curriculum's "Journey to Dialysis". */
-function curriculumProgram(enrolled: string): Program {
+    curriculum's "Journey to Dialysis"; a course-backed program keeps its
+    own label. */
+function curriculumProgram(enrolled: string): Program | string {
   if (enrolled.startsWith(CRASH)) return CRASH;
   if (enrolled.startsWith(LIBRARY)) return LIBRARY;
-  return JOURNEY;
+  if (enrolled.startsWith(JOURNEY)) return JOURNEY;
+  return enrolled;
 }
 
+const PROGRESS_STATUS: Record<string, ProgressStatus> = {
+  "not-started": "Not Started",
+  "in-progress": "In Progress",
+  completed: "Completed",
+};
+
 /**
- * The curriculum row for any enrolled patient. The demo members keep their
- * specified rows; anyone enrolled since has not started — step 0, no
- * module, 0% — rather than an invented day.
+ * The curriculum row for an enrolled patient, from the server's course
+ * progress (classes completed of the course's classes). "Needs Follow-Up"
+ * is the client's own rule: in progress and inactive FOLLOW_UP_AFTER_DAYS.
+ * Without a course there is no progress to show: not started, 0%.
  */
-export function curriculumRowFor(patient: Patient): MemberProgress {
-  const existing = byMrn.get(patient.mrn);
-  if (existing) return existing;
+export function curriculumRowFor(
+  patient: Patient,
+  now = new Date(),
+): MemberProgress {
   const program = curriculumProgram(patient.program);
+  const course = courseFor(program);
+  const step = patient.classesCompleted ?? 0;
+  const length = patient.classesTotal ?? course?.length ?? 0;
+  const lastActivity = relativeActivity(patient.lastActivityAt, now);
+  let status: ProgressStatus =
+    PROGRESS_STATUS[patient.progressStatus ?? ""] ?? "Not Started";
+  const days = daysInactive(lastActivity);
+  if (status === "In Progress" && days !== null && days >= FOLLOW_UP_AFTER_DAYS)
+    status = "Needs Follow-Up";
   return {
+    id: patient.id,
     name: patient.name,
     mrn: patient.mrn,
     program,
-    module: "Not started",
-    step: 0,
-    length: LENGTH[program],
-    progress: 0,
-    status: "Not Started",
-    lastActivity: "No activity yet",
+    module: step === 0 ? "Not started" : "—",
+    step,
+    length,
+    progress: patient.progress,
+    status,
+    lastActivity,
   };
 }
 
@@ -373,32 +306,16 @@ export const moduleBreakdown: {
 
 export const overallCompletion = 82;
 
-export const recentActivity = [
-  {
-    name: "John D. Smith",
-    action: "Completed",
-    subject: "Diet and Fluid Management",
-    when: "2 hours ago",
-  },
-  {
-    name: "Mary S. Johnson",
-    action: "Completed",
-    subject: "Treatment Day Prep",
-    when: "5 hours ago",
-  },
-  {
-    name: "Angela T. Brown",
-    action: "Watched",
-    subject: "Medications in Dialysis",
-    when: "1 day ago",
-  },
-  {
-    name: "Robert L. Davis",
-    action: "Completed",
-    subject: "Program",
-    when: "1 day ago",
-  },
-];
+/** Recent module activity has no source yet (NEW-2): empty, never the demo
+    names. */
+export const recentActivity: {
+  /** The patient it is about. */
+  patientId: string;
+  name: string;
+  action: string;
+  subject: string;
+  when: string;
+}[] = [];
 
 export const membersByStatus: {
   label: ProgressStatus;

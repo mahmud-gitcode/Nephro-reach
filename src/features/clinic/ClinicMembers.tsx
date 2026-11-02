@@ -57,7 +57,6 @@ import { paginate, ROWS_PER_PAGE_OPTIONS } from "./enrollment.data";
 import {
   ALL_PROGRAMS,
   ALL_STATUSES,
-  allowed,
   countStatus,
   filterRoster,
   MEMBER_STATUSES,
@@ -71,7 +70,16 @@ import {
 } from "./members.data";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData, type ClinicData } from "./useClinicData";
-import { messageLink } from "./clinicDashboard.data";
+import {
+  curriculumLink,
+  messageLink,
+  UNSOURCED_STATUSES,
+} from "./clinicDashboard.data";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -138,8 +146,16 @@ function PanelHeading({
  * the search box directly below still do it, so nothing became unreachable
  * — there were two controls for one job and this was the quieter one.
  */
-function SummaryCards({ list }: { list: RosterMember[] }) {
+function SummaryCards({
+  list,
+  seats,
+}: {
+  list: RosterMember[];
+  seats: ClinicData["seats"];
+}) {
   const cards = MEMBER_STATUSES.filter((s) => s !== "Not Started");
+  /* Seats are the contract's (null: unknown to this role, or no limit). */
+  const allowed = seats?.allowed ?? null;
 
   return (
     <section
@@ -152,7 +168,9 @@ function SummaryCards({ list }: { list: RosterMember[] }) {
         value={
           <>
             {list.length}
-            <span className="text-heading-4 text-fg-muted"> / {allowed}</span>
+            {allowed !== null ? (
+              <span className="text-heading-4 text-fg-muted"> / {allowed}</span>
+            ) : null}
           </>
         }
         label="Total Members"
@@ -160,15 +178,21 @@ function SummaryCards({ list }: { list: RosterMember[] }) {
 
       {cards.map((card) => {
         const Icon = statusIconSolid[card];
+        /* No source yet for this status (NEW-2): "—", never a made-up 0. */
+        const unsourced = UNSOURCED_STATUSES.includes(card);
         const count = countStatus(list, card);
         return (
           <KeyCard
             key={card}
             tone={statusKeyTone[card]}
             icon={<Icon />}
-            value={count}
+            value={unsourced ? "—" : count}
             label={card}
-            note={`${shareOf(count, list.length)}% of members`}
+            note={
+              unsourced
+                ? "Not tracked yet"
+                : `${shareOf(count, list.length)}% of members`
+            }
           />
         );
       })}
@@ -176,7 +200,11 @@ function SummaryCards({ list }: { list: RosterMember[] }) {
       <KeyCard
         tone="neutral"
         icon={<UserPlusSolid />}
-        value={Math.max(0, allowed - list.length)}
+        value={
+          seats && seats.allowed !== null
+            ? Math.max(0, seats.available ?? seats.allowed - seats.used)
+            : "—"
+        }
         label="Available Slots"
       />
     </section>
@@ -189,14 +217,14 @@ function MemberTable({
   list,
   filters,
   onFilters,
-  selectedMrn,
+  selectedId,
   onSelect,
 }: {
   list: RosterMember[];
   filters: Filters;
   onFilters: (next: Partial<Filters>) => void;
-  selectedMrn: string | null;
-  onSelect: (mrn: string) => void;
+  selectedId: string | null;
+  onSelect: (patientId: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
@@ -215,7 +243,7 @@ function MemberTable({
     setPage(1);
   }
 
-  const pageMrns = view.rows.map((member) => member.mrn);
+  const pageMrns = view.rows.map((member) => member.id);
   const allOnPage =
     pageMrns.length > 0 && pageMrns.every((mrn) => checked.has(mrn));
 
@@ -360,18 +388,18 @@ function MemberTable({
               </TableEmptyRow>
             ) : (
               view.rows.map((member) => {
-                const Icon = statusIcon[member.status];
-                const isSelected = member.mrn === selectedMrn;
+                const Icon = member.status ? statusIcon[member.status] : null;
+                const isSelected = member.id === selectedId;
                 return (
                   <TableRow
-                    key={member.mrn}
+                    key={member.id}
                     className={isSelected ? "bg-surface-brand-subtle" : ""}
                   >
                     <TableCell>
                       <input
                         type="checkbox"
-                        checked={checked.has(member.mrn)}
-                        onChange={() => toggleOne(member.mrn)}
+                        checked={checked.has(member.id)}
+                        onChange={() => toggleOne(member.id)}
                         aria-label={`Select ${member.name}`}
                         className="h-4 w-4 cursor-pointer accent-brand-600"
                       />
@@ -381,7 +409,7 @@ function MemberTable({
                           tells a screen reader which member is open. */}
                       <button
                         type="button"
-                        onClick={() => onSelect(member.mrn)}
+                        onClick={() => onSelect(member.id)}
                         aria-pressed={isSelected}
                         className={cn(
                           "cursor-pointer rounded-control-small text-left hover:text-fg-brand hover:underline",
@@ -391,17 +419,21 @@ function MemberTable({
                         {member.name}
                       </button>
                       <span className="block text-caption font-normal text-fg-muted tabular-nums">
-                        MRN {member.mrn}
+                        MRN {member.mrn || "—"}
                       </span>
                     </TableCell>
                     <TableCell>{shortProgram(member.program)}</TableCell>
                     <TableCell>
-                      <Badge
-                        tone={statusTone[member.status]}
-                        icon={<Icon aria-hidden="true" />}
-                      >
-                        {member.status}
-                      </Badge>
+                      {member.status && Icon ? (
+                        <Badge
+                          tone={statusTone[member.status]}
+                          icon={<Icon aria-hidden="true" />}
+                        >
+                          {member.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-fg-muted">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-inline-md">
@@ -421,7 +453,7 @@ function MemberTable({
                       <span className="flex justify-end gap-inline-xs">
                         <button
                           type="button"
-                          onClick={() => onSelect(member.mrn)}
+                          onClick={() => onSelect(member.id)}
                           className={iconControl}
                           aria-label={`View ${member.name}`}
                           title="View details"
@@ -429,7 +461,7 @@ function MemberTable({
                           <Eye aria-hidden="true" />
                         </button>
                         <Link
-                          href={messageLink(member.mrn)}
+                          href={messageLink(member.id)}
                           className={iconControl}
                           aria-label={`Message ${member.name}`}
                           title="Send message"
@@ -515,11 +547,17 @@ function MemberDetailsModal({
   member: RosterMember;
   onClose: () => void;
 }) {
-  const Icon = statusIcon[member.status];
-  const [attended, classesOf] = member.liveClasses;
-  const [checkedIn, checkInsOf] = member.checkIns;
-  const questions =
-    member.questions.total === 0
+  const Icon = member.status ? statusIcon[member.status] : null;
+  /* No source yet for these (NEW-2): "—", never a made-up figure. */
+  const classes = member.liveClasses
+    ? `${member.liveClasses[0]} of ${member.liveClasses[1]}`
+    : "—";
+  const checkIns = member.checkIns
+    ? `${member.checkIns[0]} of ${member.checkIns[1]}`
+    : "—";
+  const questions = !member.questions
+    ? "—"
+    : member.questions.total === 0
       ? "None"
       : `${member.questions.total} (${
           member.questions.open === 0
@@ -533,17 +571,17 @@ function MemberDetailsModal({
       onClose={onClose}
       size="wide"
       title={member.name}
-      description={`MRN ${member.mrn} · Enrolled ${member.enrolledOn}`}
+      description={`MRN ${member.mrn || "—"} · Enrolled ${member.enrolledOn}`}
       footer={
         <>
-          <Link href={messageLink(member.mrn)} className={outlineLink}>
+          <Link href={messageLink(member.id)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
             Send Message
           </Link>
           {/* The popup is the profile; the detail behind it is the patient's
-              progress, which Curriculum Progress opens from the MRN. */}
+              progress, which Curriculum Progress opens by patientId. */}
           <Link
-            href={`/dashboard/clinic/curriculum-progress?mrn=${encodeURIComponent(member.mrn)}`}
+            href={curriculumLink({ patientId: member.id })}
             className={buttonStyles({ size: "small" })}
           >
             View Progress
@@ -558,12 +596,14 @@ function MemberDetailsModal({
         >
           {initials(member.name)}
         </span>
-        <Badge
-          tone={statusTone[member.status]}
-          icon={<Icon aria-hidden="true" />}
-        >
-          {member.status}
-        </Badge>
+        {member.status && Icon ? (
+          <Badge
+            tone={statusTone[member.status]}
+            icon={<Icon aria-hidden="true" />}
+          >
+            {member.status}
+          </Badge>
+        ) : null}
       </div>
 
       <div className="mt-stack-lg">
@@ -591,10 +631,10 @@ function MemberDetailsModal({
           {member.lastSeen}
         </DetailTile>
         <DetailTile icon={Video} label="Live Classes Attended">
-          {attended} of {classesOf}
+          {classes}
         </DetailTile>
         <DetailTile icon={CalendarCheck} label="Weekly Check-Ins">
-          {checkedIn} of {checkInsOf}
+          {checkIns}
         </DetailTile>
         <DetailTile icon={MessageCircleQuestion} label="Questions Submitted">
           {questions}
@@ -756,7 +796,7 @@ function RecentMemberActivity({
 }: {
   list: RosterMember[];
   activity: ClinicData["activity"];
-  onSelect: (mrn: string) => void;
+  onSelect: (patientId: string) => void;
 }) {
   return (
     <Card as="section" padding="small" className="h-full">
@@ -768,10 +808,10 @@ function RecentMemberActivity({
         <ul className="divide-y divide-line-subtle">
           {activity.map((entry) => {
             const { icon: Icon, tile } = activityIcon[entry.kind];
-            const member = list.find((m) => m.name === entry.name);
+            const member = list.find((m) => m.id === entry.patientId);
             return (
               <li
-                key={`${entry.name}-${entry.text}`}
+                key={`${entry.patientId}-${entry.text}`}
                 className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
               >
                 <span
@@ -784,7 +824,7 @@ function RecentMemberActivity({
                   {member ? (
                     <button
                       type="button"
-                      onClick={() => onSelect(member.mrn)}
+                      onClick={() => onSelect(member.id)}
                       className={cn(
                         "cursor-pointer rounded-control-small text-label-md hover:text-fg-brand hover:underline",
                         focusRing,
@@ -826,7 +866,9 @@ function PageSkeleton() {
 
 /**
  * The filters and the open member live in the URL as well as in state:
- * ?status=Need Follow-Up&mrn=567890. The dashboard links here that way, and
+ * ?status=Need Follow-Up&patient=<patientId>. The dashboard links here that
+ * way (a patient is named by id, never an MRN: an old ?mrn= link opens the
+ * list), and
  * it means Back, a refresh or a shared link all land on the same view.
  * Values that are not on the menus or not on the roster are ignored, so a
  * stale link falls back to the default view instead of an empty one.
@@ -844,7 +886,7 @@ function MembersView() {
     return {
       status: statusOptions.includes(status) ? status : ALL_STATUSES,
       program: programOptions.includes(program) ? program : ALL_PROGRAMS,
-      mrn: params.get("mrn"),
+      patientId: params.get("patient"),
     };
   });
 
@@ -855,15 +897,17 @@ function MembersView() {
   });
 
   /* The popup opens only when asked for — a name pressed here, or a link
-     from the dashboard carrying ?mrn= — never by itself on page load. */
-  const [selectedMrn, setSelectedMrn] = useState<string | null>(initial.mrn);
-  const selected = list.find((member) => member.mrn === selectedMrn) ?? null;
+     from the dashboard carrying ?patient= — never by itself on page load. */
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initial.patientId,
+  );
+  const selected = list.find((member) => member.id === selectedId) ?? null;
 
-  function writeUrl(next: Filters, mrn: string | null) {
+  function writeUrl(next: Filters, patientId: string | null) {
     const query = new URLSearchParams();
     if (next.status !== ALL_STATUSES) query.set("status", next.status);
     if (next.program !== ALL_PROGRAMS) query.set("program", next.program);
-    if (mrn) query.set("mrn", mrn);
+    if (patientId) query.set("patient", patientId);
     const qs = query.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
@@ -875,32 +919,33 @@ function MembersView() {
     /* A filter that hides the open member drops them, so the URL never
        names someone the list does not show. */
     const stillListed =
-      selectedMrn !== null &&
-      filterRoster(list, next).some((member) => member.mrn === selectedMrn);
-    const mrn = stillListed ? selectedMrn : null;
-    if (!stillListed) setSelectedMrn(null);
+      selectedId !== null &&
+      filterRoster(list, next).some((member) => member.id === selectedId);
+    const patientId = stillListed ? selectedId : null;
+    if (!stillListed) setSelectedId(null);
 
     /* The search box is not written to the URL: it would rewrite history
        on every keystroke. */
-    if ("status" in change || "program" in change) writeUrl(next, mrn);
+    if ("status" in change || "program" in change) writeUrl(next, patientId);
   }
 
-  function select(mrn: string) {
-    setSelectedMrn(mrn);
-    writeUrl(filters, mrn);
+  function select(patientId: string) {
+    setSelectedId(patientId);
+    writeUrl(filters, patientId);
   }
 
   function close() {
-    setSelectedMrn(null);
+    setSelectedId(null);
     writeUrl(filters, null);
   }
 
   if (clinic.error) {
     return (
       <ErrorState
-        title="Members could not be loaded"
+        title={errorTitleFor(clinic.error, "Members could not be loaded")}
+        message={errorMessageFor(clinic.error, undefined)}
         error={clinic.error}
-        onRetry={clinic.refetch}
+        onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
     );
   }
@@ -927,13 +972,13 @@ function MembersView() {
 
   return (
     <>
-      <SummaryCards list={list} />
+      <SummaryCards list={list} seats={clinic.data?.seats ?? null} />
 
       <MemberTable
         list={list}
         filters={filters}
         onFilters={updateFilters}
-        selectedMrn={selectedMrn}
+        selectedId={selectedId}
         onSelect={select}
       />
 

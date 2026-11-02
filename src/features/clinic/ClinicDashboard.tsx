@@ -59,13 +59,13 @@ import {
   statusTile,
 } from "./clinicIcons";
 import {
-  enrollment,
   liveClassLink,
   memberLink,
   messageLink,
   performance,
   programProgress,
-  statusCards,
+  statusCardsFor,
+  type StatusCardData,
   statusTone,
   toolUsage,
   upcomingFrom,
@@ -80,6 +80,11 @@ import {
 } from "./members.data";
 import { paginate } from "./enrollment.data";
 import { useClinicData, type ClinicData } from "./useClinicData";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 const MESSAGES = "/dashboard/clinic/messages";
 const MEMBERS_PER_PAGE = 8;
@@ -144,11 +149,22 @@ function PanelHeading({
    the row reads as a summary, and six clickable tiles above a table that
    has its own filters was two ways to do one thing. */
 
-/* Counts the live roster, so a patient enrolled a minute ago is in it. */
-function EnrollmentCard({ enrolled }: { enrolled: number }) {
-  const contracted = enrollment.contracted;
-  const remaining = Math.max(0, contracted - enrolled);
-  const pct = Math.round((enrolled / contracted) * 100);
+/* Counts the live roster, so a patient enrolled a minute ago is in it; the
+   seats are the contract's (null: unknown to this role, or no limit). */
+function EnrollmentCard({
+  enrolled,
+  seats,
+}: {
+  enrolled: number;
+  seats: ClinicData["seats"];
+}) {
+  const contracted = seats?.allowed ?? null;
+  const used = seats?.used ?? enrolled;
+  const remaining =
+    contracted === null
+      ? null
+      : Math.max(0, seats?.available ?? contracted - used);
+  const pct = contracted ? Math.round((used / contracted) * 100) : null;
 
   return (
     <KeyCard
@@ -157,23 +173,33 @@ function EnrollmentCard({ enrolled }: { enrolled: number }) {
       value={
         <>
           {enrolled}
-          <span className="text-heading-4 text-fg-muted"> / {contracted}</span>
+          {contracted !== null ? (
+            <span className="text-heading-4 text-fg-muted">
+              {" "}
+              / {contracted}
+            </span>
+          ) : null}
         </>
       }
       label="Members Enrolled"
-      note={`${pct}% taken · ${remaining} left`}
+      note={
+        pct === null || remaining === null
+          ? undefined
+          : `${pct}% taken · ${remaining} left`
+      }
     />
   );
 }
 
-function StatusCard({ card }: { card: (typeof statusCards)[number] }) {
+function StatusCard({ card }: { card: StatusCardData }) {
   const Icon = statusIconSolid[card.status];
 
   return (
     <KeyCard
       tone={statusKeyTone[card.status]}
       icon={<Icon />}
-      value={card.count}
+      /* null: no source for this status yet (NEW-2). */
+      value={card.count ?? "—"}
       label={card.status}
       note={card.share ? `${card.share} of members` : undefined}
     />
@@ -205,7 +231,9 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
       <AsyncSection
         pending={dashboard.isPending}
         error={dashboard.error}
-        onRetry={dashboard.refetch}
+        errorTitle={errorTitleFor(dashboard.error, undefined)}
+        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={items.length === 0}
         skeleton={<SkeletonText lines={5} />}
         empty={
@@ -219,22 +247,23 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
       >
         <ul className="divide-y divide-line-subtle">
           {items.map(({ member, reasons }) => {
-            const Icon = statusIcon[member.status];
+            const status = member.status ?? "Not Started";
+            const Icon = statusIcon[status];
             return (
               <li
-                key={member.mrn}
+                key={member.id}
                 className="flex flex-col gap-inline-md py-inset-xs first:pt-0 last:pb-0 sm:flex-row sm:items-center"
               >
                 <div className="flex min-w-0 flex-1 items-start gap-inline-lg">
                   <span
                     aria-hidden="true"
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-pill ${statusTile[member.status]}`}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-pill ${statusTile[status]}`}
                   >
                     <Icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
                     <Link
-                      href={memberLink({ mrn: member.mrn })}
+                      href={memberLink({ patientId: member.id })}
                       className={cn("text-label-lg text-fg", textLink)}
                     >
                       {member.name}
@@ -250,12 +279,12 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-inline-md pl-12 sm:pl-0">
-                  <Link href={messageLink(member.mrn)} className={outlineLink}>
+                  <Link href={messageLink(member.id)} className={outlineLink}>
                     <MessageSquareText className="h-4 w-4" />
                     Message
                   </Link>
                   <Link
-                    href={memberLink({ mrn: member.mrn })}
+                    href={memberLink({ patientId: member.id })}
                     className={iconLink}
                     aria-label={`View ${member.name}`}
                   >
@@ -383,7 +412,9 @@ function RecentActivity({ dashboard }: { dashboard: Dashboard }) {
       <AsyncSection
         pending={dashboard.isPending}
         error={dashboard.error}
-        onRetry={dashboard.refetch}
+        errorTitle={errorTitleFor(dashboard.error, undefined)}
+        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={events.length === 0}
         skeleton={<SkeletonText lines={5} />}
         empty={
@@ -462,7 +493,9 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
       <AsyncSection
         pending={dashboard.isPending || !mounted}
         error={dashboard.error}
-        onRetry={dashboard.refetch}
+        errorTitle={errorTitleFor(dashboard.error, undefined)}
+        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={items.length === 0}
         skeleton={
           <div className="px-card pb-card">
@@ -534,18 +567,21 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
 /* ------------------------------------------------------------ members */
 
 function MemberRow({ member }: { member: RosterMember }) {
-  const Icon = statusIcon[member.status];
+  const Icon = member.status ? statusIcon[member.status] : null;
   return (
     <TableRow>
       <TableCell emphasis className="whitespace-nowrap">
         <span className="flex items-center gap-inline-md">
           <TableThumb name={member.name} />
           <span>
-            <Link href={memberLink({ mrn: member.mrn })} className={textLink}>
+            <Link
+              href={memberLink({ patientId: member.id })}
+              className={textLink}
+            >
               {member.name}
             </Link>
             <span className="block text-caption font-normal text-fg-muted tabular-nums">
-              MRN {member.mrn}
+              MRN {member.mrn || "—"}
             </span>
           </span>
         </span>
@@ -563,12 +599,16 @@ function MemberRow({ member }: { member: RosterMember }) {
         </span>
       </TableCell>
       <TableCell>
-        <Badge
-          tone={statusTone[member.status]}
-          icon={<Icon aria-hidden="true" />}
-        >
-          {member.status}
-        </Badge>
+        {member.status && Icon ? (
+          <Badge
+            tone={statusTone[member.status]}
+            icon={<Icon aria-hidden="true" />}
+          >
+            {member.status}
+          </Badge>
+        ) : (
+          <span className="text-fg-muted">—</span>
+        )}
       </TableCell>
       <TableCell className="whitespace-nowrap">{member.lastActivity}</TableCell>
       <TableCell>
@@ -576,7 +616,7 @@ function MemberRow({ member }: { member: RosterMember }) {
             hides them behind a third click. */}
         <span className="flex justify-end gap-inline-xs">
           <Link
-            href={memberLink({ mrn: member.mrn })}
+            href={memberLink({ patientId: member.id })}
             className={iconLink}
             aria-label={`View ${member.name}`}
             title="View member"
@@ -584,7 +624,7 @@ function MemberRow({ member }: { member: RosterMember }) {
             <Eye aria-hidden="true" />
           </Link>
           <Link
-            href={messageLink(member.mrn)}
+            href={messageLink(member.id)}
             className={iconLink}
             aria-label={`Message ${member.name}`}
             title="Send message"
@@ -651,7 +691,12 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
 
       {dashboard.error ? (
         <div className="px-card pb-card">
-          <ErrorState error={dashboard.error} onRetry={dashboard.refetch} />
+          <ErrorState
+            title={errorTitleFor(dashboard.error, undefined)}
+            message={errorMessageFor(dashboard.error, undefined)}
+            error={dashboard.error}
+            onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
+          />
         </div>
       ) : (
         <>
@@ -790,7 +835,7 @@ export default function ClinicDashboard() {
   const canEnroll = useCan("patients.enroll");
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
-    mrn: string;
+    patientId: string | null;
   } | null>(null);
 
   return (
@@ -824,24 +869,25 @@ export default function ClinicDashboard() {
           onDismiss={() => setJustEnrolled(null)}
           action={
             <Link
-              href={memberLink({ mrn: justEnrolled.mrn })}
+              href={memberLink({
+                patientId: justEnrolled.patientId ?? undefined,
+              })}
               className={outlineLink}
             >
               View on the Member page
             </Link>
           }
         >
-          They start as Not Started and count toward your contract seats.
+          They count toward your contract seats.
         </Alert>
       ) : null}
 
       {enrolling ? (
         <EnrollPatientModal
-          list={dashboard.data?.patients ?? []}
           onClose={() => setEnrolling(false)}
-          onEnrolled={(name, mrn) => {
+          onEnrolled={(name, patientId) => {
             setEnrolling(false);
-            setJustEnrolled({ name, mrn });
+            setJustEnrolled({ name, patientId });
           }}
         />
       ) : null}
@@ -850,9 +896,10 @@ export default function ClinicDashboard() {
           laptop row is too narrow for the icon tile beside "23 / 30". */}
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         <EnrollmentCard
-          enrolled={dashboard.data?.roster.length ?? enrollment.enrolled}
+          enrolled={dashboard.data?.roster.length ?? 0}
+          seats={dashboard.data?.seats ?? null}
         />
-        {statusCards.map((card) => (
+        {statusCardsFor(dashboard.data?.roster ?? []).map((card) => (
           <StatusCard key={card.status} card={card} />
         ))}
       </section>
