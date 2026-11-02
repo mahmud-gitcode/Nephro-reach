@@ -102,20 +102,15 @@ export function useMemberAttention(): {
   /* Reminded doses whose time has come and that are not logged. */
   const due = doseRows(meds.medications, reminders).filter(
     (dose) =>
-      reminders.some(
-        (r) =>
-          r.enabled &&
-          r.medicationName.toLowerCase() === dose.medication.toLowerCase(),
-      ) &&
       minutesOf(dose.time) <= minutesNow &&
-      log.statusOf(today, dose.medication, dose.time) === "pending",
+      log.statusOf(today, dose.medicationId, dose.time) === "pending",
   );
   for (const dose of due.slice(0, 3)) {
     items.push({
-      id: `dose-${dose.medication}-${dose.time}`,
+      id: `dose-${dose.medicationId}-${dose.time}`,
       tone: "warning",
-      en: `Time to take ${dose.medication} (${dose.time})`,
-      es: `Hora de tomar ${dose.medication} (${dose.time})`,
+      en: `Time to take ${dose.medication} (${dose.timeLabel})`,
+      es: `Hora de tomar ${dose.medication} (${dose.timeLabel})`,
       href: "/dashboard/personal-log/medications",
       ctaEn: "Log dose",
       ctaEs: "Registrar",

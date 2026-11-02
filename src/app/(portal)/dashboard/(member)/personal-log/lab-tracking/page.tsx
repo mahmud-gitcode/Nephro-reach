@@ -2,10 +2,9 @@
 
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
-import { useMemberClinicLabs } from "@/features/labs/useMemberClinicLabs";
 import { usDate } from "@/features/clinic/ccm.data";
 import { LabInfoButton } from "@/features/labs/LabInfoButton";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Apple,
@@ -36,8 +35,8 @@ import {
   Card,
   CardHeader,
   KeyCard,
-  Select,
   SkeletonText,
+  Select,
   Sparkline,
   Table,
   TableBody,
@@ -53,111 +52,122 @@ import { StatusBadge, sparklineTone } from "@/features/labs/StatusBadge";
 import { TrendLineCard } from "@/features/labs/TrendLineCard";
 import { LAB_CATEGORIES } from "@/features/labs/labs.panels.seed";
 import { useLanguage } from "@/context/LanguageContext";
-import { useCustomLabResult } from "@/features/labs/useCustomLabResult";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
+import { useMemberLabs } from "@/features/labs/useMemberLabs";
+import {
+  compareDays,
+  drawsOf,
+  kpisOf,
+  panelView,
+  unseenClinicRows,
+  type LabStatus,
+} from "@/features/labs/labs.view";
+import {
+  LabReportButton,
+  LabResultActions,
+} from "@/features/labs/LabResultActions";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { todayIso } from "@/features/medications/medicationLog.rules";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+
+/** "2026-10-01" → a short date in the member's language. */
+function dayLabel(day: string, isEs: boolean, withYear = true): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-ES" : "en-US", {
+    month: "short",
+    day: "numeric",
+    ...(withYear ? { year: "numeric" } : {}),
+  });
+}
 
 export default function MyLabsPage() {
   const { language, dictionary } = useLanguage();
+  const isEs = language === "ES";
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
-  const share = useExternalShare(language === "ES");
+  const share = useExternalShare(isEs);
   const l = dictionary?.labTracking;
 
   const [activeTab, setActiveTab] = useState<"overview" | "trends" | "history">(
     "overview",
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [compareDateId, setCompareDateId] = useState<string>("2024-04-30");
-  const {
-    result: customData,
-    isPending: labsPending,
-    error: labsError,
-    refetch: refetchLabs,
-  } = useCustomLabResult();
+  /* "" compares the latest with the draw before it. */
+  const [compareDateId, setCompareDateId] = useState<string>("");
   const [expandedHistoryIdx, setExpandedHistoryIdx] = useState<number | null>(
     0,
   );
-  /* What the dialysis center uploaded fills in the panels below as the
-     latest result (client, 2026-10-12), and opening this page counts as
-     having seen the "new lab result" notification. */
-  const clinic = useMemberClinicLabs();
-  const { unseen: clinicUnseen, markSeen: markClinicSeen } = clinic;
-  useEffect(() => {
-    if (clinicUnseen) markClinicSeen();
-  }, [clinicUnseen, markClinicSeen]);
-  const clinicDates = Object.values(clinic.latest).map((r) => r.date);
-  const clinicDate = clinicDates.length
-    ? clinicDates.reduce((a, b) => (b > a ? b : a))
-    : null;
-  /* The newer of the member's own draw and the clinic's. */
-  const latestIso =
-    clinicDate && (!customData?.date || clinicDate > customData.date)
-      ? `${clinicDate}T00:00`
-      : customData?.date;
 
-  const pastDrawDates = [
-    {
-      id: "2024-04-30",
-      label: language === "ES" ? "30 Abr, 2024" : "Apr 30, 2024",
-      type: "draw",
-    },
-    {
-      id: "2024-03-15",
-      label: language === "ES" ? "15 Mar, 2024" : "Mar 15, 2024",
-      type: "draw",
-    },
-    {
-      id: "2024-02-01",
-      label: language === "ES" ? "01 Feb, 2024" : "Feb 01, 2024",
-      type: "draw",
-    },
-    {
-      id: "2024-01-10",
-      label: language === "ES" ? "10 Ene, 2024" : "Jan 10, 2024",
-      type: "draw",
-    },
+  /* The member's results for the last year, every source: their own typed
+     draws and what their care team entered or imported. Charts read the
+     server's trend series for the same window. */
+  const labs = useMemberLabs();
+  const today = todayIso();
+  const view = useMemo(
+    () => panelView(labs.rows, labs.trends, compareDateId, today),
+    [labs.rows, labs.trends, compareDateId, today],
+  );
+  const kpis = useMemo(() => kpisOf(view, labs.rows), [view, labs.rows]);
+  const draws = useMemo(() => drawsOf(labs.rows), [labs.rows]);
+  const pastDraws = useMemo(() => compareDays(labs.rows), [labs.rows]);
+
+  /* What the care team uploaded fills in the panels as the latest results
+     (client, 2026-10-12), and the page names the newest upload's day.
+     Opening this page counts as the patient seeing them (the patient only:
+     a caregiver reading them is not the member seeing them). */
+  const clinicDate = useMemo(
+    () =>
+      labs.rows
+        .filter((r) => r.source !== "PATIENT_ENTERED")
+        .map((r) => r.collectedOn.slice(0, 10))
+        .reduce<string | null>((a, b) => (!a || b > a ? b : a), null),
+    [labs.rows],
+  );
+  const hasUnseen = useMemo(
+    () => unseenClinicRows(labs.rows).length > 0,
+    [labs.rows],
+  );
+  const { canMarkSeen, markSeen } = labs;
+  useEffect(() => {
+    if (hasUnseen && canMarkSeen) markSeen();
+  }, [hasUnseen, canMarkSeen, markSeen]);
+
+  const presets = [
     {
       id: "last-7-days",
       label: l?.overview?.compare?.last7Days || "Last 7 Days (1 Week)",
-      type: "preset",
     },
     {
       id: "last-30-days",
       label: l?.overview?.compare?.last30Days || "Last 30 Days (1 Month)",
-      type: "preset",
     },
     {
       id: "last-90-days",
       label: l?.overview?.compare?.last90Days || "Last 90 Days (3 Months)",
-      type: "preset",
     },
     {
       id: "last-6-months",
       label: l?.overview?.compare?.last6Months || "Last 6 Months",
-      type: "preset",
     },
     {
       id: "last-1-year",
       label: l?.overview?.compare?.last1Year || "Last 1 Year",
-      type: "preset",
     },
   ];
 
-  const latestDrawDate = latestIso
-    ? new Date(latestIso).toLocaleDateString(
-        language === "ES" ? "es-ES" : "en-US",
-        { month: "short", day: "numeric", year: "numeric" },
-      )
-    : language === "ES"
-      ? "31 May, 2024"
-      : "May 31, 2024";
-
-  /* The stat card shows the day large and the year beneath it: a full date
-     at figure size does not fit a fifth of the row. */
-  const drawDate = latestIso ? new Date(latestIso) : new Date(2024, 4, 31);
-  const drawDay = drawDate.toLocaleDateString(
-    language === "ES" ? "es-ES" : "en-US",
-    { month: "short", day: "numeric" },
-  );
+  const latestDrawDate = kpis.latestDate
+    ? dayLabel(kpis.latestDate, isEs)
+    : "—";
+  /* The stat card shows the day large and the year beneath it. */
+  const drawDay = kpis.latestDate
+    ? dayLabel(kpis.latestDate, isEs, false)
+    : "—";
+  const drawYear = kpis.latestDate ? kpis.latestDate.slice(0, 4) : undefined;
+  const pct = (n: number) =>
+    kpis.withResult === 0 ? 0 : Math.round((n * 100) / kpis.withResult);
 
   const getCategoryName = (catId: string, fallback: string) => {
     if (catId === "kidney-function")
@@ -169,6 +179,7 @@ export default function MyLabsPage() {
     if (catId === "nutrition") return l?.categories?.nutrition || fallback;
     if (catId === "dialysis-adequacy")
       return l?.categories?.dialysisAdequacy || fallback;
+    if (catId === "other") return isEs ? "Otras pruebas" : "Other tests";
     return fallback;
   };
 
@@ -196,50 +207,20 @@ export default function MyLabsPage() {
     return fallback;
   };
 
-  const getStatusLabel = (status: "In Range" | "High" | "Low") => {
+  const getStatusLabel = (status: LabStatus) => {
     if (status === "In Range")
       return l?.overview?.statuses?.inRange || "In Range";
     if (status === "High") return l?.overview?.statuses?.high || "High";
     return l?.overview?.statuses?.low || "Low";
   };
 
-  const mergedCategories = LAB_CATEGORIES.map((cat) => ({
+  const mergedCategories = view.map((cat) => ({
     ...cat,
     displayName: getCategoryName(cat.id, cat.name),
-    tests: cat.tests.map((test) => {
-      const displayName = getTestDisplayName(test.id, test.name);
-      const fromClinic = clinic.latest[test.id];
-      const customNewer =
-        !!customData?.date &&
-        !!fromClinic &&
-        customData.date.slice(0, 10) > fromClinic.date;
-      if (fromClinic && !(customNewer && customData?.values?.[test.name])) {
-        return {
-          ...test,
-          displayName,
-          latestResult: fromClinic.unit
-            ? `${fromClinic.value} ${fromClinic.unit}`
-            : fromClinic.value,
-          status: fromClinic.flag ?? ("In Range" as const),
-        };
-      }
-      if (customData?.values && customData.values[test.name]) {
-        const rawVal = customData.values[test.name];
-        const unitParts = test.latestResult.split(" ");
-        const unit = unitParts.length > 1 ? unitParts.slice(1).join(" ") : "";
-        const formatted =
-          rawVal.includes(" ") || !unit ? rawVal : `${rawVal} ${unit}`;
-        return {
-          ...test,
-          displayName,
-          latestResult: formatted,
-        };
-      }
-      return {
-        ...test,
-        displayName,
-      };
-    }),
+    tests: cat.tests.map((test) => ({
+      ...test,
+      displayName: getTestDisplayName(test.id, test.name),
+    })),
   }));
 
   const filteredCategories =
@@ -247,18 +228,30 @@ export default function MyLabsPage() {
       ? mergedCategories
       : mergedCategories.filter((cat) => cat.id === selectedCategory);
 
-  const datesOverview =
-    language === "ES"
-      ? ["4 Feb", "1 Mar", "10 Abr", "15 May", "12 Jun"]
-      : ["Feb 4", "Mar 1", "Apr 10", "May 15", "Jun 12"];
+  const categoryIcons: Record<string, (typeof LAB_CATEGORIES)[number]["icon"]> =
+    {
+      "kidney-function": Kidneys,
+      electrolytes: FlaskConical,
+      "mineral-bone": Bone,
+      "blood-counts": Droplet,
+      nutrition: Apple,
+      "dialysis-adequacy": HeartPulse,
+    };
+  const testsLabel = (n: number) =>
+    isEs
+      ? `${n} ${n === 1 ? "Prueba" : "Pruebas"}`
+      : `${n} ${n === 1 ? "Test" : "Tests"}`;
+  const totalTests = LAB_CATEGORIES.reduce((n, c) => n + c.tests.length, 0);
+
+  const reportLink = labs.reportLink;
 
   return (
-    <div className="w-full space-y-4" aria-busy={labsPending || undefined}>
+    <div className="w-full space-y-4" aria-busy={labs.isPending || undefined}>
       {/* The page named on screen: on a phone the top bar's breadcrumb is
           hidden (client review, 2026-10-08). */}
       <PageTitle
         href="/dashboard/personal-log/lab-tracking"
-        title={language === "ES" ? "Mis Laboratorios" : "My Labs"}
+        title={isEs ? "Mis Laboratorios" : "My Labs"}
       />
       <PersonalLogDisclaimer />
 
@@ -266,58 +259,64 @@ export default function MyLabsPage() {
         <Alert
           tone="info"
           title={
-            language === "ES"
+            isEs
               ? "Resultados nuevos de su clínica"
               : "New results from your clinic"
           }
         >
-          {language === "ES"
+          {isEs
             ? `Su centro de diálisis subió resultados del ${usDate(clinicDate)}. Ya aparecen abajo como sus resultados más recientes.`
             : `Your dialysis center uploaded results from ${usDate(clinicDate)}. They show below as your latest results.`}
         </Alert>
       ) : null}
 
-      {/* The panels below show the member's latest results: their own
-          entered draw and what their clinic uploaded. If either read fails,
-          the numbers below would be reference values passed off as theirs,
-          so the page says it could not load instead (INT-10). */}
+      {/* The panels show the member's own results only. If the read fails,
+          the page says so rather than showing an empty or sample table
+          (INT-10); a 403 says it was not shared, with no retry. */}
       <AsyncSection
-        pending={labsPending || clinic.isPending}
-        error={labsError ?? clinic.error}
-        onRetry={() => {
-          refetchLabs();
-          clinic.refetch();
-        }}
-        errorTitle={
-          language === "ES"
+        pending={labs.isPending}
+        error={labs.error}
+        onRetry={canRetry(labs.error) ? labs.refetch : undefined}
+        errorTitle={errorTitleFor(
+          labs.error,
+          isEs
             ? "No se pudieron cargar sus resultados"
-            : "Your lab results could not be loaded"
-        }
+            : "Your lab results could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          labs.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         skeleton={<SkeletonText lines={6} />}
       >
         {/* 1. Stat cards — the shared KeyCard, as on every dashboard. */}
-        {/* Two across on a phone; the date card spans the row so the five
-          cards leave none alone. */}
         <section className="grid grid-cols-2 gap-inset-sm sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
           <KeyCard
             className="col-span-2 sm:col-span-1"
             icon={<CalendarDays />}
             value={drawDay}
             label={l?.kpis?.latestDate || "Latest Lab Date"}
-            note={String(drawDate.getFullYear())}
+            note={drawYear}
           />
           <KeyCard
             tone="success"
             icon={<CheckCircleSolid />}
             value={
               <>
-                16
-                <span className="text-heading-4 text-fg-muted"> / 25</span>
+                {kpis.inRange}
+                <span className="text-heading-4 text-fg-muted">
+                  {" "}
+                  / {kpis.withResult}
+                </span>
               </>
             }
             label={l?.kpis?.inRange || "In Range"}
             note={
-              language === "ES" ? "64% de los resultados" : "64% of results"
+              isEs
+                ? `${pct(kpis.inRange)}% de los resultados`
+                : `${pct(kpis.inRange)}% of results`
             }
           />
           <KeyCard
@@ -325,43 +324,41 @@ export default function MyLabsPage() {
             icon={<AlertTriangleSolid />}
             value={
               <>
-                6<span className="text-heading-4 text-fg-muted"> / 25</span>
+                {kpis.high + kpis.low}
+                <span className="text-heading-4 text-fg-muted">
+                  {" "}
+                  / {kpis.withResult}
+                </span>
               </>
             }
             label={l?.kpis?.outOfRange || "Out of Range"}
             note={
-              language === "ES" ? "24% de los resultados" : "24% of results"
+              isEs
+                ? `${pct(kpis.high + kpis.low)}% de los resultados`
+                : `${pct(kpis.high + kpis.low)}% of results`
             }
           />
           <KeyCard
             tone="success"
             icon={<TrendingUp />}
-            value="7"
+            value={String(kpis.trendingUp)}
             label={l?.kpis?.trendingUp || "Trending Up"}
           />
           <KeyCard
             tone="danger"
             icon={<TrendingDown />}
-            value="5"
+            value={String(kpis.trendingDown)}
             label={l?.kpis?.trendingDown || "Trending Down"}
           />
         </section>
 
         {/* 3. Main Grid Layout (Left Content + Right Sidebar) */}
-        {/* The table needs ~930px for its seven columns, so it takes the full
-          row (the showcase rule) and the side cards sit in a row beneath. */}
         <div className="space-y-4">
           <div className="space-y-4">
-            {/* The view's toolbar: the tabs and the category filter on the
-              left, the page's actions on the right, the primary one last. */}
             <div className="flex flex-wrap items-center justify-between gap-inline-md">
-              {/* min-w-0 lets the tabs scroll inside their own track on a
-                phone instead of pushing the page wider than the screen. */}
               <div className="flex max-w-full min-w-0 flex-wrap items-center gap-inline-md">
                 <Tabs
-                  label={
-                    language === "ES" ? "Vista de laboratorios" : "Lab views"
-                  }
+                  label={isEs ? "Vista de laboratorios" : "Lab views"}
                   value={activeTab}
                   onChange={setActiveTab}
                   items={[
@@ -377,9 +374,7 @@ export default function MyLabsPage() {
                   <Select
                     selectSize="small"
                     aria-label={
-                      language === "ES"
-                        ? "Filtrar por categoría"
-                        : "Filter by category"
+                      isEs ? "Filtrar por categoría" : "Filter by category"
                     }
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
@@ -430,8 +425,7 @@ export default function MyLabsPage() {
               </div>
             </div>
 
-            {/* TAB 1: OVERVIEW & COMPARE VIEW — the shared Table, flush in its
-              card, each category a sub-header row. */}
+            {/* TAB 1: OVERVIEW & COMPARE VIEW */}
             <TabPanel id="overview" value={activeTab}>
               <Card padding="none" className="overflow-hidden">
                 <Table minWidth={960}>
@@ -452,7 +446,7 @@ export default function MyLabsPage() {
                         <span className="relative mt-0.5 flex items-center tracking-normal normal-case">
                           <select
                             aria-label={
-                              language === "ES"
+                              isEs
                                 ? "Elegir la fecha de laboratorio para comparar"
                                 : "Select comparison lab draw date"
                             }
@@ -460,33 +454,34 @@ export default function MyLabsPage() {
                             onChange={(e) => setCompareDateId(e.target.value)}
                             className="w-full cursor-pointer appearance-none rounded-control-small bg-transparent pr-5 text-label-sm text-fg-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           >
-                            <optgroup
-                              label={
-                                l?.overview?.compare?.pastDrawDatesGroup ||
-                                "Past Lab Draw Dates"
-                              }
-                            >
-                              {pastDrawDates
-                                .filter((d) => d.type === "draw")
-                                .map((date) => (
-                                  <option key={date.id} value={date.id}>
-                                    {date.label}
+                            <option value="">
+                              {isEs ? "Extracción anterior" : "Previous draw"}
+                            </option>
+                            {pastDraws.length > 0 ? (
+                              <optgroup
+                                label={
+                                  l?.overview?.compare?.pastDrawDatesGroup ||
+                                  "Past Lab Draw Dates"
+                                }
+                              >
+                                {pastDraws.map((day) => (
+                                  <option key={day} value={day}>
+                                    {dayLabel(day, isEs)}
                                   </option>
                                 ))}
-                            </optgroup>
+                              </optgroup>
+                            ) : null}
                             <optgroup
                               label={
                                 l?.overview?.compare?.presetsGroup ||
                                 "Timeframe Presets"
                               }
                             >
-                              {pastDrawDates
-                                .filter((d) => d.type === "preset")
-                                .map((date) => (
-                                  <option key={date.id} value={date.id}>
-                                    {date.label}
-                                  </option>
-                                ))}
+                              {presets.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                  {preset.label}
+                                </option>
+                              ))}
                             </optgroup>
                           </select>
                           <ChevronDown
@@ -512,7 +507,6 @@ export default function MyLabsPage() {
                   <TableBody>
                     {filteredCategories.map((category) => (
                       <React.Fragment key={category.id}>
-                        {/* The category, as a sub-header row. */}
                         <TableRow className="bg-surface-sunken">
                           <TableCell colSpan={7} className="py-inset-xs">
                             <span className="flex items-center gap-inline-sm text-label-md text-fg">
@@ -533,58 +527,67 @@ export default function MyLabsPage() {
                                 <LabInfoButton
                                   id={test.id}
                                   name={test.displayName}
-                                  isEs={language === "ES"}
+                                  isEs={isEs}
                                 />
                               </span>
                             </TableCell>
                             <TableCell emphasis>{test.latestResult}</TableCell>
                             <TableCell>{test.previousResult}</TableCell>
                             <TableCell>
-                              <span
-                                className={`inline-flex items-center gap-0.5 text-label-sm ${
-                                  test.changeColor === "red"
-                                    ? "text-danger"
-                                    : test.changeColor === "orange"
-                                      ? "text-warning"
-                                      : "text-success"
-                                }`}
-                              >
-                                {test.changeDirection === "up" ? (
-                                  <ArrowUp
-                                    aria-hidden="true"
-                                    className="h-3.5 w-3.5"
-                                  />
-                                ) : (
-                                  <ArrowDown
-                                    aria-hidden="true"
-                                    className="h-3.5 w-3.5"
-                                  />
-                                )}
-                                {test.change}
-                              </span>
+                              {test.change === null ? (
+                                <span className="text-fg-muted">—</span>
+                              ) : (
+                                <span
+                                  className={`inline-flex items-center gap-0.5 text-label-sm ${
+                                    test.changeColor === "red"
+                                      ? "text-danger"
+                                      : test.changeColor === "orange"
+                                        ? "text-warning"
+                                        : "text-success"
+                                  }`}
+                                >
+                                  {test.changeDirection === "up" ? (
+                                    <ArrowUp
+                                      aria-hidden="true"
+                                      className="h-3.5 w-3.5"
+                                    />
+                                  ) : (
+                                    <ArrowDown
+                                      aria-hidden="true"
+                                      className="h-3.5 w-3.5"
+                                    />
+                                  )}
+                                  {test.change}
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell className="text-fg-muted">
                               {test.refRange}
                             </TableCell>
                             <TableCell>
-                              <StatusBadge
-                                status={test.status}
-                                label={getStatusLabel(test.status)}
-                              />
+                              {test.status ? (
+                                <StatusBadge
+                                  status={test.status}
+                                  label={getStatusLabel(test.status)}
+                                />
+                              ) : (
+                                <span className="text-fg-muted">—</span>
+                              )}
                             </TableCell>
                             <TableCell>
-                              {/* The shared Sparkline: a screen reader gets its
-                                label, and one reading does not divide by 0. */}
-                              <Sparkline
-                                points={test.sparkline}
-                                tone={sparklineTone(test.status)}
-                                label={`${getTestDisplayName(
-                                  test.id,
-                                  test.name,
-                                )} ${language === "ES" ? "tendencia" : "trend"}`}
-                                width={80}
-                                height={24}
-                              />
+                              {test.sparkline.length > 0 ? (
+                                <Sparkline
+                                  points={test.sparkline}
+                                  tone={sparklineTone(
+                                    test.status ?? "In Range",
+                                  )}
+                                  label={`${test.displayName} ${isEs ? "tendencia" : "trend"}`}
+                                  width={80}
+                                  height={24}
+                                />
+                              ) : (
+                                <span className="text-fg-muted">—</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -599,11 +602,14 @@ export default function MyLabsPage() {
               </Card>
             </TabPanel>
 
-            {/* TAB 2: TRENDS VIEW */}
+            {/* TAB 2: TRENDS VIEW — the server's trend series. */}
             <TabPanel id="trends" value={activeTab}>
               <div className="space-y-6">
-                <div className="space-y-6">
-                  {filteredCategories.map((category) => (
+                {filteredCategories.map((category) => {
+                  const charted = category.tests.filter(
+                    (test) => test.sparkline.length > 0,
+                  );
+                  return (
                     <div key={category.id} className="space-y-3">
                       <div className="flex items-center gap-inline-sm border-b border-line pb-stack-sm">
                         <category.icon
@@ -616,465 +622,289 @@ export default function MyLabsPage() {
                         </h3>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {category.tests.map((test) => {
-                          let theme:
-                            | "purple"
-                            | "green"
-                            | "orange"
-                            | "blue"
-                            | "rose"
-                            | "teal" = "purple";
-                          if (test.name.includes("Potassium")) theme = "purple";
-                          else if (test.name.includes("Phosphorus"))
-                            theme = "green";
-                          else if (test.name.includes("Calcium"))
-                            theme = "orange";
-                          else if (test.name.includes("Creatinine"))
-                            theme = "rose";
-                          else if (test.name.includes("eGFR")) theme = "blue";
-                          else if (test.name.includes("Sodium")) theme = "teal";
-                          else if (test.name.includes("Hemoglobin"))
-                            theme = "rose";
-                          else if (test.name.includes("Kt/V")) theme = "green";
-                          else if (test.name.includes("Albumin"))
-                            theme = "orange";
-                          else if (test.name.includes("BUN")) theme = "purple";
-                          else theme = "blue";
+                      {charted.length === 0 ? (
+                        <p className="text-body-sm text-fg-muted">
+                          {isEs
+                            ? "Aún no hay resultados para graficar en esta categoría."
+                            : "No results to chart in this category yet."}
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {charted.map((test) => {
+                            let theme:
+                              | "purple"
+                              | "green"
+                              | "orange"
+                              | "blue"
+                              | "rose"
+                              | "teal" = "purple";
+                            if (test.name.includes("Potassium"))
+                              theme = "purple";
+                            else if (test.name.includes("Phosphorus"))
+                              theme = "green";
+                            else if (test.name.includes("Calcium"))
+                              theme = "orange";
+                            else if (test.name.includes("Creatinine"))
+                              theme = "rose";
+                            else if (test.name.includes("eGFR")) theme = "blue";
+                            else if (test.name.includes("Sodium"))
+                              theme = "teal";
+                            else if (test.name.includes("Hemoglobin"))
+                              theme = "rose";
+                            else if (test.name.includes("Kt/V"))
+                              theme = "green";
+                            else if (test.name.includes("Albumin"))
+                              theme = "orange";
+                            else if (test.name.includes("BUN"))
+                              theme = "purple";
+                            else theme = "blue";
 
-                          const unitParts = test.latestResult.split(" ");
-                          const unit = unitParts.slice(1).join(" ") || "";
-
-                          return (
-                            <TrendLineCard
-                              key={test.id}
-                              testName={test.displayName}
-                              unit={unit}
-                              data={test.sparkline}
-                              dates={datesOverview}
-                              colorTheme={theme}
-                              refRange={test.refRange}
-                              refRangeLabel={l?.trends?.refRange || "Ref Range"}
-                              latestLabel={l?.trends?.latest || "Latest"}
-                            />
-                          );
-                        })}
-                      </div>
+                            return (
+                              <TrendLineCard
+                                key={test.id}
+                                testName={test.displayName}
+                                unit={test.unit}
+                                data={test.sparkline}
+                                dates={test.trendDates.map((d) =>
+                                  dayLabel(d, isEs, false),
+                                )}
+                                colorTheme={theme}
+                                refRange={test.refRange}
+                                refRangeLabel={
+                                  l?.trends?.refRange || "Ref Range"
+                                }
+                                latestLabel={l?.trends?.latest || "Latest"}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </TabPanel>
 
-            {/* TAB 3: DEDICATED HISTORY VIEW */}
+            {/* TAB 3: HISTORY — one entry per draw day, newest first. */}
             <TabPanel id="history" value={activeTab}>
               <div className="space-y-4">
-                <div className="space-y-4">
-                  {[
-                    {
-                      date: latestDrawDate,
-                      tag: l?.history?.latestDraw || "Latest Draw",
-                      tagTone: "success" as const,
-                      notes:
-                        customData?.notes ||
-                        l?.history?.sampleNotes?.draw1 ||
-                        "Routine monthly blood draw. Discussed phosphorus binder dosage with care team.",
-                      detailedTests:
-                        customData?.values &&
-                        Object.keys(customData.values).length > 0
-                          ? LAB_CATEGORIES.map((cat) => {
-                              const recordedForCat = cat.tests.filter(
-                                (t) => customData.values?.[t.name],
-                              );
-                              if (recordedForCat.length === 0) return null;
-                              return {
-                                category: getCategoryName(cat.id, cat.name),
-                                tests: recordedForCat.map((t) => {
-                                  const userVal =
-                                    customData.values?.[t.name] || "";
-                                  const unitParts = t.latestResult.split(" ");
-                                  const unit = unitParts.slice(1).join(" ");
-                                  const formattedVal =
-                                    userVal.includes(" ") || !unit
-                                      ? userVal
-                                      : `${userVal} ${unit}`;
-                                  return {
-                                    name: getTestDisplayName(t.id, t.name),
-                                    val: formattedVal,
-                                    ref: t.refRange,
-                                    status: t.status,
-                                  };
-                                }),
-                              };
-                            })
-                              // NonNullable<typeof g> keeps the mapped shape
-                              // instead of restating it and drifting from it.
-                              .filter(
-                                (g): g is NonNullable<typeof g> => g !== null,
-                              )
-                          : [
-                              {
-                                category:
-                                  l?.categories?.kidneyFunction ||
-                                  "Kidney function",
-                                tests: [
-                                  {
-                                    name: getTestDisplayName("bun", "BUN"),
-                                    val: "48 mg/dL",
-                                    ref: "7 – 20 mg/dL",
-                                    status: "High" as const,
-                                  },
-                                  {
-                                    name: getTestDisplayName(
-                                      "creatinine",
-                                      "Creatinine",
-                                    ),
-                                    val: "6.48 mg/dL",
-                                    ref: "0.6 – 1.3 mg/dL",
-                                    status: "High" as const,
-                                  },
-                                  {
-                                    name: getTestDisplayName(
-                                      "egfr",
-                                      "eGFR (CKD-EPI)",
-                                    ),
-                                    val: "9 mL/min",
-                                    ref: "> 90 mL/min",
-                                    status: "Low" as const,
-                                  },
-                                ],
-                              },
-                              {
-                                category:
-                                  l?.categories?.electrolytes || "Electrolytes",
-                                tests: [
-                                  {
-                                    name: getTestDisplayName(
-                                      "potassium",
-                                      "Potassium",
-                                    ),
-                                    val: "5.2 mEq/L",
-                                    ref: "3.5 – 5.0 mEq/L",
-                                    status: "High" as const,
-                                  },
-                                  {
-                                    name: getTestDisplayName(
-                                      "sodium",
-                                      "Sodium",
-                                    ),
-                                    val: "138 mEq/L",
-                                    ref: "135 – 145 mEq/L",
-                                    status: "In Range" as const,
-                                  },
-                                ],
-                              },
-                            ],
-                    },
-                    {
-                      date: language === "ES" ? "30 Abr, 2024" : "Apr 30, 2024",
-                      tag: l?.history?.previousDraw || "Previous Draw",
-                      tagTone: "info" as const,
-                      notes:
-                        l?.history?.sampleNotes?.draw2 ||
-                        "Pre-dialysis lab check. Fasting draw at 8:00 AM.",
-                      detailedTests: [
-                        {
-                          category:
-                            l?.categories?.kidneyFunction || "Kidney function",
-                          tests: [
-                            {
-                              name: getTestDisplayName("bun", "BUN"),
-                              val: "46 mg/dL",
-                              ref: "7 – 20 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "creatinine",
-                                "Creatinine",
-                              ),
-                              val: "6.12 mg/dL",
-                              ref: "0.6 – 1.3 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "egfr",
-                                "eGFR (CKD-EPI)",
-                              ),
-                              val: "10 mL/min",
-                              ref: "> 90 mL/min",
-                              status: "Low" as const,
-                            },
-                          ],
-                        },
-                        {
-                          category:
-                            l?.categories?.electrolytes || "Electrolytes",
-                          tests: [
-                            {
-                              name: getTestDisplayName("sodium", "Sodium"),
-                              val: "139 mEq/L",
-                              ref: "135 – 145 mEq/L",
-                              status: "In Range" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "potassium",
-                                "Potassium",
-                              ),
-                              val: "5.0 mEq/L",
-                              ref: "3.5 – 5.0 mEq/L",
-                              status: "In Range" as const,
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      date: language === "ES" ? "15 Mar, 2024" : "Mar 15, 2024",
-                      tag: l?.history?.twoMonthsAgo || "2 Months Ago",
-                      tagTone: "neutral" as const,
-                      notes:
-                        l?.history?.sampleNotes?.draw3 ||
-                        "Monthly nephrology review panel.",
-                      detailedTests: [
-                        {
-                          category:
-                            l?.categories?.kidneyFunction || "Kidney function",
-                          tests: [
-                            {
-                              name: getTestDisplayName("bun", "BUN"),
-                              val: "42 mg/dL",
-                              ref: "7 – 20 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "creatinine",
-                                "Creatinine",
-                              ),
-                              val: "5.80 mg/dL",
-                              ref: "0.6 – 1.3 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "egfr",
-                                "eGFR (CKD-EPI)",
-                              ),
-                              val: "11 mL/min",
-                              ref: "> 90 mL/min",
-                              status: "Low" as const,
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      date: language === "ES" ? "01 Feb, 2024" : "Feb 01, 2024",
-                      tag: l?.history?.threeMonthsAgo || "3 Months Ago",
-                      tagTone: "neutral" as const,
-                      notes:
-                        l?.history?.sampleNotes?.draw4 ||
-                        "Routine electrolyte & iron panel.",
-                      detailedTests: [
-                        {
-                          category:
-                            l?.categories?.kidneyFunction || "Kidney function",
-                          tests: [
-                            {
-                              name: getTestDisplayName("bun", "BUN"),
-                              val: "38 mg/dL",
-                              ref: "7 – 20 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "creatinine",
-                                "Creatinine",
-                              ),
-                              val: "5.50 mg/dL",
-                              ref: "0.6 – 1.3 mg/dL",
-                              status: "High" as const,
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                    {
-                      date: language === "ES" ? "10 Ene, 2024" : "Jan 10, 2024",
-                      tag: l?.history?.fourMonthsAgo || "4 Months Ago",
-                      tagTone: "neutral" as const,
-                      notes:
-                        l?.history?.sampleNotes?.draw5 ||
-                        "Initial Stage 5 CKD baseline laboratory evaluation.",
-                      detailedTests: [
-                        {
-                          category:
-                            l?.categories?.kidneyFunction || "Kidney function",
-                          tests: [
-                            {
-                              name: getTestDisplayName("bun", "BUN"),
-                              val: "35 mg/dL",
-                              ref: "7 – 20 mg/dL",
-                              status: "High" as const,
-                            },
-                            {
-                              name: getTestDisplayName(
-                                "creatinine",
-                                "Creatinine",
-                              ),
-                              val: "5.20 mg/dL",
-                              ref: "0.6 – 1.3 mg/dL",
-                              status: "High" as const,
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                  ].map((draw, idx) => {
-                    const isExpanded = expandedHistoryIdx === idx;
-                    return (
-                      <div
-                        key={idx}
-                        className={`overflow-hidden rounded-card border bg-surface shadow-(--card-shadow) transition-colors duration-150 ease-standard ${
-                          isExpanded ? "border-action" : "border-line"
-                        }`}
+                {draws.length === 0 ? (
+                  <Card>
+                    <p className="text-body-md text-fg">
+                      {isEs
+                        ? "Aún no hay resultados de laboratorio."
+                        : "No lab results yet."}
+                    </p>
+                    <p className="mt-stack-xs text-body-sm text-fg-muted">
+                      {isEs
+                        ? "Agregue los resultados de su informe con «Agregar resultado». Los resultados que suba su clínica también aparecen aquí."
+                        : "Add the results from your report with Add Lab Result. Results your clinic uploads show here too."}
+                    </p>
+                  </Card>
+                ) : null}
+                {draws.map((draw, idx) => {
+                  const isExpanded = expandedHistoryIdx === idx;
+                  const tag =
+                    idx === 0
+                      ? l?.history?.latestDraw || "Latest Draw"
+                      : idx === 1
+                        ? l?.history?.previousDraw || "Previous Draw"
+                        : isEs
+                          ? "Extracción anterior"
+                          : "Earlier Draw";
+                  const tagTone =
+                    idx === 0
+                      ? ("success" as const)
+                      : idx === 1
+                        ? ("info" as const)
+                        : ("neutral" as const);
+                  const allTests = draw.groups.flatMap((g) => g.tests);
+                  return (
+                    <div
+                      key={draw.date}
+                      className={`overflow-hidden rounded-card border bg-surface shadow-(--card-shadow) transition-colors duration-150 ease-standard ${
+                        isExpanded ? "border-action" : "border-line"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedHistoryIdx(isExpanded ? null : idx)
+                        }
+                        aria-expanded={isExpanded}
+                        aria-controls={`draw-${idx}-values`}
+                        className="flex w-full flex-wrap items-center justify-between gap-inline-md p-card text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       >
-                        {/* The whole header is the control, so a keyboard user
-                          can open a draw. */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedHistoryIdx(isExpanded ? null : idx)
-                          }
-                          aria-expanded={isExpanded}
-                          aria-controls={`draw-${idx}-values`}
-                          className="flex w-full flex-wrap items-center justify-between gap-inline-md p-card text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                        >
-                          <span className="flex items-center gap-inline-md">
-                            <span className="text-heading-5 text-fg">
-                              {draw.date}
-                            </span>
-                            <Badge
-                              tone={draw.tagTone}
-                              variant={
-                                draw.tagTone === "neutral" ? "soft" : "solid"
-                              }
-                            >
-                              {draw.tag}
-                            </Badge>
+                        <span className="flex items-center gap-inline-md">
+                          <span className="text-heading-5 text-fg">
+                            {dayLabel(draw.date, isEs)}
                           </span>
-                          <span
-                            className={buttonStyles({
-                              variant: isExpanded ? "primary" : "neutral",
-                              appearance: "fill-stroke",
-                              size: "small",
-                            })}
+                          <Badge
+                            tone={tagTone}
+                            variant={tagTone === "neutral" ? "soft" : "solid"}
                           >
-                            {isExpanded
-                              ? l?.history?.hideValues || "Hide Values"
-                              : l?.history?.viewValues || "View Values"}
-                            <ChevronDown
-                              aria-hidden="true"
-                              className={isExpanded ? "rotate-180" : undefined}
-                            />
-                          </span>
-                        </button>
-
-                        {/* Key readings */}
-                        <div
-                          id={`draw-${idx}-values`}
-                          className="grid grid-cols-2 gap-inline-md border-t border-line bg-surface-sunken px-card py-inset-sm sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+                            {tag}
+                          </Badge>
+                          {draw.fromClinic ? (
+                            <Badge tone="info" variant="soft">
+                              {isEs ? "De su clínica" : "From your clinic"}
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <span
+                          className={buttonStyles({
+                            variant: isExpanded ? "primary" : "neutral",
+                            appearance: "fill-stroke",
+                            size: "small",
+                          })}
                         >
-                          {draw.detailedTests
-                            .flatMap((g) => g.tests)
-                            .map((t, tIdx) => (
-                              <div key={tIdx} className="min-w-0">
-                                <span className="block truncate text-caption text-fg-muted">
-                                  {t.name}
-                                </span>
-                                <span className="text-label-md text-fg">
-                                  {t.val}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
+                          {isExpanded
+                            ? l?.history?.hideValues || "Hide Values"
+                            : l?.history?.viewValues || "View Values"}
+                          <ChevronDown
+                            aria-hidden="true"
+                            className={isExpanded ? "rotate-180" : undefined}
+                          />
+                        </span>
+                      </button>
 
-                        {draw.notes && (
-                          <p className="border-t border-line px-card py-inset-sm text-body-sm text-fg-muted">
+                      {/* Key readings */}
+                      <div
+                        id={`draw-${idx}-values`}
+                        className="grid grid-cols-2 gap-inline-md border-t border-line bg-surface-sunken px-card py-inset-sm sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+                      >
+                        {allTests.map((t) => (
+                          <div key={t.row.id} className="min-w-0">
+                            <span className="block truncate text-caption text-fg-muted">
+                              {getTestDisplayName(t.row.testCode, t.name)}
+                            </span>
                             <span className="text-label-md text-fg">
-                              {l?.history?.noteLabel || "Note:"}
-                            </span>{" "}
-                            {draw.notes}
-                          </p>
-                        )}
+                              {t.val}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-                        {/* The draw's values, one table per category. */}
-                        {isExpanded && (
-                          <div className="space-y-4 border-t border-line p-card">
-                            {draw.detailedTests.map((group, gIdx) => (
-                              <div
-                                key={gIdx}
-                                className="overflow-hidden rounded-card-nested border border-line"
-                              >
-                                <p className="border-b border-line bg-surface-sunken px-(--table-edge) py-inset-xs text-label-md text-fg">
-                                  {group.category}
-                                </p>
-                                <Table minWidth={480}>
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableHeaderCell>
-                                        {l?.history?.tableHeaders?.test ||
-                                          "Test"}
-                                      </TableHeaderCell>
-                                      <TableHeaderCell>
-                                        {l?.history?.tableHeaders
-                                          ?.recordedValue || "Recorded Value"}
-                                      </TableHeaderCell>
-                                      <TableHeaderCell>
-                                        {l?.history?.tableHeaders?.refRange ||
-                                          "Reference Range"}
-                                      </TableHeaderCell>
-                                      <TableHeaderCell>
-                                        {l?.history?.tableHeaders?.status ||
-                                          "Status"}
-                                      </TableHeaderCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {group.tests.map((t, tIdx) => (
-                                      <TableRow key={tIdx}>
-                                        <TableCell emphasis>{t.name}</TableCell>
+                      {draw.notes || draw.withReport ? (
+                        <div className="flex flex-wrap items-center justify-between gap-inline-md border-t border-line px-card py-inset-sm">
+                          {draw.notes ? (
+                            <p className="text-body-sm text-fg-muted">
+                              <span className="text-label-md text-fg">
+                                {l?.history?.noteLabel || "Note:"}
+                              </span>{" "}
+                              {draw.notes}
+                            </p>
+                          ) : (
+                            <span />
+                          )}
+                          {draw.withReport ? (
+                            <LabReportButton
+                              isEs={isEs}
+                              load={() => reportLink(draw.withReport!.id)}
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {isExpanded && (
+                        <div className="space-y-4 border-t border-line p-card">
+                          {draw.groups.map((group) => (
+                            <div
+                              key={group.categoryId}
+                              className="overflow-hidden rounded-card-nested border border-line"
+                            >
+                              <p className="border-b border-line bg-surface-sunken px-(--table-edge) py-inset-xs text-label-md text-fg">
+                                {getCategoryName(
+                                  group.categoryId,
+                                  group.categoryId,
+                                )}
+                              </p>
+                              <Table minWidth={560}>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.test || "Test"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders
+                                        ?.recordedValue || "Recorded Value"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.refRange ||
+                                        "Reference Range"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell>
+                                      {l?.history?.tableHeaders?.status ||
+                                        "Status"}
+                                    </TableHeaderCell>
+                                    <TableHeaderCell className="text-right">
+                                      {isEs ? "Acciones" : "Actions"}
+                                    </TableHeaderCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {group.tests.map((t) => {
+                                    const name = getTestDisplayName(
+                                      t.row.testCode,
+                                      t.name,
+                                    );
+                                    return (
+                                      <TableRow key={t.row.id}>
+                                        <TableCell emphasis>{name}</TableCell>
                                         <TableCell emphasis>{t.val}</TableCell>
                                         <TableCell className="text-fg-muted">
                                           {t.ref}
                                         </TableCell>
                                         <TableCell>
-                                          <StatusBadge
-                                            status={
-                                              t.status as
-                                                "High" | "In Range" | "Low"
-                                            }
-                                            label={getStatusLabel(
-                                              t.status as
-                                                "High" | "In Range" | "Low",
-                                            )}
-                                          />
+                                          {t.status ? (
+                                            <StatusBadge
+                                              status={t.status}
+                                              label={getStatusLabel(t.status)}
+                                            />
+                                          ) : (
+                                            <span className="text-fg-muted">
+                                              —
+                                            </span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          {/* The care team's results are
+                                              read-only: no controls. */}
+                                          {t.editable ? (
+                                            <LabResultActions
+                                              name={name}
+                                              value={t.row.value}
+                                              isEs={isEs}
+                                              onSave={(value) =>
+                                                labs.updateResult(t.row.id, {
+                                                  value,
+                                                })
+                                              }
+                                              onRemove={() =>
+                                                labs.removeResult(t.row.id)
+                                              }
+                                            />
+                                          ) : (
+                                            <span className="text-caption text-fg-muted">
+                                              {isEs
+                                                ? "De su clínica"
+                                                : "From your clinic"}
+                                            </span>
+                                          )}
                                         </TableCell>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <LoadMore read={labs.list} />
               </div>
             </TabPanel>
           </div>
@@ -1094,17 +924,17 @@ export default function MyLabsPage() {
               <div className="mt-stack-lg grid grid-cols-3 gap-inline-md">
                 {[
                   {
-                    n: 16,
+                    n: kpis.inRange,
                     label: l?.sidebar?.latestSummary?.inRange || "In Range",
                     tone: "bg-success-surface text-success",
                   },
                   {
-                    n: 6,
+                    n: kpis.high,
                     label: l?.sidebar?.latestSummary?.high || "High",
                     tone: "bg-warning-surface text-warning",
                   },
                   {
-                    n: 3,
+                    n: kpis.low,
                     label: l?.sidebar?.latestSummary?.low || "Low",
                     tone: "bg-danger-surface text-danger",
                   },
@@ -1147,52 +977,20 @@ export default function MyLabsPage() {
                 {[
                   {
                     name: l?.categories?.all || "All Categories",
-                    count: language === "ES" ? "25 Pruebas" : "25 Tests",
+                    count: testsLabel(totalTests),
                     icon: Layers,
                     key: "all",
                   },
-                  {
-                    name: l?.categories?.kidneyFunction || "Kidney Function",
-                    count: language === "ES" ? "3 Pruebas" : "3 Tests",
-                    icon: Kidneys,
-                    key: "kidney-function",
-                  },
-                  {
-                    name: l?.categories?.electrolytes || "Electrolytes",
-                    count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                    icon: FlaskConical,
-                    key: "electrolytes",
-                  },
-                  {
-                    name: l?.categories?.mineralBone || "Mineral & Bone",
-                    count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                    icon: Bone,
-                    key: "mineral-bone",
-                  },
-                  {
-                    name: l?.categories?.bloodCounts || "Blood Counts",
-                    count: language === "ES" ? "4 Pruebas" : "4 Tests",
-                    icon: Droplet,
-                    key: "blood-counts",
-                  },
-                  {
-                    name: l?.categories?.nutrition || "Nutrition",
-                    count: language === "ES" ? "2 Pruebas" : "2 Tests",
-                    icon: Apple,
-                    key: "nutrition",
-                  },
-                  {
-                    name:
-                      l?.categories?.dialysisAdequacy || "Dialysis Adequacy",
-                    count: language === "ES" ? "1 Prueba" : "1 Test",
-                    icon: HeartPulse,
-                    key: "dialysis-adequacy",
-                  },
+                  ...LAB_CATEGORIES.map((cat) => ({
+                    name: getCategoryName(cat.id, cat.name),
+                    count: testsLabel(cat.tests.length),
+                    icon: categoryIcons[cat.id] ?? cat.icon,
+                    key: cat.id,
+                  })),
                 ].map((cat) => {
                   const selected = selectedCategory === cat.key;
                   return (
                     <li key={cat.key}>
-                      {/* A filter list, so a pressed state, not a link. */}
                       <button
                         type="button"
                         aria-pressed={selected}

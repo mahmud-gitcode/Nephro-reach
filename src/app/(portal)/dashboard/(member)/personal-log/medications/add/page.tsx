@@ -15,6 +15,7 @@ import { MEDICATION_NAMES } from "@/features/medications/medicationNames";
 import { useLanguage } from "@/context/LanguageContext";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
+  Alert,
   Button,
   buttonStyles,
   Card,
@@ -29,11 +30,12 @@ import {
   FREQUENCIES,
   ROUTES,
   medicationError,
-  reminderClock,
   type MedicationDraft,
 } from "@/features/medications/medicationList";
 import { useMedications } from "@/features/medications/useMedications";
 import { useReminders } from "@/features/medications/useReminders";
+import { saveErrorText } from "@/features/profile/saveError";
+import { UploadError } from "@/lib/api/upload";
 import { useNow } from "@/lib/utils/useNow";
 
 interface FieldConfig {
@@ -141,16 +143,58 @@ export default function AddMedicationPage() {
     instructions: "",
   });
   const [tried, setTried] = useState(false);
+  /* A photo of the bottle or label: the picked file, uploaded through
+     /files on save (only its id is sent); the preview is an in-memory blob
+     URL, never stored. */
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const pickPhoto = (file: File | null) => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+    setPhoto(file);
+  };
+  const [failure, setFailure] = useState<string | null>(null);
+  const saving = meds.isSaving || reminders.isSaving;
   const error = medicationError(draft);
   const set = (key: keyof MedicationDraft, value: string) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
+  /* Set once the medication is on the server, so trying again after a
+     failed reminder never adds the medication twice. */
+  const [savedId, setSavedId] = useState<string | null>(null);
+
   async function save() {
     setTried(true);
-    if (error) return;
-    await meds.add(draft, today);
-    if (enableReminder)
-      await reminders.setTime(draft.name.trim(), reminderClock(reminderTime));
+    if (error || saving) return;
+    setFailure(null);
+    let id = savedId;
+    if (!id) {
+      try {
+        id = (await meds.add(draft, photo)).id;
+        setSavedId(id);
+      } catch (cause) {
+        setFailure(
+          cause instanceof UploadError
+            ? cause.message
+            : saveErrorText(cause, isEs ? "es" : "en"),
+        );
+        return;
+      }
+    }
+    /* The reminder hangs off the new medication's server id. */
+    if (enableReminder) {
+      try {
+        await reminders.setTimes(id, [reminderTime]);
+      } catch {
+        setFailure(
+          isEs
+            ? "El medicamento se guardó, pero el recordatorio no. Inténtelo de nuevo o póngalo desde la lista con la campana."
+            : "The medication was saved, but its reminder was not. Try again, or set it from the list with the bell.",
+        );
+        return;
+      }
+    }
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
     router.push("/dashboard/personal-log/medications");
   }
 
@@ -306,10 +350,9 @@ export default function AddMedicationPage() {
                   instructions: appendText(d.instructions, text),
                 }))
               }
-              photo={draft.photo ?? null}
-              onPhoto={(photo) =>
-                setDraft((d) => ({ ...d, photo: photo ?? undefined }))
-              }
+              onPhotoFile={pickPhoto}
+              hasPhoto={photo !== null}
+              photoPreview={photoPreview}
             />
           </div>
         </Card>
@@ -359,6 +402,11 @@ export default function AddMedicationPage() {
           ) : null}
         </Card>
 
+        {failure ? (
+          <Alert tone="danger" className="mt-stack-lg">
+            {failure}
+          </Alert>
+        ) : null}
         <div className="mt-stack-lg grid grid-cols-1 gap-inline-md md:grid-cols-2">
           <Link
             href="/dashboard/personal-log/medications"
@@ -373,8 +421,8 @@ export default function AddMedicationPage() {
           <Button
             fullWidth
             leadingIcon={<Plus />}
-            onClick={save}
-            loading={meds.isSaving}
+            onClick={() => void save()}
+            loading={saving}
           >
             {t("medicationsLog.addMedication")}
           </Button>

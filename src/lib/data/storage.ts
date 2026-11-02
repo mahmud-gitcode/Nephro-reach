@@ -70,7 +70,6 @@ function assertBrowser() {
 const MEMBER_OWNED = new Set([
   "classroom-learner",
   "community-likes",
-  "custom-lab-results",
   "dialysis-access-photos",
   "dialysis-home-system",
   "dialysis-home-visits",
@@ -82,11 +81,6 @@ const MEMBER_OWNED = new Set([
   "journey-notes",
   "journey-progress",
   "library-saved",
-  "medication-doses",
-  "medication-mood",
-  "medication-refills",
-  "medication-reminders",
-  "medication-side-effects",
   "provider-orders",
   "rides",
   "table-talk-favorites",
@@ -94,12 +88,10 @@ const MEMBER_OWNED = new Set([
   "travel-reflections",
   "travel-treatments",
   "treatment-medications",
-  "member-medications",
   "member-appointments",
   /* Added 2026-10-12/13: each member's own. */
   "dialysis-treatments",
   "dialysis-schedule",
-  "clinic-labs-seen",
 ]);
 
 /* Whose local stores this tab reads: set by AuthContext from the server's

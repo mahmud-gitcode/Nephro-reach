@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 4;
+export const STORAGE_VERSION = 5;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -149,6 +149,41 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "clinic-notices",
     since: 4,
     why: "Phase 5: the server builds each clinic notice from a check-in saved with notifyClinic and returns it on the check-in. No screen reads this key.",
+  },
+  {
+    name: "member-medications",
+    since: 5,
+    why: "Phase 6: the list is /patients/:id/medications (server ids, status, refill flag, photo by file id, server change history); the sample list (medications.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "medication-doses",
+    since: 5,
+    why: "Phase 6: dose statuses are PUT /patients/:id/medications/:medicationId/doses, keyed by (medication id, day, HH:mm). The old rows were keyed by medication NAME and a 12-hour time; they are never matched to an API medication. No screen reads this key.",
+  },
+  {
+    name: "medication-refills",
+    since: 5,
+    why: "Phase 6: the refill flag is needsRefill on the medication (PATCH by id). No screen reads this key.",
+  },
+  {
+    name: "medication-side-effects",
+    since: 5,
+    why: "Phase 6: side effects are PUT /patients/:id/medications/:medicationId/side-effects (null clears). No screen reads this key.",
+  },
+  {
+    name: "medication-reminders",
+    since: 5,
+    why: "Phase 6: reminders are /patients/:id/reminders?kind=MEDICATION, one per medication id, times HH:mm; the sample reminders (reminders.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "custom-lab-results",
+    since: 5,
+    why: "Phase 6: each typed draw is one POST /patients/:id/labs (rows; a new draw never overwrites the last). No screen reads this key.",
+  },
+  {
+    name: "clinic-labs-seen",
+    since: 5,
+    why: "Phase 6: seen is seenByPatientAt on the care team results (POST /patients/:id/labs/seen, patient only). No screen reads this key.",
   },
 ];
 

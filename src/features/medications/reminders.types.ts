@@ -1,21 +1,27 @@
 /* ==========================================================================
-   Medication reminders — the shape of the data
+   Medication reminders: the shape of the data (Phase 6)
    --------------------------------------------------------------------------
-   One reminder per medication, matched by name. Name is a poor key and the
-   backend will give these a real medication id; until then the matching is
-   done in one place (reminders.rules.ts) so that change is one file.
+   One reminder per medication, keyed by the medication's server id (the
+   API refuses a second one). Times travel as HH:mm, 24-hour, in the
+   patient's own time zone; the 12-hour forms are for display only.
+   Whether a reminder actually rings is the server's job, including the
+   member's "Medication Reminders" mute (D21, spec 020): not decided here.
    ========================================================================== */
 
 export type ReminderChannel = "in_app" | "sms";
 
 export interface MedicationReminder {
+  /** The server's id. */
   id: string;
+  medicationId: string;
+  /** For display, from the medication list ("" when not on it). */
   medicationName: string;
-  /** As the member picked it, e.g. "08:00 AM". The first time of day. */
+  /** HH:mm, earliest first (what the API stores). */
+  times: string[];
+  /** The first time, as the member reads it, e.g. "08:00 AM". */
   time: string;
-  /** More times the same day, for a medication taken more than once
-   *  (client, 2026-10-05). Same form as `time`. */
-  extraTimes?: string[];
+  /** The other times of the day, same form as `time`. */
+  extraTimes: string[];
   frequency: string;
   channels: ReminderChannel[];
   enabled: boolean;

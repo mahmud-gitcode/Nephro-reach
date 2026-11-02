@@ -280,13 +280,8 @@ function MemberNotifications() {
   const minutesNow = clock.getHours() * 60 + clock.getMinutes();
   const due = doseRows(meds.medications, reminders).filter(
     (dose) =>
-      reminders.some(
-        (r) =>
-          r.enabled &&
-          r.medicationName.toLowerCase() === dose.medication.toLowerCase(),
-      ) &&
       minutesOf(dose.time) <= minutesNow &&
-      log.statusOf(today, dose.medication, dose.time) === "pending",
+      log.statusOf(today, dose.medicationId, dose.time) === "pending",
   );
 
   const count =
@@ -492,17 +487,17 @@ function MemberNotifications() {
       ))}
       {due.slice(0, 4).map((dose) => (
         <AskRow
-          key={`${dose.medication}-${dose.time}`}
+          key={`${dose.medicationId}-${dose.time}`}
           question={
             isEs
-              ? `Hora de tomar ${dose.medication} (${dose.time})`
-              : `Time to take ${dose.medication} (${dose.time})`
+              ? `Hora de tomar ${dose.medication} (${dose.timeLabel})`
+              : `Time to take ${dose.medication} (${dose.timeLabel})`
           }
         >
           <Button
             size="small"
             onClick={() =>
-              log.setDoseStatus(today, dose.medication, dose.time, "taken")
+              log.setDoseStatus(today, dose.medicationId, dose.time, "taken")
             }
           >
             {isEs ? "Tomado" : "Taken"}

@@ -16,7 +16,10 @@ import {
 import { Kidneys } from "@/components/icons/Kidneys";
 
 import { useLanguage } from "@/context/LanguageContext";
-import { useSaveCustomLabResult } from "@/features/labs/useCustomLabResult";
+import { useMemberLabs } from "@/features/labs/useMemberLabs";
+import { todayIso } from "@/features/medications/medicationLog.rules";
+import { saveErrorText } from "@/features/profile/saveError";
+import { UploadError } from "@/lib/api/upload";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import {
   Alert,
@@ -41,7 +44,6 @@ interface TestItem {
   name: string;
   unit: string;
   refRange: string;
-  defaultVal: string;
 }
 
 interface CategoryGroup {
@@ -62,21 +64,18 @@ const designCategories: CategoryGroup[] = [
         name: "BUN",
         unit: "mg/dL",
         refRange: "7 – 20 mg/dL",
-        defaultVal: "48",
       },
       {
         id: "creatinine",
         name: "Creatinine",
         unit: "mg/dL",
         refRange: "0.6 – 1.3 mg/dL",
-        defaultVal: "6.48",
       },
       {
         id: "egfr",
         name: "eGFR (CKD-EPI)",
         unit: "mL/min/1.73m²",
         refRange: "> 90 mL/min/1.73m²",
-        defaultVal: "9",
       },
     ],
   },
@@ -90,28 +89,24 @@ const designCategories: CategoryGroup[] = [
         name: "Sodium",
         unit: "mEq/L",
         refRange: "135 – 145 mEq/L",
-        defaultVal: "138",
       },
       {
         id: "potassium",
         name: "Potassium",
         unit: "mEq/L",
         refRange: "3.5 – 5.0 mEq/L",
-        defaultVal: "5.2",
       },
       {
         id: "chloride",
         name: "Chloride",
         unit: "mEq/L",
         refRange: "98 – 107 mEq/L",
-        defaultVal: "99",
       },
       {
         id: "co2",
         name: "CO2 (Bicarbonate)",
         unit: "mEq/L",
         refRange: "22 – 29 mEq/L",
-        defaultVal: "22",
       },
     ],
   },
@@ -125,28 +120,24 @@ const designCategories: CategoryGroup[] = [
         name: "Calcium",
         unit: "mg/dL",
         refRange: "8.5 – 10.5 mg/dL",
-        defaultVal: "9.1",
       },
       {
         id: "phosphorus",
         name: "Phosphorus",
         unit: "mg/dL",
         refRange: "2.5 – 4.5 mg/dL",
-        defaultVal: "5.6",
       },
       {
         id: "pth",
         name: "PTH (Intact)",
         unit: "pg/mL",
         refRange: "15 – 65 pg/mL",
-        defaultVal: "412",
       },
       {
         id: "vitamind",
         name: "Vitamin D 25-OH",
         unit: "ng/mL",
         refRange: "30 – 100 ng/mL",
-        defaultVal: "28",
       },
     ],
   },
@@ -160,28 +151,24 @@ const designCategories: CategoryGroup[] = [
         name: "Hemoglobin",
         unit: "g/dL",
         refRange: "11.0 – 16.0 g/dL",
-        defaultVal: "10.2",
       },
       {
         id: "hematocrit",
         name: "Hematocrit",
         unit: "%",
         refRange: "33 – 47 %",
-        defaultVal: "31",
       },
       {
         id: "ferritin",
         name: "Ferritin",
         unit: "ng/mL",
         refRange: "30 – 400 ng/mL",
-        defaultVal: "456",
       },
       {
         id: "tsat",
         name: "Iron Saturation (TSAT)",
         unit: "%",
         refRange: "20 – 50 %",
-        defaultVal: "28",
       },
     ],
   },
@@ -195,14 +182,12 @@ const designCategories: CategoryGroup[] = [
         name: "Albumin",
         unit: "g/dL",
         refRange: "3.5 – 5.0 g/dL",
-        defaultVal: "3.8",
       },
       {
         id: "bicarbonate",
         name: "Bicarbonate",
         unit: "mEq/L",
         refRange: "22 – 29 mEq/L",
-        defaultVal: "22",
       },
     ],
   },
@@ -216,7 +201,6 @@ const designCategories: CategoryGroup[] = [
         name: "Kt/V",
         unit: "ratio",
         refRange: "≥ 1.20",
-        defaultVal: "1.35",
       },
     ],
   },
@@ -227,24 +211,22 @@ export default function AddLabTrackingPage() {
   const { dictionary, language } = useLanguage();
   const l = dictionary?.labTracking;
 
-  const [labDate, setLabDate] = useState<string>("2024-05-31");
+  const isEs = language === "ES";
+  /* Today, on the member's own calendar: a draw cannot be in the future. */
+  const today = todayIso();
+  const [labDate, setLabDate] = useState<string>(today);
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>("");
 
-  const [testValues, setTestValues] = useState<{ [key: string]: string }>(
-    () => {
-      const initial: { [key: string]: string } = {};
-      designCategories.forEach((cat) => {
-        cat.tests.forEach((t) => {
-          initial[t.name] = t.defaultVal;
-        });
-      });
-      return initial;
-    },
-  );
+  /* Starts empty: only what the member types is sent (no sample values). */
+  const [testValues, setTestValues] = useState<{ [key: string]: string }>({});
+  /* A photo or PDF of the paper report: uploaded through /files on save,
+     only its id is sent; it opens later through the result's own link. */
+  const [report, setReport] = useState<File | null>(null);
 
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
-  const saveResult = useSaveCustomLabResult();
+  const [failure, setFailure] = useState<string | null>(null);
+  const labs = useMemberLabs();
 
   const getCategoryName = (catId: string, fallback: string) => {
     if (catId === "kidney-function")
@@ -304,21 +286,53 @@ export default function AddLabTrackingPage() {
      tried to save, swallowing the failure. A member would be redirected to a
      page that did not have their results on it, having been told twice that
      it did. Success is now claimed only once the write has returned. */
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saveResult.isPending) return;
+    if (labs.isSaving || savedSuccess) return;
+    setFailure(null);
 
-    saveResult.mutate(
-      { date: labDate, values: testValues, notes },
-      {
-        onSuccess: () => {
-          setSavedSuccess(true);
-          setTimeout(() => {
-            router.push("/dashboard/personal-log/lab-tracking");
-          }, 1000);
-        },
-      },
+    /* Only the tests of the sections on screen, and only the filled ones:
+       one POST adds this draw as rows; it never overwrites the last one. */
+    const shown = new Set(
+      designCategories
+        .filter((cat) => activeCategoryIds.includes(cat.id))
+        .flatMap((cat) => cat.tests.map((t) => t.name)),
     );
+    const values = Object.fromEntries(
+      Object.entries(testValues).filter(
+        ([name, value]) => shown.has(name) && value.trim() !== "",
+      ),
+    );
+    if (Object.keys(values).length === 0) {
+      setFailure(
+        isEs
+          ? "Agregue una categoría y escriba al menos un resultado."
+          : "Add a category and enter at least one result.",
+      );
+      return;
+    }
+    if (!labDate || labDate > today) {
+      setFailure(
+        isEs
+          ? "La fecha de la extracción no puede ser futura."
+          : "The draw date cannot be in the future.",
+      );
+      return;
+    }
+    try {
+      await labs.addDraw({ collectedOn: labDate, values, notes }, report);
+    } catch (cause) {
+      setFailure(
+        cause instanceof UploadError
+          ? cause.message
+          : saveErrorText(cause, isEs ? "es" : "en"),
+      );
+      return;
+    }
+    setSavedSuccess(true);
+    setTimeout(() => {
+      router.push("/dashboard/personal-log/lab-tracking");
+    }, 1000);
   };
 
   const availableCategoriesToAdd = designCategories.filter(
@@ -329,11 +343,16 @@ export default function AddLabTrackingPage() {
     <div className="mx-auto max-w-4xl space-y-stack-xl">
       <PersonalLogDisclaimer />
 
-      {saveResult.error ? (
-        <Alert tone="danger" title="These results could not be saved">
-          {saveResult.error instanceof Error
-            ? saveResult.error.message
-            : "Please try again."}
+      {failure ? (
+        <Alert
+          tone="danger"
+          title={
+            isEs
+              ? "No se pudieron guardar estos resultados"
+              : "These results could not be saved"
+          }
+        >
+          {failure}
         </Alert>
       ) : null}
 
@@ -348,7 +367,11 @@ export default function AddLabTrackingPage() {
         </Alert>
       )}
 
-      <Card as="form" onSubmit={handleSubmit} className="space-y-stack-xl">
+      <Card
+        as="form"
+        onSubmit={(e: React.FormEvent) => void handleSubmit(e)}
+        className="space-y-stack-xl"
+      >
         <header className="flex flex-wrap items-center justify-between gap-inline-lg border-b border-line-subtle pb-inset-md">
           <h1 className="text-heading-3 text-fg">
             {l?.addModal?.title || "Add Lab Result"}
@@ -378,6 +401,7 @@ export default function AddLabTrackingPage() {
                   {...props}
                   type="date"
                   value={labDate}
+                  max={today}
                   onChange={(e) => setLabDate(e.target.value)}
                 />
               )}
@@ -490,6 +514,29 @@ export default function AddLabTrackingPage() {
         </div>
 
         <FormField
+          label={
+            isEs
+              ? "Informe (foto o PDF del papel)"
+              : "Report (a photo or PDF of the paper)"
+          }
+          optionalLabel="optional"
+          hint={
+            isEs
+              ? "JPG, PNG o PDF, hasta 10 MB. Se abre solo desde sus resultados."
+              : "JPG, PNG or PDF, up to 10 MB. It opens only from your results."
+          }
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={(e) => setReport(e.target.files?.[0] ?? null)}
+            />
+          )}
+        </FormField>
+
+        <FormField
           label={l?.addModal?.notesLabel || "Notes & Observations"}
           optionalLabel="optional"
         >
@@ -520,7 +567,8 @@ export default function AddLabTrackingPage() {
           <Button
             type="submit"
             leadingIcon={<Plus />}
-            loading={saveResult.isPending}
+            loading={labs.isSaving}
+            disabled={savedSuccess}
           >
             {l?.addModal?.saveEntry || "Save Entry"}
           </Button>

@@ -144,6 +144,7 @@ describe("medication alerts", () => {
         {
           date: "2026-09-29",
           time: "08:00",
+          medicationId: "med-1",
           medication: "Lisinopril",
           effect: "dizziness",
           savedAt: "2026-09-29T08:05:00Z",
@@ -151,6 +152,7 @@ describe("medication alerts", () => {
         {
           date: "2026-09-29",
           time: "20:00",
+          medicationId: "med-1",
           medication: "Lisinopril",
           effect: "none",
           savedAt: "2026-09-29T20:05:00Z",
@@ -158,6 +160,7 @@ describe("medication alerts", () => {
         {
           date: "2026-08-01",
           time: "08:00",
+          medicationId: "med-1",
           medication: "Lisinopril",
           effect: "nausea",
           savedAt: "2026-08-01T08:05:00Z",
@@ -174,6 +177,7 @@ describe("medication alerts", () => {
     const dose = (date: string) => ({
       date,
       time: "08:00",
+      medicationId: "med-2",
       medication: "Sevelamer",
       status: "missed" as const,
     });

@@ -42,16 +42,22 @@ import {
 import { cn } from "@/lib/utils/cn";
 import * as rules from "./medicationLog.rules";
 import { SIDE_EFFECT_OPTIONS } from "./medicationLog.options";
-import type { DoseStatus, SideEffect } from "./medicationLog.types";
+import type {
+  AdherenceReport,
+  DoseStatus,
+  SideEffect,
+} from "./medicationLog.types";
 import type { MedicationLog } from "./useMedicationLog";
 import type { MedicationReminder } from "@/features/medications/useReminders";
-import { alertsData, statusTone } from "./medications.seed";
 import {
   MEDICATION_STATUSES,
+  STATUS_TONE,
+  refillCount,
   type DoseRow,
   type Medication,
   type MedicationStatus,
 } from "./medicationList";
+import { BpPhotoButton } from "@/features/personal-log/blood-pressure/BpPhotoButton";
 import { minutesOf } from "./reminders.time";
 import { useNow } from "@/lib/utils/useNow";
 
@@ -80,7 +86,7 @@ export function SectionTitle({
 export function StatusBadge({ status }: { status: string }) {
   const { t } = useLanguage();
   const label = t(`medicationsLog.statuses.${status}`) || status;
-  return <Badge tone={statusTone[status] || "neutral"}>{label}</Badge>;
+  return <Badge tone={STATUS_TONE[status] || "neutral"}>{label}</Badge>;
 }
 
 export function MedicationMasterList({
@@ -88,45 +94,48 @@ export function MedicationMasterList({
   reminders,
   onOpenReminderModal,
   onStatusChange,
+  onRefillChange,
+  photoLink,
   onEdit,
-  log,
 }: {
   /** Opens the edit form for one medication (client, 2026-10-07). */
   onEdit?: (medication: Medication) => void;
   /** Active / PRN / Paused / Stopped, set by the member (2026-10-05). */
   onStatusChange: (id: string, status: MedicationStatus) => void;
-  /** The member's stored list (useMedications). */
+  /** The member is running low (kept on the medication, by id). */
+  onRefillChange: (id: string, needsRefill: boolean) => void;
+  /** The photo's short-lived link, asked for when the member opens it. */
+  photoLink: (id: string) => Promise<{ url: string }>;
+  /** The member's list, from the API (useMedications). */
   medications: Medication[];
   reminders: MedicationReminder[];
-  onOpenReminderModal: (medName?: string) => void;
-  log: MedicationLog;
+  /** Opens the reminder dialog for one medication, by id. */
+  onOpenReminderModal: (medicationId?: string) => void;
 }) {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
+  const lowCount = refillCount(medications);
 
   /* One medication, as a table row on wide screens and as a card on a
      phone, where the 1140px table hid the status, refill and Edit
      controls (client review, 2026-10-08). */
   const medicationView = (medication: Medication) => {
     const rem = reminders.find(
-      (r) =>
-        r.medicationName.toLowerCase() === medication.name.toLowerCase() &&
-        r.enabled,
+      (r) => r.medicationId === medication.id && r.enabled,
     );
 
     const nameNode = (
       <>
         <span className="flex items-center gap-inline-sm">
-          {medication.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-            <img
-              src={medication.photo}
-              alt={
+          {medication.photoFileId ? (
+            <BpPhotoButton
+              label={
                 isEs
                   ? `Foto de ${medication.name}`
                   : `Photo of ${medication.name}`
               }
-              className="h-8 w-8 shrink-0 rounded-control object-cover"
+              isEs={isEs}
+              load={() => photoLink(medication.id)}
             />
           ) : null}
           {medication.name}
@@ -147,7 +156,7 @@ export function MedicationMasterList({
           variant="neutral"
           appearance={rem ? "fill-stroke" : "stroke"}
           size="small"
-          onClick={() => onOpenReminderModal(medication.name)}
+          onClick={() => onOpenReminderModal(medication.id)}
           aria-label={
             rem
               ? language === "ES"
@@ -170,14 +179,14 @@ export function MedicationMasterList({
       <>
         <Select
           selectSize="small"
-          value={log.needsRefill(medication.name) ? "yes" : "no"}
+          value={medication.needsRefill ? "yes" : "no"}
           aria-label={
             isEs
               ? `¿${medication.name} necesita resurtido?`
               : `Does ${medication.name} need a refill?`
           }
           onChange={(event) =>
-            log.setRefill(medication.name, event.target.value === "yes")
+            onRefillChange(medication.id, event.target.value === "yes")
           }
           /* A floor under the width. The table scrolls
            horizontally anyway, and a select narrower than its
@@ -185,7 +194,7 @@ export function MedicationMasterList({
            the answer the member picked. */
           className={cn(
             "mx-auto min-w-[5.5rem]",
-            log.needsRefill(medication.name) && "text-warning",
+            medication.needsRefill && "text-warning",
           )}
         >
           <option value="no">{isEs ? "No" : "No"}</option>
@@ -236,7 +245,7 @@ export function MedicationMasterList({
       </>
     ) : null;
     return {
-      key: `${medication.name}-${medication.startDate}`,
+      key: medication.id,
       medication,
       editNode,
       nameNode,
@@ -368,11 +377,11 @@ export function MedicationMasterList({
         </Table>
       </div>
 
-      {log.refillCount > 0 ? (
+      {lowCount > 0 ? (
         <Alert tone="warning" className="mt-stack-md">
           {isEs
-            ? `Marcaste ${log.refillCount} medicamento(s) como bajos. Avisa a tu farmacia o a tu equipo: esta página no los notifica.`
-            : `You flagged ${log.refillCount} medication(s) as low. Tell your pharmacy or care team — this page does not notify them for you.`}
+            ? `Marcaste ${lowCount} medicamento(s) como bajos. Avisa a tu farmacia o a tu equipo: esta página no los notifica.`
+            : `You flagged ${lowCount} medication(s) as low. Tell your pharmacy or care team — this page does not notify them for you.`}
         </Alert>
       ) : null}
     </Card>
@@ -383,19 +392,23 @@ export function DoseSchedule({
   rows,
   reminders,
   log,
+  date,
+  onDateChange,
 }: {
-  /** Today's doses (medicationList doseRows). */
+  /** The day's doses (medicationList doseRows). */
   rows: DoseRow[];
   reminders: MedicationReminder[];
+  /** The log of `date` (useMedicationLog(date)). */
   log: MedicationLog;
+  /** The day being looked at. The arrows move a real date, and every
+   *  status below belongs to that date. */
+  date: string;
+  onDateChange: (next: string) => void;
 }) {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
-
-  /* The day being looked at. The arrows used to be dead controls with a
-     printed "May 20" between them; they move a real date now, and every
-     status below belongs to that date. */
-  const [date, setDate] = useState(() => rules.todayIso());
+  const setDate = (next: string | ((current: string) => string)) =>
+    onDateChange(typeof next === "function" ? next(date) : next);
   const onToday = rules.isToday(date);
   const clock = new Date(useNow());
   const minutesNow = clock.getHours() * 60 + clock.getMinutes();
@@ -412,12 +425,10 @@ export function DoseSchedule({
      one a member must reach (client review, 2026-10-08). */
   const doseView = (dose: DoseRow, idx: number) => {
     const rem = reminders.find(
-      (r) =>
-        r.medicationName.toLowerCase() === dose.medication.toLowerCase() &&
-        r.enabled,
+      (r) => r.medicationId === dose.medicationId && r.enabled,
     );
 
-    const status = log.statusOf(date, dose.medication, dose.time);
+    const status = log.statusOf(date, dose.medicationId, dose.time);
     /* Not logged once its time has passed (client, 2026-10-05):
        red, so a forgotten entry stands out. Still "pending" in
        the record — the member may yet say they took it. */
@@ -425,16 +436,16 @@ export function DoseSchedule({
       status === "pending" &&
       (date < rules.todayIso() ||
         (onToday && minutesOf(dose.time) <= minutesNow));
-    const recordedEffect = log.sideEffectOf(date, dose.medication, dose.time);
+    const recordedEffect = log.sideEffectOf(date, dose.medicationId, dose.time);
     const stamp = rules.formatStamp(
-      log.stampOf(date, dose.medication, dose.time),
+      log.stampOf(date, dose.medicationId, dose.time),
       isEs,
     );
 
     const timeNode = (
       <>
         <span className="flex items-center gap-inline-sm">
-          {dose.time}
+          {dose.timeLabel}
           {rem && (
             <Bell
               className="h-3 w-3 shrink-0 text-fg-brand"
@@ -464,13 +475,14 @@ export function DoseSchedule({
           value={status}
           aria-label={
             isEs
-              ? `Estado de ${dose.medication} a las ${dose.time}`
-              : `Status for ${dose.medication} at ${dose.time}`
+              ? `Estado de ${dose.medication} a las ${dose.timeLabel}`
+              : `Status for ${dose.medication} at ${dose.timeLabel}`
           }
+          disabled={log.isSaving}
           onChange={(event) =>
             log.setDoseStatus(
               date,
-              dose.medication,
+              dose.medicationId,
               dose.time,
               event.target.value as DoseStatus,
             )
@@ -521,16 +533,17 @@ export function DoseSchedule({
       <>
         <Select
           selectSize="small"
-          value={log.sideEffectOf(date, dose.medication, dose.time) ?? ""}
+          value={recordedEffect ?? ""}
           aria-label={
             isEs
-              ? `Efectos secundarios de ${dose.medication} a las ${dose.time}`
-              : `Side effects from ${dose.medication} at ${dose.time}`
+              ? `Efectos secundarios de ${dose.medication} a las ${dose.timeLabel}`
+              : `Side effects from ${dose.medication} at ${dose.timeLabel}`
           }
+          disabled={log.isSaving}
           onChange={(event) =>
             log.setSideEffect(
               date,
-              dose.medication,
+              dose.medicationId,
               dose.time,
               event.target.value === ""
                 ? null
@@ -560,7 +573,7 @@ export function DoseSchedule({
     );
     return {
       stamp,
-      key: `${dose.time}-${idx}`,
+      key: `${dose.medicationId}-${dose.time}-${idx}`,
       dose,
       timeNode,
       medNode,
@@ -697,24 +710,18 @@ export function DoseSchedule({
   );
 }
 
-export function AdherenceChart({
-  log,
-  dosesPerDay,
-}: {
-  log: MedicationLog;
-  /** How many doses a day the schedule holds. */
-  dosesPerDay: number;
-}) {
+export function AdherenceChart({ report }: { report: AdherenceReport }) {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
 
-  /* Everything below reads the dose statuses tapped in section 2. It used
-     to be a fixed 86% next to a fixed 50/30/20 ring and a hand-drawn line,
-     which is what Joni meant by the tracker tracking nothing. */
-  const week = rules.adherenceByDay(log.doses, dosesPerDay, 7);
-  const overall = rules.summariseAdherence(
-    log.doses.filter((dose) => week.some((day) => day.date === dose.date)),
-    dosesPerDay * 7,
+  /* Everything below is the server's adherence over the last seven days
+     (GET …/medications/adherence): the same figures the care team reads,
+     built from the dose statuses tapped in section 2. */
+  const week = report.byDay;
+  const overall = report.overall;
+  const dosesPerDay = report.medications.reduce(
+    (sum, m) => sum + m.scheduledPerDay,
+    0,
   );
 
   const decided = overall.taken + overall.late + overall.missed;
@@ -904,12 +911,10 @@ export function AdherenceChart({
 export function AlertsAndMood({
   reminders,
   onOpenReminderModal,
-  showSampleAlerts,
 }: {
-  /** The sample alerts belong to the sample list: shown only with it. */
-  showSampleAlerts: boolean;
   reminders: MedicationReminder[];
-  onOpenReminderModal: (medName?: string) => void;
+  /** Opens the reminder dialog for one medication, by id. */
+  onOpenReminderModal: (medicationId?: string) => void;
 }) {
   const { language, t } = useLanguage();
 
@@ -938,7 +943,7 @@ export function AlertsAndMood({
                     variant="neutral"
                     appearance="fill-stroke"
                     size="small"
-                    onClick={() => onOpenReminderModal(rem.medicationName)}
+                    onClick={() => onOpenReminderModal(rem.medicationId)}
                     aria-label={
                       language === "ES"
                         ? `Editar hora de ${rem.medicationName}, ${rem.time}`
@@ -953,26 +958,13 @@ export function AlertsAndMood({
           </div>
         )}
 
-        <div className="mt-stack-md max-h-[290px] space-y-stack-xs overflow-y-auto pr-1">
-          {(showSampleAlerts ? alertsData : []).map((alert, idx) => (
-            <article
-              key={idx}
-              className="rounded-control border border-transparent px-inset-sm py-inset-xs transition-colors duration-150 ease-standard hover:border-line-subtle hover:bg-surface-sunken"
-            >
-              <div className="flex items-start justify-between gap-inline-lg">
-                <h3 className="text-label-md text-fg">
-                  {language === "ES" ? alert.titleEs : alert.titleEn}
-                </h3>
-                <p className="shrink-0 text-caption text-fg-muted">
-                  {language === "ES" ? alert.timeEs : alert.timeEn}
-                </p>
-              </div>
-              <p className="mt-stack-xs text-body-sm text-fg-muted">
-                {language === "ES" ? alert.bodyEs : alert.bodyEn}
-              </p>
-            </article>
-          ))}
-        </div>
+        {reminders.every((r) => !r.enabled) ? (
+          <p className="mt-stack-md text-body-sm text-fg-muted">
+            {language === "ES"
+              ? "Aún no hay recordatorios. Use la campana junto a un medicamento para crear uno."
+              : "No reminders yet. Use the bell next to a medication to set one."}
+          </p>
+        ) : null}
       </Card>
     </section>
   );
@@ -1029,8 +1021,8 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
 
       <p className="mt-stack-sm measure text-body-sm text-fg-muted">
         {isEs
-          ? "Tu registro ya se guarda en este dispositivo cada vez que marcas una dosis."
-          : "Your log already saves to this device each time you mark a dose."}
+          ? "Tu registro ya se guarda en tu cuenta cada vez que marcas una dosis."
+          : "Your log already saves to your account each time you mark a dose."}
       </p>
 
       {/* Wraps: the recipient picker takes its own line when the row is

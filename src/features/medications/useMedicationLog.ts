@@ -1,204 +1,185 @@
 "use client";
 
+/* ==========================================================================
+   What the member records on the medication page, from the API (Phase 6)
+   --------------------------------------------------------------------------
+   One day at a time (the schedule's day, today by default): the dose
+   statuses and side effects of that day, keyed by (medication id, day,
+   HH:mm). One PUT per change. A dose set back to pending is deleted on the
+   server. Every write refreshes the medication reads, so the adherence
+   figures (the server's, `useAdherence`) follow the taps that changed them.
+   ========================================================================== */
+
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { PatientScope } from "@/lib/data/queryKeys";
 import {
-  getRefills,
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import {
+  fromApiDose,
+  fromApiSideEffect,
+  toDoseBody,
+  toSideEffectBody,
+} from "./medicationLog.mapper";
+import {
+  getAdherence,
   listDoses,
-  listMood,
   listSideEffects,
-  saveDoses,
-  saveMood,
-  saveRefills,
-  saveSideEffects,
+  setDose,
+  setSideEffect as putSideEffect,
 } from "./medicationLog.repository";
 import * as rules from "./medicationLog.rules";
 import type {
   DoseRecord,
   DoseStatus,
-  MoodEntry,
-  RefillFlags,
   SideEffect,
   SideEffectRecord,
 } from "./medicationLog.types";
+import {
+  MEDICATIONS_FEATURE,
+  medicationsKey,
+  useMedications,
+} from "./useMedications";
 
-export const doseLogKey = ["medications", "doses"] as const;
-export const refillsKey = ["medications", "refills"] as const;
-export const moodKey = ["medications", "mood"] as const;
-export const sideEffectsKey = ["medications", "side-effects"] as const;
-
-/**
- * Everything the member records on the medication page.
- *
- * One hook because one page reads all three, and because the adherence
- * tracker at the bottom is derived from the dose statuses tapped at the top
- * — they have to come from the same cache or the figure lags the taps.
- *
- * Each write is read-modify-write against storage rather than the cache, so
- * it applies to what is actually saved. With a real API each transform
- * becomes the request body and nothing above this file changes.
- */
-export function useMedicationLog() {
+export function useMedicationLog(
+  date?: string,
+  explicitScope?: PatientScope | null,
+) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
+  const day = date ?? rules.todayIso();
+  const window = useMemo(() => ({ from: day, to: day }), [day]);
+  /* Names for display only: identity is the medication id. */
+  const { nameOf } = useMedications(explicitScope);
 
-  const dosesQuery = useQuery({ queryKey: doseLogKey, queryFn: listDoses });
-  const refillsQuery = useQuery({ queryKey: refillsKey, queryFn: getRefills });
-  const moodQuery = useQuery({ queryKey: moodKey, queryFn: listMood });
+  const dosesQuery = useQuery({
+    queryKey: scopedKey(scope, MEDICATIONS_FEATURE, "doses", window),
+    queryFn: () => listDoses(requireScope(scope), window),
+  });
   const sideEffectsQuery = useQuery({
-    queryKey: sideEffectsKey,
-    queryFn: listSideEffects,
+    queryKey: scopedKey(scope, MEDICATIONS_FEATURE, "side-effects", window),
+    queryFn: () => listSideEffects(requireScope(scope), window),
   });
 
-  const writeDoses = useMutation({
-    mutationFn: async (transform: (current: DoseRecord[]) => DoseRecord[]) =>
-      saveDoses(transform(await listDoses())),
-    onSuccess: (doses) => queryClient.setQueryData(doseLogKey, doses),
-  });
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: medicationsKey(scope) });
 
-  const writeRefills = useMutation({
-    mutationFn: async (transform: (current: RefillFlags) => RefillFlags) =>
-      saveRefills(transform(await getRefills())),
-    onSuccess: (flags) => queryClient.setQueryData(refillsKey, flags),
-  });
-
-  const writeSideEffects = useMutation({
-    mutationFn: async (
-      transform: (current: SideEffectRecord[]) => SideEffectRecord[],
-    ) => saveSideEffects(transform(await listSideEffects())),
-    onSuccess: (records) => queryClient.setQueryData(sideEffectsKey, records),
-  });
-
-  const writeMood = useMutation({
-    mutationFn: async (transform: (current: MoodEntry[]) => MoodEntry[]) =>
-      saveMood(transform(await listMood())),
-    onSuccess: (entries) => queryClient.setQueryData(moodKey, entries),
-  });
-
-  /* `?? []` inline would hand out a new array every render and re-run every
-     adherence figure derived from it. */
-  const doses = useMemo(() => dosesQuery.data ?? [], [dosesQuery.data]);
-  const refills = useMemo(() => refillsQuery.data ?? {}, [refillsQuery.data]);
-  const moodEntries = useMemo(() => moodQuery.data ?? [], [moodQuery.data]);
-  const sideEffects = useMemo(
-    () => sideEffectsQuery.data ?? [],
-    [sideEffectsQuery.data],
-  );
-
-  const { mutate: mutateDoses } = writeDoses;
-  const { mutate: mutateRefills } = writeRefills;
-  const { mutate: mutateMood } = writeMood;
-  const { mutate: mutateSideEffects } = writeSideEffects;
-
-  const setDoseStatus = useCallback(
-    (date: string, medication: string, time: string, status: DoseStatus) =>
-      mutateDoses((current) =>
-        rules.setDoseStatus(current, date, medication, time, status),
+  const writeDose = useMutation({
+    mutationFn: (input: {
+      date: string;
+      medicationId: string;
+      time: string;
+      status: DoseStatus;
+    }) =>
+      setDose(
+        requireScope(scope),
+        input.medicationId,
+        toDoseBody(input.date, input.time, input.status),
       ),
-    [mutateDoses],
-  );
-
-  const setRefill = useCallback(
-    (medication: string, value: boolean) =>
-      mutateRefills((current) => rules.setRefill(current, medication, value)),
-    [mutateRefills],
-  );
-
-  const setSideEffect = useCallback(
-    (
-      date: string,
-      medication: string,
-      time: string,
-      effect: SideEffect | null,
-    ) =>
-      mutateSideEffects((current) =>
-        rules.setSideEffect(current, date, medication, time, effect),
+    onSuccess: refresh,
+  });
+  const writeSideEffect = useMutation({
+    mutationFn: (input: {
+      date: string;
+      medicationId: string;
+      time: string;
+      effect: SideEffect | null;
+    }) =>
+      putSideEffect(
+        requireScope(scope),
+        input.medicationId,
+        toSideEffectBody(input.date, input.time, input.effect),
       ),
-    [mutateSideEffects],
+    onSuccess: refresh,
+  });
+
+  const doses: DoseRecord[] = useMemo(
+    () =>
+      (dosesQuery.data ?? [])
+        .map((raw) => fromApiDose(raw, nameOf))
+        .filter((d): d is DoseRecord => d !== null),
+    [dosesQuery.data, nameOf],
+  );
+  const sideEffects: SideEffectRecord[] = useMemo(
+    () =>
+      (sideEffectsQuery.data ?? [])
+        .map((raw) => fromApiSideEffect(raw, nameOf))
+        .filter((r): r is SideEffectRecord => r !== null),
+    [sideEffectsQuery.data, nameOf],
   );
 
-  const saveMoodEntry = useCallback(
-    (entry: MoodEntry) =>
-      mutateMood((current) => rules.upsertMood(current, entry)),
-    [mutateMood],
-  );
-
-  const dosesOn = useCallback(
-    (date: string) => doses.filter((dose) => dose.date === date),
-    [doses],
-  );
-
-  const moodOn = useCallback(
-    (date: string) => rules.findMood(moodEntries, date),
-    [moodEntries],
-  );
+  const { mutate: mutateDose } = writeDose;
+  const { mutate: mutateSideEffect } = writeSideEffect;
 
   return {
+    /** The day this log reads. */
+    date: day,
     doses,
-    refills,
-    moodEntries,
-
-    dosesOn,
-    moodOn,
+    sideEffects,
     statusOf: useCallback(
-      (date: string, medication: string, time: string) =>
-        rules.statusOf(doses, date, medication, time),
+      (on: string, medicationId: string, time: string) =>
+        rules.statusOf(doses, on, medicationId, time),
       [doses],
     ),
     stampOf: useCallback(
-      (date: string, medication: string, time: string) =>
-        rules.findDose(doses, date, medication, time)?.stampedAt,
+      (on: string, medicationId: string, time: string) =>
+        rules.findDose(doses, on, medicationId, time)?.stampedAt,
       [doses],
     ),
-    needsRefill: useCallback(
-      (medication: string) => rules.needsRefill(refills, medication),
-      [refills],
-    ),
-    refillCount: useMemo(() => rules.refillCount(refills), [refills]),
-
-    sideEffects,
     sideEffectOf: useCallback(
-      (date: string, medication: string, time: string) =>
-        rules.sideEffectOf(sideEffects, date, medication, time),
+      (on: string, medicationId: string, time: string) =>
+        rules.sideEffectOf(sideEffects, on, medicationId, time),
       [sideEffects],
     ),
     reportedSideEffectCount: useCallback(
-      (date: string) => rules.reportedSideEffectCount(sideEffects, date),
+      (on: string) => rules.reportedSideEffectCount(sideEffects, on),
       [sideEffects],
     ),
+    setDoseStatus: useCallback(
+      (on: string, medicationId: string, time: string, status: DoseStatus) =>
+        mutateDose({ date: on, medicationId, time, status }),
+      [mutateDose],
+    ),
+    setSideEffect: useCallback(
+      (
+        on: string,
+        medicationId: string,
+        time: string,
+        effect: SideEffect | null,
+      ) => mutateSideEffect({ date: on, medicationId, time, effect }),
+      [mutateSideEffect],
+    ),
 
-    setDoseStatus,
-    setRefill,
-    setSideEffect,
-    saveMoodEntry,
-
-    /* One pending flag for all three: the page renders them together, and a
-       half-loaded page shows an adherence figure built from nothing. */
-    isPending:
-      dosesQuery.isPending ||
-      refillsQuery.isPending ||
-      moodQuery.isPending ||
-      sideEffectsQuery.isPending,
-    error:
-      dosesQuery.error ??
-      refillsQuery.error ??
-      moodQuery.error ??
-      sideEffectsQuery.error,
+    isPending: dosesQuery.isPending || sideEffectsQuery.isPending,
+    error: dosesQuery.error ?? sideEffectsQuery.error,
     refetch: () => {
       void dosesQuery.refetch();
-      void refillsQuery.refetch();
-      void moodQuery.refetch();
       void sideEffectsQuery.refetch();
     },
     /* A dose that silently failed to save matters: the member believes they
        recorded taking their medication. */
-    saveError:
-      writeDoses.error ??
-      writeRefills.error ??
-      writeMood.error ??
-      writeSideEffects.error,
-    isSavingMood: writeMood.isPending,
+    saveError: writeDose.error ?? writeSideEffect.error,
+    isSaving: writeDose.isPending || writeSideEffect.isPending,
   };
 }
 
 /** What the panels take as a prop. */
 export type MedicationLog = ReturnType<typeof useMedicationLog>;
+
+/** The server's adherence over the last `days` days (default a week). */
+export function useAdherence(days = 7, explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
+  const query = useQuery({
+    queryKey: scopedKey(scope, MEDICATIONS_FEATURE, "adherence", days),
+    queryFn: () => getAdherence(requireScope(scope), days),
+  });
+  return {
+    report: query.data ?? null,
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+  };
+}

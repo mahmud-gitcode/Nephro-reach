@@ -1,51 +1,44 @@
 /* ==========================================================================
-   The medication log — what the member actually records
+   The medication log: what the member actually records (Phase 6)
    --------------------------------------------------------------------------
-   Three separate things, kept apart because they are written at different
-   moments and belong to different keys:
+   Two things, both on the API and both keyed by the medication's server
+   id, the day and the scheduled time (HH:mm):
 
-     doses    one status per scheduled dose per day, stamped when set
-     refills  one flag per medication, so the care team can see who is low
-     mood     one entry per day, how the member felt
+     doses         one status per scheduled dose per day, stamped by the
+                   server when set (`PUT …/medications/:id/doses`)
+     side effects  what the member felt after one dose
+                   (`PUT …/medications/:id/side-effects`)
 
-   None of this existed before. The dose status was a coloured badge printed
-   from seed data, the adherence chart was a fixed SVG path, and the mood
-   form had a Save button wired to nothing — which is why the tracker at the
-   bottom of the page was tracking nothing.
+   The refill flag lives on the medication itself, and the adherence
+   figures are the server's (`GET …/medications/adherence`). The mood
+   section was retired (D8 open): nothing here stores it.
    ========================================================================== */
 
 /**
  * `pending` is the honest starting state and is not the same as `missed`.
- * A dose due at 8pm is not missed at 9am, and colouring it red all day
- * would make an adherence figure that punishes members for the future.
+ * A dose due at 8pm is not missed at 9am. On the API, pending is "no
+ * record": setting a dose back to pending deletes it (the server keeps the
+ * revision).
  */
 export type DoseStatus = "pending" | "taken" | "late" | "missed";
 
 export interface DoseRecord {
+  medicationId: string;
+  /** The medication's name, for display ("" when it is not on the list). */
+  medication: string;
   /** ISO `yyyy-mm-dd` of the day the dose was due. */
   date: string;
-  /** Scheduled clock time, e.g. "08:00 AM". Part of the identity. */
+  /** Scheduled time, HH:mm (24-hour). Part of the identity. */
   time: string;
-  medication: string;
   status: DoseStatus;
-  /**
-   * When the member set the status, not when the dose was due. This is the
-   * timestamp the Dose Schedule shows and the one a care team reads.
-   */
+  /** When the status was set, by the server's clock. */
   stampedAt?: string;
 }
 
-/** Medication name to whether the member says they are running low. */
-export type RefillFlags = Record<string, boolean>;
-
 /**
- * What the member noticed after one scheduled dose.
- *
- * Kept in its own record rather than on DoseRecord, because setting a dose
- * back to `pending` deletes that record — and a side effect must survive a
- * member changing their mind about whether they took the dose. The two are
- * also written at different moments: the status when the dose is taken, the
- * side effect hours later when something is felt.
+ * What the member noticed after one scheduled dose. Kept apart from the
+ * dose, because setting a dose back to `pending` deletes the dose record —
+ * and a side effect must survive a member changing their mind.
  */
 export type SideEffect =
   | "none"
@@ -61,34 +54,51 @@ export type SideEffect =
   | "other";
 
 export interface SideEffectRecord {
+  medicationId: string;
+  /** For display ("" when it is not on the list). */
+  medication: string;
   /** ISO `yyyy-mm-dd` of the day the dose was due. */
   date: string;
-  /** Scheduled clock time. With date and medication, the dose's identity. */
+  /** Scheduled time, HH:mm. With date and medication id, the identity. */
   time: string;
-  medication: string;
   effect: SideEffect;
   savedAt: string;
 }
 
-export interface MoodEntry {
-  /** ISO `yyyy-mm-dd`. One entry per day. */
-  date: string;
-  /** 0 is the best of the five, matching the order shown on screen. */
-  mood: number;
-  notes: string;
-  savedAt: string;
-}
-
-/** Red, amber, green — the band the adherence tracker colours by. */
+/** Red, amber, green: the band the adherence tracker colours by. */
 export type AdherenceBand = "good" | "fair" | "poor";
 
+/** The server's `AdherenceSummaryResponseDto`. */
 export interface AdherenceSummary {
   taken: number;
   late: number;
   missed: number;
-  /** Doses whose time has not passed yet. Excluded from the percentage. */
+  /** Scheduled doses not decided yet. Excluded from the percentage. */
   pending: number;
   /** Taken and late over everything decided, 0-100. Null when nothing is. */
   percent: number | null;
   band: AdherenceBand | null;
+}
+
+/** The server's `GetMedicationAdherenceResponseDto`. */
+export interface AdherenceReport {
+  from: string;
+  to: string;
+  days: number;
+  overall: AdherenceSummary;
+  /** Oldest first. */
+  byDay: { date: string; summary: AdherenceSummary }[];
+  medications: {
+    medicationId: string;
+    name: string;
+    scheduledPerDay: number;
+    summary: AdherenceSummary;
+  }[];
+  missedDoses: {
+    threshold: number;
+    windowDays: number;
+    count: number;
+    triggered: boolean;
+    medicationIds: string[];
+  };
 }

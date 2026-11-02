@@ -1,53 +1,111 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listReminders, saveReminders } from "./reminders.repository";
+/* ==========================================================================
+   Medication reminders, from the API (Phase 6)
+   --------------------------------------------------------------------------
+   `GET …/reminders?kind=MEDICATION`, one per medication id. Setting times
+   for a medication moves its one reminder (PATCH) or creates it (POST);
+   no times, or "delete", removes it. Times go out as HH:mm. Whether a
+   reminder rings (and the member's mute, D21) is the server's job.
+   ========================================================================== */
+
+import { useCallback, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { PatientScope } from "@/lib/data/queryKeys";
 import {
-  removeReminderFor,
-  setReminderTime,
-  setReminderTimes,
-} from "./reminders.rules";
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { usePagedList } from "@/features/profile/usePagedList";
+import {
+  fromApiReminder,
+  toCreateReminderBody,
+  toTimes,
+  type ApiReminder,
+} from "./reminders.mapper";
+import {
+  createReminder,
+  listMedicationReminders,
+  removeReminder,
+  updateReminder,
+} from "./reminders.repository";
+import { reminderFor } from "./reminders.rules";
 import type { MedicationReminder } from "./reminders.types";
+import { MEDICATIONS_FEATURE, medicationsKey } from "./useMedications";
 
 export type { MedicationReminder, ReminderChannel } from "./reminders.types";
 export { reminderFor } from "./reminders.rules";
 
-export const remindersKey = ["medications", "reminders"] as const;
+const identity = (raw: ApiReminder) => raw;
 
-/** A member's medication reminders: when to take what. */
-export function useReminders() {
+/** A member's medication reminders: when to take what. `nameOf` labels
+ *  each one with its medication's name (from useMedications). */
+export function useReminders(
+  explicitScope?: PatientScope | null,
+  nameOf?: (medicationId: string) => string,
+) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
 
-  const query = useQuery({
-    queryKey: remindersKey,
-    queryFn: listReminders,
+  const list = usePagedList({
+    scope,
+    queryKey: scopedKey(scope, MEDICATIONS_FEATURE, "reminders"),
+    params: { limit: 150 },
+    fetch: listMedicationReminders,
+    map: identity,
   });
+  const reminders: MedicationReminder[] = useMemo(
+    () => list.items.map((raw) => fromApiReminder(raw, nameOf)),
+    [list.items, nameOf],
+  );
 
   const write = useMutation({
-    mutationFn: async (
-      transform: (current: MedicationReminder[]) => MedicationReminder[],
-    ) => saveReminders(transform(await listReminders())),
-    onSuccess: (reminders) => queryClient.setQueryData(remindersKey, reminders),
+    mutationFn: async ({
+      medicationId,
+      clocks,
+    }: {
+      medicationId: string;
+      /** "08:00 AM" or "20:00"; empty removes the reminder. */
+      clocks: string[];
+    }) => {
+      const target = requireScope(scope);
+      const times = toTimes(clocks);
+      const existing = reminderFor(reminders, medicationId);
+      if (times.length === 0) {
+        if (existing) await removeReminder(target, existing.id);
+        return null;
+      }
+      if (existing)
+        return updateReminder(target, existing.id, { times, enabled: true });
+      return createReminder(target, toCreateReminderBody(medicationId, times));
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: medicationsKey(scope) }),
   });
+  const { mutateAsync } = write;
 
   return {
-    reminders: query.data ?? [],
-    isPending: query.isPending,
-    error: query.error,
-    refetch: () => void query.refetch(),
+    reminders,
+    isPending: list.isPending,
+    error: list.error,
+    isError: list.isError,
+    refetch: list.refetch,
 
-    setTime: (medicationName: string, time: string) =>
-      write.mutateAsync((current) =>
-        setReminderTime(current, medicationName, time),
-      ),
-    setTimes: (medicationName: string, times: string[]) =>
-      write.mutateAsync((current) =>
-        setReminderTimes(current, medicationName, times),
-      ),
-    remove: (medicationName: string) =>
-      write.mutateAsync((current) =>
-        removeReminderFor(current, medicationName),
-      ),
+    setTimes: useCallback(
+      (medicationId: string, clocks: string[]) =>
+        mutateAsync({ medicationId, clocks }),
+      [mutateAsync],
+    ),
+    setTime: useCallback(
+      (medicationId: string, clock: string) =>
+        mutateAsync({ medicationId, clocks: [clock] }),
+      [mutateAsync],
+    ),
+    remove: useCallback(
+      (medicationId: string) => mutateAsync({ medicationId, clocks: [] }),
+      [mutateAsync],
+    ),
     isSaving: write.isPending,
     saveError: write.error,
     resetSaveError: () => write.reset(),

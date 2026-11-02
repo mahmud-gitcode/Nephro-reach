@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { reminderFor, useReminders } from "@/features/medications/useReminders";
-import { useMedicationLog } from "@/features/medications/useMedicationLog";
+import {
+  useAdherence,
+  useMedicationLog,
+} from "@/features/medications/useMedicationLog";
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { Alert, AsyncSection, Skeleton } from "@/components/ui";
 import {
@@ -21,39 +24,59 @@ import {
 import { MedicationEditModal } from "@/features/medications/MedicationEditModal";
 import { todayIso } from "@/features/medications/medicationLog.rules";
 import { reminderTimes } from "@/features/medications/reminders.rules";
-import { useMedications } from "@/features/medications/useMedications";
+import {
+  useMedicationHistory,
+  useMedications,
+} from "@/features/medications/useMedications";
+import { saveErrorText } from "@/features/profile/saveError";
+import {
+  canRetry,
+  combineReads,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 export default function MedicationLogPage() {
   const { t, language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
 
-  const { reminders, isPending, error, refetch, setTimes, remove } =
-    useReminders();
-
-  /* One log for the whole page. The dose statuses tapped in section 2 are
-     what section 3 counts, so they have to come from one cache or the
-     adherence figure lags the taps that produced it. */
-  const log = useMedicationLog();
-  /* The member's own list, and today's doses built from it. */
+  /* The member's list, from the API, and their reminders by medication id. */
   const meds = useMedications();
+  const reminderState = useReminders(undefined, meds.nameOf);
+  const { reminders, setTimes, remove } = reminderState;
+
+  /* The schedule's day: its doses and side effects are read for that day. */
+  const [date, setDate] = useState(() => todayIso());
+  const log = useMedicationLog(date);
+  /* The adherence figures are the server's, over the last seven days. */
+  const adherence = useAdherence(7);
   const rows = doseRows(meds.medications, reminders);
-  const showSampleAlerts = meds.medications.some((m) =>
-    m.id.startsWith("seed-"),
-  );
 
   const [editing, setEditing] = useState<Medication | null>(null);
+  const history = useMedicationHistory(editing?.id ?? null, isEs);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [selectedMedForReminder, setSelectedMedForReminder] = useState<
     string | undefined
   >(undefined);
 
-  const handleOpenReminderModal = (medName?: string) => {
-    setSelectedMedForReminder(medName || meds.medications[0]?.name || "");
+  const handleOpenReminderModal = (medicationId?: string) => {
+    setSelectedMedForReminder(medicationId || meds.medications[0]?.id || "");
     setIsReminderModalOpen(true);
   };
 
   const activeExistingReminder = selectedMedForReminder
     ? reminderFor(reminders, selectedMedForReminder)
     : null;
+  const selectedName = selectedMedForReminder
+    ? meds.nameOf(selectedMedForReminder)
+    : "";
+
+  /* One state for the four sections that read the list, reminders, the
+     day's log and the adherence: a reminder list that renders empty because
+     its read failed reads as "no medications to take". */
+  const reads = combineReads(meds, reminderState, log, adherence);
+  const saveError = log.saveError ?? meds.saveError;
 
   return (
     <div className="space-y-6">
@@ -63,28 +86,30 @@ export default function MedicationLogPage() {
         <h1 className="text-heading-1 text-fg">{t("medicationsLog.title")}</h1>
       </header>
 
-      {/* One read feeds four sections, so the four states are decided once
-          here rather than four times below. A reminder list that renders
-          empty because the read failed reads as "no medications to take". */}
       {/* A dose the member marked and that did not save is worth saying
-          out loud — they believe they have recorded taking it. */}
-      {log.saveError ? (
-        <Alert tone="danger">
-          {t("medicationsLog.saveFailed") ||
-            "That change did not save. Your log is unchanged — please try again."}
-        </Alert>
+          out loud: they believe they have recorded taking it. */}
+      {saveError ? (
+        <Alert tone="danger">{saveErrorText(saveError, lang)}</Alert>
       ) : null}
 
       <AsyncSection
-        pending={isPending || log.isPending || meds.isPending}
-        error={error ?? log.error ?? meds.error}
-        onRetry={() => {
-          refetch();
-          log.refetch();
-          meds.refetch();
-        }}
-        errorTitle={t("medicationsLog.title")}
-        errorMessage="Your reminders could not be read from this device. Nothing has been changed."
+        pending={reads.pending}
+        error={reads.error}
+        onRetry={canRetry(reads.error) ? reads.onRetry : undefined}
+        errorTitle={errorTitleFor(
+          reads.error,
+          isEs
+            ? "No se pudieron cargar sus medicamentos"
+            : "Your medications could not be loaded",
+          lang,
+        )}
+        errorMessage={errorMessageFor(
+          reads.error,
+          isEs
+            ? "No se cambió nada. Inténtelo de nuevo."
+            : "Nothing has been changed. Please try again.",
+          lang,
+        )}
         skeleton={
           <div className="space-y-6">
             <Skeleton height={220} />
@@ -98,13 +123,21 @@ export default function MedicationLogPage() {
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
             onStatusChange={meds.setStatus}
+            onRefillChange={meds.setNeedsRefill}
+            photoLink={meds.photoLink}
             onEdit={setEditing}
-            log={log}
           />
-          <DoseSchedule rows={rows} reminders={reminders} log={log} />
-          <AdherenceChart log={log} dosesPerDay={Math.max(rows.length, 1)} />
+          <DoseSchedule
+            rows={rows}
+            reminders={reminders}
+            log={log}
+            date={date}
+            onDateChange={setDate}
+          />
+          {adherence.report ? (
+            <AdherenceChart report={adherence.report} />
+          ) : null}
           <AlertsAndMood
-            showSampleAlerts={showSampleAlerts}
             reminders={reminders}
             onOpenReminderModal={handleOpenReminderModal}
           />
@@ -115,18 +148,23 @@ export default function MedicationLogPage() {
         <MedicationEditModal
           key={editing.id}
           medication={editing}
-          isEs={language === "ES"}
+          isEs={isEs}
           saving={meds.isSaving}
+          saveError={
+            meds.saveError ? saveErrorText(meds.saveError, lang) : null
+          }
+          history={history.items}
           onClose={() => setEditing(null)}
           onSave={(change) =>
             void meds
-              .update(editing.id, change, todayIso(new Date()))
+              .update(editing.id, change)
               .then(() => setEditing(null))
+              .catch(() => undefined)
           }
         />
       ) : null}
       {/* Keyed on the medication, so opening it for another one starts from
-          that medication's stored time without an effect syncing it. */}
+          that medication's stored times without an effect syncing it. */}
       <SimpleTimeReminderModal
         key={
           isReminderModalOpen
@@ -135,12 +173,14 @@ export default function MedicationLogPage() {
         }
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
-        medicationName={selectedMedForReminder || ""}
+        medicationName={selectedName}
         currentTimes={
           activeExistingReminder ? reminderTimes(activeExistingReminder) : []
         }
-        onSaveTimes={setTimes}
-        onDeleteReminder={remove}
+        onSaveTimes={(_name, times) =>
+          setTimes(selectedMedForReminder ?? "", times)
+        }
+        onDeleteReminder={() => remove(selectedMedForReminder ?? "")}
       />
     </div>
   );

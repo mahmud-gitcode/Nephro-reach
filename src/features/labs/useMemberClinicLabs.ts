@@ -1,60 +1,66 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+/* ==========================================================================
+   New results from the care team, for the bell and the dashboard (Phase 6)
+   --------------------------------------------------------------------------
+   One small read: the care team's results the member has not marked seen
+   (`GET …/labs?unseen=true`, newest first, one row is enough to say "new
+   result from your clinic"). The prototype looked the member up in the
+   office's own lab store by a demo MRN; that is gone. Marking them seen is
+   the patient's own act (`POST …/labs/seen`), never a caregiver's.
+   ========================================================================== */
+
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import { useMember } from "@/features/auth/useMember";
-import { useClinicLabs } from "@/features/clinic/useClinicLabs";
-import { DEMO_MEMBER_EMAIL, DEMO_MEMBER_MRN } from "@/lib/data/demoIdentity";
-import { hasUnseen, latestByPanel, newestUpload } from "./clinicLabs.member";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { newestFirst } from "./labs.view";
+import { listLabResults, markLabsSeen } from "./labs.repository";
+import { LABS_FEATURE, useIsPatientSelf } from "./useMemberLabs";
 
-/* When the member last looked at their labs, so a new clinic upload can be
-   announced once and not forever. */
-const SEEN_KEY = storageKey("clinic-labs-seen");
-const seenKey = ["labs", "clinic-seen"] as const;
-
-/** The clinic's labs on the signed-in member's chart. With a server, the
- *  member's record carries their MRN; in the demo only the demo patient
- *  has one. */
-export function useMemberClinicLabs() {
-  const member = useMember();
-  const store = useClinicLabs();
+export function useMemberClinicLabs(explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
-  const mrn = member?.email === DEMO_MEMBER_EMAIL ? DEMO_MEMBER_MRN : null;
+  const isPatient = useIsPatientSelf();
 
-  const seen = useQuery({
-    queryKey: seenKey,
-    queryFn: () => readJson<string | null>(SEEN_KEY, null),
+  const query = useQuery({
+    queryKey: scopedKey(scope, LABS_FEATURE, "unseen"),
+    queryFn: async () =>
+      (
+        await listLabResults(
+          requireScope(scope),
+          { limit: 10 },
+          { unseen: true },
+        )
+      ).items,
   });
-  const markSeenMutation = useMutation({
-    mutationFn: (at: string) => writeJson(SEEN_KEY, at),
-    onSuccess: (at) => queryClient.setQueryData(seenKey, at),
+  const seen = useMutation({
+    mutationFn: () => markLabsSeen(requireScope(scope)),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: scopedKey(scope, LABS_FEATURE),
+      }),
   });
+  const { mutate } = seen;
 
-  const latest = useMemo(
-    () => latestByPanel(store.state, mrn),
-    [store.state, mrn],
-  );
-  const newest = useMemo(
-    () => newestUpload(store.state, mrn),
-    [store.state, mrn],
-  );
-  const unseen = !seen.isPending && hasUnseen(newest, seen.data ?? null);
-  const { mutate } = markSeenMutation;
+  const rows = query.data ?? [];
+  const newestRow = newestFirst(rows)[0] ?? null;
 
   return {
-    latest,
-    newest,
-    unseen,
-    isPending: store.isPending,
-    error: store.error ?? seen.error,
-    isError: !!(store.error ?? seen.error),
-    refetch: () => {
-      store.refetch();
-      void seen.refetch();
-    },
+    /** The newest unseen result's draw day, or null. */
+    newest: newestRow ? { date: newestRow.collectedOn.slice(0, 10) } : null,
+    unseen: rows.length > 0,
+    isPending: query.isPending,
+    error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+    canMarkSeen: isPatient,
     markSeen: useCallback(() => {
-      if (newest) mutate(newest.uploadedAt);
-    }, [mutate, newest]),
+      if (isPatient) mutate();
+    }, [isPatient, mutate]),
   };
 }

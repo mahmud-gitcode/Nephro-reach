@@ -16,7 +16,17 @@ import {
   changeFrom,
   type Medication,
   type MedicationChange,
+  type MedicationEdit,
 } from "./medicationList";
+
+/** Who made a change, as the member reads it (the server's actor kind). */
+function actorLabel(kind: string, isEs: boolean): string {
+  if (kind === "PATIENT") return isEs ? "Usted" : "You";
+  if (kind === "CAREGIVER") return isEs ? "Su cuidador" : "Your caregiver";
+  if (kind === "STAFF")
+    return isEs ? "Su equipo de atención" : "Your care team";
+  return isEs ? "Otro" : "Other";
+}
 
 /* ==========================================================================
    Edit a medication (client, 2026-10-07)
@@ -30,12 +40,18 @@ export function MedicationEditModal({
   medication,
   isEs,
   saving,
+  saveError,
+  history = [],
   onSave,
   onClose,
 }: {
   medication: Medication;
   isEs: boolean;
   saving: boolean;
+  /** Why the last save failed, in the member's words (none: null). */
+  saveError?: string | null;
+  /** The server's change history, newest first. */
+  history?: MedicationEdit[];
   onSave: (change: MedicationChange) => void;
   onClose: () => void;
 }) {
@@ -50,7 +66,6 @@ export function MedicationEditModal({
     : isEs
       ? "Escriba la dosis."
       : "Enter the dose.";
-  const history = [...(medication.history ?? [])].reverse();
 
   return (
     <Modal
@@ -81,6 +96,7 @@ export function MedicationEditModal({
       }
     >
       <div className="space-y-stack-md">
+        {saveError ? <Alert tone="danger">{saveError}</Alert> : null}
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
             label={isEs ? "Dosis" : "Dose"}
@@ -196,19 +212,22 @@ export function MedicationEditModal({
               {isEs ? "Historial de cambios" : "Change history"}
             </h3>
             <ul className="mt-stack-sm divide-y divide-line-subtle">
-              {history.map((edit, i) => (
-                <li
-                  key={`${edit.date}-${edit.field}-${i}`}
-                  className="flex flex-wrap justify-between gap-inline-md py-inset-xs text-body-sm"
-                >
-                  <span className="text-fg">
-                    {edit.field}: {edit.from} → {edit.to}
-                  </span>
-                  <span className="text-fg-muted tabular-nums">
-                    {edit.date}
-                  </span>
-                </li>
-              ))}
+              {history.flatMap((edit) =>
+                edit.changes.map((change, i) => (
+                  <li
+                    key={`${edit.id}-${i}`}
+                    className="flex flex-wrap justify-between gap-inline-md py-inset-xs text-body-sm"
+                  >
+                    <span className="text-fg">
+                      {change.field}: {change.from} → {change.to}
+                    </span>
+                    <span className="text-fg-muted tabular-nums">
+                      {edit.at.slice(0, 10)} ·{" "}
+                      {actorLabel(edit.actorKind, isEs)}
+                    </span>
+                  </li>
+                )),
+              )}
             </ul>
           </section>
         ) : null}
