@@ -3,15 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, HandHeart, LogOut } from "lucide-react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Modal,
-} from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Modal } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { signOut } from "@/lib/data/session";
 import { invitationErrorKey } from "@/features/portal/InvitationPage";
@@ -89,7 +81,7 @@ export default function CaregiverHome() {
 
       {invites.invitations.length > 0 ? (
         <Card>
-          <CardHeader title="Invitations" />
+          <h2 className="text-heading-5 text-fg">Invitations</h2>
           <ul className="mt-stack-md divide-y divide-line">
             {invites.invitations.map((inv) => (
               <li
@@ -170,10 +162,12 @@ export default function CaregiverHome() {
 
       {patients.length > 0 ? (
         <Card>
-          <CardHeader
-            title="People you care for"
-            description="Open a patient to use NephroReach for them. You can switch at any time from the bar at the top of every page."
-          />
+          {/* An h2 under the page's h1 (CardHeader is an h3). */}
+          <h2 className="text-heading-5 text-fg">People you care for</h2>
+          <p className="mt-stack-xs text-body-sm text-fg-muted">
+            Open a patient to use NephroReach for them. You can switch at any
+            time from the bar at the top of every page.
+          </p>
           <ul className="mt-stack-md space-y-stack-xs">
             {patients.map((p) => {
               const current = grant?.grantId === p.grantId;
