@@ -2,15 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   activitiesDone,
   attemptsLeft,
-  buildAttempt,
   dueVideoQuestion,
   emptyQuestion,
   gradeAnswer,
   hasPassed,
   isAnswered,
+  isBlinded,
   parseClock,
   questionProblem,
-  scoreQuiz,
   shuffledBySeed,
   withKind,
 } from "./questions.rules";
@@ -90,41 +89,41 @@ describe("answered", () => {
   });
 });
 
-describe("scoring", () => {
-  const questions = [choice("q1"), choice("q2"), reflection];
-
-  it("scores only the questions with a right answer", () => {
-    const score = scoreQuiz(
-      questions,
-      { q1: answer("q1", { value: "a" }), q2: answer("q2", { value: "b" }) },
-      50,
-    );
-    expect(score).toEqual({ correct: 1, total: 2, percent: 50, passed: true });
+describe("attempts (the server scores them)", () => {
+  const attempt = (passed: boolean, at: string) => ({
+    id: at,
+    quizKey: "final",
+    answers: {},
+    correct: passed ? 1 : 0,
+    total: 1,
+    percent: passed ? 100 : 0,
+    passed,
+    submittedAt: at,
   });
 
-  it("fails below the pass mark", () => {
-    expect(scoreQuiz(questions, {}, 70).passed).toBe(false);
-  });
-
-  it("cannot fail a check with nothing to mark", () => {
-    expect(scoreQuiz([reflection], {}, 70)).toMatchObject({
-      percent: 100,
-      passed: true,
-    });
-  });
-
-  it("tracks attempts and passes per quiz", () => {
-    const failed = buildAttempt("final", [choice("q1")], {}, 70);
-    const passed = buildAttempt(
-      "final",
-      [choice("q1")],
-      { q1: answer("q1", { value: "a" }) },
-      70,
-    );
+  it("tracks attempts and passes per quiz from the server rows", () => {
+    const failed = attempt(false, "2026-11-01T10:00:00Z");
+    const passed = attempt(true, "2026-11-01T11:00:00Z");
     expect(hasPassed([failed], "final")).toBe(false);
     expect(hasPassed([failed, passed], "final")).toBe(true);
     expect(attemptsLeft([failed, passed], "final", 3)).toBe(1);
     expect(attemptsLeft([failed], "final", 0)).toBeNull();
+  });
+
+  it("never grades a blinded exam question (no key from the server)", () => {
+    const blind: Question = { ...choice("x"), correctOptionId: undefined };
+    expect(isBlinded(blind)).toBe(true);
+    expect(gradeAnswer(blind, answer("x", { value: "a" }))).toBeNull();
+    const match: Question = {
+      ...emptyQuestion("matching"),
+      id: "m",
+      pairs: [{ id: "p1", leftEn: "L", leftEs: "" }],
+      matchOptions: [{ id: "opaque", textEn: "R", textEs: "" }],
+    };
+    expect(isBlinded(match)).toBe(true);
+    expect(
+      gradeAnswer(match, answer("m", { pairs: { p1: "opaque" } })),
+    ).toBeNull();
   });
 });
 

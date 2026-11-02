@@ -26,13 +26,13 @@ import {
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
+  Alert,
+  AsyncSection,
   Badge,
-  BarChart,
   Button,
   Card,
+  EmptyState,
   KeyCard,
-  ChartLegend,
-  DonutChart,
   MonthCalendar,
   Progress,
   Skeleton,
@@ -45,17 +45,19 @@ import {
   TableRow,
 } from "@/components/ui";
 import { tableIconButton } from "./tableButton";
-import {
-  attendanceTrend,
-  classDate,
-  formatClassDate,
-  registrationSources,
-  settings,
-  summary,
-  upcomingClasses,
-} from "./liveClass.data";
+import { classDate, formatClassDate, settings } from "./liveClass.data";
 import type { RecentClass } from "./liveClass.data";
 import { useLiveClasses } from "./useLiveClasses";
+import { zoneLabel } from "./liveClass.mappers";
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
+import { toDay } from "@/lib/api/paging";
+
+const todayDay = () => toDay(new Date());
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import {
   classesOnDay,
   settingSummary,
@@ -131,13 +133,47 @@ function Rating({ value, size = "h-4 w-4" }: { value: number; size?: string }) {
   );
 }
 
-function SummaryCards() {
+/* The figures come from the classes the server returned: this month's
+   upcoming classes and their registrations; for the NephroReach team also
+   attendance and ratings of the classes held. Where the API has no figure
+   (an office cannot see attendance; no trend or feedback route exists) the
+   card says so instead of showing a sample number. */
+function SummaryCards({
+  upcoming,
+  classes,
+  today,
+  manage,
+}: {
+  upcoming: ManagedClass[];
+  classes: ManagedClass[];
+  today: string;
+  manage: boolean;
+}) {
+  const month = today.slice(0, 7);
+  const thisMonth = upcoming.filter((c) => c.date.startsWith(month)).length;
+  const registrations = upcoming.reduce((sum, c) => sum + c.registered, 0);
+  const held = classes.filter(
+    (c) => c.status !== "Cancelled" && c.date < today,
+  );
+  const booked = held.reduce((sum, c) => sum + c.registered, 0);
+  const joined = held.reduce((sum, c) => sum + (c.attended ?? 0), 0);
+  const attendance =
+    manage && booked > 0 ? Math.round((joined / booked) * 100) : null;
+  const rated = held.filter((c) => (c.averageRating ?? 0) > 0);
+  const rating =
+    manage && rated.length > 0
+      ? Math.round(
+          (rated.reduce((sum, c) => sum + (c.averageRating ?? 0), 0) /
+            rated.length) *
+            10,
+        ) / 10
+      : null;
   return (
     <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
       <KeyCard
         tone="brand"
         icon={<VideoSolid />}
-        value={summary.upcomingThisMonth}
+        value={thisMonth}
         label="Upcoming Live Classes"
         note="This month"
       />
@@ -145,43 +181,36 @@ function SummaryCards() {
       <KeyCard
         tone="success"
         icon={<UsersSolid />}
-        value={summary.totalRegistrations}
+        value={registrations}
         label="Total Registrations"
-        trend={{
-          direction: "up",
-          value: `${summary.registrationsChangePct}%`,
-          suffix: "from last month",
-        }}
+        note="For upcoming classes"
       />
 
       <KeyCard
         tone="brand"
         icon={<UserCheckSolid />}
-        value={`${summary.averageAttendancePct}%`}
+        value={attendance === null ? "—" : `${attendance}%`}
         label="Average Attendance"
-        trend={{
-          direction:
-            summary.averageAttendancePct >= summary.lastMonthAttendancePct
-              ? "up"
-              : "down",
-          value: `${summary.averageAttendancePct - summary.lastMonthAttendancePct}pts`,
-          suffix: "from last month",
-          good: summary.averageAttendancePct >= summary.lastMonthAttendancePct,
-        }}
+        note={attendance === null ? "No data yet" : "Classes held"}
       />
 
       <KeyCard
         tone="warning"
         icon={<StarSolid />}
         value={
-          <>
-            {summary.averageRating}
-            <span className="text-heading-4 text-fg-muted">/5</span>
-          </>
+          rating === null ? (
+            "—"
+          ) : (
+            <>
+              {rating}
+              <span className="text-heading-4 text-fg-muted">/5</span>
+            </>
+          )
         }
         label="Average Rating"
+        note={rating === null ? "No data yet" : undefined}
       >
-        <Rating value={summary.averageRating} />
+        {rating === null ? null : <Rating value={rating} />}
       </KeyCard>
 
       {/* Not a figure, so not a KeyCard: there is no number to lead with
@@ -190,8 +219,8 @@ function SummaryCards() {
         <p className="text-heading-5 text-fg-secondary">Member Feedback</p>
         <figure className="mt-stack-md flex flex-1 flex-col">
           <Quote aria-hidden="true" className="h-5 w-5 text-fg-brand" />
-          <blockquote className="mt-stack-xs text-body-md text-fg italic">
-            {summary.feedback}
+          <blockquote className="mt-stack-xs text-body-md text-fg-muted">
+            No data yet
           </blockquote>
           <figcaption className="mt-auto pt-stack-sm text-caption text-fg-muted">
             — Member Feedback
@@ -328,7 +357,11 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
   const first =
     requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
       ? classDate(requested)
-      : classDate(classes[0]?.date ?? upcomingClasses[0].date);
+      : classDate(
+          classes.find((c) => c.date >= todayDay())?.date ??
+            classes[0]?.date ??
+            todayDay(),
+        );
   const [year, setYear] = useState(first.getFullYear());
   const [month, setMonth] = useState(first.getMonth());
   const [day, setDay] = useState<number | null>(first.getDate());
@@ -403,7 +436,8 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
               <div className="min-w-0 flex-1">
                 <p className="text-label-lg text-fg">{item.topic}</p>
                 <p className="text-body-sm text-fg-secondary">
-                  {formatClassDate(item.date)} · {item.time} EST
+                  {formatClassDate(item.date)} · {item.time}{" "}
+                  {zoneLabel(item.startsAt ?? new Date())}
                 </p>
                 <p className="text-body-sm text-fg-muted">
                   {item.educator} · {item.registered}/{item.capacity} registered
@@ -445,7 +479,7 @@ function RecentLiveClasses({
       <ul className="divide-y divide-line-subtle">
         {classes.slice(0, 4).map((item) => (
           <li
-            key={item.title}
+            key={item.id}
             className="flex items-center gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
           >
             <span
@@ -457,7 +491,8 @@ function RecentLiveClasses({
             <div className="min-w-0 flex-1">
               <p className="text-label-lg text-fg">{item.title}</p>
               <p className="text-caption text-fg-muted">
-                {formatClassDate(item.date)} · {item.attended} attended
+                {formatClassDate(item.date)}
+                {item.attended !== null ? ` · ${item.attended} attended` : ""}
               </p>
               <p className="mt-stack-xs flex items-center gap-inline-xs text-caption text-fg-secondary">
                 {item.rating > 0 ? (
@@ -466,8 +501,8 @@ function RecentLiveClasses({
                     <span aria-hidden="true">{item.rating}</span>
                   </>
                 ) : null}
-                <Badge tone={recordings[item.title] ? "success" : "neutral"}>
-                  {recordings[item.title] ? "Published" : "Not published"}
+                <Badge tone={recordings[item.id] ? "success" : "neutral"}>
+                  {recordings[item.id] ? "Published" : "Not published"}
                 </Badge>
               </p>
             </div>
@@ -478,28 +513,26 @@ function RecentLiveClasses({
                 appearance="fill-stroke"
                 size="small"
                 aria-label={
-                  recordings[item.title]
+                  recordings[item.id]
                     ? `Edit ${item.title} recording`
                     : `Publish ${item.title} recording`
                 }
               >
-                {recordings[item.title] ? "Edit" : "Publish"}
+                {recordings[item.id] ? "Edit" : "Publish"}
               </Button>
             ) : (
               <Button
                 variant="neutral"
                 appearance="fill-stroke"
                 size="small"
-                disabled={!recordings[item.title]}
-                title={recordings[item.title] ? undefined : "Not posted yet"}
+                disabled={!recordings[item.id]}
+                title={recordings[item.id] ? undefined : "Not posted yet"}
                 aria-label={`Watch ${item.title} recording`}
-                onClick={() =>
-                  window.open(
-                    recordings[item.title],
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
-                }
+                onClick={() => {
+                  const link = recordings[item.id];
+                  if (isSafeLinkUrl(link))
+                    window.open(link, "_blank", "noopener,noreferrer");
+                }}
               >
                 Watch
               </Button>
@@ -523,30 +556,15 @@ function RecentLiveClasses({
   );
 }
 
+/* No server figure exists for these two yet (Phase 13 design §2.5,
+   MISSING-BACKEND): the cards stay, and say so. */
 function RegistrationSources() {
   return (
     <Card as="section" padding="small">
       <PanelHeading title="Registration Sources" />
-      <DonutChart
-        segments={registrationSources.map((source) => ({
-          label: source.label,
-          value: source.pct,
-          tone: source.tone,
-        }))}
-        label="Registration sources"
-        size={168}
-        thickness={30}
-        centerValue={summary.totalRegistrations}
-        centerLabel="Registrations"
-        className="mx-auto"
-      />
-      <ChartLegend
-        className="mt-stack-lg"
-        items={registrationSources.map((source) => ({
-          label: source.label,
-          tone: source.tone,
-          value: `${source.pct}%`,
-        }))}
+      <EmptyState
+        title="No data yet"
+        description="Registration sources are not recorded yet."
       />
     </Card>
   );
@@ -556,13 +574,9 @@ function AttendanceTrend() {
   return (
     <Card as="section" padding="small">
       <PanelHeading title="Attendance Trend" />
-      <BarChart
-        bars={attendanceTrend}
-        label="Live class attendance by month"
-        unit="%"
-        yMax={100}
-        yTicks={6}
-        height={240}
+      <EmptyState
+        title="No data yet"
+        description="Attendance by month is not recorded yet."
       />
     </Card>
   );
@@ -625,7 +639,7 @@ export default function ClinicLiveClass({
   manage?: boolean;
   href?: string;
 }) {
-  const live = useLiveClasses();
+  const live = useLiveClasses({ manage });
   const past = live.past;
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -662,41 +676,66 @@ export default function ClinicLiveClass({
         }
       />
 
-      <SummaryCards />
+      {live.saveError ? (
+        <Alert tone="danger" onDismiss={live.dismissSaveError}>
+          {live.saveError.message ||
+            "That change did not save. Please try again."}
+        </Alert>
+      ) : null}
 
-      <UpcomingClassesTable
-        classes={live.upcoming}
-        onViewAll={() => setAllOpen(true)}
-        onEdit={manage ? openSchedule : undefined}
-        onActions={manage ? setActing : undefined}
-      />
+      <AsyncSection
+        pending={live.isPending}
+        error={live.error}
+        errorTitle={errorTitleFor(live.error, "Live classes did not load")}
+        errorMessage={errorMessageFor(live.error, undefined)}
+        onRetry={canRetry(live.error) ? live.refetch : undefined}
+        skeleton={<Skeleton height={560} className="rounded-card" />}
+      >
+        <div className="space-y-4">
+          <SummaryCards
+            upcoming={live.upcoming}
+            classes={live.classes}
+            today={live.today}
+            manage={manage}
+          />
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <Suspense fallback={<Skeleton height={560} className="rounded-card" />}>
-          <LiveClassCalendar classes={live.classes} />
-        </Suspense>
-        <RecentLiveClasses
-          classes={past}
-          recordings={live.recordings}
-          onView={manage ? setRecording : undefined}
-          onViewAll={manage ? () => setLibraryOpen(true) : undefined}
-        />
-        <RegistrationSources />
-      </section>
+          <UpcomingClassesTable
+            classes={live.upcoming}
+            onViewAll={() => setAllOpen(true)}
+            onEdit={manage ? openSchedule : undefined}
+            onActions={manage ? setActing : undefined}
+          />
 
-      {manage ? (
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <AttendanceTrend />
-          <div className="xl:col-span-2">
-            <LiveClassSettings
-              values={live.settings}
-              onManage={(id, title) => setSetting({ id, title })}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <Suspense
+              fallback={<Skeleton height={560} className="rounded-card" />}
+            >
+              <LiveClassCalendar classes={live.classes} />
+            </Suspense>
+            <RecentLiveClasses
+              classes={past}
+              recordings={live.recordings}
+              onView={manage ? setRecording : undefined}
+              onViewAll={manage ? () => setLibraryOpen(true) : undefined}
             />
-          </div>
-        </section>
-      ) : (
-        <AttendanceTrend />
-      )}
+            <RegistrationSources />
+          </section>
+
+          {manage ? (
+            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <AttendanceTrend />
+              <div className="xl:col-span-2">
+                <LiveClassSettings
+                  values={live.settings}
+                  onManage={(id, title) => setSetting({ id, title })}
+                />
+              </div>
+            </section>
+          ) : (
+            <AttendanceTrend />
+          )}
+        </div>
+      </AsyncSection>
 
       {/* The dialogs behind the actions above. Keyed where they hold a
           draft, so a reopened form starts from what it was given. */}
@@ -738,7 +777,7 @@ export default function ClinicLiveClass({
         key={`recording-${recording?.title ?? "none"}`}
         item={recording}
         onClose={() => setRecording(null)}
-        link={recording ? (live.recordings[recording.title] ?? "") : ""}
+        link={recording ? (live.recordings[recording.id] ?? "") : ""}
         onSave={live.setRecording}
       />
 

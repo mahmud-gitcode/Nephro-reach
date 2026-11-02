@@ -17,12 +17,24 @@ import { formatTotalDuration } from "@/features/education/dialysisJourneyData";
 import {
   Course,
   courseClassCount,
-  courseDocumentCount,
   courseMinutes,
-  useCourseLibrary,
 } from "@/features/education/courseLibrary";
+import { usePlatformCourses } from "@/features/education/usePlatformCourses";
 import { CourseModal } from "@/features/education/admin/CourseAdmin";
-import { Alert, AsyncSection, Skeleton } from "@/components/ui";
+import { Alert, AsyncSection, Badge, Skeleton } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+
+/* Phase 13: the library is the server's (GET /platform/courses, every
+   status; platform `content` permission, which the server checks). */
+const STATUS_TONE = {
+  published: "success",
+  draft: "neutral",
+  archived: "warning",
+} as const;
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -83,6 +95,14 @@ function CourseCard({
             <h3 className="truncate text-body-lg font-semibold text-fg">
               {course.titleEn}
             </h3>
+            <Badge
+              tone={
+                STATUS_TONE[course.status as keyof typeof STATUS_TONE] ??
+                "neutral"
+              }
+            >
+              {course.status}
+            </Badge>
             {course.seeded && (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-caption font-bold text-fg-muted">
                 <Lock className="h-3 w-3" />
@@ -100,7 +120,7 @@ function CourseCard({
         <div>
           <dt className="text-caption font-semibold text-fg-muted">Modules</dt>
           <dd className="mt-0.5 text-body-md font-bold text-fg">
-            {course.modules.length}
+            {course.counts?.modules ?? course.modules.length}
           </dd>
         </div>
         <div>
@@ -150,7 +170,7 @@ export default function ManageCurriculumPage() {
     refetch,
     saveError,
     dismissSaveError,
-  } = useCourseLibrary();
+  } = usePlatformCourses();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -163,11 +183,6 @@ export default function ManageCurriculumPage() {
         .includes(needle),
     );
   }, [courses, query]);
-
-  const totalDocuments = courses.reduce(
-    (total, course) => total + courseDocumentCount(course),
-    0,
-  );
 
   return (
     <>
@@ -184,7 +199,7 @@ export default function ManageCurriculumPage() {
         <SummaryCard
           label="Courses"
           value={totals.courses}
-          detail="Published to My Classroom"
+          detail="Every status, drafts included"
           icon={GraduationCap}
           tone="bg-brand-100"
           iconTone="text-fg-brand"
@@ -208,7 +223,7 @@ export default function ManageCurriculumPage() {
         <SummaryCard
           label="Total length"
           value={formatTotalDuration(totals.minutes)}
-          detail={`${totalDocuments} handouts attached`}
+          detail="Across every course"
           icon={Clock3}
           tone="bg-accent-100"
           iconTone="text-accent-fg"
@@ -257,15 +272,16 @@ export default function ManageCurriculumPage() {
         >
           {saveError instanceof Error
             ? saveError.message
-            : "The catalogue on this device is unchanged. Please try again."}
+            : "Nothing was changed. Please try again."}
         </Alert>
       ) : null}
 
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle="The course catalogue did not load"
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(error, "The course catalogue did not load")}
+        errorMessage={errorMessageFor(error, undefined)}
         skeleton={
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             <Skeleton height={240} />

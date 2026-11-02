@@ -6,19 +6,43 @@ import { AsyncSection, Skeleton } from "@/components/ui";
 import { useClassroom } from "@/features/education/classroom";
 import { FINAL_QUIZ_KEY } from "@/features/education/questions.rules";
 import { QuizRunner } from "@/features/education/member/QuizRunner";
+import { useLearnerRecord } from "@/features/education/useLearnerRecord";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* The course's final exam. Passing it can unlock the certificate. */
 export default function FinalExamPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const { course, isPending, error, refetch } = useClassroom();
+  /* The attempts are the patient's: a caregiver without the education
+     grant gets the not-shared state here, before any question shows. */
+  const learner = useLearnerRecord();
+  const readError = error ?? learner.error;
+  const lang = isEs ? "es" : "en";
 
   return (
     <div className="mx-auto w-full max-w-[900px]">
       <AsyncSection
-        pending={isPending}
-        error={error}
-        onRetry={refetch}
+        pending={isPending || learner.isPending}
+        error={readError}
+        errorTitle={errorTitleFor(
+          readError,
+          isEs ? "El examen no cargó" : "The exam did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(readError, undefined, lang)}
+        onRetry={
+          canRetry(readError)
+            ? () => {
+                refetch();
+                learner.refetch();
+              }
+            : undefined
+        }
         skeleton={<Skeleton height={320} />}
       >
         {course ? (

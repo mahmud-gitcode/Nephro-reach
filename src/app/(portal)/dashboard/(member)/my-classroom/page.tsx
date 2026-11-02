@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
-  certificateStatus,
   ClassroomLesson,
   courseWords,
   formatMinutes,
@@ -34,15 +33,24 @@ import {
   useJourneyProgress,
 } from "@/features/education/useJourneyProgress";
 import { useLearnerRecord } from "@/features/education/useLearnerRecord";
+import { useLearnerCourse } from "@/features/education/useLearnerCourse";
 import {
+  Alert,
   AsyncSection,
   Badge,
+  Button,
   buttonStyles,
   Card,
+  EmptyState,
   Progress,
   SectionTitle,
   Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { MyHospitalCourse } from "@/features/hospital/MyHospitalCourse";
 import { PageTitle } from "@/components/layout/PageTitle";
 
@@ -211,10 +219,15 @@ export default function MyClassroomPage() {
   const { progress, completedCount, overallPercent, nextDay, hasStarted } =
     progressHook;
   const learner = useLearnerRecord();
+  const record = useLearnerCourse(course);
   const words = courseWords(course, isEs);
+  const access = progressHook.access;
+  const lang = isEs ? "es" : "en";
 
   const pending =
     classroom.isPending || progressHook.isPending || learner.isPending;
+  const readError = classroom.error ?? progressHook.error ?? learner.error;
+  const enrollRefused = record.enroll.error;
 
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-stack-xl">
@@ -228,13 +241,22 @@ export default function MyClassroomPage() {
           skeleton. */}
       <AsyncSection
         pending={pending}
-        error={classroom.error ?? progressHook.error ?? learner.error}
-        onRetry={() => {
-          classroom.refetch();
-          progressHook.refetch();
-          learner.refetch();
-        }}
-        errorTitle="Your classroom did not load"
+        error={readError}
+        onRetry={
+          canRetry(readError)
+            ? () => {
+                classroom.refetch();
+                progressHook.refetch();
+                learner.refetch();
+              }
+            : undefined
+        }
+        errorTitle={errorTitleFor(
+          readError,
+          isEs ? "Tu salón no cargó" : "Your classroom did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(readError, undefined, lang)}
         skeleton={
           <Card className="flex flex-col gap-stack-lg">
             <Skeleton variant="text" width="45%" height={28} />
@@ -244,8 +266,69 @@ export default function MyClassroomPage() {
           </Card>
         }
       >
-        {course ? (
+        {classroom.missing ? (
+          <EmptyState
+            icon={<BookOpen aria-hidden="true" />}
+            title={
+              isEs
+                ? "El viaje aún no está disponible"
+                : "The journey is not available yet"
+            }
+            description={
+              isEs
+                ? "Tu equipo de NephroReach todavía no ha publicado el curso."
+                : "The NephroReach team has not published the course yet."
+            }
+          />
+        ) : null}
+        {course && access && !access.enrolled ? (
+          <Card as="section" aria-labelledby="classroom-start">
+            <SectionTitle
+              id="classroom-start"
+              title={isEs ? course.titleEs || course.titleEn : course.titleEn}
+              subtitle={
+                isEs
+                  ? course.descriptionEs || course.descriptionEn
+                  : course.descriptionEn
+              }
+            />
+            {enrollRefused ? (
+              <Alert tone="danger">
+                {isEs
+                  ? "No pudimos inscribirte. Inténtalo de nuevo."
+                  : "We could not enroll you. Please try again."}
+              </Alert>
+            ) : null}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button
+                onClick={() => record.enroll.mutate()}
+                loading={record.enroll.isPending}
+              >
+                <Play aria-hidden="true" className="fill-current" />
+                {isEs ? "Empezar el viaje" : "Start the journey"}
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+        {course && access && access.enrolled ? (
           <div className="space-y-stack-xl">
+            {!access.open ? (
+              <Alert tone="info" live={false}>
+                {access.accessUntil
+                  ? isEs
+                    ? `Tu acceso terminó el ${new Date(access.accessUntil).toLocaleDateString("es-ES")}. Puedes ver tu progreso, pero no guardar cambios.`
+                    : `Your access ended on ${new Date(access.accessUntil).toLocaleDateString("en-US")}. You can see your progress but not save changes.`
+                  : isEs
+                    ? "Tu acceso a este curso terminó. Puedes ver tu progreso, pero no guardar cambios."
+                    : "Your access to this course has ended. You can see your progress but not save changes."}
+              </Alert>
+            ) : access.accessUntil ? (
+              <Alert tone="info" live={false}>
+                {isEs
+                  ? `Tu acceso termina el ${new Date(access.accessUntil).toLocaleDateString("es-ES")}.`
+                  : `Your access ends on ${new Date(access.accessUntil).toLocaleDateString("en-US")}.`}
+              </Alert>
+            ) : null}
             {/* ---- the course ---- */}
             <Card as="section" aria-labelledby="classroom-course">
               <SectionTitle
@@ -402,12 +485,8 @@ export default function MyClassroomPage() {
                 title={isEs ? "Termina el curso" : "Finish the course"}
               />
               {(() => {
-                const status = certificateStatus(
-                  course,
-                  lessons,
-                  progress,
-                  learner.attempts,
-                );
+                /* The server's reckoning, never the browser's. */
+                const status = learner.certificateStatus;
                 const finalBest = bestAttempt(learner.attempts, FINAL_QUIZ_KEY);
                 return (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

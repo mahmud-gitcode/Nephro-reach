@@ -26,15 +26,22 @@ import {
 } from "@/features/education/questions.rules";
 import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useLearnerRecord } from "@/features/education/useLearnerRecord";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { DayCard } from "../page";
 import {
+  AsyncSection,
   Button,
   Badge,
   Card,
   EmptyState,
   Select,
   Tabs,
+  Skeleton,
   TabPanel,
 } from "@/components/ui";
 import type { TabItem } from "@/components/ui";
@@ -173,10 +180,14 @@ function MyClassroomDetailsContent() {
   const searchParams = useSearchParams();
   const initialModule = searchParams.get("module") || "all";
 
-  const { course, lessons, groups } = useClassroom();
+  const classroom = useClassroom();
+  const { course, lessons, groups } = classroom;
   const words = courseWords(course, isEs);
-  const { getProgress, progress } = useJourneyProgress(lessons);
+  const journey = useJourneyProgress(lessons);
+  const { getProgress, progress } = journey;
   const { attempts } = useLearnerRecord();
+  const readError = journey.error;
+  const lang = isEs ? "es" : "en";
 
   const [moduleTab, setModuleTab] = useState<ModuleTab>(initialModule);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -299,45 +310,59 @@ function MyClassroomDetailsContent() {
           </div>
         </Card>
 
-        {/* Class Cards Grid (max 4 cards per row) */}
-        <TabPanel
-          id={activeTab}
-          value={activeTab}
-          className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        {/* Class Cards Grid (max 4 cards per row). A failed read is an
+            error, never "no classes match". */}
+        <AsyncSection
+          pending={journey.isPending}
+          error={readError}
+          errorTitle={errorTitleFor(
+            readError,
+            isEs ? "Tus clases no cargaron" : "Your classes did not load",
+            lang,
+          )}
+          errorMessage={errorMessageFor(readError, undefined, lang)}
+          onRetry={canRetry(readError) ? journey.refetch : undefined}
+          skeleton={<Skeleton height={240} />}
         >
-          {visibleDays.map((day) => (
-            <DayCard
-              key={day.slug}
-              day={day}
-              state={getProgress(day.slug)}
-              itemWord={words.item}
-            />
-          ))}
-        </TabPanel>
+          <TabPanel
+            id={activeTab}
+            value={activeTab}
+            className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+          >
+            {visibleDays.map((day) => (
+              <DayCard
+                key={day.slug}
+                day={day}
+                state={getProgress(day.slug)}
+                itemWord={words.item}
+              />
+            ))}
+          </TabPanel>
 
-        {visibleDays.length === 0 && (
-          <EmptyState
-            icon={<Filter />}
-            title={
-              j?.noResults ||
-              (isEs
-                ? "Ninguna clase coincide con este filtro."
-                : "No classes match this filter.")
-            }
-            action={
-              <Button
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => {
-                  setModuleTab("all");
-                  setStatusFilter("all");
-                }}
-              >
-                {isEs ? "Restablecer filtros" : "Reset filters"}
-              </Button>
-            }
-          />
-        )}
+          {visibleDays.length === 0 && (
+            <EmptyState
+              icon={<Filter />}
+              title={
+                j?.noResults ||
+                (isEs
+                  ? "Ninguna clase coincide con este filtro."
+                  : "No classes match this filter.")
+              }
+              action={
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={() => {
+                    setModuleTab("all");
+                    setStatusFilter("all");
+                  }}
+                >
+                  {isEs ? "Restablecer filtros" : "Reset filters"}
+                </Button>
+              }
+            />
+          )}
+        </AsyncSection>
       </div>
     </NoticeRailLayout>
   );

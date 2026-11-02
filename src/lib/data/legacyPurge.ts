@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 7;
+export const STORAGE_VERSION = 9;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -240,6 +240,21 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 7,
     why: "Phase 7: no screen reads or writes this key (the Urine Output section was removed 2026-10-05); urine output is /patients/:id/urine-output on the check-in. Removed so its old rows do not linger.",
   },
+  {
+    name: "classroom-learner",
+    since: 9,
+    why: "Phase 13: lesson answers, exam attempts and certificates are the learner record on /patients/:id/education/courses/:courseId (attempts scored by the server, certificates only from POST …/certificate). The old rows held client-scored attempts and self-issued certificates; nothing reads them. No screen reads this key.",
+  },
+  {
+    name: "journey-progress",
+    since: 9,
+    why: "Phase 13: class progress is the learner record (open, watched, complete, reopen per class id). No screen reads this key.",
+  },
+  {
+    name: "journey-notes",
+    since: 9,
+    why: "Phase 13: notes are PUT /patients/:id/education/classes/:classId/note, read from the learner record. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that
@@ -263,6 +278,14 @@ export const RETIRED_KEYS: readonly string[] = [
   /* Phase 3: caregiver grants with their invite ids (link secrets). Grants
      come from /patients/:id/caregivers and /me/context caregiving[]. */
   "nr:caregiver-grants",
+  /* Phase 13 (STORAGE_VERSION 9): the course catalogue every browser
+     edited. Courses are GET /courses (published, blinded for members) and
+     /platform/courses (the content team). */
+  "nr:course-library",
+  /* Phase 13: the live-class schedule, recording links and settings kept in
+     this browser. They are /live-classes, /platform/live-classes and
+     /platform/live-class-settings. */
+  "nr:clinic-live-class",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */

@@ -48,10 +48,17 @@ import { QuizRunner } from "@/features/education/member/QuizRunner";
 import type { VideoQuestion } from "@/features/education/questions.types";
 import { toVtt, withResolvedEnds } from "@/features/education/vtt";
 import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
   LessonActivities,
   VideoQuestionDialog,
 } from "@/features/education/member/LessonActivities";
 import {
+  Alert,
+  AsyncSection,
   Button,
   buttonStyles,
   Card,
@@ -68,9 +75,11 @@ function kindLabel(
   return j?.typeVideo || "Video";
 }
 
-/** A caption track for one language, built from the lesson transcript. */
+/** A caption track for one language, built from the lesson transcript
+ *  cues (no caption file is stored). The Blob URL is revoked when the
+ *  lesson or language changes, and on leaving the page. */
 function useCaptionTrack(day: JourneyDay, language: "EN" | "ES") {
-  return useMemo(() => {
+  const url = useMemo(() => {
     if (typeof window === "undefined") return null;
     const cues = withResolvedEnds(
       day.transcript.map((cue) => ({
@@ -82,6 +91,13 @@ function useCaptionTrack(day: JourneyDay, language: "EN" | "ES") {
     if (cues.length === 0) return null;
     return URL.createObjectURL(new Blob([toVtt(cues)], { type: "text/vtt" }));
   }, [day, language]);
+  useEffect(
+    () => () => {
+      if (url) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
+  return url;
 }
 
 /**
@@ -350,6 +366,9 @@ export default function JourneyDayPage() {
     markIncomplete,
     recordWatched,
     completedCount,
+    access,
+    error: progressError,
+    refetch: refetchProgress,
   } = useJourneyProgress(lessons);
 
   const { answers, attempts } = useLearnerRecord();
@@ -359,7 +378,7 @@ export default function JourneyDayPage() {
   const canComplete = !day
     ? true
     : isExam
-      ? hasPassed(attempts, classQuizKey(day.slug))
+      ? hasPassed(attempts, classQuizKey(day.classId))
       : activitiesDone(day.activities, day.videoQuestions, answers);
 
   // The pop-up question showing now, and the ones put off with "later".
@@ -413,11 +432,7 @@ export default function JourneyDayPage() {
     );
 
     if (video.duration > 0) {
-      recordWatched(
-        slug,
-        (video.currentTime / video.duration) * 100,
-        canComplete,
-      );
+      recordWatched(slug, (video.currentTime / video.duration) * 100);
     }
 
     // Pause for a question once its moment has come.
@@ -433,15 +448,7 @@ export default function JourneyDayPage() {
         setOpenQuestion(due);
       }
     }
-  }, [
-    slug,
-    recordWatched,
-    canComplete,
-    day,
-    openQuestion,
-    answers,
-    deferredIds,
-  ]);
+  }, [slug, recordWatched, day, openQuestion, answers, deferredIds]);
 
   const resumeVideo = useCallback(() => {
     setOpenQuestion(null);
@@ -502,6 +509,27 @@ export default function JourneyDayPage() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [dayListOpen]);
+
+  const readError = classroom.error ?? progressError;
+  if (readError) {
+    const lang = isEs ? "es" : "en";
+    return (
+      <AsyncSection
+        pending={false}
+        error={readError}
+        errorTitle={errorTitleFor(
+          readError,
+          isEs ? "Esta lección no cargó" : "This lesson did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(readError, undefined, lang)}
+        onRetry={canRetry(readError) ? refetchProgress : undefined}
+        skeleton={null}
+      >
+        {null}
+      </AsyncSection>
+    );
+  }
 
   if (classroom.isPending) {
     return (
@@ -585,19 +613,27 @@ export default function JourneyDayPage() {
             2026-10-08). */}
         <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:gap-inset-md">
           <div className="min-w-0 flex-1">
+            {access && !access.open ? (
+              <Alert tone="info" live={false} className="mb-stack-md">
+                {access.enrolled
+                  ? isEs
+                    ? "Tu acceso a este curso terminó: puedes ver la lección, pero no se guarda tu progreso."
+                    : "Your access to this course has ended: you can view the lesson, but progress is not saved."
+                  : isEs
+                    ? "Empieza el viaje en Mi Salón para guardar tu progreso."
+                    : "Start the journey from My Classroom to save your progress."}
+              </Alert>
+            ) : null}
             {isExam && course ? (
               <QuizRunner
                 key={day.slug}
                 course={course}
-                quizKey={classQuizKey(day.slug)}
+                quizKey={classQuizKey(day.classId)}
                 title={isEs ? day.titleEs : day.titleEn}
                 questions={day.activities}
                 backHref="/dashboard/my-classroom"
                 backLabel={isEs ? "Volver a Mi Salón" : "Back to My Classroom"}
                 hideBack
-                onResult={(attempt) => {
-                  if (attempt.passed) markComplete(day.slug);
-                }}
               />
             ) : (
               <DayStage

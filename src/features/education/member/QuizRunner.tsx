@@ -29,7 +29,13 @@ import {
   isAnswered,
   isScored,
 } from "../questions.rules";
-import type { AnswerMap, Question, QuizAttempt } from "../questions.types";
+import type {
+  Question,
+  QuizAttempt,
+  QuizReviewItem,
+  QuizSubmitResult,
+} from "../questions.types";
+import { EDU_CODES, hasCode } from "../useLearnerCourse";
 import { useLearnerRecord } from "../useLearnerRecord";
 import { DraftAnswer, emptyDraft, QuestionView } from "./QuestionView";
 
@@ -39,6 +45,12 @@ import { DraftAnswer, emptyDraft, QuestionView } from "./QuestionView";
    A module check or the final exam: an intro with the rules, the questions
    in one list, then a results screen with the mark. Supportive wording
    throughout — these are patients, not students sitting a test.
+
+   The server marks every attempt and keeps the attempt limit (a 409 once
+   they are used up). The results screen shows the server's score and
+   attempts left. The answer review shows only when the response carries
+   one (D19: after a pass, or after the last attempt allowed); it lives in
+   this component's state and is gone on reload, by design.
    ========================================================================== */
 
 type Stage = "intro" | "taking" | "result";
@@ -77,17 +89,26 @@ export function QuizRunner({
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { attempts, submitAttempt, isSaving, saveError } = useLearnerRecord();
+  const { attempts, submitAttempt, isSaving, canWrite } = useLearnerRecord();
 
   const [stage, setStage] = useState<Stage>("intro");
   const [drafts, setDrafts] = useState<Record<string, DraftAnswer>>({});
-  const [result, setResult] = useState<QuizAttempt | null>(null);
+  const [submitted, setSubmitted] = useState<QuizSubmitResult | null>(null);
+  const [refusal, setRefusal] = useState<
+    "used-up" | "does-not-fit" | "failed" | null
+  >(null);
+  const result = submitted?.attempt ?? null;
 
   const past = attemptsFor(attempts, quizKey);
   const best = bestAttempt(attempts, quizKey);
   const passed = hasPassed(attempts, quizKey);
-  const left = attemptsLeft(attempts, quizKey, course.maxAttempts);
-  const outOfAttempts = left === 0;
+  /* After a submit, the server's count; before, the count of its rows. */
+  const left = submitted
+    ? submitted.attemptsLeft
+    : attemptsLeft(attempts, quizKey, course.maxAttempts);
+  const outOfAttempts = left === 0 || refusal === "used-up";
+  const reviewFor = (questionId: string): QuizReviewItem | undefined =>
+    submitted?.review?.find((item) => item.questionId === questionId);
   const scoredCount = questions.filter(isScored).length;
 
   const answeredCount = questions.filter((question) =>
@@ -102,27 +123,30 @@ export function QuizRunner({
 
   const start = () => {
     setDrafts({});
-    setResult(null);
+    setSubmitted(null);
+    setRefusal(null);
     setStage("taking");
   };
 
   const submit = async () => {
-    const now = new Date().toISOString();
-    const answers: AnswerMap = Object.fromEntries(
-      Object.values(drafts).map((draft) => [
-        draft.questionId,
-        { ...draft, answeredAt: now },
-      ]),
-    );
-    const attempt = await submitAttempt(
-      quizKey,
-      questions,
-      answers,
-      course.passMark,
-    );
-    setResult(attempt);
-    setStage("result");
-    onResult?.(attempt);
+    setRefusal(null);
+    try {
+      const response = await submitAttempt(quizKey, drafts);
+      setSubmitted(response);
+      setStage("result");
+      onResult?.(response.attempt);
+    } catch (error) {
+      if (hasCode(error, EDU_CODES.attemptsUsedUp)) {
+        /* No attempt was counted; nothing more to try. */
+        setRefusal("used-up");
+        setStage("intro");
+      } else if (hasCode(error, EDU_CODES.answerDoesNotFit)) {
+        /* No attempt used: the answers stay for the member to fix. */
+        setRefusal("does-not-fit");
+      } else {
+        setRefusal("failed");
+      }
+    }
   };
 
   const back = (
@@ -160,11 +184,23 @@ export function QuizRunner({
     <div className="space-y-stack-lg">
       {hideBack ? null : back}
 
-      {saveError ? (
+      {refusal === "failed" ? (
         <Alert tone="danger">
           {isEs
             ? "No pudimos guardar tu intento. Inténtalo de nuevo."
             : "Your attempt did not save. Please try again."}
+        </Alert>
+      ) : refusal === "does-not-fit" ? (
+        <Alert tone="danger">
+          {isEs
+            ? "Una respuesta no corresponde a su pregunta. Revísala; este intento no se contó."
+            : "One answer does not match its question. Check it; this attempt was not counted."}
+        </Alert>
+      ) : refusal === "used-up" ? (
+        <Alert tone="warning">
+          {isEs
+            ? "No te quedan intentos para esta evaluación."
+            : "You have no attempts left for this check."}
         </Alert>
       ) : null}
 
@@ -240,7 +276,7 @@ export function QuizRunner({
           ) : null}
 
           <div className="mt-6 flex flex-wrap items-center gap-inline-md">
-            <Button onClick={start} disabled={outOfAttempts}>
+            <Button onClick={start} disabled={outOfAttempts || !canWrite}>
               <ClipboardCheck aria-hidden="true" />
               {past.length === 0
                 ? isEs
@@ -356,7 +392,19 @@ export function QuizRunner({
                   {isEs
                     ? `${result.correct} de ${result.total} correctas · se necesita ${course.passMark}%`
                     : `${result.correct} of ${result.total} correct · ${course.passMark}% needed`}
+                  {left !== null
+                    ? isEs
+                      ? ` · intentos restantes: ${left}`
+                      : ` · ${left} attempt${left === 1 ? "" : "s"} left`
+                    : null}
                 </p>
+                {course.showAnswers && !submitted?.review ? (
+                  <p className="mt-stack-xs text-body-sm text-fg-muted">
+                    {isEs
+                      ? "Las respuestas correctas se muestran cuando apruebas o usas tu último intento."
+                      : "The right answers are shown once you pass or use your last attempt."}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -390,7 +438,7 @@ export function QuizRunner({
             </div>
           </Card>
 
-          {course.showAnswers ? (
+          {submitted?.review ? (
             <Card as="section" aria-labelledby="quiz-review">
               <SectionTitle
                 id="quiz-review"
@@ -403,11 +451,14 @@ export function QuizRunner({
                       question={question}
                       number={index + 1}
                       draft={
-                        result.answers[question.id] ?? emptyDraft(question)
+                        drafts[question.id] ??
+                        result.answers[question.id] ??
+                        emptyDraft(question)
                       }
                       onChange={() => undefined}
                       reveal
                       showCorrect
+                      review={reviewFor(question.id)}
                       disabled
                     />
                   </li>

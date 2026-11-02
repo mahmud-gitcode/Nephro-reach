@@ -30,7 +30,6 @@ import {
   courseMinutes,
   emptyClass,
   moduleMinutes,
-  useCourseLibrary,
 } from "@/features/education/courseLibrary";
 import {
   ClassEditorPanel,
@@ -39,7 +38,8 @@ import {
   ModuleModal,
 } from "@/features/education/admin/CourseAdmin";
 import { QuestionListEditor } from "@/features/education/admin/QuestionEditor";
-import { LearnerProgressCard } from "@/features/education/admin/LearnerProgressCard";
+import { usePlatformCourse } from "@/features/education/usePlatformCourses";
+import { errorTitleFor } from "@/lib/data/asyncState";
 import {
   Alert,
   Badge,
@@ -339,7 +339,9 @@ export default function ManageCoursePage() {
     refetch,
     saveError,
     dismissSaveError,
-  } = useCourseLibrary();
+    setStatus,
+    isSaving,
+  } = usePlatformCourse(courseId);
 
   const course = getCourse(courseId);
 
@@ -367,7 +369,7 @@ export default function ManageCoursePage() {
   if (error) {
     return (
       <ErrorState
-        title="The course catalogue did not load"
+        title={errorTitleFor(error, "The course did not load")}
         error={error}
         onRetry={refetch}
       />
@@ -381,7 +383,7 @@ export default function ManageCoursePage() {
           Course not found
         </h1>
         <p className="mt-2 text-body-sm text-fg-muted">
-          It may have been deleted from this browser.
+          It may have been deleted.
         </p>
         <Link
           href="/dashboard/manage-curriculum"
@@ -402,7 +404,7 @@ export default function ManageCoursePage() {
     >
       {saveError instanceof Error
         ? saveError.message
-        : "The catalogue on this device is unchanged. Please try again."}
+        : "Nothing was changed. Please try again."}
     </Alert>
   ) : null;
 
@@ -470,6 +472,34 @@ export default function ManageCoursePage() {
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            {/* Members see published courses only. */}
+            <Badge tone={course.status === "published" ? "success" : "neutral"}>
+              {course.status}
+            </Badge>
+            {course.status === "published" ? (
+              <Button
+                variant="neutral"
+                appearance="fill-stroke"
+                loading={isSaving}
+                onClick={() => setStatus("unpublish")}
+              >
+                Unpublish
+              </Button>
+            ) : (
+              <Button loading={isSaving} onClick={() => setStatus("publish")}>
+                Publish
+              </Button>
+            )}
+            {course.status !== "archived" ? (
+              <Button
+                variant="neutral"
+                appearance="stroke"
+                loading={isSaving}
+                onClick={() => setStatus("archive")}
+              >
+                Archive
+              </Button>
+            ) : null}
             <button
               type="button"
               onClick={() => setEditingCourse(true)}
@@ -636,9 +666,7 @@ export default function ManageCoursePage() {
         />
       </Card>
 
-      <div className="mt-6">
-        <LearnerProgressCard course={course} />
-      </div>
+      <div className="mt-6"></div>
 
       {editingSettings && (
         <CourseSettingsModal

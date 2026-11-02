@@ -28,7 +28,8 @@ import {
   QuestionListEditor,
   VideoQuestionListEditor,
 } from "@/features/education/admin/QuestionEditor";
-import { Button, Modal } from "@/components/ui";
+import { Button, FormField, Input, Modal } from "@/components/ui";
+import { isFirstPartyMediaUrl } from "@/features/education/usePlatformCourses";
 
 /** Centred dialog used by the course and module forms. */
 export function AdminModal({
@@ -398,6 +399,8 @@ export function ClassEditorPanel({
   const safeIndex = Math.min(stepIndex, STEPS.length - 1);
   const step = STEPS[safeIndex].key;
   const isLastStep = safeIndex === STEPS.length - 1;
+  const mediaAddressOk =
+    isFirstPartyMediaUrl(draft.mediaSrc) && isFirstPartyMediaUrl(draft.poster);
   const canContinue = draft.titleEn.trim().length > 0;
 
   const set = (patch: Partial<CourseClass>) =>
@@ -409,10 +412,12 @@ export function ClassEditorPanel({
     setMediaFileName(file.name);
 
     // A reading class keeps its kind; otherwise the file decides whether
-    // this is a video or an audio class.
+    // this is a video or an audio class. The file itself is only previewed
+    // here (its length fills the duration): it is never uploaded or stored.
+    // Class media are first-party files at a site address (D18; uploads to
+    // storage wait for INT-16), entered in the address field below.
     const isAudioFile = file.type.startsWith("audio/");
     set({
-      mediaSrc: `/media/${file.name}`,
       ...(draft.kind === "reading"
         ? {}
         : { kind: isAudioFile ? ("audio" as const) : ("video" as const) }),
@@ -457,7 +462,10 @@ export function ClassEditorPanel({
           </Button>
 
           {isLastStep ? (
-            <Button onClick={() => onSave(draft)} disabled={!canContinue}>
+            <Button
+              onClick={() => onSave(draft)}
+              disabled={!canContinue || !mediaAddressOk}
+            >
               Save class
             </Button>
           ) : (
@@ -539,6 +547,43 @@ export function ClassEditorPanel({
                 mediaSeconds={mediaSeconds}
                 onPickFile={handlePickFile}
               />
+
+              <FormField
+                label="Media address"
+                hint="A path on this site, such as /videos/day-01.mp4. Links to other sites are not accepted."
+                error={
+                  isFirstPartyMediaUrl(draft.mediaSrc)
+                    ? undefined
+                    : "Use a path on this site."
+                }
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    value={draft.mediaSrc}
+                    placeholder="/videos/day-01.mp4"
+                    onChange={(event) => set({ mediaSrc: event.target.value })}
+                  />
+                )}
+              </FormField>
+              <FormField
+                label="Cover image address"
+                hint="Optional. A path on this site."
+                error={
+                  isFirstPartyMediaUrl(draft.poster)
+                    ? undefined
+                    : "Use a path on this site."
+                }
+              >
+                {(props) => (
+                  <Input
+                    {...props}
+                    value={draft.poster}
+                    placeholder="/images/Class.jpg"
+                    onChange={(event) => set({ poster: event.target.value })}
+                  />
+                )}
+              </FormField>
 
               <div className="space-y-4 border-t border-line pt-4">
                 <h3 className="text-caption font-bold text-fg-muted">

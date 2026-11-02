@@ -17,6 +17,11 @@ import { useClassroom } from "@/features/education/classroom";
 import { isAnswered } from "@/features/education/questions.rules";
 import type { Question } from "@/features/education/questions.types";
 import { useLearnerRecord } from "@/features/education/useLearnerRecord";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* ==========================================================================
    My Workbook
@@ -91,7 +96,21 @@ export default function WorkbookPage() {
       <AsyncSection
         pending={classroom.isPending || learner.isPending}
         error={classroom.error ?? learner.error}
-        onRetry={classroom.refetch}
+        errorTitle={errorTitleFor(
+          classroom.error ?? learner.error,
+          isEs ? "Tu cuaderno no cargó" : "Your workbook did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          classroom.error ?? learner.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
+        onRetry={
+          canRetry(classroom.error ?? learner.error)
+            ? learner.refetch
+            : undefined
+        }
         isEmpty={sections.length === 0}
         skeleton={<Skeleton height={320} />}
         empty={

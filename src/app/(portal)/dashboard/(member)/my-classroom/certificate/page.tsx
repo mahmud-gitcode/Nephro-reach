@@ -1,36 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Award, CheckCircle2, Circle, Printer } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useMember } from "@/features/auth/useMember";
 import {
   Alert,
   AsyncSection,
   Button,
   buttonStyles,
   Card,
-  FormField,
-  Input,
   Progress,
   SectionTitle,
   Skeleton,
 } from "@/components/ui";
-import {
-  certificateStatus,
-  useClassroom,
-} from "@/features/education/classroom";
-import { useJourneyProgress } from "@/features/education/useJourneyProgress";
+import { useClassroom } from "@/features/education/classroom";
+import { EDU_CODES, hasCode } from "@/features/education/useLearnerCourse";
 import { useLearnerRecord } from "@/features/education/useLearnerRecord";
 import type { Certificate } from "@/features/education/questions.types";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* ==========================================================================
    Certificate of completion
    --------------------------------------------------------------------------
-   Shows what is left until the certificate unlocks, lets the member confirm
-   the name to print, and prints — or saves as PDF — from the browser.
+   Shows what is left until the certificate unlocks (the server's
+   certificateStatus), asks the server for it (POST, no body: the server
+   checks eligibility and prints the name on the patient's NephroReach
+   record, Q-EDU-2), and prints — or saves as PDF — from the browser.
+   Asking again returns the same certificate and code.
    ========================================================================== */
 
 /* When printing, only the certificate is shown, on a landscape page. */
@@ -81,7 +83,7 @@ function CertificateSheet({
           {isEs ? "Se certifica que" : "This certifies that"}
         </p>
         <p className="text-heading-4 text-fg sm:text-heading-1">
-          {certificate.name}
+          {certificate.nameOnCertificate}
         </p>
         <p className="text-body-sm text-fg-muted sm:text-body-md">
           {isEs
@@ -99,7 +101,7 @@ function CertificateSheet({
           </div>
           <div className="border-t border-line pt-2">
             <p className="text-label-sm text-fg tabular-nums">
-              {certificate.id}
+              {certificate.code}
             </p>
             <p className="text-caption text-fg-muted">
               {isEs ? "N.º de certificado" : "Certificate ID"}
@@ -139,18 +141,16 @@ function Step({
 export default function CertificatePage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const member = useMember();
   const classroom = useClassroom();
-  const { course, lessons } = classroom;
-  const { progress, isPending: progressPending } = useJourneyProgress(lessons);
+  const { course } = classroom;
   const learner = useLearnerRecord();
 
-  const existing = course ? learner.certificateFor(course.id) : undefined;
-  const [name, setName] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const typedName = name ?? existing?.name ?? member?.name ?? "";
-
-  const pending = classroom.isPending || progressPending || learner.isPending;
+  const existing = learner.certificate;
+  const pending = classroom.isPending || learner.isPending;
+  const readError = classroom.error ?? learner.error;
+  const pageTitle = isEs
+    ? "Tu certificado no cargó"
+    : "Your certificate did not load";
   const courseTitle = course
     ? isEs
       ? course.titleEs || course.titleEn
@@ -158,10 +158,13 @@ export default function CertificatePage() {
     : "";
 
   const issue = async () => {
-    if (!course || !typedName.trim()) return;
-    await learner.issueCertificate(course.id, typedName);
-    setEditing(false);
+    try {
+      await learner.issueCertificate();
+    } catch {
+      /* Shown below from certificateError. */
+    }
   };
+  const notEligible = hasCode(learner.certificateError, EDU_CODES.notEligible);
 
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-stack-lg">
@@ -185,18 +188,16 @@ export default function CertificatePage() {
 
       <AsyncSection
         pending={pending}
-        error={classroom.error ?? learner.error}
-        onRetry={classroom.refetch}
+        error={readError}
+        errorTitle={errorTitleFor(readError, pageTitle, isEs ? "es" : "en")}
+        errorMessage={errorMessageFor(readError, undefined, isEs ? "es" : "en")}
+        onRetry={canRetry(readError) ? learner.refetch : undefined}
         skeleton={<Skeleton height={420} />}
       >
         {course
           ? (() => {
-              const status = certificateStatus(
-                course,
-                lessons,
-                progress,
-                learner.attempts,
-              );
+              /* The server's reckoning, never the browser's. */
+              const status = learner.certificateStatus;
 
               if (!course.certificateEnabled) {
                 return (
@@ -208,7 +209,7 @@ export default function CertificatePage() {
                 );
               }
 
-              if (!status.eligible) {
+              if (!status.eligible && !existing) {
                 return (
                   <Card as="section" aria-labelledby="certificate-steps">
                     <SectionTitle
@@ -268,7 +269,7 @@ export default function CertificatePage() {
                 );
               }
 
-              if (!existing || editing) {
+              if (!existing) {
                 return (
                   <Card as="section" aria-labelledby="certificate-name">
                     <SectionTitle
@@ -276,50 +277,30 @@ export default function CertificatePage() {
                       title={isEs ? "¡Felicidades!" : "Congratulations!"}
                       subtitle={
                         isEs
-                          ? "Confirma el nombre que aparecerá en tu certificado."
-                          : "Confirm the name to print on your certificate."
+                          ? "Tu certificado lleva el nombre de tu registro de NephroReach."
+                          : "Your certificate carries the name on your NephroReach record."
                       }
                     />
-                    <FormField
-                      label={isEs ? "Nombre completo" : "Full name"}
-                      hint={
-                        isEs
-                          ? "Escríbelo como quieres que se lea."
-                          : "Write it the way you want it to read."
-                      }
-                    >
-                      {(props) => (
-                        <Input
-                          {...props}
-                          value={typedName}
-                          onChange={(event) => setName(event.target.value)}
-                        />
-                      )}
-                    </FormField>
+                    {learner.certificateError ? (
+                      <Alert tone="danger">
+                        {notEligible
+                          ? isEs
+                            ? "Aún no cumples los requisitos del certificado."
+                            : "You are not yet eligible for the certificate."
+                          : isEs
+                            ? "No pudimos emitir tu certificado. Inténtalo de nuevo."
+                            : "Your certificate could not be issued. Please try again."}
+                      </Alert>
+                    ) : null}
                     <div className="mt-6 flex flex-wrap gap-inline-md">
                       <Button
                         onClick={issue}
-                        disabled={!typedName.trim()}
+                        disabled={!status.eligible || !learner.canWrite}
                         loading={learner.isSaving}
                       >
                         <Award aria-hidden="true" />
-                        {existing
-                          ? isEs
-                            ? "Actualizar certificado"
-                            : "Update certificate"
-                          : isEs
-                            ? "Obtener mi certificado"
-                            : "Get my certificate"}
+                        {isEs ? "Obtener mi certificado" : "Get my certificate"}
                       </Button>
-                      {editing ? (
-                        <Button
-                          variant="neutral"
-                          appearance="fill-stroke"
-                          onClick={() => setEditing(false)}
-                        >
-                          {isEs ? "Cancelar" : "Cancel"}
-                        </Button>
-                      ) : null}
                     </div>
                   </Card>
                 );
@@ -328,13 +309,6 @@ export default function CertificatePage() {
               return (
                 <div className="space-y-stack-lg">
                   <div className="flex flex-wrap items-center justify-end gap-inline-md">
-                    <Button
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => setEditing(true)}
-                    >
-                      {isEs ? "Cambiar nombre" : "Change name"}
-                    </Button>
                     <Button onClick={() => window.print()}>
                       <Printer aria-hidden="true" />
                       {isEs ? "Imprimir o guardar PDF" : "Print or save as PDF"}
