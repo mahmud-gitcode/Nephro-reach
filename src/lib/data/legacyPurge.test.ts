@@ -139,7 +139,7 @@ describe("Phase 2: demo credentials and the demo session", () => {
     assertClean();
     expect(result.removed).toContain("nr-registered-users");
     expect(result.removed).toContain("nr:staff-accounts#fields");
-    expect(result.version).toBe(2);
+    expect(result.version).toBe(STORAGE_VERSION);
   });
 
   it("purges again when an old tab writes them back", () => {
