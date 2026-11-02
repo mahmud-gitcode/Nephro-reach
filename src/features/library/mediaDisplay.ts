@@ -10,9 +10,17 @@
    URL itself is untouched on the server.
    ========================================================================== */
 
-/** A site path (`/images/…`), not a protocol-relative `//host`. */
+/** A site path (`/images/…`): never a protocol-relative `//host`, nor a
+ *  `/\host` (browsers read a backslash as a slash, so it is the same
+ *  off-site link), nor one hiding either behind a tab or newline (the URL
+ *  parser strips those). Any backslash or control character is refused;
+ *  a site path never needs one. A scheme (`http:`, `javascript:`) does not
+ *  start with "/" and is refused too. */
 export function isSitePath(url: string): boolean {
-  return url.startsWith("/") && !url.startsWith("//");
+  if (!url.startsWith("/")) return false;
+  if (url.includes("\\")) return false;
+  if (/[\u0000-\u001f\u007f]/.test(url)) return false;
+  return !url.startsWith("//");
 }
 
 /** The URL when the page can show it, the placeholder otherwise. */

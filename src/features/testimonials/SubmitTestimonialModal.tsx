@@ -22,6 +22,8 @@ import {
   videoLengthError,
 } from "./testimonials.rules";
 import { useSubmitTestimonial } from "./useTestimonials";
+import { useLanguageCode } from "@/context/LanguageContext";
+import { collabText } from "@/features/community/collabText";
 
 interface SubmitTestimonialModalProps {
   open: boolean;
@@ -45,6 +47,7 @@ export default function SubmitTestimonialModal({
   user,
   onSubmitted,
 }: SubmitTestimonialModalProps) {
+  const language = useLanguageCode();
   const memberName = user?.name ?? "";
   /* A role outside the four is "Other", typed in (client, 2026-10-12). */
   const [role, setRole] = useState("Dialysis Member");
@@ -78,7 +81,7 @@ export default function SubmitTestimonialModal({
   };
 
   const pickVideo = (file: File) => {
-    const refused = videoFileError(file);
+    const refused = videoFileError(file, language);
     if (refused) {
       clearVideo(refused);
       return;
@@ -208,7 +211,10 @@ export default function SubmitTestimonialModal({
           </Alert>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Your Name" hint="From your account">
+            <FormField
+              label="Your Name"
+              hint={collabText(language, "testimonials.nameHint")}
+            >
               {(props) => <Input {...props} value={memberName} readOnly />}
             </FormField>
 

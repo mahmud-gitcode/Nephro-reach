@@ -6,6 +6,7 @@ import { Modal, Badge, Button, Skeleton } from "@/components/ui";
 import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { Testimonial } from "./testimonials.types";
 import { useTestimonialVideo } from "./useTestimonials";
+import { useCollabText } from "@/features/community/collabText";
 
 interface VideoPlayerModalProps {
   testimonial: Testimonial | null;
@@ -38,6 +39,7 @@ export default function VideoPlayerModal({
   onClose,
   moderator = false,
 }: VideoPlayerModalProps) {
+  const t = useCollabText();
   /* An uploaded video plays from a short-lived link fetched on open
      (Phase 12); an external link (YouTube, Vimeo) embeds as before. */
   const uploaded = Boolean(
@@ -96,7 +98,7 @@ export default function VideoPlayerModal({
             <Skeleton height="100%" />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-surface-inverse p-6 text-center text-body-sm text-fg-inverse">
-              This video could not be loaded. Please try again later.
+              {t("video.loadFailed")}
             </div>
           )}
         </div>

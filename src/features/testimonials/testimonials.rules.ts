@@ -1,4 +1,5 @@
 import { MAX_UPLOAD_BYTES } from "@/lib/api/upload";
+import { collabText, type CollabLang } from "@/features/community/collabText";
 
 /* Pure rules for the member's submission form. Submitting, the status and
    the moderators' decisions are the server's (Phase 12). */
@@ -68,21 +69,28 @@ export function videoLengthError(seconds: number | null): string | null {
   return null;
 }
 
-/** Why a chosen file cannot be a story, or null. Size first in MB words. */
-export function videoFileError(file: {
-  type: string;
-  size: number;
-}): string | null {
+/** Why a chosen file cannot be a story, or null, in the member's language
+ *  (the collab dictionary namespace). Size first in MB words. */
+export function videoFileError(
+  file: {
+    type: string;
+    size: number;
+  },
+  language: CollabLang = "EN",
+): string | null {
   if (
     !(TESTIMONIAL_VIDEO_TYPES as readonly string[]).includes(
       file.type.trim().toLowerCase(),
     )
   ) {
-    return "That is not a video file we can take. Choose an MP4, WebM or MOV.";
+    return collabText(language, "testimonials.videoTypeRefused");
   }
-  if (file.size <= 0) return "That file is empty.";
+  if (file.size <= 0) return collabText(language, "testimonials.videoEmpty");
   if (file.size > MAX_UPLOAD_BYTES) {
-    return `That file is ${Math.round(file.size / 1024 / 1024)} MB. The limit is ${MAX_TESTIMONIAL_MB} MB.`;
+    return collabText(language, "testimonials.videoTooBig", {
+      size: String(Math.round(file.size / 1024 / 1024)),
+      limit: String(MAX_TESTIMONIAL_MB),
+    });
   }
   return null;
 }

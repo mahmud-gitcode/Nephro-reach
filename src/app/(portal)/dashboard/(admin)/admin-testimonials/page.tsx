@@ -30,19 +30,22 @@ import {
   Clock,
   XCircle,
   Play,
+  Trash2,
   Check,
   X,
 } from "lucide-react";
+import { collabText } from "@/features/community/collabText";
 
 /* Phase 12: the queue is the server's (GET /platform/content/testimonials,
    platform content Manage). Approve and decline (with a reason the member
    sees) are its two decisions. There is no API route to delete a story or
-   move it back to pending, so those buttons are gone (recorded as a
-   decision for the Lead/user); an approved story is taken down with
-   "Decline", which the server allows. */
+   move it back to pending (D52), so those buttons are shown but disabled,
+   with a "not available yet" note, until the Lead/user decide; an approved
+   story is taken down with "Decline", which the server allows. */
 export default function AdminTestimonialsPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const notAvailable = collabText(isEs, "notAvailable.testimonialActions");
 
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "approved" | "declined"
@@ -370,6 +373,21 @@ export default function AdminTestimonialsPage() {
                         </Button>
                       )}
 
+                      {/* D52: no API route yet. Shown, disabled, explained;
+                          it has no handler and changes nothing. */}
+                      {isApproved && (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="stroke"
+                          disabled
+                          title={notAvailable}
+                          aria-describedby={`testimonial-na-${item.id}`}
+                        >
+                          {isEs ? "Retirar a Pendiente" : "Unpublish"}
+                        </Button>
+                      )}
+
                       {isDeclined && (
                         <Button
                           size="small"
@@ -380,6 +398,25 @@ export default function AdminTestimonialsPage() {
                           {isEs ? "Reconsiderar y Aprobar" : "Re-approve"}
                         </Button>
                       )}
+
+                      <Button
+                        size="small"
+                        variant="danger"
+                        appearance="stroke"
+                        iconOnly
+                        disabled
+                        title={notAvailable}
+                        aria-describedby={`testimonial-na-${item.id}`}
+                        aria-label={isEs ? "Eliminar" : "Delete"}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                      <p
+                        id={`testimonial-na-${item.id}`}
+                        className="w-full text-caption text-fg-muted"
+                      >
+                        {notAvailable}
+                      </p>
                     </div>
                   </div>
 

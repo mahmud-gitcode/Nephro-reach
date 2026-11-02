@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Clock, MessageSquare, ShieldAlert, X } from "lucide-react";
+import {
+  Check,
+  Clock,
+  MessageSquare,
+  ShieldAlert,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
@@ -30,6 +37,7 @@ import {
   urgentPendingCount,
 } from "@/features/community/moderationQueue.rules";
 import type { HeldItem } from "@/features/community/community.types";
+import { collabText } from "@/features/community/collabText";
 
 /* ==========================================================================
    Community moderation
@@ -45,8 +53,9 @@ import type { HeldItem } from "@/features/community/community.types";
    Phase 12: the queue is the server's (platform content, Manage). It records
    who decided (an id, so the screen says "you" or "a moderator") and the
    note. A rejection needs a reason (the server requires one; it is kept as
-   the decision note). A decided record is the audit trail, so it can no
-   longer be deleted from here.
+   the decision note). A decided record is the audit trail and there is no
+   API route to delete one (D52), so "Delete record" is shown but disabled,
+   with a "not available yet" note, until the Lead/user decide.
    ========================================================================== */
 
 type QueueTab = "pending" | "decided";
@@ -125,6 +134,7 @@ export default function AdminCommunityPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const { user } = useAuth();
+  const notAvailable = collabText(isEs, "notAvailable.communityRecord");
 
   const [tab, setTab] = useState<QueueTab>("pending");
   /* The pending page is always read: its count and its level 1 alarm show
@@ -335,7 +345,30 @@ export default function AdminCommunityPage() {
                     {item.decidedAt ? formatWhen(item.decidedAt, isEs) : "—"}
                     {` · ${whoDecided(item)}`}
                     {item.decisionNote ? ` · ${item.decisionNote}` : ""}
-                  </span>{" "}
+                  </span>
+                  {/* D52: no API route yet. Shown, disabled, explained; it
+                      has no handler and changes nothing. */}
+                  <Button
+                    variant="neutral"
+                    appearance="stroke"
+                    disabled
+                    title={notAvailable}
+                    aria-describedby={`record-na-${item.id}`}
+                    aria-label={
+                      isEs
+                        ? `Borrar el registro de ${item.author}`
+                        : `Delete the record from ${item.author}`
+                    }
+                  >
+                    <Trash2 aria-hidden="true" />
+                    {isEs ? "Borrar registro" : "Delete record"}
+                  </Button>
+                  <p
+                    id={`record-na-${item.id}`}
+                    className="w-full text-caption text-fg-muted"
+                  >
+                    {notAvailable}
+                  </p>
                 </div>
               )}
             </Card>

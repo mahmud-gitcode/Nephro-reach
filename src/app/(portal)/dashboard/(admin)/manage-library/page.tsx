@@ -38,6 +38,7 @@ import {
   Modal,
   Skeleton,
 } from "@/components/ui";
+import { useCollabText } from "@/features/community/collabText";
 import {
   canRetry,
   errorMessageFor,
@@ -222,6 +223,7 @@ function ResourceRow({
 
 export default function ManageLibraryPage() {
   const { user } = useAuth();
+  const t = useCollabText();
   const {
     resources,
     totals,
@@ -317,7 +319,7 @@ export default function ManageLibraryPage() {
         >
           {saveError instanceof Error && saveError.message
             ? saveError.message
-            : "The library is unchanged. Please try again."}
+            : t("library.saveFailed")}
         </Alert>
       ) : null}
 

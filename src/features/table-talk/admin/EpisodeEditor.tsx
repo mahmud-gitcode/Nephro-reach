@@ -4,6 +4,7 @@ import { youTubeEmbed } from "@/lib/utils/youtube";
 import React, { useRef, useState } from "react";
 import { CheckCircle2, Plus, Trash2, Upload } from "lucide-react";
 import { parseCaptions } from "@/features/education/vtt";
+import { useCollabText } from "@/features/community/collabText";
 import {
   AUDIENCES,
   canSaveEpisode,
@@ -116,6 +117,7 @@ export function EpisodeEditor({
   onClose: () => void;
   saving?: boolean;
 }) {
+  const t = useCollabText();
   const [draft, setDraft] = useState<TableTalkEpisode>(
     () => episode ?? emptyEpisode(nextOrder),
   );
@@ -222,8 +224,7 @@ export function EpisodeEditor({
           </div>
 
           <p id="episode-media-note" className="text-caption text-fg-muted">
-            Uploading a video or a thumbnail is not available yet: it waits on
-            where public media will be stored. Paste a YouTube link instead.
+            {t("tableTalk.mediaNote")}
           </p>
 
           <FormField

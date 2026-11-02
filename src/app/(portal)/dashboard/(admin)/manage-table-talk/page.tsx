@@ -40,6 +40,7 @@ import {
   Select,
   Skeleton,
 } from "@/components/ui";
+import { useCollabText } from "@/features/community/collabText";
 import {
   canRetry,
   errorMessageFor,
@@ -295,6 +296,7 @@ function QuestionRow({
 }
 
 export default function ManageTableTalkPage() {
+  const t = useCollabText();
   const {
     episodes,
     categories,
@@ -425,20 +427,20 @@ export default function ManageTableTalkPage() {
         >
           {saveError instanceof Error && saveError.message
             ? saveError.message
-            : "Table Talk is unchanged. Please try again."}
+            : t("tableTalk.saveFailed")}
         </Alert>
       ) : null}
 
       {openError ? (
         <Alert
           tone="danger"
-          title="That episode did not open"
+          title={t("tableTalk.openFailedTitle")}
           onDismiss={() => setOpenError(null)}
           className="mt-stack-lg"
         >
           {openError instanceof Error && openError.message
             ? openError.message
-            : "Please try again."}
+            : t("common.tryAgain")}
         </Alert>
       ) : null}
 
