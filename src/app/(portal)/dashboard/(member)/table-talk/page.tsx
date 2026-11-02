@@ -1,19 +1,23 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Mic, MessageCircleQuestion, Play, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   categoryLabel,
-  filterEpisodes,
   formatDate,
   formatDuration,
   hasSpanish,
   type EpisodeFilter,
 } from "@/features/table-talk/tableTalk.rules";
 import { useTableTalk } from "@/features/table-talk/useTableTalk";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import TableTalkDisclaimer from "@/features/table-talk/TableTalkDisclaimer";
 import AboutTableTalk from "@/features/table-talk/AboutTableTalk";
 import PopularTopics from "@/features/table-talk/PopularTopics";
@@ -296,37 +300,29 @@ function GridSkeleton() {
 export default function TableTalkPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const [filter, setFilter] = useState<EpisodeFilter>("all");
+  const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState<string | "all">("all");
+  const [asking, setAsking] = useState(false);
+
+  /* The server filters, searches and pages (Phase 12): live episodes only,
+     the same filter ids as before. */
   const {
-    episodes,
+    episodes: visible,
     categories,
     featured,
     isFavorite,
     toggleFavorite,
-    favorites,
     submitQuestion,
     questionSaving,
     isPending,
     error,
     refetch,
     saveError,
-  } = useTableTalk();
-
-  const [filter, setFilter] = useState<EpisodeFilter>("all");
-  const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState<string | "all">("all");
-  const [asking, setAsking] = useState(false);
-
-  const visible = useMemo(
-    () =>
-      filterEpisodes(episodes, {
-        filter,
-        search,
-        categoryId,
-        categories,
-        favorites,
-      }),
-    [episodes, filter, search, categoryId, categories, favorites],
-  );
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useTableTalk({ filter, search, categoryId });
 
   /* The featured episode leads the page, so it is not repeated in the grid
      below unless a filter or a search is narrowing things down. */
@@ -465,11 +461,14 @@ export default function TableTalkPage() {
         <AsyncSection
           pending={isPending}
           error={error}
-          onRetry={refetch}
+          onRetry={canRetry(error) ? refetch : undefined}
           isEmpty={grid.length === 0 && !featured}
-          errorTitle={
-            isEs ? "Table Talk no se cargó" : "Table Talk did not load"
-          }
+          errorTitle={errorTitleFor(
+            error,
+            isEs ? "Table Talk no se cargó" : "Table Talk did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           skeleton={<GridSkeleton />}
           empty={
             <EmptyState
@@ -489,7 +488,7 @@ export default function TableTalkPage() {
                 episode={featured}
                 categories={categories}
                 saved={isFavorite(featured.slug)}
-                onToggleSaved={() => toggleFavorite(featured.slug)}
+                onToggleSaved={() => toggleFavorite(featured.slug, featured)}
               />
             ) : null}
 
@@ -524,11 +523,23 @@ export default function TableTalkPage() {
                       episode={episode}
                       categories={categories}
                       saved={isFavorite(episode.slug)}
-                      onToggleSaved={() => toggleFavorite(episode.slug)}
+                      onToggleSaved={() =>
+                        toggleFavorite(episode.slug, episode)
+                      }
                     />
                   ))}
                 </div>
               )}
+              {hasMore ? (
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={loadMore}
+                  loading={isLoadingMore}
+                >
+                  {isEs ? "Ver más" : "Load more"}
+                </Button>
+              ) : null}
             </section>
           </div>
         </AsyncSection>
@@ -552,7 +563,7 @@ export default function TableTalkPage() {
           />
 
           <PopularTopics
-            episodes={episodes}
+            episodes={visible}
             categories={categories}
             selectedId={categoryId}
             onSelect={setCategoryId}
@@ -563,7 +574,9 @@ export default function TableTalkPage() {
       {asking ? (
         <SuggestQuestionModal
           onClose={() => setAsking(false)}
-          onSubmit={submitQuestion}
+          onSubmit={(body: string) =>
+            submitQuestion(body).then(() => undefined)
+          }
           saving={questionSaving}
         />
       ) : null}

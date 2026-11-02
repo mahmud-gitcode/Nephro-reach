@@ -1,68 +1,96 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSaved, listResources, setSaved } from "./library.repository";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
+import { isApiError } from "@/lib/api/client";
+import { useAuth } from "@/features/auth/AuthContext";
+import { usePagedContent } from "@/features/community/usePagedContent";
+import {
+  fromApiLibraryItem,
+  getLibraryResource,
+  listLibrary,
+  setSaved,
+  type LibraryQuery,
+} from "./library.api";
 import * as rules from "./library.rules";
 import type { LibraryResource } from "./library.types";
 
 export type { LibraryFilter } from "./library.rules";
 export { EMPTY_FILTER } from "./library.rules";
 
-export const libraryResourcesKey = ["library", "resources"] as const;
-export const librarySavedKey = ["library", "saved"] as const;
+/** Everything the library caches for this account (`saved` is per member). */
+export const libraryKey = (userId: string | undefined): QueryKey => [
+  "me",
+  userId ?? "anonymous",
+  "library",
+];
+
+const PAGE = { limit: 20 } as const;
+
+function toQuery(filter?: Partial<rules.LibraryFilter>): LibraryQuery {
+  return {
+    kind: filter?.kind && filter.kind !== "all" ? filter.kind : undefined,
+    category:
+      filter?.category && filter.category !== "all"
+        ? filter.category
+        : undefined,
+    search: filter?.search?.trim() || undefined,
+    savedOnly: filter?.savedOnly || undefined,
+  };
+}
 
 /**
- * The Library shelf, plus whatever the member has saved off it.
- *
- * Two queries rather than one: the shelf is published content that changes
- * when an admin publishes, and the saved list changes every time a member
- * taps a bookmark. Refetching the whole shelf to record a bookmark would be
- * the wrong request to make once these are real endpoints.
+ * The Library shelf from the API (Phase 12): published resources only, the
+ * server filtering by kind, topic, search and "saved", paged. Each item
+ * carries whether this member saved it.
  */
-export function useLibrary() {
+export function useLibrary(filter?: Partial<rules.LibraryFilter>) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const query = toQuery(filter);
 
-  const resourcesQuery = useQuery({
-    queryKey: libraryResourcesKey,
-    queryFn: listResources,
+  const list = usePagedContent({
+    queryKey: [...libraryKey(user?.id), "list", query],
+    params: PAGE,
+    fetch: (params) => listLibrary(query, params),
+    map: fromApiLibraryItem,
+    enabled: Boolean(user?.id),
+    keepPrevious: true,
   });
 
-  const savedQuery = useQuery({
-    queryKey: librarySavedKey,
-    queryFn: getSaved,
-  });
-
-  /* Read-modify-write against storage, not against the cache, so the change
-     applies to what is actually saved rather than to a stale copy. */
+  /* An explicit save or unsave (never a toggle), by resource id. */
   const write = useMutation({
-    mutationFn: async (slug: string) =>
-      setSaved(rules.toggleSaved(await getSaved(), slug)),
-    onSuccess: (slugs) => queryClient.setQueryData(librarySavedKey, slugs),
+    mutationFn: ({ id, saved }: { id: string; saved: boolean }) =>
+      setSaved(id, saved),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: libraryKey(user?.id) }),
   });
 
-  /* `?? []` inline would hand out a new array every render and re-run every
-     filter that depends on it. */
-  /* Drafts are filtered out here rather than at each call site: this hook is
-     the member's view of the shelf, and an unpublished resource reaching a
-     member screen is the one mistake this feature can actually make. */
-  const resources = useMemo(
-    () => rules.publishedOnly(resourcesQuery.data ?? []),
-    [resourcesQuery.data],
+  const resources = list.items;
+  const saved = useMemo(
+    () => resources.filter((r) => r.saved).map((r) => r.slug),
+    [resources],
   );
-  const saved = useMemo(() => savedQuery.data ?? [], [savedQuery.data]);
 
   const { mutate } = write;
-  const toggleSaved = useCallback((slug: string) => mutate(slug), [mutate]);
-
+  const toggleSaved = useCallback(
+    (slug: string, resource?: LibraryResource) => {
+      const target = resource ?? rules.findBySlug(resources, slug);
+      if (target) mutate({ id: target.id, saved: !target.saved });
+    },
+    [mutate, resources],
+  );
   const isSaved = useCallback((slug: string) => saved.includes(slug), [saved]);
-
   const getBySlug = useCallback(
     (slug: string): LibraryResource | undefined =>
       rules.findBySlug(resources, slug),
     [resources],
   );
-
   const getRelated = useCallback(
     (resource: LibraryResource) => rules.relatedTo(resources, resource),
     [resources],
@@ -75,16 +103,39 @@ export function useLibrary() {
     toggleSaved,
     getBySlug,
     getRelated,
+    hasMore: list.hasMore,
+    loadMore: list.loadMore,
+    isLoadingMore: list.isLoadingMore,
 
-    /* One pending flag for both reads: a shelf without its bookmarks would
-       render every card as unsaved for a frame, which reads as data loss. */
-    isPending: resourcesQuery.isPending || savedQuery.isPending,
-    error: resourcesQuery.error ?? savedQuery.error,
-    refetch: () => {
-      void resourcesQuery.refetch();
-      void savedQuery.refetch();
-    },
+    isPending: list.isPending,
+    error: list.error,
+    refetch: list.refetch,
     /* A bookmark that silently failed to save is worth a message. */
     saveError: write.error,
+    isSaving: write.isPending,
+  };
+}
+
+/** One resource by slug (GET /library/:slug). A draft or a missing slug is
+ *  a 404 from the server, shown as "not found" rather than an error. */
+export function useLibraryResource(slug: string) {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: [...libraryKey(user?.id), "item", slug],
+    queryFn: async () => {
+      try {
+        return fromApiLibraryItem(await getLibraryResource(slug));
+      } catch (error) {
+        if (isApiError(error, { status: 404 })) return null;
+        throw error;
+      }
+    },
+    enabled: Boolean(user?.id) && Boolean(slug),
+  });
+  return {
+    resource: query.data ?? undefined,
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
   };
 }

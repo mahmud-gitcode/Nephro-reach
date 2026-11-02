@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
@@ -11,7 +11,7 @@ import {
   Modal,
 } from "@/components/ui";
 import { FileText, ImagePlus, Phone, Send } from "lucide-react";
-import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { downscaleToJpeg } from "./photo";
 import {
   autoReplyForText,
   detectsPersonalInfo,
@@ -51,16 +51,33 @@ export function ComposeModal({
 }: {
   open: boolean;
   onClose: () => void;
-  /** With a photo when the member added one (client, 2026-10-05). */
-  onPost: (body: string, categoryId: string, imageUrl?: string) => void;
+  /** With a photo when the member added one (client, 2026-10-05). Resolves
+   *  once the server has the post; rejects with what went wrong, and the
+   *  composer keeps what was written. */
+  onPost: (body: string, categoryId: string, photo?: Blob) => Promise<void>;
   initialCategory?: string;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
   const [body, setBody] = useState("");
-  const [photo, setPhoto] = useState<string | null>(null);
+  /* The shrunk JPEG is uploaded on submit; the preview is an object URL,
+     revoked when it changes or the composer closes. */
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const preview = useMemo(
+    () => (photo ? URL.createObjectURL(photo) : null),
+    [photo],
+  );
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
   const [selectedCategory, setSelectedCategory] = useState(
     initialCategory === "all" ? "general" : initialCategory,
   );
@@ -77,11 +94,25 @@ export function ComposeModal({
   const canPost = route !== "block";
 
   const handleSubmit = () => {
-    if (!canPost) return;
-    onPost(body.trim(), selectedCategory, photo ?? undefined);
-    setBody("");
-    setPhoto(null);
-    onClose();
+    if (!canPost || posting) return;
+    setPosting(true);
+    setPostError(null);
+    onPost(body.trim(), selectedCategory, photo ?? undefined)
+      .then(() => {
+        setBody("");
+        setPhoto(null);
+        onClose();
+      })
+      .catch((error: unknown) => {
+        setPostError(
+          error instanceof Error && error.message
+            ? error.message
+            : isEs
+              ? "No se envió. Inténtelo de nuevo."
+              : "Your post was not sent. Please try again.",
+        );
+      })
+      .finally(() => setPosting(false));
   };
 
   return (
@@ -94,6 +125,7 @@ export function ComposeModal({
         <Button
           onClick={handleSubmit}
           disabled={!canPost}
+          loading={posting}
           variant="neutral"
           appearance="fill"
           className="w-full"
@@ -104,6 +136,15 @@ export function ComposeModal({
       }
     >
       <div className="space-y-stack-lg">
+        {postError ? (
+          <Alert
+            tone="danger"
+            title={isEs ? "No se envió" : "Your post was not sent"}
+          >
+            {postError}
+          </Alert>
+        ) : null}
+
         {/* 1. Community Guidelines — part of the page, not a response to
             anything the member did, so it is not announced. */}
         <Alert
@@ -164,11 +205,11 @@ export function ComposeModal({
         {/* A photo — a meal, a recipe (client, 2026-10-05). Shrunk to a
             small JPEG before it is kept, like every photo in the app. */}
         <div className="flex flex-wrap items-center gap-inline-md">
-          {photo ? (
+          {preview ? (
             <span className="relative inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: preview, nothing to optimise */}
               <img
-                src={photo}
+                src={preview}
                 alt={isEs ? "Foto para la publicación" : "Photo for the post"}
                 className="h-20 w-20 rounded-control object-cover"
               />
@@ -185,7 +226,7 @@ export function ComposeModal({
                 if (!file) return;
                 setPhotoError(null);
                 try {
-                  setPhoto(await downscaleToDataUrl(file));
+                  setPhoto(await downscaleToJpeg(file));
                 } catch {
                   setPhotoError(
                     isEs

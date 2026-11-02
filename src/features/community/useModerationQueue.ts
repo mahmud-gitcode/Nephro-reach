@@ -1,77 +1,71 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listHeldItems, saveHeldItems } from "./moderationQueue.repository";
+import { useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  applyDecision,
-  buildHeldItem,
-  withoutHeldItem,
-  type HeldDraft,
-} from "./moderationQueue.rules";
-import type { HeldItem } from "./community.types";
+  approvePost,
+  fromApiModerationPost,
+  listModerationPosts,
+  rejectPost,
+  type ModerationTab,
+} from "./community.api";
+import { usePagedContent } from "./usePagedContent";
 
-/* One queue, read by the board (to show a member their own held reply) and
-   by the admin screen (to decide on it). Both go through here so a decision
-   made in one place is visible in the other without a reload. */
+/* The moderation queue is the server's (platform content, Manage). The
+   server orders the pending page (level 1 first, then oldest) and records
+   who decided. A 403 reaches the page as the error. */
 
-export const moderationQueueKey = ["community", "moderation-queue"] as const;
+export const MODERATION_QUEUE_KEY = [
+  "platform",
+  "content",
+  "community",
+] as const;
 
-const NO_ITEMS: HeldItem[] = [];
+/* The queue is small; one page of 150 pending posts makes the level 1
+   count true for everything waiting (the server's maximum page). */
+const PAGE = { limit: 150 } as const;
 
-export function useModerationQueue() {
+export function useModerationQueue(tab: ModerationTab) {
   const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: moderationQueueKey,
-    queryFn: listHeldItems,
+  const list = usePagedContent({
+    queryKey: [...MODERATION_QUEUE_KEY, { status: tab }],
+    params: PAGE,
+    fetch: (params) => listModerationPosts(tab, params),
+    map: fromApiModerationPost,
   });
 
-  const write = useMutation({
-    mutationFn: async (transform: (current: HeldItem[]) => HeldItem[]) =>
-      saveHeldItems(transform(await listHeldItems())),
-    onSuccess: (items) => queryClient.setQueryData(moderationQueueKey, items),
+  const settle = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: MODERATION_QUEUE_KEY }),
+    [queryClient],
+  );
+  const approve = useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      approvePost(id, note),
+    onSettled: settle,
   });
-
-  const { mutate, mutateAsync, reset } = write;
+  const reject = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      rejectPost(id, reason),
+    onSettled: settle,
+  });
 
   return {
-    items: query.data ?? NO_ITEMS,
-    isPending: query.isPending,
-    error: query.error,
-    refetch: () => void query.refetch(),
+    items: list.items,
+    total: list.total,
+    isPending: list.isPending,
+    error: list.error,
+    refetch: list.refetch,
+    hasMore: list.hasMore,
+    loadMore: list.loadMore,
+    isLoadingMore: list.isLoadingMore,
 
-    /**
-     * Park a draft for review. Returns the item so the caller can tell the
-     * member what happened, or null when the text did not need holding —
-     * the caller should publish it normally in that case.
-     */
-    hold: (draft: HeldDraft, options?: { always?: boolean }) => {
-      const item = buildHeldItem(
-        draft,
-        `held-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        new Date(),
-        options,
-      );
-      if (!item) return null;
-      mutate((current) => [...current, item]);
-      return item;
+    approve: (id: string, note?: string) => approve.mutateAsync({ id, note }),
+    reject: (id: string, reason: string) => reject.mutateAsync({ id, reason }),
+    isSaving: approve.isPending || reject.isPending,
+    saveError: approve.error ?? reject.error,
+    dismissSaveError: () => {
+      approve.reset();
+      reject.reset();
     },
-
-    /* `by` and `note` are the audit trail: a decision nobody can account
-       for afterwards is not one a member could ever appeal. */
-    approve: (id: string, by?: string, note?: string) =>
-      mutateAsync((current) =>
-        applyDecision(current, id, "approved", by, note),
-      ),
-    reject: (id: string, by?: string, note?: string) =>
-      mutateAsync((current) =>
-        applyDecision(current, id, "rejected", by, note),
-      ),
-    remove: (id: string) =>
-      mutateAsync((current) => withoutHeldItem(current, id)),
-
-    isSaving: write.isPending,
-    saveError: write.error,
-    dismissSaveError: () => reset(),
   };
 }

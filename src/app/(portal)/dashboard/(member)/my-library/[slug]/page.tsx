@@ -7,9 +7,15 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Bookmark, Download, FileText, Library, Printer } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
+import { LIBRARY_CATEGORIES } from "@/features/library/library.options";
 import { formatPublished } from "@/features/library/library.rules";
-import { useLibrary } from "@/features/library/useLibrary";
+import { useLibrary, useLibraryResource } from "@/features/library/useLibrary";
+import { relatedTo } from "@/features/library/library.rules";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { LibraryBackLink } from "@/features/library/member/LibraryBackLink";
 import { kindLabel, metaLabel } from "@/features/library/member/RelatedLibrary";
 import type { LibraryResource } from "@/features/library/library.types";
@@ -200,19 +206,14 @@ export default function LibraryResourcePage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const {
-    getBySlug,
-    getRelated,
-    isSaved,
-    toggleSaved,
-    isPending,
-    error,
-    refetch,
-    saveError,
-  } = useLibrary();
-
-  const resource = getBySlug(slug);
-  const saved = isSaved(slug);
+  /* The resource by its slug (GET /library/:slug: published only, so an
+     unpublished one is "not found"), and its topic's shelf for "related". */
+  const { resource, isPending, error, refetch } = useLibraryResource(slug);
+  const shelf = useLibrary(
+    resource ? { category: resource.category } : undefined,
+  );
+  const { toggleSaved, saveError } = shelf;
+  const saved = Boolean(resource?.saved);
 
   const meta = resource
     ? [
@@ -250,13 +251,16 @@ export default function LibraryResourcePage() {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
+        onRetry={canRetry(error) ? refetch : undefined}
         /* A slug that is not on the shelf is empty, not broken — the
            resource may simply have been unpublished. */
         isEmpty={!resource}
-        errorTitle={
-          isEs ? "Este recurso no se cargó" : "This resource did not load"
-        }
+        errorTitle={errorTitleFor(
+          error,
+          isEs ? "Este recurso no se cargó" : "This resource did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         skeleton={
           <Card className="flex flex-col gap-stack-md">
             <Skeleton variant="text" width="50%" height={28} />
@@ -295,7 +299,7 @@ export default function LibraryResourcePage() {
                   variant="neutral"
                   appearance="fill-stroke"
                   aria-pressed={saved}
-                  onClick={() => toggleSaved(resource.slug)}
+                  onClick={() => toggleSaved(resource.slug, resource)}
                 >
                   <Bookmark
                     aria-hidden="true"
@@ -360,7 +364,7 @@ export default function LibraryResourcePage() {
               <ArticleStage resource={resource} />
             )}
 
-            <RelatedRow resources={getRelated(resource)} />
+            <RelatedRow resources={relatedTo(shelf.resources, resource)} />
           </div>
         ) : null}
       </AsyncSection>

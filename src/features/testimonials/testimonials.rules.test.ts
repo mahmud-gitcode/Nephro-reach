@@ -1,156 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
-  approvedTestimonials,
-  applyTestimonialStatus,
-  buildTestimonial,
-  isRevisable,
-  reviseTestimonial,
-  testimonialsByAuthor,
-  withoutTestimonial,
-} from "./testimonials.rules";
-import type { Testimonial } from "./testimonials.types";
-import {
+  MAX_TESTIMONIAL_MB,
   MAX_TESTIMONIAL_SECONDS,
   formatClock,
+  toDurationSeconds,
+  videoFileError,
   videoLengthError,
 } from "./testimonials.rules";
+import {
+  fromApiModerationTestimonial,
+  fromApiMyTestimonial,
+  fromApiPublicTestimonial,
+  toSubmitBody,
+} from "./testimonials.api";
 
-/* A testimonial is a member's face and story on a public page. The rules that
- * matter are the ones deciding when it becomes visible and who may change it
- * after that. */
-
-const NOW = new Date(2026, 8, 15, 10, 0, 0);
-
-function story(patch: Partial<Testimonial> = {}): Testimonial {
-  return {
-    ...buildTestimonial(
-      {
-        memberName: "Ray Mitchell",
-        memberEmail: "ray@example.com",
-        title: "From Fear to Hope",
-        role: "Dialysis Member",
-        videoUrl: "https://example.com/ray.mp4",
-        summary: "The first month was the hardest.",
-      },
-      "story-1",
-      NOW,
-    ),
-    ...patch,
-  };
-}
-
-describe("what the public sees", () => {
-  it("shows only approved stories", () => {
-    const all = [
-      story({ id: "a", status: "approved" }),
-      story({ id: "b", status: "pending" }),
-      story({ id: "c", status: "declined" }),
-    ];
-    expect(approvedTestimonials(all).map((entry) => entry.id)).toEqual(["a"]);
-  });
-
-  it("starts a new submission pending, never published", () => {
-    expect(story().status).toBe("pending");
-  });
-});
-
-describe("a member's own stories", () => {
-  it("finds them by email, whatever the casing", () => {
-    const all = [
-      story({ id: "a", memberEmail: "Ray@Example.com" }),
-      story({ id: "b", memberEmail: "someone@else.com" }),
-    ];
-    expect(
-      testimonialsByAuthor(all, "ray@example.com").map((entry) => entry.id),
-    ).toEqual(["a"]);
-  });
-});
-
-describe("revising a submission", () => {
-  it("is allowed while it waits on review", () => {
-    expect(isRevisable(story({ status: "pending" }))).toBe(true);
-  });
-
-  it("is not allowed once an admin has ruled on it", () => {
-    // Editing a published story would put new words on a public page that
-    // nobody reviewed.
-    expect(isRevisable(story({ status: "approved" }))).toBe(false);
-    expect(isRevisable(story({ status: "declined" }))).toBe(false);
-  });
-
-  it("changes the words and the video, and nothing else", () => {
-    const before = story({ status: "pending" });
-    const [after] = reviseTestimonial([before], "story-1", {
-      title: "A Better Title",
-      role: "Family Caregiver",
-      videoUrl: "https://example.com/new.mp4",
-      summary: "Rewritten.",
-    });
-
-    expect(after.title).toBe("A Better Title");
-    expect(after.summary).toBe("Rewritten.");
-    expect(after.videoUrl).toBe("https://example.com/new.mp4");
-
-    /* An edit is not a resubmission: the identity, the author and the
-       submitted date stay put. */
-    expect(after.id).toBe(before.id);
-    expect(after.memberEmail).toBe(before.memberEmail);
-    expect(after.createdAt).toBe(before.createdAt);
-  });
-
-  it("leaves the status alone, so an edit cannot hide a rejection", () => {
-    const declined = story({ status: "declined", adminFeedback: "Too long." });
-    const [after] = reviseTestimonial([declined], "story-1", {
-      title: "Trying again",
-      role: "Dialysis Member",
-      videoUrl: "https://example.com/new.mp4",
-      summary: "Shorter now.",
-    });
-    expect(after.status).toBe("declined");
-    expect(after.adminFeedback).toBe("Too long.");
-  });
-
-  it("keeps the old value when a field is left blank", () => {
-    const before = story({ status: "pending" });
-    const [after] = reviseTestimonial([before], "story-1", {
-      title: "   ",
-      role: "",
-      videoUrl: "",
-      summary: "",
-    });
-    expect(after.title).toBe(before.title);
-    expect(after.videoUrl).toBe(before.videoUrl);
-  });
-
-  it("touches only the story asked for", () => {
-    const all = [story({ id: "a" }), story({ id: "b", title: "Untouched" })];
-    const after = reviseTestimonial(all, "a", {
-      title: "Changed",
-      role: "Dialysis Member",
-      videoUrl: "https://example.com/a.mp4",
-      summary: "Changed.",
-    });
-    expect(after[1].title).toBe("Untouched");
-  });
-});
-
-describe("the admin decision", () => {
-  it("records feedback with a rejection", () => {
-    const [after] = applyTestimonialStatus(
-      [story()],
-      "story-1",
-      "declined",
-      "Please shorten it.",
-      NOW,
-    );
-    expect(after.status).toBe("declined");
-    expect(after.adminFeedback).toBe("Please shorten it.");
-  });
-
-  it("removes a story outright", () => {
-    expect(withoutTestimonial([story({ id: "a" })], "a")).toHaveLength(0);
-  });
-});
+const MB = 1024 * 1024;
 
 describe("how long a testimonial may run", () => {
   it("accepts a clip inside the limit", () => {
@@ -181,5 +45,149 @@ describe("how long a testimonial may run", () => {
     expect(formatClock(75)).toBe("1:15");
     expect(formatClock(180)).toBe("3:00");
     expect(formatClock(605)).toBe("10:05");
+  });
+});
+
+describe("the measured length sent to the API (INT-19)", () => {
+  it("sends whole seconds, the number the server caps at 180", () => {
+    expect(toDurationSeconds(95.4)).toBe(95);
+    expect(toDurationSeconds(0.4)).toBe(1);
+    expect(toDurationSeconds(180)).toBe(180);
+  });
+
+  it("sends nothing when it could not be read, rather than a made-up 3:30", () => {
+    // The old form stored "3:30" for any clip it could not measure.
+    expect(toDurationSeconds(null)).toBeUndefined();
+    expect(toDurationSeconds(NaN)).toBeUndefined();
+    expect(toDurationSeconds(0)).toBeUndefined();
+    expect(toDurationSeconds(181)).toBeUndefined();
+  });
+});
+
+describe("which file can be a story", () => {
+  it("caps the upload at the API's 10 MB, not the old 200 MB", () => {
+    // The form used to accept 200 MB, which the server then refused.
+    expect(MAX_TESTIMONIAL_MB).toBe(10);
+    expect(videoFileError({ type: "video/mp4", size: 5 * MB })).toBeNull();
+    const refused = videoFileError({ type: "video/mp4", size: 15 * MB });
+    expect(refused).toContain("15 MB");
+    expect(refused).toContain("10 MB");
+  });
+
+  it("takes only the video types the API takes", () => {
+    expect(videoFileError({ type: "video/quicktime", size: MB })).toBeNull();
+    expect(videoFileError({ type: "video/webm", size: MB })).toBeNull();
+    expect(
+      videoFileError({ type: "video/x-msvideo", size: MB }),
+    ).not.toBeNull();
+    expect(videoFileError({ type: "image/png", size: MB })).not.toBeNull();
+    expect(videoFileError({ type: "video/mp4", size: 0 })).not.toBeNull();
+  });
+});
+
+describe("the API mapping", () => {
+  it("sends the file id and the measured seconds, never a URL or a name", () => {
+    const body = toSubmitBody({
+      title: "  My story ",
+      role: "Dialysis Member",
+      videoFileId: "file-1",
+      durationSeconds: 95,
+      summary: " Hope ",
+    });
+    expect(body).toEqual({
+      title: "My story",
+      role: "Dialysis Member",
+      videoFileId: "file-1",
+      durationSeconds: 95,
+      summary: "Hope",
+    });
+    expect(JSON.stringify(body)).not.toMatch(/blob:|data:|\/videos\//);
+  });
+
+  it("sends Other with the typed role beside it", () => {
+    expect(
+      toSubmitBody({
+        title: "",
+        role: "Other",
+        otherRole: " Kidney donor ",
+        videoFileId: "f",
+        summary: "s",
+      }),
+    ).toEqual({
+      role: "Other",
+      otherRole: "Kidney donor",
+      videoFileId: "f",
+      summary: "s",
+    });
+  });
+
+  it("maps a published story without any email", () => {
+    const story = fromApiPublicTestimonial({
+      id: "t1",
+      authorName: "Test M.",
+      role: "Dialysis Member",
+      title: "T",
+      summary: "S",
+      thumbnailUrl: null,
+      duration: "2:45",
+      videoUrl: null,
+      hasUploadedVideo: true,
+    });
+    expect(story).toMatchObject({
+      memberName: "Test M.",
+      status: "approved",
+      videoUrl: "",
+      hasUploadedVideo: true,
+      duration: "2:45",
+    });
+    expect(Object.keys(story)).not.toContain("memberEmail");
+  });
+
+  it("maps the member's own story and its status", () => {
+    expect(
+      fromApiMyTestimonial({
+        id: "t2",
+        title: "T",
+        role: "Other role",
+        hasVideo: true,
+        duration: null,
+        summary: "S",
+        status: "declined",
+        adminFeedback: "Please trim it",
+        createdAt: "2026-11-01T10:00:00.000Z",
+        approvedAt: null,
+      }),
+    ).toMatchObject({
+      status: "declined",
+      adminFeedback: "Please trim it",
+      hasUploadedVideo: true,
+    });
+  });
+
+  it("treats an unknown status as pending, never approved", () => {
+    expect(
+      fromApiModerationTestimonial({
+        id: "t3",
+        authorId: "u",
+        authorName: null,
+        title: "T",
+        role: "R",
+        hasVideo: false,
+        videoUrl: "https://youtu.be/abcdefghijk",
+        thumbnailUrl: null,
+        duration: null,
+        summary: "S",
+        personalInfoDetected: true,
+        status: "weird",
+        adminFeedback: null,
+        decidedById: null,
+        createdAt: "",
+        approvedAt: null,
+      }),
+    ).toMatchObject({
+      status: "pending",
+      memberName: "Member",
+      personalInfoDetected: true,
+    });
   });
 });

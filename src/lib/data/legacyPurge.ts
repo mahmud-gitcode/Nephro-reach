@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 7;
+export const STORAGE_VERSION = 8;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -239,6 +239,58 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "dialysis-urine-output",
     since: 7,
     why: "Phase 7: no screen reads or writes this key (the Urine Output section was removed 2026-10-05); urine output is /patients/:id/urine-output on the check-in. Removed so its old rows do not linger.",
+  },
+  /* Phase 12 (COLLAB, STORAGE_VERSION 8): community, reviews, Table Talk,
+     library and testimonials are the API's (BE modules/content). */
+  {
+    name: "community-reviews",
+    since: 8,
+    why: "Phase 12: reviews are POST /reviews and GET /me/reviews (the author is the account, no email); moderators use /platform/content/reviews; the landing banner reads GET /public/reviews into memory. The sample reviews (reviews.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "community-moderation-queue",
+    since: 8,
+    why: "Phase 12: posts are POST /community/posts (the server screens and holds every post) and the queue is /platform/content/community/posts; held photos were data: URLs and are gone. No screen reads this key.",
+  },
+  {
+    name: "community-likes",
+    since: 8,
+    why: "Phase 12: likes are PUT/DELETE /me/community/likes/:postId; likedByMe and likeCount come with each post. Member-owned: the per-member copies go too. No screen reads this key.",
+  },
+  {
+    name: "table-talk-episodes",
+    since: 8,
+    why: "Phase 12: episodes are /table-talk/episodes (live only) and /platform/content/table-talk/episodes; the sample episodes (tableTalk.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "table-talk-categories",
+    since: 8,
+    why: "Phase 12: categories are /table-talk/categories (server uuids, episode counts) and /platform/content/table-talk/categories. No screen reads this key.",
+  },
+  {
+    name: "table-talk-questions",
+    since: 8,
+    why: "Phase 12: questions are POST /table-talk/questions (no name or email sent) and /platform/content/table-talk/questions. Member-owned: the per-member copies go too. No screen reads this key.",
+  },
+  {
+    name: "table-talk-favorites",
+    since: 8,
+    why: "Phase 12: favorites are PUT/DELETE /me/table-talk/favorites/:episodeId (by id, not slug); `favorite` comes with each episode. Member-owned: the per-member copies go too. No screen reads this key.",
+  },
+  {
+    name: "library-resources",
+    since: 8,
+    why: "Phase 12: the shelf is /library (published only) and /platform/content/library; posters were data: URLs and the sample shelf (library.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "library-saved",
+    since: 8,
+    why: "Phase 12: saves are PUT/DELETE /me/library/saves/:resourceId (by id, not slug); `saved` comes with each item. Member-owned: the per-member copies go too. No screen reads this key.",
+  },
+  {
+    name: "video-testimonials",
+    since: 8,
+    why: "Phase 12: stories are GET /public/testimonials, GET /me/testimonials and POST /testimonials (video through /files by id); the stored entries held dead blob: URLs and member emails; the samples (testimonials.seed.ts) are deleted. No screen reads this key.",
   },
 ];
 

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Video, Upload, CheckCircle2 } from "lucide-react";
+import { uploadErrorMessage } from "@/lib/api/upload";
 import {
   Modal,
   Button,
@@ -16,63 +17,44 @@ import {
   MAX_TESTIMONIAL_MB,
   MAX_TESTIMONIAL_SECONDS,
   formatClock,
+  toDurationSeconds,
+  videoFileError,
   videoLengthError,
 } from "./testimonials.rules";
-import { useTestimonials } from "./useTestimonials";
-
-const KNOWN_ROLES = [
-  "Dialysis Member",
-  "Family Caregiver",
-  "CKD Learner",
-  "Transplant Warrior",
-];
-import type { Testimonial } from "./testimonials.types";
+import { useSubmitTestimonial } from "./useTestimonials";
 
 interface SubmitTestimonialModalProps {
   open: boolean;
   onClose: () => void;
+  /** Shown read-only: the server takes the author from the signed-in
+   *  account, never from this form. */
   user?: {
     name?: string;
-    email?: string;
   } | null;
   onSubmitted?: () => void;
-  /** An existing submission being revised. Omit to take a new one. */
-  editing?: Testimonial | null;
 }
 
+/* Phase 12: the video is uploaded through /files (PRIVATE, 10 MB, the API's
+   cap until a per-purpose limit is decided: INT-16/D18), then the story is
+   sent with its file id and the length the browser measured. There is no
+   API route to edit or delete a story yet, so this form only takes a new
+   one. */
 export default function SubmitTestimonialModal({
   open,
   onClose,
   user,
   onSubmitted,
-  editing,
 }: SubmitTestimonialModalProps) {
-  const [memberName, setMemberName] = useState(
-    editing?.memberName || user?.name || "Charles Xavier",
-  );
+  const memberName = user?.name ?? "";
   /* A role outside the four is "Other", typed in (client, 2026-10-12). */
-  const knownRole = (value: string) => KNOWN_ROLES.includes(value);
-  const [role, setRole] = useState(
-    !editing?.role
-      ? "Dialysis Member"
-      : knownRole(editing.role)
-        ? editing.role
-        : "Other",
-  );
-  const [otherRole, setOtherRole] = useState(
-    editing?.role && !knownRole(editing.role) ? editing.role : "",
-  );
-  const roleValue = role === "Other" ? otherRole.trim() || "Other" : role;
-  const [title, setTitle] = useState(
-    editing?.title || "From Fear to Hope: My Dialysis Journey",
-  );
-  const [videoUrl, setVideoUrl] = useState(editing?.videoUrl || "");
+  const [role, setRole] = useState("Dialysis Member");
+  const [otherRole, setOtherRole] = useState("");
+  const [title, setTitle] = useState("From Fear to Hope: My Dialysis Journey");
   /* The file the member chose this sitting, previewed from an object URL.
-     An edit opens with the filename it was saved under and no preview,
-     because the bytes are not in the browser any more. */
-  const [videoName, setVideoName] = useState<string | null>(
-    () => editing?.videoUrl?.split("/").pop() ?? null,
-  );
+     Only the file goes to the server (through /files), never the URL. */
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoName, setVideoName] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState<number | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,19 +72,15 @@ export default function SubmitTestimonialModal({
     setVideoError(message);
     setVideoPreview(null);
     setVideoName(null);
-    setVideoUrl("");
+    setVideoFile(null);
     setDuration("");
+    setSeconds(null);
   };
 
   const pickVideo = (file: File) => {
-    if (!file.type.startsWith("video/")) {
-      clearVideo("That is not a video file. Choose an MP4 or MOV.");
-      return;
-    }
-    if (file.size > MAX_TESTIMONIAL_MB * 1024 * 1024) {
-      clearVideo(
-        `That file is ${Math.round(file.size / 1024 / 1024)} MB. The limit is ${MAX_TESTIMONIAL_MB} MB.`,
-      );
+    const refused = videoFileError(file);
+    if (refused) {
+      clearVideo(refused);
       return;
     }
 
@@ -111,7 +89,7 @@ export default function SubmitTestimonialModal({
     setVideoError(null);
     setVideoPreview(url);
     setVideoName(file.name);
-    setVideoUrl(`/videos/testimonials/${file.name}`);
+    setVideoFile(file);
 
     /* Reading the real length means the runtime shown on the card is the
        file's, not a fixed "3:30" — and it is the only way to enforce the
@@ -131,14 +109,17 @@ export default function SubmitTestimonialModal({
       }
       if (Number.isFinite(seconds) && seconds > 0) {
         setDuration(formatClock(seconds));
+        setSeconds(seconds);
       }
     };
     probe.src = url;
   };
-  const [summary, setSummary] = useState(editing?.summary || "");
-  const [duration, setDuration] = useState(editing?.duration || "");
+  const [summary, setSummary] = useState("");
+  const [duration, setDuration] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const { submit, revise, isSaving, saveError } = useTestimonials();
+  const submit = useSubmitTestimonial();
+  const isSaving = submit.isPending;
+  const saveError = submit.error;
 
   const roles = [
     { key: "Dialysis Member", label: "Dialysis Member" },
@@ -153,32 +134,17 @@ export default function SubmitTestimonialModal({
      be thanked for a video nobody would ever receive. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoUrl.trim() || !summary.trim() || isSaving) return;
+    if (!videoFile || !summary.trim() || isSaving) return;
 
-    if (editing) {
-      void revise(editing.id, {
-        title: title.trim(),
-        role: roleValue,
-        videoUrl: videoUrl.trim(),
+    void submit
+      .mutateAsync({
+        title: title.trim() || "From Fear to Hope: My Dialysis Journey",
+        role,
+        otherRole: role === "Other" ? otherRole : undefined,
+        video: videoFile,
+        durationSeconds: toDurationSeconds(seconds),
         summary: summary.trim(),
       })
-        .then(() => {
-          onSubmitted?.();
-          onClose();
-        })
-        .catch(() => {});
-      return;
-    }
-
-    void submit({
-      memberName: memberName.trim() || "Member",
-      memberEmail: user?.email || "user@nephroreach.com",
-      title: title.trim() || "From Fear to Hope: My Dialysis Journey",
-      role: roleValue,
-      videoUrl: videoUrl.trim(),
-      summary: summary.trim(),
-      duration: duration || undefined,
-    })
       .then(() => {
         setSubmitted(true);
         onSubmitted?.();
@@ -196,14 +162,8 @@ export default function SubmitTestimonialModal({
       open={open}
       onClose={onClose}
       size="wide"
-      title={
-        editing ? "Edit your story" : "Submit 'From Fear to Hope' Testimonial"
-      }
-      description={
-        editing
-          ? "Your story is still waiting on review, so you can change it. It stays in the queue."
-          : "Share your video journey to inspire others. Admin will review and approve your submission before publishing."
-      }
+      title="Submit 'From Fear to Hope' Testimonial"
+      description="Share your video journey to inspire others. Admin will review and approve your submission before publishing."
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
@@ -211,22 +171,18 @@ export default function SubmitTestimonialModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!videoUrl.trim() || !summary.trim() || submitted}
+            disabled={!videoFile || !summary.trim() || submitted}
             loading={isSaving}
             leadingIcon={<Video className="size-4" />}
           >
-            {submitted
-              ? "Submitted"
-              : editing
-                ? "Save changes"
-                : "Submit for Admin Review"}
+            {submitted ? "Submitted" : "Submit for Admin Review"}
           </Button>
         </>
       }
     >
       {saveError ? (
         <Alert tone="danger" title="Your testimonial was not sent">
-          {saveError instanceof Error ? saveError.message : "Please try again."}
+          {uploadErrorMessage(saveError)}
         </Alert>
       ) : null}
 
@@ -252,22 +208,15 @@ export default function SubmitTestimonialModal({
           </Alert>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Your Name">
-              {(props) => (
-                <Input
-                  {...props}
-                  value={memberName}
-                  onChange={(e) => setMemberName(e.target.value)}
-                  placeholder="Enter your name"
-                  required
-                />
-              )}
+            <FormField label="Your Name" hint="From your account">
+              {(props) => <Input {...props} value={memberName} readOnly />}
             </FormField>
 
             <FormField label="Story Title">
               {(props) => (
                 <Input
                   {...props}
+                  maxLength={120}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="From Fear to Hope: My Journey"
@@ -320,7 +269,7 @@ export default function SubmitTestimonialModal({
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="video/*"
+                  accept="video/mp4,video/webm,video/quicktime"
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
@@ -382,6 +331,7 @@ export default function SubmitTestimonialModal({
               <Textarea
                 {...props}
                 rows={3}
+                maxLength={2000}
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="What challenges did you face? How did you find hope, strength, and confidence on your journey?"

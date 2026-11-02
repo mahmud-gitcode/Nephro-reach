@@ -1400,61 +1400,7 @@
       "postButton": "Post",
       "justNow": "Just now",
       "memberBadge": "Member"
-    },
-    "posts": [
-      {
-        "id": "1",
-        "author": "Marcus T.",
-        "badge": "Milestone",
-        "time": "Posted 2h ago",
-        "paragraphs": [
-          "One year on dialysis today. The first month was the hardest, and it got easier once I learned my routine.",
-          "To anyone just starting: ask your nurses everything. They want you to."
-        ],
-        "hashtags": "#OneYearStrong #DialysisLife",
-        "likes": 128,
-        "categoryId": "dialysis"
-      },
-      {
-        "id": "2",
-        "author": "Linda R.",
-        "badge": "Encouragement",
-        "time": "Posted 5h ago",
-        "paragraphs": [
-          "My mom started home hemodialysis last month. As her caregiver I was nervous, but the training team was patient with both of us.",
-          "We are finding our rhythm. Sending strength to every caregiver here."
-        ],
-        "hashtags": "#Caregivers #HomeHD",
-        "likes": 94,
-        "categoryId": "general"
-      },
-      {
-        "id": "3",
-        "author": "James W.",
-        "badge": "Milestone",
-        "time": "Posted yesterday",
-        "paragraphs": [
-          "I finished my transplant evaluation this week and I am officially on the waiting list!",
-          "Grateful for my care team, and for this group for keeping me going."
-        ],
-        "hashtags": "#TransplantJourney #Hope",
-        "likes": 211,
-        "categoryId": "transplant"
-      },
-      {
-        "id": "4",
-        "author": "Rosa M.",
-        "badge": "Tip",
-        "time": "Posted 2 days ago",
-        "paragraphs": [
-          "Small win: I hit my fluid goal every day this week. Ice chips and a smaller cup really helped me.",
-          "What helps you stay on track?"
-        ],
-        "hashtags": "#FluidGoals #SmallWins",
-        "likes": 76,
-        "categoryId": "nutrition"
-      }
-    ]
+    }
   },
   "support": {
     "pageTitle": "My Tickets",

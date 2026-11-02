@@ -1,31 +1,41 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import { EyeOff, Heart, Plus } from "lucide-react";
+import { EyeOff, Heart, MessageSquare, Plus } from "lucide-react";
 import { MoreSolid } from "@/components/icons/solid";
 import { useDismiss } from "@/lib/utils/useDismiss";
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { useLanguage } from "@/context/LanguageContext";
 import { ComposeModal } from "@/features/community/ComposeModal";
 import { routeForCommunity } from "@/features/community/moderation";
 import CommunityDisclaimer from "@/features/community/CommunityDisclaimer";
-import { useModerationQueue } from "@/features/community/useModerationQueue";
-import { useCommunityLikes } from "@/features/community/useCommunityLikes";
-import { approvedPosts } from "@/features/community/moderationQueue.rules";
-import type {
-  CommunityTab,
-  PostItem,
-} from "@/features/community/community.types";
-import { useAuth } from "@/features/auth/AuthContext";
+import { ServerSafetyNotice } from "@/features/community/ServerSafetyNotice";
+import {
+  useCommunityBoard,
+  useCreatePost,
+  useLikePost,
+  usePostImage,
+} from "@/features/community/useCommunity";
+import type { ApiCreatePostReply } from "@/features/community/community.api";
+import type { CommunityTab } from "@/features/community/community.types";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   Card,
+  EmptyState,
   menuItemStyles,
   menuStyles,
+  Skeleton,
   Tabs,
   TabPanel,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import type { TabItem } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
 
@@ -39,72 +49,18 @@ const defaultTabs: CommunityTab[] = [
   { id: "recipes", label: "Recipes" },
 ];
 
-/* Sample posts for the demo (client review, 2026-10-08: the old sample
-   was one fitness post repeated four times). */
-const defaultPosts: PostItem[] = [
-  {
-    id: "1",
-    author: "Marcus T.",
-    badge: "Milestone",
-    time: "Posted 2h ago",
-    paragraphs: [
-      "One year on dialysis today. The first month was the hardest, and it got easier once I learned my routine.",
-      "To anyone just starting: ask your nurses everything. They want you to.",
-    ],
-    hashtags: "#OneYearStrong #DialysisLife",
-    likes: 128,
-    categoryId: "dialysis",
-  },
-  {
-    id: "2",
-    author: "Linda R.",
-    badge: "Encouragement",
-    time: "Posted 5h ago",
-    paragraphs: [
-      "My mom started home hemodialysis last month. As her caregiver I was nervous, but the training team was patient with both of us.",
-      "We are finding our rhythm. Sending strength to every caregiver here.",
-    ],
-    hashtags: "#Caregivers #HomeHD",
-    likes: 94,
-    categoryId: "general",
-  },
-  {
-    id: "3",
-    author: "James W.",
-    badge: "Milestone",
-    time: "Posted yesterday",
-    paragraphs: [
-      "I finished my transplant evaluation this week and I am officially on the waiting list!",
-      "Grateful for my care team, and for this group for keeping me going.",
-    ],
-    hashtags: "#TransplantJourney #Hope",
-    likes: 211,
-    categoryId: "transplant",
-  },
-  {
-    id: "4",
-    author: "Rosa M.",
-    badge: "Tip",
-    time: "Posted 2 days ago",
-    paragraphs: [
-      "Small win: I hit my fluid goal every day this week. Ice chips and a smaller cup really helped me.",
-      "What helps you stay on track?",
-    ],
-    hashtags: "#FluidGoals #SmallWins",
-    likes: 76,
-    categoryId: "nutrition",
-  },
-];
-
 /* A positive board, not a chat (client decision, 2026-09): members post
    encouragement and like each other's posts, and there are no replies.
+   Phase 12: the posts, likes and the moderation hold are the server's. A
+   failed read shows the error, never sample posts; every post waits for a
+   moderator, and what the server said about it (safety guidance, a privacy
+   notice) is shown from its reply.
    A reply thread under a health post is where advice, arguments and
    "have you tried…" gather, which is what the board is meant to be free
    of. */
 export default function CommunityPage() {
   const { dictionary, language } = useLanguage();
   const isEs = language === "ES";
-  const { user } = useAuth();
   const comm = dictionary?.community;
 
   const tabs: CommunityTab[] =
@@ -117,87 +73,46 @@ export default function CommunityPage() {
     label: tab.label,
   }));
 
-  const queue = useModerationQueue();
-
-  /* One spelling of the member's name, so a held post is matched back to
-     its author by the same string that was stored with it. */
-  const authorName = user?.name || (language === "ES" ? "Usted" : "You");
-
   const [activeTabId, setActiveTabId] = useState<string>("all");
-  const { liked, toggle: toggleLike } = useCommunityLikes();
+  const board = useCommunityBoard(activeTabId, {
+    badge:
+      comm?.compose?.memberBadge || (language === "ES" ? "Miembro" : "Member"),
+    isEs,
+  });
+  const create = useCreatePost();
+  const like = useLikePost();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>(
     {},
   );
-  /* Shown after posting: the post waits for a moderator. */
-  const [heldNotice, setHeldNotice] = useState(false);
+  /* Shown after posting: the post waits for a moderator, with whatever
+     the server said about it. */
+  const [heldNotice, setHeldNotice] = useState<ApiCreatePostReply | null>(null);
 
-  const dictPosts: PostItem[] =
-    comm?.posts && Array.isArray(comm.posts) && comm.posts.length > 0
-      ? comm.posts
-      : defaultPosts;
-
-  /* A held post a moderator approved is on the board like any other, so it
-     is folded in here rather than living in a second list the feed would
-     have to remember to render. */
-  const releasedPosts: PostItem[] = useMemo(
-    () =>
-      approvedPosts(queue.items).map((item) => ({
-        id: item.id,
-        author: item.author,
-        badge:
-          comm?.compose?.memberBadge ||
-          (language === "ES" ? "Miembro" : "Member"),
-        time:
-          comm?.compose?.justNow ||
-          (language === "ES" ? "Recién publicado" : "Just now"),
-        paragraphs: [item.content],
-        hashtags: "",
-        likes: 0,
-        categoryId: item.categoryId || "general",
-        imageUrl: item.imageUrl,
-      })),
-    [queue.items, comm?.compose?.memberBadge, comm?.compose?.justNow, language],
+  /* The server filters by category. An empty category shows the empty
+     state (it used to fall back to every post, which only made sense with
+     sample content). */
+  const posts = useMemo(
+    () => board.items.filter((post) => !hiddenPostIds[post.id]),
+    [board.items, hiddenPostIds],
   );
 
-  const allCombinedPosts = useMemo(() => {
-    return [...releasedPosts, ...dictPosts].filter(
-      (post) => !hiddenPostIds[post.id],
-    );
-  }, [releasedPosts, dictPosts, hiddenPostIds]);
-
-  const posts = useMemo(() => {
-    if (activeTabId === "all") return allCombinedPosts;
-    const filtered = allCombinedPosts.filter(
-      (post) => post.categoryId === activeTabId,
-    );
-    return filtered.length > 0 ? filtered : allCombinedPosts;
-  }, [activeTabId, allCombinedPosts]);
-
-  /* Every post waits for a moderator (client, 2026-10-05): nothing goes
-     on the board until someone has approved it. A flagged post is held at
-     its level; a clean one as routine. */
-  const handleAddPost = (
+  /* Every post waits for a moderator (client, 2026-10-05): the server holds
+     it and screens it. `block` only means the text is empty. */
+  const handleAddPost = async (
     text: string,
-    categoryId?: string,
-    imageUrl?: string,
+    categoryId: string,
+    photo?: Blob,
   ) => {
-    const route = routeForCommunity(text);
-    if (route === "block") return;
-    queue.hold(
-      {
-        kind: "post",
-        postId: "",
-        author: authorName,
-        content: text,
-        categoryId:
-          categoryId || (activeTabId === "all" ? "general" : activeTabId),
-        imageUrl,
-      },
-      { always: true },
-    );
-    setHeldNotice(true);
+    if (routeForCommunity(text) === "block") return;
+    const reply = await create.mutateAsync({
+      body: text,
+      categoryId:
+        categoryId || (activeTabId === "all" ? "general" : activeTabId),
+      photo,
+    });
+    setHeldNotice(reply);
   };
 
   const handleHidePost = (id: string) => {
@@ -209,14 +124,29 @@ export default function CommunityPage() {
     <div className="relative mx-auto min-h-[calc(100vh-7rem)] w-full max-w-[900px]">
       <PageTitle href="/dashboard/community" className="mb-stack-lg" />
       {heldNotice ? (
+        <div className="mb-stack-lg space-y-stack-md">
+          <Alert tone="info" onDismiss={() => setHeldNotice(null)}>
+            {language === "ES"
+              ? "¡Gracias! Su publicación fue enviada a un moderador y aparecerá cuando sea aprobada."
+              : "Thank you! Your post was sent to a moderator and will appear once it is approved."}
+          </Alert>
+          <ServerSafetyNotice
+            safety={heldNotice.safety}
+            privacyNotice={heldNotice.privacyNotice}
+            isEs={isEs}
+          />
+        </div>
+      ) : null}
+
+      {like.error ? (
         <Alert
-          tone="info"
+          tone="warning"
           className="mb-stack-lg"
-          onDismiss={() => setHeldNotice(false)}
+          onDismiss={() => like.reset()}
         >
-          {language === "ES"
-            ? "¡Gracias! Su publicación fue enviada a un moderador y aparecerá cuando sea aprobada."
-            : "Thank you! Your post was sent to a moderator and will appear once it is approved."}
+          {isEs
+            ? "No pudimos guardar su me gusta. Inténtelo de nuevo."
+            : "We could not save your like. Please try again."}
         </Alert>
       ) : null}
 
@@ -242,103 +172,152 @@ export default function CommunityPage() {
         value={activeTabId}
         className="flex flex-col gap-inline-md"
       >
-        {posts.map((post) => {
-          const isLiked = Boolean(liked[post.id]);
+        <AsyncSection
+          pending={board.isPending}
+          error={board.error}
+          onRetry={canRetry(board.error) ? board.refetch : undefined}
+          errorTitle={errorTitleFor(
+            board.error,
+            isEs
+              ? "Las publicaciones no se cargaron"
+              : "The posts did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(
+            board.error,
+            undefined,
+            isEs ? "es" : "en",
+          )}
+          isEmpty={posts.length === 0}
+          empty={
+            <EmptyState
+              icon={<MessageSquare aria-hidden="true" />}
+              title={
+                isEs ? "Aún no hay publicaciones aquí" : "No posts here yet"
+              }
+              description={
+                isEs
+                  ? "Comparta algo alentador: un moderador lo revisa antes de que aparezca."
+                  : "Share something encouraging: a moderator reviews it before it appears."
+              }
+            />
+          }
+          skeleton={
+            <div className="flex flex-col gap-inline-md">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} height={160} />
+              ))}
+            </div>
+          }
+        >
+          {posts.map((post) => {
+            const isLiked = Boolean(post.liked);
 
-          return (
-            <Card key={post.id} as="article">
-              <div className="flex items-start gap-inline-md">
-                <div className="flex min-w-0 flex-1 items-center gap-inline-md">
-                  {/* Initials, not one stock photo shared by every
+            return (
+              <Card key={post.id} as="article">
+                <div className="flex items-start gap-inline-md">
+                  <div className="flex min-w-0 flex-1 items-center gap-inline-md">
+                    {/* Initials, not one stock photo shared by every
                       author. */}
-                  <div
-                    aria-hidden="true"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-surface-brand-subtle text-label-md text-fg-brand"
-                  >
-                    {post.author
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-inline-lg">
-                      <p className="text-label-lg text-fg">{post.author}</p>
-                      <Badge tone="neutral">{post.badge}</Badge>
+                    <div
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-surface-brand-subtle text-label-md text-fg-brand"
+                    >
+                      {post.author
+                        .split(" ")
+                        .map((part) => part[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </div>
-                    <p className="mt-stack-xs text-body-sm text-fg-muted">
-                      {post.time}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-inline-lg">
+                        <p className="text-label-lg text-fg">{post.author}</p>
+                        <Badge tone="neutral">{post.badge}</Badge>
+                      </div>
+                      <p className="mt-stack-xs text-body-sm text-fg-muted">
+                        {post.time}
+                      </p>
+                    </div>
                   </div>
+                  <PostMenu
+                    open={menuOpen === post.id}
+                    onOpenChange={(open) => setMenuOpen(open ? post.id : null)}
+                    onHide={() => handleHidePost(post.id)}
+                    label={comm?.postOptionsAria || "Post options"}
+                    hideLabel={comm?.hidePost || "Hide post"}
+                  />
                 </div>
-                <PostMenu
-                  open={menuOpen === post.id}
-                  onOpenChange={(open) => setMenuOpen(open ? post.id : null)}
-                  onHide={() => handleHidePost(post.id)}
-                  label={comm?.postOptionsAria || "Post options"}
-                  hideLabel={comm?.hidePost || "Hide post"}
-                />
-              </div>
 
-              <div className="mt-stack-md text-body-sm text-fg">
-                {post.paragraphs && post.paragraphs.length > 0 ? (
-                  post.paragraphs.map((p: string, pIdx: number) => (
-                    <p key={pIdx} className={pIdx > 0 ? "mt-stack-lg" : ""}>
-                      {p}
-                      {pIdx === post.paragraphs.length - 1 && post.hashtags && (
-                        <span className="ml-1 text-fg-brand">
-                          {post.hashtags}
-                        </span>
-                      )}
-                    </p>
-                  ))
-                ) : (
-                  <p />
-                )}
-                {post.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                  <img
-                    src={post.imageUrl}
-                    alt={
-                      language === "ES"
-                        ? `Foto de ${post.author}`
-                        : `Photo from ${post.author}`
+                <div className="mt-stack-md text-body-sm text-fg">
+                  {post.paragraphs && post.paragraphs.length > 0 ? (
+                    post.paragraphs.map((p: string, pIdx: number) => (
+                      <p key={pIdx} className={pIdx > 0 ? "mt-stack-lg" : ""}>
+                        {p}
+                        {pIdx === post.paragraphs.length - 1 &&
+                          post.hashtags && (
+                            <span className="ml-1 text-fg-brand">
+                              {post.hashtags}
+                            </span>
+                          )}
+                      </p>
+                    ))
+                  ) : (
+                    <p />
+                  )}
+                  {post.hasImage ? (
+                    <PostPhoto
+                      postId={post.id}
+                      alt={
+                        language === "ES"
+                          ? `Foto de ${post.author}`
+                          : `Photo from ${post.author}`
+                      }
+                    />
+                  ) : null}
+                </div>
+
+                {/* Actions Divider */}
+                <div className="mt-stack-md h-px w-full bg-line-subtle" />
+
+                {/* The one response a post takes: a like. */}
+                <div className="mt-stack-md flex items-center gap-inset-lg">
+                  {/* Like Button */}
+                  <button
+                    type="button"
+                    className="group -my-2.5 flex min-h-11 cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    onClick={() =>
+                      like.mutate({ postId: post.id, liked: !isLiked })
                     }
-                    className="mt-stack-md max-h-80 w-full rounded-card-nested object-cover"
-                  />
-                ) : null}
-              </div>
-
-              {/* Actions Divider */}
-              <div className="mt-stack-md h-px w-full bg-line-subtle" />
-
-              {/* The one response a post takes: a like. */}
-              <div className="mt-stack-md flex items-center gap-inset-lg">
-                {/* Like Button */}
-                <button
-                  type="button"
-                  className="group -my-2.5 flex min-h-11 cursor-pointer items-center gap-inline-md rounded-control-small text-fg-muted transition-colors duration-150 ease-standard hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  onClick={() => toggleLike(post.id)}
-                  aria-pressed={isLiked}
-                  aria-label={comm?.likePostAria || "Like post"}
-                >
-                  {/* Filled when liked — shape, not only colour, carries
+                    disabled={like.isPending}
+                    aria-pressed={isLiked}
+                    aria-label={comm?.likePostAria || "Like post"}
+                  >
+                    {/* Filled when liked — shape, not only colour, carries
                       the state, which an opacity change alone did not. */}
-                  <Heart
-                    aria-hidden="true"
-                    className={`size-5 transition-colors duration-150 ease-standard ${
-                      isLiked ? "fill-current text-danger" : ""
-                    }`}
-                  />
-                  <span className="text-label-md">
-                    {post.likes + (isLiked ? 1 : 0)}
-                  </span>
-                </button>
-              </div>
-            </Card>
-          );
-        })}
+                    <Heart
+                      aria-hidden="true"
+                      className={`size-5 transition-colors duration-150 ease-standard ${
+                        isLiked ? "fill-current text-danger" : ""
+                      }`}
+                    />
+                    <span className="text-label-md">{post.likes}</span>
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+          {board.hasMore ? (
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={board.loadMore}
+              loading={board.isLoadingMore}
+            >
+              {isEs ? "Ver más" : "Load more"}
+            </Button>
+          ) : null}
+        </AsyncSection>
       </TabPanel>
 
       {/* Floating Create Post Button */}
@@ -361,6 +340,22 @@ export default function CommunityPage() {
         initialCategory={activeTabId}
       />
     </div>
+  );
+}
+
+/* A post's photo: a short-lived link from the server, fetched when the post
+   is shown, never stored. Nothing renders until the link arrives. */
+function PostPhoto({ postId, alt }: { postId: string; alt: string }) {
+  const image = usePostImage(postId, { enabled: true });
+  const url = image.data?.url;
+  if (!isSafeFileUrl(url)) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a presigned storage link, nothing to optimise
+    <img
+      src={url}
+      alt={alt}
+      className="mt-stack-md max-h-80 w-full rounded-card-nested object-cover"
+    />
   );
 }
 

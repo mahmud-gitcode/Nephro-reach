@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAuth } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { useReviews } from "@/features/reviews/useReviews";
-import { reviewsByAuthor } from "@/features/reviews/reviews.rules";
+import { useMyReviews } from "@/features/reviews/useReviews";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import {
   Star,
   CheckCircle2,
@@ -30,7 +33,6 @@ import {
 import { PageTitle } from "@/components/layout/PageTitle";
 
 export default function UserReviewsPage() {
-  const { user } = useAuth();
   const { language } = useLanguage();
   const isEs = language === "ES";
 
@@ -42,13 +44,20 @@ export default function UserReviewsPage() {
   const [comment, setComment] = useState<string>("");
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
-  const userEmail = user?.email || "user@nephroreach.com";
-  const userName = user?.name || "Member";
-
-  const { reviews, isPending, error, refetch, submit, isSaving, saveError } =
-    useReviews();
-  /* One cache holds every review; this page shows only the member's own. */
-  const myReviews = reviewsByAuthor(reviews, userEmail);
+  /* The server knows who is signed in: the list is this account's own
+     reviews (GET /me/reviews), and a submission carries no name or email. */
+  const {
+    reviews: myReviews,
+    isPending,
+    error,
+    refetch,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+    submit,
+    isSaving,
+    saveError,
+  } = useMyReviews();
 
   const roleOptions = [
     {
@@ -74,11 +83,12 @@ export default function UserReviewsPage() {
     e.preventDefault();
     if (!comment.trim() || isSaving) return;
 
+    /* "Other" goes as the role with the typed text beside it; the server
+       shows the typed text. */
     void submit({
-      userName,
-      userEmail,
       rating,
-      role: role === "Other" ? otherRole.trim() || "Other" : role,
+      role,
+      otherRole: role === "Other" ? otherRole : undefined,
       comment: comment.trim(),
     })
       .then(() => {
@@ -193,6 +203,7 @@ export default function UserReviewsPage() {
               <Textarea
                 {...props}
                 rows={4}
+                maxLength={2000}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder={
@@ -220,10 +231,13 @@ export default function UserReviewsPage() {
         <AsyncSection
           pending={isPending}
           error={error}
-          onRetry={refetch}
-          errorTitle={
-            isEs ? "Sus reseñas no se cargaron" : "Your reviews did not load"
-          }
+          onRetry={canRetry(error) ? refetch : undefined}
+          errorTitle={errorTitleFor(
+            error,
+            isEs ? "Sus reseñas no se cargaron" : "Your reviews did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           skeleton={
             <div className="space-y-stack-md">
               <Skeleton height={120} />
@@ -310,6 +324,16 @@ export default function UserReviewsPage() {
                   ) : null}
                 </Card>
               ))}
+              {hasMore ? (
+                <Button
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={loadMore}
+                  loading={isLoadingMore}
+                >
+                  {isEs ? "Ver más" : "Load more"}
+                </Button>
+              ) : null}
             </div>
           )}
         </AsyncSection>

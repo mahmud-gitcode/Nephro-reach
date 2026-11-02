@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Check,
-  Clock,
-  MessageSquare,
-  ShieldAlert,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, Clock, MessageSquare, ShieldAlert, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
@@ -17,17 +10,23 @@ import {
   Button,
   Card,
   EmptyState,
+  FormField,
+  Modal,
   Skeleton,
   Tabs,
+  Textarea,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useAuth } from "@/features/auth/AuthContext";
 import { MODERATION_HOURS } from "@/features/community/moderation";
 import { useModerationQueue } from "@/features/community/useModerationQueue";
 import {
-  decidedItems,
   pendingItems,
-  pendingCount,
   urgentPendingCount,
 } from "@/features/community/moderationQueue.rules";
 import type { HeldItem } from "@/features/community/community.types";
@@ -42,6 +41,12 @@ import type { HeldItem } from "@/features/community/community.types";
 
    Two tabs, not a single list: a moderator working the pending queue should
    not have yesterday's decisions scrolling past underneath it.
+
+   Phase 12: the queue is the server's (platform content, Manage). It records
+   who decided (an id, so the screen says "you" or "a moderator") and the
+   note. A rejection needs a reason (the server requires one; it is kept as
+   the decision note). A decided record is the audit trail, so it can no
+   longer be deleted from here.
    ========================================================================== */
 
 type QueueTab = "pending" | "decided";
@@ -121,30 +126,41 @@ export default function AdminCommunityPage() {
   const isEs = language === "ES";
   const { user } = useAuth();
 
-  const {
-    items,
-    isPending,
-    error,
-    refetch,
-    approve,
-    reject,
-    remove,
-    isSaving,
-    saveError,
-    dismissSaveError,
-  } = useModerationQueue();
-
   const [tab, setTab] = useState<QueueTab>("pending");
+  /* The pending page is always read: its count and its level 1 alarm show
+     on both tabs. */
+  const pendingQueue = useModerationQueue("pending");
+  const decidedQueue = useModerationQueue("decided");
+  const active = tab === "pending" ? pendingQueue : decidedQueue;
+  const { isPending, error, refetch, saveError, dismissSaveError } = active;
+  const { approve, reject } = pendingQueue;
 
-  /* Stamped onto every decision. An audit trail that cannot say who
-     decided is not one a member could ever appeal against. */
-  const moderatorName = user?.name ?? (isEs ? "Moderador" : "Moderator");
+  const [rejecting, setRejecting] = useState<HeldItem | null>(null);
+  const [reason, setReason] = useState("");
 
-  const pending = pendingItems(items);
-  const decided = decidedItems(items);
-  const waiting = pendingCount(items);
-  const urgent = urgentPendingCount(items);
-  const shown = tab === "pending" ? pending : decided;
+  const pending = pendingItems(pendingQueue.items);
+  const waiting = pendingQueue.total ?? pending.length;
+  const urgent = urgentPendingCount(pendingQueue.items);
+  const shown = tab === "pending" ? pending : decidedQueue.items;
+
+  const whoDecided = (item: HeldItem) =>
+    item.decidedById && item.decidedById === user?.id
+      ? isEs
+        ? "usted"
+        : "you"
+      : isEs
+        ? "un moderador"
+        : "a moderator";
+
+  const confirmReject = () => {
+    if (!rejecting || !reason.trim()) return;
+    void reject(rejecting.id, reason)
+      .then(() => {
+        setRejecting(null);
+        setReason("");
+      })
+      .catch(() => {});
+  };
 
   return (
     <div className="space-y-stack-xl">
@@ -177,13 +193,16 @@ export default function AdminCommunityPage() {
           : `The board holds everything the screen catches, at three levels: 1 possible emergency or crisis, 2 a care-team concern, 3 conduct, scams or personal information. Only the author can see it until someone decides. The member has already been answered according to the level. ${MODERATION_HOURS.en}`}
       </Alert>
 
-      {saveError ? (
+      {(saveError ?? pendingQueue.saveError) ? (
         <Alert
           tone="danger"
           title={
             isEs ? "No se guardó su decisión" : "Your decision did not save"
           }
-          onDismiss={dismissSaveError}
+          onDismiss={() => {
+            dismissSaveError();
+            pendingQueue.dismissSaveError();
+          }}
         >
           {isEs
             ? "Inténtelo de nuevo. El elemento sigue pendiente."
@@ -214,10 +233,13 @@ export default function AdminCommunityPage() {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle={
-          isEs ? "La cola no se cargó" : "The moderation queue did not load"
-        }
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
+          isEs ? "La cola no se cargó" : "The moderation queue did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         isEmpty={shown.length === 0}
         empty={
           <EmptyState
@@ -255,15 +277,7 @@ export default function AdminCommunityPage() {
             <Card as="li" key={item.id} className="space-y-stack-md">
               <div className="flex flex-wrap items-center gap-inline-sm">
                 <span className="text-label-lg text-fg">{item.author}</span>
-                <Badge tone="neutral">
-                  {item.kind === "reply"
-                    ? isEs
-                      ? "Respuesta"
-                      : "Reply"
-                    : isEs
-                      ? "Publicación"
-                      : "Post"}
-                </Badge>
+                <Badge tone="neutral">{isEs ? "Publicación" : "Post"}</Badge>
                 {levelBadge(item, isEs)}
                 {reasonBadge(item, isEs)}
                 {statusBadge(item, isEs)}
@@ -297,15 +311,18 @@ export default function AdminCommunityPage() {
                   <Button
                     variant="neutral"
                     appearance="stroke"
-                    disabled={isSaving}
-                    onClick={() => void reject(item.id, moderatorName)}
+                    disabled={pendingQueue.isSaving}
+                    onClick={() => {
+                      setReason("");
+                      setRejecting(item);
+                    }}
                   >
                     <X aria-hidden="true" />
                     {isEs ? "Rechazar" : "Reject"}
                   </Button>
                   <Button
-                    disabled={isSaving}
-                    onClick={() => void approve(item.id, moderatorName)}
+                    disabled={pendingQueue.isSaving}
+                    onClick={() => void approve(item.id).catch(() => {})}
                   >
                     <Check aria-hidden="true" />
                     {isEs ? "Aprobar y publicar" : "Approve and publish"}
@@ -316,28 +333,68 @@ export default function AdminCommunityPage() {
                   <span className="text-caption text-fg-muted">
                     {isEs ? "Decidida el " : "Decided "}
                     {item.decidedAt ? formatWhen(item.decidedAt, isEs) : "—"}
-                    {item.decidedBy ? ` · ${item.decidedBy}` : ""}
-                  </span>
-                  <Button
-                    variant="neutral"
-                    appearance="stroke"
-                    disabled={isSaving}
-                    onClick={() => void remove(item.id)}
-                    aria-label={
-                      isEs
-                        ? `Borrar el registro de ${item.author}`
-                        : `Delete the record from ${item.author}`
-                    }
-                  >
-                    <Trash2 aria-hidden="true" />
-                    {isEs ? "Borrar registro" : "Delete record"}
-                  </Button>
+                    {` · ${whoDecided(item)}`}
+                    {item.decisionNote ? ` · ${item.decisionNote}` : ""}
+                  </span>{" "}
                 </div>
               )}
             </Card>
           ))}
         </ul>
+        {active.hasMore ? (
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={active.loadMore}
+            loading={active.isLoadingMore}
+          >
+            {isEs ? "Ver más" : "Load more"}
+          </Button>
+        ) : null}
       </AsyncSection>
+
+      {/* The server keeps the reason as the decision note. */}
+      <Modal
+        open={rejecting !== null}
+        onClose={() => setRejecting(null)}
+        size="small"
+        title={isEs ? "Rechazar publicación" : "Reject post"}
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setRejecting(null)}
+              disabled={pendingQueue.isSaving}
+            >
+              {isEs ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmReject}
+              disabled={!reason.trim()}
+              loading={pendingQueue.isSaving}
+            >
+              {isEs ? "Rechazar" : "Reject"}
+            </Button>
+          </>
+        }
+      >
+        <FormField
+          label={isEs ? "Motivo del rechazo" : "Reason for rejecting"}
+          required
+        >
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={3}
+              maxLength={1000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          )}
+        </FormField>
+      </Modal>
     </div>
   );
 }

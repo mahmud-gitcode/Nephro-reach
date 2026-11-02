@@ -1,41 +1,95 @@
 /* ==========================================================================
-   Reviews — the synchronous reader
+   Reviews: the marketing site's reader (Phase 12)
    --------------------------------------------------------------------------
-   The portal reads and writes reviews through useReviews(), which is async
-   and goes through the repository like every other feature.
+   The landing banner (features/landing-page/Testimonials.tsx, protected UI)
+   reads approved reviews synchronously and listens for REVIEWS_EVENT. That
+   contract stays exactly as it was; only the source changed:
 
-   This file is what the marketing site uses. It is deliberately still
-   synchronous: that page is outside the portal, has no QueryClient above it,
-   and is not ours to change. So it gets a read and an event to listen to,
-   and nothing else. Writes live in useReviews(), which fires REVIEWS_EVENT
-   after every one so this reader stays current.
+   - the source is `GET /public/reviews` (public, throttled), read once per
+     page load into a module cache, never localStorage;
+   - the request carries no credentials: a signed-in visitor's cookies never
+     travel with a public read, and the reply holds no email, no status and
+     nothing pending;
+   - until the reply arrives, and when it fails, the reader returns [] and the
+     banner shows its own dictionary defaults, as it does for an empty list.
+     A sample review is never presented as a member's words;
+   - one retry at most, so a down API is not hammered by every visitor.
 
-   Nothing inside the portal should import from here.
+   Nothing inside the portal should import from here except the moderation
+   hook, which drops the cache after a decision.
    ========================================================================== */
-import { REVIEWS_KEY } from "./reviews.repository";
-import { approvedReviews } from "./reviews.rules";
-import { INITIAL_REVIEWS } from "./reviews.seed";
+import { buildUrl } from "@/lib/api/client";
+import { fromApiPublicReview, type ApiPublicReview } from "./reviews.api";
 import type { Review } from "./reviews.types";
 
 export type { Review } from "./reviews.types";
-export { INITIAL_REVIEWS } from "./reviews.seed";
 
-/** Dispatched on window after any write, so open readers can re-read. */
+/** Dispatched on window when the reader has new data, so open readers can
+ *  re-read. In memory only: nothing is stored. */
 export const REVIEWS_EVENT = "nr-reviews-changed";
 
+/** How many approved reviews the banner shows (it is a carousel). */
+export const PUBLIC_REVIEWS_LIMIT = 12;
+
+let cache: Review[] | null = null;
+let inflight: Promise<void> | null = null;
+
+function isPublicReview(row: unknown): row is ApiPublicReview {
+  const r = row as Partial<ApiPublicReview> | null;
+  return (
+    !!r &&
+    typeof r.id === "string" &&
+    typeof r.authorName === "string" &&
+    typeof r.role === "string" &&
+    typeof r.rating === "number" &&
+    typeof r.comment === "string"
+  );
+}
+
+async function fetchOnce(): Promise<Review[]> {
+  const res = await fetch(
+    buildUrl("/public/reviews", { page: 1, limit: PUBLIC_REVIEWS_LIMIT }),
+    {
+      method: "GET",
+      credentials: "omit",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!res.ok) throw new Error(`Reviews read failed (${res.status})`);
+  const body = (await res.json()) as { data?: unknown } | null;
+  const rows = Array.isArray(body?.data) ? body.data : [];
+  return rows.filter(isPublicReview).map(fromApiPublicReview);
+}
+
+function load(): void {
+  if (inflight || typeof window === "undefined") return;
+  inflight = (async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        cache = await fetchOnce();
+        window.dispatchEvent(new Event(REVIEWS_EVENT));
+        return;
+      } catch {
+        /* Nothing sensitive to log; the banner keeps its defaults. */
+      }
+    }
+  })();
+}
+
+/** Approved reviews from the API, or [] until (and unless) they arrive. */
 export function getReviews(): Review[] {
-  if (typeof window === "undefined") return INITIAL_REVIEWS;
-  try {
-    const raw = window.localStorage.getItem(REVIEWS_KEY);
-    if (!raw) return INITIAL_REVIEWS;
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Review[]) : INITIAL_REVIEWS;
-  } catch (cause) {
-    console.error("Could not read reviews.", cause);
-    return INITIAL_REVIEWS;
-  }
+  if (cache) return cache;
+  load();
+  return [];
 }
 
 export function getApprovedReviews(): Review[] {
-  return approvedReviews(getReviews());
+  return getReviews().filter((review) => review.status === "approved");
+}
+
+/** After a moderation decision (and between tests): the next read asks the
+ *  server again. */
+export function invalidatePublicReviews(): void {
+  cache = null;
+  inflight = null;
 }

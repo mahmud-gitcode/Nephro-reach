@@ -22,11 +22,6 @@ import {
   upsertEpisode,
 } from "./tableTalk.rules";
 import type { TableTalkCategory, TableTalkEpisode } from "./tableTalk.types";
-import {
-  SAMPLE_PREFIX,
-  SEED_CATEGORIES,
-  SEED_EPISODES,
-} from "./tableTalk.seed";
 
 /* Two things can go wrong here that matter. An episode reaching a member
  * before it is ready, and the question box quietly filing an emergency as a
@@ -310,53 +305,6 @@ describe("the question box", () => {
     expect(
       looksUrgent("What should I know before traveling on dialysis?"),
     ).toBe(false);
-  });
-});
-
-describe("the example shelf that ships with the feature", () => {
-  it("shows eight episodes and holds the scheduled one back", () => {
-    // The page has to look like something before a real recording exists,
-    // and the scheduled example is there to prove scheduling works.
-    const live = liveEpisodes(SEED_EPISODES, TODAY);
-    expect(live).toHaveLength(8);
-    expect(live.some((ep) => ep.slug === "eating-out-on-a-renal-diet")).toBe(
-      false,
-    );
-  });
-
-  it("opens on a featured episode with captions and a transcript", () => {
-    const featured = featuredEpisode(SEED_EPISODES, TODAY);
-    expect(featured?.slug).toBe("getting-ready-for-travel-dialysis");
-    expect(featured?.captions.en).toContain("WEBVTT");
-    expect(featured?.captions.es).toContain("WEBVTT");
-    expect(featured?.transcriptEn?.length).toBeGreaterThan(200);
-  });
-
-  it("has something behind every filter, so none of them look broken", () => {
-    const base = {
-      search: "",
-      categoryId: "all" as const,
-      categories: SEED_CATEGORIES,
-      favorites: [],
-    };
-    const count = (filter: Parameters<typeof filterEpisodes>[1]["filter"]) =>
-      filterEpisodes(liveEpisodes(SEED_EPISODES, TODAY), {
-        ...base,
-        filter,
-      }).length;
-
-    expect(count("patients")).toBeGreaterThan(0);
-    expect(count("caregivers")).toBeGreaterThan(0);
-    expect(count("expert")).toBeGreaterThan(0);
-    expect(count("short")).toBeGreaterThan(0);
-    expect(count("live")).toBeGreaterThan(0);
-    expect(count("spanish")).toBeGreaterThan(0);
-  });
-
-  it("marks every example so an admin can clear them in one go", () => {
-    expect(
-      SEED_EPISODES.every((episode) => episode.id.startsWith(SAMPLE_PREFIX)),
-    ).toBe(true);
   });
 });
 

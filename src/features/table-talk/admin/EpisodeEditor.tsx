@@ -1,7 +1,7 @@
 "use client";
 
 import { youTubeEmbed } from "@/lib/utils/youtube";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { CheckCircle2, Plus, Trash2, Upload } from "lucide-react";
 import { parseCaptions } from "@/features/education/vtt";
 import {
@@ -51,10 +51,14 @@ function FileButton({
   label,
   accept,
   onPick,
+  disabled = false,
+  describedBy,
 }: {
   label: string;
   accept: string;
   onPick: (file: File) => void;
+  disabled?: boolean;
+  describedBy?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +79,8 @@ function FileButton({
       <Button
         variant="neutral"
         appearance="fill-stroke"
+        disabled={disabled}
+        aria-describedby={describedBy}
         onClick={() => inputRef.current?.click()}
       >
         <Upload aria-hidden="true" className="size-4 shrink-0" />
@@ -127,49 +133,20 @@ export function EpisodeEditor({
       ? "That is not a YouTube video link."
       : undefined;
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [thumbName, setThumbName] = useState<string | null>(null);
   const [captionNote, setCaptionNote] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
-
-  /* Object URLs live until revoked; several files in one sitting leak them
-     all otherwise. */
-  const objectUrls = useRef<string[]>([]);
-  useEffect(() => {
-    const urls = objectUrls.current;
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, []);
 
   const set = (patch: Partial<TableTalkEpisode>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
   const error = episodeError(draft);
 
-  const pickVideo = (file: File) => {
-    const url = URL.createObjectURL(file);
-    objectUrls.current.push(url);
-    setVideoPreview(url);
-    setVideoName(file.name);
-    setYouTube("");
-    set({ videoSrc: `/videos/${file.name}` });
-
-    /* Reading the real length means the runtime on the card is the file's,
-       not a number someone typed and got wrong. */
-    const probe = document.createElement("video");
-    probe.preload = "metadata";
-    probe.onloadedmetadata = () => {
-      const seconds = probe.duration;
-      if (Number.isFinite(seconds) && seconds > 0) {
-        const rounded = Math.round(seconds);
-        set({ durationSeconds: rounded, isShort: rounded <= 180 });
-      }
-    };
-    probe.src = url;
-  };
-
-  const pickThumb = (file: File) => {
-    setThumbName(file.name);
-    set({ thumbnail: `/images/table-talk/${file.name}` });
-  };
+  /* Phase 12: uploading a video or a thumbnail waits on D18 (a public
+     storage host for content media) and INT-16 (videos over 10 MB). The
+     two upload buttons are disabled, with a note; a YouTube link works, and
+     an episode keeps the media it already has. A made-up path is never
+     sent. */
+  const noUpload = () => {};
 
   const pickCaptions = async (file: File, lang: "en" | "es") => {
     const text = await file.text();
@@ -226,12 +203,16 @@ export function EpisodeEditor({
             <FileButton
               label={videoName ? "Replace video" : "Upload video"}
               accept="video/*"
-              onPick={pickVideo}
+              onPick={noUpload}
+              disabled
+              describedBy="episode-media-note"
             />
             <FileButton
-              label={thumbName ? "Replace thumbnail" : "Upload thumbnail"}
+              label="Upload thumbnail"
               accept="image/*"
-              onPick={pickThumb}
+              onPick={noUpload}
+              disabled
+              describedBy="episode-media-note"
             />
             {draft.durationSeconds ? (
               <span className="text-body-sm text-fg-muted">
@@ -239,6 +220,11 @@ export function EpisodeEditor({
               </span>
             ) : null}
           </div>
+
+          <p id="episode-media-note" className="text-caption text-fg-muted">
+            Uploading a video or a thumbnail is not available yet: it waits on
+            where public media will be stored. Paste a YouTube link instead.
+          </p>
 
           <FormField
             label="Or paste a YouTube link"
@@ -276,7 +262,6 @@ export function EpisodeEditor({
           ) : null}
 
           <Picked name={videoName} />
-          <Picked name={thumbName} />
 
           {videoPreview ? (
             <video

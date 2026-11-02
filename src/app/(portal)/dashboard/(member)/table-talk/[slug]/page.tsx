@@ -13,7 +13,12 @@ import {
   formatDuration,
   hasSpanish,
 } from "@/features/table-talk/tableTalk.rules";
-import { useTableTalk } from "@/features/table-talk/useTableTalk";
+import { useEpisode } from "@/features/table-talk/useTableTalk";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import TableTalkDisclaimer from "@/features/table-talk/TableTalkDisclaimer";
 import type { TableTalkEpisode } from "@/features/table-talk/tableTalk.types";
 import {
@@ -185,19 +190,18 @@ export default function EpisodePage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
+  /* The episode by slug (GET /table-talk/episodes/:slug: live only, with
+     captions and transcripts), its topic's shelf and the categories. */
   const {
-    getBySlug,
-    getRelated,
+    episode,
+    related,
     categories,
-    isFavorite,
+    isFavorite: saved,
     toggleFavorite,
     isPending,
     error,
     refetch,
-  } = useTableTalk();
-
-  const episode = getBySlug(slug);
-  const saved = isFavorite(slug);
+  } = useEpisode(slug);
 
   return (
     /* The video and title on the left; who is speaking, the transcript and
@@ -221,13 +225,16 @@ export default function EpisodePage() {
           <AsyncSection
             pending={isPending}
             error={error}
-            onRetry={refetch}
+            onRetry={canRetry(error) ? refetch : undefined}
             /* A slug that is not on the shelf is empty, not broken — the episode
            may simply have been unpublished. */
             isEmpty={!episode}
-            errorTitle={
-              isEs ? "Este episodio no se cargó" : "This episode did not load"
-            }
+            errorTitle={errorTitleFor(
+              error,
+              isEs ? "Este episodio no se cargó" : "This episode did not load",
+              isEs ? "es" : "en",
+            )}
+            errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
             skeleton={
               <Card className="flex flex-col gap-stack-md">
                 <Skeleton height={320} />
@@ -272,7 +279,7 @@ export default function EpisodePage() {
                       variant="neutral"
                       appearance="fill-stroke"
                       aria-pressed={saved}
-                      onClick={() => toggleFavorite(episode.slug)}
+                      onClick={toggleFavorite}
                     >
                       <Heart
                         aria-hidden="true"
@@ -333,7 +340,7 @@ export default function EpisodePage() {
                   </p>
                 </header>
 
-                <RelatedRow episodes={getRelated(episode)} />
+                <RelatedRow episodes={related} />
               </div>
             ) : null}
           </AsyncSection>

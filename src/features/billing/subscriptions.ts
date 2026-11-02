@@ -116,30 +116,109 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 ];
 
 /* ==========================================================================
-   The synchronous reader
+   The synchronous reader (the marketing site's pricing table)
    --------------------------------------------------------------------------
-   The admin screen reads and writes plans through usePlans(), which is async
-   and goes through subscriptions.repository like every other feature.
+   The admin screen reads and writes plans through usePlans() (EDU-BIZ).
 
-   This stays for the marketing site's pricing table: that page is outside
-   the portal, has no QueryClient above it, and is not ours to change. It
-   gets a read, and nothing else.
+   This reader is for the landing page's pricing table (Pricing.tsx,
+   protected UI): it reads once on mount, synchronously, and listens for
+   nothing. Phase 12 (COLLAB, delegated for this one function) changed only
+   its source: `GET /member-plans` (public), never localStorage.
+
+   D14 option A, as built: the table paints DEFAULT_SUBSCRIPTION_PLANS first
+   (as it always did), the first call starts one background read without
+   credentials, and every later mount of the table gets the server's plans.
+   Pricing.tsx has no listener, so the FIRST visit keeps the defaults until
+   the table mounts again. Whether to prime the cache before mount instead
+   (option B) is D14, still open.
+
+   Prices are never computed here: `priceLabel` is the server's text.
 
    Nothing inside the portal should import this.
    ========================================================================== */
-import { PLANS_KEY } from "./subscriptions.repository";
+import { buildUrl } from "@/lib/api/client";
+
+/** GET /member-plans (ListPublicMemberPlansResponseDto). */
+export type ApiPublicMemberPlan = {
+  id: string;
+  code: string;
+  priceCents: number;
+  sortOrder: number;
+  configuration: {
+    structure: string;
+    priceLabel: string;
+    billingLabel: string;
+    billingType: string;
+    billingPeriodLabel: string;
+    trialLabel?: string | null;
+    description: string;
+    popular?: boolean;
+    badge?: string | null;
+    features: SubscriptionFeature[];
+    limits?: { accessDays?: number | null; trialDays?: number | null };
+  };
+};
+
+/** A server plan in the table's shape: `code` is the id, `structure` the
+ *  name, `priceLabel` the price. Sorted by the server's `sortOrder`. */
+export function fromApiMemberPlans(
+  rows: ApiPublicMemberPlan[],
+): SubscriptionPlan[] {
+  return [...rows]
+    .filter((row) => row && typeof row.code === "string" && row.configuration)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(({ code, configuration: c }) => ({
+      id: code,
+      name: c.structure,
+      price: c.priceLabel,
+      billing: c.billingLabel,
+      billingType: c.billingType === "one_time" ? "one_time" : "recurring",
+      billingPeriodLabel: c.billingPeriodLabel,
+      accessDays: c.limits?.accessDays ?? null,
+      trialDays: c.limits?.trialDays ?? null,
+      trialLabel: c.trialLabel ?? undefined,
+      description: c.description,
+      popular: Boolean(c.popular),
+      badge: c.badge ?? undefined,
+      features: Array.isArray(c.features) ? c.features : [],
+    }));
+}
+
+let serverPlans: SubscriptionPlan[] | null = null;
+let plansRequest: Promise<void> | null = null;
+
+function loadPlans(): void {
+  if (plansRequest || typeof window === "undefined") return;
+  plansRequest = (async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(buildUrl("/member-plans"), {
+          method: "GET",
+          credentials: "omit",
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) continue;
+        const body = (await res.json()) as { data?: unknown } | null;
+        const plans = Array.isArray(body?.data)
+          ? fromApiMemberPlans(body.data as ApiPublicMemberPlan[])
+          : [];
+        if (plans.length > 0) serverPlans = plans;
+        return;
+      } catch {
+        /* The defaults stay; nothing sensitive to log. */
+      }
+    }
+  })();
+}
 
 export function getStoredSubscriptionPlans(): SubscriptionPlan[] {
-  if (typeof window === "undefined") return DEFAULT_SUBSCRIPTION_PLANS;
-  try {
-    const raw = window.localStorage.getItem(PLANS_KEY);
-    if (!raw) return DEFAULT_SUBSCRIPTION_PLANS;
-    const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed as SubscriptionPlan[];
-    }
-  } catch (cause) {
-    console.error("Could not read subscription plans.", cause);
-  }
+  if (serverPlans) return serverPlans;
+  loadPlans();
   return DEFAULT_SUBSCRIPTION_PLANS;
+}
+
+/** Tests only: forget the server's answer. */
+export function resetSubscriptionPlansReader(): void {
+  serverPlans = null;
+  plansRequest = null;
 }
