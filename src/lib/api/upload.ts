@@ -124,12 +124,26 @@ function assertUploadUrl(raw: string): URL {
   } catch (cause) {
     throw new UploadError("bad_upload_url", MESSAGES.bad_upload_url, cause);
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:")
-    throw new UploadError("bad_upload_url", MESSAGES.bad_upload_url);
+  const refuse = () =>
+    new UploadError("bad_upload_url", MESSAGES.bad_upload_url);
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw refuse();
   const expected = process.env.NEXT_PUBLIC_STORAGE_ORIGIN?.replace(/\/$/, "");
-  if (expected && url.origin !== expected)
-    throw new UploadError("bad_upload_url", MESSAGES.bad_upload_url);
+  if (process.env.NODE_ENV === "production") {
+    /* A production build must name its storage host (D18), and the file
+       travels over https, except to a storage stand-in on this machine. */
+    if (!expected) throw refuse();
+    if (url.protocol !== "https:" && !isLoopback(url)) throw refuse();
+  }
+  if (expected && url.origin !== expected) throw refuse();
   return url;
+}
+
+function isLoopback(url: URL): boolean {
+  return (
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
+    url.hostname === "[::1]"
+  );
 }
 
 export type UploadOptions = {

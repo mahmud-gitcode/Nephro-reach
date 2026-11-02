@@ -79,7 +79,7 @@ All uploads go through `uploadFile(file, { visibility? })` in `@/lib/api/upload`
 - **The storage key** is never read or stored.
 - **The client checks** mirror the server's allowlist (no SVG or HTML) and its 10 MB cap. The server checks again.
 - **PUBLIC** is requested only from content-team pages.
-- **The storage host** must be in the CSP (`NEXT_PUBLIC_STORAGE_ORIGIN`). `uploadFile` refuses a presigned URL for any other host. The production storage host is decision D18.
+- **The storage host** must be in the CSP (`NEXT_PUBLIC_STORAGE_ORIGIN`). `uploadFile` refuses a presigned URL for any other host. A production build refuses every upload when `NEXT_PUBLIC_STORAGE_ORIGIN` is unset, and refuses plain http except to a loopback stand-in. The production storage host is decision D18.
 
 ### 5. Error is not empty, and 403 is not "no data"
 
@@ -92,7 +92,7 @@ All uploads go through `uploadFile(file, { visibility? })` in `@/lib/api/upload`
 - **The API client sends `X-Organization-Id` only in office mode.** That is `setActiveOrganization(id)`, through `switchPortalContext`. A patient or caregiver call never carries the header.
 - **Refresh only for an expired access cookie.** A 401 with no code (the API guard's bare 401) refreshes once and retries. A 401 with any other code (`auth.code_invalid_or_expired`, `auth.invalid_credentials`, ...) is an answer and is thrown as is. Code, password, identifier-confirm, deactivate and shared-link routes (`NO_REFRESH`) never refresh, so a one-time code is never resubmitted.
 - **When the session ends** (401 `auth.session_no_longer_active` or `auth.account_no_longer_available`, or a failed refresh), the app calls `onSessionEnded` once. It clears the query caches, purges retired storage, broadcasts on `nr-auth`, and goes to `/login?reason=expired`.
-- **Sign-out** calls `POST /auth/logout` (best effort, 3 s cap), then does the same clean-up and a full reload.
+- **Sign-out** starts `POST /auth/logout` (best effort, `keepalive`, no body so no CORS preflight) and, without waiting for it, does the same clean-up and a full reload. Nothing waits on the network between clearing the caches and leaving the page.
 - **The legacy storage purge** (`@/lib/data/legacyPurge`) runs on boot, sign-in and sign-out. It is **staged**: it removes only keys in its retired registry and writes the `nr:storage-version` marker. Each phase that moves a feature to the API adds that feature's keys to the registry in the same change. The end state is only `preferred_language` plus the marker.
 
 ## What this rules out

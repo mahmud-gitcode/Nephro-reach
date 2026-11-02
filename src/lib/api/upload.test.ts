@@ -142,6 +142,43 @@ describe("uploadFile", () => {
     expect(calls).toHaveLength(1);
   });
 
+  describe("in a production build", () => {
+    beforeEach(() => vi.stubEnv("NODE_ENV", "production"));
+
+    it("refuses every presigned URL when no storage origin is set", async () => {
+      vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "");
+      const calls = mockFlow({ uploadUrl: "https://elsewhere.example/x" });
+      await expect(uploadFile(pdf())).rejects.toMatchObject({
+        reason: "bad_upload_url",
+      });
+      expect(calls).toHaveLength(1);
+    });
+
+    it("refuses plain http to a storage host that is not this machine", async () => {
+      vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "http://storage.example");
+      const calls = mockFlow({ uploadUrl: "http://storage.example/b/x" });
+      await expect(uploadFile(pdf())).rejects.toMatchObject({
+        reason: "bad_upload_url",
+      });
+      expect(calls).toHaveLength(1);
+    });
+
+    it("accepts https to the configured storage origin", async () => {
+      vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "https://elsewhere.example");
+      const calls = mockFlow({
+        uploadUrl: "https://elsewhere.example/b/x?X-Amz-Signature=s",
+      });
+      await expect(uploadFile(pdf())).resolves.toBe("file-1");
+      expect(calls).toHaveLength(3);
+    });
+
+    it("still accepts the local storage stand-in over http", async () => {
+      const calls = mockFlow();
+      await expect(uploadFile(pdf())).resolves.toBe("file-1");
+      expect(calls).toHaveLength(3);
+    });
+  });
+
   it("refuses SVG before any request", async () => {
     const calls = mockFlow();
     const svg = new File(["<svg/>"], "x.svg", { type: "image/svg+xml" });
