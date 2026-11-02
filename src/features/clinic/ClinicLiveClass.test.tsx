@@ -12,7 +12,7 @@ import {
   type StubHandler,
 } from "@/features/profile/memberApiStub";
 import ClinicLiveClass from "./ClinicLiveClass";
-import { toStartsAt } from "./liveClass.mappers";
+import { toStartsAt, type ApiLiveClass } from "./liveClass.mappers";
 
 /* The Live Class page on the API (Phase 13). D13 is open: an office sees
    the NephroReach schedule read-only; only the platform team schedules,
@@ -32,7 +32,7 @@ function day(offset: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const upcoming = {
+const upcoming: ApiLiveClass = {
   id: "lc-up",
   startsAt: toStartsAt(day(5), "18:00") as string,
   topic: "Fluid Basics",
@@ -44,7 +44,7 @@ const upcoming = {
   seatsLeft: 46,
   recordingUrl: null,
 };
-const past = {
+const past: ApiLiveClass = {
   ...upcoming,
   id: "lc-past",
   startsAt: toStartsAt(day(-5), "18:00") as string,

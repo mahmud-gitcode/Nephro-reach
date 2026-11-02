@@ -63,6 +63,13 @@ export function LessonQuestion({
     saved ? { ...saved } : emptyDraft(question),
   );
   const [sentToTeam, setSentToTeam] = useState(false);
+  /* The saved answer arrives with the learner record, which can land after
+     this question first renders: take it once, when it first shows up. */
+  const [hydrated, setHydrated] = useState(Boolean(saved));
+  if (saved && !hydrated) {
+    setHydrated(true);
+    setDraft({ ...saved });
+  }
 
   const answerable = isAnswered(question, { ...draft, answeredAt: "" });
   const isSaved = sameDraft(draft, saved) && isAnswered(question, saved);

@@ -484,7 +484,12 @@ export default function UserDashboard() {
             {nextClass && live.canRegister && !registration ? (
               <Button
                 leadingIcon={<Video />}
-                disabled={nextClass.status !== "Open"}
+                disabled={
+                  nextClass.status !== "Open" ||
+                  /* Registration closes when the class starts (server). */
+                  (nextClass.startsAt !== undefined &&
+                    new Date(nextClass.startsAt) <= now)
+                }
                 loading={live.register.isPending}
                 onClick={() => live.register.mutate(nextClass.id)}
               >
