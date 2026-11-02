@@ -1,36 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
   TRIP_STATUSES,
-  addTrip,
   canSubmit,
   emptyTrip,
   formatTripDates,
   isConfirmed,
   isOpen,
-  removeTrip,
   sortTrips,
   statusIndex,
   statusLabel,
   tripError,
   tripLengthDays,
-  updateTripStatus,
   TRAVEL_DOCUMENTS,
   addConfirmedTreatment,
   canRequestTimeChange,
   canSubmitTimeChange,
-  attachDocumentFile,
   checklistProgress,
   defaultTripFilter,
-  describeDocumentFile,
-  filesForDocument,
   formatFileSize,
-  removeDocumentFile,
   emptyTimeChange,
-  hasOpenTimeChange,
-  requestTimeChange,
-  resolveTimeChange,
   timeChangeError,
-  withdrawTimeChange,
   filterTrips,
   formatEventTime,
   tripFilterCounts,
@@ -47,14 +36,10 @@ import {
   pastTrips,
   placementShortfall,
   removeConfirmedTreatment,
-  setFacilityNote,
-  setPlacement,
   sortDays,
   toggleDay,
   toggleDocument,
   upcomingTrips,
-  normaliseTrip,
-  normaliseTrips,
   isEditable,
   needsChasing,
   progressPercent,
@@ -122,18 +107,6 @@ describe("the status ladder", () => {
   it("counts everything but a closed trip as open", () => {
     expect(isOpen(trip({ status: "confirmed" }))).toBe(true);
     expect(isOpen(trip({ status: "closed" }))).toBe(false);
-  });
-
-  it("stamps the update time when the facility moves it along", () => {
-    const later = new Date(2026, 8, 16, 9, 0, 0);
-    const [moved] = updateTripStatus(
-      [trip({ id: "t1" })],
-      "t1",
-      "records-sent",
-      later,
-    );
-    expect(moved.status).toBe("records-sent");
-    expect(moved.updatedAt).toBe(later.toISOString());
   });
 
   it("translates the status the member sees", () => {
@@ -221,13 +194,6 @@ describe("the list", () => {
     const older = trip({ id: "a", submittedAt: "2026-09-01T10:00:00.000Z" });
     const newer = trip({ id: "b", submittedAt: "2026-09-10T10:00:00.000Z" });
     expect(sortTrips([older, newer]).map((t) => t.id)).toEqual(["b", "a"]);
-    expect(addTrip([older], newer).map((t) => t.id)).toEqual(["b", "a"]);
-  });
-
-  it("removes a cancelled request by id", () => {
-    expect(
-      removeTrip([trip({ id: "a" }), trip({ id: "b" })], "a"),
-    ).toHaveLength(1);
   });
 });
 
@@ -379,96 +345,6 @@ describe("the placement the facility fills in", () => {
     });
     expect(placementShortfall(partial)).toBe(3);
     expect(placementShortfall(trip({ treatmentsNeeded: 1 }))).toBe(1);
-  });
-
-  it("stamps the update time when the facility saves a placement", () => {
-    const later = new Date(2026, 9, 1, 9, 0, 0);
-    const [saved] = setPlacement(
-      [trip({ id: "t1" })],
-      "t1",
-      { ...emptyPlacement(), facilityName: "Bayview" },
-      later,
-    );
-    expect(saved.placement?.facilityName).toBe("Bayview");
-    expect(saved.updatedAt).toBe(later.toISOString());
-  });
-
-  it("records a note to the patient without touching anything else", () => {
-    const [noted] = setFacilityNote(
-      [trip({ id: "t1" })],
-      "t1",
-      "Bayview can take you Tue and Thu.",
-    );
-    expect(noted.facilityNote).toBe("Bayview can take you Tue and Thu.");
-    expect(noted.status).toBe("submitted");
-  });
-});
-
-describe("trips written by an older version of the app", () => {
-  /* Exactly what was in storage before preferences, contacts and the document
-   * checklist existed. Reading `preferredDays.length` off this threw and took
-   * the whole Dialysis Management page with it. */
-  const legacy = {
-    id: "legacy-1",
-    destination: {
-      street: "1 Main St",
-      city: "Tampa",
-      state: "FL",
-      zip: "00000",
-    },
-    departDate: "2026-10-03",
-    returnDate: "2026-10-12",
-    treatmentsNeeded: 4,
-    contactPhone: "555-0100",
-    notes: "",
-    status: "submitted" as const,
-    submittedAt: "2026-09-15T10:00:00.000Z",
-    updatedAt: "2026-09-15T10:00:00.000Z",
-    facilityNote: "",
-  };
-
-  it("fills the fields the screens now read", () => {
-    const fixed = normaliseTrip(legacy);
-    expect(fixed.preferredDays).toEqual([]);
-    expect(fixed.preferredTime).toBe("any");
-    expect(fixed.documentsReady).toEqual([]);
-    expect(fixed.emergencyContact).toEqual({
-      name: "",
-      phone: "",
-      relationship: "",
-    });
-    expect(fixed.insurance).toEqual({ plan: "", memberId: "" });
-  });
-
-  it("survives the call that used to crash", () => {
-    expect(() =>
-      formatDays(normaliseTrip(legacy).preferredDays, false),
-    ).not.toThrow();
-    expect(formatDays(normaliseTrip(legacy).preferredDays, false)).toBe(
-      "No preference",
-    );
-    expect(documentsProgress(normaliseTrip(legacy)).ready).toBe(0);
-  });
-
-  it("keeps everything the old record did have", () => {
-    const fixed = normaliseTrip(legacy);
-    expect(fixed.id).toBe("legacy-1");
-    expect(fixed.destination.city).toBe("Tampa");
-    expect(fixed.destination.state).toBe("FL");
-    expect(fixed.treatmentsNeeded).toBe(4);
-    expect(fixed.submittedAt).toBe("2026-09-15T10:00:00.000Z");
-  });
-
-  it("does not let an explicit undefined overwrite a default", () => {
-    // Spreading alone would do exactly that, which is why the fields are
-    // listed again after the spread.
-    const withUndefined = { ...legacy, preferredDays: undefined };
-    expect(normaliseTrip(withUndefined).preferredDays).toEqual([]);
-  });
-
-  it("normalises a whole list", () => {
-    expect(normaliseTrips([legacy, legacy])).toHaveLength(2);
-    expect(normaliseTrips([])).toEqual([]);
   });
 });
 
@@ -666,10 +542,6 @@ describe("the travel checklist", () => {
     expect(togglePrep([], "transportation")).toEqual(["transportation"]);
     expect(togglePrep(["transportation"], "transportation")).toEqual([]);
   });
-
-  it("gives an older stored trip an empty prep list rather than undefined", () => {
-    expect(normaliseTrip({}).prepDone).toEqual([]);
-  });
 });
 
 describe("the status timeline", () => {
@@ -729,47 +601,9 @@ describe("the status timeline", () => {
     ]);
   });
 
-  it("dates a milestone from when it was actually reached", () => {
-    const later = new Date(2026, 8, 14, 9, 40, 0);
-    /* One trip, not two calls: the id comes from the real clock, and two
-       calls a millisecond apart would not match. */
-    const start = emptyTrip(AT);
-    const [trip] = updateTripStatus([start], start.id, "records-sent", later);
-    const milestones = tripMilestones({ ...trip, id: trip.id });
-
-    expect(milestones[0].at).toBe(AT.toISOString());
-    expect(milestones[1].at).toBe(later.toISOString());
-  });
-
   it("leaves a milestone undated rather than guessing one", () => {
     // Nothing recorded "confirmed", so the row shows no date at all.
     expect(tripMilestones(emptyTrip(AT))[2].at).toBeUndefined();
-  });
-
-  it("does not stamp the same rung twice when a coordinator re-saves", () => {
-    const trip = emptyTrip(AT);
-    const once = updateTripStatus([trip], trip.id, "confirmed", AT);
-    const twice = updateTripStatus(once, trip.id, "confirmed", new Date());
-
-    expect(
-      twice[0].statusHistory.filter((e) => e.status === "confirmed"),
-    ).toHaveLength(1);
-  });
-
-  it("gives an older stored trip a timeline from the dates it does have", () => {
-    const older = normaliseTrip({
-      id: "old",
-      status: "confirmed",
-      submittedAt: "2026-09-01T09:00:00.000Z",
-      updatedAt: "2026-09-05T14:00:00.000Z",
-    });
-
-    expect(older.statusHistory).toEqual([
-      { status: "submitted", at: "2026-09-01T09:00:00.000Z" },
-      { status: "confirmed", at: "2026-09-05T14:00:00.000Z" },
-    ]);
-    // The rung in between is genuinely unknown, so it carries no date.
-    expect(tripMilestones(older)[1].at).toBeUndefined();
   });
 
   it("formats an event with the time of day, not just the date", () => {
@@ -912,162 +746,9 @@ describe("asking to move the booked times", () => {
     const draft = { ...emptyTimeChange(booked(), NOW), note: "   " };
     expect(canSubmitTimeChange(draft)).toBe(false);
   });
-
-  it("records the ask as open", () => {
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Flight at 2pm" };
-    const [trip] = requestTimeChange([booked()], "trip-1", draft, NOW);
-
-    expect(hasOpenTimeChange(trip)).toBe(true);
-    expect(trip.timeChange?.note).toBe("Flight at 2pm");
-    expect(trip.timeChange?.resolvedAt).toBeUndefined();
-  });
-
-  it("does not touch the booked times", () => {
-    // Nothing moves until the receiving unit says so.
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
-    const [trip] = requestTimeChange([booked()], "trip-1", draft, NOW);
-    expect(trip.placement?.treatments).toEqual(booked().placement?.treatments);
-    expect(trip.status).toBe("confirmed");
-  });
-
-  it("lets a member take back one nobody has answered", () => {
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
-    const raised = requestTimeChange([booked()], "trip-1", draft, NOW);
-    const [trip] = withdrawTimeChange(raised, "trip-1", NOW);
-    expect(trip.timeChange).toBeUndefined();
-  });
-
-  it("keeps an answered one on the record", () => {
-    // It explains why the booked times are what they are.
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
-    const raised = requestTimeChange([booked()], "trip-1", draft, NOW);
-    const answered = resolveTimeChange(raised, "trip-1", "Moved to 08:00", NOW);
-    const [trip] = withdrawTimeChange(answered, "trip-1", NOW);
-
-    expect(trip.timeChange?.resolvedAt).toBeDefined();
-    expect(trip.timeChange?.facilityReply).toBe("Moved to 08:00");
-  });
-
-  it("closes the ask once the facility answers", () => {
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
-    const raised = requestTimeChange([booked()], "trip-1", draft, NOW);
-    const [trip] = resolveTimeChange(raised, "trip-1", "Sorry, no room", NOW);
-
-    expect(hasOpenTimeChange(trip)).toBe(false);
-    expect(trip.timeChange?.facilityReply).toBe("Sorry, no room");
-  });
-
-  it("leaves other trips alone", () => {
-    const other = { ...booked(), id: "trip-2" };
-    const draft = { ...emptyTimeChange(booked(), NOW), note: "Earlier please" };
-    const next = requestTimeChange([booked(), other], "trip-1", draft, NOW);
-    expect(next[1].timeChange).toBeUndefined();
-  });
 });
 
-describe("attaching a document", () => {
-  const NOW = new Date(2026, 8, 16, 9, 0, 0);
-  const picked = { name: "labs.pdf", size: 184_320, type: "application/pdf" };
-
-  const described = () => describeDocumentFile("recent-labs", picked, NOW);
-
-  it("keeps the name, size and type but never the bytes", () => {
-    const record = described();
-    expect(record).toMatchObject({
-      key: "recent-labs",
-      fileName: "labs.pdf",
-      sizeBytes: 184_320,
-      contentType: "application/pdf",
-    });
-    // Nothing on the record can hold file contents.
-    expect(Object.keys(record).sort()).toEqual([
-      "attachedAt",
-      "contentType",
-      "fileName",
-      "id",
-      "key",
-      "sizeBytes",
-    ]);
-  });
-
-  it("ticks the checklist row it belongs to", () => {
-    // Attaching a file IS the member saying they have that one, so leaving
-    // the tick to a second action would let the two disagree.
-    const start = emptyTrip(NOW);
-    const [trip] = attachDocumentFile([start], start.id, described(), NOW);
-    expect(trip.documentsReady).toContain("recent-labs");
-    expect(filesForDocument(trip, "recent-labs")).toHaveLength(1);
-  });
-
-  it("does not tick the same row twice for a second file", () => {
-    const base = emptyTrip(NOW);
-    const once = attachDocumentFile([base], base.id, described(), NOW);
-    const twice = attachDocumentFile(
-      once,
-      base.id,
-      {
-        ...described(),
-        id: "file-2",
-      },
-      NOW,
-    );
-
-    expect(
-      twice[0].documentsReady.filter((k) => k === "recent-labs"),
-    ).toHaveLength(1);
-    expect(filesForDocument(twice[0], "recent-labs")).toHaveLength(2);
-  });
-
-  it("unticks the row when the last file for it goes", () => {
-    // A row left ticked with nothing behind it is the app remembering
-    // something the member just took back.
-    const base = emptyTrip(NOW);
-    const record = described();
-    const attached = attachDocumentFile([base], base.id, record, NOW);
-    const [trip] = removeDocumentFile(attached, base.id, record.id, NOW);
-
-    expect(trip.documentFiles).toEqual([]);
-    expect(trip.documentsReady).not.toContain("recent-labs");
-  });
-
-  it("keeps the row ticked while another file for it remains", () => {
-    const base = emptyTrip(NOW);
-    const first = described();
-    const second = { ...described(), id: "file-2" };
-    const attached = attachDocumentFile(
-      attachDocumentFile([base], base.id, first, NOW),
-      base.id,
-      second,
-      NOW,
-    );
-    const [trip] = removeDocumentFile(attached, base.id, first.id, NOW);
-
-    expect(trip.documentsReady).toContain("recent-labs");
-    expect(filesForDocument(trip, "recent-labs")).toHaveLength(1);
-  });
-
-  it("ignores a file id that is not there", () => {
-    const base = emptyTrip(NOW);
-    expect(removeDocumentFile([base], base.id, "nope", NOW)[0]).toEqual(base);
-  });
-
-  it("splits an older stored trip's one-line destination", () => {
-    // Records written before the address had parts kept "City, ST".
-    const migrated = normaliseTrip({
-      destination: "Tampa, FL",
-    } as unknown as Partial<TripRequest>);
-    expect(migrated.destination).toEqual({
-      street: "",
-      city: "Tampa",
-      state: "FL",
-      zip: "",
-    });
-  });
-
-  it("gives an older stored trip an empty file list rather than undefined", () => {
-    expect(normaliseTrip({}).documentFiles).toEqual([]);
-  });
-
+describe("document files", () => {
   it("shows a size a member can judge", () => {
     expect(formatFileSize(512)).toBe("512 B");
     expect(formatFileSize(184_320)).toBe("180 KB");

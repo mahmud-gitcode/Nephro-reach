@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Clock, Plane, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import TravelChecklist from "@/features/travel/TravelChecklist";
 import TimeChangeRequestModal from "@/features/travel/TimeChangeRequestModal";
 import TravelTreatmentLog from "@/features/travel/TravelTreatmentLog";
@@ -22,7 +27,7 @@ import {
   statusLabel,
   tripPhase,
 } from "@/features/travel/trip.rules";
-import { useTrips } from "@/features/travel/useTrips";
+import { useMemberTrip } from "@/features/travel/useTrips";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
   Alert,
@@ -59,7 +64,7 @@ export default function TripDetailPage() {
   const isEs = language === "ES";
 
   const {
-    trips,
+    trip,
     setDocuments,
     setPrep,
     requestTimeChange,
@@ -69,8 +74,9 @@ export default function TripDetailPage() {
     error,
     refetch,
     isSaving,
-  } = useTrips();
-  const trip = trips.find((entry) => entry.id === tripId);
+    saveError,
+    dismissSaveError,
+  } = useMemberTrip(tripId);
 
   const [askingTimeChange, setAskingTimeChange] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -90,14 +96,27 @@ export default function TripDetailPage() {
         {isEs ? "Volver a tus viajes" : "Back to your trips"}
       </Link>
 
+      {saveError ? (
+        <Alert tone="danger" onDismiss={dismissSaveError}>
+          {isEs
+            ? "No pudimos guardar ese cambio. Nada se envió a tu clínica."
+            : "We could not save that change. Nothing went to your clinic."}
+        </Alert>
+      ) : null}
+
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         /* A trip id that is not in the log is missing, not broken — it may
            simply have been cancelled from another tab. */
         isEmpty={!trip}
-        errorTitle={isEs ? "Este viaje no se cargó" : "This trip did not load"}
+        errorTitle={errorTitleFor(
+          error,
+          isEs ? "Este viaje no se cargó" : "This trip did not load",
+          isEs ? "es" : "en",
+        )}
         skeleton={
           <Card className="flex flex-col gap-stack-md">
             <Skeleton height={72} />
@@ -272,7 +291,7 @@ export default function TripDetailPage() {
                           size="small"
                           variant="neutral"
                           appearance="stroke"
-                          onClick={() => withdrawTimeChange(trip.id)}
+                          onClick={() => withdrawTimeChange(trip)}
                           disabled={isSaving}
                         >
                           <X aria-hidden="true" className="size-4 shrink-0" />

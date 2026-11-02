@@ -60,26 +60,21 @@ export type TravelDocumentKey =
 export type TravelPrepKey = "transportation" | "personal-items";
 
 /**
- * A file the member attached to one of their travel documents.
+ * A file the member attached to one of their travel documents (Phase 8).
  *
- * The bytes are NOT kept. Only the name, size and type are stored, and the
- * file itself lives as an object URL for as long as the tab is open — the
- * same shape the class media uploader already uses.
- *
- * Two reasons, and both survive the arrival of a backend. `localStorage`
- * holds about 5MB in total, so one photo of an insurance card would evict
- * somebody's treatment log. And a lab report sitting in browser storage is
- * a medical record at rest with nothing guarding it. When there is an API
- * to put files behind, `url` becomes the link it returns and nothing else
- * here changes.
+ * The file itself lives behind the API: it was uploaded through
+ * `uploadFile` (ADR 0007 §4) and is attached by its file id. Nothing here
+ * holds a URL or the bytes: a short-lived download link is fetched on
+ * demand through the trip (`…/documents/:id/download-link`), never stored.
  */
 export interface TravelDocumentFile {
   id: string;
   /** Which checklist document this file belongs to. */
   key: TravelDocumentKey;
-  fileName: string;
-  sizeBytes: number;
-  /** MIME type as the browser reported it. */
+  /** null when the server has no name for it. */
+  fileName: string | null;
+  sizeBytes: number | null;
+  /** MIME type as the server recorded it. */
   contentType: string;
   attachedAt: string;
 }
@@ -159,6 +154,8 @@ export interface TripStatusEvent {
  * answers the original request.
  */
 export interface TimeChangeRequest {
+  /** The server id; absent only on a draft not yet sent. */
+  id?: string;
   requestedAt: string;
   /** The slot they would rather have. */
   preferredTime: TimePreference;
@@ -172,18 +169,22 @@ export interface TimeChangeRequest {
   facilityReply?: string;
 }
 
-/** Who the trip is for. The clinic handles many patients' trips. */
+/** Who the trip is for, as the office sees it. The clinic handles many
+ *  patients' trips. No email: the API does not return one (Phase 8). */
 export interface TripPatient {
   name: string;
-  email: string;
+  /** This office's MRN, display text only. */
+  mrn?: string;
 }
 
 export interface TripRequest {
   id: string;
-  /**
-   * Stamped from the signed-in member when they submit. Optional so trips
-   * saved before the clinic side existed still read.
-   */
+  /** The server's patient id (whose trip it is). */
+  patientId?: string;
+  /** The office it was sent to; null when the home clinic is not on
+   *  NephroReach (the request went outside). */
+  organizationId?: string | null;
+  /** Office side only: whose trip it is, by name. */
   patient?: TripPatient;
 
   /* ---- what the member asks for ---------------------------------------- */
@@ -223,8 +224,11 @@ export interface TripRequest {
    */
   facilityNote: string;
   placement?: TripPlacement;
-  /** An open or answered request to move the booked times. */
+  /** The open request to move the booked times, else the latest answered
+   *  one (derived from `timeChanges`). */
   timeChange?: TimeChangeRequest;
+  /** Every request to move the times, newest first. */
+  timeChanges: TimeChangeRequest[];
   /** ISO 8601. The member asked the dialysis center to cancel the trip
    *  (client, 2026-10-12): the request stays on record as their proof,
    *  rather than vanishing. */

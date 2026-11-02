@@ -7,22 +7,19 @@
    send there, and the External Sharing Notice comes first.
    ========================================================================== */
 
-import { ORGANIZATIONS } from "@/features/staff/staff";
 import { formatDays, timePreferenceLabel } from "./trip.rules";
 import type { TripRequest } from "./trip.types";
 
-const normal = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-/** Is this the name of a dialysis center on NephroReach? */
-export function clinicOnNephroReach(name: string | undefined): boolean {
-  if (!name?.trim()) return false;
-  return ORGANIZATIONS.some(
-    (org) => org.portal === "clinic" && normal(org.name) === normal(name),
-  );
+/**
+ * Is the member's home dialysis clinic on NephroReach? The server says so
+ * (GET /patients/:id/home-dialysis-clinic -> onNephroReach, Phase 8): a
+ * clinic picked from the directory is linked by its organization id, a
+ * typed-in one is not. No name matching against a demo list (NEW-1).
+ */
+export function clinicOnNephroReach(
+  clinic: { onNephroReach?: boolean } | null | undefined,
+): boolean {
+  return clinic?.onNephroReach === true;
 }
 
 export function travelRequestEmail(

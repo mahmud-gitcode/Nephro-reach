@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 6;
+export const STORAGE_VERSION = 7;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -185,6 +185,21 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 5,
     why: "Phase 6: seen is seenByPatientAt on the care team results (POST /patients/:id/labs/seen, patient only). No screen reads this key.",
   },
+  {
+    name: "travel-treatments",
+    since: 7,
+    why: "Phase 8: the travel dialysis log is /patients/:id/trips/:tripId/treatments (one call per row, readings as typed); the sample rows (trip.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "travel-reflections",
+    since: 7,
+    why: "Phase 8: the trip reflection is GET/PUT /patients/:id/trips/:tripId/reflection; the sample reflections (trip.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "rides",
+    since: 7,
+    why: "Phase 8: ride contacts are /patients/:id/ride-contacts (the server keeps one primary); the sample contact (rides.seed.ts) is deleted. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that
@@ -208,6 +223,14 @@ export const RETIRED_KEYS: readonly string[] = [
   /* Phase 3: caregiver grants with their invite ids (link secrets). Grants
      come from /patients/:id/caregivers and /me/context caregiving[]. */
   "nr:caregiver-grants",
+  /* Phase 8 (STORAGE_VERSION 7): the office roster enrolled in this
+     browser (names and MRNs). The roster is GET /organizations/:id/patients
+     joined with its program enrollments; enrolling is two API calls. */
+  "nr:clinic-enrollments",
+  /* Phase 8: every patient's trip requests, shared by the member and office
+     screens (addresses, insurance ids, emergency contacts). Trips are
+     /patients/:id/trips and /organizations/:id/trips. */
+  "nr:travel-trip-requests",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */

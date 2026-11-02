@@ -2,58 +2,53 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import {
   createRide,
   deleteRide,
   listRides,
   updateRide,
 } from "./rides.repository";
-import type { RideContact, RideDraft } from "./rides.types";
+import type { RideDraft } from "./rides.types";
 
 /* ==========================================================================
-   useRides
+   useRides (Phase 8; ADR 0007)
    --------------------------------------------------------------------------
-   The seam between the screen and the data. The page asks for rides and
-   gets back a list plus four booleans; it never learns where they came
-   from, which is the whole point — on the day the repository calls an API
-   instead of localStorage, this file and the page are unchanged.
-
-   Every mutation writes the whole list and hands the result back, so the
-   cache is set from the server's answer rather than guessed at. That is
-   slower than an optimistic update and correct without any rollback code;
-   with a real endpoint and real latency, optimistic updates are a decision
-   to make then, per mutation, with the invariant in the repository as the
-   thing to reconcile against.
+   The member's saved drivers, from `/patients/:patientId/ride-contacts`,
+   keyed by the patient (a caregiver reads the patient's, under their own
+   session). Each write is one server call; afterwards the list is re-read,
+   so the server's single-primary rule is what shows.
    ========================================================================== */
 
-export const ridesKey = ["travel", "rides"] as const;
-
 export function useRides() {
+  const scope = usePatientScope();
   const queryClient = useQueryClient();
+  const ridesKey = scopedKey(scope, "ride-contacts");
 
   const query = useQuery({
     queryKey: ridesKey,
-    queryFn: listRides,
+    queryFn: () => listRides(requireScope(scope)),
   });
 
-  /* Every write returns the new list, so each of these lands the same way. */
-  const land = (rides: RideContact[]) => {
-    queryClient.setQueryData(ridesKey, rides);
-  };
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ridesKey });
 
   const create = useMutation({
-    mutationFn: (draft: RideDraft) => createRide(draft),
-    onSuccess: land,
+    mutationFn: (draft: RideDraft) => createRide(requireScope(scope), draft),
+    onSettled: refresh,
   });
 
   const update = useMutation({
     mutationFn: ({ id, draft }: { id: string; draft: RideDraft }) =>
-      updateRide(id, draft),
-    onSuccess: land,
+      updateRide(requireScope(scope), id, draft),
+    onSettled: refresh,
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => deleteRide(id),
-    onSuccess: land,
+    mutationFn: (id: string) => deleteRide(requireScope(scope), id),
+    onSettled: refresh,
   });
 
   return {

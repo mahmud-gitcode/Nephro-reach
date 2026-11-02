@@ -14,14 +14,22 @@ import {
 import type { TravelTreatment } from "./travelTreatment.types";
 import { useTravelTreatments } from "./useTravelTreatments";
 import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
+  Alert,
   Badge,
   Button,
   Card,
   EmptyState,
+  ErrorState,
   FormField,
   Input,
   Modal,
   SectionTitle,
+  Skeleton,
   SwitchRow,
   Table,
   TableBody,
@@ -265,8 +273,17 @@ export function TravelTreatmentLog({ trip }: { trip: TripRequest }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
 
-  const { forTrip, saveTreatment, deleteTreatment, isSaving } =
-    useTravelTreatments();
+  const {
+    forTrip,
+    saveTreatment,
+    deleteTreatment,
+    isSaving,
+    isPending,
+    treatmentsError,
+    refetch,
+    saveError,
+    dismissSaveError,
+  } = useTravelTreatments(trip.id);
 
   const rows = forTrip(trip.id);
   const progress = treatmentProgress(rows, trip);
@@ -310,7 +327,41 @@ export function TravelTreatmentLog({ trip }: { trip: TripRequest }) {
           }
         />
 
-        {rows.length === 0 ? (
+        {saveError ? (
+          <Alert
+            tone="danger"
+            className="mt-stack-md"
+            onDismiss={dismissSaveError}
+          >
+            {isEs
+              ? "No pudimos guardar ese cambio."
+              : "We could not save that change."}
+          </Alert>
+        ) : null}
+
+        {/* Error is not empty, and a 403 is "not shared" (ADR 0007 §5). */}
+        {treatmentsError ? (
+          <div className="mt-stack-md">
+            <ErrorState
+              title={errorTitleFor(
+                treatmentsError,
+                isEs ? "El registro no se cargó" : "The log did not load",
+                isEs ? "es" : "en",
+              )}
+              message={errorMessageFor(
+                treatmentsError,
+                undefined,
+                isEs ? "es" : "en",
+              )}
+              error={treatmentsError}
+              onRetry={canRetry(treatmentsError) ? refetch : undefined}
+            />
+          </div>
+        ) : isPending ? (
+          <div className="mt-stack-md">
+            <Skeleton height={120} />
+          </div>
+        ) : rows.length === 0 ? (
           <div className="mt-stack-md">
             <EmptyState
               icon={<ClipboardList aria-hidden="true" />}

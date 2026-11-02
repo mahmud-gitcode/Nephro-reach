@@ -16,6 +16,11 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import { useRides } from "@/features/travel/useRides";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { RideContactCard } from "@/features/travel/RideContactCard";
 import type { RideContact } from "@/features/travel/rides.types";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -75,7 +80,8 @@ const RIDE_APP_SHAPE =
   "[&_svg]:h-icon-small [&_svg]:w-icon-small";
 
 export default function MyRidesPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const lang = language === "ES" ? "es" : "en";
   const {
     rides,
     isPending,
@@ -244,8 +250,13 @@ export default function MyRidesPage() {
               pending={isPending}
               error={error}
               isEmpty={rides.length === 0}
-              onRetry={refetch}
-              errorTitle="Your saved rides did not load"
+              onRetry={canRetry(error) ? refetch : undefined}
+              errorTitle={errorTitleFor(
+                error,
+                "Your saved rides did not load",
+                lang,
+              )}
+              errorMessage={errorMessageFor(error, undefined, lang)}
               skeleton={<RidesSkeleton />}
               empty={
                 <EmptyState

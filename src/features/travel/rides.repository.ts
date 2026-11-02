@@ -1,89 +1,76 @@
-import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
-import { SEED_RIDES } from "./rides.seed";
+import { api } from "@/lib/api/client";
+import { fetchPage } from "@/lib/api/paging";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import { patientPath } from "@/features/profile/patientScope";
 import type { RideContact, RideDraft } from "./rides.types";
 
 /* ==========================================================================
-   Rides — the repository
+   Rides — the repository (Phase 8; ADR 0007)
    --------------------------------------------------------------------------
-   The only place that knows where a member's saved drivers live. Today that
-   is this device; in a month it is an endpoint, and only the four bodies
-   below change.
-
-   The rules about the data live here too, not in the page. "Exactly one
-   contact is primary" was previously spread across three handlers in the
-   page component — add, edit and delete each re-derived it, and delete got
-   it subtly wrong by mutating the array it had just filtered. Written once,
-   it cannot disagree with itself.
+   `/patients/:patientId/ride-contacts`: one call per server operation. The
+   server keeps exactly one primary contact, in one transaction (the first
+   one saved is primary), so this file no longer rewrites the whole list to
+   enforce it; after every write the hook re-reads the list. No sample
+   contact and no browser storage: the retired `nr:rides` store is purged.
    ========================================================================== */
 
-const KEY = storageKey("rides");
+export type ApiRideContact = {
+  id: string;
+  patientId: string;
+  name: string;
+  phone: string;
+  note: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+};
 
-/** Only one primary survives, and a non-empty list always has one. */
-function withSinglePrimary(
-  rides: RideContact[],
-  preferredId?: string,
-): RideContact[] {
-  if (rides.length === 0) return rides;
+/** A member keeps a few drivers; one bounded page. */
+export const RIDE_WINDOW = 50;
 
-  const chosen =
-    rides.find((ride) => ride.id === preferredId && ride.isPrimary)?.id ??
-    rides.find((ride) => ride.isPrimary)?.id ??
-    rides[0].id;
+const path = (scope: PatientScope, rest = "") =>
+  patientPath(scope, `/ride-contacts${rest}`);
 
-  return rides.map((ride) => ({ ...ride, isPrimary: ride.id === chosen }));
-}
-
-/** Older saves repeated the word "primary" in the note as well as the flag. */
-function migrate(ride: RideContact): RideContact {
-  return ride.isPrimary && ride.note && /primary/i.test(ride.note)
-    ? { ...ride, note: undefined }
-    : ride;
-}
-
-export async function listRides(): Promise<RideContact[]> {
-  /* The fallback is null rather than the seed so that "never saved" and
-     "saved, then emptied" stay different answers. Conflating them hands a
-     member back a demo contact they deliberately deleted. */
-  const stored = await readJson<RideContact[] | null>(KEY, null);
-  if (!Array.isArray(stored)) return sampleOr(KEY, SEED_RIDES, []);
-  return withSinglePrimary(stored.map(migrate));
-}
-
-export async function createRide(draft: RideDraft): Promise<RideContact[]> {
-  const current = await listRides();
-  const ride: RideContact = {
-    id: crypto.randomUUID(),
-    name: draft.name.trim(),
-    phone: draft.phone.trim(),
-    note: draft.note?.trim() || undefined,
-    // The first contact saved is the primary one whether they ticked it or not.
-    isPrimary: draft.isPrimary || current.length === 0,
+export function toRide(raw: ApiRideContact): RideContact {
+  return {
+    id: raw.id,
+    name: raw.name,
+    phone: raw.phone,
+    note: raw.note ?? undefined,
+    isPrimary: raw.isPrimary,
   };
-  const next = withSinglePrimary([...current, ride], ride.id);
-  return writeJson(KEY, next);
 }
 
-export async function updateRide(
-  id: string,
-  draft: RideDraft,
-): Promise<RideContact[]> {
-  const current = await listRides();
-  const updated = current.map((ride) =>
-    ride.id === id
-      ? {
-          ...ride,
-          name: draft.name.trim(),
-          phone: draft.phone.trim(),
-          note: draft.note?.trim() || undefined,
-          isPrimary: Boolean(draft.isPrimary),
-        }
-      : ride,
-  );
-  return writeJson(KEY, withSinglePrimary(updated, id));
+export async function listRides(scope: PatientScope): Promise<RideContact[]> {
+  const page = await fetchPage<ApiRideContact>(path(scope), {
+    limit: RIDE_WINDOW,
+  });
+  return page.items.map(toRide);
 }
 
-export async function deleteRide(id: string): Promise<RideContact[]> {
-  const current = await listRides();
-  const next = withSinglePrimary(current.filter((ride) => ride.id !== id));
-  return writeJson(KEY, next);
-}
+export const createRide = (scope: PatientScope, draft: RideDraft) =>
+  api<ApiRideContact>(path(scope), {
+    method: "POST",
+    body: {
+      name: draft.name.trim(),
+      phone: draft.phone.trim(),
+      ...(draft.note?.trim() ? { note: draft.note.trim() } : {}),
+      ...(draft.isPrimary ? { isPrimary: true } : {}),
+    },
+  });
+
+/** A cleared note is sent as null, so the server clears it. */
+export const updateRide = (scope: PatientScope, id: string, draft: RideDraft) =>
+  api<ApiRideContact>(path(scope, `/${encodeURIComponent(id)}`), {
+    method: "PATCH",
+    body: {
+      name: draft.name.trim(),
+      phone: draft.phone.trim(),
+      note: draft.note?.trim() ? draft.note.trim() : null,
+      isPrimary: Boolean(draft.isPrimary),
+    },
+  });
+
+export const deleteRide = (scope: PatientScope, id: string) =>
+  api<unknown>(path(scope, `/${encodeURIComponent(id)}`), {
+    method: "DELETE",
+  });
