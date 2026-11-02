@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 8;
+export const STORAGE_VERSION = 12;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -291,6 +291,11 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "video-testimonials",
     since: 8,
     why: "Phase 12: stories are GET /public/testimonials, GET /me/testimonials and POST /testimonials (video through /files by id); the stored entries held dead blob: URLs and member emails; the samples (testimonials.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "support-tickets",
+    since: 12,
+    why: "Phase 11: tickets are /me/support-tickets (the requester) and /platform/support-tickets (the NephroReach team), with server uuids; organization requests are /platform/support-info-requests, so `contacted` is gone too. The stored tickets held requesters' names and emails. No screen reads this key.",
   },
 ];
 
