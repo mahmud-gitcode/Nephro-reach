@@ -1,38 +1,60 @@
 /* ==========================================================================
-   The member's medication list
+   The member's medication list: UI shapes and pure rules (Phase 6)
    --------------------------------------------------------------------------
-   It used to be a fixed demo list the "Add Medication" form could not add
-   to. It is stored now (member-owned, lib/data/storage): the demo patient
-   starts with the sample list, a member who registered starts with none,
-   and whatever is added shows in the list, the dose schedule and the
-   adherence figures alike.
+   The list lives on the API (`/patients/:id/medications`), one row per
+   medication with a server id. Nothing here decides what is stored: the
+   server sets the first status, records every edit as a revision (the
+   change history) and keeps the refill flag on the medication. These are
+   the shapes the screens read, the form checks, and the dose rows built
+   from the medications and their reminders, all keyed by medication id.
    ========================================================================== */
 
-import { doseScheduleData, medicationsData } from "./medications.seed";
+import type { BadgeTone } from "@/components/ui";
 import type { MedicationReminder } from "./reminders.types";
-import { reminderTimes } from "./reminders.rules";
+import { formatTo12Hour } from "./reminders.time";
 
-export type Medication = (typeof medicationsData)[number] & {
+/** One medication as the screens read it (mapped from the API row). */
+export type Medication = {
+  /** The server's id: reminders, doses and side effects hang off it. */
   id: string;
+  name: string;
+  dose: string;
+  route: string;
+  frequencyEn: string;
+  frequencyEs: string;
+  /** "—" when there is none. */
+  purposeEn: string;
+  purposeEs: string;
+  /** MM/DD/YYYY, the list's date form. */
+  startDate: string;
+  /** MM/DD/YYYY, or "---" while ongoing. */
+  endDate: string;
+  /** yyyy-mm-dd, or "" (the edit form's form). */
+  startIso: string;
+  endIso: string;
+  /** "—" when there is none. */
+  pharmacy: string;
+  status: string;
   provider?: string;
   instructions?: string;
-  /** A photo of the bottle or label (client, 2026-10-06). */
-  photo?: string;
-  /** Every edit, oldest first (client, 2026-10-07: a dose going from
-   *  5 mg to 10 mg is a change to record, not a silent overwrite). */
-  history?: MedicationEdit[];
+  /** The member says they are running low. */
+  needsRefill: boolean;
+  /** Opened only through `GET …/medications/:id/photo`, never stored. */
+  photoFileId: string | null;
 };
 
+/** One revision of a medication, from `GET …/:id/history`. */
 export type MedicationEdit = {
-  /** yyyy-mm-dd */
-  date: string;
-  field: string;
-  from: string;
-  to: string;
+  id: string;
+  /** ISO timestamp of the change. */
+  at: string;
+  /** "PATIENT" | "CAREGIVER" | "STAFF" | … (who made it). */
+  actorKind: string;
+  changes: { field: string; from: string; to: string }[];
 };
 
 /** What a member can change on a medication already on the list. The name
- *  stays: reminders and the dose log are kept by it. */
+ *  and start date stay (the server does not accept them on an edit). */
 export type MedicationChange = Pick<
   MedicationDraft,
   | "dose"
@@ -51,6 +73,12 @@ export function isoFromUs(us: string): string {
   return m ? `${m[3]}-${m[1]}-${m[2]}` : "";
 }
 
+/** "2026-09-30" → "09/30/2026", the list's date form; "" stays "". */
+export function usDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : "";
+}
+
 /** The edit form, filled from the medication as it stands. */
 export function changeFrom(m: Medication): MedicationChange {
   const blank = (v: string | undefined) => (!v || v === "—" ? "" : v);
@@ -59,64 +87,11 @@ export function changeFrom(m: Medication): MedicationChange {
     route: m.route,
     frequency: m.frequencyEn,
     purpose: blank(m.purposeEn),
-    endDate: isoFromUs(m.endDate),
+    endDate: m.endIso,
     provider: blank(m.provider),
     pharmacy: blank(m.pharmacy),
     instructions: blank(m.instructions),
   };
-}
-
-/** Applies an edit and records each field that changed. */
-export function updateMedication(
-  list: Medication[],
-  id: string,
-  change: MedicationChange,
-  today: string,
-): Medication[] {
-  return list.map((m) => {
-    if (m.id !== id) return m;
-    const before = changeFrom(m);
-    const labels: Record<keyof MedicationChange, string> = {
-      dose: "Dose",
-      route: "Route",
-      frequency: "Frequency",
-      purpose: "Purpose",
-      endDate: "End date",
-      provider: "Provider",
-      pharmacy: "Pharmacy",
-      instructions: "Instructions",
-    };
-    const edits: MedicationEdit[] = (
-      Object.keys(labels) as Array<keyof MedicationChange>
-    )
-      .filter((k) => before[k].trim() !== change[k].trim())
-      .map((k) => ({
-        date: today,
-        field: labels[k],
-        from: before[k].trim() || "—",
-        to: change[k].trim() || "—",
-      }));
-    if (edits.length === 0) return m;
-    const frequency =
-      FREQUENCIES.find((f) => f.en === change.frequency) ??
-      ({ en: change.frequency, es: change.frequency } as const);
-    const stopped = !!change.endDate && change.endDate < today;
-    return {
-      ...m,
-      dose: change.dose.trim(),
-      route: change.route,
-      frequencyEn: frequency.en,
-      frequencyEs: frequency.es,
-      purposeEn: change.purpose.trim() || "—",
-      purposeEs: change.purpose.trim() || "—",
-      endDate: change.endDate ? usDate(change.endDate) : "---",
-      pharmacy: change.pharmacy.trim() || "—",
-      provider: change.provider.trim() || undefined,
-      instructions: change.instructions.trim() || undefined,
-      ...(stopped ? { status: "Stopped" } : {}),
-      history: [...(m.history ?? []), ...edits],
-    };
-  });
 }
 
 export const ROUTES = [
@@ -153,8 +128,6 @@ export type MedicationDraft = {
   provider: string;
   pharmacy: string;
   instructions: string;
-  /** Data URL of a photo taken with the camera, when there is one. */
-  photo?: string;
 };
 
 export type MedicationError =
@@ -172,47 +145,6 @@ export function medicationError(
   return null;
 }
 
-/** "2026-09-30" → "09/30/2026", the list's date form. */
-function usDate(iso: string) {
-  const [y, m, d] = iso.split("-");
-  return `${m}/${d}/${y}`;
-}
-
-export function addMedication(
-  list: Medication[],
-  draft: MedicationDraft,
-  today: string,
-  now: number,
-): Medication[] {
-  const frequency =
-    FREQUENCIES.find((f) => f.en === draft.frequency) ??
-    ({ en: draft.frequency, es: draft.frequency } as const);
-  const stopped = !!draft.endDate && draft.endDate < today;
-  const prn = frequency.en.startsWith("As needed");
-  return [
-    ...list,
-    {
-      id: `med-${now}`,
-      name: draft.name.trim(),
-      dose: draft.dose.trim(),
-      route: draft.route,
-      frequencyEn: frequency.en,
-      frequencyEs: frequency.es,
-      purposeEn: draft.purpose.trim() || "—",
-      purposeEs: draft.purpose.trim() || "—",
-      startDate: usDate(draft.startDate),
-      endDate: draft.endDate ? usDate(draft.endDate) : "---",
-      pharmacy: draft.pharmacy.trim() || "—",
-      status: stopped ? "Stopped" : prn ? "PRN" : "Active",
-      ...(draft.provider.trim() ? { provider: draft.provider.trim() } : {}),
-      ...(draft.instructions.trim()
-        ? { instructions: draft.instructions.trim() }
-        : {}),
-      ...(draft.photo ? { photo: draft.photo } : {}),
-    },
-  ];
-}
-
 /** The statuses a member can set (client, 2026-10-05). */
 export const MEDICATION_STATUSES = [
   { value: "Active", en: "Active", es: "Activo" },
@@ -222,80 +154,70 @@ export const MEDICATION_STATUSES = [
 ] as const;
 export type MedicationStatus = (typeof MEDICATION_STATUSES)[number]["value"];
 
-export function setMedicationStatus(
-  list: Medication[],
-  id: string,
-  status: MedicationStatus,
-): Medication[] {
-  return list.map((m) => (m.id === id ? { ...m, status } : m));
+/** The badge colour of a medication status. */
+export const STATUS_TONE: Record<string, BadgeTone> = {
+  Active: "success",
+  PRN: "info",
+  Stopped: "danger",
+  Taken: "success",
+  Late: "warning",
+  Missed: "danger",
+};
+
+/** How many medications the member flagged as running low. */
+export function refillCount(medications: Medication[]): number {
+  return medications.filter((m) => m.needsRefill).length;
 }
 
-/** Paused and stopped medications have no doses to take. */
-function onSchedule(m: Medication): boolean {
-  return m.status !== "Paused" && m.status !== "Stopped";
-}
-
-export function removeMedication(list: Medication[], id: string): Medication[] {
-  return list.filter((m) => m.id !== id);
-}
-
-export const SEED_MEDICATIONS: Medication[] = medicationsData.map((m, i) => ({
-  ...m,
-  id: `seed-med-${i}`,
-}));
-
-export type DoseRow = (typeof doseScheduleData)[number];
+/** One scheduled dose of the day. */
+export type DoseRow = {
+  medicationId: string;
+  /** HH:mm (24-hour): with the day and the medication id, its identity. */
+  time: string;
+  /** "08:00 AM", as the member reads it. */
+  timeLabel: string;
+  medication: string;
+  generic: string;
+  instructionsEn: string;
+  instructionsEs: string;
+};
 
 /**
- * Today's doses: the sample schedule for the sample medications still on
- * the list, then one dose for each added, active medication that has a
- * reminder time.
+ * Today's doses, as the server schedules them (adherence.service): one row
+ * per time on the enabled reminder of each Active medication, matched by
+ * the medication's id. A medication with no reminder has no scheduled dose
+ * (spec 042 B6-4). Earliest first.
  */
 export function doseRows(
   medications: Medication[],
   reminders: MedicationReminder[],
 ): DoseRow[] {
-  const scheduled = medications.filter(onSchedule);
-  const names = new Set(scheduled.map((m) => m.name.toLowerCase()));
-  const sample = doseScheduleData.filter((row) =>
-    names.has(row.medication.toLowerCase()),
+  const rows: DoseRow[] = [];
+  for (const m of medications) {
+    if (m.status !== "Active") continue;
+    const reminder = reminders.find(
+      (r) => r.medicationId === m.id && r.enabled,
+    );
+    if (!reminder) continue;
+    for (const time of reminder.times) {
+      rows.push({
+        medicationId: m.id,
+        time,
+        timeLabel: formatTo12Hour(time),
+        medication: m.name,
+        generic: m.dose,
+        instructionsEn: m.instructions ?? "—",
+        instructionsEs: m.instructions ?? "—",
+      });
+    }
+  }
+  return rows.sort(
+    (a, b) =>
+      a.time.localeCompare(b.time) || a.medication.localeCompare(b.medication),
   );
-  /* One row per reminder time not already in the sample schedule, so a
-     medication taken twice a day has two rows. */
-  const added = scheduled
-    .filter((m) => m.status === "Active")
-    .flatMap((m) => {
-      const reminder = reminders.find(
-        (r) =>
-          r.medicationName.toLowerCase() === m.name.toLowerCase() && r.enabled,
-      );
-      if (!reminder) return [];
-      return reminderTimes(reminder)
-        .map((t) => t.toLowerCase())
-        .filter(
-          (time) =>
-            !sample.some(
-              (row) =>
-                row.medication.toLowerCase() === m.name.toLowerCase() &&
-                row.time.toLowerCase() === time,
-            ),
-        )
-        .map((time) => ({
-          time,
-          medication: m.name,
-          generic: m.dose,
-          instructionsEn: m.instructions ?? "—",
-          instructionsEs: m.instructions ?? "—",
-          status: "Pending",
-          stamp: "---",
-          sideEffectsEn: "None",
-          sideEffectsEs: "Ninguno",
-        }));
-    });
-  return [...sample, ...added];
 }
 
-/** "08:00" (24-hour, from a time input) → "08:00 AM", as reminders keep it. */
+/** "08:00" (24-hour, from a time input) → "08:00 AM", for display only. */
 export function reminderClock(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
   const hour = h % 12 === 0 ? 12 : h % 12;

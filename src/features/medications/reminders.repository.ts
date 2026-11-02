@@ -1,19 +1,38 @@
-import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
-import { SEED_REMINDERS } from "./reminders.seed";
-import type { MedicationReminder } from "./reminders.types";
+/* ==========================================================================
+   Medication reminders: one function per server operation (ADR 0007 §1)
+   ========================================================================== */
 
-const KEY = storageKey("medication-reminders");
+import { api } from "@/lib/api/client";
+import { fetchPage, type PageParams } from "@/lib/api/paging";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import { patientPath } from "@/features/profile/patientScope";
+import type {
+  ApiReminder,
+  CreateReminderBody,
+  UpdateReminderBody,
+} from "./reminders.mapper";
 
-export async function listReminders(): Promise<MedicationReminder[]> {
-  /* null, not the seed, so "never set a reminder" and "deleted them all"
-     stay different answers. The old version handed the demo reminders back
-     to anyone who deleted the last one. */
-  const stored = await readJson<MedicationReminder[] | null>(KEY, null);
-  return Array.isArray(stored) ? stored : sampleOr(KEY, SEED_REMINDERS, []);
-}
+const base = (scope: PatientScope) => patientPath(scope, "/reminders");
+const one = (scope: PatientScope, id: string) =>
+  `${base(scope)}/${encodeURIComponent(id)}`;
 
-export async function saveReminders(
-  reminders: MedicationReminder[],
-): Promise<MedicationReminder[]> {
-  return writeJson(KEY, reminders);
-}
+/** The medication reminders (kind MEDICATION), one page. */
+export const listMedicationReminders = (
+  scope: PatientScope,
+  params: PageParams,
+) =>
+  fetchPage<ApiReminder>(base(scope), params, {
+    query: { kind: "MEDICATION" },
+  });
+
+export const createReminder = (scope: PatientScope, body: CreateReminderBody) =>
+  api<ApiReminder>(base(scope), { method: "POST", body });
+
+export const updateReminder = (
+  scope: PatientScope,
+  id: string,
+  body: UpdateReminderBody,
+) => api<ApiReminder>(one(scope, id), { method: "PATCH", body });
+
+export const removeReminder = (scope: PatientScope, id: string) =>
+  api<unknown>(one(scope, id), { method: "DELETE" });

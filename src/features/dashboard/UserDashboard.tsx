@@ -212,7 +212,7 @@ export default function UserDashboard() {
   const doses = doseRows(meds.medications, reminders)
     .map((d) => ({
       ...d,
-      state: doseLog.statusOf(today, d.medication, d.time),
+      state: doseLog.statusOf(today, d.medicationId, d.time),
     }))
     .sort((a, b) => minutesOf(a.time) - minutesOf(b.time));
   const dosesDone = doses.filter(
@@ -690,7 +690,7 @@ export default function UserDashboard() {
                   <p className="mt-stack-xs flex items-center justify-between gap-inline-md text-label-md text-fg">
                     <span className="truncate">{nextDose.medication}</span>
                     <span className="shrink-0 tabular-nums">
-                      {nextDose.time}
+                      {nextDose.timeLabel}
                     </span>
                   </p>
                 </div>
