@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 4;
+export const STORAGE_VERSION = 5;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -162,25 +162,42 @@ export const RETIRED_KEYS: readonly string[] = [
   /* Phase 2: the prototype's registered accounts, with plain-text
      passwords. Sign-up goes to POST /auth/register now. */
   "nr-registered-users",
+  /* Phase 3 (STORAGE_VERSION 5): the client role matrix each organisation
+     edited in this browser. Permissions are the server's membership levels
+     (GET /me/context) and the role editor writes PUT /roles/permissions. */
+  "nr:role-permissions",
+  /* Phase 3: the staff list kept in this browser. Staff come from
+     GET /organizations/:id/staff; people are invited (D3), never created
+     here with a password. */
+  "nr:staff-accounts",
+  /* Phase 3: caregiver grants with their invite ids (link secrets). Grants
+     come from /patients/:id/caregivers and /me/context caregiving[]. */
+  "nr:caregiver-grants",
+];
+
+/** Key prefixes that are retired in every variant (one key per user). */
+export const RETIRED_PREFIXES: readonly string[] = [
+  /* Phase 3: the patient a caregiver had chosen, per caregiver email. The
+     choice is the in-memory portal context now. */
+  "nr:caregiver-viewing:",
 ];
 
 /** Cookies to expire. */
 export const RETIRED_COOKIES: readonly string[] = [LEGACY_SESSION_COOKIE];
 
 /**
- * Stores that stay live but must lose fields: `nr:staff-accounts` still
- * feeds the staff team screen until FE-ORG moves it to the API in Phase 3,
- * but its demo `password` fields go now (Phase 2). Each entry names the key
- * and the fields stripped from every object in its array.
+ * Stores that stay live but must lose fields. Each entry names the key and
+ * the fields stripped from every object in its array. Empty since Phase 3:
+ * `nr:staff-accounts` (whose demo passwords Phase 2 stripped) is retired
+ * outright above.
  */
-export const STRIPPED_FIELDS: readonly { key: string; fields: string[] }[] = [
-  { key: "nr:staff-accounts", fields: ["password"] },
-];
+export const STRIPPED_FIELDS: readonly { key: string; fields: string[] }[] = [];
 
 /** Whether a localStorage key belongs to a retired store or is retired. */
 export function isRetiredKey(key: string): boolean {
   if (KEPT_KEYS.includes(key)) return false;
   if (RETIRED_KEYS.includes(key)) return true;
+  if (RETIRED_PREFIXES.some((prefix) => key.startsWith(prefix))) return true;
   if (!key.startsWith("nr:")) return false;
   return RETIRED_STORES.some(
     ({ name }) =>
