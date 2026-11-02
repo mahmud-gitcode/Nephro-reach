@@ -80,6 +80,7 @@ import {
 } from "./members.data";
 import { paginate } from "./enrollment.data";
 import { useClinicData, type ClinicData } from "./useClinicData";
+import { WindowNote } from "./WindowNote";
 import {
   canRetry,
   errorMessageFor,
@@ -896,13 +897,18 @@ export default function ClinicDashboard() {
           laptop row is too narrow for the icon tile beside "23 / 30". */}
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         <EnrollmentCard
-          enrolled={dashboard.data?.roster.length ?? 0}
+          enrolled={dashboard.data?.rosterTotal ?? 0}
           seats={dashboard.data?.seats ?? null}
         />
         {statusCardsFor(dashboard.data?.roster ?? []).map((card) => (
           <StatusCard key={card.status} card={card} />
         ))}
       </section>
+      <WindowNote
+        window={dashboard.data?.window}
+        what="Status cards and the lists below cover"
+        noun="members"
+      />
 
       {/* The reference's grid: each row splits two thirds / one third, the
           work on the left and its side panel on the right; the members

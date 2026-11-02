@@ -173,9 +173,45 @@ test("J8-1 office roster and enrollment, ?patient=<uuid> URLs @phase8", async ({
     ).toBeVisible({ timeout: 20_000 });
     await again.getByRole("button", { name: "Cancel" }).click();
 
+    /* The Member page pages, searches and filters by program on the
+       server (QA round 1, H1; BE-2): the table read carries page, limit,
+       search and the program slug. */
+    const rosterReads: URL[] = [];
+    page.on("request", (req) => {
+      const u = new URL(req.url());
+      if (u.pathname.endsWith(`/organizations/${riverside}/patients`))
+        rosterReads.push(u);
+    });
+    const tableRead = (want: Record<string, string>) =>
+      rosterReads.some((u) =>
+        Object.entries(want).every(([k, v]) => u.searchParams.get(k) === v),
+      );
+
     /* The Member page opens the member by patientId; no MRN in the URL. */
     await page.goto("/dashboard/clinic/members");
+    await expect
+      .poll(() => tableRead({ page: "1", limit: "10", status: "ACTIVE" }), {
+        timeout: 20_000,
+      })
+      .toBe(true);
     await page.getByRole("searchbox").first().fill(name);
+    await expect
+      .poll(() => tableRead({ page: "1", limit: "10", search: name }), {
+        timeout: 20_000,
+      })
+      .toBe(true);
+    await page
+      .getByRole("combobox", { name: "Program" })
+      .selectOption("Journey to Dialysis (21-Day)");
+    await expect
+      .poll(() => tableRead({ search: name, program: "journey-21-day" }), {
+        timeout: 20_000,
+      })
+      .toBe(true);
+    await expect(
+      page.getByRole("button", { name: `View ${name}` }),
+    ).toBeVisible({ timeout: 20_000 });
+    expect(rosterReads.some((u) => u.search.includes(mrn))).toBe(false);
     await page.getByRole("button", { name: `View ${name}` }).click();
     await expect(page.getByRole("dialog", { name })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`[?&]patient=${patientId}`));

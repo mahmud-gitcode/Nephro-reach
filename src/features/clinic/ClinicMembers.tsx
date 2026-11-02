@@ -54,6 +54,9 @@ import {
   statusIcon,
 } from "./clinicIcons";
 import { paginate, ROWS_PER_PAGE_OPTIONS } from "./enrollment.data";
+import { programFor } from "./enrollment.mapping";
+import { useRosterPage, useRosterPatient } from "./useRosterPage";
+import { WindowNote } from "./WindowNote";
 import {
   ALL_PROGRAMS,
   ALL_STATUSES,
@@ -64,6 +67,7 @@ import {
   programOptions,
   shareOf,
   statusOptions,
+  rosterMemberFor,
   statusTone,
   type RosterMember,
   type RosterStatus,
@@ -148,9 +152,12 @@ function PanelHeading({
  */
 function SummaryCards({
   list,
+  total,
   seats,
 }: {
   list: RosterMember[];
+  /** The server's roster count (the window may hold fewer). */
+  total: number;
   seats: ClinicData["seats"];
 }) {
   const cards = MEMBER_STATUSES.filter((s) => s !== "Not Started");
@@ -167,7 +174,7 @@ function SummaryCards({
         icon={<UsersSolid />}
         value={
           <>
-            {list.length}
+            {total}
             {allowed !== null ? (
               <span className="text-heading-4 text-fg-muted"> / {allowed}</span>
             ) : null}
@@ -213,37 +220,45 @@ function SummaryCards({
 
 /* --------------------------------------------------------------- table */
 
+/** One page of the table, from the server or from the window. */
+type TableView = {
+  rows: RosterMember[] | undefined;
+  page: number;
+  pageCount: number;
+  firstShown: number;
+  lastShown: number;
+  total: number;
+  isFetching: boolean;
+  error: unknown;
+  refetch: () => void;
+};
+
 function MemberTable({
-  list,
+  view,
+  perPage,
+  onPage,
+  onPerPage,
+  note,
   filters,
   onFilters,
   selectedId,
   onSelect,
 }: {
-  list: RosterMember[];
+  view: TableView;
+  perPage: number;
+  onPage: (page: number) => void;
+  onPerPage: (perPage: number) => void;
+  /** Why the rows may not be the whole roster (a client-only filter). */
+  note: React.ReactNode;
   filters: Filters;
   onFilters: (next: Partial<Filters>) => void;
   selectedId: string | null;
   onSelect: (patientId: string) => void;
 }) {
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const rows = view.rows ?? [];
 
-  const filtered = useMemo(() => filterRoster(list, filters), [list, filters]);
-  const view = paginate(filtered, page, perPage);
-
-  /* A filter change — from the controls here, a summary card, or the
-     charts below — returns to page 1. Adjusted during render rather than
-     in an effect, the same pattern as Enroll Patients. */
-  const filterKey = `${filters.query}|${filters.program}|${filters.status}|${perPage}`;
-  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
-  if (filterKey !== lastFilterKey) {
-    setLastFilterKey(filterKey);
-    setPage(1);
-  }
-
-  const pageMrns = view.rows.map((member) => member.id);
+  const pageMrns = rows.map((member) => member.id);
   const allOnPage =
     pageMrns.length > 0 && pageMrns.every((mrn) => checked.has(mrn));
 
@@ -342,141 +357,161 @@ function MemberTable({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-control border border-line">
-        <Table minWidth={640}>
-          <TableHead className="bg-surface-sunken">
-            <TableRow>
-              <TableHeaderCell className="w-10">
-                <input
-                  type="checkbox"
-                  checked={allOnPage}
-                  onChange={toggleAll}
-                  aria-label="Select all members on this page"
-                  className="h-4 w-4 cursor-pointer accent-brand-600"
-                />
-              </TableHeaderCell>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell>Program</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell>Progress</TableHeaderCell>
-              <TableHeaderCell>Last Activity</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {view.rows.length === 0 ? (
-              <TableEmptyRow colSpan={7}>
-                <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
-                  No members match these filters.
-                  {filtersOn ? (
-                    <Button
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      size="small"
-                      onClick={() =>
-                        onFilters({
-                          query: "",
-                          program: ALL_PROGRAMS,
-                          status: ALL_STATUSES,
-                        })
-                      }
-                    >
-                      Clear filters
-                    </Button>
-                  ) : null}
-                </span>
-              </TableEmptyRow>
-            ) : (
-              view.rows.map((member) => {
-                const Icon = member.status ? statusIcon[member.status] : null;
-                const isSelected = member.id === selectedId;
-                return (
-                  <TableRow
-                    key={member.id}
-                    className={isSelected ? "bg-surface-brand-subtle" : ""}
-                  >
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={checked.has(member.id)}
-                        onChange={() => toggleOne(member.id)}
-                        aria-label={`Select ${member.name}`}
-                        className="h-4 w-4 cursor-pointer accent-brand-600"
-                      />
-                    </TableCell>
-                    <TableCell emphasis className="whitespace-nowrap">
-                      {/* The name opens the details panel; aria-pressed
-                          tells a screen reader which member is open. */}
-                      <button
-                        type="button"
-                        onClick={() => onSelect(member.id)}
-                        aria-pressed={isSelected}
-                        className={cn(
-                          "cursor-pointer rounded-control-small text-left hover:text-fg-brand hover:underline",
-                          focusRing,
-                        )}
+      {note}
+
+      {view.error ? (
+        <ErrorState
+          title={errorTitleFor(view.error, "Members could not be loaded")}
+          message={errorMessageFor(view.error, undefined)}
+          error={view.error}
+          onRetry={canRetry(view.error) ? view.refetch : undefined}
+        />
+      ) : view.rows === undefined ? (
+        <Skeleton height={420} className="rounded-control" />
+      ) : (
+        <div
+          aria-busy={view.isFetching}
+          className="overflow-hidden rounded-control border border-line"
+        >
+          <Table minWidth={640}>
+            <TableHead className="bg-surface-sunken">
+              <TableRow>
+                <TableHeaderCell className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={allOnPage}
+                    onChange={toggleAll}
+                    aria-label="Select all members on this page"
+                    className="h-4 w-4 cursor-pointer accent-brand-600"
+                  />
+                </TableHeaderCell>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Program</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Progress</TableHeaderCell>
+                <TableHeaderCell>Last Activity</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Actions
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableEmptyRow colSpan={7}>
+                  <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
+                    No members match these filters.
+                    {filtersOn ? (
+                      <Button
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
+                        onClick={() =>
+                          onFilters({
+                            query: "",
+                            program: ALL_PROGRAMS,
+                            status: ALL_STATUSES,
+                          })
+                        }
                       >
-                        {member.name}
-                      </button>
-                      <span className="block text-caption font-normal text-fg-muted tabular-nums">
-                        MRN {member.mrn || "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell>{shortProgram(member.program)}</TableCell>
-                    <TableCell>
-                      {member.status && Icon ? (
-                        <Badge
-                          tone={statusTone[member.status]}
-                          icon={<Icon aria-hidden="true" />}
-                        >
-                          {member.status}
-                        </Badge>
-                      ) : (
-                        <span className="text-fg-muted">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-inline-md">
-                        <Progress
-                          value={member.progress}
-                          label={`${member.name} progress`}
-                          size="small"
-                          className="w-14"
+                        Clear filters
+                      </Button>
+                    ) : null}
+                  </span>
+                </TableEmptyRow>
+              ) : (
+                rows.map((member) => {
+                  const Icon = member.status ? statusIcon[member.status] : null;
+                  const isSelected = member.id === selectedId;
+                  return (
+                    <TableRow
+                      key={member.id}
+                      className={isSelected ? "bg-surface-brand-subtle" : ""}
+                    >
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={checked.has(member.id)}
+                          onChange={() => toggleOne(member.id)}
+                          aria-label={`Select ${member.name}`}
+                          className="h-4 w-4 cursor-pointer accent-brand-600"
                         />
-                        <span className="tabular-nums">{member.progress}%</span>
-                      </span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {member.lastActivity}
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex justify-end gap-inline-xs">
+                      </TableCell>
+                      <TableCell emphasis className="whitespace-nowrap">
+                        {/* The name opens the details panel; aria-pressed
+                          tells a screen reader which member is open. */}
                         <button
                           type="button"
                           onClick={() => onSelect(member.id)}
-                          className={iconControl}
-                          aria-label={`View ${member.name}`}
-                          title="View details"
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "cursor-pointer rounded-control-small text-left hover:text-fg-brand hover:underline",
+                            focusRing,
+                          )}
                         >
-                          <Eye aria-hidden="true" />
+                          {member.name}
                         </button>
-                        <Link
-                          href={messageLink(member.id)}
-                          className={iconControl}
-                          aria-label={`Message ${member.name}`}
-                          title="Send message"
-                        >
-                          <MessageSquareText aria-hidden="true" />
-                        </Link>
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        <span className="block text-caption font-normal text-fg-muted tabular-nums">
+                          MRN {member.mrn || "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell>{shortProgram(member.program)}</TableCell>
+                      <TableCell>
+                        {member.status && Icon ? (
+                          <Badge
+                            tone={statusTone[member.status]}
+                            icon={<Icon aria-hidden="true" />}
+                          >
+                            {member.status}
+                          </Badge>
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex items-center gap-inline-md">
+                          <Progress
+                            value={member.progress}
+                            label={`${member.name} progress`}
+                            size="small"
+                            className="w-14"
+                          />
+                          <span className="tabular-nums">
+                            {member.progress}%
+                          </span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {member.lastActivity}
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex justify-end gap-inline-xs">
+                          <button
+                            type="button"
+                            onClick={() => onSelect(member.id)}
+                            className={iconControl}
+                            aria-label={`View ${member.name}`}
+                            title="View details"
+                          >
+                            <Eye aria-hidden="true" />
+                          </button>
+                          <Link
+                            href={messageLink(member.id)}
+                            className={iconControl}
+                            aria-label={`Message ${member.name}`}
+                            title="Send message"
+                          >
+                            <MessageSquareText aria-hidden="true" />
+                          </Link>
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-inline-md text-body-sm text-fg-secondary">
@@ -484,7 +519,7 @@ function MemberTable({
           <Select
             selectSize="small"
             value={String(perPage)}
-            onChange={(event) => setPerPage(Number(event.target.value))}
+            onChange={(event) => onPerPage(Number(event.target.value))}
             className="w-20"
           >
             {ROWS_PER_PAGE_OPTIONS.map((option) => (
@@ -495,7 +530,7 @@ function MemberTable({
         <TablePagination
           page={view.page}
           pageCount={view.pageCount}
-          onPageChange={setPage}
+          onPageChange={onPage}
           summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`}
         />
       </div>
@@ -901,7 +936,59 @@ function MembersView() {
   const [selectedId, setSelectedId] = useState<string | null>(
     initial.patientId,
   );
-  const selected = list.find((member) => member.id === selectedId) ?? null;
+
+  /* The table pages on the server (page, limit, search, BE-2 program), so
+     every patient on the roster can be listed and found. The member status
+     is the client's own reading (NEW-2) with no server filter: while it is
+     on, the table filters the shared window instead, and says so when the
+     window is not the whole roster. */
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState<number>(ROWS_PER_PAGE_OPTIONS[0]);
+  const filterKey = `${filters.query}|${filters.program}|${filters.status}|${perPage}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    /* A filter change returns to page 1 (adjusted during render). */
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+  const serverMode = filters.status === ALL_STATUSES;
+  const serverPage = useRosterPage(
+    {
+      search: filters.query,
+      program:
+        filters.program === ALL_PROGRAMS
+          ? null
+          : (programFor(filters.program)?.program ?? null),
+      page,
+      limit: perPage,
+    },
+    serverMode,
+  );
+  const view = useMemo((): TableView => {
+    const now = new Date();
+    if (serverMode) {
+      return {
+        ...serverPage,
+        rows: serverPage.rows?.map((p) => rosterMemberFor(p, now)),
+      };
+    }
+    const local = paginate(filterRoster(list, filters), page, perPage);
+    return {
+      ...local,
+      isFetching: false,
+      error: null,
+      refetch: clinic.refetch,
+    };
+  }, [serverMode, serverPage, list, filters, page, perPage, clinic.refetch]);
+
+  /* The open member: from the window, this page, or (a ?patient= link to
+     someone in neither) read by id. */
+  const known =
+    list.find((member) => member.id === selectedId) ??
+    view.rows?.find((member) => member.id === selectedId) ??
+    null;
+  const byId = useRosterPatient(known ? null : selectedId);
+  const selected = known ?? (byId ? rosterMemberFor(byId) : null);
 
   function writeUrl(next: Filters, patientId: string | null) {
     const query = new URLSearchParams();
@@ -972,10 +1059,32 @@ function MembersView() {
 
   return (
     <>
-      <SummaryCards list={list} seats={clinic.data?.seats ?? null} />
+      <SummaryCards
+        list={list}
+        total={clinic.data?.rosterTotal ?? list.length}
+        seats={clinic.data?.seats ?? null}
+      />
+      <WindowNote
+        window={clinic.data?.window}
+        what="Status counts and charts cover"
+        noun="members"
+      />
 
       <MemberTable
-        list={list}
+        view={view}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={setPerPage}
+        note={
+          serverMode ? null : (
+            <WindowNote
+              window={clinic.data?.window}
+              what="The status filter covers"
+              noun="members"
+              className="mb-stack-md"
+            />
+          )
+        }
         filters={filters}
         onFilters={updateFilters}
         selectedId={selectedId}

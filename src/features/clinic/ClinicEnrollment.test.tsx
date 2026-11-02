@@ -256,6 +256,22 @@ describe("enrolling a patient: two server calls", () => {
       ),
     ).toBeInTheDocument();
 
+    /* The retry runs ② for the patient ① created: the name and MRN they
+       were added with cannot be edited any more (QA round 1). */
+    expect(
+      within(dialog).getByRole("textbox", { name: /Full name/ }),
+    ).toHaveAttribute("readonly");
+    expect(
+      within(dialog).getByRole("textbox", { name: /MRN/ }),
+    ).toHaveAttribute("readonly");
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: /Full name/ }),
+      "x",
+    );
+    expect(
+      within(dialog).getByRole("textbox", { name: /Full name/ }),
+    ).toHaveValue("Riley Synthetic");
+
     programFails = false;
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Enroll Patient" }),
@@ -303,5 +319,98 @@ describe("filtering from the panels", () => {
     api();
     renderPage("status=Pending+Start");
     expect(await showing()).toHaveTextContent("of 1 patients");
+  });
+});
+
+/* QA round 1, H1: the table pages on the server, so a patient beyond any
+   window can be listed and found, and a row's program is right even when
+   the office has more enrollments than one read holds. */
+describe("server paging", () => {
+  /** A page as the API sends it, with the server's total. */
+  const paged = <T,>(items: T[], total: number, page = 1, limit = 10) => ({
+    body: {
+      success: true,
+      message: "Success",
+      statusCode: 200,
+      data: items,
+      pagination: {
+        mode: "offset",
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    },
+  });
+  const tableReads = (calls: StubCall[]) =>
+    calls.filter((c) => roster(c) && Number(c.query.get("limit")) !== 150);
+
+  it("reads each page, the search and the program from the server", async () => {
+    const { calls } = api((call) =>
+      roster(call) && call.query.get("limit") !== "150"
+        ? paged(patients, 420, Number(call.query.get("page") ?? 1))
+        : undefined,
+    );
+    renderPage();
+    expect(await showing()).toHaveTextContent("Showing 1–5 of 420 patients");
+    expect(tableReads(calls)[0].query.get("page")).toBe("1");
+    expect(tableReads(calls)[0].query.get("limit")).toBe("10");
+
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await vi.waitFor(() =>
+      expect(tableReads(calls).at(-1)?.query.get("page")).toBe("2"),
+    );
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Program"),
+      "Crash Dialysis (5-Day)",
+    );
+    await vi.waitFor(() =>
+      expect(tableReads(calls).at(-1)?.query.get("program")).toBe(
+        "crash-5-day",
+      ),
+    );
+    expect(tableReads(calls).at(-1)?.query.get("page")).toBe("1");
+
+    await userEvent.type(screen.getByRole("searchbox"), "Blake");
+    await vi.waitFor(() =>
+      expect(tableReads(calls).at(-1)?.query.get("search")).toBe("Blake"),
+    );
+    /* A name is a search term, never part of a path. */
+    for (const call of calls) expect(call.path).not.toMatch(/Blake/);
+  });
+
+  it("reads the enrollments of this page's patients when the office has more than one read holds", async () => {
+    const blake = testPatientId(2);
+    const { calls } = api((call) => {
+      if (programs(call) && call.method === "GET") {
+        const id = call.query.get("patientId");
+        if (id) return pageOf(enrollments.filter((e) => e.patientId === id));
+        /* The newest enrollments, and the server says there are more. */
+        return pageOf(
+          enrollments.filter((e) => e.patientId !== blake),
+          true,
+        );
+      }
+      return undefined;
+    });
+    renderPage();
+    const row = (await screen.findByText("Blake Sample")).closest("tr")!;
+    expect(row).toHaveTextContent("Crash Dialysis");
+    expect(row).not.toHaveTextContent("No Program");
+    const own = calls.filter((c) => programs(c) && c.query.get("patientId"));
+    expect(own.map((c) => c.query.get("patientId"))).toContain(blake);
+    /* One read per patient on the page, never more. */
+    expect(new Set(own.map((c) => c.query.get("patientId"))).size).toBe(
+      patients.length,
+    );
+    /* The breakdowns say they cover part of the office. */
+    expect(
+      screen.getByText(
+        `Export and the breakdowns cover your ${enrollments.length - 1} most recent program enrollments of ${enrollments.length}.`,
+      ),
+    ).toBeInTheDocument();
   });
 });

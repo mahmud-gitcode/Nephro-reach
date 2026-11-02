@@ -69,6 +69,9 @@ import {
 import { EnrollPatientModal } from "./EnrollPatientModal";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData, type ClinicData } from "./useClinicData";
+import { programFor } from "./enrollment.mapping";
+import { useRosterPage } from "./useRosterPage";
+import { WindowNote } from "./WindowNote";
 import {
   canRetry,
   errorMessageFor,
@@ -145,16 +148,17 @@ function PanelHeading({
 /* ------------------------------------------------------- summary cards */
 
 function SummaryCards({
-  list,
+  total,
   seats,
   onEnroll,
 }: {
-  list: Patient[];
+  /** The server's roster count. */
+  total: number;
   /** The contract's seats (null: unknown to this role). */
   seats: ClinicData["seats"];
   onEnroll: () => void;
 }) {
-  const enrolled = list.length;
+  const enrolled = total;
   /* The contract decides (allowed null: no seat limit). Unknown shows "—";
      the server refuses a full contract either way (409 seats_full). */
   const slots = seats?.allowed ?? null;
@@ -233,39 +237,66 @@ function SummaryCards({
 
 /* --------------------------------------------------------------- table */
 
+/** Search here also matches a status word ("pending"), which the server's
+ *  roster search (name or MRN) does not: such a search reads the window. */
+function searchesStatus(query: string): boolean {
+  const q = query.trim().toLowerCase();
+  return (
+    q.length >= 3 &&
+    statusOptions
+      .slice(1)
+      .concat("No Program")
+      .some((label) => label.toLowerCase().includes(q))
+  );
+}
+
+/** One page of the table, from the server or from the window. */
+type TableView = {
+  rows: Patient[] | undefined;
+  page: number;
+  pageCount: number;
+  firstShown: number;
+  lastShown: number;
+  total: number;
+  isFetching: boolean;
+  error: unknown;
+  refetch: () => void;
+};
+
 function PatientTable({
   list,
+  view,
+  perPage,
+  onPage,
+  onPerPage,
+  note,
   filters,
   onFilters,
   highlightId,
 }: {
+  /** The shared window: what Export writes. */
   list: Patient[];
+  view: TableView;
+  perPage: number;
+  onPage: (page: number) => void;
+  onPerPage: (perPage: number) => void;
+  /** Why the rows may not be the whole roster. */
+  note: React.ReactNode;
   filters: Filters;
   onFilters: (change: Partial<Filters>) => void;
   highlightId: string | null;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const rows = view.rows ?? [];
 
   const filtered = useMemo(
     () => filterPatients(list, filters),
     [list, filters],
   );
-  const view = paginate(filtered, page, perPage);
 
-  /* A filter change — from these controls or the panels below — returns
-     to page 1. Adjusted during render rather than in an effect. */
-  const filterKey = `${filters.query}|${filters.program}|${filters.status}|${filters.source}|${perPage}`;
-  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
-  if (filterKey !== lastFilterKey) {
-    setLastFilterKey(filterKey);
-    setPage(1);
-  }
-
-  const pageMrns = view.rows.map((patient) => patient.id);
+  const pageMrns = rows.map((patient) => patient.id);
   const allOnPageSelected =
     pageMrns.length > 0 && pageMrns.every((mrn) => selected.has(mrn));
 
@@ -409,123 +440,143 @@ function PatientTable({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-control border border-line">
-        <Table minWidth={980}>
-          <TableHead className="bg-surface-sunken">
-            <TableRow>
-              <TableHeaderCell className="w-10">
-                <input
-                  type="checkbox"
-                  checked={allOnPageSelected}
-                  onChange={toggleAllOnPage}
-                  aria-label="Select all patients on this page"
-                  className="h-4 w-4 cursor-pointer accent-brand-600"
-                />
-              </TableHeaderCell>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell>Program Assigned</TableHeaderCell>
-              <TableHeaderCell>Enrollment Date</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell>Start Date</TableHeaderCell>
-              <TableHeaderCell>Progress</TableHeaderCell>
-              <TableHeaderCell>Source</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {view.rows.length === 0 ? (
-              <TableEmptyRow colSpan={9}>
-                <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
-                  No patients match these filters.
-                  {filtersOn ? (
-                    <Button
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      size="small"
-                      onClick={() => onFilters({ query: "", ...NO_FILTERS })}
-                    >
-                      Clear filters
-                    </Button>
-                  ) : null}
-                </span>
-              </TableEmptyRow>
-            ) : (
-              view.rows.map((patient) => (
-                <TableRow
-                  key={patient.id}
-                  className={
-                    patient.id === highlightId
-                      ? "bg-success-surface"
-                      : undefined
-                  }
-                >
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(patient.id)}
-                      onChange={() => toggleOne(patient.id)}
-                      aria-label={`Select ${patient.name}`}
-                      className="h-4 w-4 cursor-pointer accent-brand-600"
-                    />
-                  </TableCell>
-                  <TableCell emphasis className="whitespace-nowrap">
-                    {patient.name}
-                    <span className="block text-caption font-normal text-fg-muted tabular-nums">
-                      MRN {patient.mrn || "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell>{shortProgram(patient.program)}</TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">
-                    {patient.enrolledOn}
-                  </TableCell>
-                  <TableCell>
-                    <Badge tone={statusTone[patient.status]}>
-                      {patient.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">
-                    {patient.startDate}
-                  </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-inline-md">
-                      <Progress
-                        value={patient.progress}
-                        label={`${patient.name} program progress`}
+      {note}
+
+      {view.error ? (
+        <ErrorState
+          title={errorTitleFor(view.error, "Enrollments could not be loaded")}
+          message={errorMessageFor(view.error, undefined)}
+          error={view.error}
+          onRetry={canRetry(view.error) ? view.refetch : undefined}
+        />
+      ) : view.rows === undefined ? (
+        <Skeleton height={420} className="rounded-control" />
+      ) : (
+        <div
+          aria-busy={view.isFetching}
+          className="overflow-hidden rounded-control border border-line"
+        >
+          <Table minWidth={980}>
+            <TableHead className="bg-surface-sunken">
+              <TableRow>
+                <TableHeaderCell className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={toggleAllOnPage}
+                    aria-label="Select all patients on this page"
+                    className="h-4 w-4 cursor-pointer accent-brand-600"
+                  />
+                </TableHeaderCell>
+                <TableHeaderCell>Name</TableHeaderCell>
+                <TableHeaderCell>Program Assigned</TableHeaderCell>
+                <TableHeaderCell>Enrollment Date</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Start Date</TableHeaderCell>
+                <TableHeaderCell>Progress</TableHeaderCell>
+                <TableHeaderCell>Source</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Actions
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableEmptyRow colSpan={9}>
+                  <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
+                    No patients match these filters.
+                    {filtersOn ? (
+                      <Button
+                        variant="neutral"
+                        appearance="fill-stroke"
                         size="small"
-                        className="w-14"
+                        onClick={() => onFilters({ query: "", ...NO_FILTERS })}
+                      >
+                        Clear filters
+                      </Button>
+                    ) : null}
+                  </span>
+                </TableEmptyRow>
+              ) : (
+                rows.map((patient) => (
+                  <TableRow
+                    key={patient.id}
+                    className={
+                      patient.id === highlightId
+                        ? "bg-success-surface"
+                        : undefined
+                    }
+                  >
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(patient.id)}
+                        onChange={() => toggleOne(patient.id)}
+                        aria-label={`Select ${patient.name}`}
+                        className="h-4 w-4 cursor-pointer accent-brand-600"
                       />
-                      <span className="tabular-nums">{patient.progress}%</span>
-                    </span>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {patient.source}
-                  </TableCell>
-                  <TableCell>
-                    <span className="flex justify-end gap-inline-xs">
-                      <Link
-                        href={memberLink({ patientId: patient.id })}
-                        className={iconControl}
-                        aria-label={`View ${patient.name} on the Member page`}
-                        title="View member"
-                      >
-                        <Eye aria-hidden="true" />
-                      </Link>
-                      <Link
-                        href={messageLink(patient.id)}
-                        className={iconControl}
-                        aria-label={`Message ${patient.name}`}
-                        title="Send message"
-                      >
-                        <MessageSquareText aria-hidden="true" />
-                      </Link>
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    </TableCell>
+                    <TableCell emphasis className="whitespace-nowrap">
+                      {patient.name}
+                      <span className="block text-caption font-normal text-fg-muted tabular-nums">
+                        MRN {patient.mrn || "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell>{shortProgram(patient.program)}</TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {patient.enrolledOn}
+                    </TableCell>
+                    <TableCell>
+                      <Badge tone={statusTone[patient.status]}>
+                        {patient.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {patient.startDate}
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-inline-md">
+                        <Progress
+                          value={patient.progress}
+                          label={`${patient.name} program progress`}
+                          size="small"
+                          className="w-14"
+                        />
+                        <span className="tabular-nums">
+                          {patient.progress}%
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {patient.source}
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex justify-end gap-inline-xs">
+                        <Link
+                          href={memberLink({ patientId: patient.id })}
+                          className={iconControl}
+                          aria-label={`View ${patient.name} on the Member page`}
+                          title="View member"
+                        >
+                          <Eye aria-hidden="true" />
+                        </Link>
+                        <Link
+                          href={messageLink(patient.id)}
+                          className={iconControl}
+                          aria-label={`Message ${patient.name}`}
+                          title="Send message"
+                        >
+                          <MessageSquareText aria-hidden="true" />
+                        </Link>
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-inline-md text-body-sm text-fg-secondary">
@@ -533,7 +584,7 @@ function PatientTable({
           <Select
             selectSize="small"
             value={String(perPage)}
-            onChange={(event) => setPerPage(Number(event.target.value))}
+            onChange={(event) => onPerPage(Number(event.target.value))}
             className="w-20"
           >
             {ROWS_PER_PAGE_OPTIONS.map((option) => (
@@ -544,7 +595,7 @@ function PatientTable({
         <TablePagination
           page={view.page}
           pageCount={view.pageCount}
-          onPageChange={setPage}
+          onPageChange={onPage}
           summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} patients`}
         />
       </div>
@@ -787,6 +838,46 @@ function EnrollmentView() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
+  /* The table pages on the server (page, limit, search by name or MRN,
+     BE-2 program). Status and referral source have no roster filter on
+     the server, and search also matches a status word: while one of those
+     is in use, the table filters the shared window instead and says so
+     when the window is not the whole roster. */
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState<number>(ROWS_PER_PAGE_OPTIONS[0]);
+  const filterKey = `${filters.query}|${filters.program}|${filters.status}|${filters.source}|${perPage}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    /* A filter change returns to page 1 (adjusted during render). */
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+  const serverMode =
+    filters.status === ALL_STATUSES &&
+    filters.source === ALL_SOURCES &&
+    !searchesStatus(filters.query);
+  const serverPage = useRosterPage(
+    {
+      search: filters.query,
+      program:
+        filters.program === ALL_PROGRAMS
+          ? null
+          : (programFor(filters.program)?.program ?? null),
+      page,
+      limit: perPage,
+    },
+    serverMode,
+  );
+  const view = useMemo((): TableView => {
+    if (serverMode) return serverPage;
+    return {
+      ...paginate(filterPatients(list, filters), page, perPage),
+      isFetching: false,
+      error: null,
+      refetch: clinic.refetch,
+    };
+  }, [serverMode, serverPage, list, filters, page, perPage, clinic.refetch]);
+
   function enrolled(name: string, patientId: string | null, ccm?: boolean) {
     setEnrolling(false);
     setJustEnrolled({ name, patientId, ccm });
@@ -842,7 +933,7 @@ function EnrollmentView() {
       ) : null}
 
       <SummaryCards
-        list={list}
+        total={clinic.data?.rosterTotal ?? list.length}
         seats={clinic.data?.seats ?? null}
         onEnroll={() => setEnrolling(true)}
       />
@@ -863,11 +954,30 @@ function EnrollmentView() {
         <>
           <PatientTable
             list={list}
+            view={view}
+            perPage={perPage}
+            onPage={setPage}
+            onPerPage={setPerPage}
+            note={
+              serverMode ? null : (
+                <WindowNote
+                  window={clinic.data?.window}
+                  what="These filters cover"
+                  noun="patients"
+                  className="mb-stack-md"
+                />
+              )
+            }
             filters={filters}
             onFilters={updateFilters}
             highlightId={justEnrolled?.patientId ?? null}
           />
 
+          <WindowNote
+            window={clinic.data?.window}
+            what="Export and the breakdowns cover"
+            noun="patients"
+          />
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             <EnrollmentSources
               list={list}

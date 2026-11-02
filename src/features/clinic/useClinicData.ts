@@ -23,6 +23,7 @@ import {
   type RosterQuery,
 } from "./roster.repository";
 import { officeKey, requireOffice, useOfficeScope } from "./office.scope";
+import type { Page } from "@/lib/api/paging";
 
 /* ==========================================================================
    The office's shared reads (Phase 8; ADR 0007)
@@ -34,10 +35,16 @@ import { officeKey, requireOffice, useOfficeScope } from "./office.scope";
    Curriculum Progress share this cache, so a refresh on one is fresh on
    all of them, and every key carries the organization id.
 
-   The read is one bounded window (ROSTER_WINDOW, the API's maximum page):
-   the pages filter and page within it, because two of their filters
-   (the member status of NEW-2 and the referral source) have no server
-   equivalent. `rosterTotal` is the server's count.
+   Two kinds of read (QA round 1, H1):
+   - the tables on Members and Enroll Patients page on the server
+     (`useRosterPage`: page, limit, search and the BE-2 `program` filter),
+     so every patient on the roster can be listed and found;
+   - this hook's bounded window (ROSTER_WINDOW, the API's maximum page) is
+     what the summary cards, charts, "needs attention" lists and the
+     client-only filters count (the member status of NEW-2 and the referral
+     source have no server equivalent). `window` says whether it holds the
+     whole roster; when it does not, the pages say so ("the N most recent
+     of T") instead of passing a part off as the whole.
 
    Seats come from the contract (read-only; a role without billing read
    simply sees no seat figure). Courses for the program picker come from
@@ -46,6 +53,29 @@ import { officeKey, requireOffice, useOfficeScope } from "./office.scope";
 
 export const ROSTER_WINDOW = 150;
 
+/** Did a page read hold the whole list? */
+export function isWholeList(page: Page<unknown>): boolean {
+  const p = page.pagination;
+  if (!p) return true;
+  return p.mode === "offset" ? p.total <= page.items.length : !p.hasNext;
+}
+
+/** The server's count for a page read (the rows read when it sent none). */
+export function totalOf(page: Page<unknown>): number {
+  const p = page.pagination;
+  return p?.mode === "offset" ? p.total : page.items.length;
+}
+
+/** What the shared window holds (see WindowNote). */
+export type RosterWindow = {
+  loaded: number;
+  total: number;
+  enrollmentsLoaded: number;
+  enrollmentsTotal: number;
+  rosterWhole: boolean;
+  complete: boolean;
+};
+
 export const clinicKeys = {
   roster: (orgId: string | null, q: RosterQuery = {}) =>
     officeKey(orgId, "roster", q),
@@ -53,6 +83,18 @@ export const clinicKeys = {
     officeKey(orgId, "program-enrollments"),
   seats: (orgId: string | null) => officeKey(orgId, "billing", "contract"),
 };
+
+/** The office's newest program enrollments (enrolledAt desc), one bounded
+ *  page. Shared by the window below and by `useRosterPage`'s join. */
+export function enrollmentWindowQuery(organizationId: string | null) {
+  return {
+    queryKey: clinicKeys.enrollments(organizationId),
+    queryFn: () =>
+      listProgramEnrollments(requireOffice(organizationId), {
+        limit: ROSTER_WINDOW,
+      }),
+  };
+}
 
 export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
   const { organizationId } = useOfficeScope();
@@ -66,13 +108,7 @@ export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
     queryKey: clinicKeys.roster(organizationId, rosterQuery),
     queryFn: () => listRoster(requireOffice(organizationId), rosterQuery),
   });
-  const enrollments = useQuery({
-    queryKey: clinicKeys.enrollments(organizationId),
-    queryFn: () =>
-      listProgramEnrollments(requireOffice(organizationId), {
-        limit: ROSTER_WINDOW,
-      }),
-  });
+  const enrollments = useQuery(enrollmentWindowQuery(organizationId));
   const seats = useQuery({
     queryKey: clinicKeys.seats(organizationId),
     queryFn: () => getSeats(requireOffice(organizationId)),
@@ -100,10 +136,17 @@ export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
       activity: recentActivity,
       classes: upcomingClasses,
       /** The server's roster count (may exceed the window). */
-      rosterTotal:
-        roster.data.pagination?.mode === "offset"
-          ? roster.data.pagination.total
-          : patients.length,
+      rosterTotal: totalOf(roster.data),
+      /** What the window holds. `complete`: every roster patient and every
+       *  enrollment was read, so counts over it are the office's counts. */
+      window: {
+        loaded: patients.length,
+        total: totalOf(roster.data),
+        enrollmentsLoaded: enrollments.data.items.length,
+        enrollmentsTotal: totalOf(enrollments.data),
+        rosterWhole: isWholeList(roster.data),
+        complete: isWholeList(roster.data) && isWholeList(enrollments.data),
+      } satisfies RosterWindow,
       /** null: unknown (not allowed, or not loaded); allowed null: no limit. */
       seats: seats.data ?? null,
     };
