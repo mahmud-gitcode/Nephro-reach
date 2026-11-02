@@ -251,7 +251,6 @@ describe("treatment form → server (§2.1)", () => {
       modality: "HOME_HD",
       status: "ATTENDED",
       makeupForDate: null,
-      location: null,
       arrivedLate: false /* nobody arrives late at home */,
       endedEarly: false,
       preWeight: "74.7",
@@ -292,6 +291,25 @@ describe("treatment form → server (§2.1)", () => {
       Pain: 0,
       Overall: 3,
     });
+  });
+
+  it("never sends location unless the member edited it (QA L2)", () => {
+    /* Today's form has no location input: an edit must not wipe a location
+       another writer (center staff) set. */
+    const untouched = toTreatmentBody(draft({ modality: "in-center-hd" }));
+    expect(untouched).not.toHaveProperty("location");
+    expect(JSON.stringify(untouched)).not.toContain("location");
+    expect(
+      toTreatmentBody(draft({ modality: "in-center-hd", location: "" })),
+    ).toHaveProperty("location", null);
+    expect(
+      toTreatmentBody(
+        draft({ modality: "in-center-hd", location: "  Chair 4  " }),
+      ).location,
+    ).toBe("Chair 4");
+    expect(
+      toTreatmentBody(draft({ location: "x".repeat(200) })).location,
+    ).toHaveLength(120);
   });
 
   it("in-center keeps arriving late; no extra recovery is null", () => {

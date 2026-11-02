@@ -43,6 +43,7 @@ import MachineWaterCard from "@/features/personal-log/dialysis/MachineWaterCard"
 import HelpfulTipsCard from "@/features/personal-log/dialysis/HelpfulTipsCard";
 import PdExchangeLog from "@/features/personal-log/dialysis/PdExchangeLog";
 import { useDialysisModality } from "@/features/personal-log/dialysis/useDialysisModality";
+import { dialysisText } from "@/features/personal-log/dialysis/dialysisText";
 import {
   Alert,
   AsyncSection,
@@ -652,7 +653,16 @@ function TreatmentEntriesTable({
                   </span>
                 </TableCell>
 
-                <TableCell>{entry.treatmentType}</TableCell>
+                <TableCell>
+                  {entry.modality
+                    ? dialysisText(
+                        isEs,
+                        entry.modality === "home-hd"
+                          ? "treatmentType.homeHd"
+                          : "treatmentType.inCenterHd",
+                      )
+                    : entry.treatmentType}
+                </TableCell>
 
                 <TableCell numeric>
                   {entry.fluidRemoved ? (

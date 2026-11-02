@@ -32,6 +32,7 @@ import {
   type PdExchangeError,
 } from "./pdExchange";
 import { usePdExchanges } from "./usePdExchanges";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    PD exchange log
@@ -424,9 +425,7 @@ export default function PdExchangeLog({
         onRetry={canRetry(pd.error) ? pd.refetch : undefined}
         errorTitle={errorTitleFor(
           pd.error,
-          isEs
-            ? "Tus intercambios no se cargaron"
-            : "Your exchanges did not load",
+          dialysisText(isEs, "pd.loadFailed"),
           isEs ? "es" : "en",
         )}
         errorMessage={errorMessageFor(pd.error, undefined, isEs ? "es" : "en")}

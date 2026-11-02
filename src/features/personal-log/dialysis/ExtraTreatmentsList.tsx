@@ -6,6 +6,7 @@ import { Alert, Button, Card, EmptyState, SectionTitle } from "@/components/ui";
 import { saveErrorText } from "@/features/profile/saveError";
 import { formatFullDate, fromDateKey } from "./schedule";
 import type { useExtraTreatments } from "./useExtraTreatments";
+import { dialysisText } from "./dialysisText";
 
 /* ==========================================================================
    Extra (unscheduled) treatments: the list (Phase 7)
@@ -16,11 +17,13 @@ import type { useExtraTreatments } from "./useExtraTreatments";
    one at a time. The server has no edit, so there is none here either.
    ========================================================================== */
 
-const REASON_ES: Record<string, string> = {
-  "Fluid Overload": "Exceso de líquido",
-  "High Potassium": "Potasio alto",
-  "Doctor Order": "Orden médica",
-  "Missed Session": "Sesión perdida",
+/** Dictionary key of each reason the server stores
+ *  (memberDialysis.extras.reasons); anything else is shown as stored. */
+const REASON_KEY: Record<string, string> = {
+  "Fluid Overload": "fluidOverload",
+  "High Potassium": "highPotassium",
+  "Doctor Order": "doctorOrder",
+  "Missed Session": "missedSession",
 };
 
 export function ExtraTreatmentsList({
@@ -32,14 +35,16 @@ export function ExtraTreatmentsList({
   onAdd: () => void;
   isEs: boolean;
 }) {
+  const t = (path: string, vars?: Record<string, string>) =>
+    dialysisText(isEs, `extras.${path}`, vars);
   return (
     <Card as="section" padding="small">
       <SectionTitle
-        title={isEs ? "Tratamientos extra" : "Extra Treatments"}
+        title={t("title")}
         action={
           <Button size="small" onClick={onAdd} disabled={log.isSaving}>
             <CalendarPlus aria-hidden="true" />
-            {isEs ? "Tomar tratamiento extra" : "Take extra treatment"}
+            {t("take")}
           </Button>
         }
       />
@@ -55,21 +60,13 @@ export function ExtraTreatmentsList({
       ) : null}
 
       {log.extras.length === 0 ? (
-        <EmptyState
-          title={isEs ? "Sin tratamientos extra" : "No extra treatments"}
-          description={
-            isEs
-              ? "Una sesión fuera de tu horario aparece aquí."
-              : "A session outside your schedule shows here."
-          }
-        />
+        <EmptyState title={t("emptyTitle")} description={t("emptyBody")} />
       ) : (
         <ul className="space-y-stack-sm">
           {log.extras.map((extra) => {
             const when = formatFullDate(fromDateKey(extra.dateKey), isEs);
-            const reason = isEs
-              ? (REASON_ES[extra.reason] ?? extra.reason)
-              : extra.reason;
+            const reasonKey = REASON_KEY[extra.reason];
+            const reason = reasonKey ? t(`reasons.${reasonKey}`) : extra.reason;
             return (
               <li
                 key={extra.id}
@@ -89,11 +86,7 @@ export function ExtraTreatmentsList({
                   iconOnly
                   disabled={log.isSaving}
                   onClick={() => log.remove(extra.id)}
-                  aria-label={
-                    isEs
-                      ? `Eliminar el tratamiento extra del ${when}`
-                      : `Delete the extra treatment on ${when}`
-                  }
+                  aria-label={t("deleteLabel", { date: when })}
                 >
                   <Trash2 aria-hidden="true" />
                 </Button>
@@ -110,7 +103,7 @@ export function ExtraTreatmentsList({
           className="mt-stack-sm"
           onClick={log.loadMore}
         >
-          {isEs ? "Ver más" : "Show more"}
+          {dialysisText(isEs, "common.showMore")}
         </Button>
       ) : null}
     </Card>

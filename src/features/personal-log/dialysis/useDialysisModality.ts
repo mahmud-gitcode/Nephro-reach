@@ -14,6 +14,11 @@
    A 403 on the read (`dialysis.dialysis_not_shared`) is the no-access
    state, never the default type.
 
+   Fail closed: until the read has succeeded (pending, failed, or a refetch
+   that failed) `memberCanEdit` is false and a write is refused here before
+   anything is sent, so no screen can offer, or send, a POST of the default
+   type on the strength of a read that never arrived.
+
    PD exchanges moved to `usePdExchanges` (windowed per day).
    ========================================================================== */
 
@@ -46,6 +51,15 @@ import {
   updatePrescription,
 } from "./dialysis.repository";
 
+/** A write asked for before the prescription was read, or while the server
+ *  says the member may not change it. Nothing was sent. */
+export class PrescriptionNotEditableError extends Error {
+  constructor() {
+    super("The dialysis prescription is not editable right now");
+    this.name = "PrescriptionNotEditableError";
+  }
+}
+
 export const PRESCRIPTION_FEATURE = "dialysis-prescription";
 
 export function prescriptionKey(scope: PatientScope | null) {
@@ -70,9 +84,13 @@ export function useDialysisModality(explicitScope?: PatientScope | null) {
   });
 
   const view: PrescriptionView = query.data ?? NOT_SET;
+  /* Only a read that succeeded can say the member may edit. */
+  const loaded = query.isSuccess;
+  const memberCanEdit = loaded && view.memberCanEdit;
 
   const write = useMutation({
     mutationFn: async (patch: SettingsPatch) => {
+      if (!memberCanEdit) throw new PrescriptionNotEditableError();
       const target = requireScope(scope);
       const body = toPrescriptionBody(patch, view.settings, !view.isSet);
       const raw = view.isSet
@@ -101,8 +119,11 @@ export function useDialysisModality(explicitScope?: PatientScope | null) {
     modality,
     /** Whether the server holds a prescription (404 = false). */
     isSet: view.isSet,
-    /** The server's flag; the screens follow it exactly. */
-    memberCanEdit: view.memberCanEdit,
+    /** The server's flag; the screens follow it exactly. False until the
+     *  read has succeeded (fail closed). */
+    memberCanEdit,
+    /** The prescription read has succeeded (a 404 counts: "not set"). */
+    isLoaded: loaded,
     /** The server's modality is "CKD, not on dialysis" (no tab for it). */
     notOnDialysis: view.notOnDialysis,
     facilityName: view.facilityName,

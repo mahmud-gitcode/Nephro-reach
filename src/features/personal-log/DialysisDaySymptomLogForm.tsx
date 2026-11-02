@@ -60,6 +60,7 @@ import {
   Scale,
   X,
 } from "lucide-react";
+import { dialysisText } from "./dialysis/dialysisText";
 
 type Severity = "Yes" | "No" | "Mild" | "Moderate" | "Severe";
 
@@ -108,9 +109,7 @@ export default function DialysisDaySymptomLogForm(props: Props) {
       onRetry={canRetry(reads.error) ? reads.onRetry : undefined}
       errorTitle={errorTitleFor(
         reads.error,
-        lang === "es"
-          ? "No se pudo cargar su registro de diálisis"
-          : "Your dialysis log could not be loaded",
+        dialysisText(lang, "treatment.logLoadFailed"),
         lang,
       )}
       errorMessage={errorMessageFor(reads.error, undefined, lang)}
@@ -364,15 +363,12 @@ function TreatmentForm({
     const problem = treatmentDraftProblem(draft);
     if (problem) {
       setSaveProblem(
-        problem === "weight-not-kg"
-          ? tx(
-              "Enter weights in kilograms as a number, like 72.4. Pounds are not accepted.",
-              "Anote el peso en kilogramos como número, por ejemplo 72.4. No se aceptan libras.",
-            )
-          : tx(
-              "Enter the start and end times again.",
-              "Vuelva a anotar la hora de inicio y de fin.",
-            ),
+        dialysisText(
+          isEs,
+          problem === "weight-not-kg"
+            ? "treatment.weightKgOnly"
+            : "treatment.timesAgain",
+        ),
       );
       return;
     }
