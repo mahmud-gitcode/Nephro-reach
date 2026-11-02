@@ -9,6 +9,10 @@ import { ACCOUNTS, appOrigin, env } from "./fixtures/env";
 import { HOME } from "./fixtures/session";
 import { expect, requireEnv, test } from "./fixtures/test";
 
+/* The idle warning, not the first-visit tour (also a dialog). */
+const idleWarning = (page: import("@playwright/test").Page) =>
+  page.getByRole("dialog").filter({ hasText: /are you still there/i });
+
 const SHORT = {
   member: { idle: 40, max: 120 },
   staff: { idle: 30, max: 90 },
@@ -65,7 +69,7 @@ test.describe("idle and absolute expiry (UI)", () => {
     await page.goto("/dashboard/clinic");
     await expect(page).toHaveURL(HOME.clinic);
     const opened = Date.now();
-    await expect(page.getByRole("dialog")).toBeVisible({
+    await expect(idleWarning(page)).toBeVisible({
       timeout: SHORT.staff.idle * 1000,
     });
     expect(Date.now() - opened).toBeLessThan(SHORT.staff.idle * 1000);
@@ -93,7 +97,7 @@ test.describe("idle and absolute expiry (UI)", () => {
       await page.waitForTimeout(8_000);
     }
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(idleWarning(page)).toHaveCount(0);
   });
 
   test("the absolute limit ends an active session anyway @phase2", async ({
