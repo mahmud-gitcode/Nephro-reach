@@ -93,6 +93,12 @@ function EnrollForm({
         )
       : undefined;
   const canEnroll = useCan("patients.enroll");
+  /* ① put this patient on the roster and ② failed: the retry runs ② for
+     that patient only, so the name and MRN they were added with stay as
+     they are (an edit here would never reach the server, QA round 1). */
+  const locked = enroll.partialPatientId !== null;
+  const lockedHint =
+    "Already added to your roster. Only the program is tried again.";
 
   const offersCcm = Boolean(ccm);
   const isCcm = offersCcm && draft.program === CCM_PROGRAM;
@@ -234,12 +240,14 @@ function EnrollForm({
           <FormField
             label="Full name"
             required
+            hint={locked ? lockedHint : undefined}
             error={errors.name}
             className="sm:col-span-2"
           >
             {(props) => (
               <Input
                 {...props}
+                readOnly={locked}
                 value={draft.name}
                 onChange={(event) => set("name", event.target.value)}
                 autoComplete="off"
@@ -251,12 +259,13 @@ function EnrollForm({
           <FormField
             label="MRN"
             required
-            hint="Six digits, from your EHR."
+            hint={locked ? lockedHint : "Six digits, from your EHR."}
             error={errors.mrn}
           >
             {(props) => (
               <Input
                 {...props}
+                readOnly={locked}
                 value={draft.mrn}
                 onChange={(event) => set("mrn", event.target.value)}
                 inputMode="numeric"
@@ -304,7 +313,7 @@ function EnrollForm({
                 {programs.map((option) => (
                   <option key={option}>{option}</option>
                 ))}
-                {offersCcm ? <option>{CCM_PROGRAM}</option> : null}
+                {offersCcm && !locked ? <option>{CCM_PROGRAM}</option> : null}
               </Select>
             )}
           </FormField>
