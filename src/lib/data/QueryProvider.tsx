@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { registerQueryClient } from "./queryCache";
 
 /* ==========================================================================
    QueryProvider
@@ -46,6 +47,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  /* Sign-out and session end clear this cache from outside the tree. */
+  useEffect(() => registerQueryClient(client), [client]);
 
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
