@@ -85,12 +85,13 @@ All uploads go through `uploadFile(file, { visibility? })` in `@/lib/api/upload`
 
 - **Hooks expose** `isPending`, `error`, `isError` and `refetch`. Pages render through `AsyncSection` (error, then loading, then empty, then content), or through `combineReads(...)` when a page needs several reads.
 - **A default** (a typical schedule, default goals, sample data) may stand in only when the read _succeeded_ and returned nothing. It never stands in for a failed read.
-- **`ApiError` carries** `status` and the server's `code` (spec 019 §4). A 403 (`isForbidden`) shows "not shared with you / no access". It never shows cached or placeholder data, and the 403 is not retried (`QueryProvider` doesn't retry 4xx). Screens branch on `code` where it exists and on the status otherwise.
+- **`ApiError` carries** `status` and the server's `code` (spec 019 §4). A 403 (`isForbidden`) shows "not shared with you / no access": pages pass `errorTitleFor(error, pageTitle, lang)`, `errorMessageFor(error, undefined, lang)` and `onRetry={canRetry(error) ? retry : undefined}` from `@/lib/data/asyncState` to `AsyncSection`, so no feature invents its own mapping. It never shows cached or placeholder data, and the 403 is not retried (`QueryProvider` doesn't retry 4xx). Screens branch on `code` where it exists and on the status otherwise.
 
 ### 6. Session end and storage
 
 - **The API client sends `X-Organization-Id` only in office mode.** That is `setActiveOrganization(id)`, through `switchPortalContext`. A patient or caregiver call never carries the header.
-- **When the session ends** (401 `auth.session_no_longer_active`, or a failed refresh), the app calls `onSessionEnded` once. It clears the query caches, purges retired storage, broadcasts on `nr-auth`, and goes to `/login?reason=expired`.
+- **Refresh only for an expired access cookie.** A 401 with no code (the API guard's bare 401) refreshes once and retries. A 401 with any other code (`auth.code_invalid_or_expired`, `auth.invalid_credentials`, ...) is an answer and is thrown as is. Code, password, identifier-confirm, deactivate and shared-link routes (`NO_REFRESH`) never refresh, so a one-time code is never resubmitted.
+- **When the session ends** (401 `auth.session_no_longer_active` or `auth.account_no_longer_available`, or a failed refresh), the app calls `onSessionEnded` once. It clears the query caches, purges retired storage, broadcasts on `nr-auth`, and goes to `/login?reason=expired`.
 - **Sign-out** calls `POST /auth/logout` (best effort, 3 s cap), then does the same clean-up and a full reload.
 - **The legacy storage purge** (`@/lib/data/legacyPurge`) runs on boot, sign-in and sign-out. It is **staged**: it removes only keys in its retired registry and writes the `nr:storage-version` marker. Each phase that moves a feature to the API adds that feature's keys to the registry in the same change. The end state is only `preferred_language` plus the marker.
 
