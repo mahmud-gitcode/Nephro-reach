@@ -13,6 +13,7 @@ import { api } from "@/lib/api/client";
 import { fetchPage } from "@/lib/api/paging";
 import type { PatientScope } from "@/lib/data/queryKeys";
 import { patientPath } from "@/features/profile/patientScope";
+import { countOf, type ListCount } from "./listWindow";
 import type {
   TravelReflection,
   TravelTreatment,
@@ -85,12 +86,12 @@ export function toTreatmentBody(treatment: TravelTreatment) {
 export async function listTravelTreatments(
   scope: PatientScope,
   tripId: string,
-): Promise<TravelTreatment[]> {
+): Promise<{ rows: TravelTreatment[]; count: ListCount }> {
   const page = await fetchPage<ApiTravelTreatment>(
     `${base(scope, tripId)}/treatments`,
     { limit: TREATMENT_WINDOW },
   );
-  return page.items.map(toTreatment);
+  return { rows: page.items.map(toTreatment), count: countOf(page) };
 }
 
 /** 400 travel.treatment_date_in_future for a day not reached yet. */

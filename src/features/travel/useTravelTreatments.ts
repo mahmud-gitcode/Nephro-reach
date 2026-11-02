@@ -16,6 +16,7 @@ import {
   updateTravelTreatment,
 } from "./travelTreatment.repository";
 import * as rules from "./travelTreatment.rules";
+import { partial } from "./listWindow";
 import type { TravelTreatment } from "./travelTreatment.types";
 
 /**
@@ -56,11 +57,11 @@ export function useTravelTreatments(tripId: string) {
   });
 
   const treatments = useMemo(
-    () => rules.sortTreatments(treatmentsQuery.data ?? []),
+    () => rules.sortTreatments(treatmentsQuery.data?.rows ?? []),
     [treatmentsQuery.data],
   );
   const known = useMemo(
-    () => new Set((treatmentsQuery.data ?? []).map((row) => row.id)),
+    () => new Set((treatmentsQuery.data?.rows ?? []).map((row) => row.id)),
     [treatmentsQuery.data],
   );
 
@@ -95,6 +96,8 @@ export function useTravelTreatments(tripId: string) {
     ),
     saveTreatment,
     deleteTreatment,
+    /** Part of the log only, when it holds more than one read (null: all). */
+    partial: partial(treatmentsQuery.data?.count),
 
     reflectionFor: useCallback(
       (id: string) => (id === tripId ? (reflectionQuery.data?.body ?? "") : ""),

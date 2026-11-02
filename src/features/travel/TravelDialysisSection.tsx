@@ -61,6 +61,7 @@ import type { ShareInitial } from "@/features/secure-messages/ShareOutsideCard";
 import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 import { useDialysisClinic } from "./useDialysisClinic";
 import { clinicOnNephroReach, travelRequestEmail } from "./travelEmail";
+import { PartNote } from "./PartNote";
 
 /* ==========================================================================
    Travel dialysis
@@ -348,6 +349,7 @@ export function TravelDialysisSection() {
     isPending,
     error,
     refetch,
+    partial,
   } = useMemberTrips();
 
   const [open, setOpen] = useState(false);
@@ -472,6 +474,15 @@ export function TravelDialysisSection() {
         }
       >
         <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
+        <PartNote
+          part={partial}
+          text={({ loaded, total }) =>
+            isEs
+              ? `Se muestran tus ${loaded} viajes más recientes de ${total}.`
+              : `Showing your newest ${loaded} of ${total} trips.`
+          }
+          className="mt-stack-md"
+        />
       </AsyncSection>
       {outside ? (
         <LazyShareOutsideModal

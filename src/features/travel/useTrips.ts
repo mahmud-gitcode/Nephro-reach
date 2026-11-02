@@ -15,6 +15,7 @@ import {
   useOfficeScope,
 } from "@/features/clinic/office.scope";
 import * as repo from "./trip.repository";
+import { countOf, partial, sumCounts } from "./listWindow";
 import * as rules from "./trip.rules";
 import {
   toCreateTripBody,
@@ -154,11 +155,13 @@ export function useMemberTrips() {
   const { scope } = actions;
   const query = useQuery({
     queryKey: scopedKey(scope, "trips", "list"),
-    queryFn: async () =>
-      (await repo.listTrips(requireScope(scope))).items.map(toTrip),
+    queryFn: async () => {
+      const page = await repo.listTrips(requireScope(scope));
+      return { trips: page.items.map(toTrip), count: countOf(page) };
+    },
   });
 
-  const trips = useMemo(() => query.data ?? [], [query.data]);
+  const trips = useMemo(() => query.data?.trips ?? [], [query.data]);
   const sorted = useMemo(() => rules.sortTrips(trips), [trips]);
 
   return {
@@ -166,6 +169,9 @@ export function useMemberTrips() {
     trips: sorted,
     upcoming: useMemo(() => rules.upcomingTrips(trips), [trips]),
     past: useMemo(() => rules.pastTrips(trips), [trips]),
+    /** The newest trips only, when the member has more than one read
+     *  holds (null: every trip is here). */
+    partial: partial(query.data?.count),
     isPending: query.isPending,
     error: query.error,
     refetch: () => void query.refetch(),
@@ -222,10 +228,10 @@ export function useOfficeTrips(filters: OfficeTripFilters = {}) {
   };
   const read = (q: repo.OfficeTripQuery) => ({
     queryKey: officeKey(organizationId, "trips", "list", q),
-    queryFn: async () =>
-      (await repo.listOrgTrips(requireOffice(organizationId), q)).items.map(
-        toOfficeRow,
-      ),
+    queryFn: async () => {
+      const page = await repo.listOrgTrips(requireOffice(organizationId), q);
+      return { rows: page.items.map(toOfficeRow), count: countOf(page) };
+    },
   });
 
   const current = useQuery(read({ ...base, from: today }));
@@ -239,19 +245,29 @@ export function useOfficeTrips(filters: OfficeTripFilters = {}) {
 
   const reads = combineReads(current, ended);
   const upcoming = useMemo(
-    () => (current.data ?? []).filter((row) => row.status !== "closed"),
+    () => (current.data?.rows ?? []).filter((row) => row.status !== "closed"),
     [current.data],
   );
   const past = useMemo(() => {
     const seen = new Set<string>();
-    return [...(closedNow.data ?? []), ...(ended.data ?? [])].filter((row) =>
-      seen.has(row.id) ? false : (seen.add(row.id), true),
-    );
+    return [
+      ...(closedNow.data?.rows ?? []),
+      ...(ended.data?.rows ?? []),
+    ].filter((row) => (seen.has(row.id) ? false : (seen.add(row.id), true)));
   }, [closedNow.data, ended.data]);
 
   return {
     upcoming,
     past,
+    /** When a tab holds only the newest requests (null: all of them).
+     *  The open read also holds closed trips still in their dates, so its
+     *  count is of requests read, not of open ones. */
+    openPartial: partial(current.data?.count),
+    pastPartial: partial(
+      closedNow.data
+        ? sumCounts(ended.data?.count, closedNow.data.count)
+        : ended.data?.count,
+    ),
     isPending: reads.pending,
     error: reads.error,
     refetch: reads.onRetry,

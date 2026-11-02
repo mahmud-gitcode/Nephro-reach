@@ -68,6 +68,7 @@ import {
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useCan } from "@/features/staff/useStaffAccounts";
+import { PartNote } from "@/features/travel/PartNote";
 
 /* ==========================================================================
    Travel Requests — the clinic's side of travel dialysis
@@ -555,7 +556,15 @@ export default function ClinicTravel() {
   /* Search and status are the server's filters (spec 045); the split into
      open and past is by date on the server too. */
   const deferredQuery = useDeferredValue(query);
-  const { upcoming, past, isPending, error, refetch } = useOfficeTrips({
+  const {
+    upcoming,
+    past,
+    openPartial,
+    pastPartial,
+    isPending,
+    error,
+    refetch,
+  } = useOfficeTrips({
     search: deferredQuery,
     status: statusFilter === ALL ? undefined : (statusFilter as TripStatus),
   });
@@ -664,6 +673,16 @@ export default function ClinicTravel() {
             </Select>
           </div>
         </div>
+
+        {/* Each tab reads one bounded page (newest first); when the office
+            has more, say so rather than pass a part off as the whole. */}
+        <PartNote
+          part={view === "open" ? openPartial : pastPartial}
+          text={({ loaded, total }) =>
+            `Showing the newest ${loaded} of ${total} ${view === "open" ? "current" : "past"} requests. Search or pick a status to find others.`
+          }
+          className="px-card pb-stack-md"
+        />
 
         {/* The table is the panel the Open and Past tabs control. */}
         <TabPanel id={view} value={view}>

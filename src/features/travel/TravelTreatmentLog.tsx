@@ -39,6 +39,7 @@ import {
   TableRow,
   Textarea,
 } from "@/components/ui";
+import { PartNote } from "./PartNote";
 
 /* ==========================================================================
    Travel Dialysis Log
@@ -283,6 +284,7 @@ export function TravelTreatmentLog({ trip }: { trip: TripRequest }) {
     refetch,
     saveError,
     dismissSaveError,
+    partial,
   } = useTravelTreatments(trip.id);
 
   const rows = forTrip(trip.id);
@@ -337,6 +339,19 @@ export function TravelTreatmentLog({ trip }: { trip: TripRequest }) {
               ? "No pudimos guardar ese cambio."
               : "We could not save that change."}
           </Alert>
+        ) : null}
+
+        {/* One bounded read, newest first: say so if the log holds more. */}
+        {!treatmentsError ? (
+          <PartNote
+            part={partial}
+            text={({ loaded, total }) =>
+              isEs
+                ? `Se muestran los ${loaded} tratamientos más recientes de ${total}.`
+                : `Showing the newest ${loaded} of ${total} treatments.`
+            }
+            className="mt-stack-md"
+          />
         ) : null}
 
         {/* Error is not empty, and a 403 is "not shared" (ADR 0007 §5). */}

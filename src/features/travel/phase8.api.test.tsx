@@ -769,6 +769,82 @@ describe("travel treatment log and reflection", () => {
   });
 });
 
+/* QA round 1, M1: a bounded read says when it holds only part of a list. */
+describe("bounded travel lists say when there is more", () => {
+  it("member trips: the server's total beyond the window", async () => {
+    as(memberContext(), (call) =>
+      is(call, "GET", BASE) ? pageOf([apiTrip()], true) : undefined,
+    );
+    const { result } = renderHook(() => useMemberTrips(), { wrapper });
+    await waitFor(() =>
+      expect(result.current.partial).toEqual({ loaded: 1, total: 2 }),
+    );
+  });
+
+  it("member trips: nothing to say when every trip is read", async () => {
+    as(memberContext(), (call) =>
+      is(call, "GET", BASE) ? pageOf([apiTrip()]) : undefined,
+    );
+    const { result } = renderHook(() => useMemberTrips(), { wrapper });
+    await waitFor(() => expect(result.current.trips).toHaveLength(1));
+    expect(result.current.partial).toBeNull();
+  });
+
+  it("office inbox: open and past each say so, past counting ended and closed", async () => {
+    const LIST = `/organizations/${ORG}/trips`;
+    as(
+      officeContext(),
+      (call) => {
+        if (!is(call, "GET", LIST)) return undefined;
+        if (call.query.get("before"))
+          return pageOf([summary({ id: "old", status: "confirmed" })], true);
+        if (call.query.get("status") === "closed")
+          return pageOf([summary({ id: "closed-now", status: "closed" })]);
+        return pageOf([summary()]);
+      },
+      "/dashboard/clinic/travel",
+    );
+    const { result } = renderHook(() => useOfficeTrips(), { wrapper });
+    await waitFor(() =>
+      expect(result.current.pastPartial).toEqual({ loaded: 2, total: 3 }),
+    );
+    expect(result.current.openPartial).toBeNull();
+  });
+
+  it("treatment log: the server's total beyond the window", async () => {
+    const LOG = `${BASE}/${TRIP}/treatments`;
+    as(memberContext(), (call) => {
+      if (is(call, "GET", LOG))
+        return pageOf(
+          [
+            {
+              id: "t1",
+              tripId: TRIP,
+              date: "2026-10-02",
+              facilityName: "Away Unit",
+              preWeight: null,
+              postWeight: null,
+              bloodPressure: null,
+              treatmentTime: null,
+              fluidRemoved: null,
+              completed: true,
+              notes: "",
+              createdAt: "",
+              updatedAt: "2026-10-02T12:00:00.000Z",
+            },
+          ],
+          true,
+        );
+      if (is(call, "GET", `${BASE}/${TRIP}/reflection`)) return { data: null };
+      return undefined;
+    });
+    const { result } = renderHook(() => useTravelTreatments(TRIP), { wrapper });
+    await waitFor(() =>
+      expect(result.current.partial).toEqual({ loaded: 1, total: 2 }),
+    );
+  });
+});
+
 /* ------------------------------------------------------------ storage */
 
 describe("Phase 8 retired keys cannot come back", () => {
