@@ -15,7 +15,7 @@ import {
   Trash2,
   Image as ImageIcon,
 } from "lucide-react";
-import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
+import { LIBRARY_CATEGORIES } from "@/features/library/library.options";
 import {
   formatDuration,
   formatPublished,
@@ -38,6 +38,11 @@ import {
   Modal,
   Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 
 /* ==========================================================================
    Library Management
@@ -310,8 +315,9 @@ export default function ManageLibraryPage() {
           onDismiss={dismissSaveError}
           className="mt-stack-lg"
         >
-          The library is unchanged. Try again, and if it keeps failing the
-          browser may be blocking saved data.
+          {saveError instanceof Error && saveError.message
+            ? saveError.message
+            : "The library is unchanged. Please try again."}
         </Alert>
       ) : null}
 
@@ -344,9 +350,10 @@ export default function ManageLibraryPage() {
         <AsyncSection
           pending={isPending}
           error={error}
-          onRetry={refetch}
+          onRetry={canRetry(error) ? refetch : undefined}
           isEmpty={visible.length === 0}
-          errorTitle="The library did not load"
+          errorTitle={errorTitleFor(error, "The library did not load")}
+          errorMessage={errorMessageFor(error, undefined)}
           skeleton={
             <div className="mt-stack-lg space-y-stack-sm">
               {Array.from({ length: 4 }).map((_, index) => (

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { SEED_LIBRARY_RESOURCES } from "./library.seed";
 import {
   canPost,
   composeResource,
@@ -25,7 +24,60 @@ import type { LibraryResource } from "./library.types";
 /* The Library is a finding screen, so every rule here is about a member not
  * being told that something they can see in the sidebar does not exist. */
 
-const all = SEED_LIBRARY_RESOURCES;
+/* A small synthetic shelf (the demo seed is gone, Phase 12). */
+const item = (patch: Partial<LibraryResource>): LibraryResource => ({
+  id: "lib-00",
+  slug: "item",
+  kind: "article",
+  category: "general",
+  titleEn: "Item",
+  titleEs: "Elemento",
+  summaryEn: "",
+  summaryEs: "",
+  poster: "/images/Class.jpg",
+  publishedAt: "2026-10-01",
+  published: true,
+  ...patch,
+});
+const SHELF: LibraryResource[] = [
+  item({
+    id: "lib-03",
+    slug: "potassium-at-the-grocery-store",
+    kind: "video",
+    category: "nutrition",
+    titleEn: "Potassium at the grocery store",
+    titleEs: "El potasio en el supermercado",
+    publishedAt: "2026-09-20",
+  }),
+  item({
+    id: "lib-04",
+    slug: "low-salt-shopping-list",
+    kind: "document",
+    category: "nutrition",
+    titleEn: "Low-salt shopping list",
+    titleEs: "Lista de compras baja en sal",
+    publishedAt: "2026-09-25",
+  }),
+  item({
+    id: "lib-07",
+    slug: "protecting-your-fistula",
+    kind: "video",
+    category: "access-care",
+    titleEn: "Protecting your fistula",
+    titleEs: "Proteger su fístula",
+    publishedAt: "2026-10-02",
+  }),
+  item({
+    id: "lib-09",
+    slug: "what-labs-mean",
+    kind: "article",
+    category: "labs",
+    titleEn: "What your labs mean",
+    titleEs: "Qué significan sus análisis",
+    publishedAt: "2026-08-15",
+  }),
+];
+const all = SHELF;
 const noneSaved: string[] = [];
 
 describe("library filtering", () => {

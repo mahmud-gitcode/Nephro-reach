@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,12 +15,13 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { LIBRARY_CATEGORIES } from "@/features/library/library.seed";
+import { LIBRARY_CATEGORIES } from "@/features/library/library.options";
+import { type LibraryFilter } from "@/features/library/library.rules";
 import {
-  filterResources,
-  sortByNewest,
-  type LibraryFilter,
-} from "@/features/library/library.rules";
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useLibrary } from "@/features/library/useLibrary";
 import { kindLabel, metaLabel } from "@/features/library/member/RelatedLibrary";
 import type {
@@ -30,6 +31,7 @@ import type {
 import {
   Alert,
   AsyncSection,
+  Button,
   Card,
   Chip,
   ChipGroup,
@@ -50,7 +52,7 @@ import { LIBRARY_BACK_TO } from "@/features/library/member/LibraryBackLink";
    finding rather than around progress: search, kind, topic, saved.
    ========================================================================== */
 
-export const KIND_ICON: Record<LibraryKind, React.ElementType> = {
+const KIND_ICON: Record<LibraryKind, React.ElementType> = {
   video: PlayCircle,
   document: FileText,
   article: BookOpen,
@@ -160,16 +162,6 @@ function LibraryGridSkeleton() {
 function MyLibraryContent() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const {
-    resources,
-    saved,
-    isSaved,
-    toggleSaved,
-    isPending,
-    error,
-    refetch,
-    saveError,
-  } = useLibrary();
 
   /* A link can open one shelf: /dashboard/my-library?category=access-care
      (the Vascular Access tab's Do's and Don'ts, 2026-10-05). */
@@ -191,10 +183,20 @@ function MyLibraryContent() {
     savedOnly: false,
   }));
 
-  const visible = useMemo(
-    () => sortByNewest(filterResources(resources, filter, saved)),
-    [resources, filter, saved],
-  );
+  /* The server filters (kind, topic, search, saved) and pages, newest
+     first (Phase 12). */
+  const {
+    resources: visible,
+    isSaved,
+    toggleSaved,
+    isPending,
+    error,
+    refetch,
+    saveError,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useLibrary(filter);
 
   const kinds: { key: LibraryKind | "all"; label: string }[] = [
     { key: "all", label: isEs ? "Todo" : "All" },
@@ -286,11 +288,14 @@ function MyLibraryContent() {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
+        onRetry={canRetry(error) ? refetch : undefined}
         isEmpty={visible.length === 0}
-        errorTitle={
-          isEs ? "Tu biblioteca no se cargó" : "Your library did not load"
-        }
+        errorTitle={errorTitleFor(
+          error,
+          isEs ? "Tu biblioteca no se cargó" : "Your library did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         skeleton={<LibraryGridSkeleton />}
         empty={
           <EmptyState
@@ -312,10 +317,22 @@ function MyLibraryContent() {
               key={resource.id}
               resource={resource}
               saved={isSaved(resource.slug)}
-              onToggleSaved={() => toggleSaved(resource.slug)}
+              onToggleSaved={() => toggleSaved(resource.slug, resource)}
             />
           ))}
         </div>
+        {hasMore ? (
+          <div className="mt-stack-lg flex justify-center">
+            <Button
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={loadMore}
+              loading={isLoadingMore}
+            >
+              {isEs ? "Ver más" : "Load more"}
+            </Button>
+          </div>
+        ) : null}
       </AsyncSection>
     </div>
   );

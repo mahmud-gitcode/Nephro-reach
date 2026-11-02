@@ -60,6 +60,8 @@ export interface LibraryResource {
    * member shelf the moment the file finishes reading.
    */
   published: boolean;
+  /** Member view only: the signed-in member saved it (the server's answer). */
+  saved?: boolean;
 }
 
 /** Slugs the member has saved, newest first. */

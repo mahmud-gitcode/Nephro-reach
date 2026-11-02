@@ -1,7 +1,6 @@
 "use client";
 
-import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   FileText,
   Globe,
@@ -10,7 +9,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { LIBRARY_CATEGORIES } from "../library.seed";
+import { LIBRARY_CATEGORIES } from "../library.options";
 import {
   canPost,
   composeResource,
@@ -37,9 +36,11 @@ import { Button, Chip, ChipGroup, Modal, Select } from "@/components/ui";
    a video post; attach a PDF and it is a document; attach nothing and it is
    a written one. Nobody picks a "resource type" from a list.
 
-   Files are previewed from an object URL and the stored path is where the
-   backend will serve them from — the same stand-in Class Management uses
-   until the upload endpoint exists.
+   Phase 12: posts are saved to the API. Attaching a video, a document or an
+   image waits on D18 (a public storage host for content media) and INT-16
+   (videos over 10 MB): the four attach controls are shown but disabled, with
+   a note. A post being edited keeps the media links it already has; a made-up
+   path or a data: URL is never sent.
    ========================================================================== */
 
 type Attachment = { name: string; previewUrl: string | null };
@@ -49,11 +50,13 @@ function AttachButton({
   label,
   accept,
   onPick,
+  disabled = false,
 }: {
   icon: React.ElementType;
   label: string;
   accept: string;
   onPick: (file: File) => void;
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -73,6 +76,8 @@ function AttachButton({
       />
       <Chip
         icon={<Icon aria-hidden="true" />}
+        disabled={disabled}
+        aria-describedby={disabled ? "library-media-note" : undefined}
         onClick={() => inputRef.current?.click()}
       >
         {label}
@@ -104,103 +109,16 @@ export function LibraryComposer({
       ? { name: existing.split("/").pop() ?? existing, previewUrl: null }
       : null;
   });
-  const [coverName, setCoverName] = useState<string | null>(null);
   const [showSpanish, setShowSpanish] = useState(
     () => (resource?.titleEs ?? "").trim().length > 0,
   );
   const [showTopic, setShowTopic] = useState(false);
 
-  /* Object URLs live until revoked. Attaching four files in one sitting
-     without this leaks all four. */
-  const objectUrls = useRef<string[]>([]);
-  useEffect(() => {
-    const urls = objectUrls.current;
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, []);
-
-  const trackUrl = (file: File) => {
-    const url = URL.createObjectURL(file);
-    objectUrls.current.push(url);
-    return url;
-  };
-
   const set = (patch: Partial<LibraryDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
-  const attachVideo = (file: File) => {
-    const url = trackUrl(file);
-    setAttachment({ name: file.name, previewUrl: url });
-    set({
-      kind: "video",
-      videoSrc: `/videos/${file.name}`,
-      fileSrc: undefined,
-      fileMetaEn: undefined,
-      fileMetaEs: undefined,
-    });
-
-    /* Reading the real length means the runtime on the member card is the
-       file's, not a number someone typed and got wrong. */
-    const probe = document.createElement("video");
-    probe.preload = "metadata";
-    probe.onloadedmetadata = () => {
-      const seconds = probe.duration;
-      if (Number.isFinite(seconds) && seconds > 0) {
-        set({ durationSeconds: Math.round(seconds) });
-      }
-    };
-    probe.src = url;
-  };
-
-  const attachDocument = (file: File) => {
-    setAttachment({ name: file.name, previewUrl: null });
-    const sizeKb = Math.max(1, Math.round(file.size / 1024));
-    set({
-      kind: "document",
-      fileSrc: `/documents/${file.name}`,
-      /* Page count needs the file parsed server-side, so until then the
-         honest label is the size — never an invented "2 pages". */
-      fileMetaEn: `PDF · ${sizeKb} KB`,
-      fileMetaEs: `PDF · ${sizeKb} KB`,
-      videoSrc: undefined,
-      durationSeconds: undefined,
-    });
-  };
-
-  /* The cover is kept as a shrunken copy (like every photo in the app):
-     a bare file name pointed at an image that was never uploaded, so a
-     PDF post showed no cover (client, 2026-10-06). */
-  const [coverError, setCoverError] = useState(false);
-  const attachCover = async (file: File) => {
-    setCoverError(false);
-    try {
-      set({ poster: await downscaleToDataUrl(file) });
-      setCoverName(file.name);
-    } catch {
-      setCoverError(true);
-    }
-  };
-
-  /* An image post: the picture is the post, so it is also its cover
-     (client, 2026-10-12: "I also want to be able to add images"). */
-  const attachImage = async (file: File) => {
-    setCoverError(false);
-    try {
-      const dataUrl = await downscaleToDataUrl(file);
-      setAttachment({ name: file.name, previewUrl: dataUrl });
-      set({
-        kind: "image",
-        poster: dataUrl,
-        videoSrc: undefined,
-        durationSeconds: undefined,
-        fileSrc: undefined,
-        fileMetaEn: undefined,
-        fileMetaEs: undefined,
-      });
-      setCoverName(file.name);
-    } catch {
-      setCoverError(true);
-    }
-  };
+  /* Uploads wait on D18; the attach controls are disabled. */
+  const noUpload = () => {};
 
   const removeAttachment = () => {
     setAttachment(null);
@@ -383,25 +301,29 @@ export function LibraryComposer({
               icon={Video}
               label="Video"
               accept="video/*"
-              onPick={attachVideo}
+              onPick={noUpload}
+              disabled
             />
             <AttachButton
               icon={FileText}
               label="Document"
               accept=".pdf,.doc,.docx,application/pdf"
-              onPick={attachDocument}
+              onPick={noUpload}
+              disabled
             />
             <AttachButton
               icon={ImageIcon}
               label="Image post"
               accept="image/*"
-              onPick={(file) => void attachImage(file)}
+              onPick={noUpload}
+              disabled
             />
             <AttachButton
               icon={ImageIcon}
-              label={coverName ? "Change cover" : "Cover image"}
+              label="Cover image"
               accept="image/*"
-              onPick={(file) => void attachCover(file)}
+              onPick={noUpload}
+              disabled
             />
             <Chip
               selected={showTopic || draft.category !== "general"}
@@ -420,24 +342,14 @@ export function LibraryComposer({
               Spanish
             </Chip>
           </ChipGroup>
-          {coverName && draft.poster.startsWith("data:") ? (
-            <div className="mt-stack-md flex items-center gap-inline-md">
-              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
-              <img
-                src={draft.poster}
-                alt="Cover preview"
-                className="h-16 w-28 rounded-control object-cover"
-              />
-              <span className="min-w-0 truncate text-body-sm text-fg-secondary">
-                {coverName}
-              </span>
-            </div>
-          ) : null}
-          {coverError ? (
-            <p role="alert" className="mt-stack-sm text-caption text-danger">
-              That image could not be used. Try a JPEG or PNG.
-            </p>
-          ) : null}
+          <p
+            id="library-media-note"
+            className="mt-stack-sm text-caption text-fg-muted"
+          >
+            Attaching videos, documents and images is not available yet: it
+            waits on where public media will be stored. A post keeps the media
+            it already has.
+          </p>
         </div>
       </div>
     </Modal>
