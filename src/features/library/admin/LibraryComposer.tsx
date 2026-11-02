@@ -20,6 +20,7 @@ import {
 } from "../library.rules";
 import type { LibraryCategory, LibraryResource } from "../library.types";
 import { Button, Chip, ChipGroup, Modal, Select } from "@/components/ui";
+import { useCollabText } from "@/features/community/collabText";
 
 /* ==========================================================================
    The Library composer
@@ -100,6 +101,7 @@ export function LibraryComposer({
   saving?: boolean;
   authorName?: string;
 }) {
+  const t = useCollabText();
   const [draft, setDraft] = useState<LibraryDraft>(() =>
     resource ? draftFrom(resource) : emptyDraft(),
   );
@@ -346,9 +348,7 @@ export function LibraryComposer({
             id="library-media-note"
             className="mt-stack-sm text-caption text-fg-muted"
           >
-            Attaching videos, documents and images is not available yet: it
-            waits on where public media will be stored. A post keeps the media
-            it already has.
+            {t("library.mediaNote")}
           </p>
         </div>
       </div>

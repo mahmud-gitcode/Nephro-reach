@@ -1826,5 +1826,34 @@
         "missedSession": "Sesión perdida"
       }
     }
+  },
+  "collab": {
+    "common": {
+      "tryAgain": "Inténtelo de nuevo."
+    },
+    "notAvailable": {
+      "reviewActions": "Eliminar una reseña o devolverla a pendiente aún no está disponible.",
+      "testimonialActions": "Eliminar una historia o devolverla a pendiente aún no está disponible.",
+      "storyActions": "Editar o eliminar su historia aún no está disponible.",
+      "communityRecord": "Borrar un registro ya decidido aún no está disponible."
+    },
+    "video": {
+      "loadFailed": "Este video no se pudo cargar. Inténtelo de nuevo más tarde."
+    },
+    "testimonials": {
+      "nameHint": "De su cuenta",
+      "videoTypeRefused": "Ese no es un archivo de video que podamos aceptar. Elija un MP4, WebM o MOV.",
+      "videoEmpty": "Ese archivo está vacío.",
+      "videoTooBig": "Ese archivo pesa {size} MB. El límite es {limit} MB."
+    },
+    "library": {
+      "saveFailed": "La biblioteca no cambió. Inténtelo de nuevo.",
+      "mediaNote": "Adjuntar videos, documentos e imágenes aún no está disponible: depende de dónde se guardarán los archivos públicos. Una publicación conserva los archivos que ya tiene."
+    },
+    "tableTalk": {
+      "saveFailed": "Table Talk no cambió. Inténtelo de nuevo.",
+      "openFailedTitle": "Ese episodio no se abrió",
+      "mediaNote": "Subir un video o una miniatura aún no está disponible: depende de dónde se guardarán los archivos públicos. Pegue un enlace de YouTube en su lugar."
+    }
   }
 }

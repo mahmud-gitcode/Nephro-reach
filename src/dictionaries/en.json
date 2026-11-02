@@ -1842,5 +1842,34 @@
         "missedSession": "Missed Session"
       }
     }
+  },
+  "collab": {
+    "common": {
+      "tryAgain": "Please try again."
+    },
+    "notAvailable": {
+      "reviewActions": "Deleting a review or moving it back to pending is not available yet.",
+      "testimonialActions": "Deleting a story or moving it back to pending is not available yet.",
+      "storyActions": "Editing or deleting your story is not available yet.",
+      "communityRecord": "Deleting a decided record is not available yet."
+    },
+    "video": {
+      "loadFailed": "This video could not be loaded. Please try again later."
+    },
+    "testimonials": {
+      "nameHint": "From your account",
+      "videoTypeRefused": "That is not a video file we can take. Choose an MP4, WebM or MOV.",
+      "videoEmpty": "That file is empty.",
+      "videoTooBig": "That file is {size} MB. The limit is {limit} MB."
+    },
+    "library": {
+      "saveFailed": "The library is unchanged. Please try again.",
+      "mediaNote": "Attaching videos, documents and images is not available yet: it waits on where public media will be stored. A post keeps the media it already has."
+    },
+    "tableTalk": {
+      "saveFailed": "Table Talk is unchanged. Please try again.",
+      "openFailedTitle": "That episode did not open",
+      "mediaNote": "Uploading a video or a thumbnail is not available yet: it waits on where public media will be stored. Paste a YouTube link instead."
+    }
   }
 }
