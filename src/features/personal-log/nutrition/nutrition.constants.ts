@@ -1,4 +1,4 @@
-import type { Goals, MealKey, NutrientKey } from "./nutrition.types";
+import type { MealKey, NutrientKey } from "./nutrition.types";
 
 /* Units and defaults. There is no demo day: foods are saved now, and a
    seeded plate would sit in a member's log as if they had eaten it. */
@@ -28,14 +28,5 @@ export const NUTRIENT_ORDER: NutrientKey[] = [
   "fiber",
 ];
 
-export const DEFAULT_GOALS: Goals = {
-  sodium: 2000,
-  potassium: 2500,
-  phosphorus: 1000,
-  protein: 70,
-  calories: 1900,
-  carbs: 220,
-  fats: 70,
-  fiber: 30,
-  fluid: 1500,
-};
+/* No client default goals (Phase 5): the server owns them and says when
+   they are its defaults (`isDefault`). */

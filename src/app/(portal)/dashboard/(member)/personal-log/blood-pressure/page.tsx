@@ -31,12 +31,17 @@ import {
   statusOf,
   BP_CATEGORIES,
   categoryOf,
-  complianceTrend,
   type BpStatus,
-  trend,
   type BpReading,
 } from "@/features/personal-log/blood-pressure/bloodPressure";
 import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
+import { BpPhotoButton } from "@/features/personal-log/blood-pressure/BpPhotoButton";
+import { LoadMore } from "@/features/profile/LoadMore";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { downloadText } from "@/lib/utils/download";
 
 function ReadingStatus({ status }: { status: BpStatus }) {
@@ -117,12 +122,15 @@ function DailyBloodPressureList() {
       <AsyncSection
         pending={bp.isPending}
         error={bp.error}
-        onRetry={bp.refetch}
-        errorTitle={
+        onRetry={canRetry(bp.error) ? bp.refetch : undefined}
+        errorTitle={errorTitleFor(
+          bp.error,
           isEs
             ? "No se pudieron cargar tus lecturas"
-            : "Your readings could not be loaded"
-        }
+            : "Your readings could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(bp.error, undefined, isEs ? "es" : "en")}
         isEmpty={bp.readings.length === 0}
         skeleton={<SkeletonText lines={4} />}
         empty={
@@ -169,12 +177,15 @@ function DailyBloodPressureList() {
                                 {reading.systolic}/{reading.diastolic}
                               </span>
                               <span className="text-caption text-fg-muted tabular-nums">
-                                {isEs ? "pulso" : "pulse"} {reading.pulse}
+                                {isEs ? "pulso" : "pulse"}{" "}
+                                {reading.pulse > 0 ? reading.pulse : "—"}
                               </span>
                             </p>
                             <p className="mt-stack-xs flex flex-wrap items-center gap-inline-sm text-caption text-fg-muted">
                               <span className="tabular-nums">{time}</span>
-                              <ReadingStatus status={statusOf(reading)} />
+                              <ReadingStatus
+                                status={reading.status ?? statusOf(reading)}
+                              />
                             </p>
                             <p className="mt-stack-xs truncate text-caption text-fg-secondary">
                               {details}
@@ -277,28 +288,31 @@ function DailyBloodPressureList() {
                         <TableCell>
                           <span className="flex items-center gap-inline-sm">
                             {time}
-                            {reading.photo ? (
-                              // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                              <img
-                                src={reading.photo}
-                                alt={
+                            {reading.photoFileId ? (
+                              <BpPhotoButton
+                                isEs={isEs}
+                                label={
                                   isEs
                                     ? `Foto de la lectura de las ${time}`
                                     : `Photo with the ${time} reading`
                                 }
-                                className="h-8 w-8 rounded-control object-cover"
+                                load={() => bp.photoLink(reading.id)}
                               />
                             ) : null}
                           </span>
                         </TableCell>
                         <TableCell numeric>{reading.systolic}</TableCell>
                         <TableCell numeric>{reading.diastolic}</TableCell>
-                        <TableCell numeric>{reading.pulse}</TableCell>
+                        <TableCell numeric>
+                          {reading.pulse > 0 ? reading.pulse : "—"}
+                        </TableCell>
                         <TableCell>{positionLabel}</TableCell>
                         <TableCell>{symptomsLabel}</TableCell>
                         <TableCell>
                           <span className="flex items-center gap-inline-md">
-                            <ReadingStatus status={statusOf(reading)} />
+                            <ReadingStatus
+                              status={reading.status ?? statusOf(reading)}
+                            />
                             <span className="text-body-sm text-fg-secondary">
                               {medicationLabel}
                             </span>
@@ -337,6 +351,7 @@ function DailyBloodPressureList() {
               </TableBody>
             </Table>
           </Card>
+          <LoadMore read={bp.list} />
         </>
       </AsyncSection>
 
@@ -382,8 +397,10 @@ function DailyBloodPressureList() {
 function TrendChart() {
   const { language, t } = useLanguage();
   const isEs = language === "ES";
+  /* The server's summary over the 90-day window (Phase 5): its last seven
+     readings with each day's medication compliance, never the raw rows. */
   const bp = useBloodPressure();
-  const points = trend(bp.readings);
+  const points = bp.summary?.trend ?? [];
 
   return (
     <Card as="section">
@@ -392,7 +409,7 @@ function TrendChart() {
       </h2>
 
       <div className="mt-stack-xl">
-        {bp.isError ? (
+        {bp.summaryError ? (
           <p className="text-body-sm text-fg-muted">
             {isEs
               ? "La tendencia no está disponible porque tus lecturas no se cargaron."
@@ -442,7 +459,7 @@ function TrendChart() {
                 dashed: true,
                 axis: "right",
                 unit: "%",
-                points: complianceTrend(bp.readings),
+                points: points.map((p) => p.medicationCompliance),
               },
             ]}
           />

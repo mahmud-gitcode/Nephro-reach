@@ -40,7 +40,9 @@ export type ActivityLevel = "yes" | "partly" | "no";
 export type Appetite = "good" | "fair" | "poor";
 
 export interface BetweenTreatmentCheckIn {
-  /** ISO `yyyy-mm-dd`. Also the identity: one check-in per day. */
+  /** The server's id (Phase 5). Absent on a day not saved yet. */
+  id?: string;
+  /** ISO `yyyy-mm-dd`. One check-in per day. */
   date: string;
 
   /**

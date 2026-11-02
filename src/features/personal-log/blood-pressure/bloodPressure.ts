@@ -37,8 +37,13 @@ export type BpReading = {
   medication: MedicationState;
   mood?: string;
   notes: string;
-  /** A photo taken with the reading, e.g. of the monitor (2026-10-06). */
-  photo?: string;
+  /** The server's AHA category for a saved reading (Phase 5). The form's
+   *  live preview still uses `statusOf`. */
+  status?: BpStatus;
+  /** A photo taken with the reading, e.g. of the monitor (2026-10-06): the
+   *  uploaded file's id. It opens only through the reading's own link
+   *  (`GET …/blood-pressure/:id/photo`); no image data is kept here. */
+  photoFileId?: string | null;
 };
 
 export type BpDraft = Omit<BpReading, "id">;
@@ -249,133 +254,3 @@ export function readingsCsv(readings: BpReading[]): string {
   );
   return [header.join(","), ...rows].join("\n");
 }
-
-/* ------------------------------------------------------------------ seed
-   The demo patient's readings (lib/data/storage sampleOr): a member who
-   registered themselves starts with none. */
-function reading(
-  id: string,
-  date: string,
-  time: string,
-  systolic: number,
-  diastolic: number,
-  pulse: number,
-  position: Position,
-  symptoms: string,
-  medication: MedicationState,
-): BpReading {
-  return {
-    id,
-    date,
-    time,
-    systolic,
-    diastolic,
-    pulse,
-    position,
-    symptoms,
-    medication,
-    notes: "",
-  };
-}
-
-export const SEED_READINGS: BpReading[] = [
-  reading(
-    "seed-bp-1",
-    "2026-05-05",
-    "00:00",
-    123,
-    78,
-    72,
-    "Sitting",
-    "None",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-2",
-    "2026-05-05",
-    "08:15",
-    132,
-    84,
-    76,
-    "Standing",
-    "Mild headache",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-3",
-    "2026-05-05",
-    "21:30",
-    118,
-    74,
-    70,
-    "Sitting",
-    "None",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-4",
-    "2026-05-04",
-    "07:45",
-    145,
-    92,
-    81,
-    "Sitting",
-    "Dizzy",
-    "Late",
-  ),
-  reading(
-    "seed-bp-5",
-    "2026-05-04",
-    "13:20",
-    138,
-    86,
-    78,
-    "Standing",
-    "Tired",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-6",
-    "2026-05-04",
-    "22:10",
-    129,
-    80,
-    74,
-    "Sitting",
-    "None",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-7",
-    "2026-05-03",
-    "06:55",
-    126,
-    79,
-    73,
-    "Sitting",
-    "None",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-8",
-    "2026-05-03",
-    "15:00",
-    141,
-    89,
-    82,
-    "Standing",
-    "Short breath",
-    "Taken",
-  ),
-  reading(
-    "seed-bp-9",
-    "2026-05-03",
-    "21:05",
-    122,
-    77,
-    71,
-    "Sitting",
-    "None",
-    "Taken",
-  ),
-];

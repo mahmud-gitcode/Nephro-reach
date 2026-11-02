@@ -39,4 +39,8 @@ export interface ClinicNotice {
   deliverOn: string;
 
   reasons: ClinicNoticeReason[];
+
+  /** The server's delivery state (Phase 5): it holds a notice to the
+   *  clinic's next open day and marks it delivered. */
+  status?: "held" | "sending" | "delivered";
 }

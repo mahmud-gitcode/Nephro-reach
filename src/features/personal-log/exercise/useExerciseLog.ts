@@ -2,65 +2,88 @@
 
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listExercise, saveExercise } from "./exercise.repository";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import {
+  createExercise,
+  fromApiExercise,
+  listExerciseOn,
+  removeExercise,
+  toExerciseBody,
+  updateExercise,
+} from "./exercise.repository";
 import * as rules from "./exercise.rules";
 import type { ExerciseDraft, ExerciseEntry } from "./exercise.types";
-
-export const exerciseKey = ["personal-log", "exercise"] as const;
 
 const NO_ENTRIES: ExerciseEntry[] = [];
 
 /**
- * The member's exercise notes for one day. Same read-modify-write shape as
- * `useCheckIns`, so a save applies to what is actually stored.
+ * The member's exercise notes for one day, from the API (Phase 5). Each
+ * row of the form is its own call: the first row edits the note being
+ * edited, any further rows are added beside it, on the day being viewed.
  */
-export function useExerciseLog(date: string) {
+export function useExerciseLog(
+  date: string,
+  explicitScope?: PatientScope | null,
+) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
+  const featureKey = scopedKey(scope, "exercise");
+  const queryKey = scopedKey(scope, "exercise", "day", date);
 
-  const query = useQuery({ queryKey: exerciseKey, queryFn: listExercise });
+  const query = useQuery({
+    queryKey,
+    queryFn: async () =>
+      (await listExerciseOn(requireScope(scope), date)).items.map(
+        fromApiExercise,
+      ),
+  });
 
   const write = useMutation({
-    mutationFn: async (
-      transform: (current: ExerciseEntry[]) => ExerciseEntry[],
-    ) => saveExercise(transform(await listExercise())),
-    onSuccess: (entries) => queryClient.setQueryData(exerciseKey, entries),
+    mutationFn: async ({
+      drafts,
+      editId,
+    }: {
+      drafts: ExerciseDraft[];
+      editId?: string;
+    }) => {
+      const target = requireScope(scope);
+      for (const [index, draft] of drafts.entries()) {
+        if (index === 0 && editId) {
+          const { entryDate: _day, ...body } = toExerciseBody(draft, date);
+          void _day;
+          await updateExercise(target, editId, body);
+        } else {
+          await createExercise(target, toExerciseBody(draft, date));
+        }
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: featureKey }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => removeExercise(requireScope(scope), id),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: featureKey }),
   });
 
   const { mutate, reset } = write;
+  const { mutate: mutateRemove } = remove;
   const all = query.data ?? NO_ENTRIES;
   const entries = useMemo(() => rules.entriesOn(all, date), [all, date]);
 
-  /* Saves every row of the form in one write. With `editId`, the first row
-     edits that note and any further rows are added beside it. The day comes
-     from the hook, so new notes land on the day being viewed. */
   const saveEntries = useCallback(
-    (drafts: ExerciseDraft[], editId?: string) => {
-      const existing = editId
-        ? all.find((entry) => entry.id === editId)
-        : undefined;
-      const now = Date.now();
-      const toSave: ExerciseEntry[] = drafts.map((draft, index) => {
-        const target = index === 0 ? existing : undefined;
-        return {
-          ...draft,
-          customName: draft.activity === "other" ? draft.customName.trim() : "",
-          note: draft.note.trim(),
-          id:
-            target?.id ??
-            `exercise-${now}-${index}-${Math.random().toString(36).slice(2, 7)}`,
-          date: target?.date ?? existing?.date ?? date,
-          /* Offset by the row index so the list keeps the order typed. */
-          savedAt: target?.savedAt ?? new Date(now + index).toISOString(),
-        };
-      });
-      mutate((current) => toSave.reduce(rules.upsertEntry, current));
-    },
-    [mutate, all, date],
+    (drafts: ExerciseDraft[], editId?: string, onSaved?: () => void) =>
+      mutate({ drafts, editId }, { onSuccess: () => onSaved?.() }),
+    [mutate],
   );
 
   const deleteEntry = useCallback(
-    (id: string) => mutate((current) => rules.removeEntry(current, id)),
-    [mutate],
+    (id: string) => mutateRemove(id),
+    [mutateRemove],
   );
 
   return {
@@ -71,8 +94,11 @@ export function useExerciseLog(date: string) {
     isPending: query.isPending,
     error: query.error,
     refetch: () => void query.refetch(),
-    saveError: write.error,
-    dismissSaveError: reset,
-    isSaving: write.isPending,
+    saveError: write.error ?? remove.error,
+    dismissSaveError: () => {
+      reset();
+      remove.reset();
+    },
+    isSaving: write.isPending || remove.isPending,
   };
 }

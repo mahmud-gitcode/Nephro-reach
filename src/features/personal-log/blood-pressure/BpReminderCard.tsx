@@ -13,7 +13,8 @@ import { useBpReminders } from "./useBpReminders";
    ========================================================================== */
 
 export function BpReminderCard({ isEs }: { isEs: boolean }) {
-  const { times, isPending, save, isSaving, saveError } = useBpReminders();
+  const { times, isPending, error, save, isSaving, saveError } =
+    useBpReminders();
   const [draft, setDraft] = useState<string[] | null>(null);
   const editing = draft !== null;
   const shown = draft ?? times;
@@ -32,7 +33,7 @@ export function BpReminderCard({ isEs }: { isEs: boolean }) {
             size="small"
             variant="neutral"
             appearance="fill-stroke"
-            disabled={isPending}
+            disabled={isPending || !!error}
             onClick={() => setDraft(times.length > 0 ? times : ["08:00"])}
           >
             {times.length > 0
@@ -52,7 +53,14 @@ export function BpReminderCard({ isEs }: { isEs: boolean }) {
         </Alert>
       ) : null}
 
-      {!editing ? (
+      {!editing && error ? (
+        /* A failed read is not "no reminders" (INT-10). */
+        <Alert tone="warning">
+          {isEs
+            ? "No se pudieron cargar sus recordatorios."
+            : "Your reminders could not be loaded."}
+        </Alert>
+      ) : !editing ? (
         <p className="text-body-sm text-fg-secondary">
           {times.length > 0
             ? `${isEs ? "Le recordamos revisar y registrar su presión a las" : "We remind you to check and log your blood pressure at"} ${times.join(", ")}.`
@@ -114,10 +122,10 @@ export function BpReminderCard({ isEs }: { isEs: boolean }) {
               <Button
                 size="small"
                 loading={isSaving}
-                onClick={() => {
-                  save(shown);
-                  setDraft(null);
-                }}
+                onClick={() =>
+                  /* Closed only once the server kept the times. */
+                  save(shown, () => setDraft(null))
+                }
               >
                 {isEs ? "Guardar" : "Save"}
               </Button>

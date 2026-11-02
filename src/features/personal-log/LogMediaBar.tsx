@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Check, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui";
+import { checkUpload } from "@/lib/api/upload";
 import {
   downscaleToDataUrl,
   useAccessPhotos,
@@ -22,7 +23,10 @@ import {
                  is attached to the entry being written — the reading or
                  the medication (client, 2026-10-06: "upload to the log").
                  Without it, it goes to the member's Photos log, labelled
-                 with the log it came from.
+                 with the log it came from. With `onPhotoFile` (logs on
+                 the API, Phase 5) the picked File is handed over as is:
+                 the entry uploads it through `/files` and keeps only its
+                 id; the preview is an in-memory blob URL, never stored.
    ========================================================================== */
 
 type Recognition = {
@@ -57,6 +61,9 @@ export function LogMediaBar({
   isEs,
   photo,
   onPhoto,
+  onPhotoFile,
+  hasPhoto = false,
+  photoPreview = null,
 }: {
   /** Labels the photo in the Photos log, e.g. "Blood pressure log". */
   logName: string;
@@ -67,6 +74,12 @@ export function LogMediaBar({
   photo?: string | null;
   /** Attach the photo to the entry instead of the Photos log; null removes. */
   onPhoto?: (dataUrl: string | null) => void;
+  /** Attach the picked file to the entry (it uploads it); null removes. */
+  onPhotoFile?: (file: File | null) => void;
+  /** With `onPhotoFile`: whether the entry has a photo (saved or picked). */
+  hasPhoto?: boolean;
+  /** With `onPhotoFile`: an in-memory preview of a newly picked photo. */
+  photoPreview?: string | null;
 }) {
   const photos = useAccessPhotos();
   const [canDictate, setCanDictate] = useState(false);
@@ -148,6 +161,13 @@ export function LogMediaBar({
           const file = e.target.files?.[0];
           e.target.value = "";
           if (!file) return;
+          if (onPhotoFile) {
+            /* The server's allowlist and size cap, checked before upload. */
+            const refused = checkUpload(file);
+            setAttachError(refused !== null);
+            if (!refused) onPhotoFile(file);
+            return;
+          }
           if (onPhoto) {
             setAttaching(true);
             setAttachError(false);
@@ -164,6 +184,31 @@ export function LogMediaBar({
           setSaved(true);
         }}
       />
+      {onPhotoFile && hasPhoto ? (
+        <span className="inline-flex items-center gap-inline-xs">
+          {photoPreview ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- an in-memory blob preview, nothing to optimise */
+            <img
+              src={photoPreview}
+              alt={isEs ? "Foto de esta entrada" : "Photo on this entry"}
+              className="h-10 w-10 rounded-control object-cover"
+            />
+          ) : (
+            <span className="text-caption text-fg-muted">
+              {isEs ? "Foto adjunta" : "Photo attached"}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="small"
+            variant="neutral"
+            appearance="ghost"
+            onClick={() => onPhotoFile(null)}
+          >
+            {isEs ? "Quitar foto" : "Remove photo"}
+          </Button>
+        </span>
+      ) : null}
       {onPhoto && photo ? (
         <span className="inline-flex items-center gap-inline-xs">
           {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
@@ -188,14 +233,14 @@ export function LogMediaBar({
         size="small"
         variant="neutral"
         appearance="fill-stroke"
-        loading={onPhoto ? attaching : photos.isAdding}
+        loading={onPhotoFile ? false : onPhoto ? attaching : photos.isAdding}
         leadingIcon={<Camera aria-hidden="true" />}
         onClick={() => {
           setSaved(false);
           fileInput.current?.click();
         }}
       >
-        {onPhoto && photo
+        {(onPhoto && photo) || (onPhotoFile && hasPhoto)
           ? isEs
             ? "Cambiar foto"
             : "Change photo"
@@ -209,6 +254,7 @@ export function LogMediaBar({
         </span>
       ) : null}
       {!onPhoto &&
+      !onPhotoFile &&
       saved &&
       !photos.isAdding &&
       !photos.encodeError &&

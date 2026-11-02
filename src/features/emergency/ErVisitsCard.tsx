@@ -10,13 +10,13 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useNow } from "@/lib/utils/useNow";
+import { isApiError } from "@/lib/api/client";
 import {
-  answerFor,
-  monthKey,
-  monthlyVisits,
-  visitsIn,
-  weekOf,
-} from "./erVisits";
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { monthKey } from "./erVisits";
 import { useErVisits } from "./useErVisits";
 
 /* ==========================================================================
@@ -37,12 +37,23 @@ function monthName(month: string, isEs: boolean) {
 
 export function ErVisitsCard({ isEs }: { isEs: boolean }) {
   const now = useNow();
-  const { log, isPending, error, refetch, answer, isSaving, saveError } =
-    useErVisits();
-  const thisWeek = answerFor(log, weekOf(now));
-  const thisMonth = visitsIn(log, monthKey(now));
-  const lastMonth = visitsIn(log, monthKey(now, 1));
-  const months = monthlyVisits(log, now, 6);
+  /* The week and the monthly counts are the server's (Phase 5): the week
+     is the patient's own calendar week, and the chart counts what the
+     server counts. */
+  const {
+    thisWeek,
+    months,
+    isPending,
+    error,
+    refetch,
+    answer,
+    isSaving,
+    saveError,
+  } = useErVisits();
+  const visitsInMonth = (month: string) =>
+    months.find((m) => m.month === month)?.visits ?? 0;
+  const thisMonth = visitsInMonth(monthKey(now));
+  const lastMonth = visitsInMonth(monthKey(now, 1));
 
   return (
     <Card as="section" padding="small" className="space-y-stack-md">
@@ -64,6 +75,9 @@ export function ErVisitsCard({ isEs }: { isEs: boolean }) {
           {isEs
             ? "Su respuesta no se guardó. Inténtelo de nuevo."
             : "Your answer did not save. Try again."}
+          {isApiError(saveError) && saveError.status === 400
+            ? ` ${saveError.message}`
+            : ""}
         </Alert>
       ) : null}
 
@@ -71,12 +85,15 @@ export function ErVisitsCard({ isEs }: { isEs: boolean }) {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle={
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
           isEs
             ? "No se pudieron cargar sus visitas a urgencias"
-            : "Your ER visits could not be loaded"
-        }
+            : "Your ER visits could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         skeleton={<Skeleton height={160} />}
       >
         <>

@@ -7,7 +7,8 @@
    reading" opens the form. (Logging straight from the reminder would need
    the numbers typed in, so the form is the answer.)
 
-   Pure: times in, the due one out. Storage lives in useBpReminders.ts.
+   Pure: times in, the due one out. The times live on the API as one
+   BLOOD_PRESSURE reminder (useBpReminders.ts, Phase 5).
    ========================================================================== */
 
 /** "HH:MM", 24-hour, earliest first. */

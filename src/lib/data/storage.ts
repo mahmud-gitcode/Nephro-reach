@@ -68,10 +68,7 @@ function assertBrowser() {
    -------------------------------------------------------------------------- */
 
 const MEMBER_OWNED = new Set([
-  "between-treatment-check-ins",
-  "care-team-questions",
   "classroom-learner",
-  "clinic-notices",
   "community-likes",
   "custom-lab-results",
   "dialysis-access-photos",
@@ -82,9 +79,6 @@ const MEMBER_OWNED = new Set([
   "dialysis-supplies",
   "dialysis-treatment-vitals",
   "dialysis-urine-output",
-  "er-visits",
-  "exercise-log",
-  "weight-fluid-log",
   "journey-notes",
   "journey-progress",
   "library-saved",
@@ -93,9 +87,6 @@ const MEMBER_OWNED = new Set([
   "medication-refills",
   "medication-reminders",
   "medication-side-effects",
-  "nutrition-fluids",
-  "nutrition-foods",
-  "nutrition-goals",
   "provider-orders",
   "rides",
   "table-talk-favorites",
@@ -103,8 +94,6 @@ const MEMBER_OWNED = new Set([
   "travel-reflections",
   "travel-treatments",
   "treatment-medications",
-  "blood-pressure-readings",
-  "bp-reminders",
   "member-medications",
   "member-appointments",
   /* Added 2026-10-12/13: each member's own. */

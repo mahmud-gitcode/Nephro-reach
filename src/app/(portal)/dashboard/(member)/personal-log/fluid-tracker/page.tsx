@@ -16,7 +16,13 @@ import { UrinaryOutput } from "@/features/personal-log/fluid/panels/UrinaryOutpu
 import { FluidSymptomTracker } from "@/features/personal-log/fluid/panels/FluidSymptomTracker";
 import { AlertsInsights } from "@/features/personal-log/fluid/panels/AlertsInsights";
 import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
-import { AsyncSection, SkeletonText } from "@/components/ui";
+import { Alert, AsyncSection, SkeletonText } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types";
 
 /* ==========================================================================
@@ -29,10 +35,11 @@ import type { WeightFluidEntry } from "@/features/personal-log/fluid/fluid.types
    Two things about this screen are worth knowing before changing it, because
    neither is visible from here:
 
-     1. The log is stored (useWeightLog). Each entry also keeps its date
-        and the morning weight in kg, which the care team's CCM dashboard
-        reads for weight-change alerts. EDW and "today's weight" are still
-        page state.
+     1. The log is on the API (useWeightLog, Phase 5): one entry per day,
+        saved with PUT by its date, so saving a day again updates it. The
+        server works out each day's weight in kg, which the care team's CCM
+        dashboard reads for weight-change alerts. EDW and "today's weight"
+        are still page state (decision D7 is open).
 
      2. The five panels below — weight trend, goal progress, fluid intake,
         urinary output, alerts — take no props and render fixed numbers.
@@ -62,8 +69,10 @@ export default function FluidTrackerPage() {
   const [todayDateStr, setTodayDateStr] = useState<string>("May 31, 7:30 AM");
 
   const handleSaveEntry = (newEntry: WeightFluidEntry) => {
-    weightLog.add(newEntry);
-    setIsModalOpen(false);
+    if (weightLog.isSaving) return;
+    /* The modal closes once the server kept the day (a failure shows on
+       the page and the modal stays open). */
+    weightLog.save(newEntry, unit, () => setIsModalOpen(false));
     // If a morning weight is logged, sync it as Today's weight
     const weightVal = parseFloat(newEntry.morning);
     if (!isNaN(weightVal) && weightVal > 0) {
@@ -329,6 +338,12 @@ export default function FluidTrackerPage() {
         </div>
       </div>
 
+      {weightLog.saveError ? (
+        <Alert tone="danger" live>
+          {saveErrorText(weightLog.saveError, language === "ES" ? "es" : "en")}
+        </Alert>
+      ) : null}
+
       <MetricCards
         unit={unit}
         edwKg={edwKg}
@@ -343,12 +358,19 @@ export default function FluidTrackerPage() {
       <AsyncSection
         pending={weightLog.isPending}
         error={weightLog.error}
-        onRetry={weightLog.refetch}
-        errorTitle={
+        onRetry={canRetry(weightLog.error) ? weightLog.refetch : undefined}
+        errorTitle={errorTitleFor(
+          weightLog.error,
           language === "ES"
             ? "No se pudo cargar tu registro de peso y líquidos"
-            : "Your weight & fluid log could not be loaded"
-        }
+            : "Your weight & fluid log could not be loaded",
+          language === "ES" ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          weightLog.error,
+          undefined,
+          language === "ES" ? "es" : "en",
+        )}
         skeleton={<SkeletonText lines={6} />}
       >
         <FluidSymptomTracker entries={entries} isEs={language === "ES"} />
