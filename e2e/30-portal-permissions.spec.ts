@@ -95,6 +95,11 @@ async function acceptAllStaff(account: Account) {
   }
 }
 
+/* These journeys register fresh accounts and sign in several people; the
+   API throttles both per IP (fixtures/throttle.ts paces them), so they get
+   more time than the default. */
+test.setTimeout(240_000);
+
 async function noRetiredKeys(page: Page) {
   const keys = await page.evaluate(() => Object.keys(localStorage));
   for (const k of keys) {

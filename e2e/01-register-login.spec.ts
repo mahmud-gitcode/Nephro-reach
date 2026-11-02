@@ -101,6 +101,7 @@ test("D6: registration records Terms and Privacy consent @phase3 @needs-mail", a
   page,
   api,
 }) => {
+  test.setTimeout(240_000);
   const account = throwawayAccount("consent");
   const expected = await currentConsent();
   const since = mailMark();
@@ -109,6 +110,7 @@ test("D6: registration records Terms and Privacy consent @phase3 @needs-mail", a
     if (req.method() === "POST" && req.url().endsWith("/auth/register"))
       sent = req.postDataJSON();
   });
+  await pace("register");
   await page.goto("/registration");
   await page.locator("#full-name").fill(account.name);
   await page.locator("#email").fill(account.email);
@@ -127,8 +129,18 @@ test("D6: registration records Terms and Privacy consent @phase3 @needs-mail", a
   await page.getByRole("button", { name: "Verify email" }).click();
   await expect(page).toHaveURL(/\/setup\/patient/, { timeout: 20_000 });
 
-  /* The server kept the record: both documents, source register. */
-  const client = await api(account);
+  /* The server kept the record: both documents, source register. A 429
+     from the per-IP sign-in throttle is waited out. */
+  let client: ApiClient | null = null;
+  for (let attempt = 0; attempt < 3 && !client; attempt++) {
+    try {
+      client = await api(account);
+    } catch (cause) {
+      if (!String(cause).includes("HTTP 429") || attempt === 2) throw cause;
+      await new Promise((r) => setTimeout(r, 61_000));
+    }
+  }
+  if (!client) throw new Error("no session for the new account");
   const consents = (await json(await client.get("/me/consents"), "consents"))
     .data as {
     records: Array<{
@@ -153,6 +165,7 @@ test("D6: registration records Terms and Privacy consent @phase3 @needs-mail", a
 test("D6: a sign-up without consent is refused with the server's message and no account @phase3", async ({
   page,
 }) => {
+  test.setTimeout(240_000);
   const account = throwawayAccount("noconsent");
   /* The page never sends a sign-up without the box ticked, so strip the
      consent on the wire to see what the server does with one. */
@@ -161,6 +174,7 @@ test("D6: a sign-up without consent is refused with the server's message and no 
     delete body.consent;
     await route.continue({ postData: JSON.stringify(body) });
   });
+  await pace("register");
   await page.goto("/registration");
   await page.locator("#full-name").fill(account.name);
   await page.locator("#email").fill(account.email);
@@ -175,15 +189,21 @@ test("D6: a sign-up without consent is refused with the server's message and no 
   ).toBeVisible();
   await expect(page).toHaveURL(/\/registration/);
 
-  /* No account was created: the same email can't sign in. */
+  /* No account was created: the same email can't sign in (a 429 from the
+     per-IP sign-in throttle is waited out, never read as an answer). */
   const anon = await ApiClient.anonymous();
   try {
-    await pace("login");
-    const res = await anon.ctx.post(`${env.apiURL}/auth/login`, {
-      headers: { "X-Auth-Transport": "bearer" },
-      data: { email: account.email, password: account.password },
-    });
-    expect(res.status()).toBe(401);
+    let status = 429;
+    for (let attempt = 0; attempt < 3 && status === 429; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 61_000));
+      await pace("login");
+      const res = await anon.ctx.post(`${env.apiURL}/auth/login`, {
+        headers: { "X-Auth-Transport": "bearer" },
+        data: { email: account.email, password: account.password },
+      });
+      status = res.status();
+    }
+    expect(status).toBe(401);
   } finally {
     await anon.dispose();
   }
