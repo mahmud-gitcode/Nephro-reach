@@ -4,7 +4,6 @@ import {
   monthKey,
   monthlyVisits,
   recordAnswer,
-  seedErVisits,
   visitsIn,
   weekOf,
 } from "./erVisits";
@@ -41,11 +40,5 @@ describe("ER visit log", () => {
       "2026-09",
       "2026-10",
     ]);
-  });
-
-  it("seeds a history without this week's answer", () => {
-    const seed = seedErVisits(NOW);
-    expect(answerFor(seed, weekOf(NOW))).toBeUndefined();
-    expect(seed.some((r) => r.answer === "yes")).toBe(true);
   });
 });

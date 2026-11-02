@@ -13,8 +13,9 @@ import {
    their feature moves to the API (INTEGRATION_PROGRESS deviations). */
 
 const LIVE = [
-  "nr:blood-pressure-readings",
-  "nr:member:new.member@example.test:weight-fluid-log",
+  /* Still live until their phase (6 and 7) moves them to the API. */
+  "nr:member-medications",
+  "nr:member:new.member@example.test:dialysis-treatments",
   "nr:caregiver-grants",
   "nr:dialysis-schedule",
   "nr:medication-doses",

@@ -21,11 +21,14 @@ afterEach(() => {
 });
 
 describe("whose data a key holds", () => {
-  const LOG = storageKey("exercise-log");
+  /* A store still on this device (appointments move in a later phase). */
+  const LOG = storageKey("member-appointments");
 
   it("files a member's own log under that member", () => {
     signIn("user", "ana@example.com");
-    expect(resolveKey(LOG)).toBe("nr:member:ana@example.com:exercise-log");
+    expect(resolveKey(LOG)).toBe(
+      "nr:member:ana@example.com:member-appointments",
+    );
   });
 
   it("keeps the demo patient's plain key, which the clinic also reads", () => {
@@ -52,21 +55,24 @@ describe("whose data a key holds", () => {
 
 describe("the scope cannot be forged from the browser (INT-2)", () => {
   it("ignores a hand-written session cookie", () => {
-    const LOG = storageKey("exercise-log");
+    /* A store still on this device (appointments move in a later phase). */
+    const LOG = storageKey("member-appointments");
     document.cookie = `${LEGACY_SESSION_COOKIE}=${encodeURIComponent(
       JSON.stringify({ role: "user", email: "victim@example.com", name: "x" }),
     )}; path=/`;
     /* Signed out: the plain key, never the victim's. */
     expect(resolveKey(LOG)).toBe(LOG);
     signIn("user", "ana@example.com");
-    expect(resolveKey(LOG)).toBe("nr:member:ana@example.com:exercise-log");
+    expect(resolveKey(LOG)).toBe(
+      "nr:member:ana@example.com:member-appointments",
+    );
     document.cookie = `${LEGACY_SESSION_COOKIE}=; path=/; max-age=0`;
   });
 
   it("normalises the email the server reports", () => {
     signIn("user", " Ana@Example.com ");
-    expect(resolveKey(storageKey("exercise-log"))).toBe(
-      "nr:member:ana@example.com:exercise-log",
+    expect(resolveKey(storageKey("member-appointments"))).toBe(
+      "nr:member:ana@example.com:member-appointments",
     );
   });
 });
