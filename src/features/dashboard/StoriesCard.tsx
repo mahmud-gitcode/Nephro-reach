@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Video } from "lucide-react";
+import { Pencil, Play, Trash2, Video } from "lucide-react";
 import { Badge, Button, Card, Skeleton } from "@/components/ui";
 import { useAuth } from "@/features/auth/AuthContext";
 import { isSafeFileUrl } from "@/lib/utils/safeUrl";
@@ -12,6 +12,7 @@ import {
 } from "@/features/testimonials/useTestimonials";
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
 import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
+import { collabText } from "@/features/community/collabText";
 
 /* ==========================================================================
    From Fear to Hope — a small card, not a section
@@ -23,8 +24,9 @@ import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialMod
 
    Phase 12: published stories are GET /public/testimonials and the member's
    own GET /me/testimonials. A failed read says so instead of "no stories".
-   There is no API route to edit or delete a story yet, so those two buttons
-   are gone (recorded as a decision for the Lead/user).
+   There is no API route to edit or delete a story yet (D52), so those two
+   buttons are shown but disabled, with a "not available yet" note, until
+   the Lead/user decide. They have no handler and change nothing.
    ========================================================================== */
 
 const PREVIEW = 2;
@@ -85,6 +87,7 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
   const [playing, setPlaying] = useState<Testimonial | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const shown = showAll ? approved : approved.slice(0, PREVIEW);
+  const notAvailable = collabText(isEs, "notAvailable.storyActions");
 
   const statusLabel = (story: Testimonial) =>
     story.status === "approved"
@@ -137,10 +140,45 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
                 }
               >
                 {statusLabel(story)}
-              </Badge>{" "}
+              </Badge>
+              {story.status === "pending" ? (
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="ghost"
+                  iconOnly
+                  disabled
+                  title={notAvailable}
+                  aria-describedby="stories-not-available"
+                  aria-label={
+                    isEs ? `Editar ${story.title}` : `Edit ${story.title}`
+                  }
+                >
+                  <Pencil />
+                </Button>
+              ) : null}
+              <Button
+                size="small"
+                variant="danger"
+                appearance="ghost"
+                iconOnly
+                disabled
+                title={notAvailable}
+                aria-describedby="stories-not-available"
+                aria-label={
+                  isEs ? `Eliminar ${story.title}` : `Delete ${story.title}`
+                }
+              >
+                <Trash2 />
+              </Button>
             </li>
           ))}
         </ul>
+      ) : null}
+      {mine.length > 0 ? (
+        <p id="stories-not-available" className="text-caption text-fg-muted">
+          {notAvailable}
+        </p>
       ) : null}
 
       {own.error ? (

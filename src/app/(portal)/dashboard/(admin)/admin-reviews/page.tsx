@@ -24,19 +24,22 @@ import {
   Clock,
   XCircle,
   MessageSquare,
+  Trash2,
   Check,
   X,
 } from "lucide-react";
+import { collabText } from "@/features/community/collabText";
 
 /* Phase 12: the queue is the server's (GET /platform/content/reviews, platform
    content Manage). Approve and decline are its two decisions; a decline needs
    a reason, which the member sees. There is no API route to delete a review
-   or to move it back to pending, so those two buttons are gone (recorded as
-   a decision for the Lead/user); "Decline" still takes an approved review
-   off the website. */
+   or to move it back to pending (D52), so those two buttons are shown but
+   disabled, with a "not available yet" note, until the Lead/user decide;
+   "Decline" still takes an approved review off the website. */
 export default function AdminReviewsPage() {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const notAvailable = collabText(isEs, "notAvailable.reviewActions");
 
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "approved" | "declined"
@@ -349,8 +352,47 @@ export default function AdminReviewsPage() {
                         {isEs ? "Rechazar..." : "Decline..."}
                       </Button>
                     )}
+
+                    {/* D52: no API route yet. Shown, disabled, explained;
+                        it has no handler and changes nothing. */}
+                    {rev.status === "approved" && declineId !== rev.id && (
+                      <Button
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        size="small"
+                        disabled
+                        title={notAvailable}
+                        aria-describedby={`review-na-${rev.id}`}
+                      >
+                        {isEs ? "Mover a Pendiente" : "Unpublish"}
+                      </Button>
+                    )}
                   </div>
+
+                  {/* title= is a tooltip, not a name. */}
+                  <Button
+                    variant="danger"
+                    appearance="stroke"
+                    size="small"
+                    className="px-inset-xs"
+                    disabled
+                    title={notAvailable}
+                    aria-describedby={`review-na-${rev.id}`}
+                    aria-label={
+                      isEs
+                        ? `Eliminar reseña de ${rev.userName}`
+                        : `Delete review by ${rev.userName}`
+                    }
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
                 </div>
+                <p
+                  id={`review-na-${rev.id}`}
+                  className="mt-stack-xs text-caption text-fg-muted"
+                >
+                  {notAvailable}
+                </p>
               </div>
             ))
           )}
