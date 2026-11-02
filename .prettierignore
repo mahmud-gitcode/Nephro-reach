@@ -7,3 +7,8 @@ next-env.d.ts
 # Generated or vendored
 package-lock.json
 public/
+
+# Playwright output
+/test-results/
+/playwright-report/
+/blob-report/
