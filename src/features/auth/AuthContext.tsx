@@ -188,19 +188,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** Make `next` the context in use: the office header only in office mode,
    *  and the caches cleared whenever the context changes, so one portal,
    *  office or patient never shows data read in another (INT-6, D5). */
-  const adopt = useCallback((ctx: MeContext, next: PortalChoice) => {
-    const before = choiceRef.current;
-    const office =
-      next.kind === "office" ? next.membership.organizationId : null;
-    if (!before || choiceKey(before) !== choiceKey(next)) {
-      switchPortalContext(office);
-    } else {
-      setActiveOrganization(office);
-    }
-    choiceRef.current = next;
-    setChoice(next);
-    setLocalScope(localScopeFor(contextToUser(ctx, next)));
-  }, []);
+  const adopt = useCallback(
+    (ctx: MeContext, next: PortalChoice, explicit = false) => {
+      const before = choiceRef.current;
+      const office =
+        next.kind === "office" ? next.membership.organizationId : null;
+      /* An explicit pick always starts clean, even into the same context. */
+      if (explicit || !before || choiceKey(before) !== choiceKey(next)) {
+        switchPortalContext(office);
+      } else {
+        setActiveOrganization(office);
+      }
+      choiceRef.current = next;
+      setChoice(next);
+      setLocalScope(localScopeFor(contextToUser(ctx, next)));
+    },
+    [],
+  );
 
   const applyContext = useCallback(
     (next: MeContext) => {
@@ -214,9 +218,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         : null;
       const landing = kept ?? defaultContext(next, page);
       if (!kept) pickedRef.current = false;
+      const picker = !pickedRef.current && needsPicker(next, page);
       setContext(next);
       adopt(next, landing);
-      setPickerNeeded(!pickedRef.current && needsPicker(next, page));
+      /* Until the user picks, no office is entered: no header is sent. */
+      if (picker) setActiveOrganization(null);
+      setPickerNeeded(picker);
       setError(null);
       setStatus("signed-in");
     },
@@ -238,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!context || !holdsChoice(context, next)) return false;
       pickedRef.current = true;
       setPickerNeeded(false);
-      adopt(context, next);
+      adopt(context, next, true);
       return true;
     },
     [adopt, context],
