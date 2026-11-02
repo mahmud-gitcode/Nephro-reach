@@ -1,44 +1,89 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/client";
+import { fetchPage, type PageParams } from "@/lib/api/paging";
+import type { PatientScope } from "@/lib/data/queryKeys";
+import {
+  patientPath,
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import { usePagedList } from "@/features/profile/usePagedList";
 import * as rules from "./healthcareTeam";
 
-export const healthcareTeamKey = ["care-team", "healthcare-team"] as const;
+const PAGE: PageParams = { limit: 150 };
 
-/** The member's healthcare team: invited and accepted people. */
-export function useHealthcareTeam() {
+export const listTeam = (scope: PatientScope, page: PageParams = PAGE) =>
+  fetchPage<rules.ApiTeamMember>(
+    patientPath(scope, "/care-team-contacts"),
+    page,
+  );
+
+export const inviteTeamMember = (
+  scope: PatientScope,
+  body: ReturnType<typeof rules.toInviteBody>,
+) =>
+  api<rules.ApiTeamMember>(patientPath(scope, "/care-team-contacts"), {
+    method: "POST",
+    body,
+  });
+
+export const removeTeamMember = (scope: PatientScope, id: string) =>
+  api<unknown>(
+    patientPath(scope, `/care-team-contacts/${encodeURIComponent(id)}`),
+    { method: "DELETE" },
+  );
+
+/** The member's healthcare team, from the API (Phase 4): invite and remove
+ *  only. There is no accept (INT-14): a person accepts for themselves once
+ *  invitations exist, so `recipients` stays empty until then. */
+export function useHealthcareTeam(explicitScope?: PatientScope | null) {
+  const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: healthcareTeamKey,
-    queryFn: rules.readTeam,
+  const queryKey = scopedKey(scope, "care-team-contacts");
+  const read = usePagedList({
+    scope,
+    queryKey,
+    params: PAGE,
+    fetch: listTeam,
+    map: rules.fromApiTeamMember,
   });
-  const write = useMutation({
-    mutationFn: async (
-      transform: (current: rules.TeamMember[]) => rules.TeamMember[],
-    ) => rules.writeTeam(transform(await rules.readTeam())),
-    onSuccess: (list) => queryClient.setQueryData(healthcareTeamKey, list),
+  const refresh = () => queryClient.invalidateQueries({ queryKey });
+  const add = useMutation({
+    mutationFn: (draft: rules.TeamDraft) =>
+      inviteTeamMember(requireScope(scope), rules.toInviteBody(draft)),
+    onSuccess: refresh,
   });
-  const { mutate } = write;
-  const team = useMemo(() => query.data ?? [], [query.data]);
+  const drop = useMutation({
+    mutationFn: (id: string) => removeTeamMember(requireScope(scope), id),
+    onSuccess: refresh,
+  });
+  const team = read.items;
+  const { mutate: invite } = add;
+  const { mutate: remove } = drop;
 
   return {
     team,
     recipients: useMemo(() => rules.recipients(team), [team]),
-    isPending: query.isPending,
-    isSaving: write.isPending,
+    isPending: read.isPending,
+    error: read.error,
+    isError: read.isError,
+    refetch: read.refetch,
+    read,
+    isSaving: add.isPending || drop.isPending,
+    saveError: add.error ?? drop.error,
     invite: useCallback(
-      (draft: rules.TeamDraft) =>
-        mutate((current) => rules.invite(current, draft, Date.now())),
-      [mutate],
+      (draft: rules.TeamDraft, onDone?: () => void) =>
+        invite(draft, { onSuccess: () => onDone?.() }),
+      [invite],
     ),
-    accept: useCallback(
-      (id: string) => mutate((current) => rules.accept(current, id)),
-      [mutate],
-    ),
-    remove: useCallback(
-      (id: string) => mutate((current) => rules.removeMember(current, id)),
-      [mutate],
-    ),
+    remove: useCallback((id: string) => remove(id), [remove]),
+    resetSaveError: () => {
+      add.reset();
+      drop.reset();
+    },
   };
 }

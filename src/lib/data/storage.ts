@@ -75,7 +75,6 @@ const MEMBER_OWNED = new Set([
   "community-likes",
   "custom-lab-results",
   "dialysis-access-photos",
-  "dialysis-clinic",
   "dialysis-home-system",
   "dialysis-home-visits",
   "dialysis-modality",
@@ -97,10 +96,7 @@ const MEMBER_OWNED = new Set([
   "nutrition-fluids",
   "nutrition-foods",
   "nutrition-goals",
-  "profile-emergency-contact",
-  "care-contacts",
   "provider-orders",
-  "quick-actions",
   "rides",
   "table-talk-favorites",
   "table-talk-questions",
@@ -111,13 +107,9 @@ const MEMBER_OWNED = new Set([
   "bp-reminders",
   "member-medications",
   "member-appointments",
-  "my-health",
   /* Added 2026-10-12/13: each member's own. */
-  "healthcare-team",
   "dialysis-treatments",
   "dialysis-schedule",
-  "fluid-unit",
-  "member-tour-done",
   "clinic-labs-seen",
 ]);
 

@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 2;
+export const STORAGE_VERSION = 3;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -54,6 +54,46 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "medication-mood",
     since: 1,
     why: "Mood section removed from the medications page (PROJECT_AUDIT §14). No component reads moodEntries/moodOn or calls saveMoodEntry; whether mood returns is D8, and it would come from the API, never from this key.",
+  },
+  {
+    name: "quick-actions",
+    since: 3,
+    why: "Phase 4: quick actions are saved on the account (GET/PUT /me/preferences quickActions). No screen reads this key.",
+  },
+  {
+    name: "fluid-unit",
+    since: 3,
+    why: "Phase 4: the fluid unit is the account preference (GET/PUT /me/preferences fluidUnit). No screen reads this key.",
+  },
+  {
+    name: "member-tour-done",
+    since: 3,
+    why: "Phase 4: the tour is finished on the account (POST /me/preferences/tour-completed, tourCompletedAt). No screen reads this key.",
+  },
+  {
+    name: "my-health",
+    since: 3,
+    why: "Phase 4: allergies and medical history come from /patients/:id/allergies and /medical-conditions; the sample record (health.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "profile-emergency-contact",
+    since: 3,
+    why: "Phase 4: the emergency contact is /patients/:id/emergency-contact (null = not set). No screen reads this key.",
+  },
+  {
+    name: "care-contacts",
+    since: 3,
+    why: "Phase 4: care offices are /patients/:id/care-contacts (one per kind); the sample offices are deleted. No screen reads this key.",
+  },
+  {
+    name: "dialysis-clinic",
+    since: 3,
+    why: "Phase 4: the home dialysis clinic is /patients/:id/home-dialysis-clinic (linked by organizationId, onNephroReach from the server). travel/useDialysisClinic delegates to the API hook; the demo clinic (clinic.seed.ts) is deleted. No screen reads this key.",
+  },
+  {
+    name: "healthcare-team",
+    since: 3,
+    why: "Phase 4: the team is /patients/:id/care-team-contacts (invite and remove only; no member accept, INT-14). No screen reads this key.",
   },
 ];
 

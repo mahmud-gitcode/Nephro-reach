@@ -12,11 +12,10 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, buttonStyles, Modal, Progress } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
 import { useAuth } from "@/features/auth/AuthContext";
+import { usePreferences } from "@/features/profile/usePreferences";
 
 /* ==========================================================================
    The guided tour — how the platform works, step by step
@@ -106,26 +105,20 @@ const STEPS: Step[] = [
   },
 ];
 
-const KEY = storageKey("member-tour-done");
-const tourKey = ["onboarding", "tour-done"] as const;
-
 /** Settings' "Take the tour again" sends this. */
 export const START_TOUR_EVENT = "nr:start-tour";
 
 export function MemberTour() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const queryClient = useQueryClient();
-  const done = useQuery({
-    queryKey: tourKey,
-    queryFn: () => readJson<boolean>(KEY, false),
-  });
-  const finish = useMutation({
-    mutationFn: () => writeJson(KEY, true),
-    onSuccess: () => queryClient.setQueryData(tourKey, true),
-  });
+  /* Finished on the account (`tourCompletedAt`, Phase 4), so a tour done
+     in one browser is not shown again in another. A failed read never
+     opens it: only a successful read that says "not yet" does. */
+  const { preferences, finishTour: finish } = usePreferences();
   const [step, setStep] = useState(0);
   const [restarted, setRestarted] = useState(false);
+  /* Closed in this tab while the server's answer is on its way. */
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     const start = () => {
@@ -136,12 +129,18 @@ export function MemberTour() {
     return () => window.removeEventListener(START_TOUR_EVENT, start);
   }, []);
 
-  const open = restarted || (!done.isPending && done.data === false);
+  const open =
+    restarted ||
+    (!dismissed &&
+      preferences !== null &&
+      preferences.tourCompletedAt === null);
   if (!open) return null;
 
   const close = () => {
     setRestarted(false);
-    finish.mutate();
+    setDismissed(true);
+    /* "Take the tour again" only reopens it; the first finish is kept. */
+    if (preferences?.tourCompletedAt == null) finish.mutate();
   };
   const current = STEPS[step];
   const Icon = current.icon;

@@ -1,11 +1,10 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-
 /* ==========================================================================
    Quick Actions — the member's own top four
    --------------------------------------------------------------------------
    The client (2026-10-05): Quick Actions are personalised to what the
    member wants, their top four. The catalogue is the member's main pages;
-   the choice is saved per member, in the order picked.
+   the choice is saved on the account (`/me/preferences`, Phase 4), in the
+   order picked.
    ========================================================================== */
 
 export type QuickActionId =
@@ -148,14 +147,9 @@ export function toggleChoice(
   return ids.length >= MAX_QUICK_ACTIONS ? ids : [...ids, id];
 }
 
-const KEY = storageKey("quick-actions");
-
-export async function readQuickActions(): Promise<QuickActionId[]> {
-  return cleanChoice(await readJson<unknown>(KEY, null));
-}
-
-export async function writeQuickActions(
-  ids: QuickActionId[],
-): Promise<QuickActionId[]> {
-  return writeJson(KEY, cleanChoice(ids));
+/** What the dashboard shows for a saved choice. An empty saved choice
+ *  (a new account: the server answers `[]`) shows the defaults; callers
+ *  use this only after a successful read. */
+export function shownQuickActions(saved: readonly unknown[]): QuickActionId[] {
+  return cleanChoice(saved);
 }

@@ -1,44 +1,7 @@
-import { readJson, sampleOr, storageKey, writeJson } from "@/lib/data/storage";
-import { SEED_CLINIC } from "./clinic.seed";
-import type { DialysisClinic } from "./clinic.types";
-
-const KEY = storageKey("dialysis-clinic");
-
-/* Stored JSON is not to be trusted: it was written by an older build, or by
-   a member editing devtools, or half-written when the tab closed. Anything
-   that is not a string falls back rather than reaching a tel: link as
-   `undefined`. */
-function parse(value: unknown): DialysisClinic {
-  const raw = (value ?? {}) as Partial<DialysisClinic>;
-  return {
-    name: typeof raw.name === "string" ? raw.name : SEED_CLINIC.name,
-    phone: typeof raw.phone === "string" ? raw.phone : SEED_CLINIC.phone,
-    /* Blank, not the seed's street. A record already on the device belongs
-       to a member who set their own centre, and attaching the demo
-       clinic's address to their name would be a false record of where they
-       go three times a week. */
-    address: typeof raw.address === "string" ? raw.address : "",
-    email: typeof raw.email === "string" ? raw.email : "",
-  };
-}
-
-export async function getClinic(): Promise<DialysisClinic> {
-  const stored = await readJson<unknown>(KEY, null);
-  return stored === null
-    ? sampleOr(KEY, SEED_CLINIC, { name: "", phone: "", address: "" })
-    : parse(stored);
-}
-
-export async function saveClinic(
-  clinic: DialysisClinic,
-): Promise<DialysisClinic> {
-  return writeJson(KEY, {
-    name: clinic.name.trim(),
-    phone: clinic.phone.trim(),
-    address: clinic.address.trim(),
-    email: (clinic.email ?? "").trim(),
-  });
-}
+/* The member's home dialysis clinic moved to the API in Phase 4
+   (`@/features/profile/useHomeDialysisClinic`, `/patients/:id/
+   home-dialysis-clinic`); its browser copy (`nr:dialysis-clinic`) and the
+   demo clinic are gone. Only the tel: helper is left here. */
 
 /** Strips formatting so the number works in a tel: link. */
 export function toTelHref(phone: string): string {

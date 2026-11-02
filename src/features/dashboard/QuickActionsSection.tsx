@@ -15,18 +15,24 @@ import {
   Pill,
   SlidersHorizontal,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Chip, ChipGroup, Modal } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  Chip,
+  ChipGroup,
+  Modal,
+  Skeleton,
+} from "@/components/ui";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 import {
   DEFAULT_QUICK_ACTIONS,
   MAX_QUICK_ACTIONS,
   QUICK_ACTIONS,
-  readQuickActions,
+  shownQuickActions,
   toggleChoice,
-  writeQuickActions,
   type QuickActionId,
 } from "./quickActions";
+import { usePreferences } from "@/features/profile/usePreferences";
 
 /* ==========================================================================
    Quick Actions — the member's top four, chosen by them (client, 2026-10-05)
@@ -63,8 +69,6 @@ const TONES = [
   "bg-cat-1-soft",
 ];
 
-const quickActionsKey = ["dashboard", "quick-actions"] as const;
-
 export function QuickActionsSection({
   isEs,
   title,
@@ -72,16 +76,10 @@ export function QuickActionsSection({
   isEs: boolean;
   title: string;
 }) {
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: quickActionsKey,
-    queryFn: readQuickActions,
-  });
-  const write = useMutation({
-    mutationFn: writeQuickActions,
-    onSuccess: (ids) => queryClient.setQueryData(quickActionsKey, ids),
-  });
-  const chosen = query.data ?? DEFAULT_QUICK_ACTIONS;
+  /* Saved on the account (`/me/preferences`). The defaults show only
+     after a successful read; a failed read says so instead (ADR 0007 §5). */
+  const { preferences, isPending, error, refetch, update } = usePreferences();
+  const chosen = preferences ? shownQuickActions(preferences.quickActions) : [];
   const [draft, setDraft] = useState<QuickActionId[] | null>(null);
 
   const actions = chosen
@@ -99,11 +97,45 @@ export function QuickActionsSection({
           variant="neutral"
           appearance="ghost"
           leadingIcon={<SlidersHorizontal aria-hidden="true" />}
-          onClick={() => setDraft(chosen)}
+          onClick={() => {
+            update.reset();
+            setDraft(chosen);
+          }}
+          disabled={!preferences}
         >
           {isEs ? "Personalizar" : "Customize"}
         </Button>
       </div>
+      {error ? (
+        <Alert
+          tone="warning"
+          title={
+            isEs
+              ? "No pudimos cargar sus acciones rápidas"
+              : "We couldn't load your quick actions"
+          }
+          action={
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => void refetch()}
+            >
+              {isEs ? "Intentar de nuevo" : "Try again"}
+            </Button>
+          }
+        />
+      ) : null}
+      {isPending ? (
+        <div
+          aria-busy="true"
+          className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md xl:grid-cols-4"
+        >
+          {[0, 1, 2, 3].map((index) => (
+            <Skeleton key={index} height={112} />
+          ))}
+        </div>
+      ) : null}
       {/* Two across on a phone: one per row made four tall cards fill the
           whole screen. */}
       <div className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md xl:grid-cols-4">
@@ -165,10 +197,13 @@ export function QuickActionsSection({
               </Button>
               <Button
                 disabled={draft.length === 0}
-                loading={write.isPending}
+                loading={update.isPending}
                 onClick={() => {
-                  write.mutate(draft);
-                  setDraft(null);
+                  /* Closed only once the server saved it. */
+                  update.mutate(
+                    { quickActions: draft },
+                    { onSuccess: () => setDraft(null) },
+                  );
                 }}
               >
                 {isEs ? "Guardar" : "Save"}
@@ -176,6 +211,13 @@ export function QuickActionsSection({
             </>
           }
         >
+          {update.isError ? (
+            <Alert tone="danger" className="mb-stack-sm">
+              {isEs
+                ? "No se pudo guardar. Inténtelo de nuevo."
+                : "That didn't save. Please try again."}
+            </Alert>
+          ) : null}
           <p
             className="mb-stack-sm text-caption text-fg-muted"
             aria-live="polite"

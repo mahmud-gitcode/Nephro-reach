@@ -18,6 +18,7 @@ import type {
   HistoryRow,
 } from "@/features/my-health/health.types";
 import {
+  Alert,
   AsyncSection,
   Card,
   SkeletonText,
@@ -26,18 +27,25 @@ import {
 } from "@/components/ui";
 import type { TabItem } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { saveErrorText } from "@/features/profile/saveError";
 
 export default function MyHealthPage() {
   const [activeTab, setActiveTab] = React.useState<HealthTab>("allergies");
   const { dictionary, language } = useLanguage();
   const h = dictionary?.myHealth;
+  const lang = language === "ES" ? "es" : "en";
 
-  /* Saved on this device; the demo patient starts with a sample record. */
+  /* From the API (Phase 4): one call per add, edit or delete; a modal
+     closes only once the server kept the change. */
   const health = useMyHealth();
   const allergyRows = health.allergies;
   const historyRows = health.history;
-  const setAllergyRows = health.setAllergies;
-  const setHistoryRows = health.setHistory;
 
   const [isAllergyModalOpen, setIsAllergyModalOpen] = React.useState(false);
   const [isConditionModalOpen, setIsConditionModalOpen] = React.useState(false);
@@ -46,73 +54,95 @@ export default function MyHealthPage() {
   );
   const [editingCondition, setEditingCondition] =
     React.useState<HistoryRow | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  const allergySave = editingAllergy ? health.editAllergy : health.addAllergy;
+  const conditionSave = editingCondition
+    ? health.editCondition
+    : health.addCondition;
 
   const handleOpenAddAllergy = () => {
+    health.addAllergy.reset();
     setEditingAllergy(null);
     setIsAllergyModalOpen(true);
   };
 
   const handleOpenEditAllergy = (row: AllergyRow) => {
+    health.editAllergy.reset();
     setEditingAllergy(row);
     setIsAllergyModalOpen(true);
   };
 
-  const handleDeleteAllergy = (id: string) => {
-    setAllergyRows((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  const handleSaveAllergy = (row: Omit<AllergyRow, "id">, id?: string) => {
-    if (id) {
-      setAllergyRows((prev) =>
-        prev.map((r) =>
-          r.id === id ? { ...r, ...row, reactionKey: undefined } : r,
-        ),
-      );
-    } else {
-      setAllergyRows((prev) => [
-        { ...row, id: `allergy-${Date.now()}` },
-        ...prev,
-      ]);
-    }
+  const closeAllergyModal = () => {
     setIsAllergyModalOpen(false);
     setEditingAllergy(null);
   };
 
+  const handleDeleteAllergy = (id: string) => {
+    setDeleteError(null);
+    health.deleteAllergy.mutate(id, {
+      onError: (error) => setDeleteError(saveErrorText(error, lang)),
+    });
+  };
+
+  const handleSaveAllergy = (row: Omit<AllergyRow, "id">, id?: string) => {
+    if (allergySave.isPending) return;
+    if (id && editingAllergy) {
+      health.editAllergy.mutate(
+        { before: editingAllergy, next: row },
+        { onSuccess: closeAllergyModal },
+      );
+    } else {
+      health.addAllergy.mutate(row, { onSuccess: closeAllergyModal });
+    }
+  };
+
   const handleOpenAddCondition = () => {
+    health.addCondition.reset();
     setEditingCondition(null);
     setIsConditionModalOpen(true);
   };
 
   const handleOpenEditCondition = (row: HistoryRow) => {
+    health.editCondition.reset();
     setEditingCondition(row);
     setIsConditionModalOpen(true);
   };
 
+  const closeConditionModal = () => {
+    setIsConditionModalOpen(false);
+    setEditingCondition(null);
+  };
+
   const handleDeleteCondition = (id: string) => {
-    setHistoryRows((prev) => prev.filter((r) => r.id !== id));
+    setDeleteError(null);
+    health.deleteCondition.mutate(id, {
+      onError: (error) => setDeleteError(saveErrorText(error, lang)),
+    });
   };
 
   const handleSaveCondition = (row: Omit<HistoryRow, "id">, id?: string) => {
-    if (id) {
-      setHistoryRows((prev) =>
-        prev.map((r) =>
-          r.id === id ? { ...r, ...row, conditionKey: undefined } : r,
-        ),
+    if (conditionSave.isPending) return;
+    if (id && editingCondition) {
+      health.editCondition.mutate(
+        { before: editingCondition, next: row },
+        { onSuccess: closeConditionModal },
       );
     } else {
-      setHistoryRows((prev) => [
-        { ...row, id: `history-${Date.now()}` },
-        ...prev,
-      ]);
+      health.addCondition.mutate(row, { onSuccess: closeConditionModal });
     }
-    setIsConditionModalOpen(false);
-    setEditingCondition(null);
   };
 
   const tabItems: ReadonlyArray<TabItem<HealthTab>> = [
     { id: "allergies", label: h?.tabs?.allergies || "Allergies" },
     { id: "history", label: h?.tabs?.history || "Medical History" },
   ];
+
+  const deleteAlert = deleteError ? (
+    <Alert tone="danger" live onDismiss={() => setDeleteError(null)}>
+      {deleteError}
+    </Alert>
+  ) : null;
 
   return (
     <div className="space-y-stack-xl">
@@ -138,15 +168,27 @@ export default function MyHealthPage() {
             buttonLabel={h?.allergies?.addBtn || "Add Allergy"}
             onAddClick={handleOpenAddAllergy}
           />
+          {deleteAlert}
           <AsyncSection
-            pending={health.isPending}
-            error={health.error}
-            onRetry={health.refetch}
-            errorTitle={
+            pending={health.allergiesRead.isPending}
+            error={health.allergiesRead.error}
+            onRetry={
+              canRetry(health.allergiesRead.error)
+                ? health.allergiesRead.refetch
+                : undefined
+            }
+            errorTitle={errorTitleFor(
+              health.allergiesRead.error,
               language === "ES"
                 ? "No se pudieron cargar sus alergias"
-                : "Your allergies could not be loaded"
-            }
+                : "Your allergies could not be loaded",
+              lang,
+            )}
+            errorMessage={errorMessageFor(
+              health.allergiesRead.error,
+              undefined,
+              lang,
+            )}
             skeleton={<SkeletonText lines={4} />}
           >
             <AllergiesTable
@@ -154,6 +196,7 @@ export default function MyHealthPage() {
               onEdit={handleOpenEditAllergy}
               onDelete={handleDeleteAllergy}
             />
+            <LoadMore read={health.allergiesRead} />
           </AsyncSection>
         </Card>
       </TabPanel>
@@ -169,15 +212,27 @@ export default function MyHealthPage() {
             buttonLabel={h?.history?.addBtn || "Add Condition"}
             onAddClick={handleOpenAddCondition}
           />
+          {deleteAlert}
           <AsyncSection
-            pending={health.isPending}
-            error={health.error}
-            onRetry={health.refetch}
-            errorTitle={
+            pending={health.historyRead.isPending}
+            error={health.historyRead.error}
+            onRetry={
+              canRetry(health.historyRead.error)
+                ? health.historyRead.refetch
+                : undefined
+            }
+            errorTitle={errorTitleFor(
+              health.historyRead.error,
               language === "ES"
                 ? "No se pudo cargar su historial médico"
-                : "Your medical history could not be loaded"
-            }
+                : "Your medical history could not be loaded",
+              lang,
+            )}
+            errorMessage={errorMessageFor(
+              health.historyRead.error,
+              undefined,
+              lang,
+            )}
             skeleton={<SkeletonText lines={4} />}
           >
             <MedicalHistoryTable
@@ -185,6 +240,7 @@ export default function MyHealthPage() {
               onEdit={handleOpenEditCondition}
               onDelete={handleDeleteCondition}
             />
+            <LoadMore read={health.historyRead} />
           </AsyncSection>
         </Card>
       </TabPanel>
@@ -193,11 +249,12 @@ export default function MyHealthPage() {
         <AllergyModal
           key={editingAllergy ? `edit-${editingAllergy.id}` : "add"}
           initialData={editingAllergy}
-          onClose={() => {
-            setIsAllergyModalOpen(false);
-            setEditingAllergy(null);
-          }}
+          onClose={closeAllergyModal}
           onSave={handleSaveAllergy}
+          saving={allergySave.isPending}
+          saveError={
+            allergySave.error ? saveErrorText(allergySave.error, lang) : null
+          }
         />
       ) : null}
 
@@ -205,11 +262,14 @@ export default function MyHealthPage() {
         <ConditionModal
           key={editingCondition ? `edit-${editingCondition.id}` : "add"}
           initialData={editingCondition}
-          onClose={() => {
-            setIsConditionModalOpen(false);
-            setEditingCondition(null);
-          }}
+          onClose={closeConditionModal}
           onSave={handleSaveCondition}
+          saving={conditionSave.isPending}
+          saveError={
+            conditionSave.error
+              ? saveErrorText(conditionSave.error, lang)
+              : null
+          }
         />
       ) : null}
     </div>

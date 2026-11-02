@@ -3,7 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { Bell, Building2, KeyRound, Phone, UserCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  profilePatch,
+  updateProfile,
+} from "@/features/profile/profile.repository";
 import EmergencyContactSection from "@/features/profile/EmergencyContactSection";
 import { START_TOUR_EVENT } from "@/features/onboarding/MemberTour";
 import { CareContactsSection } from "@/features/profile/CareContactsSection";
@@ -148,16 +153,30 @@ function ProfileInformation({
     savedMessage: string;
   };
 }) {
-  const { user } = useAuth();
+  /* The account's own record (`GET /me/context`); a save goes to
+     `PATCH /me/profile` and re-reads the context (Phase 4). Email and phone
+     are sign-in identifiers with their own confirm flows, so they are
+     shown, not edited, here. */
+  const { context, refreshContext } = useAuth();
   const { language } = useLanguage();
-  const [name, setName] = useState(user?.name || "Sarah Jenkins");
-  const [phone, setPhone] = useState("555-019-2834");
-  const [saved, setSaved] = useState(false);
+  const account = context?.user ?? null;
+  const [name, setName] = useState(account?.name ?? "");
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!account) return;
+      const patch = profilePatch(
+        { name: account.name, language: account.language },
+        { name, language },
+      );
+      if (Object.keys(patch).length > 0) await updateProfile(patch);
+      await refreshContext();
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (save.isPending) return;
+    save.mutate();
   };
 
   return (
@@ -167,9 +186,18 @@ function ProfileInformation({
       title={profileData?.title || "Profile Information"}
     >
       <form onSubmit={handleSubmit}>
-        {saved ? (
-          <Alert tone="success" className="mb-stack-lg">
+        {save.isSuccess ? (
+          <Alert tone="success" className="mb-stack-lg" live>
             {profileData?.savedMessage || "Profile saved successfully!"}
+          </Alert>
+        ) : null}
+        {save.isError ? (
+          <Alert tone="danger" className="mb-stack-lg" live>
+            {save.error instanceof Error && save.error.message
+              ? save.error.message
+              : language === "ES"
+                ? "No se pudo guardar. Inténtelo de nuevo."
+                : "That didn't save. Please try again."}
           </Alert>
         ) : null}
 
@@ -179,6 +207,7 @@ function ProfileInformation({
               <Input
                 {...props}
                 value={name}
+                maxLength={120}
                 onChange={(e) => setName(e.target.value)}
               />
             )}
@@ -189,7 +218,7 @@ function ProfileInformation({
               {(props) => (
                 <Input
                   {...props}
-                  value={user?.email || "sarah.jenkins@example.com"}
+                  value={account?.email ?? ""}
                   disabled
                   readOnly
                 />
@@ -199,16 +228,16 @@ function ProfileInformation({
               {(props) => (
                 <Input
                   {...props}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  value={account?.phone ?? ""}
+                  disabled
+                  readOnly
                 />
               )}
             </FormField>
           </div>
 
-          <FormField label={profileData?.memberId || "Member ID"}>
-            {(props) => <Input {...props} value="MM-XK877" disabled readOnly />}
-          </FormField>
+          {/* "Member ID" showed a made-up number; the API has no member
+              number, so it is hidden until one is decided (Lead question). */}
         </div>
 
         <div className="mt-stack-xl flex flex-wrap items-center justify-between gap-inline-md">
@@ -222,7 +251,11 @@ function ProfileInformation({
               ? "Ver el recorrido otra vez"
               : "Take the tour again"}
           </Button>
-          <Button type="submit">
+          <Button
+            type="submit"
+            loading={save.isPending}
+            disabled={!account || name.trim() === ""}
+          >
             {profileData?.saveButton || "Save Profile Changes"}
           </Button>
         </div>
@@ -413,6 +446,7 @@ function ChangePassword({
 
 export default function SettingsPage() {
   const { dictionary, language } = useLanguage();
+  const auth = useAuth();
   const st = dictionary?.settings;
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
@@ -449,7 +483,12 @@ export default function SettingsPage() {
         <div className="flex-1 space-y-stack-lg">
           <TabPanel id="profile" value={activeTab}>
             <div className="space-y-stack-lg">
-              <ProfileInformation profileData={st?.profile} />
+              {/* Remounted when the saved name changes, so the field starts
+                  from the server's value rather than syncing in an effect. */}
+              <ProfileInformation
+                key={auth.context?.user.name ?? ""}
+                profileData={st?.profile}
+              />
 
               {/* Under the profile rather than a tab of its own: it is one more
                 fact about the member, and burying it behind its own heading is

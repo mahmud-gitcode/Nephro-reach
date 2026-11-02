@@ -1,41 +1,26 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getClinic, saveClinic } from "./clinic.repository";
-import type { DialysisClinic } from "./clinic.types";
+import { useHomeDialysisClinic } from "@/features/profile/useHomeDialysisClinic";
+import { EMPTY_CLINIC } from "@/features/profile/homeDialysisClinic";
 
 export { toTelHref } from "./clinic.repository";
 export type { DialysisClinic } from "./clinic.types";
 
-export const clinicKey = ["travel", "dialysis-clinic"] as const;
-
 /**
- * One record rather than a list, so there is no empty state — but the
- * loading and error states are the same three lines, and the card that uses
- * this shows a phone number a member calls in an emergency. Showing a stale
- * or blank number silently is the failure worth avoiding here.
+ * The member's home dialysis clinic, from the API (Phase 4, MEMBER lane:
+ * `@/features/profile/useHomeDialysisClinic`). This keeps the shape the
+ * travel and Before-the-ER screens already read: `clinic` is undefined
+ * while loading or after a failed read (the card shows its error state, a
+ * number a member calls in an emergency must not quietly render blank),
+ * and the empty clinic when none is saved. A save keeps the clinic's link
+ * to its NephroReach center (`organizationId`) unless the member picks
+ * another.
  */
 export function useDialysisClinic() {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: clinicKey,
-    queryFn: getClinic,
-  });
-
-  const save = useMutation({
-    mutationFn: (clinic: DialysisClinic) => saveClinic(clinic),
-    onSuccess: (clinic) => queryClient.setQueryData(clinicKey, clinic),
-  });
-
+  const home = useHomeDialysisClinic();
   return {
-    clinic: query.data,
-    isPending: query.isPending,
-    error: query.error,
-    isError: query.isError,
-    refetch: () => void query.refetch(),
-    save,
-    isSaving: save.isPending,
-    saveError: save.error,
+    ...home,
+    clinic:
+      home.clinic === undefined ? undefined : (home.clinic ?? EMPTY_CLINIC),
   };
 }

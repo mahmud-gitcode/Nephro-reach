@@ -30,6 +30,7 @@ export function ModalShell({
   onClose,
   submitLabel,
   cancelLabel,
+  saving = false,
   children,
 }: {
   title: string;
@@ -37,6 +38,8 @@ export function ModalShell({
   onClose: () => void;
   submitLabel: string;
   cancelLabel: string;
+  /** The save is on its way: the button waits (no double submit). */
+  saving?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -49,7 +52,7 @@ export function ModalShell({
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             {cancelLabel}
           </Button>
-          <Button type="submit" form={formId}>
+          <Button type="submit" form={formId} loading={saving}>
             {submitLabel}
           </Button>
         </>
@@ -64,34 +67,23 @@ export function AllergyModal({
   initialData,
   onClose,
   onSave,
+  saving = false,
+  saveError = null,
 }: {
   initialData?: AllergyRow | null;
   onClose: () => void;
   onSave: (row: Omit<AllergyRow, "id">, id?: string) => void;
+  saving?: boolean;
+  /** The server's refusal, shown in the form (it stays open). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const h = dictionary?.myHealth;
   const isEs = language === "ES";
-  const weekPrefix = h?.allergies?.weekPrefix || "Week";
-
-  const getReaction = (key: string, fallback: string) => {
-    const reactions = h?.allergies?.reactions;
-    if (reactions && typeof reactions === "object" && key in reactions) {
-      return (reactions as Record<string, string>)[key] || fallback;
-    }
-    return fallback;
-  };
-
   const initialName = initialData?.name || "";
-  const initialReaction = initialData
-    ? initialData.reactionKey
-      ? getReaction(initialData.reactionKey, initialData.reactionDefault)
-      : initialData.reactionDefault
-    : "";
-  const initialNotes = initialData
-    ? (initialData.notes ??
-      (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
-    : "";
+  const initialReaction = initialData?.reactionDefault ?? "";
+  const initialNotes =
+    initialData?.notes && initialData.notes !== "—" ? initialData.notes : "";
 
   const [name, setName] = React.useState(initialName);
   const [type, setType] = React.useState<AllergyType>(
@@ -146,13 +138,16 @@ export function AllergyModal({
       onClose={onClose}
       cancelLabel={isEs ? "Cancelar" : "Cancel"}
       submitLabel={submitLabel}
+      saving={saving}
     >
       <form
         id="allergy-form"
         onSubmit={handleSubmit}
         className="space-y-stack-lg"
       >
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {error || saveError ? (
+          <Alert tone="danger">{error || saveError}</Alert>
+        ) : null}
 
         <FormField label={h?.allergies?.headers?.name || "Name"} required>
           {(props) => (
@@ -249,23 +244,18 @@ export function ConditionModal({
   initialData,
   onClose,
   onSave,
+  saving = false,
+  saveError = null,
 }: {
   initialData?: HistoryRow | null;
   onClose: () => void;
   onSave: (row: Omit<HistoryRow, "id">, id?: string) => void;
+  saving?: boolean;
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const h = dictionary?.myHealth;
   const isEs = language === "ES";
-  const weekPrefix = h?.allergies?.weekPrefix || "Week";
-
-  const getConditionName = (key: string, fallback: string) => {
-    const conditions = h?.history?.conditions;
-    if (conditions && typeof conditions === "object" && key in conditions) {
-      return (conditions as Record<string, string>)[key] || fallback;
-    }
-    return fallback;
-  };
 
   /* MM/DD/YYYY, as everywhere else in the app (2026-10-08). */
   const parseToDateInput = (mmddyyyy?: string) => {
@@ -278,16 +268,10 @@ export function ConditionModal({
     return mmddyyyy;
   };
 
-  const initialCondition = initialData
-    ? initialData.conditionKey
-      ? getConditionName(initialData.conditionKey, initialData.conditionDefault)
-      : initialData.conditionDefault
-    : "";
+  const initialCondition = initialData?.conditionDefault ?? "";
   const initialDiagnosed = parseToDateInput(initialData?.diagnosed);
-  const initialNotes = initialData
-    ? (initialData.notes ??
-      (initialData.week ? `${weekPrefix} ${initialData.week}` : ""))
-    : "";
+  const initialNotes =
+    initialData?.notes && initialData.notes !== "—" ? initialData.notes : "";
 
   const [condition, setCondition] = React.useState(initialCondition);
   const [status, setStatus] = React.useState<ConditionStatus>(
@@ -340,13 +324,16 @@ export function ConditionModal({
       onClose={onClose}
       cancelLabel={isEs ? "Cancelar" : "Cancel"}
       submitLabel={submitLabel}
+      saving={saving}
     >
       <form
         id="condition-form"
         onSubmit={handleSubmit}
         className="space-y-stack-lg"
       >
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {error || saveError ? (
+          <Alert tone="danger">{error || saveError}</Alert>
+        ) : null}
 
         <FormField
           label={h?.history?.headers?.condition || "Condition / History"}

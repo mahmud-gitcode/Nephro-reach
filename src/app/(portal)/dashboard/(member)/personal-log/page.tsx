@@ -24,6 +24,8 @@ import {
 import PersonalLogDisclaimer from "@/features/personal-log/PersonalLogDisclaimer";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
 import {
+  Alert,
+  AsyncSection,
   Badge,
   Button,
   buttonStyles,
@@ -49,6 +51,13 @@ import {
   type TeamRole,
 } from "@/features/care-team/healthcareTeam";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { isApiError } from "@/lib/api/client";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -324,9 +333,12 @@ function HealthcareTeam() {
   });
   const [tried, setTried] = useState(false);
   const error = teamError(team.team, draft);
+  /* The server answers 409 for an email already on the team (another
+     device may have added it): the same words as the local check. */
+  const serverDuplicate = isApiError(team.saveError, { status: 409 });
   const errorText =
-    tried && error
-      ? error === "duplicate"
+    (tried && error) || serverDuplicate
+      ? error === "duplicate" || serverDuplicate
         ? isEs
           ? "Esta persona ya está en su equipo."
           : "This person is already on your team."
@@ -338,10 +350,13 @@ function HealthcareTeam() {
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     setTried(true);
-    if (error) return;
-    team.invite(draft);
-    setDraft({ email: "", name: "", role: draft.role });
-    setTried(false);
+    if (error || team.isSaving) return;
+    team.resetSaveError();
+    /* The form clears only once the server added them. */
+    team.invite(draft, () => {
+      setDraft({ email: "", name: "", role: draft.role });
+      setTried(false);
+    });
   };
 
   return (
@@ -407,17 +422,43 @@ function HealthcareTeam() {
             </Select>
           )}
         </FormField>
-        <Button type="submit" leadingIcon={<Plus />}>
+        <Button type="submit" leadingIcon={<Plus />} loading={team.isSaving}>
           {isEs ? "Invitar" : "Invite"}
         </Button>
       </form>
+      {team.saveError && !serverDuplicate ? (
+        <Alert tone="danger" live>
+          {saveErrorText(team.saveError, isEs ? "es" : "en")}
+        </Alert>
+      ) : null}
 
       <p className="text-body-xs text-fg-muted">
         {t("personalLogHub.team.note")}
       </p>
 
       <Card padding="none" className="border border-line-subtle bg-white">
-        {team.isPending ? (
+        {team.error ? (
+          <AsyncSection
+            pending={false}
+            skeleton={null}
+            error={team.error}
+            onRetry={canRetry(team.error) ? team.refetch : undefined}
+            errorTitle={errorTitleFor(
+              team.error,
+              isEs
+                ? "No se pudo cargar su equipo de salud"
+                : "Your healthcare team could not be loaded",
+              isEs ? "es" : "en",
+            )}
+            errorMessage={errorMessageFor(
+              team.error,
+              undefined,
+              isEs ? "es" : "en",
+            )}
+          >
+            {null}
+          </AsyncSection>
+        ) : team.isPending ? (
           <Skeleton height={80} />
         ) : team.team.length === 0 ? (
           <EmptyState variant="bare" title={t("personalLogHub.team.empty")} />
@@ -447,18 +488,8 @@ function HealthcareTeam() {
                         : "Accepted"
                       : t("personalLogHub.team.invited")}
                   </Badge>
-                  {/* Until the server emails the invitation, the member can
-                      play the other side of it. */}
-                  {member.status === "invited" ? (
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => team.accept(member.id)}
-                    >
-                      {isEs ? "Marcar aceptada" : "Mark accepted"}
-                    </Button>
-                  ) : null}
+                  {/* No "Mark accepted" (INT-14): the person accepts for
+                      themselves once invitations are emailed. */}
                   <Button
                     size="small"
                     variant="neutral"
@@ -469,6 +500,7 @@ function HealthcareTeam() {
                         ? `Quitar a ${member.email}`
                         : `Remove ${member.email}`
                     }
+                    disabled={team.isSaving}
                     onClick={() => team.remove(member.id)}
                   >
                     <Trash2 />
