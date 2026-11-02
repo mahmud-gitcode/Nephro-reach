@@ -95,6 +95,11 @@ const pages: [
     /Your lab results could not be loaded/,
   ],
   [
+    "medications",
+    () => import("./personal-log/medications/page"),
+    /Your medications could not be loaded/,
+  ],
+  [
     "my health",
     () => import("./my-health/page"),
     /Your allergies could not be loaded/,
