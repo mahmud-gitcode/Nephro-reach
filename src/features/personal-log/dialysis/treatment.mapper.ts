@@ -136,7 +136,9 @@ export type TreatmentBody = {
   makeupForDate: string | null;
   startTime: string | null;
   endTime: string | null;
-  location: string | null;
+  /** Sent only when the member edited it (null = cleared). Omitted
+   *  otherwise, so an edit never wipes a location another writer set. */
+  location?: string | null;
   arrivedLate: boolean;
   endedEarly: boolean;
   preWeight: string | null;
@@ -163,6 +165,10 @@ export type TreatmentDraft = {
   /** HH:mm from the time inputs. */
   startTime: string;
   endTime: string;
+  /** The treatment location, only when the form edits it: undefined = not
+   *  touched (left out of the body), "" = cleared (sent as null). Today's
+   *  form has no location input, so it is never set. */
+  location?: string;
   arrivedLate: YesNo;
   endedEarly: YesNo;
   extraRecovery: YesNo;
@@ -250,6 +256,9 @@ export function treatmentDraftProblem(
 
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** The server's limit on the treatment location (NAME_MAX). */
+const LOCATION_MAX = 120;
+
 function orNull(value: string | undefined | null, max = 20): string | null {
   const trimmed = (value ?? "").trim();
   return trimmed ? trimmed.slice(0, max) : null;
@@ -300,7 +309,9 @@ export function toTreatmentBody(draft: TreatmentDraft): TreatmentBody {
         : null,
     startTime: missed || !draft.startTime ? null : draft.startTime,
     endTime: missed || !draft.endTime ? null : draft.endTime,
-    location: null,
+    ...(draft.location === undefined
+      ? {}
+      : { location: orNull(draft.location, LOCATION_MAX) }),
     arrivedLate: !home && draft.arrivedLate === "Yes",
     endedEarly: draft.endedEarly === "Yes",
     preWeight: kgWeightText(draft.preWeight),
