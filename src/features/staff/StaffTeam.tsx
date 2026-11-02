@@ -36,7 +36,6 @@ import {
   Tabs,
 } from "@/components/ui";
 import { useAuth } from "@/features/auth/AuthContext";
-import { nonStaffEmailsInUse } from "@/features/auth/auth";
 import { roleNameError, useRolePermissions } from "./rolePermissions";
 import {
   ALL,
@@ -147,10 +146,8 @@ function AddStaffModal({
   const [tried, setTried] = useState(false);
   const set = (change: Partial<StaffDraft>) =>
     setDraft((d) => ({ ...d, ...change }));
-  const taken = [
-    ...nonStaffEmailsInUse(),
-    ...accounts.map((account) => account.email),
-  ];
+  /* Other accounts' emails are the server's to check (Phase 3 invites). */
+  const taken = accounts.map((account) => account.email);
   const error = staffError(draft, taken);
   const show = (fields: StaffError[]) =>
     tried && error && fields.includes(error) ? ERROR_TEXT[error] : undefined;
@@ -261,9 +258,9 @@ function EditStaffModal({
   /** The administrator's own account: they cannot lock themselves out. */
   isSelf: boolean;
   onSave: (
-    change: Partial<
-      Pick<StaffAccount, "name" | "role" | "status" | "password">
-    >,
+    change: Partial<Pick<StaffAccount, "name" | "role" | "status">> & {
+      password?: string;
+    },
   ) => void;
   onClose: () => void;
 }) {

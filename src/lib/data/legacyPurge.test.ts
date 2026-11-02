@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   isRetiredKey,
   KEPT_KEYS,
+  LEGACY_SESSION_COOKIE,
   purgeLegacyStorage,
   RETIRED_STORES,
   STORAGE_VERSION,
@@ -16,11 +17,12 @@ const LIVE = [
   "nr:member:new.member@example.test:weight-fluid-log",
   "nr:caregiver-grants",
   "nr:dialysis-schedule",
-  "nr-registered-users",
   "nr:medication-doses",
 ];
 
 const RETIRED = [
+  /* Phase 2: the prototype's accounts with plain-text passwords. */
+  "nr-registered-users",
   "nr:medication-mood",
   "nr:member:new.member@example.test:medication-mood",
   "nr:caregiver-none:medication-mood",
@@ -90,5 +92,67 @@ describe("the registry", () => {
       expect(store.why.length).toBeGreaterThan(20);
       expect(store.since).toBeLessThanOrEqual(STORAGE_VERSION);
     }
+  });
+});
+
+/* Phase 2 (ADR 0006 step 2): demo credentials and the editable demo session
+   must not survive in a browser that used the prototype, and must not come
+   back when an old tab writes them again. */
+describe("Phase 2: demo credentials and the demo session", () => {
+  const forgedAdmin = encodeURIComponent(
+    JSON.stringify({ email: "x@example.test", name: "x", role: "admin" }),
+  );
+
+  function seedLegacy() {
+    document.cookie = `${LEGACY_SESSION_COOKIE}=${forgedAdmin}; path=/`;
+    window.localStorage.setItem(
+      "nr-registered-users",
+      JSON.stringify([
+        { email: "a@example.test", password: "secret-1", role: "user" },
+      ]),
+    );
+    window.localStorage.setItem(
+      "nr:staff-accounts",
+      JSON.stringify([
+        { id: "s1", email: "s1@example.test", password: "staff-pass" },
+        { id: "s2", email: "s2@example.test" },
+      ]),
+    );
+  }
+
+  function assertClean() {
+    expect(document.cookie).not.toContain(`${LEGACY_SESSION_COOKIE}=`);
+    expect(window.localStorage.getItem("nr-registered-users")).toBeNull();
+    const staff = window.localStorage.getItem("nr:staff-accounts") ?? "";
+    expect(staff).not.toContain("password");
+    expect(staff).not.toContain("staff-pass");
+    /* The live roster itself stays for the staff screen (Phase 3). */
+    expect(JSON.parse(staff)).toEqual([
+      { id: "s1", email: "s1@example.test" },
+      { id: "s2", email: "s2@example.test" },
+    ]);
+  }
+
+  it("expires the cookie, drops stored accounts and strips staff passwords", () => {
+    seedLegacy();
+    const result = purgeLegacyStorage();
+    assertClean();
+    expect(result.removed).toContain("nr-registered-users");
+    expect(result.removed).toContain("nr:staff-accounts#fields");
+    expect(result.version).toBe(2);
+  });
+
+  it("purges again when an old tab writes them back", () => {
+    seedLegacy();
+    purgeLegacyStorage();
+    seedLegacy();
+    purgeLegacyStorage();
+    assertClean();
+  });
+
+  it("removes an unreadable staff list rather than keep what it cannot check", () => {
+    window.localStorage.setItem("nr:staff-accounts", "{not json");
+    purgeLegacyStorage();
+    expect(window.localStorage.getItem("nr:staff-accounts")).toBeNull();
   });
 });

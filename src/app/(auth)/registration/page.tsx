@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useAuth, type SignInOutcome } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { DEMO_ACCOUNTS, USER_HOME } from "@/features/auth/auth";
+import { routeAfterSignIn } from "@/features/auth/auth.mapping";
+import { authErrorKind, authErrorPath } from "@/features/auth/authErrors";
+import { useAuthText } from "@/features/auth/authText";
+import { useAuthProviders } from "@/features/auth/providers";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const inputClassName =
@@ -24,10 +27,56 @@ export default function RegistrationPage() {
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const { register, loginAs } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const { language, setLanguage, dictionary } = useLanguage();
   const s = dictionary?.signup;
+  const t = useAuthText();
+  const providers = useAuthProviders();
   const router = useRouter();
+  const busy = useRef(false);
+
+  /* `next` survives registration (an invitation link, Phase 3). Read from
+     the address bar at submit time: this page has no Suspense boundary for
+     useSearchParams, and its markup must not change. */
+  const nextParam = () =>
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("next");
+
+  const submit = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      /* phone is collected but not sent (D6: whether phone is collected at
+         sign-up is still to confirm). */
+      const context = await register({ name, email, password }, agreed);
+      router.push(routeAfterSignIn(context, nextParam()));
+    } catch (cause) {
+      busy.current = false;
+      setError(
+        authErrorKind(cause) === "exists"
+          ? s?.errors?.emailExists ||
+              "That email is already registered. Sign in instead."
+          : t(authErrorPath(cause)),
+      );
+    }
+  };
+
+  const google = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      const outcome: SignInOutcome = await loginWithGoogle();
+      router.push(
+        outcome.kind === "two-factor"
+          ? "/two-factor"
+          : routeAfterSignIn(outcome.context, nextParam()),
+      );
+    } catch (cause) {
+      busy.current = false;
+      setError(t(authErrorPath(cause)));
+    }
+  };
 
   return (
     <main className="font-sf relative min-h-screen w-full overflow-x-hidden bg-white">
@@ -160,15 +209,8 @@ export default function RegistrationPage() {
                     );
                     return;
                   }
-                  const result = register({ name, email, password });
-                  if (result === "exists") {
-                    setError(
-                      s?.errors?.emailExists ||
-                        "That email is already registered. Sign in instead.",
-                    );
-                    return;
-                  }
-                  router.push(USER_HOME);
+                  setError("");
+                  void submit();
                 }}
               >
                 <div className="flex w-full flex-col gap-3.5">
@@ -328,39 +370,35 @@ export default function RegistrationPage() {
                 </button>
               </form>
 
-              <div className="flex w-full flex-col gap-6">
-                <div className="flex w-full items-center justify-center gap-4 py-2.5">
-                  <div className="h-px flex-1 bg-[#CBD5ED]/80" />
-                  <span className="text-base leading-6 font-medium tracking-[0.08px] text-[#294957]">
-                    {s?.dividerOr || "Or"}
-                  </span>
-                  <div className="h-px flex-1 bg-[#CBD5ED]/80" />
-                </div>
+              {/* D5-G: Google only when the API says it is configured. */}
+              {providers.google ? (
+                <div className="flex w-full flex-col gap-6">
+                  <div className="flex w-full items-center justify-center gap-4 py-2.5">
+                    <div className="h-px flex-1 bg-[#CBD5ED]/80" />
+                    <span className="text-base leading-6 font-medium tracking-[0.08px] text-[#294957]">
+                      {s?.dividerOr || "Or"}
+                    </span>
+                    <div className="h-px flex-1 bg-[#CBD5ED]/80" />
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs({
-                      email: DEMO_ACCOUNTS[1].email,
-                      name: DEMO_ACCOUNTS[1].name,
-                      role: "user",
-                    });
-                    router.push(USER_HOME);
-                  }}
-                  className="flex h-[52px] w-full items-center justify-center gap-4 rounded-xl bg-[#F3F9FA] px-[9px] py-3 transition-colors hover:bg-[#E8F3F5]"
-                >
-                  <span className="relative block size-7 shrink-0 overflow-clip">
-                    <LocalSvg
-                      src="/images/registration/google.svg"
-                      alt=""
-                      className="size-full"
-                    />
-                  </span>
-                  <span className="text-base leading-none font-normal tracking-[0.16px] text-[#313957]">
-                    {s?.googleSignUp || "Sign in with Google"}
-                  </span>
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => void google()}
+                    className="flex h-[52px] w-full items-center justify-center gap-4 rounded-xl bg-[#F3F9FA] px-[9px] py-3 transition-colors hover:bg-[#E8F3F5]"
+                  >
+                    <span className="relative block size-7 shrink-0 overflow-clip">
+                      <LocalSvg
+                        src="/images/registration/google.svg"
+                        alt=""
+                        className="size-full"
+                      />
+                    </span>
+                    <span className="text-base leading-none font-normal tracking-[0.16px] text-[#313957]">
+                      {s?.googleSignUp || "Sign in with Google"}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
 
               <p className="w-full text-center text-base leading-6 font-medium tracking-[0.08px] text-[#0F172A]">
                 {s?.haveAccount || "Already have an account?"}{" "}

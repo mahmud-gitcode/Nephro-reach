@@ -1,17 +1,15 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useAuth, type SignInOutcome } from "@/features/auth/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import {
-  canAccessPath,
-  DEMO_ACCOUNTS,
-  homeForRole,
-  type UserRole,
-} from "@/features/auth/auth";
+import { routeAfterSignIn } from "@/features/auth/auth.mapping";
+import { authErrorPath } from "@/features/auth/authErrors";
+import { useAuthText } from "@/features/auth/authText";
+import { useAuthProviders } from "@/features/auth/providers";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const inputClassName =
@@ -29,20 +27,54 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const { login, loginAs } = useAuth();
+  const { status, context, login, loginWithGoogle } = useAuth();
   const { language, setLanguage, dictionary } = useLanguage();
   const l = dictionary?.login;
+  const t = useAuthText();
+  const providers = useAuthProviders();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const reason = searchParams.get("reason");
+  const busy = useRef(false);
 
-  const goAfterLogin = (role: UserRole) => {
-    const next = searchParams.get("next");
-    if (next && next.startsWith("/dashboard") && canAccessPath(role, next)) {
-      router.push(next);
+  /* Why the user is here (text only, in the existing error element). */
+  const reasonText =
+    reason === "expired"
+      ? t("reasons.expired")
+      : reason === "access-changed"
+        ? t("reasons.accessChanged")
+        : reason === "password-reset"
+          ? t("reasons.passwordReset")
+          : "";
+
+  /* Already signed in (AuthProvider read /me/context on this page): go on. */
+  useEffect(() => {
+    if (status === "signed-in" && context && !busy.current) {
+      router.replace(routeAfterSignIn(context, next));
+    }
+  }, [status, context, next, router]);
+
+  const afterSignIn = (outcome: SignInOutcome) => {
+    if (outcome.kind === "two-factor") {
+      router.push("/two-factor");
       return;
     }
-    router.push(homeForRole(role));
+    router.push(routeAfterSignIn(outcome.context, next));
+  };
+
+  const run = async (step: () => Promise<SignInOutcome>) => {
+    if (busy.current) return;
+    busy.current = true;
+    setError("");
+    try {
+      afterSignIn(await step());
+    } catch (cause) {
+      busy.current = false;
+      setError(t(authErrorPath(cause)));
+    }
   };
 
   return (
@@ -161,15 +193,8 @@ function LoginForm() {
                 className="flex w-full flex-col gap-6"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  const next = login(email, password);
-                  if (!next) {
-                    setError(
-                      l?.errors?.invalid ||
-                        "Use a demo account or an email you registered.",
-                    );
-                    return;
-                  }
-                  goAfterLogin(next.role);
+                  setDirty(true);
+                  void run(() => login(email, password));
                 }}
               >
                 <div className="flex w-full flex-col gap-3.5">
@@ -189,6 +214,7 @@ function LoginForm() {
                         onChange={(event) => {
                           setEmail(event.target.value);
                           setError("");
+                          setDirty(true);
                         }}
                         placeholder={l?.emailPlaceholder || "Example@email.com"}
                         className={inputClassName}
@@ -213,6 +239,7 @@ function LoginForm() {
                         onChange={(event) => {
                           setPassword(event.target.value);
                           setError("");
+                          setDirty(true);
                         }}
                         placeholder={
                           l?.passwordPlaceholder || "at least 8 characters"
@@ -223,7 +250,7 @@ function LoginForm() {
                     </div>
                     <div className="flex justify-end">
                       <Link
-                        href="#"
+                        href="/forgot-password"
                         className="text-sm leading-5 font-medium tracking-[0.07px] text-[#1D4ED8] hover:underline"
                       >
                         {l?.forgotPassword || "Forgot Password?"}
@@ -232,8 +259,10 @@ function LoginForm() {
                   </div>
                 </div>
 
-                {error ? (
-                  <p className="text-sm font-medium text-red-500">{error}</p>
+                {error || (!dirty && reasonText) ? (
+                  <p className="text-sm font-medium text-red-500">
+                    {error || reasonText}
+                  </p>
                 ) : null}
 
                 <button
@@ -244,39 +273,35 @@ function LoginForm() {
                 </button>
               </form>
 
-              <div className="flex w-full flex-col gap-6">
-                <div className="flex w-full items-center justify-center gap-4 py-2.5">
-                  <div className="h-px flex-1 bg-[#CBD5ED]/80" />
-                  <span className="text-base leading-6 font-medium tracking-[0.08px] text-[#294957]">
-                    {l?.dividerOr || "Or"}
-                  </span>
-                  <div className="h-px flex-1 bg-[#CBD5ED]/80" />
-                </div>
+              {/* D5-G: Google only when the API says it is configured. */}
+              {providers.google ? (
+                <div className="flex w-full flex-col gap-6">
+                  <div className="flex w-full items-center justify-center gap-4 py-2.5">
+                    <div className="h-px flex-1 bg-[#CBD5ED]/80" />
+                    <span className="text-base leading-6 font-medium tracking-[0.08px] text-[#294957]">
+                      {l?.dividerOr || "Or"}
+                    </span>
+                    <div className="h-px flex-1 bg-[#CBD5ED]/80" />
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    loginAs({
-                      email: DEMO_ACCOUNTS[1].email,
-                      name: DEMO_ACCOUNTS[1].name,
-                      role: "user",
-                    });
-                    goAfterLogin("user");
-                  }}
-                  className="flex h-[52px] w-full items-center justify-center gap-4 rounded-xl border border-[#E2E8F0] bg-white px-[9px] py-3 transition-colors hover:bg-[#F8FAFC]"
-                >
-                  <span className="relative block size-7 shrink-0 overflow-clip">
-                    <LocalSvg
-                      src="/images/login/google.svg"
-                      alt=""
-                      className="size-full"
-                    />
-                  </span>
-                  <span className="text-base font-normal tracking-[0.16px] text-[#313957]">
-                    {l?.googleSignIn || "Sign in with Google"}
-                  </span>
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => void run(loginWithGoogle)}
+                    className="flex h-[52px] w-full items-center justify-center gap-4 rounded-xl border border-[#E2E8F0] bg-white px-[9px] py-3 transition-colors hover:bg-[#F8FAFC]"
+                  >
+                    <span className="relative block size-7 shrink-0 overflow-clip">
+                      <LocalSvg
+                        src="/images/login/google.svg"
+                        alt=""
+                        className="size-full"
+                      />
+                    </span>
+                    <span className="text-base font-normal tracking-[0.16px] text-[#313957]">
+                      {l?.googleSignIn || "Sign in with Google"}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
 
               <p className="w-full text-center text-base leading-6 font-medium tracking-[0.08px] text-[#0F172A]">
                 {l?.noAccount || "Don't you have an account?"}{" "}

@@ -177,16 +177,137 @@
     "signUp": "Sign up",
     "createAccount": "Create an Account",
     "alreadyHaveAccount": "Already have an account?",
-    "invalidCredentials": "Use a demo account or an email you registered.",
     "emailExists": "That email is already registered. Sign in instead.",
     "passwordTooShort": "Password must be at least 8 characters.",
     "passwordMismatch": "Passwords do not match.",
     "agreeRequired": "Please agree to the terms to continue.",
-    "demoTitle": "Demo accounts",
-    "demoAdmin": "Admin: admin@nephroreach.com / admin123",
-    "demoUser": "User: user@nephroreach.com / user123",
-    "continueAdmin": "Continue as Admin",
-    "continueUser": "Continue as User"
+    "invalidCredentials": "Email or password is incorrect.",
+    "errors": {
+      "tooMany": "Too many attempts. Wait a minute and try again.",
+      "locked": "Too many attempts on this account. Try again later.",
+      "network": "We could not reach NephroReach. Check your connection and try again.",
+      "generic": "Something went wrong. Try again.",
+      "codeInvalid": "That code is not right. Check it and try again.",
+      "codeExpired": "That code has expired or was already used. Request a new one.",
+      "challengeEnded": "This sign-in has expired. Sign in again.",
+      "linkInvalid": "This link is invalid or has expired.",
+      "registrationUnavailable": "Registration is not available right now. Try again later.",
+      "googleUnavailable": "Google sign-in is not available.",
+      "googleConflict": "An account already uses this email. Sign in with your password, then link Google in your security settings.",
+      "googleUnverified": "Your Google email address is not verified.",
+      "mfaLastMethod": "Your organization requires two-step verification. Add another method before turning this one off."
+    },
+    "reasons": {
+      "expired": "Your session has ended. Sign in again.",
+      "accessChanged": "Your access changed. Sign in again to continue.",
+      "passwordReset": "Password updated. Sign in with your new password."
+    },
+    "common": {
+      "backToSignIn": "Back to sign in",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "code": "Code",
+      "sendCode": "Send me a code",
+      "resend": "Send a new code",
+      "codeSent": "A code is on its way.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "passwordShort": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "required": "This field is required.",
+      "email": "Email"
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "intro": "Enter the code from your authenticator app. If you lost it, enter one of your backup codes instead.",
+      "method": "Verification method",
+      "totp": "Authenticator app",
+      "email": "Email code",
+      "sms": "Text message code",
+      "verify": "Verify"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "intro": "We sent a code to your email. Enter it here, or open the link in that email.",
+      "introSignedOut": "Enter your email address and the code we sent to it.",
+      "verify": "Verify email",
+      "verified": "Your email is verified.",
+      "checkingLink": "Checking your link…"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "intro": "Enter the email or phone number on your account.",
+      "identifier": "Email or phone number",
+      "sent": "If an account uses what you entered, choose where to send a reset code. If no option appears, check what you entered.",
+      "sendTo": "Send a code to {hint}",
+      "codeLabel": "Reset code",
+      "submit": "Reset password"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "submit": "Save new password"
+    },
+    "confirmEmail": {
+      "title": "Confirm your new email",
+      "done": "Your email address is changed.",
+      "addedTitle": "Confirm your added email",
+      "addedDone": "The email address is added to your account."
+    },
+    "setupPatient": {
+      "title": "Set up your patient profile",
+      "intro": "Tell us your name as it appears on your medical records. You can change it later.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "dateOfBirth": "Date of birth",
+      "save": "Save and continue"
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "required": "Your organization requires two-step verification before you can open patient information.",
+      "intro": "Add a second step to signing in with an authenticator app on your phone.",
+      "start": "Set up an authenticator app",
+      "scan": "Scan this QR code with your authenticator app, or enter the setup key by hand.",
+      "qrAlt": "QR code for your authenticator app",
+      "secret": "Setup key",
+      "showSecret": "Show setup key",
+      "hideSecret": "Hide setup key",
+      "confirmCode": "6-digit code from the app",
+      "confirm": "Turn on",
+      "on": "Two-step verification is on.",
+      "off": "Two-step verification is off.",
+      "methods": "Your methods",
+      "turnOff": "Turn off",
+      "backupTitle": "Save your backup codes",
+      "backupIntro": "Each code signs you in once if you lose your phone. They are shown only now: write them down or print them, and keep them private.",
+      "backupSaved": "I have saved these codes",
+      "regenerate": "Make new backup codes",
+      "goOn": "Continue"
+    },
+    "sudo": {
+      "title": "Confirm it is you",
+      "intro": "For your security, confirm your identity to continue.",
+      "password": "Use my password",
+      "email": "Email me a code",
+      "sms": "Text me a code",
+      "app": "Use my authenticator app",
+      "passwordLabel": "Password",
+      "confirm": "Confirm",
+      "locked": "Too many attempts. Try again later."
+    },
+    "idle": {
+      "title": "Are you still there?",
+      "body": "You will be signed out in {time} because there has been no activity. Unsaved changes will be lost.",
+      "stay": "Stay signed in",
+      "signOut": "Sign out",
+      "absolute": "Your session ends at {time}. Save your work: you will need to sign in again."
+    },
+    "guard": {
+      "errorTitle": "We could not check your session",
+      "errorBody": "NephroReach did not answer. Nothing was lost; try again.",
+      "retry": "Try again",
+      "noPortalTitle": "No portal for your organization yet",
+      "noPortalBody": "Your organization does not have a NephroReach portal yet. Contact NephroReach support."
+    }
   },
   "footer": {
     "description": "A non-clinical educational engagement platform for notification check-ins, digital journaling, structured learning, and monthly live classes.",
