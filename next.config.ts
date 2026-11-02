@@ -79,6 +79,22 @@ const tokenPageHeaders = [
   { key: "Referrer-Policy", value: "no-referrer" },
 ];
 
+/* Phase 2 auth pages. The links that open them carry a one-time secret
+   (an email-verification, reset or confirm token) and the pages hold codes
+   and challenge state: never cached, never indexed, never sent on as a
+   Referer. Login and registration get no-referrer too: their `next` may
+   carry an invitation link (and the token in it). */
+const AUTH_TOKEN_PAGES = [
+  "/verify-email",
+  "/reset-password",
+  "/forgot-password",
+  "/confirm-email",
+  "/confirm-added-email",
+  "/two-factor",
+  "/setup/:path*",
+];
+const noReferrer = [{ key: "Referrer-Policy", value: "no-referrer" }];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
@@ -89,6 +105,12 @@ const nextConfig: NextConfig = {
       { source: "/dashboard/:path*", headers: privatePageHeaders },
       { source: "/secure/:path*", headers: tokenPageHeaders },
       { source: "/caregiver-invite/:path*", headers: tokenPageHeaders },
+      ...AUTH_TOKEN_PAGES.map((source) => ({
+        source,
+        headers: tokenPageHeaders,
+      })),
+      { source: "/login", headers: noReferrer },
+      { source: "/registration", headers: noReferrer },
     ];
   },
 };
