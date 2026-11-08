@@ -32,7 +32,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { NoticeRailLayout } from "@/components/layout/NoticeRailLayout";
-import { DayCard } from "../page";
+import { DayCard } from "@/features/education/member/ClassroomDayCard";
 import {
   AsyncSection,
   Button,
