@@ -43,7 +43,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
-import { isSafeFileUrl } from "@/lib/utils/safeUrl";
+import { isStorageDownloadUrl } from "@/lib/utils/safeUrl";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { tableIconButton } from "./tableButton";
 import {
@@ -292,9 +292,10 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
     setLinkError(null);
     try {
       const link = await invoiceDownloadLink(billing.orgId, invoice.id);
-      /* Defence in depth: only a file link the app may open (never a
-         javascript: or an active data: URL), whatever the server returned. */
-      if (!isSafeFileUrl(link.url))
+      /* Defence in depth: only a presigned link on the app's file storage
+         (https, or the storage stand-in on this machine; never javascript:,
+         data: or blob:), whatever the server returned. */
+      if (!isStorageDownloadUrl(link.url))
         throw new RangeError(
           "The invoice link was not valid. Nothing was opened.",
         );

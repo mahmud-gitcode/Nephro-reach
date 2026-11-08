@@ -94,6 +94,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   window.localStorage.clear();
 });
 
@@ -221,6 +222,7 @@ describe("office billing page", () => {
   });
 
   it("an issued PDF opens through the short-lived link", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "http://localhost:5906");
     const opened = vi.fn();
     vi.stubGlobal("open", opened);
     const { calls } = billingApi((c) =>
@@ -249,7 +251,12 @@ describe("office billing page", () => {
     "javascript:alert(1)",
     "data:text/html,<script>alert(1)</script>",
     "data:image/svg+xml,<svg onload=alert(1)>",
+    "data:application/pdf;base64,JVBERi0",
+    "blob:http://localhost:4000/1234",
+    "http://files.example/inv.pdf",
+    "https://elsewhere.example/inv.pdf",
   ])("an unsafe invoice link (%s) is never opened", async (url) => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "http://localhost:5906");
     const opened = vi.fn();
     vi.stubGlobal("open", opened);
     billingApi((c) =>

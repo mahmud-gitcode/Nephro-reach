@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { isSafeFileUrl, isSafeLinkUrl } from "./safeUrl";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isSafeFileUrl, isSafeLinkUrl, isStorageDownloadUrl } from "./safeUrl";
 
 describe("isSafeLinkUrl", () => {
   it("allows web links and this site's own paths", () => {
@@ -43,5 +43,50 @@ describe("isSafeFileUrl", () => {
 
   it("refuses script links", () => {
     expect(isSafeFileUrl("javascript:alert(1)")).toBe(false);
+  });
+});
+
+describe("isStorageDownloadUrl", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("allows a presigned link on the configured storage origin", () => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "https://files.example");
+    expect(
+      isStorageDownloadUrl("https://files.example/bucket/inv.pdf?sig=x"),
+    ).toBe(true);
+  });
+
+  it("refuses any other host when the storage origin is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "https://files.example");
+    expect(isStorageDownloadUrl("https://elsewhere.example/inv.pdf")).toBe(
+      false,
+    );
+    expect(isStorageDownloadUrl("http://files.example/inv.pdf")).toBe(false);
+  });
+
+  it("refuses blob:, data:, script and plain-http links", () => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "");
+    expect(isStorageDownloadUrl("blob:https://app.example/1234")).toBe(false);
+    expect(isStorageDownloadUrl("data:application/pdf;base64,JVBERi0")).toBe(
+      false,
+    );
+    expect(isStorageDownloadUrl("javascript:alert(1)")).toBe(false);
+    expect(isStorageDownloadUrl("http://files.example/inv.pdf")).toBe(false);
+    expect(isStorageDownloadUrl("/relative/inv.pdf")).toBe(false);
+    expect(isStorageDownloadUrl("")).toBe(false);
+    expect(isStorageDownloadUrl(null)).toBe(false);
+  });
+
+  it("allows https, or http to a stand-in on this machine, outside production when no origin is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "");
+    expect(isStorageDownloadUrl("https://files.example/inv.pdf")).toBe(true);
+    expect(isStorageDownloadUrl("http://localhost:5906/b/inv.pdf")).toBe(true);
+    expect(isStorageDownloadUrl("http://127.0.0.1:5906/b/inv.pdf")).toBe(true);
+  });
+
+  it("a production build without a storage origin opens nothing", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_STORAGE_ORIGIN", "");
+    expect(isStorageDownloadUrl("https://files.example/inv.pdf")).toBe(false);
   });
 });

@@ -38,3 +38,37 @@ export function isSafeFileUrl(url: string | null | undefined): url is string {
   if (parsed.protocol === "data:") return !ACTIVE_DATA_TYPE.test(trimmed);
   return ["blob:", "https:", "http:"].includes(parsed.protocol);
 }
+
+function isLoopbackHost(url: URL): boolean {
+  return (
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
+    url.hostname === "[::1]"
+  );
+}
+
+/** A presigned download link from the app's file storage (an invoice PDF).
+ *  Only https, or http to a storage stand-in on this machine; never blob:,
+ *  data: or javascript:. When NEXT_PUBLIC_STORAGE_ORIGIN is set the link
+ *  must be on that origin, and a production build must set it, the same
+ *  rule as presigned uploads (D18). */
+export function isStorageDownloadUrl(
+  url: string | null | undefined,
+): url is string {
+  if (!url) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (parsed.protocol === "http:" && !isLoopbackHost(parsed)) return false;
+  const storage = process.env.NEXT_PUBLIC_STORAGE_ORIGIN?.trim();
+  if (!storage) return process.env.NODE_ENV !== "production";
+  try {
+    return parsed.origin === new URL(storage).origin;
+  } catch {
+    return false;
+  }
+}
