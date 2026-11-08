@@ -39,6 +39,7 @@ const RETIRED = [
   "nr:dialysis-access-photos",
   /* Phase 11: messaging, outside shares and support moved to the API. */
   "nr:messaging",
+  "nr:outside-shares",
   "nr:support-tickets",
 ];
 
