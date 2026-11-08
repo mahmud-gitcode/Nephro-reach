@@ -421,10 +421,18 @@ export function formatTime(hhmm: string): string {
 
 /** A time input's value as the API's HH:mm (24-hour), or null. */
 export function toHhMm(value: string): string | null {
-  const match = /^(\d{1,2}):(\d{2})/.exec(value.trim());
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?$/.exec(
+    value.trim(),
+  );
   if (!match) return null;
-  const h = Number(match[1]);
+  let h = Number(match[1]);
   const m = Number(match[2]);
+  const suffix = match[3]?.toUpperCase();
+  if (suffix) {
+    /* 12-hour text ("4:30 PM"): never read as 04:30. */
+    if (h < 1 || h > 12) return null;
+    h = (h % 12) + (suffix === "PM" ? 12 : 0);
+  }
   if (h > 23 || m > 59) return null;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }

@@ -377,7 +377,7 @@ export function SendReferralModal({
               if (ok) {
                 onSent?.();
                 onClose();
-              } else setFailed(actions.error ?? true);
+              } else setFailed(true);
             }}
           >
             Send
@@ -388,7 +388,7 @@ export function SendReferralModal({
       <div className="space-y-stack-md">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(null)}>
-            {referralRefusal(failed, side)}
+            {referralRefusal(actions.error ?? failed, side)}
           </Alert>
         ) : null}
         {directory.error ? (

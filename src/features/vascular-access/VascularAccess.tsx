@@ -578,7 +578,7 @@ function ConcernModal({
         })
       : await actions.reportConcern(record.id, draft);
     if (ok) onSent(Boolean(editing), sendTo);
-    else setFailed(actions.error ?? true);
+    else setFailed(true);
   }
 
   return (
@@ -625,7 +625,7 @@ function ConcernModal({
       <div className="space-y-stack-md">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(null)}>
-            {writeErrorText(failed, isEs)}
+            {writeErrorText(actions.error ?? failed, isEs)}
           </Alert>
         ) : null}
         <ChipGroup label={isEs ? "¿Qué notas?" : "What are you noticing?"}>

@@ -260,7 +260,7 @@ function ScheduleModal({
                 team,
               });
               if (!ok) {
-                setFailed(actions.error ?? true);
+                setFailed(true);
                 return;
               }
               onScheduled?.();
@@ -279,7 +279,7 @@ function ScheduleModal({
             className="sm:col-span-2"
             onDismiss={() => setFailed(null)}
           >
-            {refusal(failed)}
+            {refusal(actions.error ?? failed)}
           </Alert>
         ) : null}
         <FormField label="Patient" required className="sm:col-span-2">
@@ -798,7 +798,7 @@ function AddAccessModal({
                 status,
               });
               if (ok) onClose();
-              else setFailed(actions.error ?? true);
+              else setFailed(true);
             }}
           >
             Add Patient
@@ -815,7 +815,7 @@ function AddAccessModal({
         <div className="space-y-stack-md">
           {failed ? (
             <Alert tone="danger" onDismiss={() => setFailed(null)}>
-              {refusal(failed)}
+              {refusal(actions.error ?? failed)}
             </Alert>
           ) : null}
           <FormField label="Patient" required>

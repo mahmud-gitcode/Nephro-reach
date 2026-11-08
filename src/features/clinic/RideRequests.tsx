@@ -146,7 +146,7 @@ function ConfirmRideModal({
                 form,
               );
               if (ok) onClose();
-              else setFailed(actions.error ?? true);
+              else setFailed(true);
             }}
           >
             {current ? "Save Changes" : "Confirm & Notify Patient"}
@@ -157,7 +157,7 @@ function ConfirmRideModal({
       <div className="space-y-stack-lg">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(null)}>
-            {refusal(failed)}
+            {refusal(actions.error ?? failed)}
           </Alert>
         ) : null}
         <section className="rounded-card-nested border border-line p-inset-sm">
@@ -547,7 +547,7 @@ function SetUpRideModal({
                 memberNote: "Arranged by your dialysis center.",
               });
               if (ok) onSaved(chosenId, chosenAppointment);
-              else setFailed(actions.error ?? true);
+              else setFailed(true);
             }}
           >
             Continue
@@ -571,7 +571,7 @@ function SetUpRideModal({
         <div className="space-y-stack-md">
           {failed ? (
             <Alert tone="danger" onDismiss={() => setFailed(null)}>
-              {refusal(failed)}
+              {refusal(actions.error ?? failed)}
             </Alert>
           ) : null}
           <FormField label="Patient" required>
