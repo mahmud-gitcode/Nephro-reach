@@ -401,8 +401,8 @@ describe("retired Phase 12 stores", () => {
       true,
     );
     expect(isRetiredKey("nr:caregiver-none:library-saved")).toBe(true);
-    // The pricing store is EDU-BIZ's and stays live until it moves.
-    expect(isRetiredKey("nr:subscription-plans")).toBe(false);
+    // The pricing store moved in Phase 14.5 (EDU-BIZ): retired there.
+    expect(isRetiredKey("nr:subscription-plans")).toBe(true);
   });
 
   it("purges legacy content and it cannot come back: the screens show only the API", async () => {
