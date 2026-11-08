@@ -49,9 +49,11 @@ describe("retired education and live-class storage", () => {
     for (const key of RETIRED) expect(isRetiredKey(key)).toBe(true);
     /* Live keys of other features are left alone. */
     expect(isRetiredKey("preferred_language")).toBe(false);
-    expect(isRetiredKey("nr:member:demo@example.test:library-saved")).toBe(
-      false,
-    );
+    /* library-saved was retired by Phase 12 (version 8); the member's
+       home-HD vitals stay live until D8. */
+    expect(
+      isRetiredKey("nr:member:demo@example.test:dialysis-treatment-vitals"),
+    ).toBe(false);
   });
 
   it("is purged, with the marker written, and every old row gone", () => {
