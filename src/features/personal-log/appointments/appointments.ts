@@ -1,14 +1,15 @@
 /* ==========================================================================
    The member's appointments
    --------------------------------------------------------------------------
-   Stored (member-owned, lib/data/storage), so an appointment added today is
-   still there tomorrow, and the "Next appointment" card is simply the
-   soonest one ahead rather than a fixed date.
+   Kept on the API (`/patients/:id/appointments`, appointments.repository;
+   P15c retired the browser copy `nr:member-appointments`), so the "Next
+   appointment" card is simply the soonest one ahead. These are the rules
+   the screens apply to what the API returns.
 
    Visits the access center books on the member's Vascular Access record
-   are copied in too (client, 2026-10-05), marked with their source: they
-   get the same reminders and "did you go?" question, follow the access
-   center's changes, and are not deleted here.
+   are copied in by the server (client, 2026-10-05), marked with their
+   source: they get the same reminders and "did you go?" question, follow
+   the access center's changes, and are not edited or deleted here.
    ========================================================================== */
 
 export type Appointment = {
@@ -30,6 +31,9 @@ export type Appointment = {
   attendance?: Attendance;
   /** Set when the appointment came from another record, not the member. */
   source?: "vascular-access";
+  /** The access-center visit a server copy follows
+   *  (`sourceAccessAppointmentId`). */
+  sourceId?: string;
   /** How long before to be reminded (client, 2026-10-05). */
   reminder?: ReminderLead;
   /** Set once a missed visit has been booked again, which ends the
@@ -126,40 +130,8 @@ export type Attendance = "attended" | "missed";
 
 export type AppointmentDraft = Omit<
   Appointment,
-  "id" | "attendance" | "source" | "rescheduled"
+  "id" | "attendance" | "source" | "sourceId" | "rescheduled"
 >;
-
-/**
- * Brings in appointments kept elsewhere: adds new ones, follows changes to
- * the date, time, title or place, and keeps the member's attendance answer.
- * Returns the same list when nothing changed, so a caller can skip a write.
- */
-export function syncExternal(
-  list: Appointment[],
-  external: Appointment[],
-): Appointment[] {
-  let changed = false;
-  const next = list.map((appointment) => {
-    const fresh = external.find((e) => e.id === appointment.id);
-    if (!fresh) return appointment;
-    const same =
-      fresh.date === appointment.date &&
-      fresh.start === appointment.start &&
-      fresh.title === appointment.title &&
-      fresh.location === appointment.location &&
-      fresh.doctor === appointment.doctor;
-    if (same) return appointment;
-    changed = true;
-    return { ...fresh, attendance: appointment.attendance };
-  });
-  for (const fresh of external) {
-    if (!list.some((a) => a.id === fresh.id)) {
-      next.push(fresh);
-      changed = true;
-    }
-  }
-  return changed ? next : list;
-}
 
 export type AppointmentError = "title" | "doctor" | "date" | "start" | "end";
 
@@ -190,52 +162,6 @@ export function past(list: Appointment[], today: string): Appointment[] {
     .sort((a, b) => key(b).localeCompare(key(a)));
 }
 
-export function addAppointment(
-  list: Appointment[],
-  draft: AppointmentDraft,
-  now: number,
-): Appointment[] {
-  return [
-    ...list,
-    {
-      ...draft,
-      id: `appt-${now}`,
-      title: draft.title.trim(),
-      doctor: draft.doctor.trim(),
-      location: draft.location.trim(),
-      address: draft.address.trim(),
-      notes: draft.notes.trim(),
-    },
-  ];
-}
-
-/**
- * Changes an appointment the member added — a new time, a new day (client,
- * 2026-10-10). A visit moved to another day or time has not happened yet,
- * so any "did you go?" answer for the old slot is cleared.
- */
-export function updateAppointment(
-  list: Appointment[],
-  id: string,
-  draft: AppointmentDraft,
-): Appointment[] {
-  return list.map((a) => {
-    if (a.id !== id || a.source) return a;
-    const moved = a.date !== draft.date || a.start !== draft.start;
-    const next: Appointment = {
-      ...a,
-      ...draft,
-      title: draft.title.trim(),
-      doctor: draft.doctor.trim(),
-      location: draft.location.trim(),
-      address: draft.address.trim(),
-      notes: draft.notes.trim(),
-    };
-    if (moved) delete next.attendance;
-    return next;
-  });
-}
-
 /** The editable part of an appointment, to fill the form with. */
 export function draftOf(a: Appointment): AppointmentDraft {
   return {
@@ -251,32 +177,12 @@ export function draftOf(a: Appointment): AppointmentDraft {
   };
 }
 
-export function setAttendance(
-  list: Appointment[],
-  id: string,
-  attendance: Attendance,
-): Appointment[] {
-  return list.map((a) => {
-    if (a.id !== id) return a;
-    const next: Appointment = { ...a, attendance };
-    if (attendance === "attended") delete next.rescheduled;
-    return next;
-  });
-}
-
 /** Missed visits not yet booked again, most recent first. The member is
  *  reminded to reschedule until they do (client, 2026-10-12). */
 export function needsReschedule(list: Appointment[]): Appointment[] {
   return list
     .filter((a) => a.attendance === "missed" && !a.rescheduled)
     .sort((a, b) => key(b).localeCompare(key(a)));
-}
-
-export function markRescheduled(
-  list: Appointment[],
-  id: string,
-): Appointment[] {
-  return list.map((a) => (a.id === id ? { ...a, rescheduled: true } : a));
 }
 
 /** Past appointments from the last 30 days the member has not answered
@@ -289,13 +195,6 @@ export function awaitingAnswer(
   const since = new Date(y, m - 1, d - 30);
   const sinceIso = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
   return past(list, today).filter((a) => !a.attendance && a.date >= sinceIso);
-}
-
-export function removeAppointment(
-  list: Appointment[],
-  id: string,
-): Appointment[] {
-  return list.filter((a) => a.id !== id);
 }
 
 /** "14:30" → "2:30 PM". */
@@ -316,40 +215,17 @@ export function directionsUrl(
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-/** The demo patient's sample appointments, dated from today so they stay
- *  ahead whenever the demo is opened. */
-export function seedAppointments(now: number): Appointment[] {
-  const at = (days: number) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-  const base = {
-    title: "Nephrology",
-    doctor: "Dr. Melissa Carter",
-    location: "Riverside Dialysis Center",
-    address: "123 Kidney Care Way, Columbia, SC 29201",
-    notes: "",
-  };
-  return [
-    { ...base, id: "seed-appt-1", date: at(3), start: "10:30", end: "11:15" },
-    { ...base, id: "seed-appt-2", date: at(10), start: "10:30", end: "11:15" },
-    {
-      ...base,
-      id: "seed-appt-3",
-      date: at(17),
-      start: "09:00",
-      end: "09:45",
-      title: "Dietitian Visit",
-      doctor: "Rachel Adams, RD",
-    },
-    {
-      ...base,
-      id: "seed-appt-4",
-      date: at(-14),
-      start: "10:30",
-      end: "11:15",
-      attendance: "attended",
-    },
-  ];
+/**
+ * The access center's visits (read from its record) that the server has
+ * not copied into the member's list yet, so a visit never shows twice.
+ * `va-<id>` is the id the access read gives each visit.
+ */
+export function notCopiedYet(
+  own: Appointment[],
+  access: Appointment[],
+): Appointment[] {
+  const copied = new Set(
+    own.flatMap((a) => (a.sourceId ? [`va-${a.sourceId}`] : [])),
+  );
+  return access.filter((a) => !copied.has(a.id));
 }

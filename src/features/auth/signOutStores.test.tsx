@@ -100,3 +100,47 @@ describe("account switch: the previous member's vitals are gone", () => {
     );
   });
 });
+
+/* P15c (INT-P15-1): the previous member's retired appointments copy and
+   any office's team-messages copy are gone when the next sign-in starts. */
+describe("account switch: retired appointments and team messages", () => {
+  it("removes every copy when the next sign-in starts", async () => {
+    stubApi((c) =>
+      c.path === "/auth/login"
+        ? { status: 401, body: { success: false, message: "No", code: null } }
+        : undefined,
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LanguageProvider>
+          <AuthProvider>
+            <Probe />
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(handle.login).not.toBeNull());
+    /* Written back after boot, as an older tab would. */
+    window.localStorage.setItem(
+      "nr:member:previous.member@example.test:member-appointments",
+      JSON.stringify([{ id: "a", title: "Test visit" }]),
+    );
+    window.localStorage.setItem("nr:caregiver-none:member-appointments", "[]");
+    window.localStorage.setItem(
+      "nr:team-messages",
+      JSON.stringify([{ id: "t", org: "Test Office", body: "Test" }]),
+    );
+    await act(async () => {
+      await handle.login!("next.member@example.test", "x").catch(
+        () => undefined,
+      );
+    });
+    const left = Object.keys(window.localStorage);
+    expect(
+      left.filter(
+        (k) => k.includes("member-appointments") || k.includes("team-messages"),
+      ),
+    ).toEqual([]);
+    expect(left.some((k) => k.includes("@"))).toBe(false);
+  });
+});

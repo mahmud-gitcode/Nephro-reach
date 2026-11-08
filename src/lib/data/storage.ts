@@ -79,7 +79,6 @@ const MEMBER_OWNED = new Set([
   "table-talk-questions",
   "travel-reflections",
   "travel-treatments",
-  "member-appointments",
 ]);
 
 /* Member stores filed under the account id, never the email (PM-4). The

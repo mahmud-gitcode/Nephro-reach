@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   icsFor,
+  notCopiedYet,
   remindersDue,
-  syncExternal,
   type Appointment,
 } from "./appointments";
 
@@ -21,24 +21,21 @@ const visit = (over: Partial<Appointment> = {}): Appointment => ({
 });
 
 describe("appointments from the Vascular Access record", () => {
-  it("adds new ones and leaves the list alone when nothing changed", () => {
-    const once = syncExternal([], [visit()]);
-    expect(once).toHaveLength(1);
-    expect(syncExternal(once, [visit()])).toBe(once);
+  /* The server copies each booked access visit into the member's list
+     (sourceAccessAppointmentId); the access read shows the rest. */
+  it("shows an access visit once: the server copy wins", () => {
+    const copy = visit({ id: "appt-uuid-1", sourceId: "1" });
+    expect(notCopiedYet([copy], [visit()])).toEqual([]);
   });
 
-  it("follows a moved visit but keeps the member's attendance", () => {
-    const list = [{ ...visit(), attendance: "attended" as const }];
-    const moved = syncExternal(list, [visit({ date: "2026-10-14" })]);
-    expect(moved[0]).toMatchObject({
-      date: "2026-10-14",
-      attendance: "attended",
-    });
+  it("shows an access visit the server has not copied yet", () => {
+    const other = visit({ id: "va-2" });
+    expect(notCopiedYet([], [visit(), other])).toEqual([visit(), other]);
   });
 
-  it("never touches the member's own appointments", () => {
+  it("never hides an access visit behind the member's own appointment", () => {
     const own = { ...visit({ id: "appt-1" }), source: undefined };
-    expect(syncExternal([own], [visit()])[0]).toBe(own);
+    expect(notCopiedYet([own], [visit()])).toEqual([visit()]);
   });
 });
 

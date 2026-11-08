@@ -48,6 +48,13 @@ const RETIRED = [
   "nr:support-tickets",
   /* Phase 10: vascular access, rides and referrals moved to the API. */
   "nr:vascular-access",
+  /* P15c (INT-P15-1): appointments and team messages moved to the API, in
+     every variant (plain, email-keyed, id-keyed, the caregiver's). */
+  "nr:member-appointments",
+  "nr:member:new.member@example.test:member-appointments",
+  "nr:member-id:0f0f0f0f-0000-4000-8000-000000000001:member-appointments",
+  "nr:caregiver-none:member-appointments",
+  "nr:team-messages",
 ];
 
 beforeEach(() => {
@@ -184,17 +191,20 @@ describe("PM-4: sign-out stores", () => {
     "nr:caregiver-none:dialysis-treatment-vitals",
   ];
 
-  it("removes every copy of the vitals and nothing else", () => {
+  it("removes every copy of the vitals and nothing kept", () => {
     window.localStorage.setItem("preferred_language", "ES");
-    window.localStorage.setItem("nr:member-appointments", "[]");
+    window.localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
     for (const key of VITALS) window.localStorage.setItem(key, "{}");
     expect(purgeSignOutStores().sort()).toEqual([...VITALS].sort());
-    expect(keys()).toEqual(["nr:member-appointments", "preferred_language"]);
+    expect(keys()).toEqual(["nr:storage-version", "preferred_language"]);
   });
 
   it("matches the store name whole", () => {
     window.localStorage.setItem("nr:dialysis-treatment-vitals-extra", "{}");
-    window.localStorage.setItem("nr:member-id:x:dialysis-treatments", "{}");
+    window.localStorage.setItem(
+      "nr:member-id:x:dialysis-treatment-vitals-old",
+      "{}",
+    );
     expect(purgeSignOutStores()).toEqual([]);
   });
 
@@ -215,5 +225,44 @@ describe("PM-4: sign-out stores", () => {
     } as unknown as Storage;
     expect(purgeSignOutStores(blocked)).toEqual([]);
     expect(purgeSignOutStores(null)).toEqual([]);
+  });
+});
+
+/* P15c (INT-P15-1, D73 option (a)): appointments and team messages are on
+   the API. Their old browser copies are retired at storage version 17 and
+   removed at boot, sign-out and sign-in; a copy an older tab writes back
+   is removed again and never read (no screen reads these keys). */
+describe("P15c: appointments and team messages", () => {
+  const COPIES = [
+    "nr:member-appointments",
+    "nr:member:previous.member@example.test:member-appointments",
+    "nr:member-id:0f0f0f0f-0000-4000-8000-000000000001:member-appointments",
+    "nr:caregiver-none:member-appointments",
+    "nr:team-messages",
+  ];
+
+  it("retires every variant at storage version 17", () => {
+    expect(STORAGE_VERSION).toBeGreaterThanOrEqual(17);
+    expect(
+      RETIRED_STORES.find((s) => s.name === "member-appointments")?.since,
+    ).toBe(17);
+    for (const key of COPIES) expect(isRetiredKey(key)).toBe(true);
+    expect(isRetiredKey("nr:member-appointments-extra")).toBe(false);
+    expect(isRetiredKey("nr:team-messages-extra")).toBe(false);
+  });
+
+  it("the boot purge removes them, and again when an old tab writes them back", () => {
+    for (const key of COPIES) window.localStorage.setItem(key, "[]");
+    purgeLegacyStorage();
+    expect(keys()).toEqual([STORAGE_VERSION_KEY]);
+    for (const key of COPIES) window.localStorage.setItem(key, "[]");
+    expect(purgeLegacyStorage().removed.sort()).toEqual([...COPIES].sort());
+  });
+
+  it("sign-out and sign-in remove every copy, keeping the language", () => {
+    window.localStorage.setItem("preferred_language", "ES");
+    for (const key of COPIES) window.localStorage.setItem(key, "[]");
+    expect(purgeSignOutStores().sort()).toEqual([...COPIES].sort());
+    expect(keys()).toEqual(["preferred_language"]);
   });
 });

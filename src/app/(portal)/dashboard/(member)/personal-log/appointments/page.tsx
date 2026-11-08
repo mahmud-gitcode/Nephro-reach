@@ -37,6 +37,7 @@ import {
   directionsUrl,
   icsFor,
   needsReschedule,
+  notCopiedYet,
   past,
   timeRange,
   upcoming,
@@ -47,12 +48,13 @@ import {
 } from "@/features/personal-log/appointments/appointments";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useMemberAccessAppointments } from "@/features/vascular-access/useMemberAccessAppointments";
+import { saveErrorText } from "@/features/profile/saveError";
 import { useNow } from "@/lib/utils/useNow";
 
 /* ==========================================================================
    Appointments
    --------------------------------------------------------------------------
-   The member's own list, stored (useAppointments): what is coming up, the
+   The member's own list, on the API (useAppointments): what is coming up, the
    next one with directions, the details of any one, and the full list with
    past visits.
    ========================================================================== */
@@ -428,16 +430,16 @@ export default function AppointmentsPage() {
   const { t, language } = useLanguage();
   const isEs = language === "ES";
   const store = useAppointments();
-  /* The access center's bookings for this member, read from the API and
-     shown beside the member's own list, in memory only (Phase 10: nothing
-     from the API is copied into browser storage). Copies an older version
-     saved into the member's list are not shown twice. */
+  /* The access center's bookings for this member, read from its record on
+     the API, in memory only. The server copies each booked visit into the
+     member's appointments (read-only there except "did you go?"); a visit
+     it has not copied yet is shown from the access read, never twice. */
   const access = useMemberAccessAppointments();
   const now = new Date(useNow());
   const pad = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const own = store.appointments.filter((a) => a.source !== "vascular-access");
-  const listed = [...own, ...access.appointments];
+  const own = store.appointments;
+  const listed = [...own, ...notCopiedYet(own, access.appointments)];
   const ahead = upcoming(listed, today);
   const before = past(listed, today);
   /* The one past visit still waiting for "did you go?" — asked here rather
@@ -579,6 +581,18 @@ export default function AppointmentsPage() {
               {isEs ? "Ya la reprogramé" : "I've rescheduled it"}
             </Button>
           </div>
+        </Alert>
+      ) : null}
+
+      {store.saveError ? (
+        <Alert
+          tone="danger"
+          title={
+            isEs ? "No se pudo guardar el cambio" : "That change did not save"
+          }
+          onDismiss={store.dismissSaveError}
+        >
+          {saveErrorText(store.saveError, isEs ? "es" : "en")}
         </Alert>
       ) : null}
 
