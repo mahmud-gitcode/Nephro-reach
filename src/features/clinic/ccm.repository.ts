@@ -79,6 +79,21 @@ export type CcmEnrollment = {
   overdueFollowUps: number;
 };
 
+/** EnrollmentResponseDto: what a write on one enrolment answers (the
+ *  record without one month's figures). */
+export type CcmEnrollmentRecord = Omit<
+  CcmEnrollment,
+  | "month"
+  | "minutes"
+  | "pendingMinutes"
+  | "remainingMinutes"
+  | "status"
+  | "lastActivityOn"
+  | "nextFollowUpOn"
+  | "openAlerts"
+  | "overdueFollowUps"
+>;
+
 /** GetEnrollmentSummaryResponseDto. */
 export type CcmSummary = {
   month: string;
@@ -280,7 +295,7 @@ export const getEnrollment = (
   });
 
 export const enroll = (orgId: string, body: EnrollBody) =>
-  api<CcmEnrollment>(ccm(orgId, "/enrollments"), {
+  api<CcmEnrollmentRecord>(ccm(orgId, "/enrollments"), {
     method: "POST",
     body,
     ...asOffice(orgId),
@@ -291,7 +306,7 @@ export const updateEnrollment = (
   patientId: string,
   patch: EnrollmentPatch,
 ) =>
-  api<CcmEnrollment>(enrollment(orgId, patientId), {
+  api<CcmEnrollmentRecord>(enrollment(orgId, patientId), {
     method: "PATCH",
     body: patch,
     ...asOffice(orgId),
@@ -303,7 +318,7 @@ export const setRequirement = (
   requirementId: string,
   body: RequirementBody,
 ) =>
-  api<CcmRequirement>(
+  api<CcmEnrollmentRecord>(
     enrollment(
       orgId,
       patientId,
@@ -317,7 +332,7 @@ export const updateKidneyCare = (
   patientId: string,
   body: KidneyCareBody,
 ) =>
-  api<CcmKidneyCarePlan>(enrollment(orgId, patientId, "/kidney-care"), {
+  api<CcmEnrollmentRecord>(enrollment(orgId, patientId, "/kidney-care"), {
     method: "PATCH",
     body,
     ...asOffice(orgId),

@@ -330,6 +330,32 @@ describe("ClinicLabs on the API", () => {
     expectOfficeHeader(calls);
   });
 
+  it("a linked patient who does not share labs: the empty chart says why", async () => {
+    /* The server answers 200 with only the rows this office entered
+       (live: Metro reading John's labs), so an empty chart must not read
+       as "no labs". The reason comes from the roster row (server data). */
+    stubApi(
+      labsHandler((c) => {
+        if (c.path === org("/patients"))
+          return pageOf([
+            { ...rosterRow(P1, "Ana", "900001"), sharedAreas: ["profile"] },
+          ]);
+        if (c.path === `/patients/${P1}/labs`) return pageOf([]);
+        return undefined;
+      }),
+      CLINIC,
+    );
+    render(<ClinicLabs />, { wrapper });
+    expect(
+      await screen.findByText(
+        /does not share labs with your office\. Only results your office entered are shown\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("No lab results on this chart in the last year."),
+    ).not.toBeInTheDocument();
+  });
+
   it("a 403 on the chart shows not shared, never an empty chart", async () => {
     stubApi(
       labsHandler((c) =>

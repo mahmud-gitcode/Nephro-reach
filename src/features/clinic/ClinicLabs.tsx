@@ -391,7 +391,16 @@ function ReviewTable({ rows }: { rows: LabImportRow[] }) {
   );
 }
 
-function LabChart({ patientId }: { patientId: string }) {
+function LabChart({
+  patientId,
+  sharesLabs,
+}: {
+  patientId: string;
+  /** From the roster row (server): whether the patient shares labs with
+   *  this office. Without the share the server returns only results this
+   *  office entered itself, so an empty chart says why. */
+  sharesLabs: boolean;
+}) {
   const chart = usePatientLabChart(patientId);
   return (
     <AsyncSection
@@ -415,7 +424,9 @@ function LabChart({ patientId }: { patientId: string }) {
         <TableBody>
           {chart.results.length === 0 ? (
             <TableEmptyRow colSpan={5}>
-              No lab results on this chart in the last year.
+              {sharesLabs
+                ? "No lab results on this chart in the last year."
+                : "This patient does not share labs with your office. Only results your office entered are shown."}
             </TableEmptyRow>
           ) : (
             chart.results.map((result) => {
@@ -542,7 +553,17 @@ export default function ClinicLabs() {
               ))}
             </Select>
           </div>
-          {selected ? <LabChart key={selected} patientId={selected} /> : null}
+          {selected ? (
+            <LabChart
+              key={selected}
+              patientId={selected}
+              sharesLabs={
+                patients
+                  .find((p) => p.patientId === selected)
+                  ?.sharedAreas.includes("labs") ?? true
+              }
+            />
+          ) : null}
         </Card>
       </AsyncSection>
       {uploading ? (
