@@ -93,7 +93,10 @@ test.describe("logout across tabs", () => {
       headers: { Origin: appOrigin },
     });
     expect(r.ok()).toBeTruthy();
-    await two.page.reload();
+    /* The app may already be leaving for /login when the reload starts (it
+       notices the ended session first); that aborts the reload, which is fine:
+       the expectation below is what matters. */
+    await two.page.reload().catch(() => undefined);
     await expect(two.page).toHaveURL(/\/login/, { timeout: 15_000 });
   });
 });
