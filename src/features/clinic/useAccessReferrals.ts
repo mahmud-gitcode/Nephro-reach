@@ -157,6 +157,41 @@ export function useOfficePatients(
   };
 }
 
+/**
+ * This office's one ACTIVE patient with exactly this MRN (the office's own
+ * MRN, from its roster search), or null when there is none or more than
+ * one: a screen that knows a patient only by MRN (the CCM list, until it
+ * reads the API) never guesses between two patients.
+ */
+export function useOfficePatientByMrn(
+  orgId: string | null,
+  mrn: string,
+  options: { enabled?: boolean } = {},
+) {
+  const wanted = mrn.trim();
+  const enabled = !!orgId && !!wanted && (options.enabled ?? true);
+  const query = useQuery({
+    queryKey: orgId
+      ? orgKey(orgId, OFFICE_PATIENTS_FEATURE, "mrn", wanted)
+      : ["org", "none", OFFICE_PATIENTS_FEATURE, "mrn"],
+    queryFn: () => repo.searchOfficePatients(orgId!, wanted),
+    enabled,
+  });
+  const patient = useMemo(() => {
+    const hits = (query.data?.items ?? []).filter(
+      (p) => p.status === "ACTIVE" && p.mrn === wanted,
+    );
+    return hits.length === 1
+      ? { patientId: hits[0].patientId, name: name(hits[0]), mrn: hits[0].mrn }
+      : null;
+  }, [query.data, wanted]);
+  return {
+    patient,
+    isPending: enabled && query.isPending,
+    error: enabled ? query.error : null,
+  };
+}
+
 export type ReferralDraft = {
   toOrganizationId: string;
   kind: ReferralKind;

@@ -11,11 +11,12 @@ import {
 } from "lucide-react";
 import { Badge, Button, Select, Switch } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { useOfficeOrgId } from "@/features/vascular-access/useAccess";
 import { SendReferralModal } from "./AccessReferrals";
-import { useReferrals } from "./useAccessReferrals";
+import { useOfficePatientByMrn, useReferrals } from "./useAccessReferrals";
 import { kidneyCareFor, usDate } from "./ccm.data";
 import type { CcmStore } from "./useCcm";
 import {
@@ -71,11 +72,19 @@ export function KidneyCareSection({
   const { user } = useAuth();
   const me = user?.staffRole ? user.name : OFFICE_PERSON;
   /* Phase 10: the practice's referrals for this patient, from the API by
-     patient id (none until the CCM list carries the id; the access record
-     itself is the access and dialysis centers', so progress follows the
-     referral). */
+     patient id. The CCM list does not carry the id yet (it moves to the API
+     in OFFICE Phase 9), so until then the patient is found on this
+     office's own roster by its MRN, and only when exactly one ACTIVE
+     patient has it. The access record itself is the access and dialysis
+     centers', so progress follows the referral. */
   const orgId = useOfficeOrgId();
-  const patientId = patient.patientId ?? null;
+  const byMrn = useOfficePatientByMrn(orgId, patient.mrn, {
+    enabled: !patient.patientId,
+  });
+  const target = patient.patientId
+    ? { patientId: patient.patientId, name: patient.name, mrn: patient.mrn }
+    : byMrn.patient;
+  const patientId = target?.patientId ?? null;
   const access = useReferrals(
     orgId,
     { patientId: patientId ?? undefined },
@@ -90,11 +99,16 @@ export function KidneyCareSection({
   const progress = accessProgress(plan, referrals, undefined);
   const marks = milestones(plan, progress);
   const sent = referrals.some((r) => r.kind !== "General Message");
-  const canSend =
-    !!patientId &&
+  const showSend =
     plan?.answers.accessReferral === "Yes" &&
     !sent &&
+    !access.isPending &&
+    !access.error &&
     userCan(user, "messages.reply");
+  const canSend = showSend && !!patientId;
+  /* Shown, but honestly unavailable, when this patient cannot be matched
+     to one patient on the practice's list (or that list cannot be read). */
+  const unmatched = showSend && !patientId && !byMrn.isPending;
 
   const save = (change: Parameters<CcmStore["setKidneyCare"]>[1]) =>
     store.setKidneyCare(patient.mrn, change, today, me);
@@ -177,16 +191,19 @@ export function KidneyCareSection({
           </div>
         ) : null}
 
-        {canSend ? (
+        {canSend || unmatched ? (
           <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card-nested bg-surface-sunken p-inset-sm">
             <p className="text-body-sm text-fg-secondary">
-              Referral marked as placed. Send it to the access center to follow
-              its progress here.
+              {canSend
+                ? "Referral marked as placed. Send it to the access center to follow its progress here."
+                : "Sending from here is not available yet for this patient: they could not be matched to one patient on your practice's list. Send it from Access Center Messages instead."}
             </p>
             <Button
               size="small"
               leadingIcon={<Send aria-hidden="true" />}
-              onClick={() => setReferring(true)}
+              {...(canSend
+                ? { onClick: () => setReferring(true) }
+                : notBuiltYet("Sending this referral from CCM"))}
             >
               Send to Access Center
             </Button>
@@ -263,12 +280,12 @@ export function KidneyCareSection({
         </p>
       </div>
 
-      {referring && patientId ? (
+      {referring && target ? (
         <SendReferralModal
           side="nephrology"
           orgId={orgId}
-          patients={[{ patientId, name: patient.name, mrn: patient.mrn }]}
-          initialPatientId={patientId}
+          patients={[target]}
+          initialPatientId={target.patientId}
           initialKind="New Access Referral"
           onClose={() => setReferring(false)}
         />

@@ -133,3 +133,12 @@ export const listOfficePatients = (orgId: string, params: PageParams = {}) =>
     limit: 150,
     ...params,
   });
+
+/** This office's ACTIVE patients whose name or MRN matches `search` (the
+ *  server's roster search; one small page). */
+export const searchOfficePatients = (orgId: string, search: string) =>
+  fetchPage<ApiOfficePatient>(
+    `/organizations/${enc(orgId)}/patients`,
+    { limit: 10 },
+    { query: { search, status: "ACTIVE" } },
+  );
