@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 14;
+export const STORAGE_VERSION = 15;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -425,6 +425,15 @@ export const RETIRED_KEYS: readonly string[] = [
      two-factor and sessions are the account's own flows). */
   "nr:clinic-settings",
   "nr:clinic-settings-actions",
+  /* Phase 14.5 (EDU-BIZ, STORAGE_VERSION 15): the member plans an admin
+     edited in this browser. The admin console reads and writes
+     /platform/member-plans; the landing pricing table reads the public
+     GET /member-plans (Phase 12), never this key. */
+  "nr:subscription-plans",
+  /* Phase 14.5–14.6: the office plans and per-office plan choices kept in
+     this browser. Office plans are /platform/organization-plans and an
+     office's plan is its contract (/platform/contracts). */
+  "nr:org-subscriptions",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */

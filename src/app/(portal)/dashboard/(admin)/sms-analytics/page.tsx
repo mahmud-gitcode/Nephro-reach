@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -12,46 +12,81 @@ import {
   Plus,
 } from "lucide-react";
 import {
+  Alert,
+  AsyncSection,
   Button,
   buttonStyles,
+  Chip,
+  ChipGroup,
+  EmptyState,
   FormField,
   Input,
   Modal,
   Select,
+  Skeleton,
+  TablePagination,
 } from "@/components/ui";
+import { canRetry, isNotShared } from "@/lib/data/asyncState";
+import { useCanLevel } from "@/features/staff/useStaffAccounts";
+import {
+  ActionError,
+  actionErrorText,
+  readErrorCopy,
+} from "@/features/billing/consoleUi";
+import {
+  CAMPAIGN_KINDS,
+  CHANNEL_LABEL,
+  KIND_LABEL,
+  MESSAGE_MAX,
+  QUESTION_LABEL,
+  TITLE_MAX,
+  WEEKDAYS,
+  WEEKDAY_LABEL,
+  draftError,
+  fromApiTiming,
+  hourLabel,
+  rateLabel,
+  timingLabel,
+  type ApiCampaign,
+  type CampaignAnalytics,
+  type CampaignChannel,
+  type CampaignDraft,
+  type CampaignKind,
+  type CampaignQuestion,
+  type Weekday,
+} from "@/features/admin/campaigns.mappers";
+import {
+  useCampaignAnalytics,
+  useCampaigns,
+} from "@/features/admin/useCampaigns";
+import {
+  channelCount,
+  useNotificationAnalytics,
+} from "@/features/admin/usePlatformOverview";
 
-const templates = [
-  {
-    title: "Weekly Wellness Check",
-    type: "Check-in",
-    typeClass: "border-field bg-surface text-fg-brand",
-    status: "Active",
-    statusClass: "border-success-600 bg-success-600 text-white",
-    message:
-      "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)",
-    schedule: "Every Monday at 9:00 AM",
-  },
-  {
-    title: "Class 24hr Reminder",
-    type: "Reminder",
-    typeClass: "border-field bg-surface text-warning",
-    status: "Active",
-    statusClass: "border-success-600 bg-success-600 text-white",
-    message:
-      'Reminder: Your live class "[CLASS_NAME]" is tomorrow at [TIME]. Reply YES to confirm attendance.',
-    schedule: "Every Monday at 9:00 AM",
-  },
-  {
-    title: "Motivational Quote",
-    type: "Reminder",
-    typeClass: "border-field bg-surface text-warning",
-    status: "Inactive",
-    statusClass: "border-line bg-line text-fg-muted",
-    message:
-      '"[QUOTE]" - Remember, every step counts! Reply with INSPIRE for a new quote.',
-    schedule: "Every Wednesday at 8:00 AM",
-  },
-];
+/* ==========================================================================
+   Notification configuration and analytics (Phase 14.7, on the API)
+   --------------------------------------------------------------------------
+   Templates are the platform's notification campaigns (`/platform/campaigns`,
+   campaigns READ; create, edit, activate and deactivate need WRITE). The
+   static sample templates and the made-up totals are gone.
+   - Types are the backend's two: Check-in and Reminder (Q-EDU-4).
+   - A template repeats weekly or daily at an hour in Eastern Time (the
+     server's rule for every member), or goes out once at a chosen time.
+   - Channels: in-app, email and push. SMS is shown but not offered until
+     the SMS provider is approved and listed for disclosure (D18; recorded
+     for the Lead): this page never starts a real text message.
+   - The totals: "Messages Sent" counts the last 30 days of deliveries on
+     every channel (the server's analytics window); the reply rate is the
+     average of the active templates on this page, each one the server's
+     responseRate; "Active Automations" is the server's count.
+   ========================================================================== */
+
+/* SMS needs the provider approved and disclosed first (D18). */
+const SMS_NOT_AVAILABLE =
+  "SMS: not available yet. The text-message provider must be approved and listed for disclosure first.";
+
+const OFFERED_CHANNELS: CampaignChannel[] = ["in_app", "email", "push"];
 
 function TemplateBadge({
   children,
@@ -69,48 +104,96 @@ function TemplateBadge({
   );
 }
 
+const TYPE_CLASS: Record<CampaignKind, string> = {
+  "check-in": "border-field bg-surface text-fg-brand",
+  reminder: "border-field bg-surface text-warning",
+};
+const ACTIVE_CLASS = "border-success-600 bg-success-600 text-white";
+const INACTIVE_CLASS = "border-line bg-line text-fg-muted";
+
 function SmsTemplateCard({
   template,
+  analytics,
+  canWrite,
+  statusPending,
   onEdit,
+  onToggle,
 }: {
-  template: (typeof templates)[number];
+  template: ApiCampaign;
+  analytics?: { data?: CampaignAnalytics; error: unknown; isPending: boolean };
+  canWrite: boolean;
+  statusPending: boolean;
   onEdit: () => void;
+  onToggle: () => void;
 }) {
+  const active = template.status === "active";
+  const reply = analytics?.data
+    ? analytics.data.inAppDelivered > 0
+      ? rateLabel(analytics.data.responseRate)
+      : "no deliveries yet"
+    : analytics?.error
+      ? "not loaded"
+      : "…";
+
   return (
     <article className="rounded-card-nested border border-black/10 bg-surface px-[17px] py-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-heading-4 text-fg">{template.title}</h2>
-            <TemplateBadge className={template.typeClass}>
-              {template.type}
+            <TemplateBadge className={TYPE_CLASS[template.kind]}>
+              {KIND_LABEL[template.kind] ?? template.kind}
             </TemplateBadge>
-            <TemplateBadge className={template.statusClass}>
-              {template.status}
+            <TemplateBadge className={active ? ACTIVE_CLASS : INACTIVE_CLASS}>
+              {active ? "Active" : "Inactive"}
             </TemplateBadge>
           </div>
 
-          <p className="text-body-md leading-6 font-medium text-fg-muted">
+          <p className="text-body-md leading-6 font-medium break-words text-fg-muted">
             {template.message}
           </p>
 
           <p className="flex items-center gap-2 text-body-md leading-6 font-medium text-fg-muted">
             <Clock3 className="h-5 w-5 shrink-0" />
-            <span>Schedule: {template.schedule}</span>
+            <span>Schedule: {timingLabel(fromApiTiming(template))}</span>
+          </p>
+          <p className="text-body-sm text-fg-muted">
+            Channels:{" "}
+            {template.channels.map((c) => CHANNEL_LABEL[c] ?? c).join(", ")}
+            {template.question
+              ? ` · Question: ${QUESTION_LABEL[template.question]}`
+              : ""}
+            {" · "}Reply rate: {reply}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onEdit}
-          className={
-            buttonStyles({ variant: "neutral", appearance: "fill-stroke" }) +
-            " w-full md:w-auto"
-          }
-        >
-          <Edit3 className="h-5 w-5" />
-          Edit
-        </button>
+        {canWrite ? (
+          <div className="flex w-full flex-col gap-inline-sm md:w-auto">
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label={`Edit ${template.title}`}
+              className={
+                buttonStyles({
+                  variant: "neutral",
+                  appearance: "fill-stroke",
+                }) + " w-full md:w-auto"
+              }
+            >
+              <Edit3 className="h-5 w-5" />
+              Edit
+            </button>
+            <Button
+              variant="neutral"
+              appearance="stroke"
+              loading={statusPending}
+              onClick={onToggle}
+              aria-label={`${active ? "Deactivate" : "Activate"} ${template.title}`}
+            >
+              {active ? "Deactivate" : "Activate"}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -280,23 +363,80 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="block text-body-md text-fg">{children}</span>;
 }
 
+type Repeat = "weekly" | "daily" | "once";
+
+/** Tomorrow at 9:00 on this computer: a send time that is ahead. */
+function defaultSendAt(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
 function TemplateModal({
-  mode,
+  template,
+  saving,
+  error,
+  onSave,
   onClose,
 }: {
-  mode: "create" | "edit";
+  template: ApiCampaign | null;
+  saving: boolean;
+  error: unknown;
+  onSave: (draft: CampaignDraft) => void;
   onClose: () => void;
 }) {
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState(
-    () => new Date(2026, 5, 7, 9, 41),
+  const isEdit = template !== null;
+  const initial = template ? fromApiTiming(template) : null;
+  const [title, setTitle] = useState(template?.title ?? "");
+  const [kind, setKind] = useState<CampaignKind>(template?.kind ?? "check-in");
+  const [message, setMessage] = useState(template?.message ?? "");
+  const [question, setQuestion] = useState<CampaignQuestion | "">(
+    template?.question ?? "",
   );
-  const isEdit = mode === "edit";
+  const [channels, setChannels] = useState<CampaignChannel[]>(
+    template?.channels ?? ["in_app"],
+  );
+  const [repeat, setRepeat] = useState<Repeat>(
+    initial && initial.mode !== "none" ? initial.mode : "weekly",
+  );
+  const [weekday, setWeekday] = useState<Weekday>(
+    initial?.mode === "weekly" ? initial.weekday : "MO",
+  );
+  const [hour, setHour] = useState<number>(
+    initial?.mode === "weekly" || initial?.mode === "daily" ? initial.hour : 9,
+  );
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<Date>(() =>
+    initial?.mode === "once" ? new Date(initial.sendAt) : defaultSendAt(),
+  );
+  const [problem, setProblem] = useState<string | null>(null);
 
   const scheduleLabel = scheduledAt.toLocaleString(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   });
+
+  const draft = (): CampaignDraft => ({
+    title,
+    kind,
+    message,
+    question: question || null,
+    channels,
+    timing:
+      repeat === "weekly"
+        ? { mode: "weekly", weekday, hour }
+        : repeat === "daily"
+          ? { mode: "daily", hour }
+          : { mode: "once", sendAt: scheduledAt.toISOString() },
+  });
+
+  const toggleChannel = (channel: CampaignChannel) =>
+    setChannels((current) =>
+      current.includes(channel)
+        ? current.filter((c) => c !== channel)
+        : [...current, channel],
+    );
 
   return (
     <Modal
@@ -311,57 +451,188 @@ function TemplateModal({
       }
       footer={
         <>
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancel
           </Button>
-          <Button type="submit" form="sms-template-form">
+          <Button type="submit" form="sms-template-form" loading={saving}>
             {isEdit ? "Save Changes" : "Create Template"}
           </Button>
         </>
       }
     >
-      <form id="sms-template-form" onSubmit={(event) => event.preventDefault()}>
+      <form
+        id="sms-template-form"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const next = draft();
+          const reason = draftError(next);
+          setProblem(reason);
+          if (!reason) onSave(next);
+        }}
+      >
         <div className="space-y-stack-lg">
+          {problem ? (
+            <Alert tone="warning" title="Check the template">
+              {problem}
+            </Alert>
+          ) : null}
+          {error ? (
+            <Alert tone="danger" title="The template was not saved">
+              {actionErrorText(error)}
+            </Alert>
+          ) : null}
+
           <FormField label="Template Name">
             {(props) => (
               <Input
                 {...props}
-                defaultValue={isEdit ? "Weekly Wellness Check" : ""}
+                value={title}
+                maxLength={TITLE_MAX}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Weekly Wellness Check"
               />
             )}
           </FormField>
 
-          {/* Was a <button> shaped like a select that opened nothing. A
-                select is what it always meant to be. */}
           <FormField label="Message Type">
             {(props) => (
-              <Select {...props} defaultValue="check-in">
-                <option value="check-in">Check-in</option>
-                <option value="reminder">Reminder</option>
-                <option value="education">Education</option>
+              <Select
+                {...props}
+                value={kind}
+                onChange={(e) => setKind(e.target.value as CampaignKind)}
+              >
+                {CAMPAIGN_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {KIND_LABEL[k]}
+                  </option>
+                ))}
               </Select>
             )}
           </FormField>
 
-          <div className="relative space-y-stack-sm">
-            <FieldLabel>Schedule</FieldLabel>
-            <button
-              type="button"
-              onClick={() => setShowCalendar((current) => !current)}
-              aria-expanded={showCalendar}
-              className="flex h-control-big w-full cursor-pointer items-center justify-between rounded-control border border-field bg-surface px-inset-md text-left text-body-md text-fg-muted transition-colors duration-150 ease-standard hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {scheduleLabel}
-              <CalendarDays
-                aria-hidden="true"
-                className="h-5 w-5 text-fg-muted"
-              />
-            </button>
-            {showCalendar && (
-              <CalendarPicker value={scheduledAt} onChange={setScheduledAt} />
+          <FormField label="Repeats">
+            {(props) => (
+              <Select
+                {...props}
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value as Repeat)}
+              >
+                <option value="weekly">Every week</option>
+                <option value="daily">Every day</option>
+                <option value="once">Once, at a set time</option>
+              </Select>
             )}
+          </FormField>
+
+          {repeat === "once" ? (
+            <div className="relative space-y-stack-sm">
+              <FieldLabel>Schedule</FieldLabel>
+              <button
+                type="button"
+                onClick={() => setShowCalendar((current) => !current)}
+                aria-expanded={showCalendar}
+                className="flex h-control-big w-full cursor-pointer items-center justify-between rounded-control border border-field bg-surface px-inset-md text-left text-body-md text-fg-muted transition-colors duration-150 ease-standard hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {scheduleLabel}
+                <CalendarDays
+                  aria-hidden="true"
+                  className="h-5 w-5 text-fg-muted"
+                />
+              </button>
+              {showCalendar && (
+                <CalendarPicker value={scheduledAt} onChange={setScheduledAt} />
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
+              {repeat === "weekly" ? (
+                <FormField label="Day">
+                  {(props) => (
+                    <Select
+                      {...props}
+                      value={weekday}
+                      onChange={(e) => setWeekday(e.target.value as Weekday)}
+                    >
+                      {WEEKDAYS.map((d) => (
+                        <option key={d} value={d}>
+                          {WEEKDAY_LABEL[d]}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </FormField>
+              ) : null}
+              <FormField
+                label="Time (Eastern Time)"
+                hint="Every member gets it at this hour, Eastern Time."
+              >
+                {(props) => (
+                  <Select
+                    {...props}
+                    value={String(hour)}
+                    onChange={(e) => setHour(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {hourLabel(h)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </FormField>
+            </div>
+          )}
+
+          <div className="space-y-stack-sm">
+            <FieldLabel>Channels</FieldLabel>
+            <ChipGroup label="Channels" selection="multiple">
+              {OFFERED_CHANNELS.map((channel) => (
+                <Chip
+                  key={channel}
+                  selected={channels.includes(channel)}
+                  onClick={() => toggleChannel(channel)}
+                >
+                  {CHANNEL_LABEL[channel]}
+                </Chip>
+              ))}
+              <Chip
+                selected={channels.includes("sms")}
+                disabled={!channels.includes("sms")}
+                onClick={() => toggleChannel("sms")}
+                aria-describedby="sms-not-available"
+              >
+                {CHANNEL_LABEL.sms}
+              </Chip>
+            </ChipGroup>
+            <p id="sms-not-available" className="text-caption text-fg-muted">
+              {SMS_NOT_AVAILABLE}
+            </p>
           </div>
+
+          <FormField
+            label="Question (optional)"
+            hint="Members answer in the app, so a question needs the in-app channel."
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={question}
+                onChange={(e) =>
+                  setQuestion(e.target.value as CampaignQuestion | "")
+                }
+              >
+                <option value="">No question</option>
+                <option value="wellbeing">{QUESTION_LABEL.wellbeing}</option>
+                <option value="er-visit">{QUESTION_LABEL["er-visit"]}</option>
+              </Select>
+            )}
+          </FormField>
 
           <div className="space-y-stack-sm">
             <label
@@ -373,14 +644,11 @@ function TemplateModal({
             <div className="flex min-h-[100px] flex-col justify-between rounded-control border border-field bg-surface px-inset-md py-inset-sm transition-colors duration-150 ease-standard focus-within:border-primary-edge focus-within:ring-2 focus-within:ring-ring">
               <textarea
                 id="sms-message-content"
-                defaultValue={
-                  isEdit
-                    ? "How are you feeling today? Reply with a number 1-5 (1=struggling, 5=great)"
-                    : ""
-                }
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
                 placeholder="Enter your message..."
-                maxLength={200}
-                aria-describedby="sms-message-count"
+                maxLength={MESSAGE_MAX}
+                aria-describedby="sms-message-count sms-message-rule"
                 className="min-h-12 w-full resize-none bg-transparent text-body-sm text-fg outline-none placeholder:text-fg-muted"
               />
               <p
@@ -388,9 +656,13 @@ function TemplateModal({
                 className="flex items-center justify-end gap-inline-xs text-caption text-fg-muted"
               >
                 <FileText aria-hidden="true" className="h-4 w-4" />
-                0/200
+                {message.length}/{MESSAGE_MAX}
               </p>
             </div>
+            <p id="sms-message-rule" className="text-caption text-fg-muted">
+              The same text goes to every member by email and push: never put
+              health information or names in it.
+            </p>
           </div>
         </div>
       </form>
@@ -398,8 +670,59 @@ function TemplateModal({
   );
 }
 
+function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <article className="rounded-card border border-line bg-surface p-6">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card-nested bg-brand-100 text-fg-brand">
+        <MessageCircle className="h-5 w-5" />
+      </div>
+      <p className="text-body-sm font-semibold text-fg-muted">{label}</p>
+      <div className="mt-2 text-heading-2 leading-8 font-semibold text-fg">
+        {value}
+      </div>
+    </article>
+  );
+}
+
+function tileValue(
+  pending: boolean,
+  error: unknown,
+  value: () => React.ReactNode,
+) {
+  if (error)
+    return (
+      <span className="text-body-sm text-fg-muted">
+        {isNotShared(error) ? "No access" : "Not loaded"}
+      </span>
+    );
+  if (pending) return <Skeleton height={28} width={72} />;
+  return value();
+}
+
 export default function SmsAnalyticsPage() {
-  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [page, setPage] = useState(1);
+  const campaigns = useCampaigns(page);
+  const analytics = useNotificationAnalytics();
+  const canWrite = useCanLevel("campaigns", 2);
+  const [editing, setEditing] = useState<ApiCampaign | "new" | null>(null);
+  const ids = useMemo(
+    () => campaigns.campaigns.map((c) => c.id),
+    [campaigns.campaigns],
+  );
+  const perCampaign = useCampaignAnalytics(ids);
+  const copy = readErrorCopy(campaigns.error, "The templates did not load");
+
+  /* The reply rate: the average of the active templates on this page that
+     have had in-app deliveries (each the server's responseRate). */
+  const replyRates = campaigns.campaigns
+    .filter((c) => c.status === "active")
+    .map((c) => perCampaign.get(c.id)?.data)
+    .filter((a): a is CampaignAnalytics => Boolean(a && a.inAppDelivered > 0))
+    .map((a) => a.responseRate);
+  const averageReply =
+    replyRates.length > 0
+      ? replyRates.reduce((sum, r) => sum + r, 0) / replyRates.length
+      : null;
 
   return (
     <>
@@ -413,46 +736,113 @@ export default function SmsAnalyticsPage() {
               Configure automated messages and check-ins
             </p>
           </div>
-          <Button onClick={() => setModalMode("create")}>
-            <Plus aria-hidden="true" />
-            New Template
-          </Button>
+          {canWrite ? (
+            <Button
+              onClick={() => {
+                campaigns.resetSave();
+                setEditing("new");
+              }}
+            >
+              <Plus aria-hidden="true" />
+              New Template
+            </Button>
+          ) : null}
         </div>
 
-        <div className="space-y-3 rounded-control border border-line p-3">
-          {templates.map((template) => (
-            <SmsTemplateCard
-              key={template.title}
-              template={template}
-              onEdit={() => setModalMode("edit")}
+        <ActionError
+          error={campaigns.statusError}
+          title="The template did not change"
+          onDismiss={campaigns.dismissStatusError}
+          className="mb-stack-md"
+        />
+
+        <AsyncSection
+          pending={campaigns.isPending}
+          error={campaigns.error}
+          onRetry={canRetry(campaigns.error) ? campaigns.refetch : undefined}
+          {...copy}
+          isEmpty={campaigns.campaigns.length === 0}
+          empty={
+            <EmptyState
+              title="No message templates yet"
+              description="Create a check-in or a reminder; it goes out only once it is activated."
             />
-          ))}
-        </div>
+          }
+          skeleton={
+            <div className="space-y-3 rounded-control border border-line p-3">
+              <Skeleton height={140} />
+              <Skeleton height={140} />
+            </div>
+          }
+        >
+          <div className="space-y-3 rounded-control border border-line p-3">
+            {campaigns.campaigns.map((template) => (
+              <SmsTemplateCard
+                key={template.id}
+                template={template}
+                analytics={perCampaign.get(template.id)}
+                canWrite={canWrite}
+                statusPending={campaigns.statusPendingId === template.id}
+                onEdit={() => {
+                  campaigns.resetSave();
+                  setEditing(template);
+                }}
+                onToggle={() =>
+                  campaigns.setStatus(
+                    template.id,
+                    template.status === "active" ? "deactivate" : "activate",
+                  )
+                }
+              />
+            ))}
+          </div>
+          <TablePagination
+            page={page}
+            pageCount={campaigns.pageCount}
+            onPageChange={setPage}
+          />
+        </AsyncSection>
       </section>
 
       <section className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {[
-          ["Messages Sent", "1,284"],
-          ["Reply Rate", "68%"],
-          ["Active Automations", "02"],
-        ].map(([label, value]) => (
-          <article
-            key={label}
-            className="rounded-card border border-line bg-surface p-6"
-          >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card-nested bg-brand-100 text-fg-brand">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-            <p className="text-body-sm font-semibold text-fg-muted">{label}</p>
-            <p className="mt-2 text-heading-2 leading-8 font-semibold text-fg">
-              {value}
-            </p>
-          </article>
-        ))}
+        <StatTile
+          label="Messages Sent (last 30 days)"
+          value={tileValue(analytics.isPending, analytics.error, () => (
+            <>
+              {analytics.data!.total.toLocaleString()}
+              <span className="block text-caption font-normal text-fg-muted">
+                SMS: {channelCount(analytics.data!, "SMS").toLocaleString()}
+              </span>
+            </>
+          ))}
+        />
+        <StatTile
+          label="Reply Rate (active templates on this page)"
+          value={tileValue(campaigns.isPending, campaigns.error, () =>
+            rateLabel(averageReply),
+          )}
+        />
+        <StatTile
+          label="Active Automations"
+          value={tileValue(campaigns.activePending, campaigns.activeError, () =>
+            String(campaigns.activeTotal ?? 0).padStart(2, "0"),
+          )}
+        />
       </section>
 
-      {modalMode && (
-        <TemplateModal mode={modalMode} onClose={() => setModalMode(null)} />
+      {editing && (
+        <TemplateModal
+          template={editing === "new" ? null : editing}
+          saving={campaigns.isSaving}
+          error={campaigns.saveError}
+          onClose={() => setEditing(null)}
+          onSave={(draft) => {
+            void campaigns
+              .save(editing === "new" ? null : editing.id, draft)
+              .then(() => setEditing(null))
+              .catch(() => {});
+          }}
+        />
       )}
     </>
   );

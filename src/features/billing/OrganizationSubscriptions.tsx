@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus } from "lucide-react";
 import {
+  Alert,
+  AsyncSection,
   Button,
   Card,
   FormField,
@@ -13,153 +14,58 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmptyRow,
   TableHead,
   TableHeaderCell,
   TableRow,
   Textarea,
 } from "@/components/ui";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import { ORGANIZATIONS, type Organization } from "@/features/staff/staff";
+import { canRetry } from "@/lib/data/asyncState";
+import { useCanLevel } from "@/features/staff/useStaffAccounts";
+import {
+  ActionError,
+  PublishedBadge,
+  SkeletonTable,
+  actionErrorText,
+  readErrorCopy,
+} from "./consoleUi";
+import { centsToInput, formatCents, parseDollars } from "./money";
+import {
+  AUDIENCE_LABEL,
+  ORG_AUDIENCES,
+  type OrgAudience,
+} from "./platformPlans.mappers";
+import { PlatformContracts } from "./PlatformContracts";
+import { useOrgPlans, type AdminOrgPlan } from "./usePlans";
 
 /* ==========================================================================
-   Office & clinic subscriptions (client, 2026-10-06)
+   Office & clinic subscriptions (Phase 14.5–14.6, on the API)
    --------------------------------------------------------------------------
    The member plans above are what the marketing site sells. Offices and
    clinics are billed on a contract instead, so their plans are kept apart:
    nothing here reaches the landing page's pricing table.
-
-   Frontend only. Charging the plan is Stripe's job once a server exists.
+   - Plans: `/platform/organization-plans` (fees in cents; an edit to a
+     plan in use is saved by the server as a new version; publish and
+     retire need plans MANAGE).
+   - An office's plan is its contract (PlatformContracts): there is no
+     separate "assignment", and the prototype's Trial/Paused statuses have
+     no server equivalent.
+   Nothing is kept in this browser; the sample plans are gone.
    ========================================================================== */
 
-/* NephroReach's own team is not a subscriber. */
-type Portal = Exclude<Organization["portal"], "admin">;
-
-export type OrgPlan = {
-  id: string;
-  name: string;
-  audience: Portal;
-  monthlyFee: number;
-  patientsIncluded: number;
-  description: string;
-};
-
-export type OrgSubscriptionStatus = "Active" | "Trial" | "Paused";
-const STATUSES: OrgSubscriptionStatus[] = ["Active", "Trial", "Paused"];
-
-type State = {
-  plans: OrgPlan[];
-  /** orgId → its plan and status. */
-  assignments: Record<
-    string,
-    { planId: string; status: OrgSubscriptionStatus }
-  >;
-};
-
-const AUDIENCE: Record<Portal, string> = {
-  clinic: "Dialysis Center",
-  access: "Vascular Access Center",
-  nephrology: "Nephrology Office",
-  hospital: "Hospital",
-};
-
-/* Hospital pricing stays configurable (client, 2026-10-13): a sample plan
-   the admin edits like any other. */
-const HOSPITAL_PLAN: OrgPlan = {
-  id: "hospital",
-  name: "Hospital Education Plan",
-  audience: "hospital",
-  monthlyFee: 1495,
-  patientsIncluded: 100,
-  description:
-    "Hospital portal: patient enrollment, the 3-Day Kidney Failure Crash Course, education reports and secure messages.",
-};
-
-/* Sample prices for the admin to replace; the dialysis plan matches the
-   demo clinic's Contract & Billing page. */
-const DEFAULT_STATE: State = {
-  plans: [
-    {
-      id: "dialysis-center",
-      name: "Dialysis Center Plan",
-      audience: "clinic",
-      monthlyFee: 1995,
-      patientsIncluded: 150,
-      description:
-        "Clinic portal, member enrollment, check-ins, travel, rides, CCM and reports.",
-    },
-    {
-      id: "access-center",
-      name: "Vascular Access Center Plan",
-      audience: "access",
-      monthlyFee: 995,
-      patientsIncluded: 150,
-      description:
-        "Access patients, referrals, appointments and messages with offices and patients.",
-    },
-    {
-      id: "nephrology-office",
-      name: "Nephrology Office Plan",
-      audience: "nephrology",
-      monthlyFee: 1495,
-      patientsIncluded: 150,
-      description:
-        "Nephrology portal with CCM time tracking, labs, reports and access center messages.",
-    },
-    HOSPITAL_PLAN,
-  ],
-  assignments: {},
-};
-
-const KEY = storageKey("org-subscriptions");
-const QUERY = ["org-subscriptions"];
-
-/** Plans saved before hospitals existed get the sample hospital plan. */
-function withHospital(state: State): State {
-  return state.plans.some((p) => p.audience === "hospital")
-    ? state
-    : { ...state, plans: [...state.plans, HOSPITAL_PLAN] };
-}
-
-function money(amount: number) {
-  return amount.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
-}
-
-function useOrgSubscriptions() {
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: QUERY,
-    queryFn: () => readJson<State>(KEY, DEFAULT_STATE).then(withHospital),
-  });
-  const write = useMutation({
-    mutationFn: async (transform: (s: State) => State) =>
-      writeJson(
-        KEY,
-        transform(withHospital(await readJson<State>(KEY, DEFAULT_STATE))),
-      ),
-    onSuccess: (next) => queryClient.setQueryData(QUERY, next),
-  });
-  return { state: query.data ?? DEFAULT_STATE, change: write.mutate };
-}
+const OUTCOME_TEXT = {
+  created: "The office plan was created. Publish it to offer it on contracts.",
+  updated: "The office plan was saved.",
+  versioned:
+    "Saved as a new version: offices already on this plan keep their terms; new contracts get the new one.",
+} as const;
 
 export function OrganizationSubscriptions() {
-  const { state, change } = useOrgSubscriptions();
-  const [editing, setEditing] = useState<OrgPlan | "new" | null>(null);
-
-  /* An organisation without a saved choice is on its type's first plan. */
-  const assignmentFor = (org: Organization) =>
-    state.assignments[org.id] ?? {
-      planId: state.plans.find((p) => p.audience === org.portal)?.id ?? "",
-      status: "Active" as OrgSubscriptionStatus,
-    };
-  const assign = (
-    orgId: string,
-    next: { planId: string; status: OrgSubscriptionStatus },
-  ) =>
-    change((s) => ({ ...s, assignments: { ...s.assignments, [orgId]: next } }));
+  const plans = useOrgPlans();
+  const canWrite = useCanLevel("plans", 2);
+  const canManage = useCanLevel("plans", 3);
+  const [editing, setEditing] = useState<AdminOrgPlan | "new" | null>(null);
+  const copy = readErrorCopy(plans.error, "The office plans did not load");
 
   return (
     <section className="mt-stack-2xl space-y-stack-lg">
@@ -169,147 +75,149 @@ export function OrganizationSubscriptions() {
             Office &amp; Clinic Subscriptions
           </h2>
           <p className="mt-stack-xs measure text-caption text-fg-muted">
-            Plans for dialysis centers, vascular access centers and nephrology
-            offices. Kept apart from the member plans, so they never show on the
-            public pricing page.
+            Plans for dialysis centers, vascular access centers, nephrology
+            offices and hospitals. Kept apart from the member plans, so they
+            never show on the public pricing page.
           </p>
         </div>
-        <Button
-          size="small"
-          variant="neutral"
-          appearance="fill-stroke"
-          leadingIcon={<Plus aria-hidden="true" />}
-          onClick={() => setEditing("new")}
-        >
-          Add Office Plan
-        </Button>
+        {canWrite ? (
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            leadingIcon={<Plus aria-hidden="true" />}
+            onClick={() => {
+              plans.dismissSaveError();
+              setEditing("new");
+            }}
+          >
+            Add Office Plan
+          </Button>
+        ) : null}
       </div>
+
+      {plans.outcome ? (
+        <Alert tone="success" onDismiss={plans.dismissOutcome}>
+          {OUTCOME_TEXT[plans.outcome]}
+        </Alert>
+      ) : null}
+      <ActionError
+        error={plans.statusError}
+        title="The plan status did not change"
+        onDismiss={plans.dismissStatusError}
+      />
 
       <Card padding="none">
         <div className="p-card">
           <h3 className="text-heading-5 text-fg">Plans</h3>
         </div>
-        <Table minWidth={720}>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Plan</TableHeaderCell>
-              <TableHeaderCell>For</TableHeaderCell>
-              <TableHeaderCell>Monthly fee</TableHeaderCell>
-              <TableHeaderCell>Patients included</TableHeaderCell>
-              <TableHeaderCell className="text-right">Edit</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {state.plans.map((plan) => (
-              <TableRow key={plan.id}>
-                <TableCell emphasis>
-                  {plan.name}
-                  <span className="block text-caption text-fg-muted">
-                    {plan.description}
-                  </span>
-                </TableCell>
-                <TableCell>{AUDIENCE[plan.audience]}</TableCell>
-                <TableCell numeric>{money(plan.monthlyFee)}</TableCell>
-                <TableCell numeric>{plan.patientsIncluded}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="small"
-                    variant="neutral"
-                    appearance="ghost"
-                    iconOnly
-                    aria-label={`Edit ${plan.name}`}
-                    onClick={() => setEditing(plan)}
-                  >
-                    <Pencil aria-hidden="true" />
-                  </Button>
-                </TableCell>
+        <AsyncSection
+          pending={plans.isPending}
+          error={plans.error}
+          onRetry={canRetry(plans.error) ? plans.refetch : undefined}
+          {...copy}
+          skeleton={<SkeletonTable rows={4} columns={6} minWidth={820} />}
+        >
+          <Table minWidth={820}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Plan</TableHeaderCell>
+                <TableHeaderCell>For</TableHeaderCell>
+                <TableHeaderCell>Monthly fee</TableHeaderCell>
+                <TableHeaderCell>Patients included</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Actions
+                </TableHeaderCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {plans.plans.length === 0 ? (
+                <TableEmptyRow colSpan={6}>
+                  <p className="text-body-sm text-fg-muted">
+                    No office plans yet.
+                  </p>
+                </TableEmptyRow>
+              ) : null}
+              {plans.plans.map((plan) => (
+                <TableRow key={plan.id}>
+                  <TableCell emphasis>
+                    {plan.name}
+                    {plan.description ? (
+                      <span className="block text-caption text-fg-muted">
+                        {plan.description}
+                      </span>
+                    ) : null}
+                    {plan.earlierVersions > 0 ? (
+                      <span className="block text-caption text-fg-muted">
+                        Version {plan.earlierVersions + 1}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>{plan.audienceLabel}</TableCell>
+                  <TableCell numeric>
+                    {formatCents(plan.monthlyFeeCents)}
+                  </TableCell>
+                  <TableCell numeric>{plan.patientsIncluded}</TableCell>
+                  <TableCell>
+                    <PublishedBadge active={plan.active} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="inline-flex flex-wrap justify-end gap-inline-sm">
+                      {canManage ? (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="stroke"
+                          loading={plans.statusPendingId === plan.id}
+                          onClick={() =>
+                            plans.setStatus(
+                              plan.id,
+                              plan.active ? "retire" : "publish",
+                            )
+                          }
+                          aria-label={`${plan.active ? "Retire" : "Publish"} ${plan.name}`}
+                        >
+                          {plan.active ? "Retire" : "Publish"}
+                        </Button>
+                      ) : null}
+                      {canWrite ? (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="ghost"
+                          iconOnly
+                          aria-label={`Edit ${plan.name}`}
+                          onClick={() => {
+                            plans.dismissSaveError();
+                            setEditing(plan);
+                          }}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </Button>
+                      ) : null}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AsyncSection>
       </Card>
 
-      <Card padding="none">
-        <div className="p-card">
-          <h3 className="text-heading-5 text-fg">Organizations</h3>
-          <p className="mt-stack-xs text-caption text-fg-muted">
-            Which plan each office is on. Payment goes through Stripe once the
-            server is connected.
-          </p>
-        </div>
-        <Table minWidth={720}>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Organization</TableHeaderCell>
-              <TableHeaderCell>Type</TableHeaderCell>
-              <TableHeaderCell>Plan</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ORGANIZATIONS.filter((org) => org.portal !== "admin").map(
-              (org) => {
-                const current = assignmentFor(org);
-                const options = state.plans.filter(
-                  (p) => p.audience === org.portal,
-                );
-                return (
-                  <TableRow key={org.id}>
-                    <TableCell emphasis>{org.name}</TableCell>
-                    <TableCell>{org.kind}</TableCell>
-                    <TableCell>
-                      <Select
-                        selectSize="small"
-                        aria-label={`Plan for ${org.name}`}
-                        value={current.planId}
-                        onChange={(e) =>
-                          assign(org.id, { ...current, planId: e.target.value })
-                        }
-                      >
-                        {options.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} · {money(p.monthlyFee)}/mo
-                          </option>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        selectSize="small"
-                        aria-label={`Status for ${org.name}`}
-                        value={current.status}
-                        onChange={(e) =>
-                          assign(org.id, {
-                            ...current,
-                            status: e.target.value as OrgSubscriptionStatus,
-                          })
-                        }
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                );
-              },
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <PlatformContracts orgPlans={plans.plans} />
 
       {editing ? (
-        <PlanModal
+        <OrgPlanModal
           plan={editing === "new" ? null : editing}
+          saving={plans.isSaving}
+          error={plans.saveError}
           onClose={() => setEditing(null)}
-          onSave={(plan) => {
-            change((s) => ({
-              ...s,
-              plans: s.plans.some((p) => p.id === plan.id)
-                ? s.plans.map((p) => (p.id === plan.id ? plan : p))
-                : [...s.plans, plan],
-            }));
-            setEditing(null);
+          onSave={(draft) => {
+            void plans
+              .save(editing === "new" ? null : editing, draft)
+              .then(() => setEditing(null))
+              .catch(() => {});
           }}
         />
       ) : null}
@@ -317,30 +225,52 @@ export function OrganizationSubscriptions() {
   );
 }
 
-function PlanModal({
+function OrgPlanModal({
   plan,
+  saving,
+  error,
   onSave,
   onClose,
 }: {
-  plan: OrgPlan | null;
-  onSave: (plan: OrgPlan) => void;
+  plan: AdminOrgPlan | null;
+  saving: boolean;
+  error: unknown;
+  onSave: (draft: {
+    name: string;
+    audience: OrgAudience;
+    monthlyFeeCents: number;
+    patientsIncluded: number;
+    description: string;
+  }) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(plan?.name ?? "");
-  const [audience, setAudience] = useState<Portal>(plan?.audience ?? "clinic");
-  const [fee, setFee] = useState(String(plan?.monthlyFee ?? ""));
+  const [audience, setAudience] = useState<OrgAudience>(
+    (ORG_AUDIENCES as readonly string[]).includes(plan?.audience ?? "")
+      ? (plan!.audience as OrgAudience)
+      : "DIALYSIS_CENTER",
+  );
+  const [fee, setFee] = useState(
+    plan ? centsToInput(plan.monthlyFeeCents) : "",
+  );
   const [patients, setPatients] = useState(
-    String(plan?.patientsIncluded ?? ""),
+    plan ? String(plan.patientsIncluded) : "",
   );
   const [description, setDescription] = useState(plan?.description ?? "");
   const [tried, setTried] = useState(false);
+
+  const cents = parseDollars(fee);
   const nameError = name.trim() ? undefined : "Give the plan a name.";
   const feeError =
-    Number(fee) > 0 ? undefined : "Enter a monthly fee above zero.";
-  const patientsError =
-    Number.isInteger(Number(patients)) && Number(patients) > 0
+    cents !== null && cents > 0
       ? undefined
-      : "Enter a whole number of patients.";
+      : "Enter a monthly fee above zero, in dollars and cents (e.g. 1995.00).";
+  const patientsError =
+    /^\d+$/.test(patients.trim()) &&
+    Number(patients) >= 1 &&
+    Number(patients) <= 100_000
+      ? undefined
+      : "Enter a whole number of patients (1 to 100,000).";
 
   return (
     <Modal
@@ -349,18 +279,24 @@ function PlanModal({
       title={plan ? "Edit Office Plan" : "Add Office Plan"}
       footer={
         <>
-          <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancel
           </Button>
           <Button
+            loading={saving}
             onClick={() => {
               setTried(true);
-              if (nameError || feeError || patientsError) return;
+              if (nameError || feeError || patientsError || cents === null)
+                return;
               onSave({
-                id: plan?.id ?? `org-plan-${Date.now()}`,
                 name: name.trim(),
                 audience,
-                monthlyFee: Number(fee),
+                monthlyFeeCents: cents,
                 patientsIncluded: Number(patients),
                 description: description.trim(),
               });
@@ -372,6 +308,17 @@ function PlanModal({
       }
     >
       <div className="space-y-stack-md">
+        {error ? (
+          <Alert tone="danger" title="The plan was not saved">
+            {actionErrorText(error)}
+          </Alert>
+        ) : null}
+        {plan && plan.active ? (
+          <Alert tone="info" live={false}>
+            If an office is already on this plan, a new fee or patient limit is
+            saved as a new version; their contract keeps its terms.
+          </Alert>
+        ) : null}
         <FormField
           label="Plan name"
           required
@@ -380,6 +327,7 @@ function PlanModal({
           {(field) => (
             <Input
               {...field}
+              maxLength={120}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -390,11 +338,11 @@ function PlanModal({
             <Select
               {...field}
               value={audience}
-              onChange={(e) => setAudience(e.target.value as Portal)}
+              onChange={(e) => setAudience(e.target.value as OrgAudience)}
             >
-              {(Object.keys(AUDIENCE) as Portal[]).map((p) => (
-                <option key={p} value={p}>
-                  {AUDIENCE[p]}
+              {ORG_AUDIENCES.map((a) => (
+                <option key={a} value={a}>
+                  {AUDIENCE_LABEL[a]}
                 </option>
               ))}
             </Select>
@@ -409,10 +357,10 @@ function PlanModal({
             {(field) => (
               <Input
                 {...field}
-                type="number"
-                min={0}
+                inputMode="decimal"
                 value={fee}
                 onChange={(e) => setFee(e.target.value)}
+                placeholder="1995.00"
               />
             )}
           </FormField>
@@ -437,6 +385,7 @@ function PlanModal({
             <Textarea
               {...field}
               rows={3}
+              maxLength={500}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
