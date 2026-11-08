@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 15;
+export const STORAGE_VERSION = 16;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -458,12 +458,45 @@ export const RETIRED_COOKIES: readonly string[] = [LEGACY_SESSION_COOKIE];
  */
 export const STRIPPED_FIELDS: readonly { key: string; fields: string[] }[] = [];
 
+/**
+ * Member stores still live in this browser that hold health data, until
+ * their decision moves them to the API. Each is filed under the account id
+ * (`nr:member-id:<userId>:<name>`, storage.ts), never the email, and every
+ * variant is removed on sign-out and at every sign-in
+ * (purgeSignOutStores), so it never outlives the session that wrote it.
+ * The old email-keyed copy (`nr:member:<email>:<name>`) is retired since
+ * `since` and removed by every purge.
+ */
+export const SIGN_OUT_STORES: readonly RetiredStore[] = [
+  {
+    name: "dialysis-treatment-vitals",
+    since: 16,
+    why: "PM-4 interim fix (P15a; D8 stays open): the home-HD session vitals key put the member's email in the key and survived sign-out, so the next person on a shared browser could read the previous member's email and vitals. No screen reads or writes it today (useTreatmentVitals has no caller); the store is retired when D8 is decided.",
+  },
+];
+
+function isSignOutStoreKey(key: string, name: string): boolean {
+  return (
+    key === `nr:${name}` ||
+    key === `nr:caregiver-none:${name}` ||
+    ((key.startsWith("nr:member:") || key.startsWith("nr:member-id:")) &&
+      key.endsWith(`:${name}`))
+  );
+}
+
 /** Whether a localStorage key belongs to a retired store or is retired. */
 export function isRetiredKey(key: string): boolean {
   if (KEPT_KEYS.includes(key)) return false;
   if (RETIRED_KEYS.includes(key)) return true;
   if (RETIRED_PREFIXES.some((prefix) => key.startsWith(prefix))) return true;
   if (!key.startsWith("nr:")) return false;
+  /* PM-4: the email-keyed copy of a sign-out store. */
+  if (
+    SIGN_OUT_STORES.some(
+      ({ name }) => key.startsWith("nr:member:") && key.endsWith(`:${name}`),
+    )
+  )
+    return true;
   return RETIRED_STORES.some(
     ({ name }) =>
       key === `nr:${name}` ||
@@ -513,6 +546,35 @@ function storageOrNull(): Storage | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Removes every copy of the SIGN_OUT_STORES (every member's, the plain key,
+ * the caregiver's empty view). Runs on sign-out, on session end and at the
+ * start of every sign-in, so an account switch on one browser never finds
+ * the previous person's copy. Never throws.
+ */
+export function purgeSignOutStores(
+  storage: Storage | null = storageOrNull(),
+): string[] {
+  const removed: string[] = [];
+  if (!storage) return removed;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key !== null) keys.push(key);
+    }
+    for (const key of keys) {
+      if (SIGN_OUT_STORES.some(({ name }) => isSignOutStoreKey(key, name))) {
+        storage.removeItem(key);
+        removed.push(key);
+      }
+    }
+  } catch {
+    /* Blocked storage: nothing to remove. */
+  }
+  return removed;
 }
 
 /**

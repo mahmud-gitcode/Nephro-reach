@@ -139,7 +139,19 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
     has: member.page.getByRole("button", { name: "Submit Secure Message" }),
   });
   await notice.getByRole("checkbox").check();
+  /* Wait on the server's answer to the send, not only on the text on the
+     page: on a production build the office can open its inbox before the
+     write lands, and the inbox does not poll. */
+  const sent = member.page.waitForResponse(
+    (res) =>
+      res.request().method() === "POST" &&
+      /\/patients\/[^/]+\/conversations(\/[^/]+\/messages)?$/.test(
+        new URL(res.url()).pathname,
+      ),
+    { timeout: 20_000 },
+  );
   await notice.getByRole("button", { name: "Submit Secure Message" }).click();
+  expect([200, 201]).toContain((await sent).status());
   await expect(member.page.getByText(question).first()).toBeVisible({
     timeout: 20_000,
   });
@@ -149,17 +161,29 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
 
   const clinicUi = await asUser(ACCOUNTS.clinic);
   await clinicUi.page.goto("/dashboard/clinic/messages");
+  /* The row by patient, not by its preview: when the office is closed the
+     server adds its automatic reply after John's message, so the preview
+     shows that reply (this, not next start, made the test flaky). */
   const row = clinicUi.page
     .getByRole("listitem")
-    .filter({ hasText: question })
+    .filter({ hasText: ACCOUNTS.john.name })
     .first();
   await expect(row).toBeVisible({ timeout: 20_000 });
   await row.click();
   await expect(
     clinicUi.page.getByRole("list", { name: "Messages" }).getByText(question),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   await clinicUi.page.getByLabel(/^Message John/).fill(answer);
+  const replied = clinicUi.page.waitForResponse(
+    (res) =>
+      res.request().method() === "POST" &&
+      /\/organizations\/[^/]+\/conversations\/[^/]+\/messages$/.test(
+        new URL(res.url()).pathname,
+      ),
+    { timeout: 20_000 },
+  );
   await clinicUi.page.getByRole("button", { name: "Send message" }).click();
+  expect([200, 201]).toContain((await replied).status());
   await expect(
     clinicUi.page.getByRole("list", { name: "Messages" }).getByText(answer),
   ).toBeVisible({ timeout: 20_000 });

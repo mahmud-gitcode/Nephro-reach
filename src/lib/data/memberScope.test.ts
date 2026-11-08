@@ -53,6 +53,44 @@ describe("whose data a key holds", () => {
   });
 });
 
+/* PM-4 (P15a): the home-HD vitals are filed under the account id, never
+   the email. */
+describe("the vitals store is keyed by the account id", () => {
+  const VITALS = storageKey("dialysis-treatment-vitals");
+  const ANA = "0f0f0f0f-0000-4000-8000-0000000000a1";
+  const BEN = "0f0f0f0f-0000-4000-8000-0000000000b2";
+
+  it("uses the id the server reported, with no email in the key", () => {
+    setLocalScope({ role: "user", email: "ana@example.com", userId: ANA });
+    expect(resolveKey(VITALS)).toBe(
+      `nr:member-id:${ANA}:dialysis-treatment-vitals`,
+    );
+    expect(resolveKey(VITALS)).not.toContain("ana@example.com");
+    /* The demo patient too: no shared plain copy for a member. */
+    setLocalScope({ role: "user", email: DEMO_MEMBER_EMAIL, userId: BEN });
+    expect(resolveKey(VITALS)).toBe(
+      `nr:member-id:${BEN}:dialysis-treatment-vitals`,
+    );
+  });
+
+  it("two members never read each other's vitals", async () => {
+    setLocalScope({ role: "user", email: "ana@example.com", userId: ANA });
+    await writeJson(VITALS, { "2026-11-01": { preWeight: 80 } });
+    setLocalScope({ role: "user", email: "ben@example.com", userId: BEN });
+    expect(await readJson(VITALS, null)).toBeNull();
+    expect(Object.keys(window.localStorage).some((k) => k.includes("@"))).toBe(
+      false,
+    );
+  });
+
+  it("a caregiver reads an empty view, never the member's", () => {
+    setLocalScope({ role: "caregiver", email: "c@example.com", userId: ANA });
+    expect(resolveKey(VITALS)).toBe(
+      "nr:caregiver-none:dialysis-treatment-vitals",
+    );
+  });
+});
+
 describe("the scope cannot be forged from the browser (INT-2)", () => {
   it("ignores a hand-written session cookie", () => {
     /* A store still on this device (appointments move in a later phase). */

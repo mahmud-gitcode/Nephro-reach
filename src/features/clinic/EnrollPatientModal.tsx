@@ -26,7 +26,7 @@ import {
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { organizationFor } from "@/features/staff/staff";
-import { useCcm, type CcmActions } from "./useCcm";
+import { CcmEnrollPartialError, useCcm, type CcmActions } from "./useCcm";
 import { actionErrorText } from "./officeContext";
 import { ConditionSelect } from "./ConditionSelect";
 import { useConditionLibrary } from "./useConditionLibrary";
@@ -96,12 +96,18 @@ function EnrollForm({
   /* ① put this patient on the roster and ② failed: the retry runs ② for
      that patient only, so the name and MRN they were added with stay as
      they are (an edit here would never reach the server, QA round 1). */
-  const locked = enroll.partialPatientId !== null;
-  const lockedHint =
-    "Already added to your roster. Only the program is tried again.";
+  /* The same for CCM "enroll new": (1) roster, (2) CCM enrolment. When (2)
+     fails, the patient (1) created is kept and the retry runs (2) only
+     (adding them again would be refused as patients.mrn_taken). */
+  const [ccmPatientId, setCcmPatientId] = useState<string | null>(null);
+  const ccmLocked = ccmPatientId !== null;
+  const locked = enroll.partialPatientId !== null || ccmLocked;
+  const lockedHint = ccmLocked
+    ? "Already added to your roster. Only the CCM enrollment is tried again."
+    : "Already added to your roster. Only the program is tried again.";
 
   const offersCcm = Boolean(ccm);
-  const isCcm = offersCcm && draft.program === CCM_PROGRAM;
+  const isCcm = offersCcm && (ccmLocked || draft.program === CCM_PROGRAM);
   const library = ccm?.library ?? [];
   const [dob, setDob] = useState("");
   const [conditions, setConditions] = useState<string[]>([]);
@@ -109,6 +115,7 @@ function EnrollForm({
   const [careManager, setCareManager] = useState("");
   const [location, setLocation] = useState("");
   const [ccmFailure, setCcmFailure] = useState<unknown>(null);
+  const ccmSaving = ccm?.store.isSaving ?? false;
 
   function ccmErrors() {
     const out: {
@@ -152,27 +159,36 @@ function EnrollForm({
     setAttempted(true);
     if (isCcm && ccm) {
       if (Object.keys(ccmErrors()).length > 0) return;
+      if (ccmSaving) return;
       const name = draft.name.trim().split(/\s+/);
       const lastName = name.length > 1 ? name.pop()! : "";
+      const body = {
+        conditions,
+        providerName: provider.trim(),
+        careManagerName: careManager.trim(),
+        ...(location.trim() ? { location: location.trim() } : {}),
+      };
       setCcmFailure(null);
-      ccm.store
-        .enrollNew(
-          {
-            firstName: name.join(" "),
-            lastName,
-            dateOfBirth: dob,
-            mrn: draft.mrn.trim(),
-          },
-          {
-            conditions,
-            providerName: provider.trim(),
-            careManagerName: careManager.trim(),
-            ...(location.trim() ? { location: location.trim() } : {}),
-          },
-        )
+      (ccmPatientId
+        ? ccm.store.enroll({ ...body, patientId: ccmPatientId })
+        : ccm.store.enrollNew(
+            {
+              firstName: name.join(" "),
+              lastName,
+              dateOfBirth: dob,
+              mrn: draft.mrn.trim(),
+            },
+            body,
+          )
+      )
         /* The CCM success links to the CCM dashboard, not a roster row. */
         .then(() => onEnrolled(draft.name.trim(), null, true))
-        .catch(setCcmFailure);
+        .catch((error: unknown) => {
+          if (error instanceof CcmEnrollPartialError) {
+            setCcmPatientId(error.patientId);
+            setCcmFailure(error.error);
+          } else setCcmFailure(error);
+        });
       return;
     }
     if (Object.keys(validateEnrollment(draft, programs)).length > 0) return;
@@ -212,9 +228,9 @@ function EnrollForm({
             type="submit"
             form="enroll-form"
             size="small"
-            disabled={enroll.isPending || !canEnroll}
+            disabled={enroll.isPending || ccmSaving || !canEnroll}
           >
-            {enroll.isPending
+            {enroll.isPending || ccmSaving
               ? "Enrolling…"
               : isCcm
                 ? "Enroll in CCM"
@@ -231,8 +247,17 @@ function EnrollForm({
           </Alert>
         ) : null}
         {ccmFailure ? (
-          <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
+          <Alert
+            tone="danger"
+            className="mb-stack-lg"
+            title={
+              ccmLocked
+                ? "Patient added, CCM enrollment failed"
+                : "Not enrolled"
+            }
+          >
             {actionErrorText(ccmFailure)}
+            {ccmLocked ? " Press Enroll in CCM to try the CCM step again." : ""}
           </Alert>
         ) : null}
         {failure?.partial ? (
@@ -296,11 +321,17 @@ function EnrollForm({
           </FormField>
 
           {isCcm ? (
-            <FormField label="Date of birth" required error={errors.dob}>
+            <FormField
+              label="Date of birth"
+              required
+              hint={ccmLocked ? lockedHint : undefined}
+              error={errors.dob}
+            >
               {(props) => (
                 <Input
                   {...props}
                   type="date"
+                  readOnly={ccmLocked}
                   value={dob}
                   onChange={(event) => setDob(event.target.value)}
                 />
@@ -330,10 +361,15 @@ function EnrollForm({
                 value={draft.program}
                 onChange={(event) => set("program", event.target.value)}
               >
-                {programs.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-                {offersCcm && !locked ? <option>{CCM_PROGRAM}</option> : null}
+                {/* A CCM retry stays CCM: the patient is already added. */}
+                {ccmLocked
+                  ? null
+                  : programs.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                {offersCcm && (ccmLocked || !locked) ? (
+                  <option>{CCM_PROGRAM}</option>
+                ) : null}
               </Select>
             )}
           </FormField>

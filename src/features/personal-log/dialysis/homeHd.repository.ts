@@ -9,7 +9,10 @@ import { normaliseVitals, type TreatmentVitals } from "./homeHd";
    with the treatment or two; `nr:dialysis-treatment-vitals` is then retired
    (Phase 15 at the latest). It is the one remaining member PHI key and is
    deliberately not in the purge registry until then. No screen reads it
-   today (useTreatmentVitals has no caller).
+   today (useTreatmentVitals has no caller). PM-4 interim fix (P15a): it is
+   filed under the account id, never the email (storage.ts ID_SCOPED), and
+   every copy is removed on sign-out and at sign-in (legacyPurge
+   SIGN_OUT_STORES); the old email-keyed copy is purged.
    ========================================================================== */
 
 const VITALS_KEY = storageKey("dialysis-treatment-vitals");

@@ -32,6 +32,7 @@ import { formatClassDate, registrationTone } from "./liveClass.data";
 import type { RecentClass } from "./liveClass.data";
 import type { BadgeTone } from "@/components/ui";
 import { toStartsAt, zoneLabel } from "./liveClass.mappers";
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 
 /* ==========================================================================
    The dialogs behind Live Class's actions
@@ -554,7 +555,8 @@ export function RecordingModal({
 
         {error ? <Alert tone="warning">{error}</Alert> : null}
 
-        {link && !error ? (
+        {/* Only a stored http(s) link becomes an href (never javascript:). */}
+        {isSafeLinkUrl(link) && !error ? (
           <a
             href={link}
             target="_blank"
@@ -620,7 +622,7 @@ export function RecordingsLibraryModal({
                 </span>
               </button>
 
-              {link ? (
+              {isSafeLinkUrl(link) ? (
                 <a
                   href={link}
                   target="_blank"

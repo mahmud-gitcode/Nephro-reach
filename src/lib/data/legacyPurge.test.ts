@@ -4,7 +4,9 @@ import {
   KEPT_KEYS,
   LEGACY_SESSION_COOKIE,
   purgeLegacyStorage,
+  purgeSignOutStores,
   RETIRED_STORES,
+  SIGN_OUT_STORES,
   STORAGE_VERSION,
   STORAGE_VERSION_KEY,
 } from "./legacyPurge";
@@ -13,13 +15,16 @@ import {
    their feature moves to the API (INTEGRATION_PROGRESS deviations). */
 
 const LIVE = [
-  /* Home-HD session vitals stay until D8 (retired by Phase 15 at the
-     latest): the one remaining member PHI store. */
-  "nr:member:new.member@example.test:dialysis-treatment-vitals",
+  /* Home-HD session vitals stay until D8: the one remaining member PHI
+     store, filed under the account id (PM-4) and removed on sign-out by
+     purgeSignOutStores, not by the boot purge. */
+  "nr:member-id:0f0f0f0f-0000-4000-8000-000000000001:dialysis-treatment-vitals",
   "nr:dialysis-treatment-vitals",
 ];
 
 const RETIRED = [
+  /* PM-4: the email-keyed copy of the home-HD vitals. */
+  "nr:member:new.member@example.test:dialysis-treatment-vitals",
   /* Phase 2: the prototype's accounts with plain-text passwords. */
   "nr-registered-users",
   "nr:medication-mood",
@@ -105,7 +110,7 @@ describe("the registry", () => {
   });
 
   it("explains why each retired store is safe to delete", () => {
-    for (const store of RETIRED_STORES) {
+    for (const store of [...RETIRED_STORES, ...SIGN_OUT_STORES]) {
       expect(store.why.length).toBeGreaterThan(20);
       expect(store.since).toBeLessThanOrEqual(STORAGE_VERSION);
     }
@@ -165,5 +170,50 @@ describe("Phase 2: demo credentials and the demo session", () => {
     window.localStorage.setItem("nr:staff-accounts", "{not json");
     purgeLegacyStorage();
     expect(window.localStorage.getItem("nr:staff-accounts")).toBeNull();
+  });
+});
+
+/* PM-4 (P15a, D8 stays open): the home-HD vitals never outlive the session
+   that wrote them, and no key carries an email. */
+describe("PM-4: sign-out stores", () => {
+  const VITALS = [
+    "nr:member-id:0f0f0f0f-0000-4000-8000-000000000001:dialysis-treatment-vitals",
+    "nr:member-id:0f0f0f0f-0000-4000-8000-000000000002:dialysis-treatment-vitals",
+    "nr:member:new.member@example.test:dialysis-treatment-vitals",
+    "nr:dialysis-treatment-vitals",
+    "nr:caregiver-none:dialysis-treatment-vitals",
+  ];
+
+  it("removes every copy of the vitals and nothing else", () => {
+    window.localStorage.setItem("preferred_language", "ES");
+    window.localStorage.setItem("nr:member-appointments", "[]");
+    for (const key of VITALS) window.localStorage.setItem(key, "{}");
+    expect(purgeSignOutStores().sort()).toEqual([...VITALS].sort());
+    expect(keys()).toEqual(["nr:member-appointments", "preferred_language"]);
+  });
+
+  it("matches the store name whole", () => {
+    window.localStorage.setItem("nr:dialysis-treatment-vitals-extra", "{}");
+    window.localStorage.setItem("nr:member-id:x:dialysis-treatments", "{}");
+    expect(purgeSignOutStores()).toEqual([]);
+  });
+
+  it("the boot purge drops the old email-keyed copy (no email left in a key)", () => {
+    window.localStorage.setItem(
+      "nr:member:new.member@example.test:dialysis-treatment-vitals",
+      JSON.stringify({ "2026-11-01": { preWeight: 80 } }),
+    );
+    purgeLegacyStorage();
+    expect(keys().some((k) => k.includes("@"))).toBe(false);
+  });
+
+  it("does not throw when storage is blocked", () => {
+    const blocked = {
+      get length(): number {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    } as unknown as Storage;
+    expect(purgeSignOutStores(blocked)).toEqual([]);
+    expect(purgeSignOutStores(null)).toEqual([]);
   });
 });

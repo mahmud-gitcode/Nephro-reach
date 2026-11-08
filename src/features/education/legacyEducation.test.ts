@@ -50,9 +50,12 @@ describe("retired education and live-class storage", () => {
     /* Live keys of other features are left alone. */
     expect(isRetiredKey("preferred_language")).toBe(false);
     /* library-saved was retired by Phase 12 (version 8); the member's
-       home-HD vitals stay live until D8. */
+       home-HD vitals stay live until D8, filed under the account id since
+       PM-4 (the email-keyed copy is retired). */
     expect(
-      isRetiredKey("nr:member:demo@example.test:dialysis-treatment-vitals"),
+      isRetiredKey(
+        "nr:member-id:0f0f0f0f-0000-4000-8000-000000000001:dialysis-treatment-vitals",
+      ),
     ).toBe(false);
   });
 

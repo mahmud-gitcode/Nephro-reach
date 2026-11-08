@@ -41,7 +41,7 @@ import {
   SESSION_ENDED_CODE,
   setActiveOrganization,
 } from "@/lib/api/client";
-import { purgeLegacyStorage } from "@/lib/data/legacyPurge";
+import { purgeLegacyStorage, purgeSignOutStores } from "@/lib/data/legacyPurge";
 import { clearQueryCaches, switchPortalContext } from "@/lib/data/queryCache";
 import { setLocalScope } from "@/lib/data/storage";
 import {
@@ -318,6 +318,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const startSignIn = useCallback(() => {
     resetApiClientState();
     purgeLegacyStorage();
+    /* PM-4: an account switch never finds the previous person's copy. */
+    purgeSignOutStores();
     clearQueryCaches();
     clearPendingChallenge();
     ending.current = false;

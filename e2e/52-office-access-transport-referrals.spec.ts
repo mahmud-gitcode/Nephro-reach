@@ -691,12 +691,25 @@ test("cross-office isolation: one account in two dialysis centers @phase10 @need
   await page.getByRole("link", { name: "Switch portal" }).click();
   await expect(page).toHaveURL(/\/select-portal/);
   await page.getByRole("button", { name: `Open: ${name}` }).click();
+  /* Wait on the second office's own roster answer and its rendered result,
+     not on network idle (a production build keeps background requests). */
+  const secondRoster = page.waitForResponse(
+    (res) =>
+      new URL(res.url()).pathname.endsWith(
+        `/organizations/${office.id}/access-profiles`,
+      ) && res.request().method() === "GET",
+    { timeout: 30_000 },
+  );
   await page.getByRole("link", { name: "Vascular Access" }).first().click();
   await expect(page.getByText("Access Patients").first()).toBeVisible({
     timeout: 30_000,
   });
   const mark = calls.length;
-  await page.waitForLoadState("networkidle");
+  expect((await secondRoster).status()).toBe(200);
+  /* The new office keeps no records: its empty roster is the loaded state. */
+  await expect(page.getByText("No patients match these filters.")).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(
     page.getByRole("button", { name: `View ${ACCOUNTS.john.name}` }),
   ).toHaveCount(0);

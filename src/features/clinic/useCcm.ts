@@ -158,6 +158,20 @@ export function useCcmInbox(
 
 export type CcmActions = ReturnType<typeof useCcm>;
 
+/** "Enroll new" put the patient on the roster, and the CCM enrolment then
+ *  failed: `patientId` is the patient the roster call created, `error` the
+ *  CCM step's refusal. */
+export class CcmEnrollPartialError extends Error {
+  readonly patientId: string;
+  readonly error: unknown;
+  constructor(patientId: string, error: unknown) {
+    super("The patient was added to the roster; the CCM enrollment failed.");
+    this.name = "CcmEnrollPartialError";
+    this.patientId = patientId;
+    this.error = error;
+  }
+}
+
 /**
  * The CCM writes, one per server operation, with the old action names so
  * the page changes call sites, not structure. Each takes the patient id.
@@ -196,7 +210,10 @@ export function useCcm() {
       enroll: (body: repo.EnrollBody) =>
         run(body.patientId, (org) => repo.enroll(org, body)),
       /** A person not on the roster yet: the roster link first (it takes a
-       *  contract seat on the server, NEW-3), then the CCM enrolment. */
+       *  contract seat on the server, NEW-3), then the CCM enrolment. The
+       *  two are not atomic: when the second fails, the error carries the
+       *  new patient's id so a retry runs `enroll` for that patient only
+       *  (adding them again would be refused as patients.mrn_taken). */
       enrollNew: (
         patient: repo.NewRosterPatient,
         body: Omit<repo.EnrollBody, "patientId">,
@@ -205,7 +222,11 @@ export function useCcm() {
           const added = await repo.addRosterPatient(org, patient);
           const patientId = repo.enrolledPatientId(added);
           if (!patientId) throw new Error("The new patient has no id.");
-          return repo.enroll(org, { ...body, patientId });
+          try {
+            return await repo.enroll(org, { ...body, patientId });
+          } catch (error) {
+            throw new CcmEnrollPartialError(patientId, error);
+          }
         }),
       setConditions: (patientId: string, conditions: string[]) =>
         run(patientId, (org) =>

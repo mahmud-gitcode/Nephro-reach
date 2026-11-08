@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/client";
 import { registerQueryClient } from "./queryCache";
 import { STORAGE_VERSION_KEY } from "./legacyPurge";
+import { setLocalScope, storageKey, writeJson } from "./storage";
 import {
   __resetSessionForTests,
   AUTH_CHANNEL,
@@ -149,6 +150,47 @@ describe("signOut", () => {
     void signOut();
     expect(client.getQueryCache().getAll()).toHaveLength(0);
     expect(assign).toHaveBeenCalledWith("/");
+  });
+});
+
+/* PM-4 (P15a): after sign-out no home-HD vitals key and no email remain in
+   this browser (D8 stays open; the store itself is not retired). */
+describe("signOut: member health data kept in this browser", () => {
+  it("leaves no vitals key and no email in localStorage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 200 })),
+    );
+    setLocalScope({
+      role: "user",
+      email: "ana@example.test",
+      userId: "0f0f0f0f-0000-4000-8000-0000000000a1",
+    });
+    await writeJson(storageKey("dialysis-treatment-vitals"), {
+      "2026-11-01": { preWeight: 80 },
+    });
+    /* An older build's email-keyed copy, and a plain one. */
+    window.localStorage.setItem(
+      "nr:member:ana@example.test:dialysis-treatment-vitals",
+      "{}",
+    );
+    window.localStorage.setItem("nr:dialysis-treatment-vitals", "{}");
+    window.localStorage.setItem("preferred_language", "EN");
+    expect(
+      Object.keys(window.localStorage).filter((k) =>
+        k.includes("dialysis-treatment-vitals"),
+      ),
+    ).toHaveLength(3);
+
+    await signOut();
+    setLocalScope(null);
+
+    const left = Object.keys(window.localStorage);
+    expect(left.filter((k) => k.includes("vitals"))).toEqual([]);
+    expect(left.some((k) => k.includes("@"))).toBe(false);
+    for (const k of left)
+      expect(window.localStorage.getItem(k) ?? "").not.toContain("@");
+    expect(window.localStorage.getItem("preferred_language")).toBe("EN");
   });
 });
 
