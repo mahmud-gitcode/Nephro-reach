@@ -161,15 +161,18 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
 
   const clinicUi = await asUser(ACCOUNTS.clinic);
   await clinicUi.page.goto("/dashboard/clinic/messages");
+  /* The row by patient, not by its preview: when the office is closed the
+     server adds its automatic reply after John's message, so the preview
+     shows that reply (this, not next start, made the test flaky). */
   const row = clinicUi.page
     .getByRole("listitem")
-    .filter({ hasText: question })
+    .filter({ hasText: ACCOUNTS.john.name })
     .first();
   await expect(row).toBeVisible({ timeout: 20_000 });
   await row.click();
   await expect(
     clinicUi.page.getByRole("list", { name: "Messages" }).getByText(question),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   await clinicUi.page.getByLabel(/^Message John/).fill(answer);
   const replied = clinicUi.page.waitForResponse(
     (res) =>
