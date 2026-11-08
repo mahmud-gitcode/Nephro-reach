@@ -285,6 +285,19 @@ test("J10-2: ride lifecycle, member and dialysis center (D4/PM-2) @phase10", asy
   const access = await api(ACCOUNTS.access);
   const { johnId, profileId, several } = await johnAtMetro(john);
   const metro = await access.orgId("ACCESS_CENTER");
+  /* Leftover open rides from an earlier run would share the queue. */
+  const open = (
+    await json(
+      await john.get(
+        `/patients/${johnId}/access-profiles/${profileId}/transport?limit=150`,
+      ),
+      "old rides",
+    )
+  ).data as Array<{ id: string; status: string }>;
+  for (const old of open.filter((r) => r.status !== "Cancelled"))
+    await john.post(
+      `/patients/${johnId}/access-profiles/${profileId}/transport/${old.id}/cancel`,
+    );
   const visitDay = day(40 + Math.floor(Math.random() * 200));
   const booked = await json(
     await access.post(
@@ -308,12 +321,8 @@ test("J10-2: ride lifecycle, member and dialysis center (D4/PM-2) @phase10", asy
     await openMetro(page, several);
     await page.getByRole("button", { name: "Request a Ride" }).click();
     const ask = page.getByRole("dialog", { name: "Request a Ride" });
-    const visit = ask.getByLabel("Appointment");
-    const option = await visit
-      .locator("option", { hasText: "Fistulogram" })
-      .first()
-      .getAttribute("value");
-    await visit.selectOption(option!);
+    /* The visit booked above, by its id (older test visits may exist). */
+    await ask.getByLabel("Appointment").selectOption(appointmentId);
     await ask.getByLabel(/^Pickup address/).fill("1 Synthetic Way, Columbia");
     await ask.getByRole("button", { name: "Submit Request" }).click();
     await expect(ask).toBeHidden({ timeout: 20_000 });
@@ -504,6 +513,7 @@ test("J10-4: a referral to a directory access center, acknowledged and answered 
     await to.selectOption({ label: ACCOUNTS.access.name });
   }
   await modal.getByLabel(/^Type/).selectOption("General Message");
+  await modal.getByLabel(/^Patient/).selectOption("");
   await modal.getByLabel(/^Message/).fill(detail);
   await modal.getByRole("button", { name: "Send" }).click();
   await expect(modal).toBeHidden({ timeout: 20_000 });
