@@ -20,8 +20,9 @@ import {
    Messaging moved to the API (useConversations.ts). This keeps the
    prototype hook's exported name and shape so files in other lanes compile
    unchanged until their owners switch:
-   - features/clinic/ClinicCheckIns.tsx, useMemberFeed.ts (OFFICE Phase 9):
-     use `useOfficeInbox` / `useOfficeMessaging(org).start`;
+   - features/clinic/ClinicCheckIns.tsx (OFFICE; useMemberFeed.ts was
+     deleted by Phase 9): use `useOfficeInbox` /
+     `useOfficeMessaging(org).start`;
    - features/clinic/ClinicReports.tsx (EDU-BIZ Phase 14): `useOfficeInbox`.
 
    It reads the signed-in context's own threads from the server (the
