@@ -468,7 +468,11 @@ async function auditRole(role: Role, asUser: AsUser) {
   const out = page.getByRole("button", { name: /^log out$/i }).first();
   if (await out.isVisible().catch(() => false)) {
     await out.click();
-    await expect(page).toHaveURL(/\/login/, { timeout: 30_000 });
+    /* The signing-out tab leaves the portal (to the landing page); other
+       tabs go to /login (e2e/02). */
+    await expect(page).not.toHaveURL(/\/(dashboard|select-portal)/, {
+      timeout: 30_000,
+    });
     await settle(page);
     await audit(page, context, role.id, "(after sign-out)");
   } else {

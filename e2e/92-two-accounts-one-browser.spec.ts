@@ -187,7 +187,10 @@ for (const pair of PAIRS) {
       .getByRole("button", { name: /^log out$/i })
       .first()
       .click();
-    await expect(page).toHaveURL(/\/login/, { timeout: 30_000 });
+    /* The signing-out tab leaves the portal (to the landing page). */
+    await expect(page).not.toHaveURL(/\/(dashboard|select-portal)/, {
+      timeout: 30_000,
+    });
 
     const calls = recordApiCalls(page);
     const pages = await useEveryPage(page, pair.b);
