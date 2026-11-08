@@ -311,6 +311,62 @@ test("J9-2 a rough-day check-in reaches the office; opening it marks it seen @ph
   }
 });
 
+/* P15a: the check-in reminder is an office message through the API (it
+   used the retired member store, which threw and showed "not sent"). */
+test("check-in reminder: the office writes to the patient through the messaging API @phase9", async ({
+  asUser,
+  api,
+}) => {
+  const owner = await api(ACCOUNTS.clinic);
+  const R = await owner.orgId("DIALYSIS_CENTER");
+  const member = await api(ACCOUNTS.john);
+  const JOHN = await member.patientId();
+  const { page } = await asUser(ACCOUNTS.clinic);
+  const calls = recordApiCalls(page);
+  await page.goto("/dashboard/clinic/checkins");
+  await page
+    .getByRole("button", { name: "Send a check-in reminder" })
+    .click({ timeout: 20_000 });
+  const dialog = page.getByRole("dialog", {
+    name: "Send a Check-In Reminder",
+  });
+  const patient = dialog.getByLabel(/^Patient/);
+  await expect(patient.locator(`option[value="${JOHN}"]`)).toBeAttached({
+    timeout: 20_000,
+  });
+  await patient.selectOption(JOHN);
+  const marker = `P15a reminder ${Date.now().toString(36)}`;
+  await dialog.getByLabel(/^Message/).fill(marker);
+  const sent = page.waitForResponse(
+    (res) =>
+      res.request().method() === "POST" &&
+      new URL(res.url()).pathname.endsWith(`/organizations/${R}/conversations`),
+    { timeout: 20_000 },
+  );
+  await dialog.getByRole("button", { name: "Send" }).click();
+  expect([200, 201]).toContain((await sent).status());
+  await expect(dialog).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.getByText(/not sent/i)).toHaveCount(0);
+  /* John's own thread with the office now ends with the reminder. */
+  await expect
+    .poll(async () => {
+      const rows = (
+        await json(
+          await member.get(`/patients/${JOHN}/conversations?limit=50`),
+          "threads",
+        )
+      ).data as Array<{
+        organizationId: string;
+        lastMessage: { body: string } | null;
+      }>;
+      return rows.some(
+        (r) => r.organizationId === R && r.lastMessage?.body === marker,
+      );
+    })
+    .toBe(true);
+  expectOnlyOffice(calls, R);
+});
+
 /* ------------------------------------------------------------- J9-3 */
 
 async function logMinutes(page: Page, minutes: number) {
