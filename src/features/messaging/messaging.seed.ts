@@ -13,7 +13,9 @@ import { DEMO_MEMBER_MRN, DEMO_MEMBER_NAME } from "@/lib/data/demoIdentity";
    Importers (2026-11-03), to be removed by their owners:
    - FACILITY: features/clinic/ClinicCheckIns.tsx, ClinicReports.tsx
      (and the test features/clinic/newPatientFlows.test.ts);
-   - NEPHROLOGY_OFFICE: features/clinic/ClinicReports.tsx;
+   - NEPHROLOGY_OFFICE: features/clinic/ClinicReports.tsx, and the page
+     app/(portal)/dashboard/(nephrology)/nephrology/messages/page.tsx
+     (display label passed to ClinicMessages only);
    - DEMO_MEMBER: features/clinic/memberFeed.ts,
      features/vascular-access/vascularAccess.data.ts (+ its test);
    - seedConversations: features/clinic/memberFeed.test.ts.

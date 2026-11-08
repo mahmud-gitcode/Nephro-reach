@@ -83,6 +83,9 @@ export function NewMessageModal({
   const [category, setCategory] = useState<MessageCategory>(initialCategory);
   const [body, setBody] = useState(initialBody);
   const [tried, setTried] = useState(false);
+  /* A send that throws at once (a screen whose sending is not connected
+     yet) keeps the dialog open with this, never closes as if sent. */
+  const [thrown, setThrown] = useState<string | null>(null);
   const error = !body.trim()
     ? isEs
       ? "Escribe un mensaje"
@@ -93,7 +96,25 @@ export function NewMessageModal({
     setTried(true);
     if (error || !recipient) return;
     const send = () => {
-      const result = onSend(recipient, body, category);
+      let result: void | Promise<unknown>;
+      setThrown(null);
+      try {
+        result = onSend(recipient, body, category);
+      } catch (cause) {
+        const unavailable =
+          (cause as { code?: unknown } | null)?.code ===
+          "messaging.write_unavailable";
+        setThrown(
+          unavailable
+            ? isEs
+              ? "El mensaje no se envió: enviar desde esta pantalla aún no está disponible. Escriba al paciente desde Mensajes."
+              : "This message was not sent: sending from this screen is not available yet. Write to the patient from Messages."
+            : isEs
+              ? "El mensaje no se envió."
+              : "This message was not sent.",
+        );
+        return;
+      }
       if (result && typeof (result as Promise<unknown>).then === "function")
         (result as Promise<unknown>).then(onClose, () => {
           /* The page passes the server's refusal as sendError. */
@@ -127,7 +148,9 @@ export function NewMessageModal({
       }
     >
       <div className="space-y-stack-md">
-        {sendError ? <Alert tone="danger">{sendError}</Alert> : null}
+        {sendError || thrown ? (
+          <Alert tone="danger">{sendError ?? thrown}</Alert>
+        ) : null}
         <FormField
           label={recipientLabel}
           required
