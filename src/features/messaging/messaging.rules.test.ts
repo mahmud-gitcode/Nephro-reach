@@ -76,91 +76,6 @@ function stateWith(
   };
 }
 
-describe("appendMessage", () => {
-  it("adds the message to the right thread and leaves the others alone", () => {
-    const next = rules.appendMessage(
-      stateWith(),
-      "c1",
-      "On my way",
-      "clinic",
-      NOW,
-    );
-    expect(next.conversations[0].messages).toHaveLength(2);
-    expect(next.conversations[0].messages[1]).toMatchObject({
-      author: "clinic",
-      body: "On my way",
-      sentAt: new Date(NOW).toISOString(),
-    });
-    expect(next.conversations[1].messages).toHaveLength(1);
-  });
-
-  it("refuses an empty body, so a stray Enter posts nothing", () => {
-    const before = stateWith();
-    expect(rules.appendMessage(before, "c1", "", "clinic", NOW)).toBe(before);
-    expect(rules.appendMessage(before, "c1", "   \n ", "clinic", NOW)).toBe(
-      before,
-    );
-  });
-
-  it("trims the body rather than storing the whitespace around it", () => {
-    const next = rules.appendMessage(
-      stateWith(),
-      "c1",
-      "  hi  ",
-      "clinic",
-      NOW,
-    );
-    expect(next.conversations[0].messages[1].body).toBe("hi");
-  });
-
-  it("treats a clinic reply as having read the thread", () => {
-    const next = rules.appendMessage(
-      stateWith({ unread: 4 }),
-      "c1",
-      "Reply",
-      "clinic",
-      NOW,
-    );
-    expect(next.conversations[0].unread).toBe(0);
-  });
-
-  it("counts an incoming member message as unread", () => {
-    const next = rules.appendMessage(
-      stateWith({ unread: 1 }),
-      "c1",
-      "Another",
-      "member",
-      NOW,
-    );
-    expect(next.conversations[0].unread).toBe(2);
-  });
-
-  it("does not mutate the state it was given", () => {
-    const before = stateWith();
-    rules.appendMessage(before, "c1", "New", "clinic", NOW);
-    expect(before.conversations[0].messages).toHaveLength(1);
-  });
-
-  it("ignores an id that is not in the state", () => {
-    const next = rules.appendMessage(stateWith(), "nope", "Hi", "clinic", NOW);
-    expect(next.conversations.flatMap((c) => c.messages)).toHaveLength(2);
-  });
-});
-
-describe("markRead", () => {
-  it("clears the unread count for that thread only", () => {
-    const next = rules.markRead(stateWith({ unread: 3 }), "c1");
-    expect(next.conversations[0].unread).toBe(0);
-    expect(next.conversations[1].unread).toBe(0);
-  });
-
-  it("leaves an already-read thread untouched, object identity included", () => {
-    const before = stateWith({ unread: 0 });
-    const next = rules.markRead(before, "c1");
-    expect(next.conversations[0]).toBe(before.conversations[0]);
-  });
-});
-
 describe("sortByRecent", () => {
   it("puts the most recently active thread first", () => {
     const sorted = rules.sortByRecent(stateWith().conversations);
@@ -301,38 +216,6 @@ describe("initials", () => {
   });
 });
 
-describe("the seed", () => {
-  const seeded = rules.seedConversations(NOW);
-
-  it("gives every conversation a unique id", () => {
-    expect(new Set(seeded.map((c) => c.id)).size).toBe(seeded.length);
-  });
-
-  it("gives every message a unique id, which React keys on", () => {
-    const ids = seeded.flatMap((c) => c.messages.map((m) => m.id));
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it("keeps each thread in chronological order", () => {
-    for (const conversation of seeded) {
-      const sent = conversation.messages.map((m) => m.sentAt);
-      expect([...sent].sort()).toEqual(sent);
-    }
-  });
-
-  it("never dates a message in the future", () => {
-    for (const conversation of seeded) {
-      for (const message of conversation.messages) {
-        expect(Date.parse(message.sentAt)).toBeLessThanOrEqual(NOW);
-      }
-    }
-  });
-
-  it("is stable: seeding twice at the same instant gives the same ids", () => {
-    expect(rules.seedConversations(NOW)).toEqual(seeded);
-  });
-});
-
 describe("applyFilter", () => {
   it("hides an archived thread from All", () => {
     const state = stateWith({ archived: true });
@@ -381,57 +264,6 @@ describe("filterCounts", () => {
   });
 });
 
-describe("toggleFlag", () => {
-  it("raises and lowers the flag on one thread", () => {
-    const once = rules.toggleFlag(stateWith(), "c1");
-    expect(once.conversations[0].flagged).toBe(true);
-    expect(once.conversations[1].flagged).toBe(false);
-    expect(rules.toggleFlag(once, "c1").conversations[0].flagged).toBe(false);
-  });
-});
-
-describe("setArchived", () => {
-  it("archives and restores without touching the messages", () => {
-    const archived = rules.setArchived(stateWith(), "c1", true);
-    expect(archived.conversations[0].archived).toBe(true);
-    expect(archived.conversations[0].messages).toHaveLength(1);
-    expect(
-      rules.setArchived(archived, "c1", false).conversations[0].archived,
-    ).toBe(false);
-  });
-});
-
-describe("markUnread", () => {
-  it("puts a read thread back in the unread pile as one", () => {
-    expect(rules.markUnread(stateWith(), "c1").conversations[0].unread).toBe(1);
-  });
-
-  it("leaves an already-unread thread at its own count", () => {
-    expect(
-      rules.markUnread(stateWith({ unread: 3 }), "c1").conversations[0].unread,
-    ).toBe(3);
-  });
-
-  it("cannot make an empty thread unread", () => {
-    const empty: MessagingState = {
-      conversations: [
-        {
-          id: "c3",
-          memberName: "Nobody",
-          contact: FACILITY,
-          category: "care-team",
-          unread: 0,
-          flagged: false,
-          archived: false,
-          patient: profile("CKD Education", "100333"),
-          messages: [],
-        },
-      ],
-    };
-    expect(rules.markUnread(empty, "c3").conversations[0].unread).toBe(0);
-  });
-});
-
 describe("hasAttachment", () => {
   it("is true only for a thread carrying a file", () => {
     const [mary, john] = stateWith().conversations;
@@ -452,29 +284,6 @@ describe("searchConversations, on the patient record", () => {
   it("finds a patient by programme", () => {
     const found = rules.searchConversations(stateWith().conversations, "Crash");
     expect(found.map((c) => c.id)).toEqual(["c1"]);
-  });
-});
-
-describe("the seeded clinic inbox", () => {
-  /* The seed now carries the member's own threads too. These assertions
-     are about the clinic queue, so they take the same slice the clinic
-     screen does rather than the whole store. */
-  const seeded = rules.clinicConversations(rules.seedConversations(NOW));
-
-  it("holds the ten threads the client specified", () => {
-    expect(seeded).toHaveLength(10);
-  });
-
-  it("has exactly three unread threads, matching the filter count", () => {
-    expect(rules.filterCounts(seeded).unread).toBe(3);
-  });
-
-  it("gives every thread a complete patient record for the rail", () => {
-    for (const conversation of seeded) {
-      expect(conversation.patient?.mrn).toMatch(/^\d+$/);
-      expect(conversation.patient?.program).not.toBe("");
-      expect(conversation.patient?.phone).not.toBe("");
-    }
   });
 });
 
@@ -540,52 +349,6 @@ describe("inboxTimeLabel", () => {
    The member's end of the store
    ========================================================================== */
 
-describe("splitting one store between two portals", () => {
-  const seeded = rules.seedConversations(NOW);
-
-  it("gives the clinic only threads addressed to the facility", () => {
-    for (const conversation of rules.clinicConversations(seeded)) {
-      expect(conversation.contact.kind).toBe("facility");
-    }
-  });
-
-  it("gives the clinic one row per patient, never one per thread", () => {
-    const names = rules.clinicConversations(seeded).map((c) => c.memberName);
-    expect(new Set(names).size).toBe(names.length);
-  });
-
-  it("gives every thread the clinic works a chart to show in the rail", () => {
-    for (const conversation of rules.clinicConversations(seeded)) {
-      expect(conversation.patient).toBeDefined();
-    }
-  });
-
-  it("gives the member every thread of theirs, both ends included", () => {
-    const mine = rules.memberConversations(seeded, DEMO_MEMBER);
-    expect(mine.length).toBeGreaterThan(1);
-    for (const conversation of mine) {
-      expect(conversation.memberName).toBe(DEMO_MEMBER);
-    }
-  });
-
-  it("puts the member's thread with the centre in both inboxes", () => {
-    /* The point of one store: a reply typed on either screen lands on the
-       same record. If these ever diverge the round trip is broken. */
-    const mine = rules.memberConversations(seeded, DEMO_MEMBER);
-    const facility = mine.find((c) => c.contact.kind === "facility");
-    expect(facility).toBeDefined();
-    expect(rules.clinicConversations(seeded).map((c) => c.id)).toContain(
-      facility!.id,
-    );
-  });
-
-  it("keeps one member's threads out of another member's inbox", () => {
-    expect(rules.memberConversations(seeded, "Sandra Phillips")).toHaveLength(
-      1,
-    );
-  });
-});
-
 describe("applyMemberFilter", () => {
   const seeded = rules.memberConversations(
     rules.seedConversations(NOW),
@@ -627,31 +390,6 @@ describe("applyMemberFilter", () => {
   });
 });
 
-describe("careTeamFor", () => {
-  const seeded = rules.memberConversations(
-    rules.seedConversations(NOW),
-    DEMO_MEMBER,
-  );
-
-  it("lists the people, not the building", () => {
-    for (const contact of rules.careTeamFor(seeded)) {
-      expect(contact.kind).toBe("person");
-    }
-  });
-
-  it("lists nobody the member cannot actually reach", () => {
-    const names = seeded.map((c) => c.contact.name);
-    for (const contact of rules.careTeamFor(seeded)) {
-      expect(names).toContain(contact.name);
-    }
-  });
-
-  it("lists each person once, however many threads they hold", () => {
-    const names = rules.careTeamFor(seeded).map((c) => c.name);
-    expect(new Set(names).size).toBe(names.length);
-  });
-});
-
 describe("searchConversations, from the member's end", () => {
   const seeded = rules.memberConversations(
     rules.seedConversations(NOW),
@@ -674,57 +412,6 @@ describe("searchConversations, from the member's end", () => {
     const chartless = seeded.filter((c) => !c.patient);
     expect(chartless.length).toBeGreaterThan(0);
     expect(() => rules.searchConversations(chartless, "100245")).not.toThrow();
-  });
-});
-
-describe("the clinic's private patient note", () => {
-  it("is saved on the thread's chart, trimmed", () => {
-    const state = rules.seedState(Date.now());
-    const thread = state.conversations.find((c) => c.patient);
-    if (!thread) throw new Error("seed has a charted thread");
-    const next = rules.setPatientNotes(state, thread.id, "  Prefers mornings ");
-    expect(
-      next.conversations.find((c) => c.id === thread.id)?.patient?.notes,
-    ).toBe("Prefers mornings");
-  });
-});
-
-describe("after hours", () => {
-  const at = (h: number, m = 0) => new Date(2026, 9, 7, h, m);
-
-  it("is closed before opening and from closing time on", () => {
-    expect(rules.isAfterHours(at(7, 59))).toBe(true);
-    expect(rules.isAfterHours(at(8, 0))).toBe(false);
-    expect(rules.isAfterHours(at(16, 59))).toBe(false);
-    expect(rules.isAfterHours(at(17, 0))).toBe(true);
-    expect(rules.isAfterHours(at(23, 30))).toBe(true);
-  });
-
-  it("follows the office's own hours", () => {
-    const hours = { opensAt: "07:00", closesAt: "19:30" };
-    expect(rules.isAfterHours(at(7, 0), hours)).toBe(false);
-    expect(rules.isAfterHours(at(19, 0), hours)).toBe(false);
-    expect(rules.isAfterHours(at(19, 30), hours)).toBe(true);
-  });
-
-  it("adds the reply without marking the member's message read", () => {
-    const seeded = { conversations: rules.seedConversations(NOW) };
-    const thread = seeded.conversations[0];
-    const sent = rules.appendMessage(seeded, thread.id, "Hello", "member", NOW);
-    const replied = rules.appendAutomatedReply(
-      sent,
-      thread.id,
-      rules.AFTER_HOURS_REPLY,
-      NOW + 1,
-    );
-    const after = replied.conversations.find((c) => c.id === thread.id)!;
-    const before = sent.conversations.find((c) => c.id === thread.id)!;
-    expect(after.unread).toBe(before.unread);
-    expect(after.messages.at(-1)).toMatchObject({
-      author: "clinic",
-      automated: true,
-      body: rules.AFTER_HOURS_REPLY,
-    });
   });
 });
 
@@ -763,45 +450,22 @@ describe("open questions for Reports", () => {
 /* The client (2026-10-06): patients do not message physicians directly. The
    pattern once held invisible backspace bytes where \b was meant, so it
    matched nobody and every physician thread stayed open to the member. */
-describe("who a member may message", () => {
-  const person = (role: string): CareTeamContact => ({
-    name: "Someone",
-    role,
-    kind: "person",
-  });
 
-  it.each(["Provider", "Physician", "Nephrologist", "Doctor", "MD", "NP"])(
-    "blocks %s",
-    (role) => {
-      expect(rules.memberCanMessage(person(role))).toBe(false);
-    },
-  );
-
-  it.each([
-    "Dialysis Nurse",
-    "Renal Dietitian",
-    "Social Worker",
-    "Scheduling",
-    "Care Coordinator",
-  ])("allows %s", (role) => {
-    expect(rules.memberCanMessage(person(role))).toBe(true);
-  });
-
-  it("always allows the office itself", () => {
-    expect(
-      rules.memberCanMessage({
-        name: "Riverside Nephrology Associates",
-        role: "Your Nephrology Office",
-        kind: "facility",
-      }),
-    ).toBe(true);
-  });
-
-  it("leaves physicians out of the seeded care team a member can write to", () => {
-    const team = rules
-      .careTeamFor(rules.seedConversations(Date.now()))
-      .filter(rules.memberCanMessage)
-      .map((c) => c.role);
-    expect(team).not.toContain("Provider");
+describe("the list's last message (Phase 11)", () => {
+  it("stands in for the thread until its messages are loaded", () => {
+    const row = {
+      ...stateWith().conversations[0],
+      messages: [],
+      last: {
+        id: "x",
+        author: "clinic" as const,
+        body: "From the list",
+        sentAt: new Date(NOW).toISOString(),
+        attachment: { name: "a.pdf", sizeLabel: "1 KB", id: "f1" },
+      },
+    };
+    expect(rules.lastMessage(row)?.body).toBe("From the list");
+    expect(rules.hasAttachment(row)).toBe(true);
+    expect(rules.searchConversations([row], "from the list")).toHaveLength(1);
   });
 });

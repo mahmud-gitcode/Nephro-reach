@@ -1,39 +1,37 @@
-import { FACILITY, seedConversations } from "./messaging.seed";
 import type {
-  CareTeamContact,
   Attachment,
+  CareTeamContact,
   Conversation,
   InboxFilter,
   MemberInboxFilter,
   Message,
   MessageAuthor,
+  MessageCategory,
   MessagingState,
   PatientProfile,
-  MessageCategory,
 } from "./messaging.types";
 
 /* ==========================================================================
    Messaging — the rules
    --------------------------------------------------------------------------
-   Everything here is pure: state in, state out, with `now` passed rather
-   than read. That is what lets the seed produce "10:24 today" on whatever
-   day the demo is opened, and lets the tests assert a timestamp without
-   racing the clock.
+   Pure: the inbox filters, search, counts and labels the two inboxes share.
+   Since Phase 11 the threads, their state and the after-hours reply are the
+   server's; nothing here decides what is stored, and no thread is ever
+   found by a person's name.
    ========================================================================== */
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-export { seedConversations };
-
-export function seedState(now: number): MessagingState {
-  return { conversations: seedConversations(now) };
-}
-
-/** The most recent message in a thread, or null for an empty one. */
+/** The most recent message in a thread, or null for an empty one: the
+ *  loaded messages when the thread is open, else the list's last message. */
 export function lastMessage(conversation: Conversation): Message | null {
-  return conversation.messages[conversation.messages.length - 1] ?? null;
+  return (
+    conversation.messages[conversation.messages.length - 1] ??
+    conversation.last ??
+    null
+  );
 }
 
 /**
@@ -68,204 +66,22 @@ export function searchConversations(
        thread simply has nothing to match here. */
     const patient = conversation.patient;
     if (patient) {
-      if (patient.program.toLowerCase().includes(q)) return true;
-      if (patient.mrn.includes(q)) return true;
+      if (patient.program?.toLowerCase().includes(q)) return true;
+      if (patient.mrn?.includes(q)) return true;
     }
-    return conversation.messages.some((message) =>
-      message.body.toLowerCase().includes(q),
-    );
+    /* Only what is loaded: the open thread's messages, else the last one
+       the list carries (the API has no message search). */
+    const loaded = conversation.messages.length
+      ? conversation.messages
+      : conversation.last
+        ? [conversation.last]
+        : [];
+    return loaded.some((message) => message.body.toLowerCase().includes(q));
   });
 }
 
 export function totalUnread(conversations: Conversation[]): number {
   return conversations.reduce((sum, c) => sum + c.unread, 0);
-}
-
-/**
- * Adds a message to a thread.
- *
- * Returns the state unchanged for an empty or whitespace-only body, so a
- * stray Enter cannot post a blank bubble. The id carries the timestamp
- * because two messages in the same thread in the same millisecond is not a
- * thing a person can do.
- */
-/* --------------------------------------------------------------------------
-   After hours (client, 2026-10-07)
-   --------------------------------------------------------------------------
-   NephroReach is a communication conduit, not an emergency service. A
-   member writing outside office hours gets this back at once, so nobody
-   waits overnight believing someone is reading.
-   -------------------------------------------------------------------------- */
-
-export const AFTER_HOURS_REPLY =
-  "Your secure transmission has been successfully routed and timestamped. Your care coordination team reviews messages during scheduled office hours. If your condition escalates or becomes urgent before your team responds, please call your local clinic's emergency line or contact 911 immediately.";
-
-export const DEFAULT_OFFICE_HOURS = { opensAt: "08:00", closesAt: "17:00" };
-
-const minutesOfDay = (hhmm: string) => {
-  const [h, m] = hhmm.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
-
-/** Outside the office's hours, on the office's clock ("HH:MM", 24h). */
-export function isAfterHours(
-  now: Date,
-  hours: { opensAt: string; closesAt: string } = DEFAULT_OFFICE_HOURS,
-): boolean {
-  const t = now.getHours() * 60 + now.getMinutes();
-  return t < minutesOfDay(hours.opensAt) || t >= minutesOfDay(hours.closesAt);
-}
-
-/** Adds NephroReach's automated reply. Unlike a person replying, it does
- *  not mark the member's message read: nobody has seen it yet. */
-export function appendAutomatedReply(
-  state: MessagingState,
-  conversationId: string,
-  body: string,
-  now: number,
-): MessagingState {
-  return {
-    conversations: state.conversations.map((conversation) =>
-      conversation.id === conversationId
-        ? {
-            ...conversation,
-            messages: [
-              ...conversation.messages,
-              {
-                id: `${conversationId}-auto-${now}`,
-                author: "clinic",
-                body,
-                sentAt: new Date(now).toISOString(),
-                automated: true,
-              },
-            ],
-          }
-        : conversation,
-    ),
-  };
-}
-
-export function appendMessage(
-  state: MessagingState,
-  conversationId: string,
-  body: string,
-  author: MessageAuthor,
-  now: number,
-  attachment?: Attachment,
-): MessagingState {
-  const text = body.trim();
-  /* An attachment with no words is still a message worth sending; words
-     with no attachment obviously are. Nothing at all is not. */
-  if (!text && !attachment) return state;
-
-  return {
-    conversations: state.conversations.map((conversation) =>
-      conversation.id === conversationId
-        ? {
-            ...conversation,
-            /* The clinic replying is also the clinic having read it. */
-            unread: author === "clinic" ? 0 : conversation.unread + 1,
-            messages: [
-              ...conversation.messages,
-              {
-                id: `${conversationId}-${now}`,
-                author,
-                body: text,
-                sentAt: new Date(now).toISOString(),
-                ...(attachment ? { attachment } : {}),
-              },
-            ],
-          }
-        : conversation,
-    ),
-  };
-}
-
-/** A thread's id from who it is between, so starting one twice finds the
- *  first instead of opening a duplicate. */
-export function conversationIdFor(memberName: string, contactName: string) {
-  const slug = (text: string) =>
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-  return `${slug(memberName)}--${slug(contactName)}`;
-}
-
-export type NewConversation = {
-  memberName: string;
-  contact: CareTeamContact;
-  category: MessageCategory;
-  /** The chart, for a thread the clinic holds. */
-  patient?: PatientProfile;
-  body: string;
-  author: MessageAuthor;
-  attachment?: Attachment;
-};
-
-/**
- * "New Message": writes into the member's existing thread with that
- * contact if there is one (bringing it back from the archive), otherwise
- * opens a new thread. Either way the message lands where both sides
- * already look. Nothing at all is not a message.
- */
-export function startConversation(
-  state: MessagingState,
-  input: NewConversation,
-  now: number,
-): MessagingState {
-  if (!input.body.trim() && !input.attachment) return state;
-  const existing = state.conversations.find(
-    (c) =>
-      c.memberName === input.memberName &&
-      c.contact.name === input.contact.name,
-  );
-  const id =
-    existing?.id ?? conversationIdFor(input.memberName, input.contact.name);
-  const withThread: MessagingState = existing
-    ? {
-        conversations: state.conversations.map((c) =>
-          c.id === id ? { ...c, archived: false } : c,
-        ),
-      }
-    : {
-        conversations: [
-          ...state.conversations,
-          {
-            id,
-            memberName: input.memberName,
-            contact: input.contact,
-            category: input.category,
-            unread: 0,
-            flagged: false,
-            archived: false,
-            ...(input.patient ? { patient: input.patient } : {}),
-            messages: [],
-          },
-        ],
-      };
-  return appendMessage(
-    withThread,
-    id,
-    input.body,
-    input.author,
-    now,
-    input.attachment,
-  );
-}
-
-/** Opening a thread clears its unread count. */
-export function markRead(
-  state: MessagingState,
-  conversationId: string,
-): MessagingState {
-  return {
-    conversations: state.conversations.map((conversation) =>
-      conversation.id === conversationId && conversation.unread !== 0
-        ? { ...conversation, unread: 0 }
-        : conversation,
-    ),
-  };
 }
 
 /* --------------------------------------------------------------------------
@@ -431,96 +247,28 @@ export function filterCounts(conversations: Conversation[]) {
   };
 }
 
-/** Flips one field on one thread, leaving every other object identical. */
-function updateConversation(
-  state: MessagingState,
-  conversationId: string,
-  change: (conversation: Conversation) => Conversation,
-): MessagingState {
-  return {
-    conversations: state.conversations.map((conversation) =>
-      conversation.id === conversationId ? change(conversation) : conversation,
-    ),
-  };
-}
-
-export function toggleFlag(
-  state: MessagingState,
-  conversationId: string,
-): MessagingState {
-  return updateConversation(state, conversationId, (c) => ({
-    ...c,
-    flagged: !c.flagged,
-  }));
-}
-
-export function setArchived(
-  state: MessagingState,
-  conversationId: string,
-  archived: boolean,
-): MessagingState {
-  return updateConversation(state, conversationId, (c) => ({ ...c, archived }));
-}
-
-/** The clinic's private note on the patient, shown in the rail. Never sent
- *  to the member. */
-export function setPatientNotes(
-  state: MessagingState,
-  conversationId: string,
-  notes: string,
-): MessagingState {
-  return updateConversation(state, conversationId, (c) =>
-    c.patient ? { ...c, patient: { ...c.patient, notes: notes.trim() } } : c,
-  );
-}
-
-/**
- * Puts a thread back in the unread pile.
- *
- * One, not the number that were unread before it was opened — that figure
- * is gone, and "1" is the honest claim that something here needs another
- * look. A thread with no messages cannot be unread at all.
- */
-export function markUnread(
-  state: MessagingState,
-  conversationId: string,
-): MessagingState {
-  return updateConversation(state, conversationId, (c) =>
-    c.messages.length === 0 || c.unread > 0 ? c : { ...c, unread: 1 },
-  );
-}
-
-/** Threads holding at least one attachment, for the list's paperclip. */
+/** Threads holding an attachment that is loaded, for the list's paperclip. */
 export function hasAttachment(conversation: Conversation): boolean {
-  return conversation.messages.some((message) => message.attachment);
+  return (
+    conversation.messages.some((message) => message.attachment) ||
+    Boolean(conversation.last?.attachment)
+  );
 }
 
-/* --------------------------------------------------------------------------
-   Whose inbox is this
-   --------------------------------------------------------------------------
-   One store holds every thread on the platform, and each portal takes the
-   slice it is entitled to. Keeping the split here rather than in the
-   screens is what stops the two inboxes drifting: there is one definition
-   of "the clinic's threads" and one of "mine", and both are testable
-   without rendering anything.
-   -------------------------------------------------------------------------- */
-
 /**
- * The threads the clinic works.
- *
- * Only the ones addressed to the facility itself. A member writing to their
- * dietitian is not clinic queue work, and listing it there would put the
- * same member on screen five times over — the clinic inbox is one row per
- * patient, and that is the property this preserves.
+ * @deprecated The office's threads come from its own inbox route now
+ * (`useOfficeInbox`), already limited to that office by the server. Kept
+ * for the read-only `useMessages` adapter's consumers (Reports) until they
+ * move; with no name it filters nothing.
  */
 export function clinicConversations(
   conversations: Conversation[],
-  /** Whose queue: the dialysis center by default, or the nephrology
-   *  office (2026-10-06). */
-  officeName: string = FACILITY.name,
+  officeName?: string,
 ): Conversation[] {
   return conversations.filter(
-    (c) => c.contact.kind === "facility" && c.contact.name === officeName,
+    (c) =>
+      c.contact.kind === "facility" &&
+      (officeName === undefined || c.contact.name === officeName),
   );
 }
 
@@ -546,7 +294,7 @@ export type OpenQuestion = {
  */
 export function openQuestions(
   conversations: Conversation[],
-  officeName: string = FACILITY.name,
+  officeName?: string,
 ): OpenQuestion[] {
   return clinicConversations(conversations, officeName)
     .filter((c) => !c.archived)
@@ -565,14 +313,6 @@ export function openQuestions(
       ];
     })
     .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
-}
-
-/** The threads belonging to one member, whichever end they are addressed to. */
-export function memberConversations(
-  conversations: Conversation[],
-  memberName: string,
-): Conversation[] {
-  return conversations.filter((c) => c.memberName === memberName);
 }
 
 /**
@@ -608,31 +348,121 @@ export function memberFilterCounts(conversations: Conversation[]) {
   };
 }
 
-/**
- * The distinct care-team people behind a member's threads.
- *
- * Drives the Care Team rail. Derived from the threads rather than stored
- * beside them, so the rail can never list somebody the member has no way to
- * reach. The facility itself is left out: it is the header of the thread
- * below, not a person on the team.
- */
-/* The client (2026-10-06): patients do not message physicians directly.
-   They write to the nurse or the care team, who bring the physician in. */
-const PHYSICIAN_ROLE =
-  /\b(provider|physician|nephrologist|doctor|md|np|app)\b/i;
+/* --------------------------------------------------------------------------
+   Deprecated: the prototype's browser store
+   --------------------------------------------------------------------------
+   No screen calls these any more (Phase 11: the server starts and finds
+   threads by id). They stay, pure and unused by the app, only because the
+   OFFICE lane's tests (features/clinic/newPatientFlows.test.ts) still
+   import them; delete them when those tests move to the API.
+   -------------------------------------------------------------------------- */
 
-/** May a member write to this contact? Not a physician or provider. */
-export function memberCanMessage(contact: Conversation["contact"]): boolean {
-  return contact.kind === "facility" || !PHYSICIAN_ROLE.test(contact.role);
+/** @deprecated See above. A thread's id from who it is between. */
+export function conversationIdFor(memberName: string, contactName: string) {
+  const slug = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  return `${slug(memberName)}--${slug(contactName)}`;
 }
 
-export function careTeamFor(conversations: Conversation[]) {
-  const seen = new Map<string, Conversation["contact"]>();
-  for (const conversation of conversations) {
-    if (conversation.contact.kind !== "person") continue;
-    if (!seen.has(conversation.contact.name)) {
-      seen.set(conversation.contact.name, conversation.contact);
-    }
-  }
-  return [...seen.values()];
+/** @deprecated See above. */
+export type NewConversation = {
+  memberName: string;
+  contact: CareTeamContact;
+  category: MessageCategory;
+  /** The chart, for a thread the clinic holds. */
+  patient?: PatientProfile;
+  body: string;
+  author: MessageAuthor;
+  attachment?: Attachment;
+};
+
+/**
+ * @deprecated See above.
+ * "New Message": writes into the member's existing thread with that
+ * contact if there is one (bringing it back from the archive), otherwise
+ * opens a new thread. Either way the message lands where both sides
+ * already look. Nothing at all is not a message.
+ */
+export function startConversation(
+  state: MessagingState,
+  input: NewConversation,
+  now: number,
+): MessagingState {
+  if (!input.body.trim() && !input.attachment) return state;
+  const existing = state.conversations.find(
+    (c) =>
+      c.memberName === input.memberName &&
+      c.contact.name === input.contact.name,
+  );
+  const id =
+    existing?.id ?? conversationIdFor(input.memberName, input.contact.name);
+  const withThread: MessagingState = existing
+    ? {
+        conversations: state.conversations.map((c) =>
+          c.id === id ? { ...c, archived: false } : c,
+        ),
+      }
+    : {
+        conversations: [
+          ...state.conversations,
+          {
+            id,
+            memberName: input.memberName,
+            contact: input.contact,
+            category: input.category,
+            unread: 0,
+            flagged: false,
+            archived: false,
+            ...(input.patient ? { patient: input.patient } : {}),
+            messages: [],
+          },
+        ],
+      };
+  return appendMessage(
+    withThread,
+    id,
+    input.body,
+    input.author,
+    now,
+    input.attachment,
+  );
+}
+
+function appendMessage(
+  state: MessagingState,
+  conversationId: string,
+  body: string,
+  author: MessageAuthor,
+  now: number,
+  attachment?: Attachment,
+): MessagingState {
+  const text = body.trim();
+  /* An attachment with no words is still a message worth sending; words
+     with no attachment obviously are. Nothing at all is not. */
+  if (!text && !attachment) return state;
+
+  return {
+    conversations: state.conversations.map((conversation) =>
+      conversation.id === conversationId
+        ? {
+            ...conversation,
+            /* The clinic replying is also the clinic having read it. */
+            unread: author === "clinic" ? 0 : conversation.unread + 1,
+            messages: [
+              ...conversation.messages,
+              {
+                id: `${conversationId}-${now}`,
+                author,
+                body: text,
+                sentAt: new Date(now).toISOString(),
+                ...(attachment ? { attachment } : {}),
+              },
+            ],
+          }
+        : conversation,
+    ),
+  };
 }

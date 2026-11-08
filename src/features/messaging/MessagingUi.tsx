@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -14,7 +15,8 @@ import { Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import * as rules from "./messaging.rules";
 import { AttachButton, PendingAttachment } from "./AttachControls";
-import { downloadAttachment } from "./attachments";
+import { openAttachment, releaseAttachment } from "./attachments";
+import type { ApiAttachmentLink } from "./messaging.api";
 import type { Attachment, Conversation, Message } from "./messaging.types";
 
 /* ==========================================================================
@@ -47,10 +49,12 @@ const COPY = {
     noMatch: "No conversations match that search.",
     emptyFolder: "Nothing in this folder.",
     back: "Back to all conversations",
-    download: "Download",
-    sampleFile:
-      "This sample file was never stored, so there is nothing to download",
+    download: "Open",
+    openFailed: "That file could not be opened. Try again.",
     messages: "Messages",
+    earlier: "Load earlier messages",
+    caregiver: "Caregiver",
+    caregiverOf: (name: string) => `Caregiver for ${name}`,
     newMessages: "New messages",
     automated: "Automated reply · ",
     send: "Send message",
@@ -66,10 +70,12 @@ const COPY = {
     noMatch: "Ninguna conversación coincide con esa búsqueda.",
     emptyFolder: "No hay nada en esta carpeta.",
     back: "Volver a todas las conversaciones",
-    download: "Descargar",
-    sampleFile:
-      "Este archivo de ejemplo nunca se guardó, así que no hay nada que descargar",
+    download: "Abrir",
+    openFailed: "No se pudo abrir ese archivo. Inténtalo de nuevo.",
     messages: "Mensajes",
+    earlier: "Cargar mensajes anteriores",
+    caregiver: "Cuidador",
+    caregiverOf: (name: string) => `Cuidador de ${name}`,
     newMessages: "Mensajes nuevos",
     automated: "Respuesta automática · ",
     send: "Enviar mensaje",
@@ -389,72 +395,119 @@ export function ThreadHeader({
   );
 }
 
+/** A sent picture, shown through its short-lived link (asked for while it
+ *  is on screen, and never kept longer than the link lives). */
+function SentImage({
+  attachment,
+  link,
+}: {
+  attachment: Attachment;
+  link: () => Promise<ApiAttachmentLink>;
+}) {
+  const query = useQuery({
+    queryKey: ["message-attachment-link", attachment.id ?? attachment.name],
+    queryFn: link,
+    staleTime: 60_000,
+    gcTime: 60_000,
+  });
+  const url = query.data?.url;
+  if (!url || !/^https?:/i.test(url)) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned link
+    <img
+      src={url}
+      alt={attachment.name}
+      referrerPolicy="no-referrer"
+      className="block max-h-64 w-full max-w-xs object-cover"
+    />
+  );
+}
+
 export function AttachmentCard({
   attachment,
   onBrand,
   isEs,
+  link,
 }: {
   attachment: Attachment;
   /* Inside a brand-filled bubble the usual borders vanish, so the card
      switches to translucent white rather than a second colour scheme. */
   onBrand: boolean;
   isEs?: boolean;
+  /** The sent file's short-lived link; absent before it is sent. */
+  link?: () => Promise<ApiAttachmentLink>;
 }) {
   const copy = copyFor(isEs);
+  const [failed, setFailed] = useState(false);
+  const [opening, setOpening] = useState(false);
   /* A photo is the point of the message, so it shows as itself; a file row
      would make the nurse click to see a red exit site. */
-  if (attachment.imageUrl) {
-    return (
-      <div
-        className={cn(
-          "mt-stack-sm overflow-hidden rounded-card-nested border",
-          onBrand ? "border-white/25" : "border-line",
-        )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
-        <img
-          src={attachment.imageUrl}
-          alt={attachment.name}
-          className="block max-h-64 w-full max-w-xs object-cover"
-        />
-      </div>
-    );
-  }
+  const isImage = attachment.contentType?.startsWith("image/") ?? false;
 
   return (
-    <div
-      className={cn(
-        "mt-stack-sm flex items-center gap-inline-md rounded-card-nested border p-inset-xs",
-        onBrand ? "border-white/25 bg-white/10" : "border-line bg-surface",
-      )}
-    >
-      <FileText
-        aria-hidden="true"
-        className={cn("size-5 shrink-0", !onBrand && "text-fg-muted")}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-label-sm">{attachment.name}</span>
-        <span
+    <div className="mt-stack-sm space-y-stack-xs">
+      {isImage && link ? (
+        <div
           className={cn(
-            "block text-caption",
-            onBrand ? "text-white/80" : "text-fg-muted",
+            "overflow-hidden rounded-card-nested border",
+            onBrand ? "border-white/25" : "border-line",
           )}
         >
-          {attachment.sizeLabel}
-        </span>
-      </span>
-      <Button
-        disabled={!attachment.dataUrl}
-        title={attachment.dataUrl ? undefined : copy.sampleFile}
-        onClick={() => downloadAttachment(attachment)}
-        variant="neutral"
-        appearance="fill-stroke"
-        size="small"
-        iconOnly
-        aria-label={`${copy.download} ${attachment.name}`}
+          <SentImage attachment={attachment} link={link} />
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          "flex items-center gap-inline-md rounded-card-nested border p-inset-xs",
+          onBrand ? "border-white/25 bg-white/10" : "border-line bg-surface",
+        )}
       >
-        <Download aria-hidden="true" />
-      </Button>
+        <FileText
+          aria-hidden="true"
+          className={cn("size-5 shrink-0", !onBrand && "text-fg-muted")}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label-sm">
+            {attachment.name}
+          </span>
+          <span
+            className={cn(
+              "block text-caption",
+              onBrand ? "text-white/80" : "text-fg-muted",
+            )}
+          >
+            {attachment.sizeLabel}
+          </span>
+        </span>
+        <Button
+          disabled={!link}
+          loading={opening}
+          onClick={async () => {
+            if (!link) return;
+            setOpening(true);
+            setFailed(false);
+            try {
+              if (!(await openAttachment(link))) setFailed(true);
+            } catch {
+              setFailed(true);
+            } finally {
+              setOpening(false);
+            }
+          }}
+          variant="neutral"
+          appearance="fill-stroke"
+          size="small"
+          iconOnly
+          aria-label={`${copy.download} ${attachment.name}`}
+        >
+          <Download aria-hidden="true" />
+        </Button>
+      </div>
+      {failed ? (
+        <p role="alert" className="text-caption text-danger">
+          {copy.openFailed}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -474,6 +527,8 @@ export function MessageLog({
   firstUnreadId,
   now,
   isEs,
+  attachmentLink,
+  older,
 }: {
   conversation: Conversation;
   /** The author on this side of the screen. */
@@ -483,6 +538,10 @@ export function MessageLog({
   firstUnreadId: string | null;
   now: number;
   isEs?: boolean;
+  /** A sent file's short-lived link, by message id. */
+  attachmentLink?: (messageId: string) => Promise<ApiAttachmentLink>;
+  /** Older pages of the thread (newest page first on the server). */
+  older?: { hasMore: boolean; loadMore: () => void; isLoadingMore: boolean };
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const copy = copyFor(isEs);
@@ -492,13 +551,29 @@ export function MessageLog({
   );
 
   /* Land on the newest message when a thread opens, and follow it down as
-     it grows — the newest is the one being read, never the oldest. */
+     a new one arrives — the newest is the one being read, never the
+     oldest. Loading earlier pages does not jump to the end. */
+  const newestId =
+    conversation.messages[conversation.messages.length - 1]?.id ?? null;
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [conversation.id, conversation.messages.length]);
+  }, [conversation.id, newestId]);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-inset-md py-inset-md">
+      {older?.hasMore ? (
+        <div className="mb-stack-md flex justify-center">
+          <Button
+            variant="neutral"
+            appearance="fill-stroke"
+            size="small"
+            loading={older.isLoadingMore}
+            onClick={older.loadMore}
+          >
+            {copy.earlier}
+          </Button>
+        </div>
+      ) : null}
       <ol className="space-y-stack-lg" aria-label={copy.messages}>
         {groups.map((group) => (
           <li key={group.dayKey}>
@@ -514,7 +589,14 @@ export function MessageLog({
                 const startsRun =
                   !previous ||
                   previous.author !== message.author ||
+                  Boolean(previous.byCaregiver) !==
+                    Boolean(message.byCaregiver) ||
                   message.id === firstUnreadId;
+                /* D1: a caregiver's message is signed as the caregiver's,
+                   never as the patient's. */
+                const signature = message.byCaregiver
+                  ? copy.caregiverOf(otherName)
+                  : otherName;
                 return (
                   <li
                     key={message.id}
@@ -539,7 +621,7 @@ export function MessageLog({
                     ) : null}
                     {startsRun && !isMine ? (
                       <p className="mb-1 px-1 text-caption text-fg-muted">
-                        {otherName}
+                        {signature}
                       </p>
                     ) : null}
                     <div
@@ -560,6 +642,11 @@ export function MessageLog({
                           attachment={message.attachment}
                           onBrand={isMine}
                           isEs={isEs}
+                          link={
+                            attachmentLink && message.attachment.id
+                              ? () => attachmentLink(message.id)
+                              : undefined
+                          }
                         />
                       ) : null}
                       <p
@@ -569,8 +656,11 @@ export function MessageLog({
                         )}
                       >
                         <span className="sr-only">
-                          {isMine ? copy.you : otherName},{" "}
+                          {isMine ? copy.you : signature},{" "}
                         </span>
+                        {isMine && message.byCaregiver
+                          ? `${copy.caregiver} · `
+                          : ""}
                         {message.automated ? copy.automated : ""}
                         {rules.timeLabel(message.sentAt)}
                       </p>
@@ -624,7 +714,9 @@ export function Composer({
   draft: string;
   onDraftChange: (next: string) => void;
   sending: boolean;
-  onSend: (body: string, attachment?: Attachment) => void;
+  /** Resolves once the server has the message; a rejection keeps the
+   *  draft and the file, so nothing typed is lost. */
+  onSend: (body: string, attachment?: Attachment) => Promise<unknown>;
   placeholder: string;
   label: string;
   isEs?: boolean;
@@ -648,10 +740,17 @@ export function Composer({
     const body = draft.trim();
     const attachment = pending ?? undefined;
     const send = () => {
-      onSend(body, attachment);
-      onDraftChange("");
-      setPending(null);
-      setAttachError(null);
+      onSend(body, attachment).then(
+        () => {
+          onDraftChange("");
+          releaseAttachment(attachment);
+          setPending(null);
+          setAttachError(null);
+        },
+        () => {
+          /* The page shows the server's refusal; the draft stays. */
+        },
+      );
     };
     if (confirmSend) confirmSend(send);
     else send();
@@ -664,7 +763,10 @@ export function Composer({
           {pending ? (
             <PendingAttachment
               attachment={pending}
-              onRemove={() => setPending(null)}
+              onRemove={() => {
+                releaseAttachment(pending);
+                setPending(null);
+              }}
               isEs={isEs}
             />
           ) : null}

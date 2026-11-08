@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Send } from "lucide-react";
 import {
+  Alert,
   Button,
   FormField,
   Modal,
@@ -15,9 +16,10 @@ import type { MessageCategory } from "./messaging.types";
 /* ==========================================================================
    New Message
    --------------------------------------------------------------------------
-   One dialog for both ends: a member writes to someone on their care team,
-   the clinic writes to one of its patients. Sending goes into the thread
-   the two already share if there is one (messaging.rules startConversation).
+   One dialog for both ends: a member writes to an office caring for them,
+   an office writes to one of its patients. The server puts the message in
+   the thread the two already share, if there is one. Recipients are ids
+   (an organization id, a patient id), never names.
    ========================================================================== */
 
 export type Recipient = { value: string; label: string };
@@ -34,7 +36,18 @@ export function NewMessageModal({
   onSend,
   onClose,
   confirmSend,
+  recipientsPending = false,
+  recipientsError,
+  sending = false,
+  sendError,
 }: {
+  /** The recipient list is still loading. */
+  recipientsPending?: boolean;
+  /** Why there is no one to write to (a failed read, or none). */
+  recipientsError?: string;
+  sending?: boolean;
+  /** The server's refusal of the last send; the dialog stays open. */
+  sendError?: string;
   /** Runs before the send, e.g. the safety notice; it calls `send` when
    *  the member confirms, so a cancel keeps what they typed. */
   confirmSend?: (send: () => void) => void;
@@ -49,14 +62,24 @@ export function NewMessageModal({
   /** The member files a thread as care team or appointments. */
   withCategory?: boolean;
   isEs?: boolean;
-  onSend: (recipient: string, body: string, category: MessageCategory) => void;
+  /** When it returns a promise, the dialog closes only once it resolves,
+   *  so a refused send keeps what was typed. */
+  onSend: (
+    recipient: string,
+    body: string,
+    category: MessageCategory,
+  ) => void | Promise<unknown>;
   onClose: () => void;
 }) {
-  const [recipient, setRecipient] = useState(
-    recipients.some((r) => r.value === initialRecipient)
-      ? initialRecipient!
-      : (recipients[0]?.value ?? ""),
+  const [picked, setRecipient] = useState<string | null>(
+    initialRecipient ?? null,
   );
+  /* The list can arrive after the dialog opens: keep a valid pick, else
+     the first recipient. */
+  const recipient =
+    picked && recipients.some((r) => r.value === picked)
+      ? picked
+      : (recipients[0]?.value ?? "");
   const [category, setCategory] = useState<MessageCategory>(initialCategory);
   const [body, setBody] = useState(initialBody);
   const [tried, setTried] = useState(false);
@@ -70,8 +93,12 @@ export function NewMessageModal({
     setTried(true);
     if (error || !recipient) return;
     const send = () => {
-      onSend(recipient, body, category);
-      onClose();
+      const result = onSend(recipient, body, category);
+      if (result && typeof (result as Promise<unknown>).then === "function")
+        (result as Promise<unknown>).then(onClose, () => {
+          /* The page passes the server's refusal as sendError. */
+        });
+      else onClose();
     };
     if (confirmSend) confirmSend(send);
     else send();
@@ -88,14 +115,24 @@ export function NewMessageModal({
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             {isEs ? "Cancelar" : "Cancel"}
           </Button>
-          <Button onClick={send} leadingIcon={<Send aria-hidden="true" />}>
+          <Button
+            onClick={send}
+            loading={sending}
+            disabled={!recipient || recipientsPending}
+            leadingIcon={<Send aria-hidden="true" />}
+          >
             {isEs ? "Enviar" : "Send"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
-        <FormField label={recipientLabel} required>
+        {sendError ? <Alert tone="danger">{sendError}</Alert> : null}
+        <FormField
+          label={recipientLabel}
+          required
+          error={recipientsPending ? undefined : recipientsError}
+        >
           {(field) => (
             <Select
               {...field}
