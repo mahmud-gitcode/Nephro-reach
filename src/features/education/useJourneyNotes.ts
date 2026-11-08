@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNotes, saveNotes } from "./journey.repository";
-import type { JourneyNotesMap } from "./journey.types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useClassroom } from "./classroom";
+import { useLearnerCourse } from "./useLearnerCourse";
 
 export type { JourneyNotesMap } from "./journey.types";
 
@@ -14,84 +13,99 @@ export type { JourneyNotesMap } from "./journey.types";
  */
 export type NoteSaveState = "idle" | "saving" | "saved" | "error";
 
-const AUTOSAVE_DELAY_MS = 600;
-
-export const journeyNotesKey = ["education", "journey-notes"] as const;
+/** Wait this long after the last keystroke before saving (per class). */
+export const AUTOSAVE_DELAY_MS = 800;
 
 /**
- * Free-text notes, one per journey day, autosaved.
+ * Free-text notes, one per journey day, on the server (PUT …/classes/:id/
+ * note, at most 5000 characters, "" clears it). Read from the learner
+ * record's progress rows.
  *
  * Typing does not go through the mutation — a keystroke is not a request.
- * The typed map is held in a ref and the write is debounced; the mutation
- * only carries what is actually being saved. `flushNote` skips the wait,
- * for blur and for leaving the page.
+ * The typed text is held locally per class and the write is debounced;
+ * `flushNote` skips the wait, for blur and for leaving the page. A failed
+ * save keeps the text on screen and says so.
  */
 export function useJourneyNotes() {
-  const queryClient = useQueryClient();
+  const classroom = useClassroom();
+  const learner = useLearnerCourse(classroom.course);
   const [saveState, setSaveState] = useState<NoteSaveState>("idle");
+  /* Typed text by slug, ahead of the server. */
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const pendingRef = useRef<{ slug: string; text: string } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /* The map as typed, which runs ahead of both the cache and storage. It is
-     state as well as a ref: state so each keystroke re-renders the textarea,
-     a ref so the debounced write sees the newest map without being
-     re-created on every character. */
-  const [draft, setDraft] = useState<JourneyNotesMap | null>(null);
-  const latestRef = useRef<JourneyNotesMap | null>(null);
 
-  const query = useQuery({
-    queryKey: journeyNotesKey,
-    queryFn: getNotes,
-  });
+  const { mutate } = learner.note;
+  const lessons = classroom.lessons;
+  const canWrite = learner.canWrite;
 
-  const write = useMutation({
-    mutationFn: (notes: JourneyNotesMap) => saveNotes(notes),
-    onSuccess: (notes) => {
-      queryClient.setQueryData(journeyNotesKey, notes);
-      setSaveState("saved");
+  const send = useCallback(
+    (slug: string, text: string) => {
+      const classId = lessons.find((lesson) => lesson.slug === slug)?.classId;
+      if (!classId || !canWrite) {
+        setSaveState("error");
+        return;
+      }
+      mutate(
+        { classId, text },
+        {
+          onSuccess: () => setSaveState("saved"),
+          onError: () => setSaveState("error"),
+        },
+      );
     },
-    onError: () => setSaveState("error"),
-  });
-
-  const { mutate } = write;
-  const notes = useMemo(() => draft ?? query.data ?? {}, [draft, query.data]);
-
-  const getNote = useCallback((slug: string) => notes[slug] ?? "", [notes]);
-
-  const setNote = useCallback(
-    (slug: string, value: string) => {
-      const next = {
-        ...(latestRef.current ?? query.data ?? {}),
-        [slug]: value,
-      };
-      latestRef.current = next;
-      setDraft(next);
-      setSaveState("saving");
-
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        mutate(next);
-      }, AUTOSAVE_DELAY_MS);
-    },
-    [mutate, query.data],
+    [lessons, mutate, canWrite],
   );
 
-  /** Writes now instead of waiting out the debounce. */
+  const getNote = useCallback(
+    (slug: string) => drafts[slug] ?? learner.notes[slug] ?? "",
+    [drafts, learner.notes],
+  );
+
   const flushNote = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (latestRef.current) mutate(latestRef.current);
-  }, [mutate]);
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    if (pending) send(pending.slug, pending.text);
+  }, [send]);
+
+  const setNote = useCallback(
+    (slug: string, value: string) => {
+      /* A different day's unsaved text goes first. */
+      if (pendingRef.current && pendingRef.current.slug !== slug) flushNote();
+      pendingRef.current = { slug, text: value };
+      setDrafts((current) => ({ ...current, [slug]: value }));
+      setSaveState("saving");
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        const pending = pendingRef.current;
+        pendingRef.current = null;
+        if (pending) send(pending.slug, pending.text);
+      }, AUTOSAVE_DELAY_MS);
+    },
+    [flushNote, send],
+  );
+
+  /* Leaving the page saves what was typed (the request still goes out). */
+  const flushRef = useRef(flushNote);
+  useEffect(() => {
+    flushRef.current = flushNote;
+  }, [flushNote]);
+  useEffect(() => () => flushRef.current(), []);
 
   return {
     getNote,
     setNote,
     flushNote,
     saveState,
-    isPending: query.isPending,
-    error: query.error,
-    saveError: write.error,
+    canWrite,
+    isPending: classroom.isPending || learner.isPending,
+    error: classroom.error ?? learner.error,
+    saveError: learner.note.error,
   };
 }
 

@@ -179,7 +179,9 @@ export function questionProblem(question: Question): string | null {
   if (question.kind === "matching") {
     if (question.pairs.length < 2) return "Add at least two pairs.";
     if (
-      question.pairs.some((pair) => !pair.leftEn.trim() || !pair.rightEn.trim())
+      question.pairs.some(
+        (pair) => !pair.leftEn.trim() || !(pair.rightEn ?? "").trim(),
+      )
     ) {
       return "Every pair needs both sides.";
     }
@@ -211,16 +213,37 @@ export function isAnswered(
   );
 }
 
-/** true / false for scored kinds, null for kinds that are never marked. */
+/**
+ * Practice feedback on a LESSON question: true / false for the choice and
+ * matching kinds, null for kinds that are never marked.
+ *
+ * Only lesson questions carry their key (spec 019 §1). A scored exam
+ * question comes without one (no correctOptionId, matching as
+ * matchOptions): for it this answers null, never a verdict. Exams are
+ * marked by the server alone, and their review comes from the attempt
+ * response (D19).
+ */
 export function gradeAnswer(
   question: Question,
   answer: Answer | undefined,
 ): boolean | null {
   if (!isScored(question)) return null;
+  if (isBlinded(question)) return null;
   if (!answer || !isAnswered(question, answer)) return false;
   if (isChoice(question)) return answer.value === question.correctOptionId;
   // Matching: every left item points at its own pair.
   return question.pairs.every((pair) => answer.pairs?.[pair.id] === pair.id);
+}
+
+/** A scored exam question as the server sends it to a member: no key. */
+export function isBlinded(question: Question): boolean {
+  if (isChoice(question)) return !question.correctOptionId;
+  if (question.kind === "matching")
+    return (
+      question.matchOptions !== undefined ||
+      question.pairs.some((pair) => pair.rightEn === undefined)
+    );
+  return false;
 }
 
 /** The option the member picked, for its feedback. */
@@ -231,29 +254,7 @@ export function pickedOption(
   return question.options.find((option) => option.id === answer?.value);
 }
 
-export interface QuizScore {
-  correct: number;
-  total: number;
-  percent: number;
-  passed: boolean;
-}
-
-export function scoreQuiz(
-  questions: Question[],
-  answers: AnswerMap,
-  passMark: number,
-): QuizScore {
-  const scored = questions.filter(isScored);
-  const correct = scored.filter(
-    (question) => gradeAnswer(question, answers[question.id]) === true,
-  ).length;
-  const total = scored.length;
-  // A check with nothing to mark cannot be failed.
-  const percent = total === 0 ? 100 : Math.round((correct / total) * 100);
-  return { correct, total, percent, passed: percent >= passMark };
-}
-
-/** Each exam class keeps its own attempts. */
+/** Each exam class keeps its own attempts, under its server id (a UUID). */
 export const classQuizKey = (classId: string) => `class:${classId}`;
 export const FINAL_QUIZ_KEY = "final";
 
@@ -283,23 +284,6 @@ export function attemptsLeft(
 ): number | null {
   if (maxAttempts <= 0) return null;
   return Math.max(0, maxAttempts - attemptsFor(attempts, quizKey).length);
-}
-
-export function buildAttempt(
-  quizKey: string,
-  questions: Question[],
-  answers: AnswerMap,
-  passMark: number,
-  now = new Date(),
-): QuizAttempt {
-  const score = scoreQuiz(questions, answers, passMark);
-  return {
-    id: newId("attempt"),
-    quizKey,
-    answers,
-    ...score,
-    submittedAt: now.toISOString(),
-  };
 }
 
 /**
@@ -365,16 +349,6 @@ export function parseClock(value: string): number | null {
 export function formatClockShort(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds));
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
-}
-
-/** A stable, readable id: NR-2026-7K3F9Q. */
-export function certificateId(now = new Date()): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let index = 0; index < 6; index += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return `NR-${now.getFullYear()}-${code}`;
 }
 
 /** Deterministic shuffle, so the order holds across renders of one question. */

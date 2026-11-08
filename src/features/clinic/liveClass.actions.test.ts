@@ -2,25 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   pastClasses,
   SETTING_FIELDS,
-  addClass,
   addDays,
   classError,
   classesOnDay,
   defaultSettingValues,
   defaultSettings,
-  duplicateClass,
+  duplicateDraft,
   emptyClassDraft,
   isFull,
-  normaliseLiveClassActions,
   recordingLinkError,
-  removeClass,
   seatsLeft,
-  seedClasses,
-  setClassStatus,
   settingSummary,
   sortClasses,
   toDraft,
-  updateClass,
   upcomingFrom,
   type ManagedClass,
 } from "./liveClass.actions";
@@ -131,79 +125,26 @@ describe("the schedule", () => {
   });
 });
 
-describe("editing the schedule", () => {
-  const schedule = seedClasses();
-
-  it("adds a class with nobody registered", () => {
-    const next = addClass(schedule, {
-      ...emptyClassDraft("2026-11-07"),
-      topic: "Transplant Basics",
+describe("copying a class", () => {
+  it("copies to the same slot a week later, closed for registration", () => {
+    const source = klass({
+      id: "a",
+      date: "2026-09-26",
+      joinUrl: "https://zoom.us/j/1",
     });
-    expect(next.at(-1)).toMatchObject({
-      registered: 0,
-      topic: "Transplant Basics",
-    });
-  });
-
-  it("trims what it stores", () => {
-    const [added] = addClass([], {
-      ...emptyClassDraft("2026-11-07"),
-      topic: "  Transplant Basics  ",
-      educator: "  A Nurse  ",
-    });
-    expect(added.topic).toBe("Transplant Basics");
-    expect(added.educator).toBe("A Nurse");
-  });
-
-  it("never trims a registration count to fit a smaller capacity", () => {
-    // How many people signed up is a fact. Shrinking it to match a typo in
-    // the capacity box would quietly lose real registrations.
-    const booked = [klass({ id: "a", registered: 45, capacity: 50 })];
-    const next = updateClass(booked, "a", {
-      ...toDraft(booked[0]),
-      capacity: 20,
-    });
-
-    expect(next[0].capacity).toBe(20);
-    expect(next[0].registered).toBe(45);
-  });
-
-  it("changes only the class named", () => {
-    const two = [klass({ id: "a" }), klass({ id: "b", date: "2026-09-19" })];
-    const next = setClassStatus(two, "b", "Cancelled");
-
-    expect(next[0].status).toBe("Open");
-    expect(next[1].status).toBe("Cancelled");
-  });
-
-  it("copies a class to the same slot a week later, with nobody on it", () => {
-    // Registrations belong to the session people signed up for, and the
-    // copy opens closed so nobody joins a half-built class.
-    const source = [klass({ id: "a", date: "2026-09-12", registered: 45 })];
-    const next = duplicateClass(source, "a");
-
-    expect(next).toHaveLength(2);
-    expect(next[1]).toMatchObject({
-      date: "2026-09-19",
+    const draft = duplicateDraft(source);
+    expect(draft).toMatchObject({
+      date: "2026-10-03",
       time: "18:00",
-      registered: 0,
+      topic: source.topic,
       status: "Not Yet Open",
+      joinUrl: "https://zoom.us/j/1",
     });
-    expect(next[1].id).not.toBe("a");
-  });
-
-  it("does nothing when asked to copy a class that is not there", () => {
-    expect(duplicateClass([klass({ id: "a" })], "ghost")).toHaveLength(1);
+    expect(draft).not.toHaveProperty("registered");
   });
 
   it("counts days across a month boundary", () => {
-    expect(addDays("2026-09-26", 7)).toBe("2026-10-03");
-    expect(addDays("2026-12-28", 7)).toBe("2027-01-04");
-  });
-
-  it("removes only the class asked for", () => {
-    const next = removeClass([klass({ id: "a" }), klass({ id: "b" })], "a");
-    expect(next.map((item) => item.id)).toEqual(["b"]);
+    expect(addDays("2026-09-28", 7)).toBe("2026-10-05");
   });
 });
 
@@ -271,57 +212,6 @@ describe("the six settings panels", () => {
   });
 });
 
-describe("reading the stored record back", () => {
-  it("starts from the seeded schedule when nothing is stored", () => {
-    expect(normaliseLiveClassActions(null).classes).toHaveLength(
-      seedClasses().length,
-    );
-  });
-
-  it("keeps a schedule somebody emptied rather than re-seeding it", () => {
-    expect(normaliseLiveClassActions({ classes: [] }).classes).toEqual([]);
-  });
-
-  it("drops a class with no id or date and repairs a bad status", () => {
-    const read = normaliseLiveClassActions({
-      classes: [
-        { date: "2026-09-12" },
-        { id: "a" },
-        { id: "b", date: "2026-09-12", status: "Maybe", capacity: -3 },
-      ],
-    });
-
-    expect(read.classes).toHaveLength(1);
-    expect(read.classes[0]).toMatchObject({
-      status: "Not Yet Open",
-      capacity: 50,
-    });
-  });
-
-  it("drops a stored recording link that is not http", () => {
-    // It comes straight back out as an href, so it is filtered on the way
-    // in as well as on the way in from the form.
-    const read = normaliseLiveClassActions({
-      recordings: {
-        Good: "https://zoom.us/rec/1",
-        Bad: "javascript:alert(1)",
-        Wrong: 7,
-      },
-    });
-
-    expect(read.recordings).toEqual({ Good: "https://zoom.us/rec/1" });
-  });
-
-  it("refuses a select value that is not one of the options", () => {
-    const read = normaliseLiveClassActions({
-      settings: { reminders: { email: true, lead: "whenever" } },
-    });
-
-    expect(read.settings.reminders.email).toBe(true);
-    expect(read.settings.reminders.lead).toBe("1 day before");
-  });
-});
-
 describe("the meeting link members join by", () => {
   const draft = { ...emptyClassDraft("2026-10-20"), topic: "Fluid Basics" };
 
@@ -335,22 +225,10 @@ describe("the meeting link members join by", () => {
     ).toBeNull();
   });
 
-  it("is saved with the class and survives a reload", () => {
-    const [added] = addClass([], {
-      ...draft,
-      joinUrl: "  https://zoom.us/j/123  ",
-    });
-    expect(added.joinUrl).toBe("https://zoom.us/j/123");
-    const read = normaliseLiveClassActions({ classes: [added] });
-    expect(read.classes[0].joinUrl).toBe("https://zoom.us/j/123");
-    expect(toDraft(added).joinUrl).toBe("https://zoom.us/j/123");
-  });
-
-  it("drops a stored link that is not http(s)", () => {
-    const read = normaliseLiveClassActions({
-      classes: [{ id: "x", date: "2026-10-20", joinUrl: "javascript:x" }],
-    });
-    expect(read.classes[0].joinUrl).toBeUndefined();
+  it("comes back into the edit form", () => {
+    expect(
+      toDraft(klass({ id: "a", joinUrl: "https://zoom.us/j/123" })).joinUrl,
+    ).toBe("https://zoom.us/j/123");
   });
 });
 
@@ -386,17 +264,18 @@ describe("pastClasses", () => {
     },
   ] as Parameters<typeof pastClasses>[0];
 
-  it("adds the admin's held classes, so their recordings can be published", () => {
+  it("lists the held classes by id, so their recordings can be published", () => {
     const past = pastClasses(classes, "2026-10-08");
-    const titles = past.map((c) => c.title);
-    expect(titles[0]).toBe("Potassium Basics");
-    expect(past[0]).toMatchObject({ attended: 40, rating: 0 });
-    expect(titles).not.toContain("Called Off");
-    expect(titles).not.toContain("Still To Come");
-    expect(titles).toContain("Understanding Your Kidneys");
+    expect(past.map((c) => c.id)).toEqual(["a"]);
+    /* An office reads no attendance: none is invented. */
+    expect(past[0]).toMatchObject({
+      title: "Potassium Basics",
+      attended: null,
+      rating: 0,
+    });
   });
 
-  it("keeps the sample history when nothing has been held", () => {
-    expect(pastClasses().length).toBeGreaterThan(0);
+  it("shows no sample history when nothing has been held", () => {
+    expect(pastClasses()).toEqual([]);
   });
 });

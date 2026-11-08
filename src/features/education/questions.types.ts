@@ -31,17 +31,28 @@ export interface ChoiceOption {
   id: string;
   textEn: string;
   textEs: string;
-  /** Shown after this option is picked: why it is, or is not, the best one. */
-  feedbackEn: string;
-  feedbackEs: string;
+  /** Shown after this option is picked: why it is, or is not, the best one.
+   *  Absent on scored exam questions: the server sends feedback only in an
+   *  attempt review (D19). */
+  feedbackEn?: string;
+  feedbackEs?: string;
 }
 
 export interface MatchPair {
   id: string;
   leftEn: string;
   leftEs: string;
-  rightEn: string;
-  rightEs: string;
+  /** Absent on scored exam questions: the right sides come as
+   *  `matchOptions`, with ids that do not reveal the pairing. */
+  rightEn?: string;
+  rightEs?: string;
+}
+
+/** A right-hand choice of a scored matching question (server ids). */
+export interface MatchOption {
+  id: string;
+  textEn: string;
+  textEs: string;
 }
 
 /** Where a fill-in answer is also sent once the member saves it. */
@@ -65,10 +76,14 @@ export interface Question {
 
   /** Choice kinds (multiple-choice, true-false, scenario). */
   options: ChoiceOption[];
-  correctOptionId: string;
+  /** The right option. Lesson (practice) questions carry it; scored exam
+   *  questions never do: the server marks them (spec 019, D19). */
+  correctOptionId?: string;
 
   /** Matching only. The right-hand column is shuffled for the member. */
   pairs: MatchPair[];
+  /** Scored matching only: the right-hand choices, answered by id. */
+  matchOptions?: MatchOption[];
 
   /** Fill-in only. */
   fields: FillInField[];
@@ -120,17 +135,45 @@ export interface QuizAttempt {
   submittedAt: string;
 }
 
+/** A certificate the server issued (POST …/certificate). */
 export interface Certificate {
   id: string;
   courseId: string;
-  /** The name printed on the certificate, confirmed by the member. */
-  name: string;
+  /** The verification code the server drew. */
+  code: string;
+  /** The name on the patient NephroReach record: the server prints it
+   *  (Q-EDU-2). The member never types it. */
+  nameOnCertificate: string;
   issuedAt: string;
 }
 
-/** Everything one member has done in the classroom, beyond watching. */
-export interface LearnerRecord {
-  answers: AnswerMap;
-  attempts: QuizAttempt[];
-  certificates: Certificate[];
+/** The server answer review for one question of a submitted attempt.
+ *  Present only when the course shows answers and no further attempt can
+ *  benefit (D19): the attempt passed, or it was the last one allowed. */
+export interface QuizReviewItem {
+  questionId: string;
+  correct: boolean;
+  correctOptionId: string | null;
+  /** Matching: each left pair id with the matchOptions id that is right. */
+  correctPairs: { leftId: string; rightId: string }[];
+  feedback: { optionId: string; feedbackEn: string; feedbackEs: string }[];
+}
+
+/** What a submit returns: the attempt, the attempts left (null means
+ *  unlimited) and the review (null unless D19 allows it). Held in component
+ *  state only: never cached or stored. */
+export interface QuizSubmitResult {
+  attempt: QuizAttempt;
+  attemptsLeft: number | null;
+  review: QuizReviewItem[] | null;
+}
+
+/** Where the member stands on the certificate, as the server reckons it. */
+export interface CertificateStatus {
+  lessonsDone: number;
+  lessonsTotal: number;
+  allLessons: boolean;
+  examNeeded: boolean;
+  examPassed: boolean;
+  eligible: boolean;
 }

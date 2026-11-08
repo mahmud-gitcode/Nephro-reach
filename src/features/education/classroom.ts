@@ -1,22 +1,34 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
-  CLASSROOM_COURSE_ID,
+  CATALOG_PAGE_LIMIT,
   Course,
   CourseClassKind,
   CourseDocument,
   CourseModule,
-  useCourseLibrary,
+  courseCatalogKey,
+  DEFAULT_POSTER,
 } from "./courseLibrary";
 import type { TranscriptCue } from "./dialysisJourneyData";
-import { FINAL_QUIZ_KEY, hasPassed } from "./questions.rules";
-import type { Question, QuizAttempt, VideoQuestion } from "./questions.types";
+import {
+  fromApiCourse,
+  isFirstPartyMediaUrl,
+  JOURNEY_COURSE_SLUG,
+} from "./education.mappers";
+import {
+  getPublishedCourse,
+  listPublishedCourses,
+} from "./education.repository";
+import type { Question, VideoQuestion } from "./questions.types";
 
 /* ==========================================================================
-   The member classroom, read from the course catalogue
+   The member classroom, read from the course catalogue (Phase 13)
    --------------------------------------------------------------------------
-   Admins build courses in the catalogue; the classroom shows one of them.
+   The content team builds courses on the server; the classroom shows the
+   published 21-day journey, found by its slug (never a fixed id). A failed
+   read is an error, never a fallback course.
    This file flattens a course into what the member screens need — lessons
    in order, grouped under their module — so the screens never reach into
    the admin shape directly.
@@ -39,8 +51,10 @@ export interface ClassroomLesson {
    * carry the number of the lesson before them.
    */
   day: number;
-  /** The class id. Used in the lesson URL. */
+  /** The class slug. Used in the lesson URL. */
   slug: string;
+  /** The class server id. Used in API calls and the exam quiz key. */
+  classId: string;
   groupId: string;
   kind: CourseClassKind;
   titleEn: string;
@@ -101,7 +115,8 @@ export function toLessons(course: Course): ClassroomLesson[] {
       if (courseClass.kind !== "exam") position += 1;
       return {
         day: Math.max(position, 1),
-        slug: courseClass.id,
+        slug: courseClass.slug,
+        classId: courseClass.id,
         groupId: courseModule.id,
         kind: courseClass.kind,
         titleEn: courseClass.titleEn,
@@ -109,8 +124,15 @@ export function toLessons(course: Course): ClassroomLesson[] {
         summaryEn: courseClass.summaryEn,
         summaryEs: courseClass.summaryEs || courseClass.summaryEn,
         durationMinutes: courseClass.durationMinutes,
-        poster: courseClass.poster,
-        videoSrc: courseClass.mediaSrc,
+        /* D18: only first-party media play; anything else shows as
+           unavailable rather than loading a third-party host. */
+        poster:
+          courseClass.poster && isFirstPartyMediaUrl(courseClass.poster)
+            ? courseClass.poster
+            : DEFAULT_POSTER,
+        videoSrc: isFirstPartyMediaUrl(courseClass.mediaSrc)
+          ? courseClass.mediaSrc
+          : "",
         bodyEn: courseClass.bodyEn,
         bodyEs: courseClass.bodyEs || courseClass.bodyEn,
         keyPointsEn: courseClass.keyPointsEn,
@@ -139,13 +161,41 @@ export function formatMinutes(minutes: number): string {
   return `${hours}h ${String(rest).padStart(2, "0")}m`;
 }
 
+/** The journey course, published and blinded for members. Shared content,
+ *  not patient data: the key holds no patient. */
+export function useJourneyCourse(slug: string = JOURNEY_COURSE_SLUG) {
+  const catalog = useQuery({
+    queryKey: courseCatalogKey,
+    queryFn: () => listPublishedCourses({ limit: CATALOG_PAGE_LIMIT }),
+  });
+  const courseId = catalog.data?.items.find((row) => row.slug === slug)?.id;
+  const detail = useQuery({
+    queryKey: ["education", "course", courseId ?? "none"],
+    queryFn: () => getPublishedCourse(courseId as string),
+    enabled: Boolean(courseId),
+  });
+  const course = useMemo(
+    () => (detail.data ? fromApiCourse(detail.data) : undefined),
+    [detail.data],
+  );
+  return {
+    course,
+    courseId,
+    /** The catalogue loaded and has no such course: not published yet. */
+    missing: catalog.isSuccess && !courseId,
+    isPending: catalog.isPending || (Boolean(courseId) && detail.isPending),
+    error: catalog.error ?? detail.error,
+    refetch: () => {
+      void catalog.refetch();
+      if (courseId) void detail.refetch();
+    },
+  };
+}
+
 /** The course the classroom shows, flattened for the member screens. */
-export function useClassroom(courseId: string = CLASSROOM_COURSE_ID) {
-  const library = useCourseLibrary();
-  const course =
-    library.getCourse(courseId) ??
-    library.courses.find((entry) => entry.seeded) ??
-    library.courses[0];
+export function useClassroom() {
+  const journey = useJourneyCourse();
+  const course = journey.course;
 
   const lessons = useMemo(() => (course ? toLessons(course) : []), [course]);
   const groups = useMemo(() => (course ? toGroups(course) : []), [course]);
@@ -160,37 +210,11 @@ export function useClassroom(courseId: string = CLASSROOM_COURSE_ID) {
     lessons,
     groups,
     totalMinutes,
+    missing: journey.missing,
     getLesson: (slug: string) => lessons.find((lesson) => lesson.slug === slug),
     getGroup: (groupId: string) => groups.find((group) => group.id === groupId),
-    isPending: library.isPending,
-    error: library.error,
-    refetch: library.refetch,
-  };
-}
-
-/**
- * Where the member stands on the certificate: every lesson finished, and the
- * final exam passed when the course asks for it.
- */
-export function certificateStatus(
-  course: Course,
-  lessons: ClassroomLesson[],
-  progress: Record<string, { status: string } | undefined>,
-  attempts: QuizAttempt[],
-) {
-  const lessonsDone = lessons.filter(
-    (lesson) => progress[lesson.slug]?.status === "completed",
-  ).length;
-  const allLessons = lessons.length > 0 && lessonsDone === lessons.length;
-  const examNeeded = course.requireExamPass && course.finalExam.length > 0;
-  const examPassed = hasPassed(attempts, FINAL_QUIZ_KEY);
-  return {
-    lessonsDone,
-    lessonsTotal: lessons.length,
-    allLessons,
-    examNeeded,
-    examPassed,
-    eligible:
-      course.certificateEnabled && allLessons && (!examNeeded || examPassed),
+    isPending: journey.isPending,
+    error: journey.error,
+    refetch: journey.refetch,
   };
 }

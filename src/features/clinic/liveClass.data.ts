@@ -1,27 +1,18 @@
-import type { BadgeTone, SeriesTone } from "@/components/ui";
+import type { BadgeTone } from "@/components/ui";
 
 /* ==========================================================================
-   Clinic live classes — demo data
+   Live classes — shapes, the settings cards, and calendar helpers
    --------------------------------------------------------------------------
-   The client's figures from their mockup, copied as given. Two do not
-   reconcile, and are left alone until the client says which is right:
+   Phase 13: the schedule, recordings and settings come from the API
+   (useLiveClasses). The sample figures that stood in for them (the summary,
+   recent classes, registration sources and attendance trend) are gone: the
+   page shows the server rows, or "No data yet" where the API has no figure.
 
-   - "5 upcoming live classes this month", against a schedule of three in
-     September and two in October.
-   - The schedule is dated as if today were before September 12: the 12th
-     and 19th are still "Open" for registration. `liveClass.data.test.ts`
-     pins the figures so a fix is a decision rather than a drive-by.
+   `upcomingClasses` below is the prototype schedule. No live-class screen
+   reads it any more; it stays only because the office dashboard
+   (OFFICE lane, useClinicData) still imports it until that lane moves its
+   card to the API. Remove it with that change.
    ========================================================================== */
-
-export const summary = {
-  upcomingThisMonth: 5,
-  totalRegistrations: 326,
-  registrationsChangePct: 12,
-  averageAttendancePct: 82,
-  lastMonthAttendancePct: 76,
-  averageRating: 4.8,
-  feedback: "Informative, easy to understand and very helpful!",
-};
 
 export type RegistrationStatus = "Open" | "Not Yet Open";
 
@@ -184,62 +175,15 @@ export function classesOn(year: number, month: number, day: number) {
   });
 }
 
+/** A class that has taken place. `attended` is null where the reader may
+ *  not see it (an office reads the public schedule). */
 export type RecentClass = {
+  id: string;
   title: string;
   date: string;
-  attended: number;
+  attended: number | null;
   rating: number;
 };
-
-export const recentClasses: RecentClass[] = [
-  {
-    title: "Understanding Your Kidneys",
-    date: "2026-08-29",
-    attended: 120,
-    rating: 4.8,
-  },
-  {
-    title: "Fluid Management in Dialysis",
-    date: "2026-08-22",
-    attended: 98,
-    rating: 4.7,
-  },
-  {
-    title: "Lab Results Explained",
-    date: "2026-08-15",
-    attended: 112,
-    rating: 4.9,
-  },
-  {
-    title: "Treatment Options & Transplant",
-    date: "2026-08-08",
-    attended: 105,
-    rating: 4.8,
-  },
-];
-
-/* Sources are identities, so they take the categorical ramp in a fixed
-   order, the same way Enroll Patients colours its sources. */
-export const registrationSources: {
-  label: string;
-  pct: number;
-  tone: SeriesTone;
-}[] = [
-  { label: "Patient Portal", pct: 45, tone: "cat-6" },
-  { label: "Office Referral", pct: 30, tone: "cat-4" },
-  { label: "Hospital Referral", pct: 15, tone: "cat-1" },
-  { label: "Social Media", pct: 7, tone: "cat-7" },
-  { label: "Other", pct: 3, tone: "neutral" },
-];
-
-export const attendanceTrend = [
-  { label: "Apr", value: 68 },
-  { label: "May", value: 72 },
-  { label: "Jun", value: 75 },
-  { label: "Jul", value: 80 },
-  { label: "Aug", value: 76 },
-  { label: "Sep", value: 82 },
-];
 
 export const settings = [
   {

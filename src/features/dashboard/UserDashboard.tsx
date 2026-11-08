@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -49,7 +49,11 @@ import {
 } from "@/features/personal-log/appointments/appointments";
 import { useClassroom } from "@/features/education/classroom";
 import { useJourneyProgress } from "@/features/education/useJourneyProgress";
-import { useLiveClasses } from "@/features/clinic/useLiveClasses";
+import { useMemberLiveClasses } from "@/features/education/useMemberLiveClasses";
+import { zoneLabel } from "@/features/clinic/liveClass.mappers";
+import { isApiError } from "@/lib/api/client";
+import { isNotShared } from "@/lib/data/asyncState";
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
 
@@ -194,11 +198,29 @@ export default function UserDashboard() {
     .filter((c) => !c.archived);
   const unread = messagingRules.totalUnread(threads);
 
-  const live = useLiveClasses();
-  const nextClass = live.upcoming[0];
-  const recordingCount = live.past.filter(
-    (c) => live.recordings[c.title],
-  ).length;
+  /* Live classes from the API (Phase 13): the published schedule and the
+     patient's own registration. Join is attendance: the server answers
+     with the meeting link in the join window, opened as a link (D18). */
+  const live = useMemberLiveClasses();
+  const nextClass = live.next;
+  const recordingCount = live.recordingCount;
+  const registration = nextClass
+    ? live.registrationFor(nextClass.id)
+    : undefined;
+  const [joinLink, setJoinLink] = useState<string | null>(null);
+  const joinRefusal = live.attend.error;
+  const join = async () => {
+    if (!nextClass) return;
+    try {
+      const link = await live.attend.mutateAsync(nextClass.id);
+      if (isSafeLinkUrl(link)) {
+        setJoinLink(link);
+        window.open(link, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      /* Shown under the button from live.attend.error. */
+    }
+  };
 
   const classroom = useClassroom();
   const journey = useJourneyProgress(classroom.lessons);
@@ -428,7 +450,12 @@ export default function UserDashboard() {
                   </span>
                   <span className="inline-flex items-center gap-inline-sm">
                     <Clock aria-hidden="true" className="size-4" />
-                    {nextClass.time}
+                    {nextClass.startsAt
+                      ? `${new Date(nextClass.startsAt).toLocaleTimeString(
+                          locale,
+                          { hour: "numeric", minute: "2-digit" },
+                        )} ${zoneLabel(nextClass.startsAt)}`
+                      : nextClass.time}
                   </span>
                   {nextClass.educator ? (
                     <span className="inline-flex items-center gap-inline-sm">
@@ -454,22 +481,70 @@ export default function UserDashboard() {
           </div>
 
           <div className="flex shrink-0 flex-col items-stretch gap-stack-xs md:items-end">
-            <Button
-              leadingIcon={<Video />}
-              disabled={!nextClass?.joinUrl}
-              onClick={() =>
-                nextClass?.joinUrl &&
-                window.open(nextClass.joinUrl, "_blank", "noopener,noreferrer")
-              }
-            >
-              {isEs ? "Unirse a la clase" : "Join class"}
-            </Button>
-            {nextClass && !nextClass.joinUrl ? (
-              <span className="text-caption text-fg-muted md:text-right">
-                {isEs
-                  ? "El enlace aparece cuando se agrega."
-                  : "The join link appears once it is added."}
+            {nextClass && live.canRegister && !registration ? (
+              <Button
+                leadingIcon={<Video />}
+                disabled={
+                  nextClass.status !== "Open" ||
+                  /* Registration closes when the class starts (server). */
+                  (nextClass.startsAt !== undefined &&
+                    new Date(nextClass.startsAt) <= now)
+                }
+                loading={live.register.isPending}
+                onClick={() => live.register.mutate(nextClass.id)}
+              >
+                {isEs ? "Inscribirme" : "Register"}
+              </Button>
+            ) : (
+              <Button
+                leadingIcon={<Video />}
+                disabled={!nextClass || !registration}
+                loading={live.attend.isPending}
+                onClick={join}
+              >
+                {isEs ? "Unirse a la clase" : "Join class"}
+              </Button>
+            )}
+            {registration ? (
+              <span className="text-caption text-success md:text-right">
+                {isEs ? "Estás inscrito" : "You are registered"}
               </span>
+            ) : null}
+            {joinRefusal ? (
+              <span className="text-caption text-fg-muted md:text-right">
+                {isApiError(joinRefusal, {
+                  code: "education.join_not_open_yet",
+                })
+                  ? isEs
+                    ? "La clase abre 30 minutos antes de empezar."
+                    : "The class opens 30 minutes before it starts."
+                  : isApiError(joinRefusal, {
+                        code: "education.join_link_missing",
+                      })
+                    ? isEs
+                      ? "El enlace aparece cuando se agrega."
+                      : "The join link appears once it is added."
+                    : isEs
+                      ? "No pudimos abrir la clase. Inténtalo de nuevo."
+                      : "We could not open the class. Please try again."}
+              </span>
+            ) : null}
+            {live.register.error ? (
+              <span className="text-caption text-danger md:text-right">
+                {isEs
+                  ? "No pudimos inscribirte. Inténtalo de nuevo."
+                  : "We could not register you. Please try again."}
+              </span>
+            ) : null}
+            {joinLink ? (
+              <a
+                href={joinLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center text-label-md text-fg-brand hover:underline"
+              >
+                {isEs ? "Abrir el enlace de la clase" : "Open the class link"}
+              </a>
             ) : null}
             {recordingCount > 0 ? (
               <Link
@@ -495,7 +570,17 @@ export default function UserDashboard() {
             icon={<GraduationCap />}
             title={isEs ? "Mi aprendizaje" : "My learning"}
           />
-          {classroom.isPending || journey.isPending ? (
+          {journey.error ? (
+            <p className="text-body-sm text-fg-muted">
+              {isNotShared(journey.error)
+                ? isEs
+                  ? "Tu aprendizaje no se ha compartido contigo."
+                  : "This learning record has not been shared with you."
+                : isEs
+                  ? "Tu aprendizaje no cargó."
+                  : "Your learning did not load."}
+            </p>
+          ) : classroom.isPending || journey.isPending ? (
             <Skeleton height={160} />
           ) : (
             <>

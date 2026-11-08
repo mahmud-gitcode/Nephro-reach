@@ -1,9 +1,7 @@
 import {
   classDate,
-  recentClasses,
   type RecentClass,
   settings as SETTING_CARDS,
-  upcomingClasses,
   type RegistrationStatus,
   type UpcomingClass,
 } from "./liveClass.data";
@@ -17,10 +15,13 @@ import {
    front end only.
 
    There is no Zoom integration and no video host, so nothing here creates a
-   meeting or streams a recording. What a clinic actually does in those
+   meeting or streams a recording. What NephroReach actually does in those
    tools is keep a link, so that is what this keeps: paste the Zoom or Vimeo
-   URL and the button opens it. That is the real workflow, not a stand-in
-   for one.
+   URL and the button opens it as a link (noopener), never embedded (D18).
+
+   Phase 13: the schedule, recordings and settings live on the server
+   (useLiveClasses). What stays here is pure: validation, ordering, the
+   calendar, and the settings panels' fields.
    ========================================================================== */
 
 /**
@@ -33,11 +34,20 @@ import {
 export type ClassStatus = RegistrationStatus | "Cancelled";
 
 export interface ManagedClass extends Omit<UpcomingClass, "status"> {
+  /** The server id. */
   id: string;
+  /** The instant it starts (ISO); `date`/`time` are its browser-local day
+   *  and 24-hour "HH:mm". */
+  startsAt?: string;
   status: ClassStatus;
-  /** Where members join the live session (Zoom, Teams…). Empty until the
-   *  clinic pastes one; the member's Join button waits for it. */
+  /** Where members join the live session (Zoom, Teams…). Only the platform
+   *  team reads it; a member gets it from attendance, in the join window. */
   joinUrl?: string;
+  /** The recording link, once posted (opened as a link, never embedded). */
+  recordingUrl?: string;
+  /** Platform only: how many joined, and their average rating. */
+  attended?: number | null;
+  averageRating?: number | null;
 }
 
 export interface ClassDraft {
@@ -62,16 +72,6 @@ export const PROGRAMS = [
   "Crash Dialysis",
   "All Programs",
 ] as const;
-
-/** The seeded schedule, as the starting point for a clinic's own edits. */
-export function seedClasses(): ManagedClass[] {
-  return upcomingClasses.map((item) => ({
-    ...item,
-    /* The seed has one class per date, so the date is already unique and
-       makes a stable id across reloads. New ones get a minted one. */
-    id: item.date,
-  }));
-}
 
 export function emptyClassDraft(date: string): ClassDraft {
   return {
@@ -158,53 +158,6 @@ export function isFull(item: ManagedClass): boolean {
   return item.registered >= item.capacity;
 }
 
-export function addClass(
-  classes: ManagedClass[],
-  draft: ClassDraft,
-): ManagedClass[] {
-  return [
-    ...classes,
-    {
-      ...draft,
-      topic: draft.topic.trim(),
-      educator: draft.educator.trim(),
-      joinUrl: draft.joinUrl.trim(),
-      /* A class nobody has been told about yet has nobody registered. */
-      registered: 0,
-      id: `class-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    },
-  ];
-}
-
-export function updateClass(
-  classes: ManagedClass[],
-  id: string,
-  draft: ClassDraft,
-): ManagedClass[] {
-  return classes.map((item) =>
-    item.id === id
-      ? {
-          ...item,
-          ...draft,
-          topic: draft.topic.trim(),
-          educator: draft.educator.trim(),
-          joinUrl: draft.joinUrl.trim(),
-          /* Capacity can be cut below what is already booked, but the
-             registration count is a fact and is never trimmed to fit. */
-          registered: item.registered,
-        }
-      : item,
-  );
-}
-
-export function setClassStatus(
-  classes: ManagedClass[],
-  id: string,
-  status: ClassStatus,
-): ManagedClass[] {
-  return classes.map((item) => (item.id === id ? { ...item, status } : item));
-}
-
 /** Add days to a yyyy-mm-dd date. */
 export function addDays(iso: string, days: number): string {
   const [year, month, day] = iso.split("-").map(Number);
@@ -217,36 +170,18 @@ export function addDays(iso: string, days: number): string {
 }
 
 /**
- * Copy a class to the same slot a week later.
+ * The form values for a copy of a class in the same slot a week later.
  *
  * Registrations do not come with it — they belong to the session people
  * signed up for — and the copy opens closed, so nobody is registered for a
- * class the office has not finished setting up.
+ * class the team has not finished setting up. Sent as one new class.
  */
-export function duplicateClass(
-  classes: ManagedClass[],
-  id: string,
-): ManagedClass[] {
-  const source = classes.find((item) => item.id === id);
-  if (!source) return classes;
-
-  return [
-    ...classes,
-    {
-      ...source,
-      id: `class-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      date: addDays(source.date, 7),
-      registered: 0,
-      status: "Not Yet Open",
-    },
-  ];
-}
-
-export function removeClass(
-  classes: ManagedClass[],
-  id: string,
-): ManagedClass[] {
-  return classes.filter((item) => item.id !== id);
+export function duplicateDraft(source: ManagedClass): ClassDraft {
+  return {
+    ...toDraft(source),
+    date: addDays(source.date, 7),
+    status: "Not Yet Open",
+  };
 }
 
 /**
@@ -279,7 +214,7 @@ export function classesOnDay(
    Recordings
    -------------------------------------------------------------------------- */
 
-/** Where a past class's recording lives, keyed by the class title. */
+/** Where a past class's recording lives, keyed by the class id. */
 export type RecordingLinks = Record<string, string>;
 
 /**
@@ -306,31 +241,25 @@ export function recordingLinkError(url: string): string | null {
 }
 
 /**
- * Classes that have taken place, newest first: the sample history, plus
- * every class the admin scheduled whose date has passed and that was not
- * called off — so each new live class can have its recording published
- * (client, 2026-10-08). Recordings are kept by title, so a topic held
- * twice keeps its newest session.
+ * Classes that have taken place, newest first: every class whose day has
+ * passed and that was not called off — so each live class can have its
+ * recording published (client, 2026-10-08). Each keeps its own id, so a
+ * topic held twice keeps both sessions.
  */
 export function pastClasses(
   classes: ManagedClass[] = [],
   today = "",
 ): RecentClass[] {
-  const held: RecentClass[] = classes
+  return classes
     .filter((c) => c.status !== "Cancelled" && !!today && c.date < today)
     .map((c) => ({
+      id: c.id,
       title: c.topic,
       date: c.date,
-      attended: c.registered,
-      /* No rating collected for these yet. */
-      rating: 0,
-    }));
-  const byTitle = new Map<string, RecentClass>();
-  for (const item of [...recentClasses, ...held]) {
-    const seen = byTitle.get(item.title);
-    if (!seen || item.date > seen.date) byTitle.set(item.title, item);
-  }
-  return [...byTitle.values()].sort((a, b) => b.date.localeCompare(a.date));
+      attended: c.attended ?? null,
+      rating: c.averageRating ?? 0,
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /* --------------------------------------------------------------------------
@@ -466,120 +395,6 @@ export function settingSummary(
 
   if (on.length > 0) return on.join(", ");
   return null;
-}
-
-/* --------------------------------------------------------------------------
-   Storage
-   -------------------------------------------------------------------------- */
-
-export interface LiveClassActions {
-  classes: ManagedClass[];
-  recordings: RecordingLinks;
-  settings: Record<SettingId, SettingValues>;
-  updatedAt: string;
-}
-
-export function defaultLiveClassActions(): LiveClassActions {
-  return {
-    classes: seedClasses(),
-    recordings: {},
-    settings: defaultSettings(),
-    updatedAt: "",
-  };
-}
-
-/** Read the stored record back, repairing anything unusable. */
-export function normaliseLiveClassActions(stored: unknown): LiveClassActions {
-  const base = defaultLiveClassActions();
-  if (!stored || typeof stored !== "object") return base;
-
-  const raw = stored as Partial<LiveClassActions>;
-
-  const classes = Array.isArray(raw.classes)
-    ? raw.classes.flatMap((value) => {
-        if (!value || typeof value !== "object") return [];
-        const item = value as Partial<ManagedClass>;
-        if (typeof item.id !== "string" || typeof item.date !== "string") {
-          return [];
-        }
-
-        const capacity =
-          Number.isFinite(item.capacity) && Number(item.capacity) > 0
-            ? Number(item.capacity)
-            : 50;
-
-        return [
-          {
-            id: item.id,
-            date: item.date,
-            time: typeof item.time === "string" ? item.time : "18:00",
-            topic: typeof item.topic === "string" ? item.topic : "Class",
-            educator: typeof item.educator === "string" ? item.educator : "",
-            program: typeof item.program === "string" ? item.program : "",
-            registered:
-              Number.isFinite(item.registered) && Number(item.registered) >= 0
-                ? Number(item.registered)
-                : 0,
-            capacity,
-            status: CLASS_STATUSES.includes(item.status as ClassStatus)
-              ? (item.status as ClassStatus)
-              : "Not Yet Open",
-            ...(typeof item.joinUrl === "string" &&
-            item.joinUrl &&
-            recordingLinkError(item.joinUrl) === null
-              ? { joinUrl: item.joinUrl }
-              : {}),
-          } satisfies ManagedClass,
-        ];
-      })
-    : base.classes;
-
-  const recordings: RecordingLinks = {};
-  if (raw.recordings && typeof raw.recordings === "object") {
-    for (const [title, url] of Object.entries(raw.recordings)) {
-      /* A stored link that is not http(s) is dropped rather than shown:
-         the page turns these into an href it will open. */
-      if (typeof url === "string" && recordingLinkError(url) === null) {
-        recordings[title] = url;
-      }
-    }
-  }
-
-  const settings = base.settings;
-  if (raw.settings && typeof raw.settings === "object") {
-    for (const card of SETTING_CARDS) {
-      const stored = (raw.settings as Record<string, unknown>)[card.id];
-      if (!stored || typeof stored !== "object") continue;
-
-      const values = defaultSettingValues(card.id);
-      for (const field of SETTING_FIELDS[card.id]) {
-        const value = (stored as Record<string, unknown>)[field.key];
-
-        if (field.kind === "switch" && typeof value === "boolean") {
-          values[field.key] = value;
-        } else if (field.kind === "number" && Number.isFinite(value)) {
-          values[field.key] = Number(value);
-        } else if (
-          field.kind === "select" &&
-          typeof value === "string" &&
-          field.options?.includes(value)
-        ) {
-          values[field.key] = value;
-        } else if (field.kind === "text" && typeof value === "string") {
-          values[field.key] = value;
-        }
-      }
-      settings[card.id] = values;
-    }
-  }
-
-  return {
-    /* An emptied schedule is a decision, not a broken record. */
-    classes,
-    recordings,
-    settings,
-    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
-  };
 }
 
 /** Re-exported so the page does not import the seed and the rules both. */

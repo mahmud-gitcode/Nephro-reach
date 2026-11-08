@@ -11,7 +11,6 @@ import {
   Progress,
   SectionTitle,
 } from "@/components/ui";
-import { useCareTeamQuestions } from "@/features/care-team/useCareTeamQuestions";
 import {
   activitiesProgress,
   formatClockShort,
@@ -28,6 +27,9 @@ import { DraftAnswer, emptyDraft, QuestionView } from "./QuestionView";
    The questions under a lesson, and the same questions when they pop up in
    the video. Answers are saved as soon as the member checks or saves them;
    nothing here is marked for a grade — the feedback is the point.
+   A fill-in answer addressed to the care team is passed on by the server
+   when it saves the answer (one question, under the patient's record), so
+   this side only says it was sent.
    ========================================================================== */
 
 function sameDraft(draft: DraftAnswer, saved: Answer | undefined): boolean {
@@ -53,41 +55,51 @@ export function LessonQuestion({
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { answers, saveAnswer, clearAnswer } = useLearnerRecord();
-  const careTeam = useCareTeamQuestions();
+  const { answers, saveAnswer, clearAnswer, canWrite } = useLearnerRecord();
+  const [failed, setFailed] = useState(false);
 
   const saved = answers[question.id];
   const [draft, setDraft] = useState<DraftAnswer>(() =>
     saved ? { ...saved } : emptyDraft(question),
   );
   const [sentToTeam, setSentToTeam] = useState(false);
+  /* The saved answer arrives with the learner record, which can land after
+     this question first renders: take it once, when it first shows up. */
+  const [hydrated, setHydrated] = useState(Boolean(saved));
+  if (saved && !hydrated) {
+    setHydrated(true);
+    setDraft({ ...saved });
+  }
 
   const answerable = isAnswered(question, { ...draft, answeredAt: "" });
   const isSaved = sameDraft(draft, saved) && isAnswered(question, saved);
   const scoredKind = isChoice(question) || question.kind === "matching";
 
   const save = async () => {
-    saveAnswer(draft);
-    if (question.kind === "fill-in" && question.destination === "care-team") {
-      const text = question.fields
-        .map((field) => draft.fields?.[field.id]?.trim())
-        .filter(Boolean)
-        .join(" — ");
-      if (text) {
-        await careTeam.add({
-          id: `cq-${Date.now().toString(36)}`,
-          role: "Provider",
-          question: text,
-          status: "Submitted",
-        });
-        setSentToTeam(true);
-      }
+    setFailed(false);
+    try {
+      await saveAnswer(draft);
+    } catch {
+      setFailed(true);
+      return;
     }
+    if (
+      question.kind === "fill-in" &&
+      question.destination === "care-team" &&
+      question.fields.some((field) => draft.fields?.[field.id]?.trim())
+    )
+      setSentToTeam(true);
     onAnswered?.();
   };
 
-  const retry = () => {
-    clearAnswer(question.id);
+  const retry = async () => {
+    setFailed(false);
+    try {
+      await clearAnswer(question.id);
+    } catch {
+      setFailed(true);
+      return;
+    }
     setDraft(emptyDraft(question));
     setSentToTeam(false);
   };
@@ -103,6 +115,14 @@ export function LessonQuestion({
         showCorrect={false}
         disabled={scoredKind && isSaved}
       />
+
+      {failed ? (
+        <Alert tone="danger">
+          {isEs
+            ? "Tu respuesta no se guardó. Inténtalo de nuevo."
+            : "Your answer did not save. Please try again."}
+        </Alert>
+      ) : null}
 
       {sentToTeam ? (
         <Alert tone="success">
@@ -120,12 +140,17 @@ export function LessonQuestion({
               variant="neutral"
               appearance="fill-stroke"
               onClick={retry}
+              disabled={!canWrite}
             >
               <RotateCcw aria-hidden="true" />
               {isEs ? "Intentar de nuevo" : "Try again"}
             </Button>
           ) : (
-            <Button size="small" onClick={save} disabled={!answerable}>
+            <Button
+              size="small"
+              onClick={save}
+              disabled={!answerable || !canWrite}
+            >
               {isEs ? "Comprobar respuesta" : "Check answer"}
             </Button>
           )
@@ -134,7 +159,7 @@ export function LessonQuestion({
             <Button
               size="small"
               onClick={save}
-              disabled={!answerable || isSaved}
+              disabled={!answerable || isSaved || !canWrite}
             >
               {isEs ? "Guardar" : "Save"}
             </Button>

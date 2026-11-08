@@ -31,6 +31,7 @@ import {
 import { formatClassDate, registrationTone } from "./liveClass.data";
 import type { RecentClass } from "./liveClass.data";
 import type { BadgeTone } from "@/components/ui";
+import { toStartsAt, zoneLabel } from "./liveClass.mappers";
 
 /* ==========================================================================
    The dialogs behind Live Class's actions
@@ -136,6 +137,12 @@ export function ScheduleClassModal({
               value={draft.time}
               onChange={(event) => set({ time: event.target.value })}
             />
+            <p className="text-caption text-fg-muted">
+              {zoneLabel(
+                toStartsAt(draft.date, draft.time) ?? new Date().toISOString(),
+              )}{" "}
+              (your time zone)
+            </p>
           </div>
         </div>
 
@@ -489,7 +496,7 @@ export function RecordingModal({
       open
       onClose={onClose}
       title={item.title}
-      description={`${formatClassDate(item.date)} · ${item.attended} attended${item.rating > 0 ? ` · rated ${item.rating}` : ""}`}
+      description={`${formatClassDate(item.date)}${item.attended !== null ? ` · ${item.attended} attended` : ""}${item.rating > 0 ? ` · rated ${item.rating}` : ""}`}
       footer={
         <>
           {/* Unpublishing takes it off members' home screens. */}
@@ -498,7 +505,7 @@ export function RecordingModal({
               variant="danger"
               appearance="ghost"
               onClick={() => {
-                onSave(item.title, "");
+                onSave(item.id, "");
                 onClose();
               }}
             >
@@ -511,7 +518,7 @@ export function RecordingModal({
           <Button
             disabled={!!error || !url.trim()}
             onClick={() => {
-              onSave(item.title, url);
+              onSave(item.id, url);
               onClose();
             }}
           >
@@ -593,11 +600,11 @@ export function RecordingsLibraryModal({
     >
       <ul className="divide-y divide-line-subtle">
         {classes.map((item) => {
-          const link = recordings[item.title];
+          const link = recordings[item.id];
 
           return (
             <li
-              key={item.title}
+              key={item.id}
               className="flex flex-wrap items-center gap-inline-md py-inset-xs first:pt-0"
             >
               <button

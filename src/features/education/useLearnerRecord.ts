@@ -1,147 +1,85 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import * as rules from "./questions.rules";
-import type {
-  Answer,
-  Certificate,
-  LearnerRecord,
-  Question,
-} from "./questions.types";
+import { useCallback } from "react";
+import { useClassroom } from "./classroom";
+import type { Answer, QuizSubmitResult } from "./questions.types";
+import { useLearnerCourse } from "./useLearnerCourse";
 
 /* ==========================================================================
-   The learner record — answers, exam attempts, certificates
+   The learner record — answers, exam attempts, the certificate (Phase 13)
    --------------------------------------------------------------------------
-   Kept apart from lesson progress, which the video player writes several
-   times a minute. Stored in this browser for now, through the same async
-   adapter as everything else, so a server can take over without the
-   screens changing.
-
-   No seed: answers the member never gave would be a lie about their record.
+   From the server's learner record of the journey course. Lesson answers
+   are saved one at a time; exam attempts are sent whole and scored by the
+   server, which also decides the review (D19) and the certificate. This
+   side never grades an exam and never makes a certificate.
    ========================================================================== */
 
-const KEY = storageKey("classroom-learner");
-
-const EMPTY: LearnerRecord = { answers: {}, attempts: [], certificates: [] };
-
-async function readRecord(): Promise<LearnerRecord> {
-  const stored = await readJson<Partial<LearnerRecord> | null>(KEY, null);
-  if (!stored || typeof stored !== "object") return EMPTY;
-  return {
-    answers:
-      stored.answers && typeof stored.answers === "object"
-        ? stored.answers
-        : {},
-    attempts: Array.isArray(stored.attempts) ? stored.attempts : [],
-    certificates: Array.isArray(stored.certificates) ? stored.certificates : [],
-  };
-}
-
-export const learnerRecordKey = ["education", "learner-record"] as const;
-
 export function useLearnerRecord() {
-  const queryClient = useQueryClient();
+  const classroom = useClassroom();
+  const learner = useLearnerCourse(classroom.course);
+  const { mutateAsync: answerAsync } = learner.answer;
+  const { mutateAsync: attemptAsync } = learner.attempt;
+  const { mutateAsync: certificateAsync } = learner.issue;
 
-  const query = useQuery({ queryKey: learnerRecordKey, queryFn: readRecord });
-
-  const write = useMutation({
-    mutationFn: async (transform: (current: LearnerRecord) => LearnerRecord) =>
-      writeJson(KEY, transform(await readRecord())),
-    onSuccess: (record) => queryClient.setQueryData(learnerRecordKey, record),
-  });
-
-  const { mutate, mutateAsync, reset } = write;
-  const record = useMemo(() => query.data ?? EMPTY, [query.data]);
-
-  /** Saves a lesson answer. Lessons keep the latest answer only. */
+  /** Saves a lesson answer (PUT, the latest answer only). */
   const saveAnswer = useCallback(
-    (answer: Omit<Answer, "answeredAt">) =>
-      mutate((current) => ({
-        ...current,
-        answers: {
-          ...current.answers,
-          [answer.questionId]: {
-            ...answer,
-            answeredAt: new Date().toISOString(),
-          },
-        },
-      })),
-    [mutate],
+    (answer: Omit<Answer, "answeredAt">) => answerAsync({ draft: answer }),
+    [answerAsync],
   );
 
   const clearAnswer = useCallback(
-    (questionId: string) =>
-      mutate((current) => {
-        const answers = { ...current.answers };
-        delete answers[questionId];
-        return { ...current, answers };
-      }),
-    [mutate],
+    (questionId: string) => answerAsync({ draft: { questionId }, clear: true }),
+    [answerAsync],
   );
 
-  /** Scores and stores one exam or module-check attempt. */
+  /** Sends one exam attempt. The server scores it; the result (with the
+   *  attempts left and the review, when D19 allows) goes to the caller. */
   const submitAttempt = useCallback(
-    async (
+    (
       quizKey: string,
-      questions: Question[],
-      answers: Record<string, Answer>,
-      passMark: number,
-    ) => {
-      const attempt = rules.buildAttempt(quizKey, questions, answers, passMark);
-      await mutateAsync((current) => ({
-        ...current,
-        attempts: [...current.attempts, attempt],
-      }));
-      return attempt;
-    },
-    [mutateAsync],
+      answers: Record<string, Omit<Answer, "answeredAt">>,
+    ): Promise<QuizSubmitResult> => attemptAsync({ quizKey, answers }),
+    [attemptAsync],
   );
 
+  /** Asks the server for the certificate (no body: it checks eligibility
+   *  and prints the name on the patient's record). */
   const issueCertificate = useCallback(
-    async (courseId: string, name: string) => {
-      const certificate: Certificate = {
-        id: rules.certificateId(),
-        courseId,
-        name: name.trim(),
-        issuedAt: new Date().toISOString(),
-      };
-      await mutateAsync((current) => ({
-        ...current,
-        certificates: [
-          ...current.certificates.filter(
-            (entry) => entry.courseId !== courseId,
-          ),
-          certificate,
-        ],
-      }));
-      return certificate;
-    },
-    [mutateAsync],
-  );
-
-  const certificateFor = useCallback(
-    (courseId: string) =>
-      record.certificates.find((entry) => entry.courseId === courseId),
-    [record.certificates],
+    () => certificateAsync(),
+    [certificateAsync],
   );
 
   return {
-    record,
-    answers: record.answers,
-    attempts: record.attempts,
+    answers: learner.answers,
+    attempts: learner.attempts,
+    certificate: learner.certificate,
+    certificateStatus: learner.certificateStatus,
+    access: learner.access,
+    canWrite: learner.canWrite,
     saveAnswer,
     clearAnswer,
     submitAttempt,
     issueCertificate,
-    certificateFor,
 
-    isPending: query.isPending,
-    error: query.error,
-    refetch: () => void query.refetch(),
-    saveError: write.error,
-    dismissSaveError: reset,
-    isSaving: write.isPending,
+    isPending: classroom.isPending || learner.isPending,
+    error: classroom.error ?? learner.error,
+    refetch: () => {
+      classroom.refetch();
+      learner.refetch();
+    },
+    answerError: learner.answer.error,
+    attemptError: learner.attempt.error,
+    certificateError: learner.issue.error,
+    saveError:
+      learner.answer.error ?? learner.attempt.error ?? learner.issue.error,
+    dismissSaveError: () => {
+      learner.answer.reset();
+      learner.attempt.reset();
+      learner.issue.reset();
+    },
+    isSaving:
+      learner.answer.isPending ||
+      learner.attempt.isPending ||
+      learner.issue.isPending,
   };
 }

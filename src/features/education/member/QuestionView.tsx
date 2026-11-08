@@ -13,7 +13,7 @@ import {
   pickedOption,
   shuffledBySeed,
 } from "../questions.rules";
-import type { Answer, Question } from "../questions.types";
+import type { Answer, Question, QuizReviewItem } from "../questions.types";
 
 /* ==========================================================================
    QuestionView
@@ -24,6 +24,11 @@ import type { Answer, Question } from "../questions.types";
 
    `reveal` turns on the verdict and the feedback for the chosen answer.
    `showCorrect` also marks the right answer, for an exam review.
+
+   A lesson question carries its own key, so its practice feedback can be
+   shown. A scored exam question never does: its verdict, right answer and
+   feedback come only from the server review of a submitted attempt (D19).
+   Without a review, a blinded question shows no verdict at all.
    ========================================================================== */
 
 export type DraftAnswer = Omit<Answer, "answeredAt">;
@@ -40,6 +45,7 @@ export function QuestionView({
   reveal = false,
   showCorrect = false,
   disabled = false,
+  review,
 }: {
   question: Question;
   draft: DraftAnswer;
@@ -49,14 +55,20 @@ export function QuestionView({
   reveal?: boolean;
   showCorrect?: boolean;
   disabled?: boolean;
+  /** The server review of this question in a submitted attempt. */
+  review?: QuizReviewItem;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const t = (en: string, es: string) => (isEs ? es || en : en);
 
-  const verdict = reveal
-    ? gradeAnswer(question, { ...draft, answeredAt: "" })
-    : null;
+  const verdict = !reveal
+    ? null
+    : review
+      ? isScored(question)
+        ? review.correct
+        : null
+      : gradeAnswer(question, { ...draft, answeredAt: "" });
 
   return (
     <fieldset className="min-w-0 space-y-stack-md" disabled={disabled}>
@@ -109,6 +121,7 @@ export function QuestionView({
           onChange={onChange}
           reveal={reveal}
           showCorrect={showCorrect}
+          review={review}
         />
       ) : null}
 
@@ -119,6 +132,7 @@ export function QuestionView({
           onChange={onChange}
           reveal={reveal}
           showCorrect={showCorrect}
+          review={review}
         />
       ) : null}
 
@@ -176,25 +190,38 @@ function ChoiceList({
   onChange,
   reveal,
   showCorrect,
+  review,
 }: {
   question: Question;
   draft: DraftAnswer;
   onChange: (next: DraftAnswer) => void;
   reveal: boolean;
   showCorrect: boolean;
+  review?: QuizReviewItem;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
   const picked = pickedOption(question, { ...draft, answeredAt: "" });
+  /* The key: from the review, or the lesson question's own. A blinded
+     question without a review has none, and nothing is marked. */
+  const correctId = review
+    ? (review.correctOptionId ?? undefined)
+    : question.correctOptionId;
+  const known = reveal && correctId !== undefined;
+  const pickedFeedback = picked
+    ? review
+      ? review.feedback.find((entry) => entry.optionId === picked.id)
+      : picked
+    : undefined;
 
   return (
     <div className="space-y-stack-sm">
       <div role="radiogroup" className="grid grid-cols-1 gap-4">
         {question.options.map((option) => {
           const selected = draft.value === option.id;
-          const isRight = option.id === question.correctOptionId;
-          const markRight = reveal && (showCorrect || selected) && isRight;
-          const markWrong = reveal && selected && !isRight;
+          const isRight = option.id === correctId;
+          const markRight = known && (showCorrect || selected) && isRight;
+          const markWrong = known && selected && !isRight;
 
           return (
             <button
@@ -245,17 +272,22 @@ function ChoiceList({
         })}
       </div>
 
-      {reveal && picked && (picked.feedbackEn || picked.feedbackEs) ? (
+      {known &&
+      picked &&
+      pickedFeedback &&
+      (pickedFeedback.feedbackEn || pickedFeedback.feedbackEs) ? (
         <p
           role="status"
           className={cn(
             "rounded-card p-inset-md text-body-sm",
-            picked.id === question.correctOptionId
+            picked.id === correctId
               ? "bg-success-surface text-success"
               : "bg-warning-surface text-warning",
           )}
         >
-          {isEs ? picked.feedbackEs || picked.feedbackEn : picked.feedbackEn}
+          {isEs
+            ? pickedFeedback.feedbackEs || pickedFeedback.feedbackEn
+            : pickedFeedback.feedbackEn}
         </p>
       ) : null}
     </div>
@@ -268,32 +300,63 @@ function MatchingList({
   onChange,
   reveal,
   showCorrect,
+  review,
 }: {
   question: Question;
   draft: DraftAnswer;
   onChange: (next: DraftAnswer) => void;
   reveal: boolean;
   showCorrect: boolean;
+  review?: QuizReviewItem;
 }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
+  /* A scored question offers the server options (ids that do not reveal
+     the pairing); a lesson question offers its own right sides. */
   const rightSide = useMemo(
-    () => shuffledBySeed(question.pairs, question.id),
-    [question.pairs, question.id],
+    () =>
+      question.matchOptions
+        ? question.matchOptions.map((option) => ({
+            id: option.id,
+            textEn: option.textEn,
+            textEs: option.textEs,
+          }))
+        : shuffledBySeed(question.pairs, question.id).map((pair) => ({
+            id: pair.id,
+            textEn: pair.rightEn ?? "",
+            textEs: pair.rightEs ?? "",
+          })),
+    [question.matchOptions, question.pairs, question.id],
   );
+  const expectedFor = (pairId: string): string | undefined =>
+    review
+      ? review.correctPairs.find((entry) => entry.leftId === pairId)?.rightId
+      : question.matchOptions
+        ? undefined
+        : pairId;
+  const optionText = (id: string | undefined) => {
+    const option = rightSide.find((entry) => entry.id === id);
+    return option
+      ? isEs
+        ? option.textEs || option.textEn
+        : option.textEn
+      : "";
+  };
 
   return (
     <ul className="grid grid-cols-1 gap-4">
       {question.pairs.map((pair) => {
         const chosen = draft.pairs?.[pair.id] ?? "";
-        const right = chosen === pair.id;
+        const expected = expectedFor(pair.id);
+        const known = reveal && expected !== undefined;
+        const right = known && chosen === expected;
         const label = isEs ? pair.leftEs || pair.leftEn : pair.leftEn;
         return (
           <li
             key={pair.id}
             className={cn(
               "grid grid-cols-1 items-center gap-inline-md rounded-card p-inset-md sm:grid-cols-2",
-              reveal
+              known
                 ? right
                   ? "bg-success-surface"
                   : "bg-danger-surface"
@@ -321,14 +384,14 @@ function MatchingList({
                 <option value="">{isEs ? "Elige…" : "Choose…"}</option>
                 {rightSide.map((option) => (
                   <option key={option.id} value={option.id}>
-                    {isEs ? option.rightEs || option.rightEn : option.rightEn}
+                    {isEs ? option.textEs || option.textEn : option.textEn}
                   </option>
                 ))}
               </Select>
-              {reveal && showCorrect && !right ? (
+              {known && showCorrect && !right ? (
                 <p className="mt-stack-xs text-body-sm text-fg-secondary">
                   {isEs ? "Respuesta: " : "Answer: "}
-                  {isEs ? pair.rightEs || pair.rightEn : pair.rightEn}
+                  {optionText(expected)}
                 </p>
               ) : null}
             </div>

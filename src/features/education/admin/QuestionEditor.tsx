@@ -308,8 +308,8 @@ function OptionsEditor({
             )}
             <BilingualInput
               label="Feedback"
-              en={option.feedbackEn}
-              es={option.feedbackEs}
+              en={option.feedbackEn ?? ""}
+              es={option.feedbackEs ?? ""}
               onEn={(feedbackEn) => update(option.id, { feedbackEn })}
               onEs={(feedbackEs) => update(option.id, { feedbackEs })}
               placeholder="Why this answer is, or is not, the best one."
@@ -385,8 +385,8 @@ function PairsEditor({
           />
           <BilingualInput
             label="Right (its match)"
-            en={pair.rightEn}
-            es={pair.rightEs}
+            en={pair.rightEn ?? ""}
+            es={pair.rightEs ?? ""}
             onEn={(rightEn) => update(pair.id, { rightEn })}
             onEs={(rightEs) => update(pair.id, { rightEs })}
           />
