@@ -46,6 +46,8 @@ import { useNow } from "@/lib/utils/useNow";
 import { useMemberName } from "@/features/auth/useMemberName";
 import * as messaging from "@/features/messaging/messaging.rules";
 import { fileError } from "@/features/personal-log/dialysis/accessPhotos";
+import { useAccessPhotos } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { SavedAccessPhotos } from "./SavedAccessPhotos";
 import type { AccessTarget } from "./access.repository";
 import {
   useAccessActions,
@@ -97,8 +99,8 @@ import {
    On the API (Phase 10): the member may have several access profiles, one
    per access center; with more than one, a selector picks which. Every
    write is the member's own route, and a photo is uploaded first and sent
-   by file id (a fresh upload only: attaching a saved access photo waits on
-   NEW-5).
+   by file id (a fresh upload; the saved access photos stay listed, but
+   attaching one is shown as not available yet until NEW-5 is decided).
    ========================================================================== */
 
 const HREF = "/dashboard/vascular-access";
@@ -534,6 +536,8 @@ function ConcernModal({
   onSent: (edited: boolean, sendTo: ConcernRecipient[]) => void;
 }) {
   const safety = useSafetyNotice(isEs);
+  /* The saved access photos, listed but not attachable yet (NEW-5). */
+  const photoLog = useAccessPhotos();
   /* A dialysis center to send to only when the record names one: the
      server refuses `dialysis` otherwise (a hint, not a rule). */
   const hasDialysis = !!record.dialysisCenter;
@@ -700,6 +704,7 @@ function ConcernModal({
           </div>
         ) : null}
         <PhotoInput file={file} onChange={setFile} isEs={isEs} />
+        <SavedAccessPhotos photos={photoLog.photos} isEs={isEs} />
         <Alert tone="warning">
           {isEs
             ? "Sangrado que no para, o sin frémito: llama al 911 o a tu centro ahora."
@@ -1057,8 +1062,9 @@ function ConversationModal({
   onClose,
 }: Props & { onClose: () => void }) {
   const safety = useSafetyNotice(isEs);
-  /* A fresh picture from the device only (NEW-5: a saved access photo
-     would need the same user's new upload anyway). */
+  /* A fresh picture from the device; the saved access photos stay listed
+     but cannot be attached yet (NEW-5). */
+  const photoLog = useAccessPhotos();
   const [file, setFile] = useState<File | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -1089,7 +1095,12 @@ function ConversationModal({
           isEs={isEs}
           sending={actions.isSaving}
           hasAttachment={!!file}
-          attach={<PhotoInput file={file} onChange={setFile} isEs={isEs} />}
+          attach={
+            <>
+              <PhotoInput file={file} onChange={setFile} isEs={isEs} />
+              <SavedAccessPhotos photos={photoLog.photos} isEs={isEs} />
+            </>
+          }
           confirmSend={safety.guard}
           onSend={async (body, isPrivate) => {
             setFailed(false);

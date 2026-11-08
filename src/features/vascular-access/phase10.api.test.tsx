@@ -288,6 +288,46 @@ describe("a concern with a photo", () => {
       within(dialog).getByRole("button", { name: "Vascular access center" }),
     ).toBeTruthy();
   });
+
+  it("the saved access photos stay listed, disabled until NEW-5 (QA M2)", async () => {
+    const photosPath = `/patients/${JOHN_ID}/dialysis/access-photos`;
+    const { calls } = memberApi([METRO], (call) =>
+      call.method === "GET" && call.path === photosPath
+        ? pageOf([
+            {
+              id: "ph-1",
+              patientId: JOHN_ID,
+              subject: "access",
+              note: "Redness (synthetic)",
+              takenAt: "2026-11-01T10:00:00.000Z",
+              sentAt: null,
+              sent: false,
+              createdById: null,
+              createdAt: "2026-11-01T10:00:00.000Z",
+            },
+          ])
+        : undefined,
+    );
+    render(<VascularAccess />, { wrapper });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /report a concern/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const saved = await within(dialog).findByRole("button", {
+      name: "Access — Redness (synthetic)",
+    });
+    expect(saved).toBeDisabled();
+    expect(
+      within(dialog).getByText(/Attaching a saved photo is not available yet/),
+    ).toBeTruthy();
+    /* The fresh upload is still offered beside it. */
+    expect(dialog.querySelector('input[type="file"]')).not.toBeNull();
+    /* Never the photo's bytes: no access-photo write, no upload. */
+    expect(
+      calls.some((c) => c.method !== "GET" && c.path.startsWith(photosPath)),
+    ).toBe(false);
+    expect(uploadFile).not.toHaveBeenCalled();
+  });
 });
 
 describe("the three-way conversation", () => {
