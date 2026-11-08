@@ -7,7 +7,8 @@
      that office's id is ever used;
    - outside share: John shares in the UI (no link to copy), the recipient
      opens the emailed link in a fresh browser, asks for the code, verifies,
-     reads, replies twice and is refused a third; John stops sharing and the
+     reads, replies twice and is refused a third; the link opened in John's
+     own signed-in browser sends no cookie either; John stops sharing and the
      recipient's next load reads "not valid";
    - support: hospital staff open a ticket (dashboard Hospital), the
      NephroReach team sees it in the Support Inbox and answers, the staff
@@ -346,6 +347,35 @@ test("outside share: emailed link, code, two replies, stop sharing @phase11 @nee
       JSON.stringify({ ...localStorage, ...sessionStorage }),
     );
     expect(storage).not.toContain(link.pathname.split("/").pop()!);
+
+    /* QA round 1 (L3): the same link opened in the member's own signed-in
+       browser still sends no cookie on the /shared/ calls, although that
+       browser holds the member's API session cookies. */
+    const memberContext = member.page.context();
+    expect(
+      (await memberContext.cookies(env.apiURL)).length,
+      "the member's browser holds API cookies",
+    ).toBeGreaterThan(0);
+    const sameBrowser = await memberContext.newPage();
+    try {
+      const signedIn: Request[] = [];
+      sameBrowser.on("request", (req) => {
+        if (req.url().includes("/api/v1/shared/")) signedIn.push(req);
+      });
+      await sameBrowser.goto(link.pathname);
+      await expect(
+        sameBrowser.getByRole("button", { name: "Email me a code" }),
+      ).toBeVisible({ timeout: 20_000 });
+      expect(signedIn.length).toBeGreaterThan(0);
+      for (const req of signedIn) {
+        const sent = await req.allHeaders();
+        expect(sent["cookie"], `cookie on ${req.url()}`).toBeUndefined();
+        expect(sent["x-organization-id"]).toBeUndefined();
+        expect(sent["referer"], `referer on ${req.url()}`).toBeUndefined();
+      }
+    } finally {
+      await sameBrowser.close();
+    }
 
     /* The member stops sharing; the recipient's next load is refused. */
     await member.page.reload();
