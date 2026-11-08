@@ -343,6 +343,23 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 10,
     why: "Phase 9: the condition library is GET/POST/PUT/PATCH/DELETE /organizations/:orgId/ccm/conditions. No screen reads this key.",
   },
+  /* Phase 11 (COLLAB, STORAGE_VERSION 12): messaging, outside shares and
+     support are the API's. */
+  {
+    name: "support-tickets",
+    since: 12,
+    why: "Phase 11: tickets are /me/support-tickets (the requester) and /platform/support-tickets (the NephroReach team), with server uuids; organization requests are /platform/support-info-requests, so `contacted` is gone too. The stored tickets held requesters' names and emails. No screen reads this key.",
+  },
+  {
+    name: "messaging",
+    since: 12,
+    why: "Phase 11: member and office conversations are /patients/:id/conversations and /organizations/:id/conversations (found by id, never by a member's name; read, flag and archive state per thread on the server; the after-hours reply is the server's). The stored threads held patients' messages, names, MRNs and data: attachments. No screen reads this key.",
+  },
+  {
+    name: "outside-shares",
+    since: 12,
+    why: "Phase 11: outside shares are /patients/:id/outside-shares and /organizations/:id/outside-shares; the link is made and emailed by the server and opened through /shared/:token with an emailed code and a share session held in memory only. The stored shares held link tokens, recipients' emails and data: attachments. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that

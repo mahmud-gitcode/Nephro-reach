@@ -2,7 +2,6 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import { useSafetyNotice } from "./useSafetyNotice";
-import { useAfterHoursReply } from "./useAfterHoursReply";
 import { ShareOutsideCard } from "@/features/secure-messages/ShareOutsideCard";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -29,10 +28,24 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { saveErrorText } from "@/features/profile/saveError";
+import { uploadErrorMessage, UploadError } from "@/lib/api/upload";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import * as rules from "./messaging.rules";
-import { useMessages } from "./useMessages";
-import { useMemberName } from "@/features/auth/useMemberName";
-import { FACILITY, NEPHROLOGY_OFFICE } from "./messaging.seed";
+import {
+  useAttachmentLink,
+  useMemberInbox,
+  useMemberMessaging,
+  useMessageRecipients,
+  usePatientAreaLevel,
+  useThread,
+  withMessages,
+} from "./useConversations";
 import { NewMessageModal } from "./NewMessageModal";
 import {
   Composer,
@@ -61,10 +74,17 @@ import type {
 /* ==========================================================================
    Member messages
    --------------------------------------------------------------------------
-   The same panes as the clinic screen and the same store behind them, read
-   from the other end: the list is the people on my care team rather than
-   the patients in a queue, and the rail answers "what else can I do" and
-   "who do I call if this is urgent".
+   The same panes as the clinic screen and the same threads behind them,
+   read from the other end: the list is the offices caring for me rather
+   than the patients in a queue, and the rail answers "what else can I do"
+   and "who do I call if this is urgent".
+
+   Phase 11: the threads are the server's (`/patients/:id/conversations`),
+   found by id, never by a name. A member writes to an office's inbox, not
+   to a person; the after-hours reply is the server's, written in the
+   office's time zone, and shows once the thread is read again. A caregiver
+   reads and writes here only as far as the patient's grant allows, and
+   their messages are signed as theirs.
 
    The inversion worth naming is authorship. Clinic-side a `clinic` message
    is mine; here a `member` message is. Everything else — rows, bubbles,
@@ -207,33 +227,21 @@ function MemberRail({
 }
 
 export default function MemberMessages() {
-  const {
-    conversations: allConversations,
-    isLoading,
-    error,
-    sendMessage,
-    startConversation,
-    markRead,
-    writeError,
-    isSending,
-    clearWriteError,
-  } = useMessages();
+  const inbox = useMemberInbox();
+  const conversations = inbox.conversations;
+  const messaging = useMemberMessaging(inbox.scope);
+  const recipients = useMessageRecipients(inbox.scope);
+  const { writeError, isSending, clearWriteError, markRead } = messaging;
+  /* The server decides; this only hides Send from a caregiver whose grant
+     does not let them write messages. */
+  const canWrite = usePatientAreaLevel("messages") >= 2;
   const [composing, setComposing] = useState<Compose | null>(null);
-  /* Not an emergency service: the safety notice before every send, and
-     the automatic reply after hours (client, 2026-10-07). */
+  /* Not an emergency service: the safety notice before every send
+     (client, 2026-10-07). The after-hours reply is the server's. */
   const { language } = useLanguage();
   const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   const safety = useSafetyNotice(isEs);
-  const afterHoursReply = useAfterHoursReply();
-
-  /* The member's slice of the one platform-wide store. Their thread with
-     the centre is the same record the clinic screen works, so a reply
-     typed here turns up in the clinic inbox and the other way round. */
-  const memberName = useMemberName();
-  const conversations = useMemo(
-    () => rules.memberConversations(allConversations, memberName),
-    [allConversations, memberName],
-  );
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<MemberInboxFilter>("all");
@@ -251,9 +259,18 @@ export default function MemberMessages() {
     return () => clearInterval(id);
   }, []);
 
+  const thread = useThread({ kind: "member", scope: inbox.scope }, activeId);
+  const attachmentLink = useAttachmentLink({
+    kind: "member",
+    scope: inbox.scope,
+  });
   const active = useMemo(
-    () => conversations.find((c) => c.id === activeId) ?? null,
-    [conversations, activeId],
+    () =>
+      withMessages(
+        conversations.find((c) => c.id === activeId) ?? null,
+        thread.messages,
+      ),
+    [conversations, activeId, thread.messages],
   );
 
   const visible = useMemo(
@@ -328,12 +345,16 @@ export default function MemberMessages() {
                 {unread} {isEs ? "sin leer" : "unread"}
               </Badge>
             ) : null}
-            <Button
-              leadingIcon={<SquarePen aria-hidden="true" />}
-              onClick={() => setComposing({ category: "care-team", body: "" })}
-            >
-              {isEs ? "Nuevo mensaje" : "New Message"}
-            </Button>
+            {canWrite ? (
+              <Button
+                leadingIcon={<SquarePen aria-hidden="true" />}
+                onClick={() =>
+                  setComposing({ category: "care-team", body: "" })
+                }
+              >
+                {isEs ? "Nuevo mensaje" : "New Message"}
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -342,20 +363,25 @@ export default function MemberMessages() {
         <Alert
           tone="danger"
           onDismiss={clearWriteError}
-          title={
-            isEs ? "Tu mensaje no se guardó" : "Your message was not saved"
-          }
+          title={isEs ? "Tu mensaje no se envió" : "Your message was not sent"}
         >
-          {isEs
-            ? "Los mensajes se guardan en este navegador, que puede rechazarlos en una ventana privada o cuando los datos del sitio están llenos. No se envió nada a tu equipo de atención."
-            : "Messages are kept in this browser, which can refuse them in a private window or when site data is full. Nothing was sent to your care team."}
+          {writeError instanceof UploadError
+            ? uploadErrorMessage(writeError)
+            : saveErrorText(writeError, lang)}
         </Alert>
       ) : null}
 
       <AsyncSection
-        pending={isLoading}
-        error={error}
-        isEmpty={conversations.length === 0}
+        pending={inbox.isPending}
+        error={inbox.error}
+        onRetry={canRetry(inbox.error) ? inbox.refetch : undefined}
+        errorTitle={errorTitleFor(
+          inbox.error,
+          isEs ? "Tus mensajes no se cargaron" : "Your messages did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(inbox.error, undefined, lang)}
+        isEmpty={conversations.length === 0 && !canWrite}
         skeleton={<Skeleton className={cn(PANE_HEIGHT, "w-full")} />}
         empty={
           <EmptyState
@@ -392,7 +418,15 @@ export default function MemberMessages() {
                 isEs={isEs}
               />
               {visible.length === 0 ? (
-                <EmptyList searching={query.length > 0} isEs={isEs} />
+                conversations.length === 0 ? (
+                  <p className="px-inset-sm py-inset-md text-center text-body-sm text-fg-muted">
+                    {isEs
+                      ? "Aún no hay mensajes. Escribe a tu equipo de atención con Nuevo mensaje."
+                      : "No messages yet. Write to your care team with New Message."}
+                  </p>
+                ) : (
+                  <EmptyList searching={query.length > 0} isEs={isEs} />
+                )
               ) : (
                 <ol
                   aria-label={isEs ? "Conversaciones" : "Conversations"}
@@ -426,6 +460,7 @@ export default function MemberMessages() {
                   })}
                 </ol>
               )}
+              <LoadMore read={inbox} />
             </div>
 
             <div
@@ -450,19 +485,44 @@ export default function MemberMessages() {
                     onBack={() => setActiveId(null)}
                     isEs={isEs}
                   />
-                  <MessageLog
-                    conversation={active}
-                    mine="member"
-                    otherName={active.contact.name}
-                    firstUnreadId={firstUnreadIdOf(active, unreadAtOpen)}
-                    now={now}
-                    isEs={isEs}
-                  />
-                  {!rules.memberCanMessage(active.contact) ? (
+                  <AsyncSection
+                    pending={thread.isPending}
+                    error={thread.error}
+                    onRetry={
+                      canRetry(thread.error) ? thread.refetch : undefined
+                    }
+                    errorTitle={errorTitleFor(
+                      thread.error,
+                      isEs
+                        ? "La conversación no se cargó"
+                        : "The conversation did not load",
+                      lang,
+                    )}
+                    errorMessage={errorMessageFor(
+                      thread.error,
+                      undefined,
+                      lang,
+                    )}
+                    skeleton={<Skeleton className="m-inset-md h-40" />}
+                  >
+                    <MessageLog
+                      conversation={active}
+                      mine="member"
+                      otherName={active.contact.name}
+                      firstUnreadId={firstUnreadIdOf(active, unreadAtOpen)}
+                      now={now}
+                      isEs={isEs}
+                      older={thread}
+                      attachmentLink={(messageId) =>
+                        attachmentLink(active.id, messageId)
+                      }
+                    />
+                  </AsyncSection>
+                  {!canWrite ? (
                     <p className="border-t border-line-subtle px-inset-md py-inset-sm text-body-sm text-fg-muted">
                       {isEs
-                        ? "No se puede escribir directamente a los médicos. Escribe a tu enfermera o a tu equipo de atención y ellos incluirán a tu médico."
-                        : "Physicians can't be messaged directly. Message your nurse or care team and they will bring your physician in."}
+                        ? "Puedes leer estos mensajes, pero el permiso que te dio el paciente no incluye escribirlos."
+                        : "You can read these messages, but the access the patient gave you does not include writing them."}
                     </p>
                   ) : (
                     <Composer
@@ -476,15 +536,14 @@ export default function MemberMessages() {
                       }
                       sending={isSending}
                       confirmSend={safety.guard}
-                      onSend={(body, attachment) =>
-                        sendMessage(
-                          active.id,
+                      onSend={(body, attachment) => {
+                        clearWriteError();
+                        return messaging.send.mutateAsync({
+                          conversationId: active.id,
                           body,
-                          "member",
                           attachment,
-                          afterHoursReply(),
-                        )
-                      }
+                        });
+                      }}
                       placeholder={`${isEs ? "Escribe a" : "Message"} ${active.contact.name.split(",")[0]}...`}
                       label={`${isEs ? "Escribe a" : "Message"} ${active.contact.name}`}
                       isEs={isEs}
@@ -499,8 +558,8 @@ export default function MemberMessages() {
                   }
                   description={
                     isEs
-                      ? "Elige a alguien de tu equipo de atención para leer y responder, o empieza un mensaje nuevo."
-                      : "Choose someone on your care team to read and reply, or start a new message."
+                      ? "Elige una oficina de tu equipo de atención para leer y responder, o empieza un mensaje nuevo."
+                      : "Choose an office on your care team to read and reply, or start a new message."
                   }
                 />
               )}
@@ -531,40 +590,42 @@ export default function MemberMessages() {
           isEs={isEs}
           initialBody={composing.body}
           initialCategory={composing.category}
-          recipients={[
-            FACILITY,
-            NEPHROLOGY_OFFICE,
-            ...rules.careTeamFor(conversations).filter(rules.memberCanMessage),
-          ].map((contact) => ({
-            value: contact.name,
-            label: `${contact.name} · ${contact.role}`,
+          recipients={recipients.offices.map((office) => ({
+            value: office.organizationId,
+            label: `${office.name} · ${office.role}`,
           }))}
+          recipientsPending={recipients.isPending}
+          recipientsError={
+            recipients.error
+              ? saveErrorText(recipients.error, lang)
+              : recipients.isPending || recipients.offices.length > 0
+                ? undefined
+                : isEs
+                  ? "Ninguna oficina te atiende en NephroReach todavía."
+                  : "No office caring for you is on NephroReach yet."
+          }
+          sending={messaging.start.isPending}
+          sendError={
+            messaging.start.error
+              ? messaging.start.error instanceof UploadError
+                ? uploadErrorMessage(messaging.start.error)
+                : saveErrorText(messaging.start.error, lang)
+              : undefined
+          }
           confirmSend={safety.guard}
-          onSend={(to, body, category) => {
-            const contact =
-              [
-                FACILITY,
-                NEPHROLOGY_OFFICE,
-                ...rules.careTeamFor(conversations),
-              ].find((c) => c.name === to) ?? FACILITY;
-            const existing = conversations.find(
-              (c) => c.contact.name === contact.name,
-            );
-            startConversation(
-              {
-                memberName,
-                contact,
-                category,
-                body,
-                author: "member",
-              },
-              afterHoursReply(),
-            );
-            setActiveId(
-              existing?.id ?? rules.conversationIdFor(memberName, contact.name),
-            );
+          onSend={async (organizationId, body, category) => {
+            const conversation = await messaging.start.mutateAsync({
+              organizationId,
+              body,
+              category,
+            });
+            setActiveId(conversation.id);
+            setUnreadAtOpen(0);
           }}
-          onClose={() => setComposing(null)}
+          onClose={() => {
+            messaging.start.reset();
+            setComposing(null);
+          }}
         />
       ) : null}
     </div>

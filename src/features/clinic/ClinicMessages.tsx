@@ -34,15 +34,33 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
-import { FACILITY } from "@/features/messaging/messaging.seed";
+import { uploadErrorMessage, UploadError } from "@/lib/api/upload";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { saveErrorText } from "@/features/profile/saveError";
+import { LoadMore } from "@/features/profile/LoadMore";
 import { NewMessageModal } from "@/features/messaging/NewMessageModal";
 import { OfficeShareOutside } from "@/features/secure-messages/ShareOutsideCard";
-import { useClinicData } from "./useClinicData";
 import { ClinicRideRequests } from "./RideRequests";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { TeamMessages } from "@/features/staff/TeamMessages";
 import * as rules from "@/features/messaging/messaging.rules";
-import { useMessages } from "@/features/messaging/useMessages";
+import { fromOfficeConversation } from "@/features/messaging/messaging.mappers";
+import {
+  useActiveOffice,
+  useAttachmentLink,
+  useClinicNote,
+  useOfficeInbox,
+  useOfficeInboxCount,
+  useOfficeMessaging,
+  useOfficeRecipients,
+  useThread,
+  withMessages,
+  type ThreadTarget,
+} from "@/features/messaging/useConversations";
 import {
   Composer,
   ConversationItem,
@@ -71,12 +89,30 @@ import type {
    Three panes: the inbox, the thread, and the patient beside it. The right
    rail is the point of the layout — a coordinator answering a question
    about swelling should not have to leave the conversation to find out who
-   they are talking to or what programme they are on.
+   they are talking to.
+
+   Phase 11: the inbox is the server's (`/organizations/:id/conversations`),
+   read in the office context the staff member signed in to (the
+   X-Organization-Id header), so an office only ever sees its own patients'
+   threads. Every thread and patient is found by the server's id, never by
+   a name or an MRN; flag, archive and read state are the office's own, per
+   thread, on the server. The note in the rail is the office's private note
+   (never shown to the patient).
 
    Below `xl` there is not room for three, so the rail folds under the
    thread; below `lg` the inbox and the thread take turns, with a back
    button returning to the list.
    ========================================================================== */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The patient a "Message" link names (`?patient=<id>`), or null. Only a
+ *  server id is accepted: an MRN or a name in the URL is ignored. */
+function linkedPatientId(): string | null {
+  if (typeof window === "undefined") return null;
+  const id = new URLSearchParams(window.location.search).get("patient");
+  return id && UUID.test(id) ? id : null;
+}
 
 function RailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -90,15 +126,19 @@ function RailRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /** The clinic's private note on a patient. Staff only; the member never
- *  sees it. */
+ *  sees it. Closes once the server has it; a refusal keeps the text. */
 function NoteModal({
   initial,
   onSave,
   onClose,
+  saving,
+  error,
 }: {
   initial: string;
-  onSave: (notes: string) => void;
+  onSave: (notes: string) => Promise<unknown>;
   onClose: () => void;
+  saving: boolean;
+  error?: string;
 }) {
   const [text, setText] = useState(initial);
   return (
@@ -112,9 +152,11 @@ function NoteModal({
             Cancel
           </Button>
           <Button
+            loading={saving}
             onClick={() => {
-              onSave(text);
-              onClose();
+              onSave(text).then(onClose, () => {
+                /* The error shows above the field; the text stays. */
+              });
             }}
           >
             Save Note
@@ -122,45 +164,48 @@ function NoteModal({
         </>
       }
     >
-      <FormField
-        label="Note"
-        hint="Visible to clinic staff only. The patient never sees it."
-      >
-        {(field) => (
-          <Textarea
-            {...field}
-            rows={5}
-            maxLength={1000}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-        )}
-      </FormField>
+      <div className="space-y-stack-md">
+        {error ? <Alert tone="danger">{error}</Alert> : null}
+        <FormField
+          label="Note"
+          hint="Visible to clinic staff only. The patient never sees it."
+        >
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={5}
+              maxLength={1000}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          )}
+        </FormField>
+      </div>
     </Modal>
   );
 }
 
 function PatientRail({
   conversation,
+  organizationId,
+  canWrite,
   onToggleFlag,
   onMarkUnread,
   onToggleArchive,
   onScheduleCall,
-  onSaveNote,
 }: {
   conversation: Conversation;
+  organizationId: string | null;
+  canWrite: boolean;
   onToggleFlag: () => void;
   onMarkUnread: () => void;
   onToggleArchive: () => void;
   /** Starts a reply offering a call, for the staff member to finish. */
   onScheduleCall: () => void;
-  onSaveNote: (notes: string) => void;
 }) {
-  const { patient } = conversation;
   const [editingNote, setEditingNote] = useState(false);
-  /* Every thread this screen lists has a chart — `clinicConversations`
-     sees to that — so this is a type narrowing, not an expected state. */
-  if (!patient) return null;
+  const note = useClinicNote(organizationId, conversation.patientId ?? null);
+  const mrn = conversation.patient?.mrn;
 
   return (
     <div className="space-y-stack-lg">
@@ -172,22 +217,18 @@ function PatientRail({
               <p className="truncate text-label-md text-fg">
                 {conversation.memberName}
               </p>
-              <Badge tone="success">{patient.status}</Badge>
             </div>
           </div>
           <dl className="space-y-1.5">
-            <RailRow label="DOB" value={patient.dob} />
-            <RailRow label="Age" value={patient.age ?? "—"} />
-            <RailRow label="MRN" value={patient.mrn} />
-            <RailRow label="Phone" value={patient.phone} />
-            <RailRow label="Email" value={patient.email} />
-            <RailRow label="Program" value={patient.program} />
-            <RailRow label="Enrolled" value={patient.enrolledOn} />
-            <RailRow label="Care Team" value={patient.careTeam} />
+            <RailRow label="MRN" value={mrn ?? "—"} />
           </dl>
-          {patient.notes ? (
-            <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm text-fg-secondary">
-              {patient.notes}
+          {note.error ? (
+            <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm text-fg-muted">
+              {errorMessageFor(note.error, "The note did not load.", "en")}
+            </p>
+          ) : note.note ? (
+            <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm whitespace-pre-line text-fg-secondary">
+              {note.note}
             </p>
           ) : null}
         </div>
@@ -195,21 +236,27 @@ function PatientRail({
 
       <RailSection title="Quick Actions">
         <ul className="space-y-0.5">
-          <RailActionItem
-            label="View Patient Profile"
-            icon={UserRound}
-            href={`/dashboard/clinic/members?mrn=${encodeURIComponent(patient.mrn)}`}
-          />
-          <RailActionItem
-            label="Schedule Call"
-            icon={CalendarClock}
-            onClick={onScheduleCall}
-          />
-          <RailActionItem
-            label={patient.notes ? "Edit Note" : "Add Note"}
-            icon={NotebookPen}
-            onClick={() => setEditingNote(true)}
-          />
+          {conversation.patientId ? (
+            <RailActionItem
+              label="View Patient Profile"
+              icon={UserRound}
+              href={`/dashboard/clinic/members?patient=${encodeURIComponent(conversation.patientId)}`}
+            />
+          ) : null}
+          {canWrite ? (
+            <RailActionItem
+              label="Schedule Call"
+              icon={CalendarClock}
+              onClick={onScheduleCall}
+            />
+          ) : null}
+          {canWrite && !note.error && !note.isPending ? (
+            <RailActionItem
+              label={note.note ? "Edit Note" : "Add Note"}
+              icon={NotebookPen}
+              onClick={() => setEditingNote(true)}
+            />
+          ) : null}
           <RailActionItem
             label={
               conversation.flagged ? "Unflag Conversation" : "Flag Conversation"
@@ -240,15 +287,25 @@ function PatientRail({
       </RailSection>
       {editingNote ? (
         <NoteModal
-          initial={patient.notes}
-          onSave={onSaveNote}
-          onClose={() => setEditingNote(false)}
+          initial={note.note}
+          saving={note.save.isPending}
+          error={
+            note.save.error ? saveErrorText(note.save.error, "en") : undefined
+          }
+          onSave={(text) => note.save.mutateAsync(text)}
+          onClose={() => {
+            note.save.reset();
+            setEditingNote(false);
+          }}
         />
       ) : null}
     </div>
   );
 }
 
+/** @deprecated The prototype's roster row. The inbox writes to the office's
+ *  roster from the server (by patient id); a passed list is ignored. Kept
+ *  so callers in other lanes compile until they drop the prop. */
 export type InboxPatient = {
   name: string;
   mrn: string;
@@ -258,58 +315,49 @@ export type InboxPatient = {
 };
 
 export default function ClinicMessages({
-  office = FACILITY,
+  office: officeOverride,
   href = "/dashboard/clinic/messages",
-  patients: patientsOverride,
   showRides = true,
 }: {
-  /** Whose inbox: the dialysis center, the nephrology office, a hospital. */
+  /** The office's display name, when the signed-in context has none.
+   *  Which inbox is read is the signed-in office context, never this. */
   office?: CareTeamContact;
   href?: string;
-  /** The patients this office may write to; the clinic's roster when
-   *  absent. A hospital passes only the patients it enrolled. */
+  /** @deprecated Ignored: recipients are the office's roster from the
+   *  server, by patient id. */
   patients?: InboxPatient[];
   /** Ride requests belong to the dialysis center's inbox, not a
    *  hospital's (client, 2026-10-13). */
   showRides?: boolean;
 } = {}) {
-  const {
-    conversations: allConversations,
-    isLoading,
-    error,
-    sendMessage,
-    startConversation,
-    markRead,
-    toggleFlag,
-    markUnread,
-    setArchived,
-    setPatientNotes,
-    writeError,
-    isSending,
-    clearWriteError,
-  } = useMessages();
-  /* One store holds every thread on the platform; this screen works the
-     facility's queue, one row per patient. A member's thread with their
-     own dietitian lives in the same store and belongs to the member
-     portal, not here. */
-  const conversations = useMemo(
-    () => rules.clinicConversations(allConversations, office.name),
-    [allConversations, office.name],
+  const activeOffice = useActiveOffice();
+  const organizationId = activeOffice.organizationId;
+  const office = useMemo<CareTeamContact>(
+    () =>
+      activeOffice.contact.name
+        ? activeOffice.contact
+        : (officeOverride ?? activeOffice.contact),
+    [activeOffice.contact, officeOverride],
   );
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
+  const inbox = useOfficeInbox(organizationId, filter, office);
+  const conversations = inbox.conversations;
+  const unreadCount = useOfficeInboxCount(organizationId, "unread");
+  const flaggedCount = useOfficeInboxCount(organizationId, "flagged");
+  const messaging = useOfficeMessaging(organizationId);
+  const { writeError, isSending, clearWriteError, markRead } = messaging;
   const [composing, setComposing] = useState(false);
-  /* The patient a "Message" link named, preselected in New Message. */
+  /* The patient a "Message" link named (by id), preselected in New Message. */
   const [composeTo, setComposeTo] = useState<string | undefined>();
   const canReply = useCan("messages.reply");
   const canTeam = useCan("messages.team");
-  /* Every patient on the clinic's list, newly enrolled ones included. */
-  const clinicData = useClinicData();
-  const patients: InboxPatient[] = useMemo(
-    () => patientsOverride ?? clinicData.data?.patients ?? [],
-    [patientsOverride, clinicData.data],
-  );
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const recipients = useOfficeRecipients(composing ? organizationId : null);
+  /* The open thread, kept as it was opened: a server filter (Unread) may
+     drop it from the list the moment it is read, and the reader is still
+     in it. The list's fresher copy wins while it has one. */
+  const [opened, setOpened] = useState<Conversation | null>(null);
+  const activeId = opened?.id ?? null;
   /* Drafts live up here, keyed by thread. A coordinator is interrupted
      mid-reply constantly — losing what they had typed because they glanced
      at another patient is the kind of small betrayal that stops people
@@ -320,37 +368,39 @@ export default function ClinicMessages({
   const [unreadAtOpen, setUnreadAtOpen] = useState<Record<string, number>>({});
 
   /* One instant for the whole screen, so every "2h" and every "Today" is
-     measured against the same clock rather than each reading it fresh.
-     Held in state because `Date.now()` in a render body is impure — it
-     would hand two renders different answers for the same data. The tick
-     keeps the labels honest during a long session; a minute is as fine as
-     these labels get. */
+     measured against the same clock. A minute is as fine as these labels
+     get. */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
 
+  const target = useMemo<ThreadTarget>(
+    () => ({ kind: "office", organizationId }),
+    [organizationId],
+  );
+  const thread = useThread(target, activeId);
+  const attachmentLink = useAttachmentLink(target);
   const active = useMemo(
-    () => conversations.find((c) => c.id === activeId) ?? null,
-    [conversations, activeId],
+    () =>
+      withMessages(
+        conversations.find((c) => c.id === activeId) ?? opened,
+        thread.messages,
+      ),
+    [conversations, activeId, opened, thread.messages],
   );
 
+  /* The server filtered the folder; the search covers the loaded rows. */
   const visible = useMemo(
-    () =>
-      rules.sortByRecent(
-        rules.searchConversations(
-          rules.applyFilter(conversations, filter, activeId),
-          query,
-        ),
-      ),
-    [conversations, filter, query, activeId],
+    () => rules.sortByRecent(rules.searchConversations(conversations, query)),
+    [conversations, query],
   );
   const visibleIds = useMemo(() => visible.map((c) => c.id), [visible]);
 
   const open = useCallback(
     (conversation: Conversation) => {
-      setActiveId(conversation.id);
+      setOpened(conversation);
       setUnreadAtOpen((current) => ({
         ...current,
         [conversation.id]: conversation.unread,
@@ -360,53 +410,55 @@ export default function ClinicMessages({
     [markRead],
   );
 
-  /* A link here can name a thread (?thread=…), as Reports' Open Questions
-     does, so "Reply" lands on the patient's conversation rather than the
-     top of the inbox. Followed once, when the inbox has loaded. */
+  /* A link here can name a thread (?thread=<id>), as Reports' Open
+     Questions does, so "Reply" lands on the patient's conversation rather
+     than the top of the inbox. Followed once, when the inbox has loaded. */
   const deepLinked = useRef(false);
   useEffect(() => {
-    if (deepLinked.current || isLoading) return;
+    if (deepLinked.current || inbox.isPending) return;
     const id = new URLSearchParams(window.location.search).get("thread");
-    const target = id ? conversations.find((c) => c.id === id) : undefined;
-    if (!target) {
+    const found = id ? conversations.find((c) => c.id === id) : undefined;
+    if (!found) {
       deepLinked.current = true;
       return;
     }
-    /* Opened on the next tick, once the inbox has painted. Marked done
-       only when it runs, so a re-render in between does not lose it. */
     const timer = window.setTimeout(() => {
       deepLinked.current = true;
-      open(target);
+      open(found);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [isLoading, conversations, open]);
+  }, [inbox.isPending, conversations, open]);
 
-  /* "Message" on a member (?to=<MRN>) opens that patient's thread, or New
-     Message addressed to them when there is none yet (client, 2026-10-18).
-     Waits for the roster, which names the patient. */
+  /* "Message" on a patient (?patient=<id>) opens that patient's thread, or
+     New Message addressed to them when there is none yet. */
+  const [linkedPatient] = useState(linkedPatientId);
+  const linked = useOfficeInbox(
+    linkedPatient ? organizationId : null,
+    "all",
+    office,
+    { patientId: linkedPatient ?? undefined, enabled: linkedPatient !== null },
+  );
   const addressed = useRef(false);
   useEffect(() => {
-    if (addressed.current || isLoading || patients.length === 0) return;
-    const mrn = new URLSearchParams(window.location.search).get("to");
-    const patient = mrn ? patients.find((p) => p.mrn === mrn) : undefined;
-    if (!patient) {
-      addressed.current = true;
-      return;
-    }
-    const thread = conversations.find(
-      (c) => c.patient?.mrn === mrn || c.memberName === patient.name,
-    );
-    /* Marked done only when it runs, as the ?thread= link above. */
+    if (addressed.current || !linkedPatient || linked.isPending) return;
+    const existing = linked.conversations[0];
     const timer = window.setTimeout(() => {
       addressed.current = true;
-      if (thread) open(thread);
-      else if (canReply) {
-        setComposeTo(patient.mrn);
+      if (existing) open(existing);
+      else if (canReply && !linked.error) {
+        setComposeTo(linkedPatient);
         setComposing(true);
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [isLoading, patients, conversations, open, canReply]);
+  }, [
+    linkedPatient,
+    linked.isPending,
+    linked.conversations,
+    linked.error,
+    open,
+    canReply,
+  ]);
 
   /* ↑/↓ walk the inbox and Escape leaves the thread, because a clinic
      working a queue of ninety messages should not have to aim at each one.
@@ -414,14 +466,14 @@ export default function ClinicMessages({
      the text cursor. */
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
+      const el = event.target as HTMLElement | null;
       const typing =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el?.isContentEditable;
 
       if (event.key === "Escape" && !typing) {
-        setActiveId(null);
+        setOpened(null);
         return;
       }
       if (typing) return;
@@ -446,12 +498,10 @@ export default function ClinicMessages({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [visibleIds, activeId, conversations, open]);
 
-  const unread = rules.totalUnread(conversations);
-  const counts = rules.filterCounts(conversations);
   const filters: FilterOption<InboxFilter>[] = [
     { id: "all", label: "All" },
-    { id: "unread", label: "Unread", count: counts.unread },
-    { id: "flagged", label: "Flagged", count: counts.flagged },
+    { id: "unread", label: "Unread", count: unreadCount },
+    { id: "flagged", label: "Flagged", count: flaggedCount },
     { id: "archived", label: "Archived" },
   ];
 
@@ -462,7 +512,9 @@ export default function ClinicMessages({
         action={
           /* Quiet status first, the page's one primary action last. */
           <div className="flex flex-wrap items-center gap-inline-md">
-            {unread > 0 ? <Badge tone="info">{unread} unread</Badge> : null}
+            {unreadCount > 0 ? (
+              <Badge tone="info">{unreadCount} unread</Badge>
+            ) : null}
             {/* People not on NephroReach — a rehab facility, an outside
                 nephrology office — get a secure link (client,
                 2026-10-18). */}
@@ -485,15 +537,21 @@ export default function ClinicMessages({
           title="That change was not saved"
           onDismiss={clearWriteError}
         >
-          Your browser refused to store it — this can happen in a private window
-          or when site data is full. Nothing was sent to the patient.
+          {writeError instanceof UploadError
+            ? uploadErrorMessage(writeError)
+            : saveErrorText(writeError, "en")}
         </Alert>
       ) : null}
 
       <AsyncSection
-        pending={isLoading}
-        error={error}
-        isEmpty={conversations.length === 0}
+        pending={inbox.isPending && filter === "all"}
+        error={inbox.error}
+        onRetry={canRetry(inbox.error) ? inbox.refetch : undefined}
+        errorTitle={errorTitleFor(inbox.error, "Your inbox did not load", "en")}
+        errorMessage={errorMessageFor(inbox.error, undefined, "en")}
+        isEmpty={
+          filter === "all" && !inbox.isPending && conversations.length === 0
+        }
         skeleton={<Skeleton className={cn(PANE_HEIGHT, "w-full")} />}
         empty={
           <EmptyState
@@ -523,7 +581,9 @@ export default function ClinicMessages({
                 value={filter}
                 onChange={setFilter}
               />
-              {visible.length === 0 ? (
+              {inbox.isPending ? (
+                <Skeleton className="h-40 w-full" />
+              ) : visible.length === 0 ? (
                 <EmptyList searching={query.length > 0} />
               ) : (
                 <ol
@@ -560,6 +620,7 @@ export default function ClinicMessages({
                   })}
                 </ol>
               )}
+              <LoadMore read={inbox} />
             </div>
 
             <div
@@ -575,8 +636,8 @@ export default function ClinicMessages({
                     avatar={<MessagingAvatar name={active.memberName} />}
                     title={active.memberName}
                     subtitle={
-                      active.patient
-                        ? `MRN ${active.patient.mrn} · ${active.patient.program}`
+                      active.patient?.mrn
+                        ? `MRN ${active.patient.mrn}`
                         : undefined
                     }
                     extra={
@@ -589,18 +650,41 @@ export default function ClinicMessages({
                         </Badge>
                       ) : null
                     }
-                    onBack={() => setActiveId(null)}
+                    onBack={() => setOpened(null)}
                   />
-                  <MessageLog
-                    conversation={active}
-                    mine="clinic"
-                    otherName={active.memberName}
-                    firstUnreadId={firstUnreadIdOf(
-                      active,
-                      unreadAtOpen[active.id] ?? 0,
+                  <AsyncSection
+                    pending={thread.isPending}
+                    error={thread.error}
+                    onRetry={
+                      canRetry(thread.error) ? thread.refetch : undefined
+                    }
+                    errorTitle={errorTitleFor(
+                      thread.error,
+                      "The conversation did not load",
+                      "en",
                     )}
-                    now={now}
-                  />
+                    errorMessage={errorMessageFor(
+                      thread.error,
+                      undefined,
+                      "en",
+                    )}
+                    skeleton={<Skeleton className="m-inset-md h-40" />}
+                  >
+                    <MessageLog
+                      conversation={active}
+                      mine="clinic"
+                      otherName={active.memberName}
+                      firstUnreadId={firstUnreadIdOf(
+                        active,
+                        unreadAtOpen[active.id] ?? 0,
+                      )}
+                      now={now}
+                      older={thread}
+                      attachmentLink={(messageId) =>
+                        attachmentLink(active.id, messageId)
+                      }
+                    />
+                  </AsyncSection>
                   {canReply ? (
                     <Composer
                       key={active.id}
@@ -614,7 +698,11 @@ export default function ClinicMessages({
                       sending={isSending}
                       onSend={(body, attachment) => {
                         clearWriteError();
-                        sendMessage(active.id, body, "clinic", attachment);
+                        return messaging.send.mutateAsync({
+                          conversationId: active.id,
+                          body,
+                          attachment,
+                        });
                       }}
                       placeholder={`Message ${active.memberName.split(" ")[0]}...`}
                       label={`Message ${active.memberName}`}
@@ -644,8 +732,14 @@ export default function ClinicMessages({
                 className="border-t border-line p-inset-md lg:col-span-2 xl:col-span-1 xl:h-[calc(100dvh-13rem)] xl:min-h-[560px] xl:overflow-y-auto xl:border-t-0 xl:border-l"
               >
                 <PatientRail
+                  key={active.id}
                   conversation={active}
-                  onToggleFlag={() => toggleFlag(active.id)}
+                  organizationId={organizationId}
+                  canWrite={canReply}
+                  /* The explicit value, never a toggle. */
+                  onToggleFlag={() =>
+                    messaging.setFlagged(active.id, !active.flagged)
+                  }
                   onScheduleCall={() =>
                     setDrafts((current) => ({
                       ...current,
@@ -653,17 +747,16 @@ export default function ClinicMessages({
                         "We would like to set up a call with you. Would one of these times work for you? ",
                     }))
                   }
-                  onSaveNote={(notes) => setPatientNotes(active.id, notes)}
                   /* Marking unread or archiving is a decision to leave the
                      thread, so the pane closes rather than sitting open on
                      a conversation the list no longer shows. */
                   onMarkUnread={() => {
-                    markUnread(active.id);
-                    setActiveId(null);
+                    messaging.markUnread(active.id);
+                    setOpened(null);
                   }}
                   onToggleArchive={() => {
-                    setArchived(active.id, !active.archived);
-                    setActiveId(null);
+                    messaging.setArchived(active.id, !active.archived);
+                    setOpened(null);
                   }}
                 />
               </aside>
@@ -683,40 +776,40 @@ export default function ClinicMessages({
           title="New Message"
           recipientLabel="Patient"
           initialRecipient={composeTo}
-          recipients={patients.map((patient) => ({
-            value: patient.mrn,
-            label: `${patient.name} · MRN ${patient.mrn}`,
+          recipients={recipients.patients.map((patient) => ({
+            value: patient.patientId,
+            label: patient.mrn
+              ? `${patient.name} · MRN ${patient.mrn}`
+              : patient.name,
           }))}
-          onSend={(mrn, body) => {
-            const patient = patients.find((p) => p.mrn === mrn);
-            if (!patient) return;
-            const existing = conversations.find(
-              (c) => c.memberName === patient.name,
-            );
-            startConversation({
-              memberName: patient.name,
-              contact: office,
-              category: "care-team",
+          recipientsPending={recipients.isPending}
+          recipientsError={
+            recipients.error
+              ? saveErrorText(recipients.error, "en")
+              : recipients.isPending || recipients.patients.length > 0
+                ? undefined
+                : "No patients are on this office's roster yet."
+          }
+          sending={messaging.start.isPending}
+          sendError={
+            messaging.start.error
+              ? messaging.start.error instanceof UploadError
+                ? uploadErrorMessage(messaging.start.error)
+                : saveErrorText(messaging.start.error, "en")
+              : undefined
+          }
+          onSend={async (patientId, body) => {
+            const started = await messaging.start.mutateAsync({
+              patientId,
               body,
-              author: "clinic",
-              patient: {
-                dob: "—",
-                mrn: patient.mrn,
-                phone: "—",
-                email: "—",
-                program: patient.program,
-                enrolledOn: patient.enrolledOn,
-                status: patient.status,
-                careTeam: "—",
-                notes: "",
-              },
             });
-            setActiveId(
-              existing?.id ??
-                rules.conversationIdFor(patient.name, office.name),
+            setOpened(
+              conversations.find((c) => c.id === started.id) ??
+                fromOfficeConversation(started, office),
             );
           }}
           onClose={() => {
+            messaging.start.reset();
             setComposing(false);
             setComposeTo(undefined);
           }}

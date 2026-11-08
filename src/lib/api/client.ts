@@ -144,7 +144,25 @@ export type ApiOptions = {
   /** Lets the request outlive the page (sign-out navigates right away).
    *  Send no body with it, so the cross-origin request needs no preflight. */
   keepalive?: boolean;
+  /**
+   * Outside-share links only (`/shared/<token>/...`, Phase 11): the
+   * recipient's share session from `POST /shared/<token>/verify`, sent as
+   * the `x-share-session` header. Refused on any other route, so it can
+   * never ride along on a member or office call.
+   */
+  shareSession?: string;
 };
+
+/** The public outside-share routes. They are called without cookies, the
+ *  office header, the cache or a Referer: a signed-in member's session must
+ *  never ride along on a link opened in the same browser (Phase 11 P-1). */
+export function isSharedLinkRoute(path: string): boolean {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  return withSlash.split("?")[0].startsWith("/shared/");
+}
+
+/** The header the share session travels in (backend SHARE_SESSION_HEADER). */
+export const SHARE_SESSION_HEADER = "x-share-session";
 
 /* Office mode: the office membership the user is acting for. null means
    patient or caregiver mode, where no organization header is ever sent. */
@@ -294,18 +312,26 @@ function organizationHeader(options: ApiOptions): string | null {
 }
 
 async function send(path: string, options: ApiOptions): Promise<Response> {
+  const shared = isSharedLinkRoute(path);
+  if (options.shareSession !== undefined && !shared)
+    throw new Error("A share session is sent only to /shared/ routes.");
   const headers: Record<string, string> = { Accept: "application/json" };
-  const organizationId = organizationHeader(options);
+  const organizationId = shared ? null : organizationHeader(options);
   if (organizationId) headers["X-Organization-Id"] = organizationId;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  if (shared && options.shareSession)
+    headers[SHARE_SESSION_HEADER] = options.shareSession;
 
   return fetch(buildUrl(path, options.query), {
     method: options.method ?? "GET",
-    credentials: "include",
+    credentials: shared ? "omit" : "include",
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
     ...(options.keepalive ? { keepalive: true } : {}),
+    ...(shared
+      ? { cache: "no-store" as const, referrerPolicy: "no-referrer" as const }
+      : {}),
   });
 }
 

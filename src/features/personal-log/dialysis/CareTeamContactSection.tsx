@@ -1,8 +1,7 @@
 "use client";
 
 import { useSafetyNotice } from "@/features/messaging/useSafetyNotice";
-import { useAfterHoursReply } from "@/features/messaging/useAfterHoursReply";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -15,11 +14,13 @@ import {
   SectionTitle,
   Select,
 } from "@/components/ui";
-import { useMessages } from "@/features/messaging/useMessages";
-import * as rules from "@/features/messaging/messaging.rules";
-import { useMemberName } from "@/features/auth/useMemberName";
+import {
+  useMemberMessaging,
+  useMessageRecipients,
+} from "@/features/messaging/useConversations";
+import { saveErrorText } from "@/features/profile/saveError";
 import { useAccessPhotos } from "./useAccessPhotos";
-import { photoAttachment } from "./accessPhotos";
+import { photoAttachment, type AccessPhoto } from "./accessPhotos";
 import { PhotoPicker } from "./PhotoPicker";
 
 /* ==========================================================================
@@ -28,17 +29,30 @@ import { PhotoPicker } from "./PhotoPicker";
    A member at home cannot lean over and ask the nurse in the next chair, so
    the log itself has to be able to send a message.
 
-   It writes into the existing messaging store rather than keeping its own.
-   A second inbox would mean a member sending from here and a nurse replying
-   in Messages, with neither able to see the other half of the conversation.
+   It writes into the member's own thread with the office (Phase 11: the
+   server's `/patients/:id/conversations`, which reuses the thread already
+   shared with that office), never a second inbox: a member sending from
+   here and a nurse replying in Messages see the same conversation. The
+   after-hours reply is the server's.
 
    The reason chips are a subject line, not a category: they get prefixed to
    the message so the nurse reading the thread knows what it is about
    without a taxonomy nobody maintains.
 
-   A photo from the Photos card beside this one can ride along with the
-   message, so the nurse sees the exit site the words are about.
+   A photo from the Photos card beside this one is referenced in the
+   message by its record (Phase 7: the picture stays on the server as the
+   access photo; it is never copied into the message as a data: image).
    ========================================================================== */
+
+/** The line naming an access photo in the message: its subject, when it
+ *  was taken and its record id, never the picture itself. */
+function photoReference(photo: AccessPhoto, isEs: boolean): string {
+  const { name } = photoAttachment(photo, isEs);
+  const taken = photo.takenAt.slice(0, 10);
+  return isEs
+    ? `Foto de acceso: ${name} (${taken}, registro ${photo.id})`
+    : `Access photo: ${name} (${taken}, record ${photo.id})`;
+}
 
 type Reason = { id: string; en: string; es: string };
 
@@ -85,16 +99,13 @@ export default function CareTeamContactSection({
   const { language } = useLanguage();
   const isEs = language === "ES";
   const safety = useSafetyNotice(isEs);
-  const afterHoursReply = useAfterHoursReply();
   const REASONS = reasonsFor(isHome);
   const photoLog = useAccessPhotos();
 
-  const messaging = useMessages();
-  const memberName = useMemberName();
-  const threads = useMemo(
-    () => rules.memberConversations(messaging.conversations, memberName),
-    [messaging.conversations, memberName],
-  );
+  const messaging = useMemberMessaging();
+  const recipients = useMessageRecipients(messaging.scope);
+  /* The offices caring for the member: each is one thread on the server. */
+  const threads = recipients.offices;
 
   const [threadId, setThreadId] = useState("");
   const [reasons, setReasons] = useState<string[]>([]);
@@ -103,7 +114,7 @@ export default function CareTeamContactSection({
   const [sent, setSent] = useState(false);
 
   // Default to the first thread once they have loaded.
-  const activeThread = threadId || threads[0]?.id || "";
+  const activeThread = threadId || threads[0]?.organizationId || "";
   // Deleted from the Photos card since it was picked: nothing to send.
   const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
   const canSend = !!activeThread && (body.trim().length > 0 || !!photo);
@@ -128,21 +139,30 @@ export default function CareTeamContactSection({
       })
       .join(", ");
 
-    const text = body.trim();
+    const words = body.trim();
+    const text = photo
+      ? [words, photoReference(photo, isEs)].filter(Boolean).join(" · ")
+      : words;
     safety.guard(() => {
-      messaging.sendMessage(
-        activeThread,
-        subject ? `[${subject}] ${text}`.trim() : text,
-        "member",
-        photo ? photoAttachment(photo, isEs) : undefined,
-        afterHoursReply(),
-      );
-      if (photo) photoLog.markSent(photo.id);
-
-      setBody("");
-      setReasons([]);
-      setPhotoId(null);
-      setSent(true);
+      setSent(false);
+      messaging.start
+        .mutateAsync({
+          organizationId: activeThread,
+          category: "care-team",
+          body: subject ? `[${subject}] ${text}`.trim() : text,
+        })
+        .then(
+          () => {
+            if (photo) photoLog.markSent(photo.id);
+            setBody("");
+            setReasons([]);
+            setPhotoId(null);
+            setSent(true);
+          },
+          () => {
+            /* The error shows below; what was typed stays. */
+          },
+        );
     });
   };
 
@@ -176,9 +196,9 @@ export default function CareTeamContactSection({
             onChange={(event) => setThreadId(event.target.value)}
             disabled={threads.length === 0}
           >
-            {threads.map((thread) => (
-              <option key={thread.id} value={thread.id}>
-                {thread.contact.name} — {thread.contact.role}
+            {threads.map((office) => (
+              <option key={office.organizationId} value={office.organizationId}>
+                {office.name} — {office.role}
               </option>
             ))}
           </Select>
@@ -235,18 +255,28 @@ export default function CareTeamContactSection({
         />
 
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
-          <Button type="submit" size="small" disabled={!canSend}>
+          <Button
+            type="submit"
+            size="small"
+            disabled={!canSend}
+            loading={messaging.start.isPending}
+          >
             <Send />
             <span>{isEs ? "Enviar" : "Send"}</span>
           </Button>
         </div>
       </form>
 
-      {messaging.writeError ? (
+      {messaging.start.error ? (
         <Alert tone="danger" className="mt-stack-md">
           {isEs
             ? "No se pudo enviar. Intenta de nuevo."
-            : "That did not send. Try again."}
+            : "That did not send. Try again."}{" "}
+          {saveErrorText(messaging.start.error, isEs ? "es" : "en")}
+        </Alert>
+      ) : recipients.error ? (
+        <Alert tone="danger" className="mt-stack-md">
+          {saveErrorText(recipients.error, isEs ? "es" : "en")}
         </Alert>
       ) : sent ? (
         <Alert tone="success" className="mt-stack-md">

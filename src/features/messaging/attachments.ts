@@ -1,75 +1,85 @@
-import { isSafeFileUrl } from "@/lib/utils/safeUrl";
-import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
+import { checkUpload, uploadErrorMessage, UploadError } from "@/lib/api/upload";
+import { downscaleToFile } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { sizeLabel } from "./messaging.mappers";
 import type { Attachment } from "./messaging.types";
 
 /* ==========================================================================
-   Message attachments
+   Message attachments (Phase 11)
    --------------------------------------------------------------------------
-   The file travels inside the message, as a data URL, because there is no
-   file server yet. Photos are shrunk to the same 1024px JPEG the access
-   photo log uses; anything else must be small, since the browser gives the
-   whole portal about 5 MB. With a server, the file is uploaded and the
-   message keeps a link.
+   A picked file stays a File in memory until the message is sent; then it
+   goes up through /files (uploadFile) and only its id goes with the
+   message. Photos are shrunk to a JPEG File first. Nothing becomes a data:
+   URL and nothing is stored. A sent file is opened through the message's
+   short-lived link, asked for when the member or the office clicks it.
    ========================================================================== */
 
-/** The largest non-photo file a message can carry, in bytes. */
-export const MAX_FILE_BYTES = 750 * 1024;
+export { sizeLabel };
 
-export function sizeLabel(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
+/** The client checks mirror the server's (types, 10 MB); it checks again. */
+const ACCEPT_HINT = {
+  en: "Use a photo, PDF, Word document or text file up to 10 MB.",
+  es: "Use una foto, un PDF, un documento de Word o un texto de hasta 10 MB.",
+} as const;
 
 /** A picked file as an attachment, or an error message to show instead. */
 export async function toAttachment(
   file: File,
   isEs = false,
 ): Promise<{ attachment: Attachment } | { error: string }> {
-  if (file.type.startsWith("image/")) {
-    const imageUrl = await downscaleToDataUrl(file);
-    return {
-      attachment: {
-        name: file.name,
-        sizeLabel: sizeLabel(Math.round((imageUrl.length * 3) / 4)),
-        imageUrl,
-      },
-    };
-  }
-  if (file.size > MAX_FILE_BYTES) {
+  const ready = file.type.startsWith("image/")
+    ? await downscaleToFile(file)
+    : file;
+  const refused = checkUpload(ready);
+  if (refused) {
+    const why = uploadErrorMessage(new UploadError(refused, ""));
     return {
       error: isEs
-        ? `Ese archivo pesa ${sizeLabel(file.size)}. Por ahora se pueden adjuntar archivos de hasta ${sizeLabel(MAX_FILE_BYTES)}; las fotos de cualquier tamaño se reducen para que quepan.`
-        : `That file is ${sizeLabel(file.size)}. Files up to ${sizeLabel(MAX_FILE_BYTES)} can be attached for now; photos of any size are shrunk to fit.`,
+        ? `No se puede adjuntar ese archivo. ${ACCEPT_HINT.es}`
+        : `${why || "That file can't be attached."} ${ACCEPT_HINT.en}`.trim(),
     };
   }
   return {
     attachment: {
-      name: file.name,
-      sizeLabel: sizeLabel(file.size),
-      dataUrl: await readAsDataUrl(file),
+      name: ready.name,
+      sizeLabel: sizeLabel(ready.size),
+      contentType: ready.type,
+      file: ready,
+      ...(ready.type.startsWith("image/") &&
+      typeof URL !== "undefined" &&
+      typeof URL.createObjectURL === "function"
+        ? { previewUrl: URL.createObjectURL(ready) }
+        : {}),
     },
   };
 }
 
-/** Saves an attachment's file, if the message carries one. */
-export function downloadAttachment(attachment: Attachment): boolean {
-  const url = attachment.dataUrl ?? attachment.imageUrl;
-  if (!isSafeFileUrl(url)) return false;
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = attachment.name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+/** Frees a picked image's preview. */
+export function releaseAttachment(attachment: Attachment | null | undefined) {
+  if (
+    attachment?.previewUrl &&
+    typeof URL !== "undefined" &&
+    typeof URL.revokeObjectURL === "function"
+  )
+    URL.revokeObjectURL(attachment.previewUrl);
+}
+
+/**
+ * Opens a sent file: asks the server for its short-lived link and hands it
+ * to the browser. Only an http(s) link is followed. Resolves false when
+ * there was nothing safe to open.
+ */
+export async function openAttachment(
+  link: () => Promise<{ url: string }>,
+): Promise<boolean> {
+  const { url } = await link();
+  if (!isSafeLinkUrl(url)) return false;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
   return true;
 }

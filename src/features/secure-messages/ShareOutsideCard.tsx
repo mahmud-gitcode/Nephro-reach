@@ -2,45 +2,61 @@
 
 import { useShareOutsideNotice } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
-import { Copy, ExternalLink, Paperclip, Share2 } from "lucide-react";
+import { Paperclip, Share2 } from "lucide-react";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
   FormField,
   Input,
   Modal,
   Select,
+  Skeleton,
   Textarea,
   type BadgeTone,
 } from "@/components/ui";
 import { useLanguage } from "@/context/LanguageContext";
-import { useMemberName } from "@/features/auth/useMemberName";
 import { useDialysisClinic } from "@/features/travel/useDialysisClinic";
 import { useCareContacts } from "@/features/profile/useCareContacts";
 import { isNetworkClinic } from "@/features/profile/clinicEnrollment";
 import { networkOffices } from "@/features/profile/careContacts";
-import { downscaleToDataUrl } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { downscaleToFile } from "@/features/personal-log/dialysis/useAccessPhotos";
+import { usePatientAreaLevel } from "@/features/messaging/useConversations";
+import { LoadMore } from "@/features/profile/LoadMore";
+import { saveErrorText } from "@/features/profile/saveError";
+import { checkUpload, uploadErrorMessage, UploadError } from "@/lib/api/upload";
 import {
-  MAX_ATTACHMENT_BYTES,
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
+  OFFICE_SHARE_KINDS,
   SHARE_KINDS,
-  SHARE_LOG_LABEL,
+  eventLabel,
   isEmail,
-  shareLink,
-  shareStatus,
-  sharesForPatient,
+  kindLabel,
   type ShareAttachment,
   type ShareKind,
   type ShareStatus,
 } from "./shares";
-import { useShares } from "./useShares";
+import type { ApiOutsideShare } from "./shares.api";
+import {
+  useCreateShare,
+  useOutsideShares,
+  useRevokeShare,
+  useShareOwner,
+} from "./useShares";
 
 /* ==========================================================================
    Share Outside NephroReach — the member's side, in the Messages rail
    --------------------------------------------------------------------------
    The member picks what to send and to whom; the recipient gets a secure
-   link to that one item and nothing else (client, 2026-10-05). In this
-   frontend phase the link is shown here to copy, rather than emailed.
+   link to that one item and nothing else (client, 2026-10-05). Phase 11:
+   the server creates the share and emails the link to the recipient only;
+   the sender never sees the link (D9 open), only the server's message and
+   the share's activity, and may stop sharing at any time.
    ========================================================================== */
 
 const OTHER = "__other__";
@@ -51,16 +67,13 @@ const STATUS: Record<ShareStatus, { en: string; es: string; tone: BadgeTone }> =
     opened: { en: "Link opened", es: "Enlace abierto", tone: "info" },
     viewed: { en: "Viewed", es: "Visto", tone: "success" },
     replied: { en: "Replied", es: "Respondió", tone: "accent" },
+    expired: { en: "Expired", es: "Vencido", tone: "neutral" },
+    revoked: {
+      en: "Sharing stopped",
+      es: "Ya no se comparte",
+      tone: "warning",
+    },
   };
-
-/* What an office sends: a member's own logs and travel requests are not
-   theirs to share. */
-const OFFICE_KINDS: ShareKind[] = [
-  "message",
-  "referral",
-  "appointment",
-  "document",
-];
 
 type Office = { name: string; kind: string };
 
@@ -85,66 +98,6 @@ function useOutsideOffices(): Office[] {
     }
   }
   return offices;
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function absoluteLink(token: string) {
-  return typeof window === "undefined"
-    ? shareLink(token)
-    : `${window.location.origin}${shareLink(token)}`;
-}
-
-function LinkBox({ token, isEs }: { token: string; isEs: boolean }) {
-  const [copied, setCopied] = useState(false);
-  const link = absoluteLink(token);
-  return (
-    <div className="space-y-stack-xs">
-      <Input
-        value={link}
-        readOnly
-        aria-label={isEs ? "Enlace seguro" : "Secure link"}
-      />
-      <div className="flex flex-wrap gap-inline-sm">
-        <Button
-          size="small"
-          variant="neutral"
-          appearance="fill-stroke"
-          leadingIcon={<Copy aria-hidden="true" />}
-          onClick={async () => {
-            await navigator.clipboard?.writeText(link);
-            setCopied(true);
-          }}
-        >
-          {copied
-            ? isEs
-              ? "Copiado"
-              : "Copied"
-            : isEs
-              ? "Copiar enlace"
-              : "Copy link"}
-        </Button>
-        <a
-          href={shareLink(token)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-10 items-center gap-inline-xs text-body-sm text-fg-brand hover:underline"
-        >
-          <ExternalLink aria-hidden="true" className="size-4" />
-          {isEs
-            ? "Ver como destinatario (demo)"
-            : "Open as the recipient (demo)"}
-        </a>
-      </div>
-    </div>
-  );
 }
 
 /** What a share starts with when another page opens it: a log, a travel
@@ -178,15 +131,14 @@ function ShareModal({
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useShareOutsideNotice(isEs);
-  const memberName = useMemberName();
-  const me = sender ?? memberName;
-  const store = useShares();
+  const owner = useShareOwner(sender !== undefined);
+  const create = useCreateShare(owner);
   const memberOffices = useOutsideOffices();
   /* An office types who it is writing to; the member's own care contacts
      are not its address book. */
   const offices = sender ? [] : memberOffices;
   const kinds = sender
-    ? SHARE_KINDS.filter((k) => OFFICE_KINDS.includes(k.id))
+    ? SHARE_KINDS.filter((k) => OFFICE_SHARE_KINDS.includes(k.id))
     : SHARE_KINDS;
   const [kind, setKind] = useState<ShareKind>(initial?.kind ?? "message");
   const [choice, setChoice] = useState(() =>
@@ -203,7 +155,9 @@ function ShareModal({
   );
   const [fileError, setFileError] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  /* The server's message once the share is created. */
+  const [done, setDone] = useState<string | null>(null);
 
   const recipientOrg = choice === OTHER ? otherName.trim() : choice;
   const emailError = isEmail(email)
@@ -218,7 +172,7 @@ function ShareModal({
         ? "Escriba un mensaje o adjunte un archivo."
         : "Write a message or attach a file.";
 
-  if (token) {
+  if (done !== null) {
     return (
       <Modal
         open
@@ -226,19 +180,12 @@ function ShareModal({
         title={isEs ? "Compartido" : "Shared"}
         footer={<Button onClick={onClose}>{isEs ? "Listo" : "Done"}</Button>}
       >
-        <div className="space-y-stack-md">
-          <Alert tone="success" live>
-            {isEs
-              ? `Se envió un enlace seguro a ${email.trim()}. El aviso no incluye su información.`
-              : `A secure link was sent to ${email.trim()}. The notice does not include your information.`}
-          </Alert>
-          <p className="text-body-sm text-fg-secondary">
-            {isEs
-              ? "Demo: hasta que el correo esté conectado, puede copiar el enlace y enviarlo usted mismo."
-              : "Demo: until email is connected, you can copy the link and send it yourself."}
-          </p>
-          <LinkBox token={token} isEs={isEs} />
-        </div>
+        <Alert tone="success" live>
+          {isEs
+            ? `Se envió un enlace seguro a ${email.trim()}. El aviso no incluye lo que compartió.`
+            : done ||
+              `A secure link was sent to ${email.trim()}. The notice does not include what you shared.`}
+        </Alert>
       </Modal>
     );
   }
@@ -261,27 +208,31 @@ function ShareModal({
             {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
-            loading={store.isSaving}
+            loading={create.isPending}
+            disabled={preparing}
             leadingIcon={<Share2 aria-hidden="true" />}
             onClick={() => {
               setTried(true);
               if (emailError || contentError) return;
-              share.guard(async () => {
-                onShared?.();
-                setToken(
-                  await store.create({
-                    patientName: me,
-                    ...(sender ? { fromOffice: true } : {}),
+              share.guard(() => {
+                create
+                  .mutateAsync({
                     kind,
                     recipientEmail: email,
                     recipientOrg,
-                    subject:
-                      subject.trim() ||
-                      SHARE_KINDS.find((k) => k.id === kind)!.en,
+                    subject: subject.trim() || kindLabel(kind),
                     body,
-                    ...(attachment ? { attachment } : {}),
-                  }),
-                );
+                    attachment,
+                  })
+                  .then(
+                    (result) => {
+                      onShared?.();
+                      setDone(result.message);
+                    },
+                    () => {
+                      /* The refusal shows in the form; nothing is lost. */
+                    },
+                  );
               });
             }}
           >
@@ -292,6 +243,13 @@ function ShareModal({
       }
     >
       <div className="space-y-stack-md">
+        {create.error ? (
+          <Alert tone="danger">
+            {create.error instanceof UploadError
+              ? uploadErrorMessage(create.error)
+              : saveErrorText(create.error, isEs ? "es" : "en")}
+          </Alert>
+        ) : null}
         <FormField label={isEs ? "Qué enviar" : "What to send"} required>
           {(field) => (
             <Select
@@ -387,37 +345,36 @@ function ShareModal({
               accept="image/*,application/pdf,.doc,.docx,.txt"
               className="peer sr-only"
               onChange={async (e) => {
-                const file = e.target.files?.[0];
+                const picked = e.target.files?.[0];
                 e.target.value = "";
-                if (!file) return;
+                if (!picked) return;
                 setFileError(null);
+                setPreparing(true);
                 try {
-                  const dataUrl = file.type.startsWith("image/")
-                    ? await downscaleToDataUrl(file)
-                    : file.size <= MAX_ATTACHMENT_BYTES
-                      ? await fileToDataUrl(file)
-                      : null;
-                  if (!dataUrl) {
+                  /* A photo is shrunk to a JPEG File; nothing becomes a
+                     data: URL. It is uploaded when the share is sent. */
+                  const file = picked.type.startsWith("image/")
+                    ? await downscaleToFile(picked)
+                    : picked;
+                  const refused = checkUpload(file);
+                  if (refused) {
                     setFileError(
                       isEs
-                        ? "El archivo es demasiado grande (máx. 1.5 MB)."
-                        : "That file is too large (1.5 MB max).",
+                        ? "No se puede adjuntar ese archivo (foto, PDF, Word o texto de hasta 10 MB)."
+                        : uploadErrorMessage(new UploadError(refused, "")) ||
+                            "That file can't be attached (a photo, PDF, Word or text file up to 10 MB).",
                     );
                     return;
                   }
-                  setAttachment({
-                    name: file.name,
-                    type: file.type.startsWith("image/")
-                      ? "image/jpeg"
-                      : file.type,
-                    dataUrl,
-                  });
+                  setAttachment({ name: file.name, type: file.type, file });
                 } catch {
                   setFileError(
                     isEs
                       ? "No se pudo usar ese archivo."
                       : "That file could not be used.",
                   );
+                } finally {
+                  setPreparing(false);
                 }
               }}
             />
@@ -456,27 +413,155 @@ function ShareModal({
   );
 }
 
+function when(iso: string, isEs: boolean) {
+  return new Date(iso).toLocaleString(isEs ? "es-US" : "en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function ShareRow({
+  share,
+  isEs,
+  canRevoke,
+  onRevoke,
+  revoking,
+}: {
+  share: ApiOutsideShare;
+  isEs: boolean;
+  canRevoke: boolean;
+  onRevoke: () => Promise<unknown>;
+  revoking: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const status = STATUS[share.status] ?? STATUS.sent;
+  const live = share.status !== "revoked" && share.status !== "expired";
+  return (
+    <li className="space-y-stack-sm py-inset-sm">
+      <div className="flex flex-wrap items-start justify-between gap-inline-md">
+        <div className="min-w-0">
+          <p className="text-label-md text-fg">{share.subject}</p>
+          <p className="text-caption text-fg-muted">
+            {kindLabel(share.kind, isEs)} ·{" "}
+            {share.recipientOrg || share.recipientEmail} ·{" "}
+            {when(share.sharedAt, isEs)}
+          </p>
+        </div>
+        <Badge tone={status.tone}>{isEs ? status.es : status.en}</Badge>
+      </div>
+      <div className="flex flex-wrap gap-inline-sm">
+        <Button
+          size="small"
+          variant="neutral"
+          appearance="ghost"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded
+            ? isEs
+              ? "Ocultar detalles"
+              : "Hide details"
+            : isEs
+              ? "Ver actividad"
+              : "Show activity"}
+        </Button>
+        {canRevoke && live && !confirming ? (
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={() => setConfirming(true)}
+          >
+            {isEs ? "Dejar de compartir" : "Stop sharing"}
+          </Button>
+        ) : null}
+      </div>
+      {confirming ? (
+        <Alert
+          tone="warning"
+          title={isEs ? "¿Dejar de compartir?" : "Stop sharing?"}
+        >
+          <p>
+            {isEs
+              ? "El enlace dejará de funcionar de inmediato, también para quien ya lo abrió."
+              : "The link stops working right away, also for anyone who already opened it."}
+          </p>
+          <div className="mt-stack-sm flex flex-wrap gap-inline-sm">
+            <Button
+              size="small"
+              loading={revoking}
+              onClick={() => {
+                onRevoke().then(
+                  () => setConfirming(false),
+                  () => {
+                    /* The refusal shows above the list. */
+                  },
+                );
+              }}
+            >
+              {isEs ? "Sí, dejar de compartir" : "Yes, stop sharing"}
+            </Button>
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setConfirming(false)}
+            >
+              {isEs ? "Seguir compartiendo" : "Keep sharing"}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+      {share.replies.length ? (
+        <ol className="space-y-stack-xs">
+          {share.replies.map((reply) => (
+            <li
+              key={reply.id}
+              className="rounded-card-nested bg-surface-sunken p-inset-sm"
+            >
+              <p className="text-caption text-fg-muted">
+                {reply.authorName} · {when(reply.at, isEs)}
+              </p>
+              <p className="text-body-sm whitespace-pre-line text-fg">
+                {reply.body}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {expanded ? (
+        <ol className="space-y-0.5">
+          {share.events.map((entry) => (
+            <li key={entry.id} className="text-caption text-fg-secondary">
+              {eventLabel(entry.event)}
+              {entry.event === "verified" ? ` (${entry.by})` : ""} ·{" "}
+              <span className="text-fg-muted">{when(entry.at, isEs)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+}
+
 function MySharesModal({
   isEs,
   onClose,
   sender,
+  canRevoke,
 }: {
   isEs: boolean;
   onClose: () => void;
   sender?: string;
+  canRevoke: boolean;
 }) {
-  const memberName = useMemberName();
-  const me = sender ?? memberName;
-  const store = useShares();
-  const shares = sharesForPatient(store.state, me);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const when = (iso: string) =>
-    new Date(iso).toLocaleString(isEs ? "es-US" : "en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  const owner = useShareOwner(sender !== undefined);
+  const list = useOutsideShares(owner);
+  const revoke = useRevokeShare(owner);
+  const lang = isEs ? "es" : "en";
 
   return (
     <Modal
@@ -491,76 +576,43 @@ function MySharesModal({
             : "What I've Shared"
       }
     >
-      <ul className="divide-y divide-line-subtle">
-        {shares.map((share) => {
-          const status = STATUS[shareStatus(share)];
-          const kind = SHARE_KINDS.find((k) => k.id === share.kind)!;
-          const expanded = openId === share.id;
-          return (
-            <li key={share.id} className="space-y-stack-sm py-inset-sm">
-              <div className="flex flex-wrap items-start justify-between gap-inline-md">
-                <div className="min-w-0">
-                  <p className="text-label-md text-fg">{share.subject}</p>
-                  <p className="text-caption text-fg-muted">
-                    {isEs ? kind.es : kind.en} ·{" "}
-                    {share.recipientOrg || share.recipientEmail} ·{" "}
-                    {when(share.sharedAt)}
-                  </p>
-                </div>
-                <Badge tone={status.tone}>{isEs ? status.es : status.en}</Badge>
-              </div>
-              <Button
-                size="small"
-                variant="neutral"
-                appearance="ghost"
-                aria-expanded={expanded}
-                onClick={() => setOpenId(expanded ? null : share.id)}
-              >
-                {expanded
-                  ? isEs
-                    ? "Ocultar detalles"
-                    : "Hide details"
-                  : isEs
-                    ? "Ver enlace y registro"
-                    : "Show link and activity"}
-              </Button>
-              {share.replies?.length ? (
-                <ol className="space-y-stack-xs">
-                  {share.replies.map((reply) => (
-                    <li
-                      key={reply.at}
-                      className="rounded-card-nested bg-surface-sunken p-inset-sm"
-                    >
-                      <p className="text-caption text-fg-muted">
-                        {reply.by} · {when(reply.at)}
-                      </p>
-                      <p className="text-body-sm whitespace-pre-line text-fg">
-                        {reply.body}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              ) : null}
-              {expanded ? (
-                <div className="space-y-stack-sm">
-                  <LinkBox token={share.token} isEs={isEs} />
-                  <ol className="space-y-0.5">
-                    {share.log.map((entry, i) => (
-                      <li key={i} className="text-caption text-fg-secondary">
-                        {SHARE_LOG_LABEL[entry.event]}
-                        {entry.event === "verified"
-                          ? ` (${entry.by})`
-                          : ""} ·{" "}
-                        <span className="text-fg-muted">{when(entry.at)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      <AsyncSection
+        pending={list.isPending}
+        error={list.error}
+        onRetry={canRetry(list.error) ? list.refetch : undefined}
+        errorTitle={errorTitleFor(
+          list.error,
+          isEs ? "Lo compartido no se cargó" : "Your shares did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(list.error, undefined, lang)}
+        isEmpty={list.shares.length === 0}
+        skeleton={<Skeleton height={160} />}
+        empty={
+          <p className="text-body-sm text-fg-muted">
+            {isEs ? "Aún no ha compartido nada." : "Nothing shared yet."}
+          </p>
+        }
+      >
+        {revoke.error ? (
+          <Alert tone="danger" onDismiss={() => revoke.reset()}>
+            {saveErrorText(revoke.error, lang)}
+          </Alert>
+        ) : null}
+        <ul className="divide-y divide-line-subtle">
+          {list.shares.map((share) => (
+            <ShareRow
+              key={share.id}
+              share={share}
+              isEs={isEs}
+              canRevoke={canRevoke}
+              revoking={revoke.isPending && revoke.variables === share.id}
+              onRevoke={() => revoke.mutateAsync(share.id)}
+            />
+          ))}
+        </ul>
+        <LoadMore read={list} />
+      </AsyncSection>
     </Modal>
   );
 }
@@ -569,11 +621,15 @@ function MySharesModal({
 export function ShareOutsideCard() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const me = useMemberName();
-  const store = useShares();
-  const count = sharesForPatient(store.state, me).length;
+  /* A caregiver sees only what the patient's grant allows (D30 open: the
+     server decides; a custom `sharing` grant). The UI only hides. */
+  const level = usePatientAreaLevel("sharing");
+  const owner = useShareOwner(false);
+  const list = useOutsideShares(owner, { enabled: level >= 1 });
+  const count = list.total;
   const [sharing, setSharing] = useState(false);
   const [viewing, setViewing] = useState(false);
+  if (level < 1) return null;
 
   return (
     <section className="rounded-card-nested bg-surface-sunken p-inset-md">
@@ -592,15 +648,17 @@ export function ShareOutsideCard() {
           </p>
         </div>
       </div>
-      <Button
-        size="small"
-        fullWidth
-        className="mt-stack-md"
-        leadingIcon={<Share2 aria-hidden="true" />}
-        onClick={() => setSharing(true)}
-      >
-        {isEs ? "Compartir" : "Share Outside NephroReach"}
-      </Button>
+      {level >= 2 ? (
+        <Button
+          size="small"
+          fullWidth
+          className="mt-stack-md"
+          leadingIcon={<Share2 aria-hidden="true" />}
+          onClick={() => setSharing(true)}
+        >
+          {isEs ? "Compartir" : "Share Outside NephroReach"}
+        </Button>
+      ) : null}
       {count > 0 ? (
         <Button
           size="small"
@@ -617,7 +675,11 @@ export function ShareOutsideCard() {
         <ShareModal isEs={isEs} onClose={() => setSharing(false)} />
       ) : null}
       {viewing ? (
-        <MySharesModal isEs={isEs} onClose={() => setViewing(false)} />
+        <MySharesModal
+          isEs={isEs}
+          canRevoke={level >= 2}
+          onClose={() => setViewing(false)}
+        />
       ) : null}
     </section>
   );
@@ -629,8 +691,9 @@ export function ShareOutsideCard() {
  * other office inboxes (client, 2026-10-18).
  */
 export function OfficeShareOutside({ sender }: { sender: string }) {
-  const store = useShares();
-  const count = sharesForPatient(store.state, sender).length;
+  const owner = useShareOwner(true);
+  const list = useOutsideShares(owner);
+  const count = list.total;
   const [sharing, setSharing] = useState(false);
   const [viewing, setViewing] = useState(false);
 
@@ -664,6 +727,7 @@ export function OfficeShareOutside({ sender }: { sender: string }) {
         <MySharesModal
           isEs={false}
           sender={sender}
+          canRevoke
           onClose={() => setViewing(false)}
         />
       ) : null}
