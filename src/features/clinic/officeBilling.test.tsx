@@ -245,6 +245,30 @@ describe("office billing page", () => {
     ).toBe(true);
   });
 
+  it.each([
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "data:image/svg+xml,<svg onload=alert(1)>",
+  ])("an unsafe invoice link (%s) is never opened", async (url) => {
+    const opened = vi.fn();
+    vi.stubGlobal("open", opened);
+    billingApi((c) =>
+      c.path === org("/billing/invoices/i-1/download-link")
+        ? { data: { url, expiresIn: 300 } }
+        : undefined,
+    );
+    render(<ClinicBilling />, { wrapper });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Download NR-INV-SYN-10" }),
+    );
+    expect(
+      await screen.findByText(
+        "The invoice link was not valid. Nothing was opened.",
+      ),
+    ).toBeInTheDocument();
+    expect(opened).not.toHaveBeenCalled();
+  });
+
   it("a change request is sent to the server and listed as yours", async () => {
     let sent: unknown = null;
     billingApi((c) => {
