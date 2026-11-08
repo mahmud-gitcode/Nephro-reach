@@ -82,18 +82,30 @@ const MEMBER_OWNED = new Set([
   "member-appointments",
 ]);
 
+/* Member stores filed under the account id, never the email (PM-4). The
+   home-HD session vitals (kept in this browser until D8) are health data:
+   the old key `nr:member:<email>:dialysis-treatment-vitals` put the
+   member's email in a key that outlived sign-out. They are also cleared on
+   sign-out and at every sign-in (legacyPurge SIGN_OUT_STORES), so the next
+   person on a shared browser finds neither the vitals nor the email. */
+const ID_SCOPED = new Set(["dialysis-treatment-vitals"]);
+
 /* Whose local stores this tab reads: set by AuthContext from the server's
    `GET /me/context` (Phase 2), never from anything the browser can edit.
    It replaces the prototype's demo session cookie, which any user could
    rewrite to read another member's local data. Null when signed out. */
-export type LocalScope = { role: string; email: string };
+export type LocalScope = { role: string; email: string; userId?: string };
 let localScope: LocalScope | null = null;
 
 /** AuthContext calls this after every context read, and with null on
  *  sign-out and session end. */
 export function setLocalScope(scope: LocalScope | null): void {
   localScope = scope
-    ? { role: scope.role, email: scope.email.trim().toLowerCase() }
+    ? {
+        role: scope.role,
+        email: scope.email.trim().toLowerCase(),
+        ...(scope.userId ? { userId: scope.userId } : {}),
+      }
     : null;
 }
 
@@ -121,6 +133,10 @@ export function resolveKey(key: string): string {
   if (!MEMBER_OWNED.has(name)) return key;
   const session = sessionOf();
   if (session?.role === "caregiver") return `nr:caregiver-none:${name}`;
+  if (ID_SCOPED.has(name))
+    return session?.role === "user" && session.userId
+      ? `nr:member-id:${session.userId}:${name}`
+      : key;
   if (
     !session ||
     session.role !== "user" ||

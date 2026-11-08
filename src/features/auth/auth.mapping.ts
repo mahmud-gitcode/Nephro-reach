@@ -425,6 +425,8 @@ export function toCurrentSession(dto: CurrentSessionDto): CurrentSession {
 /** The legacy local stores' scope for a user (lib/data/storage.ts). */
 export function localScopeFor(
   user: AuthUser | null,
-): { role: UserRole; email: string } | null {
-  return user ? { role: user.role, email: user.email.toLowerCase() } : null;
+): { role: UserRole; email: string; userId: string } | null {
+  return user
+    ? { role: user.role, email: user.email.toLowerCase(), userId: user.id }
+    : null;
 }

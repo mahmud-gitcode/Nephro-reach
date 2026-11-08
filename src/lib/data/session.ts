@@ -28,7 +28,7 @@ import {
   setActiveOrganization,
 } from "@/lib/api/client";
 import { clearQueryCaches } from "./queryCache";
-import { purgeLegacyStorage } from "./legacyPurge";
+import { purgeLegacyStorage, purgeSignOutStores } from "./legacyPurge";
 
 export const AUTH_CHANNEL = "nr-auth";
 export const SIGNED_OUT_MESSAGE = "signed-out";
@@ -84,6 +84,9 @@ export function clearLocalSession(clearDemoSession?: () => void): void {
   clearDemoSession?.();
   clearQueryCaches();
   purgeLegacyStorage();
+  /* PM-4: member health data still kept in this browser goes with the
+     session that wrote it. */
+  purgeSignOutStores();
 }
 
 /** The whole sign-out. `clearDemoSession` drops the prototype's session

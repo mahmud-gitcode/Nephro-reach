@@ -159,11 +159,14 @@ describe("defaultContext and contextToUser", () => {
     });
   });
 
-  it("scopes legacy stores by role and lower-cased email", () => {
+  it("scopes legacy stores by role, lower-cased email and the account id", () => {
     const member = context({ patient });
-    expect(
-      localScopeFor(contextToUser(member, defaultContext(member))),
-    ).toEqual({ role: "user", email: "test.person@example.test" });
+    const user = contextToUser(member, defaultContext(member));
+    expect(localScopeFor(user)).toEqual({
+      role: "user",
+      email: "test.person@example.test",
+      userId: user!.id,
+    });
     expect(localScopeFor(null)).toBeNull();
   });
 });
