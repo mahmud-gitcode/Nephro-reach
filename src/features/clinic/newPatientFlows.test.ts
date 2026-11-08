@@ -9,7 +9,7 @@ import { addAccessRecord } from "@/features/vascular-access/vascularAccess.data"
 
 /* A patient enrolled at the clinic reaches the other clinic screens:
    Messages and Vascular Access each start them on request (CCM
-   enrolment is the API's: useCcm.test.tsx). */
+   enrolment is the API's: phase9.api.test.tsx). */
 
 const NOW = new Date(2026, 8, 30, 10).getTime();
 
