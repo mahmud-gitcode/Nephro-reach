@@ -39,11 +39,13 @@ export function useMessages() {
   const role = useOptionalAuth()?.user?.role;
   const office = useActiveOffice();
   const isMember = role === "user" || role === "caregiver";
-  const member = useMemberInbox(isMember ? undefined : null);
+  /* Only the signed-in side's inbox is read; the other is switched off. */
+  const member = useMemberInbox(undefined, { enabled: isMember });
   const officeInbox = useOfficeInbox(
     isMember ? null : office.organizationId,
     "all",
     office.contact,
+    { enabled: !isMember },
   );
   const read = isMember ? member : officeInbox;
   const conversations: Conversation[] = useMemo(

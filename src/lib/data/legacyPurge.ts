@@ -297,6 +297,11 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 12,
     why: "Phase 11: tickets are /me/support-tickets (the requester) and /platform/support-tickets (the NephroReach team), with server uuids; organization requests are /platform/support-info-requests, so `contacted` is gone too. The stored tickets held requesters' names and emails. No screen reads this key.",
   },
+  {
+    name: "messaging",
+    since: 12,
+    why: "Phase 11: member and office conversations are /patients/:id/conversations and /organizations/:id/conversations (found by id, never by a member's name; read, flag and archive state per thread on the server; the after-hours reply is the server's). The stored threads held patients' messages, names, MRNs and data: attachments. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that

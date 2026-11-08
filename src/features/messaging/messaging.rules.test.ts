@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import * as rules from "./messaging.rules";
-import { DEMO_MEMBER } from "./messaging.seed";
 import type { CareTeamContact, MessagingState } from "./messaging.types";
 
 const NOW = Date.parse("2026-09-20T12:00:00.000Z");
@@ -288,14 +287,18 @@ describe("searchConversations, on the patient record", () => {
 });
 
 describe("applyFilter, with the open thread pinned", () => {
+  const read = () => {
+    const state = stateWith({ unread: 0 });
+    return state.conversations;
+  };
+
   it("keeps a thread listed after opening it marks it read", () => {
     /* The clinic clicks an unread thread in the Unread folder. Marking it
        read must not pull the row out from under them. */
-    const read = rules.markRead(stateWith({ unread: 2 }), "c1");
-    expect(rules.applyFilter(read.conversations, "unread")).toEqual([]);
-    expect(
-      rules.applyFilter(read.conversations, "unread", "c1").map((c) => c.id),
-    ).toEqual(["c1"]);
+    expect(rules.applyFilter(read(), "unread")).toEqual([]);
+    expect(rules.applyFilter(read(), "unread", "c1").map((c) => c.id)).toEqual([
+      "c1",
+    ]);
   });
 
   it("keeps an archived thread listed in All while it is open", () => {
@@ -306,13 +309,11 @@ describe("applyFilter, with the open thread pinned", () => {
   });
 
   it("pins nothing when the id is null", () => {
-    const read = rules.markRead(stateWith({ unread: 2 }), "c1");
-    expect(rules.applyFilter(read.conversations, "unread", null)).toEqual([]);
+    expect(rules.applyFilter(read(), "unread", null)).toEqual([]);
   });
 
   it("does not leak the pin into the folder counts", () => {
-    const read = rules.markRead(stateWith({ unread: 2 }), "c1");
-    expect(rules.filterCounts(read.conversations).unread).toBe(0);
+    expect(rules.filterCounts(read()).unread).toBe(0);
   });
 });
 
@@ -346,103 +347,146 @@ describe("inboxTimeLabel", () => {
 });
 
 /* ==========================================================================
-   The member's end of the store
+   The member's end (Phase 11: rows from the server, by id)
    ========================================================================== */
 
-describe("applyMemberFilter", () => {
-  const seeded = rules.memberConversations(
-    rules.seedConversations(NOW),
-    DEMO_MEMBER,
-  );
+const OFFICE_A: CareTeamContact = {
+  name: "Synthetic Dialysis Center A",
+  role: "Your Dialysis Care Team",
+  kind: "facility",
+};
+const OFFICE_B: CareTeamContact = {
+  name: "Synthetic Nephrology Office B",
+  role: "Your Nephrology Office",
+  kind: "facility",
+};
 
+function memberRow(
+  id: string,
+  contact: CareTeamContact,
+  category: "care-team" | "appointments",
+  archived = false,
+  last: { author: "member" | "clinic"; body: string; at: number } | null = null,
+) {
+  return {
+    id,
+    memberName: "",
+    contact,
+    category,
+    unread: 0,
+    flagged: false,
+    archived,
+    messages: [],
+    last: last
+      ? {
+          id: `${id}-last`,
+          author: last.author,
+          body: last.body,
+          sentAt: new Date(last.at).toISOString(),
+        }
+      : null,
+  };
+}
+
+const memberInbox = [
+  memberRow("m1", OFFICE_A, "care-team"),
+  memberRow("m2", OFFICE_A, "appointments"),
+  memberRow("m3", OFFICE_B, "care-team", true),
+];
+
+describe("applyMemberFilter", () => {
   it("shows everything but the archived under All", () => {
-    const all = rules.applyMemberFilter(seeded, "all");
-    expect(all.length).toBeGreaterThan(0);
-    for (const conversation of all) expect(conversation.archived).toBe(false);
+    const all = rules.applyMemberFilter(memberInbox, "all");
+    expect(all.map((c) => c.id)).toEqual(["m1", "m2"]);
   });
 
   it("filters by subject, not by state", () => {
-    for (const conversation of rules.applyMemberFilter(
-      seeded,
-      "appointments",
-    )) {
-      expect(conversation.category).toBe("appointments");
-    }
+    expect(
+      rules.applyMemberFilter(memberInbox, "appointments").map((c) => c.id),
+    ).toEqual(["m2"]);
   });
 
   it("shows only the archived under Archived", () => {
-    const archived = rules.applyMemberFilter(seeded, "archived");
-    expect(archived.length).toBeGreaterThan(0);
-    for (const conversation of archived)
-      expect(conversation.archived).toBe(true);
+    expect(
+      rules.applyMemberFilter(memberInbox, "archived").map((c) => c.id),
+    ).toEqual(["m3"]);
   });
 
   it("keeps the open thread listed when it stops matching", () => {
-    const care = seeded.find((c) => c.category === "care-team")!;
-    const shown = rules.applyMemberFilter(seeded, "appointments", care.id);
-    expect(shown.map((c) => c.id)).toContain(care.id);
+    const shown = rules.applyMemberFilter(memberInbox, "appointments", "m1");
+    expect(shown.map((c) => c.id)).toContain("m1");
   });
 
   it("counts the folder, not the view", () => {
-    const counts = rules.memberFilterCounts(seeded);
-    expect(counts.all).toBe(rules.applyMemberFilter(seeded, "all").length);
-    expect(counts.all + counts.archived).toBe(seeded.length);
+    const counts = rules.memberFilterCounts(memberInbox);
+    expect(counts.all).toBe(2);
+    expect(counts.all + counts.archived).toBe(memberInbox.length);
   });
 });
 
 describe("searchConversations, from the member's end", () => {
-  const seeded = rules.memberConversations(
-    rules.seedConversations(NOW),
-    DEMO_MEMBER,
-  );
-
-  it("finds a thread by who it is with", () => {
-    const hits = rules.searchConversations(seeded, "wilson");
-    expect(hits.length).toBe(1);
-    expect(hits[0].contact.name).toBe("Nurse Wilson");
+  it("finds a thread by the office it is with", () => {
+    const hits = rules.searchConversations(memberInbox, "nephrology office b");
+    expect(hits.map((c) => c.id)).toEqual(["m3"]);
   });
 
-  it("finds a thread by what that person does", () => {
-    const hits = rules.searchConversations(seeded, "dietitian");
-    expect(hits.length).toBe(1);
-    expect(hits[0].contact.role).toBe("Renal Dietitian");
+  it("finds a thread by what the office is", () => {
+    const hits = rules.searchConversations(memberInbox, "dialysis care team");
+    expect(hits.map((c) => c.id)).toEqual(["m1", "m2"]);
   });
 
   it("does not crash on a thread with no chart behind it", () => {
-    const chartless = seeded.filter((c) => !c.patient);
-    expect(chartless.length).toBeGreaterThan(0);
-    expect(() => rules.searchConversations(chartless, "100245")).not.toThrow();
+    expect(() =>
+      rules.searchConversations(memberInbox, "100245"),
+    ).not.toThrow();
   });
 });
 
 describe("open questions for Reports", () => {
+  const officeInbox = [
+    {
+      ...memberRow("q1", OFFICE_A, "care-team", false, {
+        author: "member",
+        body: "Is swelling normal?",
+        at: NOW - 2 * HOUR,
+      }),
+      memberName: "Test Patient One",
+    },
+    {
+      ...memberRow("q2", OFFICE_A, "care-team", false, {
+        author: "member",
+        body: "Older question",
+        at: NOW - 5 * HOUR,
+      }),
+      memberName: "Test Patient Two",
+    },
+    {
+      ...memberRow("q3", OFFICE_A, "care-team", false, {
+        author: "clinic",
+        body: "We will call you.",
+        at: NOW - HOUR,
+      }),
+      memberName: "Test Patient Three",
+    },
+    {
+      ...memberRow("q4", OFFICE_A, "care-team", true, {
+        author: "member",
+        body: "Archived",
+        at: NOW - HOUR,
+      }),
+      memberName: "Test Patient Four",
+    },
+  ];
+
   it("lists threads whose last word is the patient's, oldest first", () => {
-    const state = rules.seedState(Date.now());
-    const open = rules.openQuestions(state.conversations);
-    expect(open.length).toBeGreaterThan(0);
-    for (const q of open) {
-      const thread = state.conversations.find((c) => c.id === q.conversationId);
-      expect(rules.lastMessage(thread!)?.author).toBe("member");
-      expect(q.body.length).toBeGreaterThan(0);
-    }
-    const sorted = [...open].sort((a, b) => a.sentAt.localeCompare(b.sentAt));
-    expect(open).toEqual(sorted);
+    const open = rules.openQuestions(officeInbox);
+    expect(open.map((q) => q.conversationId)).toEqual(["q2", "q1"]);
+    expect(open[0].body).toBe("Older question");
   });
 
   it("drops a question once the office replies", () => {
-    const state = rules.seedState(Date.now());
-    const [first] = rules.openQuestions(state.conversations);
-    const replied = rules.appendMessage(
-      state,
-      first.conversationId,
-      "We will call you today.",
-      "clinic",
-      Date.now(),
-    );
     expect(
-      rules
-        .openQuestions(replied.conversations)
-        .some((q) => q.conversationId === first.conversationId),
+      rules.openQuestions(officeInbox).some((q) => q.conversationId === "q3"),
     ).toBe(false);
   });
 });

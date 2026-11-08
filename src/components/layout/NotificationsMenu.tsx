@@ -1,6 +1,5 @@
 "use client";
 
-import { NEPHROLOGY_OFFICE } from "@/features/messaging/messaging.seed";
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bell, MessageSquareText } from "lucide-react";
@@ -20,7 +19,6 @@ import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
 import type { Conversation } from "@/features/messaging/messaging.types";
 import { isMemberRole } from "@/features/auth/useMember";
-import { useMemberName } from "@/features/auth/useMemberName";
 import { useErVisits } from "@/features/emergency/useErVisits";
 import { answerFor, weekOf } from "@/features/emergency/erVisits";
 import { useMedications } from "@/features/medications/useMedications";
@@ -546,16 +544,17 @@ function MemberNotifications() {
 }
 
 /** The signed-in person's own inbox: a member's threads, or their
- *  office's patient queue. Null for a role with no Messages page. */
+ *  office's patient queue. Null for a role with no Messages page. The
+ *  server already limits the read to the signed-in patient or office
+ *  (Phase 11): nothing is filtered by a name here. */
 function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
   const { user } = useAuth();
-  const memberName = useMemberName();
   const { conversations } = useMessages();
   if (isMemberRole(user?.role)) {
     return {
       inbox: {
         href: "/dashboard/messages",
-        threads: messagingRules.memberConversations(conversations, memberName),
+        threads: conversations,
         mine: "member",
       },
       fromOf: (c) => c.contact.name,
@@ -566,16 +565,10 @@ function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
     fromOf: (c: Conversation) => c.memberName,
   });
   if (user?.role === "clinic" && userCan(user, "messages.view")) {
-    return staff(
-      "/dashboard/clinic/messages",
-      messagingRules.clinicConversations(conversations),
-    );
+    return staff("/dashboard/clinic/messages", conversations);
   }
   if (user?.role === "nephrology" && userCan(user, "messages.view")) {
-    return staff(
-      "/dashboard/nephrology/messages",
-      messagingRules.clinicConversations(conversations, NEPHROLOGY_OFFICE.name),
-    );
+    return staff("/dashboard/nephrology/messages", conversations);
   }
   /* The access center's threads are with offices, on its own page. */
   if (user?.role === "access" && userCan(user, "access.messages")) {

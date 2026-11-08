@@ -107,7 +107,10 @@ function pagedState(query: {
 /* ------------------------------------------------------------- the lists */
 
 /** The patient's threads (the patient, or a caregiver with `messages`). */
-export function useMemberInbox(explicitScope?: PatientScope | null) {
+export function useMemberInbox(
+  explicitScope?: PatientScope | null,
+  options: { enabled?: boolean } = {},
+) {
   const scope = usePatientScope(explicitScope);
   const { language } = useLanguage();
   const isEs = language === "ES";
@@ -118,6 +121,7 @@ export function useMemberInbox(explicitScope?: PatientScope | null) {
     initialPageParam: LIST_PAGE,
     getNextPageParam: (last, _pages, params) =>
       nextPageParams(last.pagination, params),
+    enabled: options.enabled ?? true,
   });
   const conversations = useMemo(
     () =>
@@ -134,7 +138,7 @@ export function useOfficeInbox(
   organizationId: string | null,
   inbox: InboxFilter,
   office: CareTeamContact,
-  filter: { patientId?: string } = {},
+  filter: { patientId?: string; enabled?: boolean } = {},
 ) {
   const query = useInfiniteQuery({
     queryKey: officeKey(organizationId, {
@@ -149,6 +153,9 @@ export function useOfficeInbox(
     initialPageParam: LIST_PAGE,
     getNextPageParam: (last, _pages, params) =>
       nextPageParams(last.pagination, params),
+    /* Without an office the read still runs, so the page shows the
+       "no office" state; a caller may switch it off instead. */
+    enabled: filter.enabled ?? true,
   });
   const conversations = useMemo(
     () =>
@@ -518,4 +525,14 @@ export function usePatientAreaLevel(area: "messages" | "sharing"): number {
   );
   const level = grant?.permissions?.[area];
   return typeof level === "number" ? level : 0;
+}
+
+/** For other lanes (OFFICE Phase 9 check-ins, EDU-BIZ reports): one slice
+ *  of the office inbox, by id, with the server's filters. */
+export const useOfficeConversations = useOfficeInbox;
+
+/** For other lanes (OFFICE Phase 9 check-ins): start or continue the
+ *  office's thread with one patient, by patient id. */
+export function useStartOfficeConversation(organizationId: string | null) {
+  return useOfficeMessaging(organizationId).start;
 }
