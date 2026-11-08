@@ -8,6 +8,7 @@ import {
   AsyncSection,
   Button,
   Card,
+  EmptyState,
   FormField,
   Input,
   Modal,
@@ -16,7 +17,33 @@ import {
   SwitchRow,
   Textarea,
 } from "@/components/ui";
-import { usePlans, type SubscriptionPlan } from "@/features/billing/usePlans";
+import { useCanLevel } from "@/features/staff/useStaffAccounts";
+import { canRetry } from "@/lib/data/asyncState";
+import {
+  ActionError,
+  PublishedBadge,
+  actionErrorText,
+  readErrorCopy,
+} from "@/features/billing/consoleUi";
+import { centsToInput, parseDollars } from "@/features/billing/money";
+import type { MemberPlanDraft } from "@/features/billing/platformPlans.mappers";
+import { usePlans, type AdminMemberPlan } from "@/features/billing/usePlans";
+
+/* ==========================================================================
+   Subscription & pricing plans (Phase 14.5, on the API)
+   --------------------------------------------------------------------------
+   The member plans are `/platform/member-plans`: prices in cents (the label
+   is derived from the cents, never parsed from text), one plan per call.
+   - Edit and Add need plans WRITE; Publish and Retire need plans MANAGE.
+     The UI hides what the role cannot do; the server refuses it anyway.
+   - Editing the price or features of a plan members are on is saved by the
+     server as a NEW version; members keep the old terms. The card says so.
+   - A new plan starts unpublished; only published plans reach the landing
+     page's pricing table (its own public reader, D14).
+   Nothing is kept in this browser.
+   ========================================================================== */
+
+type SubscriptionPlan = AdminMemberPlan & { earlierVersions: number };
 
 function FeatureIcon({ included }: { included: boolean }) {
   return (
@@ -36,9 +63,17 @@ function FeatureIcon({ included }: { included: boolean }) {
 function PricingCard({
   plan,
   onEdit,
+  canEdit,
+  canManage,
+  statusPending,
+  onStatus,
 }: {
   plan: SubscriptionPlan;
   onEdit: (plan: SubscriptionPlan) => void;
+  canEdit: boolean;
+  canManage: boolean;
+  statusPending: boolean;
+  onStatus: (plan: SubscriptionPlan) => void;
 }) {
   const card = (
     <article
@@ -57,6 +92,7 @@ function PricingCard({
           >
             {plan.name}
           </h2>
+          <PublishedBadge active={plan.active} />
         </div>
 
         <div className="flex flex-wrap items-baseline gap-1">
@@ -70,16 +106,38 @@ function PricingCard({
           </div>
         )}
 
-        <Button
-          variant="neutral"
-          appearance="fill"
-          size="small"
-          onClick={() => onEdit(plan)}
-          className="w-full"
-        >
-          <Edit3 aria-hidden="true" />
-          Edit Plan
-        </Button>
+        {plan.earlierVersions > 0 ? (
+          <p className="text-caption text-fg-muted">
+            Version {plan.earlierVersions + 1}: members on an earlier version
+            keep its terms.
+          </p>
+        ) : null}
+
+        {canEdit ? (
+          <Button
+            variant="neutral"
+            appearance="fill"
+            size="small"
+            onClick={() => onEdit(plan)}
+            className="w-full"
+          >
+            <Edit3 aria-hidden="true" />
+            Edit Plan
+          </Button>
+        ) : null}
+        {canManage ? (
+          <Button
+            variant="neutral"
+            appearance="stroke"
+            size="small"
+            loading={statusPending}
+            onClick={() => onStatus(plan)}
+            className="w-full"
+            aria-label={`${plan.active ? "Retire" : "Publish"} ${plan.name}`}
+          >
+            {plan.active ? "Retire Plan" : "Publish Plan"}
+          </Button>
+        ) : null}
       </div>
 
       <div className="border-t border-dashed border-line" />
@@ -124,18 +182,22 @@ function PricingCard({
 function EditPlanModal({
   plan,
   saving,
+  error,
   onSave,
   onClose,
 }: {
   plan: SubscriptionPlan | "new";
   saving: boolean;
-  onSave: (updatedPlan: SubscriptionPlan) => void;
+  error: unknown;
+  onSave: (draft: MemberPlanDraft) => void;
   onClose: () => void;
 }) {
   const isNew = plan === "new";
 
   const [name, setName] = useState(isNew ? "" : plan.name);
-  const [price, setPrice] = useState(isNew ? "" : plan.price.replace("$", ""));
+  const [price, setPrice] = useState(
+    isNew ? "" : centsToInput(plan.priceCents),
+  );
   const [billing, setBilling] = useState(isNew ? "/Month" : plan.billing);
   const [billingType, setBillingType] = useState<"recurring" | "one_time">(
     isNew ? "recurring" : plan.billingType,
@@ -152,6 +214,24 @@ function EditPlanModal({
   const [description, setDescription] = useState(isNew ? "" : plan.description);
   const [popular, setPopular] = useState(isNew ? false : !!plan.popular);
   const [badge] = useState(isNew ? "" : plan.badge || "");
+  const [tried, setTried] = useState(false);
+  const priceCents = parseDollars(price);
+  const nameError = name.trim() ? undefined : "Give the plan a name.";
+  const priceError =
+    priceCents === null
+      ? "Enter the price in dollars and cents, e.g. 4.99."
+      : undefined;
+  const accessError =
+    accessDays === "" ||
+    (/^\d+$/.test(accessDays) &&
+      Number(accessDays) >= 1 &&
+      Number(accessDays) <= 3650)
+      ? undefined
+      : "Enter whole days from 1 to 3650, or leave it blank.";
+  const trialError =
+    trialDays === "" || (/^\d+$/.test(trialDays) && Number(trialDays) <= 365)
+      ? undefined
+      : "Enter whole days from 0 to 365, or leave it blank.";
   const [features, setFeatures] = useState<
     Array<{ label: string; included: boolean }>
   >(
@@ -169,25 +249,22 @@ function EditPlanModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !price.trim()) return;
+    setTried(true);
+    if (nameError || priceError || accessError || trialError) return;
 
-    const formattedPlan: SubscriptionPlan = {
-      id: isNew ? `plan-${Date.now()}` : plan.id,
+    onSave({
       name: name.trim(),
-      price: price.startsWith("$") ? price.trim() : `$${price.trim()}`,
+      priceCents: priceCents!,
       billing: billing.trim(),
       billingType,
       billingPeriodLabel: billingPeriodLabel.trim(),
-      accessDays: accessDays ? parseInt(accessDays, 10) || null : null,
-      trialDays: trialDays ? parseInt(trialDays, 10) || null : null,
-      trialLabel: trialDays ? `${trialDays}-Day Free Trial` : undefined,
+      accessDays: accessDays ? Number(accessDays) : null,
+      trialDays: trialDays ? Number(trialDays) : null,
       description: description.trim(),
       popular,
-      badge: badge.trim() || undefined,
+      badge: badge.trim() || null,
       features,
-    };
-
-    onSave(formattedPlan);
+    });
   };
 
   const handleAddFeature = () => {
@@ -238,13 +315,30 @@ function EditPlanModal({
         id="subscription-plan-form"
         className="space-y-stack-xl"
         onSubmit={handleSubmit}
+        noValidate
       >
+        {error ? (
+          <Alert tone="danger" title="Your plan changes were not saved">
+            {actionErrorText(error)}
+          </Alert>
+        ) : null}
+        {!isNew && plan.active ? (
+          <Alert tone="info" live={false}>
+            If members are on this plan, a new price or feature list is saved as
+            a new version: they keep their current terms.
+          </Alert>
+        ) : null}
         {/* Plan Name */}
-        <FormField label="Plan Name" required>
+        <FormField
+          label="Plan Name"
+          required
+          error={tried ? nameError : undefined}
+        >
           {(props) => (
             <Input
               {...props}
               type="text"
+              maxLength={120}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Essential Membership"
@@ -254,7 +348,11 @@ function EditPlanModal({
 
         {/* Price & Billing Unit */}
         <div className="grid grid-cols-2 gap-inline-lg">
-          <FormField label="Price ($ USD)" required>
+          <FormField
+            label="Price ($ USD)"
+            required
+            error={tried ? priceError : undefined}
+          >
             {(props) => (
               <div className="relative flex items-center">
                 <span
@@ -281,6 +379,7 @@ function EditPlanModal({
                 {...props}
                 type="text"
                 value={billing}
+                maxLength={40}
                 onChange={(e) => setBilling(e.target.value)}
                 placeholder="e.g. /Month, /Class, or One-time"
               />
@@ -308,7 +407,10 @@ function EditPlanModal({
               </Select>
             )}
           </FormField>
-          <FormField label="Access Period (Days)">
+          <FormField
+            label="Access Period (Days)"
+            error={tried ? accessError : undefined}
+          >
             {(props) => (
               <Input
                 {...props}
@@ -325,6 +427,7 @@ function EditPlanModal({
         <FormField
           label="Free Trial Period (Days)"
           hint="Grants free trial days before recurring payment begins (e.g. 7 days)."
+          error={tried ? trialError : undefined}
         >
           {(props) => (
             <Input
@@ -344,6 +447,7 @@ function EditPlanModal({
               {...props}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={1000}
               rows={2}
               placeholder="What this plan includes..."
             />
@@ -423,6 +527,7 @@ function EditPlanModal({
               inputSize="small"
               type="text"
               value={newFeatureText}
+              maxLength={200}
               onChange={(e) => setNewFeatureText(e.target.value)}
               placeholder="Add a new feature..."
               className="flex-1"
@@ -459,31 +564,34 @@ export default function SubscriptionsPage() {
     isSaving,
     saveError,
     dismissSaveError,
+    outcome,
+    dismissOutcome,
+    setStatus,
+    statusPendingId,
+    statusError,
+    dismissStatusError,
   } = usePlans();
+  const canEdit = useCanLevel("plans", 2);
+  const canManage = useCanLevel("plans", 3);
 
   const [editingPlan, setEditingPlan] = useState<
     SubscriptionPlan | "new" | null
   >(null);
-  const [showSavedToast, setShowSavedToast] = useState(false);
 
-  /* These prices are what the marketing site charges. The old version told
-     the admin "Changes saved successfully. Both the Admin Dashboard and the
-     Landing Page pricing have been updated." without waiting to find out —
-     and the write was in a function that swallowed its own failure. */
-  const handleSavePlan = (updatedPlan: SubscriptionPlan) => {
-    const exists = plans.some((plan) => plan.id === updatedPlan.id);
-    const next = exists
-      ? plans.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
-      : [...plans, updatedPlan];
-
-    void save(next)
-      .then(() => {
-        setEditingPlan(null);
-        setShowSavedToast(true);
-        setTimeout(() => setShowSavedToast(false), 3000);
-      })
+  /* The message waits for the server: a version, an edit in place, or a
+     new (unpublished) plan are three different outcomes. */
+  const handleSavePlan = (draft: MemberPlanDraft) => {
+    const target = editingPlan === "new" ? null : editingPlan;
+    void save(target, draft)
+      .then(() => setEditingPlan(null))
       .catch(() => {});
   };
+  const copy = readErrorCopy(error, "The plans did not load");
+  const published = plans.filter((plan) => plan.active);
+  const recurring = published.filter(
+    (plan) => plan.billingType === "recurring",
+  ).length;
+  const unknown = isPending || Boolean(error);
 
   return (
     <>
@@ -493,35 +601,43 @@ export default function SubscriptionsPage() {
             Subscription &amp; Pricing Plans
           </h1>
           <p className="mt-stack-xs measure text-caption text-fg-muted">
-            Manage your 4 customer packages, prices ($4.99, $7.99, $10, $49.99),
-            trial periods, and feature permissions dynamically.
+            Manage the member packages, prices, trial periods, and feature
+            permissions. Published plans show on the landing page.
           </p>
         </div>
-        <Button size="small" onClick={() => setEditingPlan("new")}>
-          <Plus aria-hidden="true" />
-          Add New Plan
-        </Button>
+        {canEdit ? (
+          <Button
+            size="small"
+            onClick={() => {
+              dismissSaveError();
+              setEditingPlan("new");
+            }}
+          >
+            <Plus aria-hidden="true" />
+            Add New Plan
+          </Button>
+        ) : null}
       </div>
 
-      {saveError ? (
+      {outcome ? (
         <Alert
-          tone="danger"
-          title="Your plan changes were not saved"
+          tone="success"
           className="mb-stack-xl"
-          onDismiss={dismissSaveError}
+          onDismiss={dismissOutcome}
         >
-          {saveError instanceof Error
-            ? saveError.message
-            : "Nothing has changed on the pricing page. Please try again."}
+          {outcome === "versioned"
+            ? "Saved as a new version. Members already on this plan keep their current terms; new members get the new one."
+            : outcome === "created"
+              ? "The plan was created. It is not on the landing page until it is published."
+              : "Changes saved."}
         </Alert>
       ) : null}
-
-      {showSavedToast && (
-        <Alert tone="success" className="mb-stack-xl">
-          Changes saved successfully. Both the Admin Dashboard and the Landing
-          Page pricing have been updated.
-        </Alert>
-      )}
+      <ActionError
+        error={statusError}
+        title="The plan status did not change"
+        onDismiss={dismissStatusError}
+        className="mb-stack-xl"
+      />
 
       {/* Developer Rules & Notice Card */}
       <Alert
@@ -542,8 +658,8 @@ export default function SubscriptionsPage() {
             unlock without creating recurring subscriptions.
           </li>
           <li>
-            <strong>Zero Hard-Coding:</strong> All 4 tiers can be edited
-            directly here; values update dynamically across the frontend.
+            <strong>Zero Hard-Coding:</strong> Every tier is edited here and
+            saved on the server; the landing page shows the published ones.
           </li>
         </ul>
       </Alert>
@@ -552,9 +668,15 @@ export default function SubscriptionsPage() {
       <AsyncSection
         pending={isPending}
         error={error}
-        onRetry={refetch}
-        errorTitle="The plans did not load"
-        errorMessage="Nothing is shown below, so nothing here can be edited yet."
+        onRetry={canRetry(error) ? refetch : undefined}
+        {...copy}
+        isEmpty={plans.length === 0}
+        empty={
+          <EmptyState
+            title="No member plans yet"
+            description="Add a plan, then publish it to show it on the landing page."
+          />
+        }
         skeleton={
           <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
             <Skeleton height={420} />
@@ -567,9 +689,16 @@ export default function SubscriptionsPage() {
         <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => (
             <PricingCard
-              key={plan.id || plan.name}
+              key={plan.id}
               plan={plan}
-              onEdit={setEditingPlan}
+              canEdit={canEdit}
+              canManage={canManage}
+              statusPending={statusPendingId === plan.id}
+              onStatus={(p) => setStatus(p.id, p.active ? "retire" : "publish")}
+              onEdit={(p) => {
+                dismissSaveError();
+                setEditingPlan(p);
+              }}
             />
           ))}
         </section>
@@ -578,9 +707,14 @@ export default function SubscriptionsPage() {
       {/* Overview Analytics Bar */}
       <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          ["Active Products", `${plans.length} Tiers`],
-          ["Subscription Types", "2 Recurring + 2 One-Time"],
-          ["Dynamic Storage", "Admin Synced"],
+          ["Active Products", unknown ? "—" : `${published.length} Published`],
+          [
+            "Subscription Types",
+            unknown
+              ? "—"
+              : `${recurring} Recurring + ${published.length - recurring} One-Time`,
+          ],
+          ["Plan Storage", "Saved on the server"],
         ].map(([label, value]) => (
           <Card as="article" key={label} padding="none" className="p-inset-lg">
             <div
@@ -601,6 +735,7 @@ export default function SubscriptionsPage() {
         <EditPlanModal
           plan={editingPlan}
           saving={isSaving}
+          error={saveError}
           onSave={handleSavePlan}
           onClose={() => setEditingPlan(null)}
         />
