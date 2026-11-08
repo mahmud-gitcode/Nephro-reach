@@ -350,6 +350,11 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 14,
     why: "Phase 14: hospital enrollments are GET/POST/PATCH /organizations/:id/program-enrollments (this hospital's own roster, server scoped; discharge, accessUntil and hasAccess from the server) and the figures are /organizations/:id/reports/education; a member's hospital course is /patients/:id/education/enrollments. The sample enrollments (hospital.seed.ts, synthetic names, emails and MRNs) are deleted. No screen reads this key.",
   },
+  {
+    name: "clinic-billing-actions",
+    since: 14,
+    why: "Phase 14: the office contract, seats, invoices and change requests are /organizations/:id/billing/* (contract, invoices with a server download link, change-requests); payments and the renewal choice are NephroReach's (no office route), so nothing an office does on the billing page is kept in the browser. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that

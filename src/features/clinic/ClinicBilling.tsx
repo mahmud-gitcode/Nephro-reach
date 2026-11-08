@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import {
   CalendarClock,
-  CreditCard,
   Download,
   FileText,
   MessageSquareText,
@@ -20,10 +19,13 @@ import {
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
+  Alert,
+  AsyncSection,
   Badge,
   Button,
   buttonStyles,
   Card,
+  EmptyState,
   KeyCard,
   Progress,
   ProgressRing,
@@ -35,40 +37,43 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { tableIconButton } from "./tableButton";
 import {
-  contract,
   contractTone,
   daysUntilEnd,
+  formatCents,
   formatDate,
-  formatMoney,
-  invoicesUpTo,
+  formatDay,
   invoiceTone,
-  localDate,
-  nextInvoiceDate,
   outstanding,
   paidThisMonthPct,
-  patientsCovered,
   termElapsedPct,
-  totalPaid,
+  totalPaidThisYear,
+  type Contract,
   type Invoice,
 } from "./billing.data";
-import { useClinicData } from "./useClinicData";
-import { useClinicSettings } from "./useClinicSettings";
-import { useBillingActions } from "./useBillingActions";
-import {
-  applyPayments,
-  changeTopicLabel,
-  renewalLabel,
-} from "./billing.actions";
-import {
-  ContractDocumentModal,
-  PayInvoiceModal,
-  RenewalOptionsModal,
-  RequestChangeModal,
-  downloadInvoice,
-} from "./BillingModals";
+import { changeTopicLabel, renewalLabel } from "./billing.actions";
+import { useOfficeBilling, type OfficeBilling } from "./useBillingActions";
+import { invoiceDownloadLink } from "./officeBilling.repository";
+import { actionErrorText, useOfficeOrg } from "./officeContext";
+import { ContractDocumentModal, RequestChangeModal } from "./BillingModals";
+
+/* ==========================================================================
+   Contract & Billing (Phase 14)
+   --------------------------------------------------------------------------
+   The office's own contract, invoices, seats and change requests, all from
+   the API (useOfficeBilling). An office cannot pay an invoice or choose its
+   renewal here: NephroReach marks invoices paid and holds the renewal
+   choice, so those controls are hidden and the choice is shown read-only.
+   An invoice PDF opens only when NephroReach issued one.
+   ========================================================================== */
 
 function PanelHeading({
   title,
@@ -96,14 +101,19 @@ function PanelHeading({
 }
 
 function SummaryCards({
+  contract,
   invoices,
   today,
-  patientsCovered,
+  seats,
 }: {
+  contract: Contract;
   invoices: Invoice[];
   today: Date;
-  patientsCovered: number;
+  seats: OfficeBilling["seats"];
 }) {
+  const paidPct = paidThisMonthPct(invoices, today);
+  const used = seats?.used ?? 0;
+  const allowed = seats?.allowed ?? null;
   return (
     <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
       <KeyCard
@@ -115,12 +125,12 @@ function SummaryCards({
           </Badge>
         }
         label="Contract Status"
-        note={`${formatDate(localDate(contract.start))} – ${formatDate(localDate(contract.end))}`}
+        note={`${formatDay(contract.start)} – ${formatDay(contract.end)}`}
       />
       <KeyCard
         tone="success"
         icon={<MoneySolid />}
-        value={formatMoney(contract.monthlyFee)}
+        value={formatCents(contract.monthlyFeeCents)}
         label="Monthly Fee"
         note={`Billed ${contract.billingCycle.toLowerCase()}`}
       />
@@ -129,53 +139,62 @@ function SummaryCards({
         icon={<UsersSolid />}
         value={
           <>
-            {patientsCovered}
+            {used}
             <span className="text-heading-4 text-fg-muted">
               {" "}
-              / {contract.patientsAllowed}
+              / {allowed ?? "no limit"}
             </span>
           </>
         }
         label="Patients Covered"
-        note={`${contract.patientsAllowed - patientsCovered} slots remaining`}
+        note={
+          seats?.available !== null && seats?.available !== undefined
+            ? `${seats.available} slots remaining`
+            : "No seat limit"
+        }
       />
       <KeyCard
         tone="success"
         icon={<CheckCircleSolid />}
-        value={`${paidThisMonthPct(invoices, today)}%`}
+        value={paidPct === null ? "—" : `${paidPct}%`}
         label="Invoices Paid"
-        note="This month"
+        note="This month (invoices shown)"
       />
     </section>
   );
 }
 
 function ContractDetails({
+  contract,
+  billing,
+  messagesHref,
+  canRequest,
   onViewContract,
   onRequestChange,
-  lastRequest,
 }: {
+  contract: Contract;
+  billing: OfficeBilling;
+  messagesHref: string;
+  canRequest: boolean;
   onViewContract: () => void;
   onRequestChange: () => void;
-  /** The most recent change request, so the clinic can see it landed. */
-  lastRequest?: { topic: string; requestedAt: string };
 }) {
-  /* Name, email and phone are the organization profile from Settings, so
-     an edit there shows here rather than leaving two copies to disagree. */
-  const { settings } = useClinicSettings();
-  const { profile } = settings;
+  const signedInOffice = useOptionalAuth()?.user?.org ?? null;
+  const profile = billing.profile;
+  const lastRequest = billing.changeRequests[0];
+  const officeName = profile?.name ?? signedInOffice ?? "Your office";
 
   const rows: [string, React.ReactNode][] = [
     ["Contract #", contract.number],
-    ["Start Date", formatDate(localDate(contract.start))],
-    ["End Date", formatDate(localDate(contract.end))],
+    ["Start Date", formatDay(contract.start)],
+    ["End Date", formatDay(contract.end)],
     ["Patients Allowed", contract.patientsAllowed],
-    ["Monthly Fee", formatMoney(contract.monthlyFee)],
+    ["Monthly Fee", formatCents(contract.monthlyFeeCents)],
     ["Billing Cycle", contract.billingCycle],
     ["Auto-Renew", contract.autoRenew ? "Yes" : "No"],
     ["Primary Contact", contract.primaryContact],
-    ["Email", profile.email],
-    ["Phone", profile.phone],
+    ["Email", profile?.email ?? "—"],
+    ["Phone", profile?.phone ?? "—"],
   ];
 
   return (
@@ -190,7 +209,7 @@ function ContractDetails({
           <FileText className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-heading-5 text-fg">{profile.name}</p>
+          <p className="text-heading-5 text-fg">{officeName}</p>
           <p className="text-body-sm text-fg-muted">{contract.type}</p>
           <Badge tone={contractTone[contract.status]} className="mt-stack-xs">
             {contract.status}
@@ -217,18 +236,24 @@ function ContractDetails({
           <FileText className="h-4 w-4" />
           View Contract Document
         </Button>
-        {/* A clinic cannot rewrite its own contract, so the mockup's "Edit
-            Contract" becomes a request to NephroReach. */}
+        {/* An office cannot rewrite its own contract, so the mockup's "Edit
+            Contract" is a request to NephroReach (billing Edit). */}
         <Button
           variant="neutral"
           appearance="fill-stroke"
           size="small"
+          disabled={!canRequest}
+          title={
+            canRequest
+              ? undefined
+              : "Your role cannot send billing requests in this office."
+          }
           onClick={onRequestChange}
         >
           Request a Change
         </Button>
         <Link
-          href="/dashboard/clinic/messages"
+          href={messagesHref}
           className={buttonStyles({
             variant: "neutral",
             appearance: "fill-stroke",
@@ -240,155 +265,191 @@ function ContractDetails({
         </Link>
       </div>
 
-      {/* A request that vanishes on send is indistinguishable from one that
-          failed, so the latest one stays on the card. */}
+      {/* The latest request stays on the card, so a sent one is visible. */}
       {lastRequest ? (
         <p className="mt-inset-md text-body-sm text-fg-muted">
-          Change requested: {lastRequest.topic} ·{" "}
+          Change requested by{" "}
+          {billing.requesterLabel(lastRequest.requestedById)}:{" "}
+          {changeTopicLabel(lastRequest.topic)} ·{" "}
           {formatDate(new Date(lastRequest.requestedAt))}
+          {lastRequest.resolvedAt
+            ? ` · resolved ${formatDate(new Date(lastRequest.resolvedAt))}`
+            : " · open"}
         </p>
       ) : null}
     </Card>
   );
 }
 
-function InvoiceTable({
-  invoices,
-  onPay,
-  onDownload,
-}: {
-  invoices: Invoice[];
-  onPay: (invoices: Invoice[]) => void;
-  onDownload: (invoice: Invoice) => void;
-}) {
-  const owed = outstanding(invoices);
-  const unpaid = invoices.filter((invoice) => invoice.status !== "Paid");
+function InvoiceTable({ billing }: { billing: OfficeBilling }) {
+  const [opening, setOpening] = React.useState<string | null>(null);
+  const [linkError, setLinkError] = React.useState<unknown>(null);
+
+  const open = async (invoice: Invoice) => {
+    if (!billing.orgId) return;
+    setOpening(invoice.id);
+    setLinkError(null);
+    try {
+      const link = await invoiceDownloadLink(billing.orgId, invoice.id);
+      window.open(link.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setLinkError(error);
+    } finally {
+      setOpening(null);
+    }
+  };
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading
-        title="Invoices"
-        action={
-          /* Stripe is not wired up yet, so this carries the same
-             not-built marker as the download above rather than pretending
-             to take a payment. Disabled when there is nothing owed: a live
-             Pay button over a zero balance invites a double payment. */
-          <Button
-            size="small"
-            variant="neutral"
-            appearance="fill-stroke"
-            disabled={owed <= 0}
-            onClick={() => onPay(unpaid)}
-          >
-            <CreditCard aria-hidden="true" />
-            <span>{owed > 0 ? `Pay ${formatMoney(owed)}` : "Nothing due"}</span>
-          </Button>
+      <PanelHeading title="Invoices" />
+      {linkError ? (
+        <Alert tone="danger" className="mb-stack-md">
+          {actionErrorText(linkError)}
+        </Alert>
+      ) : null}
+      <AsyncSection
+        pending={billing.invoicesPending}
+        error={billing.invoicesError}
+        errorTitle={errorTitleFor(
+          billing.invoicesError,
+          "Invoices did not load",
+        )}
+        errorMessage={errorMessageFor(billing.invoicesError, undefined)}
+        onRetry={
+          canRetry(billing.invoicesError) ? billing.refetchInvoices : undefined
         }
-      />
-      <div className="overflow-hidden rounded-control border border-line">
-        <Table minWidth={560}>
-          <TableHead className="bg-surface-sunken">
-            <TableRow>
-              <TableHeaderCell>Invoice #</TableHeaderCell>
-              <TableHeaderCell>Billing Period</TableHeaderCell>
-              <TableHeaderCell>Issued</TableHeaderCell>
-              <TableHeaderCell>Due</TableHeaderCell>
-              <TableHeaderCell numeric>Amount</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {invoices.map((invoice) => (
-              <TableRow key={invoice.number}>
-                <TableCell emphasis className="whitespace-nowrap tabular-nums">
-                  {invoice.number}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {invoice.period}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {formatDate(invoice.issued)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {formatDate(invoice.due)}
-                </TableCell>
-                <TableCell numeric>{formatMoney(invoice.amount)}</TableCell>
-                <TableCell>
-                  <Badge tone={invoiceTone[invoice.status]}>
-                    {invoice.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="inline-flex items-center justify-end gap-inline-xs">
-                    {/* Only where money is actually owed. A Pay button on a
-                        settled invoice is how somebody pays twice. */}
-                    {invoice.status !== "Paid" ? (
-                      <Button
-                        size="small"
-                        iconOnly
-                        className={tableIconButton}
-                        aria-label={`Pay ${invoice.number}`}
-                        onClick={() => onPay([invoice])}
-                      >
-                        <CreditCard aria-hidden="true" />
-                      </Button>
-                    ) : null}
+        isEmpty={billing.invoices.length === 0}
+        skeleton={<Skeleton height={240} />}
+        empty={
+          <EmptyState
+            variant="bare"
+            title="No invoices yet"
+            description="Invoices appear here once NephroReach issues them."
+          />
+        }
+      >
+        <div className="overflow-hidden rounded-control border border-line">
+          <Table minWidth={560}>
+            <TableHead className="bg-surface-sunken">
+              <TableRow>
+                <TableHeaderCell>Invoice #</TableHeaderCell>
+                <TableHeaderCell>Billing Period</TableHeaderCell>
+                <TableHeaderCell>Issued</TableHeaderCell>
+                <TableHeaderCell>Due</TableHeaderCell>
+                <TableHeaderCell numeric>Amount</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Actions
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {billing.invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell
+                    emphasis
+                    className="whitespace-nowrap tabular-nums"
+                  >
+                    {invoice.number}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {invoice.period}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {formatDate(invoice.issued)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {formatDate(invoice.due)}
+                  </TableCell>
+                  <TableCell numeric>
+                    {formatCents(invoice.amountCents, invoice.currency)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge tone={invoiceTone[invoice.status]}>
+                      {invoice.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Button
                       variant="neutral"
                       appearance="fill-stroke"
                       size="small"
                       iconOnly
                       className={tableIconButton}
+                      disabled={!invoice.hasPdf || opening === invoice.id}
+                      title={
+                        invoice.hasPdf
+                          ? undefined
+                          : "No PDF has been issued for this invoice."
+                      }
                       aria-label={`Download ${invoice.number}`}
-                      onClick={() => onDownload(invoice)}
+                      onClick={() => void open(invoice)}
                     >
                       <Download aria-hidden="true" />
                     </Button>
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {billing.hasMoreInvoices ? (
+          <div className="flex justify-center pt-inset-md">
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={billing.loadMoreInvoices}
+            >
+              Show older invoices
+            </Button>
+          </div>
+        ) : null}
+      </AsyncSection>
     </Card>
   );
 }
 
-function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
-  const remaining = contract.patientsAllowed - patientsCovered;
+function SeatUsage({
+  seats,
+  enrollHref,
+}: {
+  seats: OfficeBilling["seats"];
+  enrollHref: string;
+}) {
+  const used = seats?.used ?? 0;
+  const allowed = seats?.allowed ?? null;
   return (
     <Card as="section" padding="small" className="flex flex-col">
       <PanelHeading title="Patient Seats" />
       <div className="flex items-center gap-inset-sm">
         <ProgressRing
-          value={(patientsCovered / contract.patientsAllowed) * 100}
+          value={allowed ? Math.min(100, (used / allowed) * 100) : 0}
           label="Contract seats in use"
           size={96}
         />
         <dl className="space-y-stack-xs">
           <div className="flex gap-inline-md">
             <dt className="text-body-sm text-fg-muted">Enrolled</dt>
-            <dd className="text-label-lg text-fg tabular-nums">
-              {patientsCovered}
-            </dd>
+            <dd className="text-label-lg text-fg tabular-nums">{used}</dd>
           </div>
           <div className="flex gap-inline-md">
             <dt className="text-body-sm text-fg-muted">Remaining</dt>
-            <dd className="text-label-lg text-fg tabular-nums">{remaining}</dd>
+            <dd className="text-label-lg text-fg tabular-nums">
+              {seats?.available ?? "—"}
+            </dd>
           </div>
           <div className="flex gap-inline-md">
             <dt className="text-body-sm text-fg-muted">Allowed</dt>
             <dd className="text-label-lg text-fg tabular-nums">
-              {contract.patientsAllowed}
+              {allowed ?? "No limit"}
             </dd>
           </div>
         </dl>
       </div>
       <div className="mt-auto pt-inset-md">
         <Link
-          href="/dashboard/clinic/enroll-patients"
+          href={enrollHref}
           className={buttonStyles({
             variant: "neutral",
             appearance: "fill-stroke",
@@ -404,23 +465,18 @@ function SeatUsage({ patientsCovered }: { patientsCovered: number }) {
   );
 }
 
-function Renewal({
-  today,
-  renewal,
-  onReview,
-}: {
-  today: Date;
-  renewal: string;
-  onReview: () => void;
-}) {
-  const days = daysUntilEnd(today);
-  const elapsed = termElapsedPct(today);
+function Renewal({ contract, today }: { contract: Contract; today: Date }) {
+  const end = contract.end;
+  const days = end ? daysUntilEnd(end, today) : null;
+  const elapsed = end ? termElapsedPct(contract.start, end, today) : 0;
   return (
     <Card as="section" padding="small" className="flex flex-col">
       <PanelHeading title="Renewal" />
       <div className="flex items-baseline justify-between gap-inline-md">
         <span className="text-body-sm text-fg-secondary">Term elapsed</span>
-        <span className="text-label-lg text-fg tabular-nums">{elapsed}%</span>
+        <span className="text-label-lg text-fg tabular-nums">
+          {end ? `${elapsed}%` : "—"}
+        </span>
       </div>
       <Progress
         value={elapsed}
@@ -434,7 +490,9 @@ function Renewal({
             aria-hidden="true"
             className="h-4 w-4 shrink-0 text-fg-muted"
           />
-          Ends {formatDate(localDate(contract.end))} · {days} days left
+          {end
+            ? `Ends ${formatDay(end)} · ${days} days left`
+            : "No end date set"}
         </li>
         <li className="flex items-center gap-inline-md text-body-sm text-fg">
           <RefreshCw
@@ -446,47 +504,45 @@ function Renewal({
             : "Does not renew automatically"}
         </li>
       </ul>
-      <div className="mt-auto pt-inset-md">
-        <Button
-          variant="neutral"
-          appearance="fill-stroke"
-          size="small"
-          fullWidth
-          onClick={onReview}
-        >
-          Review Renewal Options
-        </Button>
-        <p className="mt-inset-xs text-center text-body-sm text-fg-muted">
-          {renewal}
-        </p>
-      </div>
+      {/* NephroReach holds the renewal choice; an office reads it here and
+          asks for a change with "Request a Change". */}
+      <p className="mt-auto pt-inset-md text-body-sm text-fg-muted">
+        Renewal choice: {renewalLabel(contract.renewalChoice)}
+      </p>
     </Card>
   );
 }
 
 function BillingSummary({
-  invoices,
+  contract,
+  billing,
   today,
 }: {
-  invoices: Invoice[];
+  contract: Contract;
+  billing: OfficeBilling;
   today: Date;
 }) {
-  const next = nextInvoiceDate(today);
   const rows: [string, string][] = [
-    [`Paid in ${today.getFullYear()}`, formatMoney(totalPaid(invoices))],
-    ["Outstanding", formatMoney(outstanding(invoices))],
     [
-      "Next invoice",
-      next
-        ? `${formatDate(next)} · ${formatMoney(contract.monthlyFee)}`
-        : "None — contract ends",
+      `Paid in ${today.getFullYear()}`,
+      formatCents(totalPaidThisYear(billing.invoices, today)),
     ],
-    ["Invoices issued", String(invoices.length)],
+    ["Outstanding", formatCents(outstanding(billing.invoices))],
+    ["Billing cycle", contract.billingCycle],
+    [
+      "Invoices issued",
+      billing.invoicesTotal === null ? "—" : String(billing.invoicesTotal),
+    ],
   ];
 
   return (
     <Card as="section" padding="small">
-      <PanelHeading title="Billing Summary" />
+      <PanelHeading
+        title="Billing Summary"
+        description={
+          billing.hasMoreInvoices ? "From the invoices shown." : undefined
+        }
+      />
       <dl className="divide-y divide-line-subtle">
         {rows.map(([term, value]) => (
           <div
@@ -506,147 +562,135 @@ function BillingSummary({
 
 export default function ClinicBilling({
   href = "/dashboard/clinic/billing",
-  covered: coveredOverride,
 }: {
   /** The page in the signed-in office's own menu. */
   href?: string;
-  /** Patients covered, when the office counts its own (a hospital). */
-  covered?: number;
 } = {}) {
-  /* Invoices, the renewal countdown and "this month" all hang off today's
-     date. This page is prerendered at build time, so reading the clock
-     during that render would bake in the build date and then disagree with
-     the browser on hydration. Read it once the page is in the browser. */
+  /* "This month" and the renewal countdown hang off today's date. This page
+     is prerendered at build time, so the clock is read once the page is in
+     the browser. */
   const mounted = useIsMounted();
-  /* Seats in use come from the live roster, so a patient enrolled on Enroll
-     Patients counts here at once; the demo count stands in until it loads. */
-  const clinic = useClinicData();
-  const covered =
-    coveredOverride ?? clinic.data?.patients.length ?? patientsCovered;
   const today = mounted ? new Date() : null;
-
-  /* What this clinic has done here — payments made, changes asked for, the
-     renewal choice. The invoices themselves stay derived from the contract;
-     payments are folded in on read so there is still one source of truth
-     for what was billed. */
-  const billing = useBillingActions();
-  const { settings } = useClinicSettings();
-  const invoices = today
-    ? applyPayments(invoicesUpTo(today), billing.paidInvoices)
-    : [];
+  const billing = useOfficeBilling();
+  const office = useOfficeOrg();
+  const canRequest = office.can("billing", 2);
+  const hospital = href.startsWith("/dashboard/hospital");
 
   const [contractOpen, setContractOpen] = React.useState(false);
   const [changeOpen, setChangeOpen] = React.useState(false);
-  const [renewalOpen, setRenewalOpen] = React.useState(false);
-  const [paying, setPaying] = React.useState<Invoice[] | null>(null);
 
-  const lastRequest = billing.changeRequests[0];
-  const owedNow = outstanding(invoices);
+  const contract = billing.contract;
+  const closeChange = () => {
+    billing.resetSend();
+    setChangeOpen(false);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Pay Now up top, the page's one primary action (client,
-          2026-10-06). It pays everything still owed; Stripe takes the
-          card on the live site. */}
-      <PageTitle
-        href={href}
-        action={
-          <Button
-            leadingIcon={<CreditCard aria-hidden="true" />}
-            disabled={owedNow <= 0}
-            title={owedNow > 0 ? undefined : "Nothing is due right now"}
-            onClick={() =>
-              setPaying(invoices.filter((invoice) => invoice.status !== "Paid"))
-            }
-          >
-            {owedNow > 0 ? `Pay Now · ${formatMoney(owedNow)}` : "Pay Now"}
-          </Button>
-        }
-      />
+      <PageTitle href={href} />
 
-      {today === null ? (
-        <div className="space-y-4" aria-busy="true">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} height={164} className="rounded-card" />
-            ))}
+      <AsyncSection
+        pending={billing.isPending || today === null}
+        error={billing.error}
+        errorTitle={errorTitleFor(billing.error, "Billing did not load")}
+        errorMessage={errorMessageFor(billing.error, undefined)}
+        onRetry={canRetry(billing.error) ? billing.refetch : undefined}
+        isEmpty={contract === null}
+        skeleton={
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
+              {Array.from({ length: 4 }, (_, index) => (
+                <Skeleton key={index} height={164} className="rounded-card" />
+              ))}
+            </div>
+            <Skeleton height={480} className="rounded-card" />
           </div>
-          <Skeleton height={480} className="rounded-card" />
-        </div>
-      ) : (
-        <>
-          <SummaryCards
-            invoices={invoices}
-            today={today}
-            patientsCovered={covered}
+        }
+        empty={
+          <EmptyState
+            title="No contract"
+            description={
+              billing.pendingContract
+                ? `A contract starts ${formatDay(billing.pendingContract.start)}.`
+                : "This office has no NephroReach contract yet."
+            }
           />
+        }
+      >
+        {contract && today ? (
+          <>
+            {billing.pendingContract ? (
+              <Alert tone="info">
+                A new contract ({billing.pendingContract.number}) starts{" "}
+                {formatDay(billing.pendingContract.start)}.
+              </Alert>
+            ) : null}
 
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <ContractDetails
-              onViewContract={() => setContractOpen(true)}
-              onRequestChange={() => setChangeOpen(true)}
-              lastRequest={
-                lastRequest
-                  ? {
-                      topic: changeTopicLabel(lastRequest.topic),
-                      requestedAt: lastRequest.requestedAt,
-                    }
-                  : undefined
-              }
+            <SummaryCards
+              contract={contract}
+              invoices={billing.invoices}
+              today={today}
+              seats={billing.seats}
             />
-            <div className="xl:col-span-2">
-              <InvoiceTable
-                invoices={invoices}
-                onPay={(unpaid) => setPaying(unpaid)}
-                onDownload={(invoice) =>
-                  downloadInvoice(invoice, settings.profile.name)
+
+            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ContractDetails
+                contract={contract}
+                billing={billing}
+                canRequest={canRequest}
+                messagesHref={
+                  hospital
+                    ? "/dashboard/hospital/messages"
+                    : "/dashboard/clinic/messages"
+                }
+                onViewContract={() => setContractOpen(true)}
+                onRequestChange={() => setChangeOpen(true)}
+              />
+              <div className="xl:col-span-2">
+                <InvoiceTable billing={billing} />
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <SeatUsage
+                seats={billing.seats}
+                enrollHref={
+                  hospital
+                    ? "/dashboard/hospital/patients"
+                    : "/dashboard/clinic/enroll-patients"
                 }
               />
-            </div>
-          </section>
+              <Renewal contract={contract} today={today} />
+              <BillingSummary
+                contract={contract}
+                billing={billing}
+                today={today}
+              />
+            </section>
 
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            <SeatUsage patientsCovered={covered} />
-            <Renewal
-              today={today}
-              renewal={renewalLabel(billing.renewal)}
-              onReview={() => setRenewalOpen(true)}
+            <ContractDocumentModal
+              open={contractOpen}
+              onClose={() => setContractOpen(false)}
+              clinicName={billing.profile?.name ?? ""}
+              contract={contract}
             />
-            <BillingSummary invoices={invoices} today={today} />
-          </section>
 
-          {/* The dialogs behind the four actions above. Each is keyed on
-              open so a reopened form starts clean, with no effect syncing
-              a draft back to props. */}
-          <ContractDocumentModal
-            open={contractOpen}
-            onClose={() => setContractOpen(false)}
-            clinicName={settings.profile.name}
-          />
-
-          <RequestChangeModal
-            key={`change-${changeOpen}`}
-            open={changeOpen}
-            onClose={() => setChangeOpen(false)}
-            onSubmit={billing.requestChange}
-          />
-
-          <PayInvoiceModal
-            open={paying !== null}
-            onClose={() => setPaying(null)}
-            invoices={paying ?? []}
-            onPaid={billing.pay}
-          />
-
-          <RenewalOptionsModal
-            key={`renewal-${renewalOpen}`}
-            open={renewalOpen}
-            onClose={() => setRenewalOpen(false)}
-            current={billing.renewal}
-            onChoose={billing.setRenewal}
-          />
-        </>
-      )}
+            <RequestChangeModal
+              key={`change-${changeOpen}`}
+              open={changeOpen}
+              onClose={closeChange}
+              saving={billing.isSending}
+              error={billing.sendError}
+              onSubmit={(topic, detail) =>
+                billing.requestChange(
+                  { topic, detail },
+                  { onSuccess: closeChange },
+                )
+              }
+            />
+          </>
+        ) : null}
+      </AsyncSection>
     </div>
   );
 }
