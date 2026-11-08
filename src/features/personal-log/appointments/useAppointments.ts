@@ -100,7 +100,7 @@ export function useAppointments(explicitScope?: PatientScope | null) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: featureKey }),
   });
 
-  const { mutate, reset } = write;
+  const { mutate, mutateAsync, reset } = write;
 
   return {
     appointments: query.data ?? NO_APPOINTMENTS,
@@ -127,6 +127,22 @@ export function useAppointments(explicitScope?: PatientScope | null) {
       (id: string, draft: rules.AppointmentDraft) =>
         mutate({ kind: "update", id, draft }),
       [mutate],
+    ),
+    /* The form's save: resolves once the server has the booking and
+       rejects when it refused it, so the form stays open with the error
+       and a step that depends on it (marking the missed visit
+       rescheduled) runs only after it succeeded. */
+    addAsync: useCallback(
+      async (draft: rules.AppointmentDraft) => {
+        await mutateAsync({ kind: "add", draft });
+      },
+      [mutateAsync],
+    ),
+    updateAsync: useCallback(
+      async (id: string, draft: rules.AppointmentDraft) => {
+        await mutateAsync({ kind: "update", id, draft });
+      },
+      [mutateAsync],
     ),
     remove: useCallback(
       (id: string) => mutate({ kind: "remove", id }),

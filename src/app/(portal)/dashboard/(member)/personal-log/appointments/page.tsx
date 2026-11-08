@@ -31,6 +31,7 @@ import {
 } from "@/components/ui";
 import {
   appointmentError,
+  canAnswerAttendance,
   draftOf,
   awaitingAnswer,
   REMINDER_LEADS,
@@ -185,7 +186,9 @@ function DetailsModal({
   isEs: boolean;
   /** The day has gone by, so "did you go?" can be answered. */
   isPast: boolean;
-  onAttendance: (attendance: Attendance) => void;
+  /** Absent when the answer has nowhere to go yet: an access visit the
+   *  server has not copied into the member's list. */
+  onAttendance?: (attendance: Attendance) => void;
   /** Absent for an appointment that belongs to another record. */
   onEdit?: () => void;
   /** Absent for an appointment that belongs to another record. */
@@ -277,7 +280,14 @@ function DetailsModal({
               : "Delete this appointment? This cannot be undone."}
           </Alert>
         ) : null}
-        {isPast ? (
+        {isPast && !onAttendance ? (
+          <p className="text-caption text-fg-muted">
+            {isEs
+              ? "Aún no disponible: podrá responder si fue a esta cita cuando el centro de acceso la agregue a su lista."
+              : "Not available yet: you can say whether you went once the access center adds this visit to your list."}
+          </p>
+        ) : null}
+        {isPast && onAttendance ? (
           <SegmentedChoice<Attendance | null>
             label={
               isEs ? "¿Fue a esta cita?" : "Did you go to this appointment?"
@@ -472,14 +482,27 @@ export default function AppointmentsPage() {
           : "This is needed"
       : undefined;
 
-  function save(e: React.FormEvent) {
+  /* One step at a time: the booking first, and only once the server has
+     it is the missed visit marked rescheduled. A refused booking keeps the
+     form open with the member's draft and the error. */
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     setTried(true);
-    if (error) return;
-    if (editingId) store.update(editingId, draft);
-    else store.add(draft);
-    if (reschedulingId) store.markRescheduled(reschedulingId);
+    if (error || store.isSaving) return;
+    const replaces = reschedulingId;
+    try {
+      if (editingId) await store.updateAsync(editingId, draft);
+      else await store.addAsync(draft);
+    } catch {
+      return;
+    }
     closeForm();
+    if (replaces) store.markRescheduled(replaces);
+  }
+
+  function openForm() {
+    store.dismissSaveError();
+    setIsModalOpen(true);
   }
 
   function closeForm() {
@@ -497,7 +520,7 @@ export default function AppointmentsPage() {
     setReschedulingId(appointment.id);
     setTried(false);
     setOpenId(null);
-    setIsModalOpen(true);
+    openForm();
   }
 
   function openEdit(appointment: Appointment) {
@@ -505,7 +528,7 @@ export default function AppointmentsPage() {
     setEditingId(appointment.id);
     setTried(false);
     setOpenId(null);
-    setIsModalOpen(true);
+    openForm();
   }
 
   const shown = showAll ? ahead : ahead.slice(0, 3);
@@ -516,7 +539,7 @@ export default function AppointmentsPage() {
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
-        <Button onClick={() => setIsModalOpen(true)} leadingIcon={<Plus />}>
+        <Button onClick={openForm} leadingIcon={<Plus />}>
           {t("appointments.addAppointment")}
         </Button>
       </header>
@@ -686,8 +709,10 @@ export default function AppointmentsPage() {
           appointment={opened}
           isEs={isEs}
           isPast={opened.date < today}
-          onAttendance={(attendance) =>
-            store.setAttendance(opened.id, attendance)
+          onAttendance={
+            canAnswerAttendance(opened)
+              ? (attendance) => store.setAttendance(opened.id, attendance)
+              : undefined
           }
           onClose={() => setOpenId(null)}
           onEdit={opened.source ? undefined : () => openEdit(opened)}
@@ -731,7 +756,11 @@ export default function AppointmentsPage() {
             >
               {t("appointments.cancel")}
             </Button>
-            <Button type="submit" form="appointment-form">
+            <Button
+              type="submit"
+              form="appointment-form"
+              loading={store.isSaving}
+            >
               {editingId
                 ? isEs
                   ? "Guardar Cambios"
@@ -743,10 +772,22 @@ export default function AppointmentsPage() {
       >
         <form
           id="appointment-form"
-          onSubmit={save}
+          onSubmit={(e) => void save(e)}
           noValidate
           className="space-y-stack-lg"
         >
+          {store.saveError ? (
+            <Alert
+              tone="danger"
+              title={
+                isEs
+                  ? "No se pudo guardar el cambio"
+                  : "That change did not save"
+              }
+            >
+              {saveErrorText(store.saveError, isEs ? "es" : "en")}
+            </Alert>
+          ) : null}
           <FormField
             label={t("appointments.specialtyLabel")}
             required

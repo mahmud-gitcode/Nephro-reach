@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   renderHook,
   screen,
@@ -354,5 +355,131 @@ describe("the Appointments page", () => {
       await screen.findByText("Your appointments could not be loaded"),
     ).toBeInTheDocument();
     expect(screen.queryByText("No upcoming appointments")).toBeNull();
+  });
+
+  /* QA-SEC P15c round 1, low 2: an access visit with no server copy yet
+     has no row for "did you go?" (the PATCH would be a 404). */
+  it("does not offer 'did you go?' on an access visit the server has not copied yet", async () => {
+    const profile = {
+      id: "p-1",
+      patientId: JOHN_ID,
+      accessCenter: { id: "o-1", name: "Test Access Center" },
+      dialysisCenter: null,
+      type: "AV fistula",
+      location: "Left arm",
+      createdOn: null,
+      status: "active",
+      lastAssessmentOn: null,
+      dialysisCanPost: false,
+      party: "member",
+      unread: 0,
+      createdAt: "2026-11-01T10:00:00.000Z",
+      updatedAt: "2026-11-01T10:00:00.000Z",
+    };
+    const { calls } = stubApi((c) => {
+      if (isList(c)) return pageOf([]);
+      if (c.path === `/patients/${JOHN_ID}/access-profiles`)
+        return pageOf([profile]);
+      if (c.path === `/patients/${JOHN_ID}/access-profiles/p-1/appointments`)
+        return pageOf([
+          {
+            id: "v-1",
+            profileId: "p-1",
+            date: inDays(-2),
+            time: "09:00",
+            title: "Access Test Check",
+            place: "Test Access Center",
+            team: "vascular",
+            completedAt: null,
+            result: null,
+            performedBy: null,
+            transportStatus: null,
+            createdAt: "2026-11-01T10:00:00.000Z",
+          },
+        ]);
+      return undefined;
+    });
+    render(<AppointmentsPage />, { wrapper });
+    fireEvent.click(await screen.findByRole("button", { name: /view all/i }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /Access Test Check/,
+      }),
+    );
+    expect(
+      await screen.findByText(
+        /Not available yet: you can say whether you went/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Did you go to this appointment?")).toBeNull();
+    expect(calls.filter((c) => c.path.endsWith("/attendance"))).toEqual([]);
+  });
+
+  /* QA-SEC P15c round 1, low 3: the new booking first; the missed visit
+     is marked rescheduled only after the server has it. */
+  async function rescheduleWith(postReply: () => ReturnType<typeof apiError>) {
+    const missed = row({ date: inDays(-3), attendance: "missed" });
+    const stub = stubApi((c) => {
+      if (isList(c))
+        return pageOf(c.query.get("order") === "asc" ? [] : [missed]);
+      if (c.method === "POST" && c.path === `/patients/${JOHN_ID}/appointments`)
+        return postReply();
+      if (c.method !== "GET") return { data: row() };
+      return undefined;
+    });
+    render(<AppointmentsPage />, { wrapper });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add the new date" }),
+    );
+    fireEvent.change(await screen.findByLabelText(/^Date/), {
+      target: { value: inDays(4) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Appointment" }));
+    return { ...stub, missed };
+  }
+
+  it("a refused booking keeps the form open and does not mark the missed visit", async () => {
+    const { calls } = await rescheduleWith(() =>
+      apiError(403, "access.forbidden"),
+    );
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.method === "POST" &&
+            c.path === `/patients/${JOHN_ID}/appointments`,
+        ),
+      ).toBe(true),
+    );
+    expect(
+      (await screen.findAllByText("That change did not save")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Save Appointment" }),
+    ).toBeVisible();
+    expect(
+      (screen.getByLabelText(/^Specialty/) as HTMLInputElement).value,
+    ).toBe("Nephrology Test Visit");
+    expect(calls.filter((c) => c.path.endsWith("/rescheduled"))).toEqual([]);
+  });
+
+  it("marks the missed visit rescheduled only after the booking is saved", async () => {
+    const { calls, missed } = await rescheduleWith(() => ({ data: row() }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.path.endsWith("/rescheduled"))).toBe(true),
+    );
+    const writes = calls
+      .filter((c) => c.method !== "GET")
+      .map((c) => `${c.method} ${c.path}`);
+    const base = `/patients/${JOHN_ID}/appointments`;
+    expect(writes).toEqual([
+      `POST ${base}`,
+      `POST ${base}/${missed.id}/rescheduled`,
+    ]);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Save Appointment" }),
+      ).toBeNull(),
+    );
   });
 });

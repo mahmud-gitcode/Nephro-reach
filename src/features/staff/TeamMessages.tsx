@@ -51,7 +51,7 @@ import {
    which only a role with staff View may read. Without it the card still
    lists the messages and lets the person reply, but starting a new message
    is shown disabled with the D52 "not available yet" note (no colleague
-   directory route for team messages; decision recorded by P15c).
+   directory route for team messages; decision D75).
    ========================================================================== */
 
 const STAFF_PAGE = { page: 1, limit: 150 } as const;

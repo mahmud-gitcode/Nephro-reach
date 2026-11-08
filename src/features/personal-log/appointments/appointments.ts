@@ -229,3 +229,13 @@ export function notCopiedYet(
   );
   return access.filter((a) => !copied.has(a.id));
 }
+
+/**
+ * Whether "did you go?" can be answered for this visit. An access-center
+ * visit the server has not copied into the member's list yet (no
+ * `sourceId`) has no row to record the answer on, so it is not offered
+ * (the server would refuse it with 404).
+ */
+export function canAnswerAttendance(appointment: Appointment): boolean {
+  return !(appointment.source === "vascular-access" && !appointment.sourceId);
+}

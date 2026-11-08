@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAnswerAttendance,
   icsFor,
   notCopiedYet,
   remindersDue,
@@ -36,6 +37,16 @@ describe("appointments from the Vascular Access record", () => {
   it("never hides an access visit behind the member's own appointment", () => {
     const own = { ...visit({ id: "appt-1" }), source: undefined };
     expect(notCopiedYet([own], [visit()])).toEqual([visit()]);
+  });
+
+  it("asks 'did you go?' only where the server has a row to record it", () => {
+    expect(canAnswerAttendance(visit())).toBe(false);
+    expect(
+      canAnswerAttendance(visit({ id: "appt-uuid-1", sourceId: "1" })),
+    ).toBe(true);
+    expect(
+      canAnswerAttendance({ ...visit({ id: "appt-1" }), source: undefined }),
+    ).toBe(true);
   });
 });
 
