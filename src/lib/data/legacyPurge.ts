@@ -343,6 +343,30 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 10,
     why: "Phase 9: the condition library is GET/POST/PUT/PATCH/DELETE /organizations/:orgId/ccm/conditions. No screen reads this key.",
   },
+  /* Phase 11 (COLLAB, STORAGE_VERSION 12): messaging, outside shares and
+     support are the API's. */
+  {
+    name: "support-tickets",
+    since: 12,
+    why: "Phase 11: tickets are /me/support-tickets (the requester) and /platform/support-tickets (the NephroReach team), with server uuids; organization requests are /platform/support-info-requests, so `contacted` is gone too. The stored tickets held requesters' names and emails. No screen reads this key.",
+  },
+  {
+    name: "messaging",
+    since: 12,
+    why: "Phase 11: member and office conversations are /patients/:id/conversations and /organizations/:id/conversations (found by id, never by a member's name; read, flag and archive state per thread on the server; the after-hours reply is the server's). The stored threads held patients' messages, names, MRNs and data: attachments. No screen reads this key.",
+  },
+  {
+    name: "outside-shares",
+    since: 12,
+    why: "Phase 11: outside shares are /patients/:id/outside-shares and /organizations/:id/outside-shares; the link is made and emailed by the server and opened through /shared/:token with an emailed code and a share session held in memory only. The stored shares held link tokens, recipients' emails and data: attachments. No screen reads this key.",
+  },
+  /* Phase 10 (OFFICE, STORAGE_VERSION 11): vascular access, rides and
+     referrals are the API's (BE modules/vascular-access). */
+  {
+    name: "vascular-access",
+    since: 11,
+    why: "Phase 10: access records are /patients/:id/access-profiles and /organizations/:id/access-profiles (several per patient, the viewer's party from the server, private messages sent hidden), rides are …/transport and the office queue /organizations/:id/transport, referrals are /organizations/:id/referrals with directory ids. The old key held every patient's record in one browser, matched by MRN and name, with data: URL photos; the seed (seedAccessState) is deleted. No screen reads this key.",
+  },
   /* Phase 14a (EDU-BIZ, STORAGE_VERSION 14): the hospital portal is the
      API's (BE modules/education program enrollments, modules/reports). */
   {

@@ -23,32 +23,44 @@ import {
   Textarea,
   type BadgeTone,
 } from "@/components/ui";
+import { isApiError } from "@/lib/api/client";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import * as messaging from "@/features/messaging/messaging.rules";
+import { useDirectory } from "@/features/profile/directory";
 import {
-  ACCESS_CENTER_NAME,
+  ACCESS_CENTER_REFERRAL_KINDS,
   CONCERN_KINDS,
   REFERRAL_KINDS,
-  SOURCE_LABEL,
-  receiverOf,
-  unreadFor,
-  type AccessRecord,
   type AccessReferral,
-  type ReferralInput,
+  type AccessRosterRow,
   type ReferralKind,
   type ReferralSource,
   type ReferralStatus,
 } from "@/features/vascular-access/vascularAccess.data";
 import {
-  useVascularAccess,
-  type VascularAccessStore,
-} from "@/features/vascular-access/useVascularAccess";
+  useAccessActions,
+  useAccessRecord,
+  useAccessRoster,
+  useOfficeOrgId,
+  useOfficeTarget,
+} from "@/features/vascular-access/useAccess";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { UpdatedBar } from "./UpdatedBar";
-import { useClinicData } from "./useClinicData";
 import { AccessConversationView } from "@/features/vascular-access/AccessUi";
+import {
+  useOfficePatients,
+  useReferral,
+  useReferralActions,
+  useReferrals,
+  type ReferralActions,
+} from "./useAccessReferrals";
 
 /* ==========================================================================
    Referrals and office messages — staff to staff, without the patient
@@ -62,9 +74,11 @@ import { AccessConversationView } from "@/features/vascular-access/AccessUi";
    Every one is a thread: who wrote first, about which patient (or none,
    for a general message), and the replies. The patient never sees them.
 
-   Each office signs into its own portal (client, 2026-10-03): the
-   dialysis center (clinic portal) and the nephrology office (nephrology
-   portal) each see only their own threads with the access center.
+   On the API (Phase 10): `/organizations/:orgId/referrals`. The server
+   gives each office only its own threads; the other office is picked by
+   its directory id, the patient by id from this office's roster (the MRN
+   is never sent). Which offices may be written to is the server's rule
+   (D11 / COLLAB-3 open: the directory lists what the backend allows).
    Access center: acknowledges, schedules or closes; can write first.
    ========================================================================== */
 
@@ -89,33 +103,25 @@ function findingsLabel(ids: string[]) {
 
 /** The thread's name in a list: its patient, or "General message". */
 function subjectOf(referral: AccessReferral) {
-  return referral.memberName || "General message";
+  return referral.patient?.name || "General message";
 }
 
-/** Who wrote first, as the thread's first message. */
-function openerOf(referral: AccessReferral): "access" | ReferralSource {
-  return referral.startedBy ?? referral.source;
+/** The office on the other side of the thread from this one. */
+function otherOffice(referral: AccessReferral, side: Side) {
+  return side === "access" ? referral.from : referral.to;
 }
 
-function orgName(party: "access" | ReferralSource) {
-  return party === "access" ? ACCESS_CENTER_NAME : SOURCE_LABEL[party];
-}
-
-/** The threads a side may see: all of them for the access center, its
- *  own for an office. */
-export function threadsFor(
-  referrals: AccessReferral[],
-  side: Side,
-): AccessReferral[] {
-  return side === "access"
-    ? referrals
-    : referrals.filter((r) => r.source === side);
-}
-
-/** Waiting on this side: new, and addressed to it. */
-function waitingOn(referral: AccessReferral, side: Side) {
-  const receiver = receiverOf(referral);
-  return referral.status === "New" && receiver === side;
+/** Why a send was refused, in words that say what to do. */
+export function referralRefusal(error: unknown, side: Side): string {
+  if (isApiError(error, { status: 404 })) {
+    if (error.code?.endsWith("referral_patient_not_linked"))
+      return side === "access"
+        ? "This patient is not linked to both your center and the office you chose."
+        : "This patient is not linked to your office.";
+  }
+  return isApiError(error) && error.messages[0]
+    ? error.messages[0]
+    : "That did not send. Try again.";
 }
 
 /* ------------------------------------------------------------------ list */
@@ -138,9 +144,8 @@ function ReferralList({
   return (
     <ul className="divide-y divide-line-subtle">
       {referrals.map((referral) => {
-        const last = referral.replies.at(-1);
-        const opener = openerOf(referral);
-        const waiting = waitingOn(referral, side);
+        const waiting = referral.waitingOnYou;
+        const sentBy = referral.sentBy ?? "";
         return (
           <li key={referral.id} className="py-inset-xs first:pt-0 last:pb-0">
             <button
@@ -171,19 +176,16 @@ function ReferralList({
                 </span>
                 <span className="block text-caption text-fg-muted">
                   {side === "access"
-                    ? opener === "access"
-                      ? `To ${SOURCE_LABEL[referral.source]}`
-                      : `${SOURCE_LABEL[referral.source]} · ${referral.sentBy}`
-                    : opener === "access"
-                      ? `From ${ACCESS_CENTER_NAME}`
-                      : `Sent by ${referral.sentBy}`}
+                    ? referral.startedByAccess
+                      ? `To ${referral.from.name}`
+                      : `${referral.from.name}${sentBy ? ` · ${sentBy}` : ""}`
+                    : referral.startedByAccess
+                      ? `From ${referral.to.name}`
+                      : `Sent by ${sentBy || referral.from.name}`}
                   {" · "}
-                  {messaging.relativeLabel(
-                    last?.sentAt ?? referral.sentAt,
-                    now,
-                  )}
-                  {referral.replies.length > 0
-                    ? ` · ${referral.replies.length} repl${referral.replies.length === 1 ? "y" : "ies"}`
+                  {messaging.relativeLabel(referral.sentAt, now)}
+                  {referral.replyCount > 0
+                    ? ` · ${referral.replyCount} repl${referral.replyCount === 1 ? "y" : "ies"}`
                     : ""}
                 </span>
               </span>
@@ -202,12 +204,17 @@ function ReferralList({
 
 export function ReferralsPanel({
   referrals,
+  error,
+  onRetry,
   side,
   canSend,
   onSend,
   onOpen,
 }: {
   referrals: AccessReferral[];
+  /** A failed read is never shown as "nothing open". */
+  error?: unknown;
+  onRetry?: () => void;
   /** "access" sees every office; an office only its own threads. */
   side: Side;
   canSend: boolean;
@@ -237,63 +244,99 @@ export function ReferralsPanel({
       <p className="mb-stack-md text-caption text-fg-muted">
         {side === "access"
           ? "Straight from the dialysis center and the nephrology office. Staff only — the patient does not see these."
-          : `Concerns, referrals and messages with ${ACCESS_CENTER_NAME}. Staff only — the patient does not see these.`}
+          : "Concerns, referrals and messages with the access center. Staff only — the patient does not see these."}
       </p>
-      <ReferralList
-        referrals={referrals.filter((r) => r.status !== "Closed")}
-        side={side}
-        onOpen={onOpen}
-        empty={
-          side === "access"
-            ? "No open referrals."
-            : "Nothing open with the access center."
-        }
-      />
+      {error ? (
+        <ErrorState
+          title={errorTitleFor(error, "Referrals could not be loaded")}
+          message={errorMessageFor(error, undefined)}
+          error={error}
+          onRetry={canRetry(error) ? onRetry : undefined}
+        />
+      ) : (
+        <ReferralList
+          referrals={referrals.filter((r) => r.status !== "Closed")}
+          side={side}
+          onOpen={onOpen}
+          empty={
+            side === "access"
+              ? "No open referrals."
+              : "Nothing open with the access center."
+          }
+        />
+      )}
     </Card>
   );
 }
 
 /* ------------------------------------------------------------- send form */
 
+export type ReferralPatient = {
+  patientId: string;
+  name: string;
+  mrn: string | null;
+};
+
 export function SendReferralModal({
   side,
+  orgId,
   patients,
-  initialMrn,
+  patientsError,
+  initialPatientId,
   initialKind,
-  me,
-  onSend,
+  onSent,
   onClose,
 }: {
   side: Side;
-  patients: Array<{ name: string; mrn: string }>;
-  initialMrn?: string;
+  /** The active office: the referral is sent under its id. */
+  orgId: string | null;
+  /** This office's patients (its roster), by id. */
+  patients: ReferralPatient[];
+  patientsError?: unknown;
+  initialPatientId?: string;
   initialKind?: ReferralKind;
-  /** Who is sending. */
-  me: string;
-  onSend: (input: ReferralInput) => void;
+  onSent?: () => void;
   onClose: () => void;
 }) {
-  const kinds =
+  const actions = useReferralActions(orgId);
+  const directory = useDirectory();
+  /* The access center may start only these two (the server's rule; a
+     hint here). */
+  const kinds: readonly ReferralKind[] =
+    side === "access" ? ACCESS_CENTER_REFERRAL_KINDS : REFERRAL_KINDS;
+  /* The access center picks which kind of office, then which office. */
+  const [officeKind, setOfficeKind] = useState<ReferralSource>("dialysis");
+  const targets = directory.offices.filter((office) =>
     side === "access"
-      ? (["General Message", "Appointment Request"] as ReferralKind[])
-      : [...REFERRAL_KINDS];
-  /* An office always writes as itself; the access center picks one. */
-  const [office, setOffice] = useState<ReferralSource>(
-    side === "access" ? "dialysis" : side,
+      ? office.type ===
+        (officeKind === "dialysis" ? "DIALYSIS_CENTER" : "NEPHROLOGY_OFFICE")
+      : office.type === "ACCESS_CENTER",
   );
-  const [kind, setKind] = useState<ReferralKind>(initialKind ?? kinds[0]);
-  const [mrn, setMrn] = useState(
-    initialMrn ?? (kind === "General Message" ? "" : (patients[0]?.mrn ?? "")),
+  const [toId, setToId] = useState("");
+  const chosenTo = targets.some((t) => t.id === toId)
+    ? toId
+    : (targets[0]?.id ?? "");
+  const [kind, setKind] = useState<ReferralKind>(
+    initialKind && kinds.includes(initialKind) ? initialKind : kinds[0],
+  );
+  const [patientId, setPatientId] = useState(
+    initialPatientId ??
+      (kind === "General Message" ? "" : (patients[0]?.patientId ?? "")),
   );
   const [findings, setFindings] = useState<string[]>([]);
   const [detail, setDetail] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [tried, setTried] = useState(false);
+  const [failed, setFailed] = useState<unknown>(null);
   const general = kind === "General Message";
-  const patient = patients.find((p) => p.mrn === mrn);
+  const patient = patients.find((p) => p.patientId === patientId);
   const patientError =
-    patient || (general && mrn === "") ? undefined : "Choose the patient.";
+    patient || (general && patientId === "")
+      ? undefined
+      : "Choose the patient.";
   const detailError = detail.trim() ? undefined : "Write your message.";
+  const toError = chosenTo ? undefined : "Choose who it goes to.";
+  const targetName = targets.find((t) => t.id === chosenTo)?.name;
 
   function toggle(id: string) {
     setFindings((current) =>
@@ -309,7 +352,7 @@ export function SendReferralModal({
       description={
         side === "access"
           ? "Goes to the office you choose. The patient does not see it."
-          : `Goes straight to ${ACCESS_CENTER_NAME}. The patient does not see it.`
+          : `Goes straight to ${targetName ?? "the access center"}. The patient does not see it.`
       }
       footer={
         <>
@@ -318,21 +361,23 @@ export function SendReferralModal({
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
-            onClick={() => {
+            disabled={actions.isSaving}
+            onClick={async () => {
               setTried(true);
-              if (patientError || detailError) return;
-              onSend({
-                source: office,
-                ...(side === "access" ? { startedBy: "access" as const } : {}),
-                sentBy: me,
-                memberName: patient?.name ?? "",
-                mrn: patient?.mrn ?? "",
+              if (patientError || detailError || toError) return;
+              setFailed(null);
+              const ok = await actions.send({
+                toOrganizationId: chosenTo,
                 kind,
+                patientId: patient?.patientId ?? null,
                 findings,
                 detail,
                 urgent,
               });
-              onClose();
+              if (ok) {
+                onSent?.();
+                onClose();
+              } else setFailed(true);
             }}
           >
             Send
@@ -341,16 +386,58 @@ export function SendReferralModal({
       }
     >
       <div className="space-y-stack-md">
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(null)}>
+            {referralRefusal(actions.error ?? failed, side)}
+          </Alert>
+        ) : null}
+        {directory.error ? (
+          <Alert tone="danger">
+            {errorMessageFor(
+              directory.error,
+              "The office directory could not be loaded.",
+            )}
+          </Alert>
+        ) : null}
         {side === "access" ? (
           <SegmentedChoice
             label="Send to"
-            value={office}
-            onChange={(next: ReferralSource) => setOffice(next)}
+            value={officeKind}
+            onChange={(next: ReferralSource) => {
+              setOfficeKind(next);
+              setToId("");
+            }}
             options={[
               { value: "dialysis", label: "Dialysis Center" },
               { value: "nephrology", label: "Nephrology Office" },
             ]}
           />
+        ) : null}
+        {side === "access" || targets.length !== 1 ? (
+          <FormField
+            label={side === "access" ? "Office" : "Access center"}
+            required
+            error={tried ? toError : undefined}
+          >
+            {(field) => (
+              <Select
+                {...field}
+                value={chosenTo}
+                onChange={(e) => setToId(e.target.value)}
+              >
+                {targets.length === 0 ? (
+                  <option value="">
+                    {directory.isPending ? "Loading…" : "None listed"}
+                  </option>
+                ) : null}
+                {targets.map((office) => (
+                  <option key={office.id} value={office.id}>
+                    {office.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
         ) : null}
         <div className="grid gap-stack-md sm:grid-cols-2">
           <FormField label="Type" required>
@@ -374,23 +461,32 @@ export function SendReferralModal({
             {(field) => (
               <Select
                 {...field}
-                value={mrn}
-                onChange={(e) => setMrn(e.target.value)}
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
               >
-                {general || mrn === "" ? (
+                {general || patientId === "" ? (
                   <option value="">
                     {general ? "No specific patient" : "Choose a patient"}
                   </option>
                 ) : null}
                 {patients.map((p) => (
-                  <option key={p.mrn} value={p.mrn}>
-                    {p.name} · MRN {p.mrn}
+                  <option key={p.patientId} value={p.patientId}>
+                    {p.name}
+                    {p.mrn ? ` · MRN ${p.mrn}` : ""}
                   </option>
                 ))}
               </Select>
             )}
           </FormField>
         </div>
+        {patientsError ? (
+          <p className="text-caption text-fg-muted">
+            {errorMessageFor(
+              patientsError,
+              "Your patient list could not be loaded.",
+            )}
+          </p>
+        ) : null}
         {kind === "Access Concern" ? (
           <div>
             <p className="mb-stack-xs text-label-md text-fg">Findings</p>
@@ -416,6 +512,7 @@ export function SendReferralModal({
             <Textarea
               {...field}
               rows={4}
+              maxLength={4000}
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
               placeholder={
@@ -440,46 +537,81 @@ export function SendReferralModal({
 /* ---------------------------------------------------------- detail popup */
 
 export function ReferralModal({
-  referral,
-  record,
+  orgId,
+  referralId,
+  hasRecord,
   side,
-  me,
-  canReply,
+  canReplyTo,
   canAct,
-  store,
+  actions,
   onSchedule,
   onStartRecord,
   onClose,
 }: {
-  referral: AccessReferral;
-  /** The patient's access record, when there is one. */
-  record: AccessRecord | undefined;
+  orgId: string | null;
+  referralId: string;
+  /** Whether this office has an access record for the patient. */
+  hasRecord: (patientId: string) => boolean;
   side: Side;
-  me: string;
-  canReply: boolean;
+  canReplyTo: (referral: AccessReferral) => boolean;
   /** The access center may acknowledge, schedule and close. */
   canAct: boolean;
-  store: VascularAccessStore;
+  actions: ReferralActions;
   /** Absent where the page cannot book (the Messages page). */
-  onSchedule?: () => void;
-  onStartRecord?: () => void;
+  onSchedule?: (referral: AccessReferral) => void;
+  onStartRecord?: (referral: AccessReferral) => void;
   onClose: () => void;
 }) {
   const now = useNow();
+  const read = useReferral(orgId, referralId);
   const [draft, setDraft] = useState("");
+  const referral = read.referral;
+
+  if (!referral) {
+    return (
+      <Modal open onClose={onClose} size="wide" title="Referral">
+        {read.error ? (
+          <ErrorState
+            title={errorTitleFor(read.error, "This thread could not be loaded")}
+            message={errorMessageFor(read.error, undefined)}
+            error={read.error}
+            onRetry={canRetry(read.error) ? read.refetch : undefined}
+          />
+        ) : (
+          <Skeleton height={240} className="rounded-card" />
+        )}
+      </Modal>
+    );
+  }
+
   const open = referral.status !== "Closed";
+  const opener = referral.startedByAccess ? referral.to : referral.from;
+  const orgNameOf = (id: string) =>
+    id === referral.to.id ? referral.to.name : referral.from.name;
   const thread = [
     {
       id: referral.id,
-      author: openerOf(referral),
-      authorName: referral.sentBy,
+      authorName: referral.sentBy ?? "",
+      orgName: opener.name,
+      mine: opener.id === orgId,
       body: referral.detail,
       sentAt: referral.sentAt,
     },
-    ...referral.replies,
+    ...(referral.replies ?? []).map((reply) => ({
+      id: reply.id,
+      authorName: reply.authorName ?? "",
+      orgName: orgNameOf(reply.authorOrgId),
+      /* The side is the writer's office, compared by id. */
+      mine: reply.authorOrgId === orgId,
+      body: reply.body,
+      sentAt: reply.sentAt,
+    })),
   ];
-  const actions = side === "access" && open && canAct;
-  const forPatient = referral.mrn !== "";
+  const actionsShown = side === "access" && open && canAct;
+  const patientId = referral.patient?.id ?? null;
+  const record = patientId ? hasRecord(patientId) : false;
+  const canReply = canReplyTo(referral);
+  const other = otherOffice(referral, side);
 
   return (
     <Modal
@@ -488,46 +620,47 @@ export function ReferralModal({
       size="wide"
       title={subjectOf(referral)}
       description={
-        forPatient ? `MRN ${referral.mrn} · ${referral.kind}` : referral.kind
+        referral.mrn ? `MRN ${referral.mrn} · ${referral.kind}` : referral.kind
       }
       footer={
-        actions ? (
+        actionsShown ? (
           <>
             <Button
               variant="neutral"
               appearance="ghost"
+              disabled={actions.isSaving}
               leadingIcon={<X aria-hidden="true" />}
-              onClick={() => {
-                store.setReferralStatus(referral.id, "Closed", me);
-                onClose();
+              onClick={async () => {
+                if (await actions.setStatus(referral.id, "Closed")) onClose();
               }}
             >
               Close Thread
             </Button>
-            {referral.status === "New" && receiverOf(referral) === "access" ? (
+            {referral.status === "New" && referral.waitingOnYou ? (
               <Button
                 variant="neutral"
                 appearance="fill-stroke"
+                disabled={actions.isSaving}
                 leadingIcon={<Check aria-hidden="true" />}
                 onClick={() =>
-                  store.setReferralStatus(referral.id, "Acknowledged", me)
+                  void actions.setStatus(referral.id, "Acknowledged")
                 }
               >
                 Acknowledge
               </Button>
             ) : null}
-            {forPatient && record && onSchedule ? (
+            {patientId && record && onSchedule ? (
               <Button
                 leadingIcon={<CalendarPlus aria-hidden="true" />}
-                onClick={onSchedule}
+                onClick={() => onSchedule(referral)}
               >
                 Schedule Appointment
               </Button>
             ) : null}
-            {forPatient && !record && onStartRecord ? (
+            {patientId && !record && onStartRecord ? (
               <Button
                 leadingIcon={<UserPlus aria-hidden="true" />}
-                onClick={onStartRecord}
+                onClick={() => onStartRecord(referral)}
               >
                 Start Access Record
               </Button>
@@ -537,16 +670,17 @@ export function ReferralModal({
       }
     >
       <div className="space-y-stack-lg">
+        {actions.error ? (
+          <Alert tone="danger" onDismiss={actions.clearError}>
+            {referralRefusal(actions.error, side)}
+          </Alert>
+        ) : null}
         <dl className="grid gap-stack-sm text-body-sm sm:grid-cols-3">
           <div>
             <dt className="text-caption text-fg-muted">
               {side === "access" ? "Office" : "With"}
             </dt>
-            <dd className="text-label-lg text-fg">
-              {side === "access"
-                ? SOURCE_LABEL[referral.source]
-                : ACCESS_CENTER_NAME}
-            </dd>
+            <dd className="text-label-lg text-fg">{other.name}</dd>
           </div>
           <div>
             <dt className="text-caption text-fg-muted">Status</dt>
@@ -567,7 +701,7 @@ export function ReferralModal({
           ) : null}
         </dl>
 
-        {forPatient && !record && side === "access" && onStartRecord ? (
+        {patientId && !record && side === "access" && onStartRecord ? (
           <p className="text-body-sm text-fg-muted">
             This patient has no access record yet. Start one to schedule.
           </p>
@@ -575,36 +709,34 @@ export function ReferralModal({
 
         <section aria-label="Thread">
           <ol className="space-y-stack-md">
-            {thread.map((entry) => {
-              const mine =
-                side === "access"
-                  ? entry.author === "access"
-                  : entry.author !== "access";
-              return (
-                <li
-                  key={entry.id}
-                  className={cn(
-                    "rounded-card-nested p-inset-sm",
-                    mine
-                      ? "bg-surface-sunken"
-                      : "border border-line bg-surface",
-                  )}
-                >
-                  <p className="text-caption text-fg-muted">
-                    <span className="text-label-md text-fg">
-                      {entry.authorName}
-                    </span>
-                    {" · "}
-                    {orgName(entry.author)}
-                    {" · "}
-                    {messaging.relativeLabel(entry.sentAt, now)}
-                  </p>
-                  <p className="mt-stack-xs text-body-sm whitespace-pre-line text-fg">
-                    {entry.body}
-                  </p>
-                </li>
-              );
-            })}
+            {thread.map((entry) => (
+              <li
+                key={entry.id}
+                className={cn(
+                  "rounded-card-nested p-inset-sm",
+                  entry.mine
+                    ? "bg-surface-sunken"
+                    : "border border-line bg-surface",
+                )}
+              >
+                <p className="text-caption text-fg-muted">
+                  {entry.authorName ? (
+                    <>
+                      <span className="text-label-md text-fg">
+                        {entry.authorName}
+                      </span>
+                      {" · "}
+                    </>
+                  ) : null}
+                  {entry.orgName}
+                  {" · "}
+                  {messaging.relativeLabel(entry.sentAt, now)}
+                </p>
+                <p className="mt-stack-xs text-body-sm whitespace-pre-line text-fg">
+                  {entry.body}
+                </p>
+              </li>
+            ))}
           </ol>
           {referral.handledBy && referral.handledAt ? (
             <p className="mt-stack-sm text-caption text-fg-muted">
@@ -618,25 +750,11 @@ export function ReferralModal({
           <Composer
             value={draft}
             onChange={setDraft}
-            sending={store.isSaving}
-            label={
-              side === "access"
-                ? `Reply to ${SOURCE_LABEL[referral.source]}`
-                : `Reply to ${ACCESS_CENTER_NAME}`
-            }
-            placeholder={
-              side === "access"
-                ? `Reply to ${SOURCE_LABEL[referral.source]}…`
-                : "Reply to the access center…"
-            }
-            onSend={(body) => {
-              store.replyToReferral(
-                referral.id,
-                side === "access" ? "access" : referral.source,
-                me,
-                body,
-              );
-              setDraft("");
+            sending={actions.isSaving}
+            label={`Reply to ${other.name}`}
+            placeholder={`Reply to ${other.name}…`}
+            onSend={async (body) => {
+              if (await actions.reply(referral.id, body)) setDraft("");
             }}
           />
         ) : !open ? (
@@ -652,17 +770,18 @@ export function ReferralModal({
 /** The access center starts a message in a patient's access conversation
  *  (client, 2026-10-06: the access center can message patients too). */
 function MessagePatientModal({
-  patients,
+  rows,
   onSend,
   onClose,
 }: {
-  patients: Array<{ name: string; mrn: string }>;
-  onSend: (mrn: string, body: string) => void;
+  rows: AccessRosterRow[];
+  onSend: (profileId: string, body: string) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const [mrn, setMrn] = useState(patients[0]?.mrn ?? "");
+  const [profileId, setProfileId] = useState(rows[0]?.id ?? "");
   const [body, setBody] = useState("");
   const [tried, setTried] = useState(false);
+  const [failed, setFailed] = useState(false);
   const error = body.trim() ? undefined : "Write your message.";
   return (
     <Modal
@@ -677,11 +796,12 @@ function MessagePatientModal({
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
-            disabled={!mrn}
-            onClick={() => {
+            disabled={!profileId}
+            onClick={async () => {
               setTried(true);
               if (error) return;
-              onSend(mrn, body.trim());
+              setFailed(false);
+              if (!(await onSend(profileId, body.trim()))) setFailed(true);
             }}
           >
             Send
@@ -690,16 +810,22 @@ function MessagePatientModal({
       }
     >
       <div className="space-y-stack-md">
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(false)}>
+            That did not send. Try again.
+          </Alert>
+        ) : null}
         <FormField label="Patient" required>
           {(field) => (
             <Select
               {...field}
-              value={mrn}
-              onChange={(e) => setMrn(e.target.value)}
+              value={profileId}
+              onChange={(e) => setProfileId(e.target.value)}
             >
-              {patients.map((p) => (
-                <option key={p.mrn} value={p.mrn}>
-                  {p.name} · MRN {p.mrn}
+              {rows.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.memberName}
+                  {row.mrn ? ` · MRN ${row.mrn}` : ""}
                 </option>
               ))}
             </Select>
@@ -720,16 +846,80 @@ function MessagePatientModal({
   );
 }
 
+/** One patient's access conversation, read when it is opened. */
+function PatientConversation({
+  row,
+  canMessagePatients,
+  onClose,
+}: {
+  row: AccessRosterRow;
+  canMessagePatients: boolean;
+  onClose: () => void;
+}) {
+  const target = useOfficeTarget();
+  const actions = useAccessActions(target);
+  const reads = useAccessRecord(target, row.id, {
+    memberName: row.memberName,
+    mrn: row.mrn,
+  });
+  const record = reads.record;
+  return (
+    <Modal
+      open
+      size="wide"
+      onClose={onClose}
+      title={row.memberName}
+      description={`${row.mrn ? `MRN ${row.mrn} · ` : ""}access conversation`}
+    >
+      {reads.error ? (
+        <ErrorState
+          title={errorTitleFor(
+            reads.error,
+            "This conversation could not be loaded",
+          )}
+          message={errorMessageFor(reads.error, undefined)}
+          error={reads.error}
+          onRetry={canRetry(reads.error) ? reads.refetch : undefined}
+        />
+      ) : !record ? (
+        <Skeleton height={240} className="rounded-card" />
+      ) : (
+        <>
+          {actions.error ? (
+            <Alert tone="danger" onDismiss={actions.clearError}>
+              That change did not save. Try again.
+            </Alert>
+          ) : null}
+          <AccessConversationView
+            record={record}
+            party={record.party}
+            target={target}
+            myName={record.memberName}
+            readOnlyReason={
+              canMessagePatients
+                ? undefined
+                : "Your role can read this conversation but not reply."
+            }
+            sending={actions.isSaving}
+            onSend={(body, isPrivate) =>
+              void actions.sendMessage(record.id, body, { isPrivate })
+            }
+            onSetPrivate={(messageId, isPrivate) =>
+              void actions.setMessagePrivate(record.id, messageId, isPrivate)
+            }
+            onSetDialysisCanPost={(allowed) =>
+              void actions.setDialysisCanPost(record.id, allowed)
+            }
+          />
+        </>
+      )}
+    </Modal>
+  );
+}
+
 /* ------------------------------------------------------------ Messages */
 
 type Folder = "all" | ReferralSource | "closed" | "patients";
-
-/** Who an organisation's own demo login writes as. */
-const DEFAULT_PERSON: Record<Side, string> = {
-  access: "Dr. Patel",
-  dialysis: "Nurse Wilson",
-  nephrology: "Dr. Samuel Reed",
-};
 
 const MESSAGES_HREF: Record<Side, string> = {
   access: "/dashboard/access-center/messages",
@@ -739,12 +929,11 @@ const MESSAGES_HREF: Record<Side, string> = {
 
 /** A Messages page for staff-to-staff threads. The access center sees
  *  every office, in folders, and books from Access Patients; an office
- *  sees only its own threads with the access center. */
+ *  sees only its own threads with the access center (the server's list). */
 export function OfficeMessages({ side }: { side: Side }) {
   const { user } = useAuth();
-  const store = useVascularAccess();
-  const clinicData = useClinicData();
-  const me = user?.staffRole ? user.name : DEFAULT_PERSON[side];
+  const orgId = useOfficeOrgId();
+  const target = useOfficeTarget();
   /* The access center's own permissions (2026-10-06); the offices keep
      theirs. */
   const atAccess = side === "access";
@@ -757,61 +946,56 @@ export function OfficeMessages({ side }: { side: Side }) {
     : userCan(user, "access.schedule");
   const canMessagePatients =
     atAccess && userCan(user, "access.message.patients");
+  const read = useReferrals(orgId);
+  const actions = useReferralActions(orgId);
+  const accessActions = useAccessActions(target);
+  /* The access center's patients' conversations (its roster). */
+  const roster = useAccessRoster(orgId, {}, { enabled: atAccess });
+  const patientsRead = useOfficePatients(orgId);
+  const directory = useDirectory();
+  const typeOf = (id: string) =>
+    directory.offices.find((o) => o.id === id)?.type;
+  const sourceOf = (referral: AccessReferral): ReferralSource =>
+    typeOf(referral.from.id) === "NEPHROLOGY_OFFICE"
+      ? "nephrology"
+      : "dialysis";
   const [folder, setFolder] = useState<Folder>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [toPatient, setToPatient] = useState(false);
-  const [patientMrn, setPatientMrn] = useState<string | null>(null);
-  const chatting = patientMrn
-    ? store.records.find((r) => r.mrn === patientMrn)
+  const [chattingId, setChattingId] = useState<string | null>(null);
+  const chatting = chattingId
+    ? roster.rows.find((row) => row.id === chattingId)
     : undefined;
-  /* Patients' conversations with the access center, newest first. */
-  const patientChats = store.records
-    .filter((r) => r.conversation.messages.length > 0)
-    .sort((a, b) =>
-      (b.conversation.messages.at(-1)?.sentAt ?? "").localeCompare(
-        a.conversation.messages.at(-1)?.sentAt ?? "",
-      ),
-    );
+  /* Unread first, then by name. */
+  const patientChats = [...roster.rows].sort(
+    (a, b) => b.unread - a.unread || a.memberName.localeCompare(b.memberName),
+  );
 
-  /* Tenant isolation: an office never sees another office's threads. */
-  const referrals = threadsFor(store.referrals, side);
+  const referrals = read.referrals;
   const count = (f: Folder) =>
     referrals.filter((r) =>
       f === "closed"
         ? r.status === "Closed"
-        : r.status !== "Closed" && (f === "all" || r.source === f),
+        : r.status !== "Closed" && (f === "all" || sourceOf(r) === f),
     ).length;
   const shown = referrals.filter((r) =>
     folder === "closed"
       ? r.status === "Closed"
-      : r.status !== "Closed" && (folder === "all" || r.source === folder),
+      : r.status !== "Closed" && (folder === "all" || sourceOf(r) === folder),
   );
-  const reading = openId ? referrals.find((r) => r.id === openId) : undefined;
-  /* Access patients, the office's roster, and anyone already written
-     about. */
-  const patients = [
-    ...store.records.map((r) => ({ name: r.memberName, mrn: r.mrn })),
-    ...(side === "access" ? [] : (clinicData.data?.patients ?? [])).map(
-      (p) => ({ name: p.name, mrn: p.mrn }),
-    ),
-    ...referrals
-      .filter(
-        (r) => r.mrn && !store.records.some((record) => record.mrn === r.mrn),
-      )
-      .map((r) => ({ name: r.memberName, mrn: r.mrn })),
-  ].filter((p, i, all) => all.findIndex((q) => q.mrn === p.mrn) === i);
 
   let body: React.ReactNode;
-  if (store.error) {
+  if (read.error) {
     body = (
       <ErrorState
-        title="Messages could not be loaded"
-        error={store.error}
-        onRetry={store.refetch}
+        title={errorTitleFor(read.error, "Messages could not be loaded")}
+        message={errorMessageFor(read.error, undefined)}
+        error={read.error}
+        onRetry={canRetry(read.error) ? read.refetch : undefined}
       />
     );
-  } else if (store.isPending) {
+  } else if (read.isPending) {
     body = <Skeleton className="h-96 w-full" />;
   } else {
     body = (
@@ -842,55 +1026,56 @@ export function OfficeMessages({ side }: { side: Side }) {
               ? [
                   {
                     id: "patients" as const,
-                    label: `Patients (${patientChats.length})`,
+                    label: `Patients (${roster.total})`,
                   },
                 ]
               : []),
           ]}
         />
         {folder === "patients" ? (
-          patientChats.length === 0 ? (
+          roster.error ? (
+            <ErrorState
+              title={errorTitleFor(
+                roster.error,
+                "Patient conversations could not be loaded",
+              )}
+              message={errorMessageFor(roster.error, undefined)}
+              error={roster.error}
+              onRetry={canRetry(roster.error) ? roster.refetch : undefined}
+            />
+          ) : patientChats.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
               No patient conversations yet.
             </p>
           ) : (
             <ul className="divide-y divide-line-subtle">
-              {patientChats.map((record) => {
-                const last = record.conversation.messages.at(-1)!;
-                const unread = unreadFor(record, "access");
-                return (
-                  <li
-                    key={record.mrn}
-                    className="py-inset-xs first:pt-0 last:pb-0"
+              {patientChats.map((row) => (
+                <li key={row.id} className="py-inset-xs first:pt-0 last:pb-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChattingId(row.id);
+                      if (row.unread > 0) void accessActions.markRead(row.id);
+                    }}
+                    className={cn(
+                      "flex w-full cursor-pointer items-start justify-between gap-inline-lg rounded-control-small text-left",
+                      focusRing,
+                    )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPatientMrn(record.mrn);
-                        store.markConversationRead(record.mrn, "access");
-                      }}
-                      className={cn(
-                        "flex w-full cursor-pointer items-start justify-between gap-inline-lg rounded-control-small text-left",
-                        focusRing,
-                      )}
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-label-lg text-fg">
-                          {record.memberName}
-                        </span>
-                        <span className="block truncate text-body-sm text-fg-secondary">
-                          {last.private && last.author !== "access"
-                            ? "Private message"
-                            : last.body}
-                        </span>
+                    <span className="min-w-0">
+                      <span className="block text-label-lg text-fg">
+                        {row.memberName}
                       </span>
-                      {unread > 0 ? (
-                        <Badge tone="danger">{unread} new</Badge>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
+                      <span className="block truncate text-body-sm text-fg-secondary">
+                        {row.overview.type} · {row.overview.status}
+                      </span>
+                    </span>
+                    {row.unread > 0 ? (
+                      <Badge tone="danger">{row.unread} new</Badge>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
             </ul>
           )
         ) : (
@@ -914,9 +1099,9 @@ export function OfficeMessages({ side }: { side: Side }) {
         action={
           <div className="flex flex-wrap items-center gap-inline-md">
             <UpdatedBar
-              updatedAt={store.updatedAt}
-              isFetching={store.isFetching}
-              refetch={store.refetch}
+              updatedAt={read.updatedAt}
+              isFetching={read.isFetching}
+              refetch={read.refetch}
             />
             {canMessagePatients ? (
               <Button
@@ -941,91 +1126,58 @@ export function OfficeMessages({ side }: { side: Side }) {
           </div>
         }
       />
-      {store.writeError ? (
-        <Alert tone="danger" onDismiss={store.clearWriteError}>
-          That change did not save. Try again.
-        </Alert>
-      ) : null}
       {body}
-      {reading ? (
+      {openId ? (
         <ReferralModal
-          key={reading.id}
-          referral={reading}
-          record={store.records.find((r) => r.mrn === reading.mrn)}
+          key={openId}
+          orgId={orgId}
+          referralId={openId}
+          hasRecord={(patientId) =>
+            roster.rows.some((row) => row.patientId === patientId)
+          }
           side={side}
-          me={me}
-          canReply={
+          canReplyTo={(referral) =>
             atAccess
               ? userCan(
                   user,
-                  reading.source === "nephrology"
+                  sourceOf(referral) === "nephrology"
                     ? "access.message.nephrology"
                     : "access.message.dialysis",
                 )
               : canReply
           }
           canAct={canAct}
-          store={store}
+          actions={actions}
           onClose={() => setOpenId(null)}
         />
       ) : null}
       {toPatient ? (
         <MessagePatientModal
-          patients={store.records.map((r) => ({
-            name: r.memberName,
-            mrn: r.mrn,
-          }))}
+          rows={roster.rows}
           onClose={() => setToPatient(false)}
-          onSend={(mrn, body) => {
-            store.sendMessage(mrn, "access", me, body);
-            setToPatient(false);
-            setFolder("patients");
+          onSend={async (profileId, text) => {
+            const ok = await accessActions.sendMessage(profileId, text);
+            if (ok) {
+              setToPatient(false);
+              setFolder("patients");
+            }
+            return ok;
           }}
         />
       ) : null}
       {chatting ? (
-        <Modal
-          open
-          size="wide"
-          onClose={() => setPatientMrn(null)}
-          title={chatting.memberName}
-          description={`MRN ${chatting.mrn} · access conversation`}
-        >
-          <AccessConversationView
-            record={chatting}
-            party="access"
-            myName={me}
-            readOnlyReason={
-              canMessagePatients
-                ? undefined
-                : "Your role can read this conversation but not reply."
-            }
-            sending={store.isSaving}
-            onSend={(body, isPrivate) =>
-              store.sendMessage(chatting.mrn, "access", me, body, {
-                private: isPrivate,
-              })
-            }
-            onSetPrivate={(messageId, isPrivate) =>
-              store.setMessagePrivate(
-                chatting.mrn,
-                messageId,
-                isPrivate,
-                "access",
-              )
-            }
-            onSetDialysisCanPost={(allowed) =>
-              store.setDialysisCanPost(chatting.mrn, allowed, "access")
-            }
-          />
-        </Modal>
+        <PatientConversation
+          row={chatting}
+          canMessagePatients={canMessagePatients}
+          onClose={() => setChattingId(null)}
+        />
       ) : null}
       {composing ? (
         <SendReferralModal
           side={side}
-          patients={patients}
-          me={me}
-          onSend={store.sendReferral}
+          orgId={orgId}
+          patients={patientsRead.patients}
+          patientsError={patientsRead.error}
           onClose={() => setComposing(false)}
         />
       ) : null}

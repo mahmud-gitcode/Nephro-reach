@@ -34,7 +34,7 @@ export function AttachButton({
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
-        accept="image/*,.pdf,.txt,.doc,.docx"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/avif,application/pdf,text/plain,.doc,.docx"
         onChange={async (event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
@@ -83,10 +83,10 @@ export function PendingAttachment({
 }) {
   return (
     <div className="flex items-center gap-inline-md rounded-control border border-line bg-surface p-inset-xs">
-      {attachment.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
+      {attachment.previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a local object URL of the picked file, nothing to optimise
         <img
-          src={attachment.imageUrl}
+          src={attachment.previewUrl}
           alt=""
           className="size-10 shrink-0 rounded-control-small object-cover"
         />

@@ -28,7 +28,6 @@ import {
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
-import { useMemberName } from "@/features/auth/useMemberName";
 import { useNow } from "@/lib/utils/useNow";
 import { cn } from "@/lib/utils/cn";
 import { QuickActionsSection } from "./QuickActionsSection";
@@ -186,15 +185,15 @@ export default function UserDashboard() {
   const isEs = language === "ES";
   const locale = isEs ? "es-ES" : "en-US";
   const { user } = useAuth();
-  const memberName = useMemberName();
   const now = new Date(useNow());
   const today = toDateKey(now);
 
   const attention = useMemberAttention();
 
   const { conversations } = useMessages();
+  /* The patient's own threads: the server scopes the read (Phase 11). */
   const threads = messagingRules
-    .sortByRecent(messagingRules.memberConversations(conversations, memberName))
+    .sortByRecent(conversations)
     .filter((c) => !c.archived);
   const unread = messagingRules.totalUnread(threads);
 

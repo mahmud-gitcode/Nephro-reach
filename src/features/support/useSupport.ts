@@ -1,46 +1,187 @@
 "use client";
 
+/* ==========================================================================
+   Support hooks (Phase 11, ADR 0007)
+   --------------------------------------------------------------------------
+   Read from the API page by page; every change is one call for one ticket,
+   followed by a refetch of what it touched, so the screen always shows the
+   server's answer (its ids, its status). Nothing is kept in the browser.
+   ========================================================================== */
+
 import { useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { nextPageParams, type Page, type PageParams } from "@/lib/api/paging";
+import * as api from "./support.api";
 import * as rules from "./support.data";
 
-/* One shared key: every dashboard writes its tickets here and the admin's
-   Support Inbox reads them all. With a server, each office reads only its
-   own tickets and only NephroReach support reads them all. */
-const KEY = storageKey("support-tickets");
-export const supportKey = ["support-tickets"] as const;
+const PAGE: PageParams = { limit: 20 };
 
-async function readState(): Promise<rules.SupportState> {
-  const stored = await readJson<Partial<rules.SupportState> | null>(KEY, null);
+/** Every support read is filed under the signed-in account and side. */
+function useSupportKey(side: "me" | "platform") {
+  const accountId = useOptionalAuth()?.user?.id ?? "none";
+  return useMemo(
+    () => ["support", side, accountId] as const,
+    [side, accountId],
+  );
+}
+
+function usePaged<Raw, Row>(
+  queryKey: readonly unknown[],
+  fetch: (params: PageParams) => Promise<Page<Raw>>,
+  map: (raw: Raw) => Row,
+  enabled = true,
+) {
+  const query = useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) => fetch(pageParam),
+    initialPageParam: PAGE,
+    getNextPageParam: (last, _pages, lastParams) =>
+      nextPageParams(last.pagination, lastParams),
+    enabled,
+  });
+  const items = useMemo(
+    () => (query.data?.pages ?? []).flatMap((page) => page.items).map(map),
+    [query.data, map],
+  );
   return {
-    tickets: Array.isArray(stored?.tickets) ? stored.tickets : [],
-    contacted: Array.isArray(stored?.contacted) ? stored.contacted : [],
+    items,
+    isPending: query.isPending,
+    error: query.error,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+    hasMore: query.hasNextPage,
+    loadMore: () => void query.fetchNextPage(),
+    isLoadingMore: query.isFetchingNextPage,
   };
 }
 
-export function useSupport() {
+/** How many tickets are in one status (the server's count, limit 1). */
+function useCount(
+  queryKey: readonly unknown[],
+  fetch: () => Promise<Page<unknown>>,
+  enabled = true,
+) {
+  const query = useQuery({ queryKey, queryFn: fetch, enabled });
+  const pagination = query.data?.pagination;
+  if (!pagination) return 0;
+  return pagination.mode === "offset" ? pagination.total : 0;
+}
+
+/** The signed-in account's own tickets: open one, read one, reply. */
+export function useMyTickets() {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: supportKey, queryFn: readState });
-  const write = useMutation({
-    mutationFn: async (
-      transform: (s: rules.SupportState) => rules.SupportState,
-    ) => writeJson(KEY, transform(await readState())),
-    onSuccess: (state) => queryClient.setQueryData(supportKey, state),
+  const base = useSupportKey("me");
+  const list = usePaged(
+    [...base, "tickets"],
+    (params) => api.listMyTickets(params),
+    rules.fromApiTicket,
+  );
+  const refresh = () => queryClient.invalidateQueries({ queryKey: base });
+  const open = useMutation({
+    mutationFn: (body: api.NewTicketBody) => api.openTicket(body),
+    onSuccess: refresh,
   });
-  const state = useMemo(() => query.data ?? rules.EMPTY_SUPPORT, [query.data]);
-  const run = write.mutate;
+  const reply = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) =>
+      api.replyToMyTicket(id, body),
+    onSuccess: refresh,
+  });
   return {
-    state,
-    isPending: query.isPending,
-    isSaving: write.isPending,
-    saveError: write.error,
-    open: (input: rules.NewTicket) =>
-      run((s) => rules.openTicket(s, input, Date.now())),
-    reply: (id: string, reply: Omit<rules.SupportReply, "at">) =>
-      run((s) => rules.replyToTicket(s, id, reply, Date.now())),
-    setStatus: (id: string, status: rules.SupportStatus) =>
-      run((s) => rules.setTicketStatus(s, id, status)),
-    toggleContacted: (key: string) => run((s) => rules.toggleContacted(s, key)),
+    tickets: list.items,
+    list,
+    isPending: list.isPending,
+    error: list.error,
+    open,
+    reply,
+    isSaving: open.isPending || reply.isPending,
+    saveError: open.error ?? reply.error,
+    clearSaveError: () => {
+      open.reset();
+      reply.reset();
+    },
   };
+}
+
+/** One ticket with its replies, read when it is opened. */
+export function useTicket(side: "me" | "platform", id: string | null) {
+  const base = useSupportKey(side);
+  const query = useQuery({
+    queryKey: [...base, "ticket", id ?? ""],
+    queryFn: () =>
+      side === "me" ? api.getMyTicket(id!) : api.getPlatformTicket(id!),
+    enabled: Boolean(id),
+  });
+  return {
+    ticket: query.data ? rules.fromApiTicket(query.data) : null,
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+  };
+}
+
+export type InboxFilter = "all" | rules.SupportStatus;
+
+/** The NephroReach team's inbox: every ticket, by status. */
+export function usePlatformTickets(filter: InboxFilter) {
+  const queryClient = useQueryClient();
+  const base = useSupportKey("platform");
+  const status = filter === "all" ? undefined : filter;
+  const list = usePaged(
+    [...base, "tickets", { status: filter }],
+    (params) => api.listPlatformTickets(params, { status }),
+    rules.fromApiTicket,
+  );
+  const openCount = useCount([...base, "tickets", "count", "open"], () =>
+    api.listPlatformTickets({ limit: 1 }, { status: "open" }),
+  );
+  const refresh = () => queryClient.invalidateQueries({ queryKey: base });
+  const reply = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) =>
+      api.replyAsSupport(id, body),
+    onSuccess: refresh,
+  });
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: rules.SupportStatus }) =>
+      api.setTicketStatus(id, status),
+    onSuccess: refresh,
+  });
+  return {
+    tickets: list.items,
+    list,
+    openCount,
+    reply,
+    setStatus,
+    saveError: reply.error ?? setStatus.error,
+    clearSaveError: () => {
+      reply.reset();
+      setStatus.reset();
+    },
+  };
+}
+
+/** "Request information for your organization", from secure share pages. */
+export function useInfoRequests() {
+  const queryClient = useQueryClient();
+  const base = useSupportKey("platform");
+  const list = usePaged(
+    [...base, "info-requests"],
+    (params) => api.listInfoRequests(params),
+    rules.fromApiInfoRequest,
+  );
+  const newCount = useCount([...base, "info-requests", "count", "new"], () =>
+    api.listInfoRequests({ limit: 1 }, { contacted: false }),
+  );
+  const toggle = useMutation({
+    mutationFn: ({ id, contacted }: { id: string; contacted: boolean }) =>
+      api.setInfoRequestContacted(id, contacted),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: [...base, "info-requests"] }),
+  });
+  return { requests: list.items, list, newCount, toggle };
 }
