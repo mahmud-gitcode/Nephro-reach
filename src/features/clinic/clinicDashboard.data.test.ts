@@ -1,36 +1,49 @@
 import { describe, expect, it } from "vitest";
 import {
   curriculumLink,
-  enrollment,
   liveClassLink,
   memberLink,
+  messageLink,
+  STATUS_CARD_ORDER,
   statusCardLink,
-  statusCards,
+  statusCardsFor,
   statusTone,
   upcomingFrom,
 } from "./clinicDashboard.data";
-import { patients } from "./enrollment.data";
 import { classesOn, upcomingClasses } from "./liveClass.data";
 import {
   needsAttention,
-  recentActivity,
-  roster,
+  rosterMemberFor,
   statusOptions,
+  type ActivityEvent,
 } from "./members.data";
+import { rosterRows } from "./rosterTestData";
 import { statusOptions as curriculumStatusOptions } from "./curriculumProgress.data";
 
-describe("enrollment", () => {
-  it("is counted from the Enroll Patients roster", () => {
-    expect(enrollment.enrolled).toBe(patients.length);
-    expect(enrollment.contracted).toBe(30);
-    expect(enrollment.remaining).toBe(7);
-  });
-});
+const NOW = new Date("2026-11-03T12:00:00Z");
+const roster = rosterRows().map((p) => rosterMemberFor(p, NOW));
+const statusCards = statusCardsFor(roster);
 
-describe("status cards", () => {
+describe("status cards (Phase 8: counted from the live roster)", () => {
   it("give every status a badge tone", () => {
     for (const card of statusCards)
       expect(statusTone[card.status]).toBeDefined();
+  });
+
+  it("count the roster, and show Attention Needed as no source (NEW-2)", () => {
+    expect(statusCards.map((c) => [c.status, c.count])).toEqual([
+      ["On Track", 1],
+      ["Need Follow-Up", 1],
+      ["Attention Needed", null],
+      ["Not Started", 1],
+      ["Completed", 1],
+    ]);
+    expect(statusCards[0].share).toBe("20%");
+    expect(STATUS_CARD_ORDER).toHaveLength(5);
+  });
+
+  it("are all zero, never demo figures, for an empty office", () => {
+    expect(statusCardsFor([]).map((c) => c.count)).toEqual([0, 0, null, 0, 0]);
   });
 
   it("link to a filter the destination page actually has", () => {
@@ -55,11 +68,16 @@ describe("status cards", () => {
 });
 
 describe("links", () => {
-  it("open the Member page on one member", () => {
-    expect(memberLink({ mrn: "567890" })).toBe(
-      "/dashboard/clinic/members?mrn=567890",
+  it("open the Member page on one member by patientId, never an MRN", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    expect(memberLink({ patientId: id })).toBe(
+      `/dashboard/clinic/members?patient=${id}`,
     );
     expect(memberLink({})).toBe("/dashboard/clinic/members");
+    expect(messageLink(id)).toBe(`/dashboard/clinic/messages?patient=${id}`);
+    expect(curriculumLink({ patientId: id })).toBe(
+      `/dashboard/clinic/curriculum-progress?patient=${id}#member-progress`,
+    );
   });
 
   it("scroll Curriculum Progress to its table", () => {
@@ -102,28 +120,30 @@ describe("upcoming classes", () => {
 });
 
 describe("needs attention today", () => {
-  const items = needsAttention(roster, recentActivity);
+  const missed: ActivityEvent = {
+    patientId: roster[1].id,
+    name: roster[1].name,
+    kind: "missed",
+    text: "missed check-in",
+    when: "Yesterday",
+  };
+  const items = needsAttention(roster, [missed]);
 
   it("lists every member whose status asks for it", () => {
     const flagged = roster.filter((m) =>
-      ["Attention Needed", "Need Follow-Up", "Not Started"].includes(m.status),
+      ["Attention Needed", "Need Follow-Up", "Not Started"].includes(
+        m.status ?? "",
+      ),
     );
     for (const member of flagged)
-      expect(items.some((i) => i.member.mrn === member.mrn)).toBe(true);
+      expect(items.some((i) => i.member.id === member.id)).toBe(true);
   });
 
-  it("lists James once, with his missed check-in first", () => {
-    const james = items.filter((i) => i.member.name === "James K. Wilson");
-    expect(james).toHaveLength(1);
-    expect(james[0].reasons[0]).toMatch(/^Missed check-in/);
-    expect(james[0].reasons).toHaveLength(2);
-  });
-
-  it("puts Attention Needed first and Need Follow-Up after", () => {
-    const statuses = items.map((i) => i.member.status);
-    const lastUrgent = statuses.lastIndexOf("Attention Needed");
-    const firstFollowUp = statuses.indexOf("Need Follow-Up");
-    expect(lastUrgent).toBeLessThan(firstFollowUp);
+  it("lists a member once, with a missed check-in first (matched by id)", () => {
+    const blake = items.filter((i) => i.member.id === roster[1].id);
+    expect(blake).toHaveLength(1);
+    expect(blake[0].reasons[0]).toMatch(/^Missed check-in/);
+    expect(blake[0].reasons).toHaveLength(2);
   });
 
   it("is empty when nobody needs anything", () => {

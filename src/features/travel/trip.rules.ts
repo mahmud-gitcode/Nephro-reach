@@ -121,6 +121,7 @@ export function emptyTrip(now = new Date()): TripRequest {
     updatedAt: now.toISOString(),
     facilityNote: "",
     statusHistory: [{ status: "submitted", at: now.toISOString() }],
+    timeChanges: [],
   };
 }
 
@@ -155,44 +156,7 @@ export function sortTrips(trips: TripRequest[]): TripRequest[] {
   return [...trips].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 }
 
-export function addTrip(
-  trips: TripRequest[],
-  trip: TripRequest,
-): TripRequest[] {
-  return sortTrips([trip, ...trips]);
-}
-
-export function removeTrip(trips: TripRequest[], id: string): TripRequest[] {
-  return trips.filter((trip) => trip.id !== id);
-}
-
 /** Facility-side update. Kept here so the status ladder has one owner. */
-export function updateTripStatus(
-  trips: TripRequest[],
-  id: string,
-  status: TripStatus,
-  now = new Date(),
-): TripRequest[] {
-  const at = now.toISOString();
-  return trips.map((trip) => {
-    if (trip.id !== id) return trip;
-
-    /* Re-saving the same status is not a new event: a coordinator opening
-       and closing a request would otherwise stamp it again and again. */
-    const alreadyThere = trip.statusHistory.some(
-      (event) => event.status === status,
-    );
-
-    return {
-      ...trip,
-      status,
-      updatedAt: at,
-      statusHistory: alreadyThere
-        ? trip.statusHistory
-        : [...trip.statusHistory, { status, at }],
-    };
-  });
-}
 
 /** "Jun 3 – Jun 12, 2026" from two ISO dates. */
 /** "Orlando, FL" — how a trip is named in a list. */
@@ -516,88 +480,15 @@ export function formatEventTime(iso: string, isEs: boolean): string {
 /* ==========================================================================
    Files attached to a document
    --------------------------------------------------------------------------
-   Attaching a file is how a member says "I have this one", so it ticks the
-   matching checklist row rather than leaving two things to keep in step.
-   Removing the last file for a document unticks it again, for the same
-   reason: a row that stayed ticked with nothing behind it would be the app
-   remembering something the member had just taken back.
+   Files come from the API (uploaded through /files, attached by file id);
+   these helpers only read them for display.
    ========================================================================== */
-
-/**
- * Describe a picked file as a record, without its bytes.
- *
- * Lives here rather than in the panel because `Date.now()` inside a
- * component body is flagged as impure — and because what a stored file
- * record contains is a rule, not a detail of one screen.
- */
-export function describeDocumentFile(
-  key: TravelDocumentKey,
-  file: { name: string; size: number; type: string },
-  now = new Date(),
-): TravelDocumentFile {
-  return {
-    id: `file-${now.getTime().toString(36)}-${file.size.toString(36)}`,
-    key,
-    fileName: file.name,
-    sizeBytes: file.size,
-    contentType: file.type,
-    attachedAt: now.toISOString(),
-  };
-}
 
 export function filesForDocument(
   trip: TripRequest,
   key: TravelDocumentKey,
 ): TravelDocumentFile[] {
   return trip.documentFiles.filter((file) => file.key === key);
-}
-
-export function attachDocumentFile(
-  trips: TripRequest[],
-  id: string,
-  file: TravelDocumentFile,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id
-      ? {
-          ...trip,
-          documentFiles: [...trip.documentFiles, file],
-          documentsReady: trip.documentsReady.includes(file.key)
-            ? trip.documentsReady
-            : [...trip.documentsReady, file.key],
-          updatedAt: now.toISOString(),
-        }
-      : trip,
-  );
-}
-
-export function removeDocumentFile(
-  trips: TripRequest[],
-  id: string,
-  fileId: string,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) => {
-    if (trip.id !== id) return trip;
-
-    const gone = trip.documentFiles.find((file) => file.id === fileId);
-    if (!gone) return trip;
-
-    const documentFiles = trip.documentFiles.filter(
-      (file) => file.id !== fileId,
-    );
-    const stillHasOne = documentFiles.some((file) => file.key === gone.key);
-
-    return {
-      ...trip,
-      documentFiles,
-      documentsReady: stillHasOne
-        ? trip.documentsReady
-        : trip.documentsReady.filter((key) => key !== gone.key),
-      updatedAt: now.toISOString(),
-    };
-  });
 }
 
 /** "1.4 MB" — a size a member can judge, not a byte count. */
@@ -820,32 +711,6 @@ export function emptyPlacement(): TripPlacement {
   return { facilityName: "", address: "", phone: "", treatments: [] };
 }
 
-export function setPlacement(
-  trips: TripRequest[],
-  id: string,
-  placement: TripPlacement,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id
-      ? { ...trip, placement, updatedAt: now.toISOString() }
-      : trip,
-  );
-}
-
-export function setFacilityNote(
-  trips: TripRequest[],
-  id: string,
-  facilityNote: string,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id
-      ? { ...trip, facilityNote, updatedAt: now.toISOString() }
-      : trip,
-  );
-}
-
 export function addConfirmedTreatment(
   placement: TripPlacement,
   date: string,
@@ -902,84 +767,6 @@ export function placementShortfall(trip: TripRequest): number {
     0,
     trip.treatmentsNeeded - (trip.placement?.treatments.length ?? 0),
   );
-}
-
-/* ==========================================================================
-   Reading older records
-   --------------------------------------------------------------------------
-   Storage holds whatever shape the app wrote last time, and a trip saved
-   before preferences, contacts and the document checklist existed has none of
-   those fields. Reading `preferredDays.length` off one of those throws, and
-   the whole screen goes with it.
-
-   So every trip is normalised on the way out of storage rather than guarded
-   at each of the dozen places that read it. New optional fields get their
-   empty value; nothing that was already there is touched.
-   ========================================================================== */
-
-export function normaliseTrip(trip: Partial<TripRequest>): TripRequest {
-  const blank = emptyTrip();
-
-  return {
-    ...blank,
-    ...trip,
-    /* Spreading is not enough for these: an older record carries the key as
-       `undefined`, which overwrites the default rather than falling back to
-       it. */
-    /* Older records kept the destination as one line, usually "City, ST".
-       Split it rather than dropping it: the street and zip are genuinely
-       unknown and stay blank, which the form then asks for. */
-    destination:
-      typeof trip.destination === "string"
-        ? (() => {
-            const [city = "", state = ""] = (trip.destination as string)
-              .split(",")
-              .map((part) => part.trim());
-            return { street: "", city, state, zip: "" };
-          })()
-        : (trip.destination ?? { street: "", city: "", state: "", zip: "" }),
-    preferredDays: trip.preferredDays ?? [],
-    preferredTime: trip.preferredTime ?? "any",
-    documentsReady: trip.documentsReady ?? [],
-    prepDone: trip.prepDone ?? [],
-    documentFiles: trip.documentFiles ?? [],
-    emergencyContact: trip.emergencyContact ?? {
-      name: "",
-      phone: "",
-      relationship: "",
-    },
-    insurance: trip.insurance ?? { plan: "", memberId: "" },
-    facilityNote: trip.facilityNote ?? "",
-    /* An older record has no history. Seed it from the two timestamps it
-       does have rather than leaving the timeline blank: `submittedAt` is
-       exactly when the first rung happened, and `updatedAt` is when the rung
-       it is on now happened. The rungs in between are genuinely unknown, and
-       the timeline shows them without a date rather than inventing one. */
-    statusHistory:
-      trip.statusHistory ??
-      (trip.submittedAt
-        ? [
-            { status: "submitted" as const, at: trip.submittedAt },
-            ...(trip.status && trip.status !== "submitted" && trip.updatedAt
-              ? [{ status: trip.status, at: trip.updatedAt }]
-              : []),
-          ]
-        : []),
-    /* An older record may carry the flattened placement fields this replaced. */
-    placement: trip.placement
-      ? {
-          facilityName: trip.placement.facilityName ?? "",
-          address: trip.placement.address ?? "",
-          phone: trip.placement.phone ?? "",
-          treatments: trip.placement.treatments ?? [],
-        }
-      : undefined,
-    id: trip.id ?? blank.id,
-  };
-}
-
-export function normaliseTrips(trips: Partial<TripRequest>[]): TripRequest[] {
-  return trips.map(normaliseTrip);
 }
 
 /* ==========================================================================
@@ -1066,58 +853,9 @@ export function canSubmitTimeChange(request: TimeChangeRequest): boolean {
   return timeChangeError(request) === null;
 }
 
-export function requestTimeChange(
-  trips: TripRequest[],
-  id: string,
-  request: TimeChangeRequest,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id
-      ? {
-          ...trip,
-          timeChange: { ...request, resolvedAt: undefined },
-          updatedAt: now.toISOString(),
-        }
-      : trip,
-  );
-}
-
 /** The member changing their mind before the facility has acted. */
-export function withdrawTimeChange(
-  trips: TripRequest[],
-  id: string,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) => {
-    /* A request the facility has already answered stays on the record: it
-       explains why the booked times are what they are. */
-    if (trip.id !== id || !hasOpenTimeChange(trip)) return trip;
-    return { ...trip, timeChange: undefined, updatedAt: now.toISOString() };
-  });
-}
 
 /** Facility side: answering it, whether or not the times actually moved. */
-export function resolveTimeChange(
-  trips: TripRequest[],
-  id: string,
-  facilityReply: string,
-  now = new Date(),
-): TripRequest[] {
-  return trips.map((trip) =>
-    trip.id === id && trip.timeChange
-      ? {
-          ...trip,
-          timeChange: {
-            ...trip.timeChange,
-            resolvedAt: now.toISOString(),
-            facilityReply,
-          },
-          updatedAt: now.toISOString(),
-        }
-      : trip,
-  );
-}
 
 /* ==========================================================================
    Filtering the trip list

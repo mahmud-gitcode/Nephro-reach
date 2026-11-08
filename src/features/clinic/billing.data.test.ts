@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONTRACT_SLOTS, enrolledCount } from "./enrollment.data";
+import { CONTRACT_SLOTS } from "./enrollment.data";
 import {
   contract,
   daysUntilEnd,
@@ -16,7 +16,7 @@ const sept21 = new Date(2026, 8, 21);
 
 describe("the contract matches the rest of the clinic portal", () => {
   it("covers the Enroll Patients roster against its seat count", () => {
-    expect(patientsCovered).toBe(enrolledCount);
+    expect(patientsCovered).toBe(23);
     expect(contract.patientsAllowed).toBe(CONTRACT_SLOTS);
   });
 

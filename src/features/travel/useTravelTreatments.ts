@@ -3,142 +3,126 @@
 import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  listTravelReflections,
+  requireScope,
+  scopedKey,
+  usePatientScope,
+} from "@/features/profile/patientScope";
+import {
+  addTravelTreatment,
+  getTravelReflection,
   listTravelTreatments,
-  saveTravelReflections,
-  saveTravelTreatments,
+  removeTravelTreatment,
+  saveTravelReflection,
+  updateTravelTreatment,
 } from "./travelTreatment.repository";
 import * as rules from "./travelTreatment.rules";
-import type {
-  TravelReflection,
-  TravelTreatment,
-} from "./travelTreatment.types";
-
-export const travelTreatmentsKey = ["travel", "treatments"] as const;
-export const travelReflectionsKey = ["travel", "reflections"] as const;
+import { partial } from "./listWindow";
+import type { TravelTreatment } from "./travelTreatment.types";
 
 /**
- * The treatments a member logged while away, and how the trip felt.
- *
- * Same read-modify-write shape as the rest of the app: a save applies to
- * what is actually stored, so a second tab cannot drop a row.
+ * The treatments a member logged while away on one trip, and how the trip
+ * felt (Phase 8: `/patients/:id/trips/:tripId/treatments` and
+ * `…/reflection`). Every save is one server operation, then the reads are
+ * invalidated so the server's answer (its ids, its updatedAt) is what shows.
  */
-export function useTravelTreatments() {
+export function useTravelTreatments(tripId: string) {
+  const scope = usePatientScope();
   const queryClient = useQueryClient();
+  const treatmentsKey = scopedKey(scope, "trips", tripId, "treatments");
+  const reflectionKey = scopedKey(scope, "trips", tripId, "reflection");
 
   const treatmentsQuery = useQuery({
-    queryKey: travelTreatmentsKey,
-    queryFn: listTravelTreatments,
+    queryKey: treatmentsKey,
+    queryFn: () => listTravelTreatments(requireScope(scope), tripId),
+    enabled: tripId !== "",
+  });
+  const reflectionQuery = useQuery({
+    queryKey: reflectionKey,
+    queryFn: () => getTravelReflection(requireScope(scope), tripId),
+    enabled: tripId !== "",
   });
 
-  const reflectionsQuery = useQuery({
-    queryKey: travelReflectionsKey,
-    queryFn: listTravelReflections,
+  const writeTreatment = useMutation({
+    mutationFn: (op: () => Promise<unknown>) => op(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: treatmentsKey }),
   });
-
-  const writeTreatments = useMutation({
-    mutationFn: async (
-      transform: (current: TravelTreatment[]) => TravelTreatment[],
-    ) => saveTravelTreatments(transform(await listTravelTreatments())),
-    onSuccess: (rows) => queryClient.setQueryData(travelTreatmentsKey, rows),
+  const writeReflection = useMutation({
+    mutationFn: (body: string) =>
+      saveTravelReflection(
+        requireScope(scope),
+        tripId,
+        rules.clipReflection(body),
+      ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reflectionKey }),
   });
-
-  const writeReflections = useMutation({
-    mutationFn: async (
-      transform: (current: TravelReflection[]) => TravelReflection[],
-    ) => saveTravelReflections(transform(await listTravelReflections())),
-    onSuccess: (rows) => queryClient.setQueryData(travelReflectionsKey, rows),
-  });
-
-  const { mutate: mutateTreatments } = writeTreatments;
-  const { mutate: mutateReflections } = writeReflections;
 
   const treatments = useMemo(
-    () => treatmentsQuery.data ?? [],
+    () => rules.sortTreatments(treatmentsQuery.data?.rows ?? []),
     [treatmentsQuery.data],
   );
-  const reflections = useMemo(
-    () => reflectionsQuery.data ?? [],
-    [reflectionsQuery.data],
+  const known = useMemo(
+    () => new Set((treatmentsQuery.data?.rows ?? []).map((row) => row.id)),
+    [treatmentsQuery.data],
   );
 
-  const forTrip = useCallback(
-    (tripId: string) => rules.treatmentsForTrip(treatments, tripId),
-    [treatments],
-  );
+  const { mutate: mutateTreatment } = writeTreatment;
+  const { mutate: mutateReflection } = writeReflection;
 
+  /** A row the server knows is replaced; a new one is added. */
   const saveTreatment = useCallback(
     (treatment: TravelTreatment) =>
-      mutateTreatments((current) => rules.upsertTreatment(current, treatment)),
-    [mutateTreatments],
+      mutateTreatment(() =>
+        known.has(treatment.id)
+          ? updateTravelTreatment(requireScope(scope), tripId, treatment)
+          : addTravelTreatment(requireScope(scope), tripId, treatment),
+      ),
+    [mutateTreatment, known, scope, tripId],
   );
 
   const deleteTreatment = useCallback(
     (id: string) =>
-      mutateTreatments((current) => rules.removeTreatment(current, id)),
-    [mutateTreatments],
-  );
-
-  /** Called when a trip itself goes, so its log does not outlive it. */
-  const dropTrip = useCallback(
-    (tripId: string) => {
-      mutateTreatments((current) =>
-        rules.removeTreatmentsForTrip(current, tripId),
-      );
-      mutateReflections((current) =>
-        current.filter((entry) => entry.tripId !== tripId),
-      );
-    },
-    [mutateTreatments, mutateReflections],
-  );
-
-  const reflectionFor = useCallback(
-    (tripId: string) =>
-      reflections.find((entry) => entry.tripId === tripId)?.body ?? "",
-    [reflections],
-  );
-
-  const saveReflection = useCallback(
-    (tripId: string, body: string) =>
-      mutateReflections((current) => {
-        const next: TravelReflection = {
-          tripId,
-          body: rules.clipReflection(body),
-          updatedAt: new Date().toISOString(),
-        };
-        const index = current.findIndex((entry) => entry.tripId === tripId);
-        if (index === -1) return [next, ...current];
-
-        const copy = [...current];
-        copy[index] = next;
-        return copy;
-      }),
-    [mutateReflections],
+      mutateTreatment(() =>
+        removeTravelTreatment(requireScope(scope), tripId, id),
+      ),
+    [mutateTreatment, scope, tripId],
   );
 
   return {
     treatments,
-    forTrip,
+    /** This trip's rows (the hook is per trip). */
+    forTrip: useCallback(
+      (id: string) => (id === tripId ? treatments : []),
+      [tripId, treatments],
+    ),
     saveTreatment,
     deleteTreatment,
-    dropTrip,
+    /** Part of the log only, when it holds more than one read (null: all). */
+    partial: partial(treatmentsQuery.data?.count),
 
-    reflectionFor,
-    saveReflection,
+    reflectionFor: useCallback(
+      (id: string) => (id === tripId ? (reflectionQuery.data?.body ?? "") : ""),
+      [tripId, reflectionQuery.data],
+    ),
+    saveReflection: useCallback(
+      (_tripId: string, body: string) => mutateReflection(body),
+      [mutateReflection],
+    ),
 
-    isPending: treatmentsQuery.isPending || reflectionsQuery.isPending,
-    error: treatmentsQuery.error ?? reflectionsQuery.error,
+    isPending: treatmentsQuery.isPending || reflectionQuery.isPending,
+    error: treatmentsQuery.error ?? reflectionQuery.error,
+    treatmentsError: treatmentsQuery.error,
+    reflectionError: reflectionQuery.error,
     refetch: () => {
       void treatmentsQuery.refetch();
-      void reflectionsQuery.refetch();
+      void reflectionQuery.refetch();
     },
     /* Worth surfacing: the member has just written down numbers they read
        off a machine they will not be standing in front of again. */
-    saveError: writeTreatments.error ?? writeReflections.error,
+    saveError: writeTreatment.error ?? writeReflection.error,
     dismissSaveError: () => {
-      writeTreatments.reset();
-      writeReflections.reset();
+      writeTreatment.reset();
+      writeReflection.reset();
     },
-    isSaving: writeTreatments.isPending || writeReflections.isPending,
+    isSaving: writeTreatment.isPending || writeReflection.isPending,
   };
 }

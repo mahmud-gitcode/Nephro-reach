@@ -18,7 +18,6 @@ import {
   type KidneyCareChange,
   type KidneyCarePlan,
 } from "./kidneyCare";
-import { patients as roster } from "./enrollment.data";
 import { LINKED_MEMBER, type FeedItem, type FeedKind } from "./memberFeed";
 import {
   DEFAULT_CONDITIONS,
@@ -829,11 +828,24 @@ const PROFILES: Array<Omit<CcmPatient, "name">> = [
   },
 ];
 
+/* The demo CCM patients' names. The office roster itself is on the API
+   (Phase 8); CCM's own demo record moves to the API in Phase 9, which
+   deletes this table. */
+const DEMO_CCM_NAMES: Record<string, string> = {
+  "123456": "John D. Smith",
+  "789012": "Mary S. Johnson",
+  "345678": "Robert L. Davis",
+  "901234": "Angela T. Brown",
+  "567890": "James K. Wilson",
+  "234567": "Patricia M. Allen",
+  "890123": "David R. Carter",
+  "456789": "Lisa W. Thomas",
+};
+
 export const CCM_PATIENTS: CcmPatient[] = [
   ...PROFILES.map((profile) => ({
     ...profile,
-    name:
-      roster.find((p) => p.mrn === profile.mrn)?.name ?? `MRN ${profile.mrn}`,
+    name: DEMO_CCM_NAMES[profile.mrn] ?? `MRN ${profile.mrn}`,
   })),
   /* The member the demo signs in as: their own app feeds this row's inbox
      and check-ins (memberFeed.ts). DOB as in the messaging chart. */

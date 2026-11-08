@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useDeferredValue, useState } from "react";
 import { Building2, Plane, Plus, Trash2 } from "lucide-react";
 import {
   TRAVEL_DOCUMENTS,
   TRIP_STATUSES,
   addConfirmedTreatment,
-  canConfirm,
   confirmationError,
   destinationLabel,
   emptyPlacement,
@@ -14,15 +13,22 @@ import {
   formatEventTime,
   formatTripDates,
   hasOpenTimeChange,
-  pastTrips,
   removeConfirmedTreatment,
   statusLabel,
   timePreferenceLabel,
-  todayIso,
   tripLengthDays,
-  upcomingTrips,
 } from "@/features/travel/trip.rules";
-import { useTrips } from "@/features/travel/useTrips";
+import {
+  ArrangementError,
+  useOfficeTrip,
+  useOfficeTrips,
+  type OfficeTripRow,
+} from "@/features/travel/useTrips";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import type {
   TripPlacement,
   TripRequest,
@@ -50,6 +56,7 @@ import {
   TableRow,
   TableSkeleton,
   TableThumb,
+  TabPanel,
   Tabs,
   Textarea,
   type BadgeTone,
@@ -61,6 +68,7 @@ import {
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { useCan } from "@/features/staff/useStaffAccounts";
+import { PartNote } from "@/features/travel/PartNote";
 
 /* ==========================================================================
    Travel Requests — the clinic's side of travel dialysis
@@ -83,6 +91,21 @@ const ALL = "all";
 
 const patientName = (trip: TripRequest) => trip.patient?.name ?? "Patient";
 
+/* The inbox rows are the server's summaries (OfficeTripRow); the popup reads
+   the whole trip. The two share these few words. */
+const rowDestination = (row: OfficeTripRow) =>
+  [row.city, row.state].filter(Boolean).join(", ");
+const rowDates = (row: OfficeTripRow) =>
+  formatTripDates(
+    { departDate: row.departDate, returnDate: row.returnDate } as TripRequest,
+    false,
+  );
+const rowDays = (row: OfficeTripRow) =>
+  tripLengthDays({
+    departDate: row.departDate,
+    returnDate: row.returnDate,
+  } as TripRequest);
+
 /** Where a request stands, as a tag colour. */
 const STATUS_TONE: Record<TripStatus, BadgeTone> = {
   submitted: "info",
@@ -93,7 +116,11 @@ const STATUS_TONE: Record<TripStatus, BadgeTone> = {
   closed: "neutral",
 };
 
-function StatusTag({ trip }: { trip: TripRequest }) {
+function StatusTag({
+  trip,
+}: {
+  trip: Pick<TripRequest, "cancelRequestedAt" | "status">;
+}) {
   /* The member asked to cancel (client, 2026-10-12): the center manages it
      with the other unit. */
   if (trip.cancelRequestedAt) {
@@ -112,32 +139,25 @@ function RequestRow({
   trip,
   onManage,
 }: {
-  trip: TripRequest;
+  trip: OfficeTripRow;
   onManage: () => void;
 }) {
-  const booked = trip.placement?.treatments.length ?? 0;
+  const booked = trip.bookedCount;
   const short = booked < trip.treatmentsNeeded;
 
   return (
     <TableRow>
       <TableCell emphasis>
         <span className="flex items-center gap-inline-md">
-          <TableThumb name={patientName(trip)} />
-          <span className="min-w-0">
-            {patientName(trip)}
-            {trip.patient?.email ? (
-              <span className="block text-caption font-normal text-fg-muted">
-                {trip.patient.email}
-              </span>
-            ) : null}
-          </span>
+          <TableThumb name={trip.patientName} />
+          <span className="min-w-0">{trip.patientName}</span>
         </span>
       </TableCell>
-      <TableCell>{destinationLabel(trip)}</TableCell>
+      <TableCell>{rowDestination(trip)}</TableCell>
       <TableCell className="whitespace-nowrap">
-        {formatTripDates(trip, false)}
+        {rowDates(trip)}
         <span className="block text-caption text-fg-muted">
-          {tripLengthDays(trip)} days
+          {rowDays(trip)} days
         </span>
       </TableCell>
       <TableCell className="whitespace-nowrap tabular-nums">
@@ -147,14 +167,14 @@ function RequestRow({
         <span className="block text-caption text-fg-muted">booked</span>
       </TableCell>
       <TableCell>
-        {trip.placement?.facilityName || (
+        {trip.facilityName || (
           <span className="text-fg-muted">Not arranged</span>
         )}
       </TableCell>
       <TableCell>
         <span className="flex flex-col items-start gap-stack-xs">
           <StatusTag trip={trip} />
-          {hasOpenTimeChange(trip) ? (
+          {trip.hasOpenTimeChange ? (
             <Badge tone="warning" icon={<ClockSolid aria-hidden="true" />}>
               Time change asked
             </Badge>
@@ -167,7 +187,7 @@ function RequestRow({
           appearance="fill-stroke"
           size="small"
           onClick={onManage}
-          aria-label={`Manage ${patientName(trip)}'s trip to ${destinationLabel(trip)}`}
+          aria-label={`Manage ${trip.patientName}'s trip to ${rowDestination(trip)}`}
         >
           Manage
         </Button>
@@ -528,46 +548,46 @@ function ManageModal({
 /* ------------------------------------------------------------- the page */
 
 export default function ClinicTravel() {
-  const {
-    trips,
-    saveArrangement,
-    resolveTimeChange,
-    isPending,
-    error,
-    refetch,
-    saveError,
-    dismissSaveError,
-  } = useTrips();
-
   const [view, setView] = useState<"open" | "past">("open");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
   const [managingId, setManagingId] = useState<string | null>(null);
 
-  const today = todayIso();
-  const upcoming = useMemo(() => upcomingTrips(trips, today), [trips, today]);
-  const past = useMemo(() => pastTrips(trips, today), [trips, today]);
+  /* Search and status are the server's filters (spec 045); the split into
+     open and past is by date on the server too. */
+  const deferredQuery = useDeferredValue(query);
+  const {
+    upcoming,
+    past,
+    openPartial,
+    pastPartial,
+    isPending,
+    error,
+    refetch,
+  } = useOfficeTrips({
+    search: deferredQuery,
+    status: statusFilter === ALL ? undefined : (statusFilter as TripStatus),
+  });
+  /* The popup reads the whole trip, by id; a save refreshes it and the list. */
+  const {
+    trip: managing,
+    error: managingError,
+    saveArrangement,
+    resolveTimeChange,
+    saveError,
+    dismissSaveError,
+  } = useOfficeTrip(managingId);
 
-  const needsAction = upcoming.filter((trip) => !canConfirm(trip)).length;
-  const timeChanges = upcoming.filter(hasOpenTimeChange).length;
+  const needsAction = upcoming.filter(
+    (trip) => !trip.facilityName.trim() || trip.bookedCount === 0,
+  ).length;
+  const timeChanges = upcoming.filter((trip) => trip.hasOpenTimeChange).length;
   const confirmed = upcoming.filter(
     (trip) => trip.status === "confirmed",
   ).length;
 
-  const rows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return (view === "open" ? upcoming : past).filter(
-      (trip) =>
-        (statusFilter === ALL || trip.status === statusFilter) &&
-        (!needle ||
-          `${patientName(trip)} ${trip.patient?.email ?? ""} ${destinationLabel(trip)} ${trip.placement?.facilityName ?? ""}`
-            .toLowerCase()
-            .includes(needle)),
-    );
-  }, [view, upcoming, past, query, statusFilter]);
-
-  /* Read live from the list, so a save shows straight through. */
-  const managing = trips.find((trip) => trip.id === managingId) ?? null;
+  const rows = view === "open" ? upcoming : past;
+  const filtered = query.trim() !== "" || statusFilter !== ALL;
 
   return (
     <div className="space-y-4">
@@ -579,7 +599,10 @@ export default function ClinicTravel() {
           title="That change did not save"
           onDismiss={dismissSaveError}
         >
-          The request is unchanged, and the patient has not been told anything.
+          {saveError instanceof ArrangementError &&
+          saveError.part !== "placement"
+            ? `The ${saveError.part === "note" ? "message" : "status"} did not save; anything before it did. Open the request to check it.`
+            : "The request is unchanged, and the patient has not been told anything."}
         </Alert>
       ) : null}
 
@@ -651,66 +674,85 @@ export default function ClinicTravel() {
           </div>
         </div>
 
-        <AsyncSection
-          /* Loading shows as skeleton rows inside the table below, so the
-             header and filters stay put; this section only handles the
-             failed and empty states. */
-          pending={false}
-          skeleton={null}
-          error={error}
-          onRetry={refetch}
-          isEmpty={!isPending && trips.length === 0}
-          errorTitle="Travel requests did not load"
-          empty={
-            <div className="px-card pb-card">
-              <EmptyState
-                variant="bare"
-                icon={<Plane aria-hidden="true" />}
-                title="No travel requests"
-                description="When a patient asks for dialysis while they are away, the request lands here."
-              />
-            </div>
+        {/* Each tab reads one bounded page (newest first); when the office
+            has more, say so rather than pass a part off as the whole. */}
+        <PartNote
+          part={view === "open" ? openPartial : pastPartial}
+          text={({ loaded, total }) =>
+            `Showing the newest ${loaded} of ${total} ${view === "open" ? "current" : "past"} requests. Search or pick a status to find others.`
           }
-        >
-          <Table minWidth={900}>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Patient</TableHeaderCell>
-                <TableHeaderCell>Destination</TableHeaderCell>
-                <TableHeaderCell>Dates</TableHeaderCell>
-                <TableHeaderCell>Treatments</TableHeaderCell>
-                <TableHeaderCell>Receiving facility</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell className="text-right">
-                  <span className="sr-only">Actions</span>
-                </TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            {isPending ? (
-              <TableSkeleton rows={4} columns={7} />
-            ) : (
-              <TableBody>
-                {rows.length === 0 ? (
-                  <TableEmptyRow colSpan={7}>
-                    <p className="text-center text-body-sm text-fg-muted">
-                      {view === "open" && upcoming.length === 0
-                        ? "Nothing open — every current request has been dealt with."
-                        : "No requests match these filters."}
-                    </p>
-                  </TableEmptyRow>
-                ) : (
-                  rows.map((trip) => (
-                    <RequestRow
-                      key={trip.id}
-                      trip={trip}
-                      onManage={() => setManagingId(trip.id)}
-                    />
-                  ))
-                )}
-              </TableBody>
-            )}
-          </Table>
-        </AsyncSection>
+          className="px-card pb-stack-md"
+        />
+
+        {/* The table is the panel the Open and Past tabs control. */}
+        <TabPanel id={view} value={view}>
+          <AsyncSection
+            /* Loading shows as skeleton rows inside the table below, so the
+               header and filters stay put; this section only handles the
+               failed and empty states. */
+            pending={false}
+            skeleton={null}
+            error={error}
+            onRetry={canRetry(error) ? refetch : undefined}
+            isEmpty={
+              !isPending &&
+              !filtered &&
+              upcoming.length === 0 &&
+              past.length === 0
+            }
+            errorTitle={errorTitleFor(error, "Travel requests did not load")}
+            errorMessage={errorMessageFor(error, undefined)}
+            empty={
+              <div className="px-card pb-card">
+                <EmptyState
+                  variant="bare"
+                  icon={<Plane aria-hidden="true" />}
+                  title="No travel requests"
+                  description="When a patient asks for dialysis while they are away, the request lands here."
+                />
+              </div>
+            }
+          >
+            <Table minWidth={900}>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Patient</TableHeaderCell>
+                  <TableHeaderCell>Destination</TableHeaderCell>
+                  <TableHeaderCell>Dates</TableHeaderCell>
+                  <TableHeaderCell>Treatments</TableHeaderCell>
+                  <TableHeaderCell>Receiving facility</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell className="text-right">
+                    <span className="sr-only">Actions</span>
+                  </TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              {isPending ? (
+                <TableSkeleton rows={4} columns={7} />
+              ) : (
+                <TableBody>
+                  {rows.length === 0 ? (
+                    <TableEmptyRow colSpan={7}>
+                      <p className="text-center text-body-sm text-fg-muted">
+                        {view === "open" && upcoming.length === 0
+                          ? "Nothing open — every current request has been dealt with."
+                          : "No requests match these filters."}
+                      </p>
+                    </TableEmptyRow>
+                  ) : (
+                    rows.map((trip) => (
+                      <RequestRow
+                        key={trip.id}
+                        trip={trip}
+                        onManage={() => setManagingId(trip.id)}
+                      />
+                    ))
+                  )}
+                </TableBody>
+              )}
+            </Table>
+          </AsyncSection>
+        </TabPanel>
 
         <p className="flex items-center gap-inline-sm border-t border-line px-(--table-edge) py-inset-sm text-caption text-fg-muted">
           <Building2 aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -718,15 +760,28 @@ export default function ClinicTravel() {
         </p>
       </Card>
 
-      {managing ? (
+      {managingId && managingError ? (
+        <Alert
+          tone="danger"
+          title={errorTitleFor(managingError, "This request did not load")}
+          onDismiss={() => setManagingId(null)}
+        >
+          {errorMessageFor(
+            managingError,
+            "It may have been closed, or the patient is no longer linked to your office.",
+          )}
+        </Alert>
+      ) : null}
+
+      {managing && managing.id === managingId ? (
         <ManageModal
           key={managing.id}
           trip={managing}
           onClose={() => setManagingId(null)}
-          onResolveTimeChange={(reply) => resolveTimeChange(managing.id, reply)}
+          onResolveTimeChange={(reply) => resolveTimeChange(managing, reply)}
           onSave={({ status, placement, note }) => {
-            /* One write for all three, and only what changed. */
-            saveArrangement(managing.id, {
+            /* Only what changed, placement then message then status. */
+            saveArrangement(managing, {
               status: status !== managing.status ? status : undefined,
               placement:
                 JSON.stringify(placement) !==

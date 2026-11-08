@@ -2,18 +2,27 @@ import { describe, expect, it } from "vitest";
 import { emptyTrip } from "./trip.rules";
 import { clinicOnNephroReach, travelRequestEmail } from "./travelEmail";
 
-describe("clinicOnNephroReach", () => {
-  it("knows the dialysis centers on the platform, however it is typed", () => {
-    expect(clinicOnNephroReach("Riverside Dialysis Center")).toBe(true);
-    expect(clinicOnNephroReach("  riverside dialysis center ")).toBe(true);
+describe("clinicOnNephroReach (NEW-1: the server's answer, not a name match)", () => {
+  it("follows onNephroReach from GET /patients/:id/home-dialysis-clinic", () => {
+    expect(clinicOnNephroReach({ onNephroReach: true })).toBe(true);
+    expect(clinicOnNephroReach({ onNephroReach: false })).toBe(false);
   });
 
-  it("treats anything else, or nothing, as outside the network", () => {
-    expect(clinicOnNephroReach("Sunrise Kidney Care")).toBe(false);
-    expect(clinicOnNephroReach("")).toBe(false);
+  it("treats no clinic, or an unknown answer, as outside the network", () => {
+    expect(clinicOnNephroReach(null)).toBe(false);
     expect(clinicOnNephroReach(undefined)).toBe(false);
-    // An access center is on NephroReach, but it is not a dialysis clinic.
-    expect(clinicOnNephroReach("Metro Vascular Access Center")).toBe(false);
+    expect(clinicOnNephroReach({})).toBe(false);
+  });
+
+  it("never matches a typed name against a demo list any more", () => {
+    /* A clinic typed in as "Riverside Dialysis Center" is not linked to
+       the center: only a directory pick (organizationId) is. */
+    expect(
+      clinicOnNephroReach({
+        name: "Riverside Dialysis Center",
+        onNephroReach: false,
+      } as { onNephroReach: boolean }),
+    ).toBe(false);
   });
 });
 

@@ -89,7 +89,7 @@ export function ConfirmedTreatmentPanel({ trip }: { trip: TripRequest }) {
 export function TravelReflectionsPanel({ trip }: { trip: TripRequest }) {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { reflectionFor, saveReflection } = useTravelTreatments();
+  const { reflectionFor, saveReflection } = useTravelTreatments(trip.id);
 
   const saved = reflectionFor(trip.id);
   /* A draft and a Save button (client, 2026-10-12): it saved on every key,

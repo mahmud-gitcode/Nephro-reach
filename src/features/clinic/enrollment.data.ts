@@ -1,31 +1,39 @@
 import type { BadgeTone } from "@/components/ui";
 
 /* ==========================================================================
-   Patient enrollment — demo data
+   Patient enrollment — labels, filters and the row type
    --------------------------------------------------------------------------
-   The client named eight patients and gave totals for twenty-three. Every
-   panel on the page — sources, programs, statuses, the seat count, the
-   pagination — is a count of those twenty-three, so the eight named rows
-   alone would leave the table disagreeing with every chart beside it.
-
-   So the roster below is the full twenty-three: the eight as specified,
-   then fifteen written to land exactly on the client's totals (16 / 7 / 0
-   by program, 18 / 3 / 2 / 0 by status, 12 / 6 / 3 / 2 by source). Those
-   fifteen are filler and say so; replace them, not the eight, when real
-   data arrives. `enrollment.data.test.ts` asserts the totals still hold, so
-   an edit that breaks the agreement fails rather than ships.
+   The roster is the office's patients from the API (Phase 8:
+   GET /organizations/:id/patients joined with its program enrollments, see
+   enrollment.mapping.ts). The demo roster that used to live here (twenty-
+   three typed patients with MRNs) is deleted: an empty office shows an
+   empty roster, never sample people.
    ========================================================================== */
 
+/** Contract seats before the API answers, or when the contract read is not
+ *  allowed for this role: unknown, so nothing is promised. */
 export const CONTRACT_SLOTS = 30;
 
 export type EnrollmentStatus =
-  "Enrolled" | "Pending Start" | "Not Started" | "Withdrawn";
+  | "Enrolled"
+  | "Pending Start"
+  | "Not Started"
+  | "Withdrawn"
+  | "Completed"
+  | "Admitted"
+  | "Discharged"
+  /** On the roster, in no program yet. */
+  | "No Program";
 
 export const statusTone: Record<EnrollmentStatus, BadgeTone> = {
   Enrolled: "success",
   "Pending Start": "warning",
   "Not Started": "neutral",
   Withdrawn: "danger",
+  Completed: "neutral",
+  Admitted: "neutral",
+  Discharged: "neutral",
+  "No Program": "neutral",
 };
 
 export const JOURNEY = "Journey to Dialysis (21-Day)";
@@ -35,15 +43,26 @@ export type EnrollmentSource =
   "Office Referral" | "Provider Referral" | "Hospital Discharge" | "Self-Pay";
 
 export type Patient = {
+  /** The server's patientId: the only identity a row has. */
+  id: string;
+  enrollmentId: string | null;
   name: string;
+  /** This office's MRN, display text only; "" when there is none. */
   mrn: string;
   program: string;
+  programSlug: string | null;
   enrolledOn: string;
   status: EnrollmentStatus;
   /** An em dash when the patient has no start date yet. */
   startDate: string;
   progress: number;
-  source: EnrollmentSource;
+  source: EnrollmentSource | "";
+  hasAccount: boolean;
+  relationshipStatus: string;
+  progressStatus: string | null;
+  classesCompleted: number | null;
+  classesTotal: number | null;
+  lastActivityAt: string | null;
 };
 
 export const ALL_PROGRAMS = "All Programs";
@@ -59,255 +78,6 @@ export const statusOptions: string[] = [
   "Not Started",
   "Withdrawn",
 ];
-
-/** The eight the client named, in the order they gave them. */
-const namedPatients: Patient[] = [
-  {
-    name: "John D. Smith",
-    mrn: "123456",
-    program: JOURNEY,
-    enrolledOn: "08/15/2026",
-    status: "Enrolled",
-    startDate: "08/16/2026",
-    progress: 75,
-    source: "Office Referral",
-  },
-  {
-    name: "Mary S. Johnson",
-    mrn: "789012",
-    program: CRASH,
-    enrolledOn: "08/20/2026",
-    status: "Enrolled",
-    startDate: "08/21/2026",
-    progress: 60,
-    source: "Hospital Discharge",
-  },
-  {
-    name: "Robert L. Davis",
-    mrn: "345678",
-    program: JOURNEY,
-    enrolledOn: "08/10/2026",
-    status: "Pending Start",
-    startDate: "08/15/2026",
-    progress: 0,
-    source: "Provider Referral",
-  },
-  {
-    name: "Angela T. Brown",
-    mrn: "901234",
-    program: JOURNEY,
-    enrolledOn: "08/25/2026",
-    status: "Enrolled",
-    startDate: "08/26/2026",
-    progress: 40,
-    source: "Office Referral",
-  },
-  {
-    name: "James K. Wilson",
-    mrn: "567890",
-    program: CRASH,
-    enrolledOn: "08/12/2026",
-    status: "Enrolled",
-    startDate: "08/13/2026",
-    progress: 100,
-    source: "Provider Referral",
-  },
-  {
-    name: "Patricia M. Allen",
-    mrn: "234567",
-    program: JOURNEY,
-    enrolledOn: "08/18/2026",
-    status: "Enrolled",
-    startDate: "08/19/2026",
-    progress: 55,
-    source: "Office Referral",
-  },
-  {
-    name: "David R. Carter",
-    mrn: "890123",
-    program: JOURNEY,
-    enrolledOn: "08/14/2026",
-    status: "Not Started",
-    startDate: "—",
-    progress: 0,
-    source: "Self-Pay",
-  },
-  {
-    name: "Lisa W. Thomas",
-    mrn: "456789",
-    program: CRASH,
-    enrolledOn: "08/22/2026",
-    status: "Enrolled",
-    startDate: "08/23/2026",
-    progress: 30,
-    source: "Office Referral",
-  },
-];
-
-/** Filler. Written to hit the client's totals — see the file header. */
-const fillerPatients: Patient[] = [
-  {
-    name: "Sandra Phillips",
-    mrn: "112233",
-    program: JOURNEY,
-    enrolledOn: "08/11/2026",
-    status: "Enrolled",
-    startDate: "08/12/2026",
-    progress: 82,
-    source: "Office Referral",
-  },
-  {
-    name: "John Taylor",
-    mrn: "223344",
-    program: JOURNEY,
-    enrolledOn: "08/13/2026",
-    status: "Enrolled",
-    startDate: "08/14/2026",
-    progress: 68,
-    source: "Office Referral",
-  },
-  {
-    name: "Marcus White",
-    mrn: "334455",
-    program: CRASH,
-    enrolledOn: "08/16/2026",
-    status: "Enrolled",
-    startDate: "08/17/2026",
-    progress: 45,
-    source: "Hospital Discharge",
-  },
-  {
-    name: "Lisa Reynolds",
-    mrn: "445566",
-    program: JOURNEY,
-    enrolledOn: "08/17/2026",
-    status: "Enrolled",
-    startDate: "08/18/2026",
-    progress: 51,
-    source: "Provider Referral",
-  },
-  {
-    name: "Daniel Brooks",
-    mrn: "556677",
-    program: JOURNEY,
-    enrolledOn: "08/19/2026",
-    status: "Enrolled",
-    startDate: "08/20/2026",
-    progress: 33,
-    source: "Office Referral",
-  },
-  {
-    name: "Maria Clark",
-    mrn: "667788",
-    program: CRASH,
-    enrolledOn: "08/21/2026",
-    status: "Enrolled",
-    startDate: "08/22/2026",
-    progress: 90,
-    source: "Hospital Discharge",
-  },
-  {
-    name: "Robert Turner",
-    mrn: "778899",
-    program: JOURNEY,
-    enrolledOn: "08/23/2026",
-    status: "Enrolled",
-    startDate: "08/24/2026",
-    progress: 27,
-    source: "Office Referral",
-  },
-  {
-    name: "Evelyn Green",
-    mrn: "889900",
-    program: JOURNEY,
-    enrolledOn: "08/24/2026",
-    status: "Enrolled",
-    startDate: "08/25/2026",
-    progress: 62,
-    source: "Provider Referral",
-  },
-  {
-    name: "Kevin Walker",
-    mrn: "990011",
-    program: CRASH,
-    enrolledOn: "08/26/2026",
-    status: "Enrolled",
-    startDate: "08/27/2026",
-    progress: 74,
-    source: "Office Referral",
-  },
-  {
-    name: "Tiffany Moore",
-    mrn: "101112",
-    program: JOURNEY,
-    enrolledOn: "08/27/2026",
-    status: "Enrolled",
-    startDate: "08/28/2026",
-    progress: 19,
-    source: "Office Referral",
-  },
-  {
-    name: "Teresa J. Fields",
-    mrn: "121314",
-    program: JOURNEY,
-    enrolledOn: "08/28/2026",
-    status: "Enrolled",
-    startDate: "08/29/2026",
-    progress: 58,
-    source: "Provider Referral",
-  },
-  {
-    name: "Nathan R. Webb",
-    mrn: "131415",
-    program: JOURNEY,
-    enrolledOn: "08/29/2026",
-    status: "Enrolled",
-    startDate: "08/30/2026",
-    progress: 41,
-    source: "Office Referral",
-  },
-  {
-    name: "Camille D. Ortiz",
-    mrn: "141516",
-    program: JOURNEY,
-    enrolledOn: "08/30/2026",
-    status: "Pending Start",
-    startDate: "09/02/2026",
-    progress: 0,
-    source: "Office Referral",
-  },
-  {
-    name: "Gerald F. Moss",
-    mrn: "151617",
-    program: CRASH,
-    enrolledOn: "08/31/2026",
-    status: "Pending Start",
-    startDate: "09/03/2026",
-    progress: 0,
-    source: "Provider Referral",
-  },
-  {
-    name: "Brenda K. Vaughn",
-    mrn: "161718",
-    program: JOURNEY,
-    enrolledOn: "09/01/2026",
-    status: "Not Started",
-    startDate: "—",
-    progress: 0,
-    source: "Self-Pay",
-  },
-];
-
-export const patients: Patient[] = [...namedPatients, ...fillerPatients];
-
-export const enrolledCount = patients.length;
-
-export const slotsRemaining = CONTRACT_SLOTS - enrolledCount;
-
-/** 23 of 30 — the goal card's figure, derived rather than typed. */
-export const enrollmentGoalPct = Math.round(
-  (enrolledCount / CONTRACT_SLOTS) * 100,
-);
 
 /**
  * Search, program, status and referral source in one pass.

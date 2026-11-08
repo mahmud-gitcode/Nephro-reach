@@ -1,130 +1,110 @@
 import { describe, expect, it } from "vitest";
-import { patients } from "./enrollment.data";
 import {
-  availableSlots,
   countStatus,
   daysInactive,
+  FOLLOW_UP_AFTER_DAYS,
   filterRoster,
-  programBreakdown,
-  roster,
-  shareOf,
-  withFollowUpRule,
+  memberStatusFor,
+  needsAttention,
+  programBreakdownOf,
+  recentActivity,
+  rosterMemberFor,
 } from "./members.data";
+import * as data from "./members.data";
+import { rosterRows } from "./rosterTestData";
 
-describe("the roster is the Enroll Patients roster", () => {
-  it("has the same 23 people, with the same MRNs and programs", () => {
-    expect(roster).toHaveLength(23);
+const NOW = new Date("2026-11-03T12:00:00Z");
+const roster = rosterRows().map((p) => rosterMemberFor(p, NOW));
+const byName = (name: string) => roster.find((m) => m.name === name)!;
+
+describe("rows come from the API roster (Phase 8)", () => {
+  it("ships no demo tracking table, roster or activity", () => {
+    expect("roster" in data).toBe(false);
+    expect(recentActivity).toEqual([]);
+  });
+
+  it("keys every member by patientId, never by MRN", () => {
+    for (const member of roster) expect(member.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(byName("Devon Example").mrn).toBe("");
+  });
+});
+
+describe("what is derived and what is not (NEW-2)", () => {
+  it("shows no live classes, check-ins or questions: there is no source", () => {
     for (const member of roster) {
-      const patient = patients.find((p) => p.mrn === member.mrn);
-      expect(patient?.name).toBe(member.name);
-      expect(patient?.program).toBe(member.program);
-      expect(patient?.enrolledOn).toBe(member.enrolledOn);
+      expect(member.liveClasses).toBeNull();
+      expect(member.checkIns).toBeNull();
+      expect(member.questions).toBeNull();
     }
   });
-});
 
-/* Counted from the roster, and still landing on the client's figures. */
-describe("the summary matches the client's figures", () => {
-  it.each([
-    ["On Track", 18, 78],
-    ["Need Follow-Up", 3, 13],
-    ["Attention Needed", 2, 9],
-    ["Not Started", 0, 0],
-  ] as const)("%s: %i (%i%%)", (status, count, pct) => {
-    expect(countStatus(roster, status)).toBe(count);
-    expect(shareOf(count)).toBe(pct);
+  it("has no status for a patient in no program", () => {
+    expect(byName("Devon Example").status).toBeNull();
   });
 
-  it("leaves 7 of 30 slots", () => {
-    expect(availableSlots).toBe(7);
+  it("reads Not Started and Completed from the course progress", () => {
+    expect(byName("Casey Synthetic").status).toBe("Not Started");
+    expect(byName("Emery Fixture").status).toBe("Completed");
   });
 
-  it("splits 16 / 7 / 0 by program", () => {
-    expect(programBreakdown.map((row) => row.value)).toEqual([16, 7, 0]);
+  it("never invents Attention Needed", () => {
+    expect(countStatus(roster, "Attention Needed")).toBe(0);
+  });
+
+  it("shows progress and classes from the server", () => {
+    expect(byName("Avery Testpatient").progress).toBe(40);
+    expect(byName("Avery Testpatient").currentModule).toBe("8 of 21 classes");
   });
 });
 
-describe("the eight rows the client specified", () => {
-  it.each([
-    ["John D. Smith", "On Track", 75],
-    ["Mary S. Johnson", "On Track", 60],
-    ["Robert L. Davis", "Need Follow-Up", 40],
-    ["Angela T. Brown", "On Track", 85],
-    ["James K. Wilson", "Attention Needed", 20],
-    ["Patricia M. Allen", "On Track", 100],
-    ["David R. Carter", "Need Follow-Up", 55],
-    ["Lisa W. Thomas", "On Track", 30],
-  ] as const)("%s", (name, status, progress) => {
-    const member = roster.find((m) => m.name === name);
-    expect(member?.status).toBe(status);
-    expect(member?.progress).toBe(progress);
-  });
-
-  it("gives Angela the details the mockup showed", () => {
-    const angela = roster.find((m) => m.name === "Angela T. Brown")!;
-    expect(angela.currentModule).toContain("Day 12 of 21");
-    expect(angela.liveClasses).toEqual([2, 3]);
-    expect(angela.checkIns).toEqual([3, 3]);
-    expect(angela.questions).toEqual({ total: 1, open: 0 });
-  });
-});
-
-describe("filtering", () => {
-  it("finds a member by MRN", () => {
-    expect(filterRoster(roster, { query: "901234" })[0].name).toBe(
-      "Angela T. Brown",
-    );
-  });
-
-  it("narrows by status", () => {
-    const rows = filterRoster(roster, { status: "Attention Needed" });
-    expect(rows.map((m) => m.name)).toEqual([
-      "James K. Wilson",
-      "Robert Turner",
-    ]);
-  });
-});
-
-describe("the 3-day follow-up rule", () => {
-  const base = {
-    status: "On Track" as const,
-    progress: 50,
-    lastSeen: "",
-    liveClasses: [1, 3] as [number, number],
-    checkIns: [1, 3] as [number, number],
-    questions: { total: 0, open: 0 },
-  };
-
+describe(`the ${FOLLOW_UP_AFTER_DAYS}-day follow-up rule (client, 2026-10-18)`, () => {
   it("reads how long a member has been quiet", () => {
     expect(daysInactive("Today")).toBe(0);
-    expect(daysInactive("1 day ago")).toBe(1);
     expect(daysInactive("6 days ago")).toBe(6);
-    expect(daysInactive("1 week ago")).toBe(7);
+    expect(daysInactive("2 weeks ago")).toBe(14);
     expect(daysInactive("No activity yet")).toBeNull();
   });
 
-  it("flags On Track members after 3 days without activity", () => {
-    expect(
-      withFollowUpRule({ ...base, lastActivity: "2 days ago" }).status,
-    ).toBe("On Track");
-    expect(
-      withFollowUpRule({ ...base, lastActivity: "3 days ago" }).status,
-    ).toBe("Need Follow-Up");
-    expect(
-      withFollowUpRule({
-        ...base,
-        status: "Attention Needed",
-        lastActivity: "5 days ago",
-      }).status,
-    ).toBe("Attention Needed");
+  it("keeps a member active today on track", () => {
+    expect(byName("Avery Testpatient").status).toBe("On Track");
   });
 
-  it("leaves no quiet member on track in the roster", () => {
-    for (const member of roster) {
-      const days = daysInactive(member.lastActivity);
-      if (days !== null && days >= 3) {
-        expect(member.status).not.toBe("On Track");
-      }
-    }
+  it("flags an in-progress member quiet for 3 days or more", () => {
+    expect(byName("Blake Sample").status).toBe("Need Follow-Up");
+    const base = {
+      programSlug: "journey-21-day",
+      progressStatus: "in-progress",
+    };
+    expect(
+      memberStatusFor({ ...base, lastActivityAt: "2026-10-31T12:00:00Z" }, NOW),
+    ).toBe("Need Follow-Up");
+    expect(
+      memberStatusFor({ ...base, lastActivityAt: "2026-11-01T12:00:00Z" }, NOW),
+    ).toBe("On Track");
+  });
+});
+
+describe("filtering and charts", () => {
+  it("finds a member by MRN or name", () => {
+    expect(filterRoster(roster, { query: "900003" })).toHaveLength(1);
+    expect(filterRoster(roster, { query: "blake" })).toHaveLength(1);
+  });
+
+  it("narrows by status", () => {
+    expect(
+      filterRoster(roster, { status: "Need Follow-Up" }).map((m) => m.name),
+    ).toEqual(["Blake Sample"]);
+  });
+
+  it("splits by program", () => {
+    expect(programBreakdownOf(roster).map((s) => s.value)).toEqual([3, 1, 1]);
+  });
+
+  it("lists who needs attention, once each, by patientId", () => {
+    const items = needsAttention(roster, []);
+    expect(items.map((i) => i.member.name)).toEqual([
+      "Blake Sample",
+      "Casey Synthetic",
+    ]);
   });
 });

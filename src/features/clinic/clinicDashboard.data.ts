@@ -1,5 +1,4 @@
 import type { BadgeTone } from "@/components/ui";
-import { CONTRACT_SLOTS, patients } from "./enrollment.data";
 import { classDate, type UpcomingClass } from "./liveClass.data";
 
 /* ==========================================================================
@@ -8,11 +7,12 @@ import { classDate, type UpcomingClass } from "./liveClass.data";
    The dashboard summarises pages that own their data, so most of what it
    shows is read from them rather than kept here: members and their recent
    activity from the Member page (members.data.ts), classes from Live Class,
-   the seat count from Enroll Patients. `useClinicData` gathers them.
+   the seat count from the contract. `useClinicData` gathers them.
 
-   What stays here is what only the dashboard shows — the status cards and
-   the three charts — as the client's demo figures, copied as given. Those
-   do not reconcile with the roster; see the note above `statusCards`.
+   What stays here is what only the dashboard shows: the status cards
+   (counted from the live roster) and the three charts, which are still
+   the client's demo figures with no patient in them (their reports move
+   to the API with Phase 14).
    ========================================================================== */
 
 export type MemberStatus =
@@ -36,37 +36,46 @@ export const statusTone: Record<MemberStatus, BadgeTone> = {
   Completed: "info",
 };
 
-/* Counted from the Enroll Patients roster, so the card and that page
-   cannot disagree. */
-export const enrollment = {
-  enrolled: patients.length,
-  contracted: CONTRACT_SLOTS,
-  get remaining() {
-    return this.contracted - this.enrolled;
-  },
+/** The five status cards, in this order. */
+export const STATUS_CARD_ORDER: readonly MemberStatus[] = [
+  "On Track",
+  "Need Follow-Up",
+  "Attention Needed",
+  "Not Started",
+  "Completed",
+];
+
+/** Statuses with no source yet (NEW-2): their card shows "—", not 0. */
+export const UNSOURCED_STATUSES: readonly MemberStatus[] = ["Attention Needed"];
+
+export type StatusCardData = {
+  status: MemberStatus;
+  /** null: no source for this status yet. */
+  count: number | null;
+  share?: string;
 };
 
 /**
- * The five status cards.
- *
- * A caution for whoever wires this to real data: as supplied, these counts
- * total 30 against 23 enrolled members, and the percentages total 122%. The
- * percentages are each out of 23, so they read as five overlapping views of
- * the roster rather than five slices of it. Left exactly as specified —
- * confirm with the client which reading is meant before the figures are
- * computed rather than typed.
+ * The five status cards, counted from the live roster rather than typed
+ * (the client's demo figures, which did not reconcile with any roster,
+ * are gone). Each share is out of the whole roster.
  */
-export const statusCards: Array<{
-  status: MemberStatus;
-  count: number;
-  share?: string;
-}> = [
-  { status: "On Track", count: 18, share: "78%" },
-  { status: "Need Follow-Up", count: 3, share: "13%" },
-  { status: "Attention Needed", count: 2, share: "9%" },
-  { status: "Not Started", count: 2 },
-  { status: "Completed", count: 5, share: "22%" },
-];
+export function statusCardsFor(
+  list: readonly { status: MemberStatus | null }[],
+): StatusCardData[] {
+  return STATUS_CARD_ORDER.map((status) => {
+    if (UNSOURCED_STATUSES.includes(status)) return { status, count: null };
+    const count = list.filter((member) => member.status === status).length;
+    return {
+      status,
+      count,
+      share:
+        status === "Not Started" || list.length === 0
+          ? undefined
+          : `${Math.round((count / list.length) * 100)}%`,
+    };
+  });
+}
 
 export const performance = [
   { label: "Average Curriculum Completion", value: 78 },
@@ -82,25 +91,31 @@ export const performance = [
 const MEMBERS = "/dashboard/clinic/members";
 const CURRICULUM = "/dashboard/clinic/curriculum-progress";
 
-/** The Member page, filtered to a status or opened on one member. */
-export function memberLink(filters: { status?: string; mrn?: string }) {
+/** The Member page, filtered to a status or opened on one member. A member
+ *  is named by their patientId, never an MRN (INT-13). */
+export function memberLink(filters: { status?: string; patientId?: string }) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
-  if (filters.mrn) params.set("mrn", filters.mrn);
+  if (filters.patientId) params.set("patient", filters.patientId);
   const query = params.toString();
   return `${MEMBERS}${query ? `?${query}` : ""}`;
 }
 
-/** Messages, opened on one patient's thread — or New Message addressed to
- *  them when they have none yet. */
-export function messageLink(mrn: string) {
-  return `/dashboard/clinic/messages?to=${encodeURIComponent(mrn)}`;
+/** Messages for one patient, by patientId. Until messaging moves to the
+ *  API (Phase 11) the inbox opens without a preselected thread. */
+export function messageLink(patientId: string) {
+  return `/dashboard/clinic/messages?patient=${encodeURIComponent(patientId)}`;
 }
 
 /** Curriculum Progress, filtered, scrolled to its member table. */
-export function curriculumLink(filters: { status?: string; q?: string }) {
+export function curriculumLink(filters: {
+  status?: string;
+  q?: string;
+  patientId?: string;
+}) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
+  if (filters.patientId) params.set("patient", filters.patientId);
   if (filters.q) params.set("q", filters.q);
   const query = params.toString();
   return `${CURRICULUM}${query ? `?${query}` : ""}#member-progress`;

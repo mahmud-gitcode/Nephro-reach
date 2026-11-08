@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@/components/ui";
-import { CONTRACT_SLOTS, enrolledCount } from "./enrollment.data";
+import { CONTRACT_SLOTS } from "./enrollment.data";
 
 /* ==========================================================================
    Contract & Billing — demo data
@@ -40,7 +40,9 @@ export const contract = {
   primaryContact: "Dr. Melissa Carter",
 };
 
-export const patientsCovered = enrolledCount;
+/** The client's demo figure, shown only until the live roster loads (the
+ *  page reads the roster); the contract moves to the API in Phase 14. */
+export const patientsCovered = 23;
 
 /** `new Date("2026-01-01")` is UTC midnight — Dec 31 in the Americas. */
 export function localDate(iso: string): Date {

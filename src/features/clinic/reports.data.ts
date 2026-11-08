@@ -249,8 +249,13 @@ export function rosterReport(rows: RosterMember[]) {
   const statusPct = shares(statusCounts);
   const completed = rows.filter((m) => m.progress >= 100).length;
   const started = rows.filter((m) => m.status !== "Not Started").length;
-  const attended = rows.reduce((sum, m) => sum + m.liveClasses[0], 0);
-  const openQuestions = rows.reduce((sum, m) => sum + m.questions.open, 0);
+  /* No source for live classes or questions yet (NEW-2): "—", not 0. */
+  const attended = rows.every((m) => m.liveClasses === null)
+    ? null
+    : rows.reduce((sum, m) => sum + (m.liveClasses?.[0] ?? 0), 0);
+  const openQuestions = rows.every((m) => m.questions === null)
+    ? null
+    : rows.reduce((sum, m) => sum + (m.questions?.open ?? 0), 0);
   const pct = (n: number) =>
     rows.length === 0 ? "0%" : `${Math.round((n / rows.length) * 100)}%`;
 
@@ -270,7 +275,7 @@ export function rosterReport(rows: RosterMember[]) {
     {
       id: "attendees",
       label: "Live Class Attendances",
-      value: String(attended),
+      value: attended === null ? "—" : String(attended),
       note: "Classes attended, all members",
     },
     {
@@ -282,7 +287,7 @@ export function rosterReport(rows: RosterMember[]) {
     {
       id: "questions",
       label: "Open Questions",
-      value: String(openQuestions),
+      value: openQuestions === null ? "—" : String(openQuestions),
       note: "Waiting on the care team",
     },
   ];
@@ -329,16 +334,16 @@ export function memberActivityCsv(
       m.mrn,
       m.program,
       m.enrolledOn,
-      m.status,
+      m.status ?? "—",
       m.progress,
       m.currentModule,
       m.lastActivity,
-      m.liveClasses[0],
-      m.liveClasses[1],
-      m.checkIns[0],
-      m.checkIns[1],
-      m.questions.total,
-      m.questions.open,
+      m.liveClasses ? m.liveClasses[0] : "—",
+      m.liveClasses ? m.liveClasses[1] : "—",
+      m.checkIns ? m.checkIns[0] : "—",
+      m.checkIns ? m.checkIns[1] : "—",
+      m.questions ? m.questions.total : "—",
+      m.questions ? m.questions.open : "—",
     ]),
   ];
 }

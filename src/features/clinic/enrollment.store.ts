@@ -1,45 +1,28 @@
-import {
-  readJson,
-  storageKey,
-  StorageError,
-  writeJson,
-} from "@/lib/data/storage";
-import {
-  CONTRACT_SLOTS,
-  CRASH,
-  JOURNEY,
-  patients,
-  type EnrollmentSource,
-  type Patient,
-} from "./enrollment.data";
-import { listCourses, type Course } from "@/features/education/courseLibrary";
+import { CRASH, JOURNEY, type EnrollmentSource } from "./enrollment.data";
+import { splitName, type ProgramCourse } from "./enrollment.mapping";
 
 /* ==========================================================================
-   Enrolling a patient
+   The enrollment form: choices and client hints (Phase 8)
    --------------------------------------------------------------------------
-   The demo roster is fixed; patients the clinic enrolls in the browser are
-   kept beside it under one key and joined on read, so every clinic page —
-   this one, the Member page, the dashboard — sees the same list. When the
-   backend lands, `readEnrolled` and `enrollPatient` become API calls and
-   nothing that renders them changes.
+   Enrolling is two server operations (useEnrollPatient in useClinicData):
+   the roster, then the program. Nothing is kept in this browser any more:
+   the `nr:clinic-enrollments` key is retired and purged. The checks below
+   are hints shown before a submit; the server decides the rest (a taken
+   MRN, a full contract, an existing enrollment) and its answer is shown on
+   the matching field.
    ========================================================================== */
-
-const KEY = storageKey("clinic-enrollments");
 
 export const ENROLL_PROGRAMS = [JOURNEY, CRASH] as const;
 
 /**
  * What a patient can be enrolled in: the two contracted programs, then
- * every course the admin has added since (client, 2026-10-18: "whenever I
- * add a new program, it will have to come right here").
+ * every published course from the catalog (client, 2026-10-18: "whenever
+ * I add a new program, it will have to come right here").
  */
 export function enrollablePrograms(
-  courses: Pick<Course, "titleEn" | "seeded">[],
+  courses: Pick<ProgramCourse, "titleEn">[],
 ): string[] {
-  const added = courses
-    .filter((course) => !course.seeded)
-    .map((course) => course.titleEn.trim())
-    .filter(Boolean);
+  const added = courses.map((course) => course.titleEn.trim()).filter(Boolean);
   return [...new Set<string>([...ENROLL_PROGRAMS, ...added])];
 }
 
@@ -70,25 +53,20 @@ export const emptyDraft = (): EnrollmentDraft => ({
 export type EnrollmentErrors = Partial<Record<keyof EnrollmentDraft, string>>;
 
 /**
- * What has to be true before a patient takes a seat. A full contract is
- * reported on the name field, the first one read, because it is the one
- * error no other field can fix.
+ * The form's own hints before anything is sent: a first and last name, the
+ * clinic's six-digit MRN format, a program and a source from the lists.
+ * Seats and MRN uniqueness are the server's to decide (409 seats_full,
+ * mrn_taken), so they are not checked here.
  */
 export function validateEnrollment(
   draft: EnrollmentDraft,
-  roster: Pick<Patient, "mrn">[],
   programs: readonly string[] = ENROLL_PROGRAMS,
 ): EnrollmentErrors {
   const errors: EnrollmentErrors = {};
-  if (roster.length >= CONTRACT_SLOTS) {
-    errors.name = `All ${CONTRACT_SLOTS} contract seats are filled.`;
-    return errors;
-  }
   if (!draft.name.trim()) errors.name = "Enter the patient's full name.";
+  else if (!splitName(draft.name)) errors.name = "Enter first and last name.";
   const mrn = draft.mrn.trim();
   if (!/^\d{6}$/.test(mrn)) errors.mrn = "An MRN is 6 digits.";
-  else if (roster.some((patient) => patient.mrn === mrn))
-    errors.mrn = "A patient with this MRN is already enrolled.";
   if (!programs.includes(draft.program)) errors.program = "Choose a program.";
   if (!ENROLL_SOURCES.includes(draft.source as EnrollmentSource))
     errors.source = "Choose how they were referred.";
@@ -101,54 +79,19 @@ export function formatUsDate(date: Date): string {
   return `${pad(date.getMonth() + 1)}/${pad(date.getDate())}/${date.getFullYear()}`;
 }
 
-/**
- * The roster row for a new enrollment. With a start date they are Pending
- * Start; without one, Not Started. Progress is 0 either way — nobody has
- * done a module on the day they are enrolled.
- */
-export function toPatient(draft: EnrollmentDraft, today: Date): Patient {
-  let startDate = "—";
-  if (draft.startDate) {
-    const [y, m, d] = draft.startDate.split("-").map(Number);
-    startDate = formatUsDate(new Date(y, m - 1, d));
+/** The copy for a server refusal, by its code (spec 019 §4). */
+export function enrollErrorText(code: string | null, fallback: string): string {
+  switch (code) {
+    case "patients.mrn_taken":
+      return "A patient with this MRN is already enrolled.";
+    case "patients.seats_full":
+      return "All contract seats are filled.";
+    case "patients.patient_already_enrolled":
+    case "education.enrollment_exists":
+      return "This patient is already enrolled.";
+    case "patients.concurrent_change":
+      return "Someone else changed this at the same time. Try again.";
+    default:
+      return fallback;
   }
-  return {
-    name: draft.name.trim().replace(/\s+/g, " "),
-    mrn: draft.mrn.trim(),
-    program: draft.program,
-    enrolledOn: formatUsDate(today),
-    status: draft.startDate ? "Pending Start" : "Not Started",
-    startDate,
-    progress: 0,
-    source: draft.source as EnrollmentSource,
-  };
-}
-
-/** Patients enrolled in this browser, oldest first. */
-export async function readEnrolled(): Promise<Patient[]> {
-  const stored = await readJson<Patient[] | null>(KEY, null);
-  return Array.isArray(stored) ? stored : [];
-}
-
-/** The demo roster and everyone enrolled since, as one list. */
-export async function readAllPatients(): Promise<Patient[]> {
-  return [...patients, ...(await readEnrolled())];
-}
-
-/**
- * Checks again against what is stored, not what the form last saw, so two
- * tabs cannot both take the last seat or reuse one MRN.
- */
-export async function enrollPatient(
-  draft: EnrollmentDraft,
-  today = new Date(),
-): Promise<Patient> {
-  const added = await readEnrolled();
-  const programs = enrollablePrograms(await listCourses());
-  const errors = validateEnrollment(draft, [...patients, ...added], programs);
-  const first = Object.values(errors)[0];
-  if (first) throw new StorageError(first);
-  const patient = toPatient(draft, today);
-  await writeJson(KEY, [...added, patient]);
-  return patient;
 }

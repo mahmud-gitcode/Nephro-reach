@@ -27,7 +27,7 @@ import {
   toggleDay,
   tripError,
 } from "./trip.rules";
-import { useTrips } from "./useTrips";
+import { useMemberTrips } from "./useTrips";
 import YourTrips from "./YourTrips";
 import type {
   TimePreference,
@@ -37,7 +37,9 @@ import type {
 } from "./trip.types";
 import {
   Alert,
+  AsyncSection,
   Button,
+  Card,
   Chip,
   ChipGroup,
   FormField,
@@ -45,7 +47,13 @@ import {
   Modal,
   Select,
   Textarea,
+  Skeleton,
 } from "@/components/ui";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { useMember } from "@/features/auth/useMember";
 import { isEmail } from "@/features/personal-log/shareLog";
@@ -53,6 +61,7 @@ import type { ShareInitial } from "@/features/secure-messages/ShareOutsideCard";
 import { LazyShareOutsideModal } from "@/features/secure-messages/LazyShareOutsideModal";
 import { useDialysisClinic } from "./useDialysisClinic";
 import { clinicOnNephroReach, travelRequestEmail } from "./travelEmail";
+import { PartNote } from "./PartNote";
 
 /* ==========================================================================
    Travel dialysis
@@ -330,8 +339,18 @@ export function RequestSummary({ trip }: { trip: TripRequest }) {
 export function TravelDialysisSection() {
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const { trips, submit, update, saveError, dismissSaveError, isSaving } =
-    useTrips();
+  const {
+    trips,
+    submit,
+    update,
+    saveError,
+    dismissSaveError,
+    isSaving,
+    isPending,
+    error,
+    refetch,
+    partial,
+  } = useMemberTrips();
 
   const [open, setOpen] = useState(false);
   /* The trip being edited, or null when the form is creating a new one. */
@@ -347,7 +366,7 @@ export function TravelDialysisSection() {
   const [outside, setOutside] = useState<ShareInitial | null>(null);
   /* Decided by the clinic, never asked: on NephroReach it goes there,
      otherwise to the clinic's email. */
-  const route: "network" | "email" = clinicOnNephroReach(clinic?.name)
+  const route: "network" | "email" = clinicOnNephroReach(clinic)
     ? "network"
     : "email";
   const [clinicEmail, setClinicEmail] = useState("");
@@ -381,7 +400,8 @@ export function TravelDialysisSection() {
 
   const save = () => {
     if (editingId) update(draft);
-    else submit(draft);
+    /* A failure shows as saveError (the alert above the list). */ else
+      void submit(draft).catch(() => undefined);
     setOpen(false);
   };
 
@@ -435,7 +455,35 @@ export function TravelDialysisSection() {
       {/* Rendered here rather than on the page because Request and Edit
         open the form below. Keeping the trigger and the dialog in one
         component means no state has to be lifted and synced back. */}
-      <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
+      {/* Error is not empty: a failed read (or a trip list not shared with
+          this caregiver) never shows as "no trips yet". */}
+      <AsyncSection
+        pending={isPending}
+        error={error}
+        onRetry={canRetry(error) ? refetch : undefined}
+        errorTitle={errorTitleFor(
+          error,
+          isEs ? "Tus viajes no se cargaron" : "Your trips did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
+        skeleton={
+          <Card>
+            <Skeleton height={160} />
+          </Card>
+        }
+      >
+        <YourTrips trips={trips} onRequest={openForm} onEdit={openEdit} />
+        <PartNote
+          part={partial}
+          text={({ loaded, total }) =>
+            isEs
+              ? `Se muestran tus ${loaded} viajes más recientes de ${total}.`
+              : `Showing your newest ${loaded} of ${total} trips.`
+          }
+          className="mt-stack-md"
+        />
+      </AsyncSection>
       {outside ? (
         <LazyShareOutsideModal
           isEs={isEs}

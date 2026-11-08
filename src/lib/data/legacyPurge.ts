@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 9;
+export const STORAGE_VERSION = 13;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -309,6 +309,23 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 9,
     why: "Phase 13: notes are PUT /patients/:id/education/classes/:classId/note, read from the learner record. No screen reads this key.",
   },
+  /* Phase 8 (OFFICE, STORAGE_VERSION 13; the lane used 7, renumbered at
+     merge): travel logs, reflections and ride contacts are the API's. */
+  {
+    name: "travel-treatments",
+    since: 13,
+    why: "Phase 8: the travel dialysis log is /patients/:id/trips/:tripId/treatments (one call per row, readings as typed); the sample rows (trip.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "travel-reflections",
+    since: 13,
+    why: "Phase 8: the trip reflection is GET/PUT /patients/:id/trips/:tripId/reflection; the sample reflections (trip.seed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "rides",
+    since: 13,
+    why: "Phase 8: ride contacts are /patients/:id/ride-contacts (the server keeps one primary); the sample contact (rides.seed.ts) is deleted. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that
@@ -340,6 +357,14 @@ export const RETIRED_KEYS: readonly string[] = [
      this browser. They are /live-classes, /platform/live-classes and
      /platform/live-class-settings. */
   "nr:clinic-live-class",
+  /* Phase 8 (STORAGE_VERSION 13): the office roster enrolled in this
+     browser (names and MRNs). The roster is GET /organizations/:id/patients
+     joined with its program enrollments; enrolling is two API calls. */
+  "nr:clinic-enrollments",
+  /* Phase 8: every patient's trip requests, shared by the member and office
+     screens (addresses, insurance ids, emergency contacts). Trips are
+     /patients/:id/trips and /organizations/:id/trips. */
+  "nr:travel-trip-requests",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */

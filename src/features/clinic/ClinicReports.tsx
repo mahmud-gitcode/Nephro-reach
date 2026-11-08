@@ -491,10 +491,10 @@ function CustomReports({
         ...rows.map((m) => [
           m.name,
           m.program,
-          m.status,
+          m.status ?? "—",
           m.lastActivity,
-          `${m.liveClasses[0]}/${m.liveClasses[1]}`,
-          `${m.checkIns[0]}/${m.checkIns[1]}`,
+          m.liveClasses ? `${m.liveClasses[0]}/${m.liveClasses[1]}` : "—",
+          m.checkIns ? `${m.checkIns[0]}/${m.checkIns[1]}` : "—",
         ]),
       ],
     },
@@ -508,7 +508,7 @@ function CustomReports({
           m.program,
           m.progress,
           m.currentModule,
-          m.status,
+          m.status ?? "—",
         ]),
       ],
     },
@@ -520,9 +520,11 @@ function CustomReports({
         ...rows.map((m) => [
           m.name,
           m.program,
-          m.checkIns[0],
-          m.checkIns[1],
-          m.checkIns[1] ? Math.round((m.checkIns[0] / m.checkIns[1]) * 100) : 0,
+          m.checkIns ? m.checkIns[0] : "—",
+          m.checkIns ? m.checkIns[1] : "—",
+          m.checkIns && m.checkIns[1]
+            ? Math.round((m.checkIns[0] / m.checkIns[1]) * 100)
+            : "—",
         ]),
       ],
     },
@@ -548,8 +550,8 @@ function CustomReports({
         ...rows.map((m) => [
           m.name,
           m.program,
-          m.liveClasses[0],
-          m.liveClasses[1],
+          m.liveClasses ? m.liveClasses[0] : "—",
+          m.liveClasses ? m.liveClasses[1] : "—",
         ]),
       ],
     },
