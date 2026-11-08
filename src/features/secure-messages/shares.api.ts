@@ -111,7 +111,7 @@ export async function createShare(
 }
 
 export const revokeShare = (owner: ShareOwner, shareId: string) =>
-  api<ApiOutsideShare>(`${ownerPath(owner)}/${seg(shareId)}/revoke`, {
+  api<unknown>(`${ownerPath(owner)}/${seg(shareId)}/revoke`, {
     ...headerFor(owner),
     method: "POST",
   });
