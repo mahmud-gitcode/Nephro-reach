@@ -565,6 +565,79 @@ describe("ClinicCheckIns on the API (D33 closed)", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText("No check-in notices yet.")).toBeNull();
   });
+
+  /* P15a: the reminder goes through the office messaging API (it used the
+     retired member store, which now throws and showed "not sent"). */
+  const reminderHandler = (send?: StubReply) =>
+    checkInsHandler((c) => {
+      if (c.path === org("/patients"))
+        return pageOf([
+          rosterRow(P1, "Ana", "900001"),
+          { ...rosterRow(P2, "Ben", "900002"), status: "ENDED" },
+        ]);
+      if (c.path === org("/conversations") && c.method === "POST")
+        return send ?? { status: 201, data: { id: "conv-1", patientId: P1 } };
+      return undefined;
+    });
+  const REMINDER = "Send a Check-In Reminder";
+  const REMINDER_TEXT = /We haven't seen your check-in this week/;
+
+  it("Send Reminder writes to the patient by id through the office API, then closes", async () => {
+    const user = userEvent.setup();
+    const { calls } = stubApi(reminderHandler(), CLINIC);
+    render(<ClinicCheckIns />, { wrapper });
+    await screen.findByText("Rough day");
+    await user.click(
+      screen.getByRole("button", { name: "Send a check-in reminder" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: REMINDER });
+    /* Only ACTIVE roster patients are offered, by patient id. */
+    const option = await within(dialog).findByRole("option", {
+      name: "Ana Synthetic · MRN 900001",
+    });
+    expect(option).toHaveValue(P1);
+    expect(
+      within(dialog).queryByRole("option", { name: /Ben Synthetic/ }),
+    ).toBeNull();
+    expect(await axe(dialog)).toHaveNoViolations();
+    await user.click(within(dialog).getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: REMINDER })).toBeNull(),
+    );
+    const posts = calls.filter(
+      (c) => c.path === org("/conversations") && c.method === "POST",
+    );
+    expect(posts).toHaveLength(1);
+    expect(posts[0].body).toEqual({
+      patientId: P1,
+      body: expect.stringMatching(REMINDER_TEXT),
+    });
+    expect(screen.queryByText(/not sent/i)).toBeNull();
+    expectOfficeHeader(calls);
+  });
+
+  it("a refused reminder keeps the dialog and the text, with the server's reason", async () => {
+    const user = userEvent.setup();
+    stubApi(reminderHandler(apiError(403, "access.permission_denied")), CLINIC);
+    render(<ClinicCheckIns />, { wrapper });
+    await screen.findByText("Rough day");
+    await user.click(
+      screen.getByRole("button", { name: "Send a check-in reminder" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: REMINDER });
+    await within(dialog).findByRole("option", {
+      name: "Ana Synthetic · MRN 900001",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "Send" }));
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: REMINDER })).toBeInTheDocument();
+    expect(
+      (within(dialog).getByRole("textbox") as HTMLTextAreaElement).value,
+    ).toMatch(REMINDER_TEXT);
+    expect(
+      within(dialog).queryByText(/sending from this screen is not available/i),
+    ).toBeNull();
+  });
 });
 
 /* -------------------------------------------------------------- CCM */

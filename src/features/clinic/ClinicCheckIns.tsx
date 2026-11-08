@@ -38,10 +38,13 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { downloadText, toCsv } from "@/lib/utils/download";
-import { FACILITY } from "@/features/messaging/messaging.seed";
 import { NewMessageModal } from "@/features/messaging/NewMessageModal";
-import { useMessages } from "@/features/messaging/useMessages";
-import { useClinicData } from "./useClinicData";
+import {
+  useOfficeMessaging,
+  useOfficeRecipients,
+} from "@/features/messaging/useConversations";
+import { saveErrorText } from "@/features/profile/saveError";
+import { useOfficeOrg } from "./officeContext";
 import { useNow } from "@/lib/utils/useNow";
 import { dayKey, usDate } from "./ccm.data";
 import {
@@ -524,12 +527,13 @@ export default function ClinicCheckIns() {
       ? unseen.data.pagination.total
       : null;
   const shown = useCheckInNotices({ page: noticesPage, limit: NOTICES_PAGE });
-  /* "Send Reminder": a message to a patient on the clinic's roster
-     (messaging moves to the API in Phase 11). */
+  /* "Send Reminder": a message from this office to a patient on its
+     roster, through the office messaging API (the thread the office
+     already has with that patient, or a new one). */
   const [reminding, setReminding] = useState(false);
-  const clinicData = useClinicData();
-  const { conversations, startConversation } = useMessages();
-  const patients = clinicData.data?.patients ?? [];
+  const { orgId } = useOfficeOrg();
+  const messaging = useOfficeMessaging(orgId);
+  const recipients = useOfficeRecipients(reminding ? orgId : null);
   const shownValue = (
     value: number | null,
     read: { isPending: boolean; error: unknown },
@@ -610,38 +614,34 @@ export default function ClinicCheckIns() {
         <NewMessageModal
           title="Send a Check-In Reminder"
           recipientLabel="Patient"
-          recipients={patients.map((p) => ({
-            value: p.mrn,
-            label: `${p.name} · MRN ${p.mrn}`,
+          recipients={recipients.patients.map((patient) => ({
+            value: patient.patientId,
+            label: patient.mrn
+              ? `${patient.name} · MRN ${patient.mrn}`
+              : patient.name,
           }))}
+          recipientsPending={recipients.isPending}
+          recipientsError={
+            recipients.error
+              ? saveErrorText(recipients.error, "en")
+              : recipients.isPending || recipients.patients.length > 0
+                ? undefined
+                : "No patients are on this office's roster yet."
+          }
           initialBody="Hi, this is your care team. We haven't seen your check-in this week. Please take a minute to complete it in NephroReach, or reply here if anything is wrong."
-          onSend={(mrn, body) => {
-            const patient = patients.find((p) => p.mrn === mrn);
-            if (!patient) return;
-            startConversation({
-              memberName: patient.name,
-              contact: FACILITY,
-              category: "care-team",
-              body,
-              author: "clinic",
-              ...(conversations.some((c) => c.memberName === patient.name)
-                ? {}
-                : {
-                    patient: {
-                      dob: "—",
-                      mrn: patient.mrn,
-                      phone: "—",
-                      email: "—",
-                      program: patient.program,
-                      enrolledOn: patient.enrolledOn,
-                      status: patient.status,
-                      careTeam: "—",
-                      notes: "",
-                    },
-                  }),
-            });
+          sending={messaging.start.isPending}
+          sendError={
+            messaging.start.error
+              ? saveErrorText(messaging.start.error, "en")
+              : undefined
+          }
+          onSend={(patientId, body) =>
+            messaging.start.mutateAsync({ patientId, body })
+          }
+          onClose={() => {
+            messaging.start.reset();
+            setReminding(false);
           }}
-          onClose={() => setReminding(false)}
         />
       ) : null}
     </div>
