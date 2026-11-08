@@ -1,51 +1,76 @@
 import { describe, expect, it } from "vitest";
+import type { ErSummaryRow } from "./checkInNotices.repository";
 import {
-  clinicErReports,
-  clinicMonthly,
+  last90Days,
+  monthWindows,
+  officeErWeeks,
   patientsWithVisits,
-  visitsInMonth,
 } from "./clinicEr.data";
 
-const NOW = new Date(2026, 9, 6, 12).getTime();
-const linked = { name: "John Taylor", mrn: "223344" };
+const row = (over: Partial<ErSummaryRow>): ErSummaryRow => ({
+  patientId: "p-1",
+  firstName: "Test",
+  lastName: "Patient",
+  mrn: "000001",
+  from: "2026-10-01",
+  to: "2026-10-31",
+  weeksInWindow: 4,
+  weeksAnswered: 4,
+  erVisitWeeks: 0,
+  lastErVisitWeekOf: null,
+  lastAnsweredAt: null,
+  ...over,
+});
 
-describe("ER visits on the clinic dashboard", () => {
-  it("counts the linked patient's Yes answers with the rest of the roster", () => {
-    const log = [
-      {
-        weekOf: "2026-09-28",
-        answer: "yes" as const,
-        reportedAt: new Date(2026, 9, 2).toISOString(),
-      },
-      {
-        weekOf: "2026-09-21",
-        answer: "no" as const,
-        reportedAt: new Date(2026, 8, 25).toISOString(),
-      },
-    ];
-    const reports = clinicErReports(linked, log, NOW);
-    expect(reports.filter((r) => r.mrn === "223344")).toHaveLength(1);
-    expect(reports.length).toBeGreaterThan(1);
-    expect(reports[0].reportedAt >= reports.at(-1)!.reportedAt).toBe(true);
+const page = (items: ErSummaryRow[], total = items.length) => ({
+  items,
+  pagination: {
+    mode: "offset" as const,
+    total,
+    page: 1,
+    limit: 150,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  },
+});
+
+describe("office ER visits from the server summary", () => {
+  it("builds month windows, oldest first, the last ending today", () => {
+    const now = new Date(2026, 10, 3).getTime();
+    const months = monthWindows(now, 3);
+    expect(months.map((m) => m.month)).toEqual([
+      "2026-09",
+      "2026-10",
+      "2026-11",
+    ]);
+    expect(months[0]).toMatchObject({ from: "2026-09-01", to: "2026-09-30" });
+    expect(months[2]).toMatchObject({ from: "2026-11-01", to: "2026-11-03" });
   });
 
-  it("totals by month and lists the patients with visits", () => {
-    const reports = [
-      { name: "A", mrn: "1", reportedAt: new Date(2026, 9, 1).toISOString() },
-      { name: "A", mrn: "1", reportedAt: new Date(2026, 9, 3).toISOString() },
-      { name: "B", mrn: "2", reportedAt: new Date(2026, 8, 10).toISOString() },
+  it("gives a 90-day window ending today", () => {
+    expect(last90Days(new Date(2026, 10, 3).getTime())).toEqual({
+      from: "2026-08-06",
+      to: "2026-11-03",
+    });
+  });
+
+  it("totals only a whole list, never a counted page", () => {
+    const rows = [
+      row({ erVisitWeeks: 2 }),
+      row({ patientId: "p-2", erVisitWeeks: 1 }),
     ];
-    expect(visitsInMonth(reports, "2026-10")).toBe(2);
-    expect(clinicMonthly(reports, NOW, 2)).toEqual([
-      { month: "2026-09", visits: 1 },
-      { month: "2026-10", visits: 2 },
+    expect(officeErWeeks(page(rows))).toBe(3);
+    expect(officeErWeeks(page(rows, 300))).toBeNull();
+    expect(officeErWeeks(undefined)).toBeNull();
+  });
+
+  it("lists patients with a reported visit, most first", () => {
+    const list = patientsWithVisits([
+      row({ patientId: "a", erVisitWeeks: 0 }),
+      row({ patientId: "b", erVisitWeeks: 1, lastErVisitWeekOf: "2026-10-05" }),
+      row({ patientId: "c", erVisitWeeks: 3 }),
     ]);
-    const since = new Date(2026, 8, 1).getTime();
-    expect(
-      patientsWithVisits(reports, since).map((p) => [p.mrn, p.visits]),
-    ).toEqual([
-      ["1", 2],
-      ["2", 1],
-    ]);
+    expect(list.map((r) => r.patientId)).toEqual(["c", "b"]);
   });
 });

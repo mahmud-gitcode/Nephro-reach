@@ -1,55 +1,60 @@
 import { describe, expect, it } from "vitest";
-import * as C from "./ccm.data";
 import {
   ACTIVITY_TYPES,
   ALERT_ACTIVITY,
-  CCM_PATIENTS,
-  CCM_REQUIREMENTS,
   CCM_THRESHOLD_MINUTES,
-  addActivity,
+  OUTCOMES,
+  activityTypeFor,
   ageOn,
-  completeFollowUp,
-  countStatus,
-  dayKey,
   durationMinutes,
-  filterWorklist,
-  followUpsDue,
-  minutesFor,
-  monthOf,
-  pendingMinutesFor,
   recentMonths,
-  requirementsMet,
-  resolveInbox,
-  seedCcmState,
-  setRequirement,
-  sortWorklist,
-  statusFor,
-  worklist,
+  requirementBody,
   worklistCsv,
-  type CcmState,
 } from "./ccm.data";
+import { CCM_INBOX_KINDS, type CcmEnrollment } from "./ccm.repository";
 
-const NOW = new Date(2026, 8, 27, 12).getTime(); // Sep 27, 2026
-const TODAY = dayKey(NOW);
-const MONTH = monthOf(TODAY);
+/* Phase 9: statuses, minutes and alerts are the server's. What stays in
+   ccm.data.ts is display: labels, the client's lists, dates, the full
+   checklist body and the CSV. Synthetic values only. */
 
-describe("the threshold is 30 minutes", () => {
+const NOW = new Date(2026, 8, 27, 12).getTime();
+
+const row = (over: Partial<CcmEnrollment> = {}): CcmEnrollment => ({
+  id: "e-1",
+  patientId: "00000000-0000-4000-8000-000000000001",
+  firstName: "Test",
+  lastName: "Patient",
+  dateOfBirth: "1960-01-02",
+  mrn: "000001",
+  providerName: "Dr. Example",
+  careManagerName: "Care Manager",
+  location: "Main",
+  conditions: ["ckd-4", "htn"],
+  isOnDialysis: false,
+  isOnHomeHealthOrHospice: false,
+  billingBlocked: false,
+  requirements: [],
+  requirementsMet: 3,
+  requirementsTotal: 8,
+  kidneyCarePlan: null,
+  enrolledById: null,
+  enrolledAt: "2026-09-01T00:00:00.000Z",
+  updatedAt: "2026-09-01T00:00:00.000Z",
+  month: "2026-09",
+  minutes: 20,
+  pendingMinutes: 0,
+  remainingMinutes: 10,
+  status: "Below Threshold",
+  lastActivityOn: "2026-09-20",
+  nextFollowUpOn: null,
+  openAlerts: 0,
+  overdueFollowUps: 0,
+  ...over,
+});
+
+describe("the threshold", () => {
   it("is 30, not the mockup's 20", () => {
     expect(CCM_THRESHOLD_MINUTES).toBe(30);
-  });
-
-  it.each([
-    [0, "Below Threshold"],
-    [20, "Below Threshold"],
-    [29, "Below Threshold"],
-    [30, "Ready for Review"],
-    [45, "Ready for Review"],
-  ] as const)("%i minutes is %s", (minutes, status) => {
-    expect(statusFor(minutes, false)).toBe(status);
-  });
-
-  it("needs attention outranks the minutes", () => {
-    expect(statusFor(45, true)).toBe("Action Needed");
   });
 });
 
@@ -58,46 +63,6 @@ describe("time", () => {
     expect(durationMinutes("10:05", "10:13")).toBe(8);
     expect(durationMinutes("10:13", "10:05")).toBe(0);
     expect(durationMinutes("", "10:05")).toBe(0);
-  });
-
-  it("sums a patient's minutes within the month only", () => {
-    const state: CcmState = { activities: [], requirements: {}, inbox: [] };
-    const base = {
-      mrn: "1",
-      type: "BP Review & Follow-Up",
-      note: "x",
-      outcome: "Continue monitoring",
-      staff: "Nurse Lisa, RN",
-      counts: "yes" as const,
-      ehrDocumented: true,
-    };
-    let next = addActivity(
-      state,
-      { ...base, date: "2026-09-02", minutes: 12 },
-      1,
-    );
-    next = addActivity(next, { ...base, date: "2026-09-20", minutes: 10 }, 2);
-    next = addActivity(next, { ...base, date: "2026-08-30", minutes: 40 }, 3);
-    expect(minutesFor(next, "1", "2026-09")).toBe(22);
-    expect(minutesFor(next, "1", "2026-08")).toBe(40);
-  });
-
-  it("counts only the minutes marked to include", () => {
-    const state: CcmState = { activities: [], requirements: {}, inbox: [] };
-    const base = {
-      mrn: "1",
-      type: "BP Review & Follow-Up",
-      note: "",
-      outcome: "Continue monitoring",
-      staff: "Nurse Lisa, RN",
-      date: "2026-09-02",
-      ehrDocumented: false,
-    };
-    let next = addActivity(state, { ...base, minutes: 12, counts: "yes" }, 1);
-    next = addActivity(next, { ...base, minutes: 8, counts: "pending" }, 2);
-    next = addActivity(next, { ...base, minutes: 5, counts: "no" }, 3);
-    expect(minutesFor(next, "1", "2026-09")).toBe(12);
-    expect(pendingMinutesFor(next, "1", "2026-09")).toBe(8);
   });
 
   it("offers the current month and the two before it", () => {
@@ -110,192 +75,112 @@ describe("time", () => {
   });
 });
 
-describe("the seeded worklist", () => {
-  const state = seedCcmState(NOW);
-  const rows = worklist(state, CCM_PATIENTS, MONTH, TODAY);
-
-  it("lists every CCM patient, and the statuses add up to the total", () => {
-    expect(rows).toHaveLength(CCM_PATIENTS.length);
-    expect(
-      countStatus(rows, "Action Needed") +
-        countStatus(rows, "Below Threshold") +
-        countStatus(rows, "Ready for Review"),
-    ).toBe(rows.length);
-  });
-
-  it("never logs activity after today", () => {
-    expect(state.activities.every((a) => a.date <= TODAY)).toBe(true);
-  });
-
-  it("flags an open alert and an overdue follow-up as needing attention", () => {
-    const angela = rows.find((row) => row.mrn === "901234")!;
-    expect(angela.openAlerts).toBeGreaterThan(0);
-    expect(angela.status).toBe("Action Needed");
-
-    const david = rows.find((row) => row.mrn === "890123")!;
-    expect(david.overdue).toBe(1);
-    expect(david.status).toBe("Action Needed");
-  });
-
-  it("judges a past month on its minutes alone", () => {
-    const past = worklist(state, CCM_PATIENTS, "2026-08", TODAY);
-    expect(past.some((row) => row.status === "Action Needed")).toBe(false);
-  });
-
-  it("shows what is left under the threshold", () => {
-    const mary = rows.find((row) => row.mrn === "789012")!;
-    /* 28 logged, but 14 of them wait on the practice's review. */
-    expect(mary.minutes).toBe(14);
-    expect(pendingMinutesFor(state, "789012", MONTH)).toBe(14);
-    expect(mary.remaining).toBe(16);
-  });
-
-  it("clears attention once the alert is resolved and follow-up done", () => {
-    const overdue = state.activities.find(
-      (a) => a.mrn === "890123" && a.followUp,
-    )!;
-    const next = completeFollowUp(state, overdue.id);
-    const david = worklist(next, CCM_PATIENTS, MONTH, TODAY).find(
-      (row) => row.mrn === "890123",
-    )!;
-    expect(david.status).toBe("Below Threshold");
-
-    const alert = state.inbox.find((item) => item.mrn === "901234")!;
-    const cleared = resolveInbox(state, alert.id);
-    expect(
-      worklist(cleared, CCM_PATIENTS, MONTH, TODAY).find(
-        (r) => r.mrn === "901234",
-      )!.status,
-    ).not.toBe("Action Needed");
-  });
-
-  it("lists follow-ups due within a week, overdue first", () => {
-    const due = followUpsDue(state, TODAY);
-    expect(due.length).toBeGreaterThan(0);
-    expect(due[0].followUp.date < TODAY).toBe(true);
-  });
-
-  it("exports one CSV line per row plus a header", () => {
-    const csv = worklistCsv(rows, MONTH).split("\n");
-    expect(csv).toHaveLength(rows.length + 1);
-    expect(csv[0]).toContain("Minutes");
-  });
-});
-
-describe("worklist filters and sorting", () => {
-  const rows = worklist(seedCcmState(NOW), CCM_PATIENTS, MONTH, TODAY);
-
-  it("filters by location", () => {
-    const north = filterWorklist(rows, {
-      query: "",
-      provider: "All",
-      location: "North Clinic",
-      careManager: "All",
-      status: "All",
-    });
-    expect(north.length).toBeGreaterThan(0);
-    expect(north.every((row) => row.location === "North Clinic")).toBe(true);
-  });
-
-  it("sorts by next follow-up with patients who have none last", () => {
-    const sorted = sortWorklist(rows, {
-      key: "nextFollowUp",
-      direction: "asc",
-    });
-    const dates = sorted.map((row) => row.nextFollowUp);
-    const firstNone = dates.indexOf(null);
-    expect(firstNone).toBeGreaterThan(0);
-    expect(dates.slice(firstNone).every((d) => d === null)).toBe(true);
-    const set = dates.slice(0, firstNone) as string[];
-    expect([...set].sort()).toEqual(set);
-  });
-});
-
-describe("requirements", () => {
-  it("counts the ones checked off", () => {
-    const state: CcmState = { activities: [], requirements: {}, inbox: [] };
-    expect(requirementsMet(state, "1")).toBe(0);
-    const next = setRequirement(state, "1", "consent", { met: true });
-    expect(requirementsMet(next, "1")).toBe(1);
-    expect(CCM_REQUIREMENTS).toHaveLength(8);
-  });
-});
-
-describe("activity types", () => {
-  it("are the client's sixteen plus the six access / KRT planning steps", () => {
+describe("the client's lists round-trip with the server's enums", () => {
+  it("activity types: the client's sixteen plus the six KRT planning steps", () => {
     expect(ACTIVITY_TYPES).toHaveLength(22);
     expect(ACTIVITY_TYPES).toContain("Vascular Access Referral");
     expect(ACTIVITY_TYPES.at(-1)).toBe("Other CCM Activity");
-    const types: readonly string[] = ACTIVITY_TYPES;
-    expect(
-      seedCcmState(NOW).activities.every((a) => types.includes(a.type)),
-    ).toBe(true);
   });
-});
 
-describe("alerts and the activity they are logged under", () => {
-  it("points every alert kind at a type from the client's dropdown", () => {
-    for (const type of Object.values(ALERT_ACTIVITY)) {
+  it("outcomes are the server's six", () => {
+    expect(OUTCOMES).toEqual([
+      "Continue monitoring",
+      "Education provided",
+      "Medication adjusted",
+      "Provider notified",
+      "Referral placed",
+      "Care plan updated",
+    ]);
+  });
+
+  it("maps exactly the server's 10 inbox kinds (no seed-only kinds, NEW-4)", () => {
+    expect(Object.keys(ALERT_ACTIVITY).sort()).toEqual(
+      [...CCM_INBOX_KINDS].sort(),
+    );
+    expect(ALERT_ACTIVITY).not.toHaveProperty("Hospital discharge");
+    expect(ALERT_ACTIVITY).not.toHaveProperty("Medication change");
+    for (const type of Object.values(ALERT_ACTIVITY))
       expect(ACTIVITY_TYPES).toContain(type);
-    }
-    expect(ALERT_ACTIVITY["Blood pressure"]).toBe("BP Review & Follow-Up");
-    expect(ALERT_ACTIVITY["Weight change"]).toBe(
-      "Weight / Fluid Review & Follow-Up",
-    );
-    expect(ALERT_ACTIVITY["Missed appointment"]).toBe(
-      "Appointment Coordination",
-    );
+  });
+
+  it("prefers the activity type the server sent with an inbox item", () => {
+    expect(
+      activityTypeFor({
+        kind: "Lab alert",
+        activityType: "Medical Record Review",
+      }),
+    ).toBe("Medical Record Review");
+    expect(
+      activityTypeFor({ kind: "Blood pressure", activityType: null }),
+    ).toBe("BP Review & Follow-Up");
   });
 });
 
-describe("the compliance filter", () => {
-  const state = C.seedCcmState(NOW);
-  const first = C.ccmPatientsOf(state)[0];
+describe("a checklist item always sends its full state", () => {
+  const current = {
+    met: false,
+    inProgress: false,
+    notApplicable: false,
+    date: null,
+    detail: "Called the patient",
+  };
 
-  it("blocks billing for dialysis, home health or hospice", () => {
-    expect(C.ccmBillingBlocked({})).toBe(false);
-    expect(C.ccmBillingBlocked({ isOnDialysis: true })).toBe(true);
-    expect(C.ccmBillingBlocked({ isOnHomeHealthOrHospice: true })).toBe(true);
-  });
-
-  it("routes a flagged chart out of the billing queue", () => {
-    const flagged = C.setCompliance(state, first.mrn, { isOnDialysis: true });
-    const rows = C.worklist(flagged, C.ccmPatientsOf(flagged), MONTH, TODAY);
-    expect(rows.find((r) => r.mrn === first.mrn)?.billingBlocked).toBe(true);
-    expect(C.billingQueue(rows).some((r) => r.mrn === first.mrn)).toBe(false);
-    expect(C.billingQueue(rows)).toHaveLength(rows.length - 1);
-  });
-
-  it("returns the chart to the queue once both flags are cleared", () => {
-    const flagged = C.setCompliance(state, first.mrn, { isOnDialysis: true });
-    const cleared = C.setCompliance(flagged, first.mrn, {
-      isOnDialysis: false,
-      isOnHomeHealthOrHospice: false,
-    });
-    const rows = C.worklist(cleared, C.ccmPatientsOf(cleared), MONTH, TODAY);
-    expect(C.billingQueue(rows).some((r) => r.mrn === first.mrn)).toBe(true);
-  });
-});
-
-describe("not applicable requirements", () => {
-  const state = C.seedCcmState(NOW);
-  const mrn = C.ccmPatientsOf(state)[0].mrn;
-  const id = C.CCM_REQUIREMENTS[0].id;
-
-  it("reads as not applicable and counts as taken care of", () => {
-    const before = C.requirementsMet(state, mrn);
-    const cleared = C.setRequirement(state, mrn, id, {
-      met: false,
+  it("completes with today's date and keeps the note", () => {
+    expect(
+      requirementBody(current, { status: "complete" }, "2026-09-27"),
+    ).toEqual({
+      met: true,
       inProgress: false,
       notApplicable: false,
+      date: "2026-09-27",
+      detail: "Called the patient",
     });
-    const na = C.setRequirement(cleared, mrn, id, { notApplicable: true });
-    expect(C.requirementStatus(C.requirementFor(na, mrn, id))).toBe(
-      "not-applicable",
+  });
+
+  it("a note change keeps the status, and `met` is always present", () => {
+    const body = requirementBody(
+      { ...current, met: true, date: "2026-09-02" },
+      { detail: "Signed" },
+      "2026-09-27",
     );
-    expect(C.requirementsMet(na, mrn)).toBe(
-      C.requirementsMet(cleared, mrn) + 1,
+    expect(body).toEqual({
+      met: true,
+      inProgress: false,
+      notApplicable: false,
+      date: "2026-09-02",
+      detail: "Signed",
+    });
+  });
+
+  it("not applicable and in progress are not met", () => {
+    expect(
+      requirementBody(current, { status: "not-applicable" }, "2026-09-27"),
+    ).toMatchObject({ met: false, notApplicable: true, date: null });
+    expect(
+      requirementBody(current, { status: "in-progress" }, "2026-09-27"),
+    ).toMatchObject({ met: false, inProgress: true, date: null });
+  });
+});
+
+describe("the CSV export of server rows", () => {
+  it("writes one line per row plus a header, from the server's fields", () => {
+    const csv = worklistCsv(
+      [row(), row({ patientId: "p-2", mrn: null })],
+      "2026-09",
     );
-    expect(before).toBeGreaterThanOrEqual(C.requirementsMet(cleared, mrn));
+    const lines = csv.split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[0].startsWith("Month,Patient,MRN")).toBe(true);
+    expect(lines[1]).toContain("Test Patient");
+    expect(lines[1]).toContain("3/8");
+    expect(lines[1]).toContain("Below Threshold");
+  });
+
+  it("neutralises a cell that would run as a spreadsheet formula", () => {
+    const csv = worklistCsv(
+      [row({ providerName: "=HYPERLINK(1)" })],
+      "2026-09",
+    );
+    expect(csv).not.toContain(",=HYPERLINK");
   });
 });

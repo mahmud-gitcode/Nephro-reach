@@ -19,6 +19,7 @@ import {
   type ConditionDraft,
   type ConditionGroup,
 } from "./ccmConditions";
+import { actionErrorText } from "./officeContext";
 import { useConditionLibrary } from "./useConditionLibrary";
 
 /* ==========================================================================
@@ -63,7 +64,12 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
       <div className="space-y-stack-lg">
         {store.saveError ? (
           <Alert tone="danger" title="That change was not saved">
-            This browser refused to store it. Try again.
+            {actionErrorText(store.saveError)}
+          </Alert>
+        ) : null}
+        {store.error ? (
+          <Alert tone="danger" title="The library could not be loaded">
+            {actionErrorText(store.error)}
           </Alert>
         ) : null}
 
@@ -88,12 +94,16 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                 />
               )}
             </FormField>
-            <FormField label="Short name" hint="Shown on the worklist">
+            <FormField
+              label="Short name"
+              hint="Not saved yet: the worklist shows the full name"
+            >
               {(field) => (
                 <Input
                   {...field}
                   value={draft.short}
                   maxLength={16}
+                  disabled
                   placeholder="e.g. SCD"
                   onChange={(e) =>
                     setDraft({ ...draft, short: e.target.value })
@@ -103,11 +113,16 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
             </FormField>
           </div>
           <div className="mt-stack-md flex flex-wrap items-end gap-inline-md">
-            <FormField label="Group" className="min-w-56 flex-1">
+            <FormField
+              label="Group"
+              hint="Not saved yet: added conditions are listed under Other"
+              className="min-w-56 flex-1"
+            >
               {(field) => (
                 <Select
                   {...field}
                   value={draft.group}
+                  disabled
                   onChange={(e) =>
                     setDraft({
                       ...draft,
@@ -123,6 +138,7 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
             </FormField>
             <Button
               leadingIcon={<Plus aria-hidden="true" />}
+              disabled={store.isSaving}
               onClick={() => {
                 setTried(true);
                 if (error) return;
@@ -179,7 +195,7 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                         <Switch
                           checked={condition.active}
                           onChange={(on: boolean) =>
-                            store.setActive(condition.id, on)
+                            store.setActive(condition, on)
                           }
                           label={`Offer ${condition.label}`}
                         />
@@ -190,7 +206,7 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                             appearance="ghost"
                             iconOnly
                             aria-label={`Delete ${condition.label}`}
-                            onClick={() => store.remove(condition.id)}
+                            onClick={() => store.remove(condition)}
                           >
                             <Trash2 aria-hidden="true" />
                           </Button>

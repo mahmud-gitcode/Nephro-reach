@@ -1,63 +1,58 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import * as repo from "./ccm.repository";
 import * as rules from "./ccmConditions";
+import { requireOffice, useOfficeOrg } from "./officeContext";
+import { ccmKeys } from "./useCcm";
 
-/* The clinic's condition library: its own additions and the defaults it
-   turned off (ccmConditions.ts). One record per clinic. */
-const KEY = storageKey("ccm-condition-library");
-export const conditionLibraryKey = ["clinic", "ccm-condition-library"] as const;
-
-async function readLibrary(): Promise<rules.ConditionLibraryState> {
-  const stored = await readJson<Partial<rules.ConditionLibraryState> | null>(
-    KEY,
-    null,
-  );
-  return {
-    custom: Array.isArray(stored?.custom) ? stored.custom : [],
-    inactive: Array.isArray(stored?.inactive) ? stored.inactive : [],
-  };
-}
-
+/* The office's condition library on the API (Phase 9): the defaults with
+   whether this office offers them, and its own additions. Replaces the
+   browser store `nr:ccm-condition-library` (retired and purged). A custom
+   entry keeps only its name on the server (BE-7 open). */
 export function useConditionLibrary() {
+  const { orgId } = useOfficeOrg();
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: conditionLibraryKey,
-    queryFn: readLibrary,
+    queryKey: orgId ? ccmKeys.conditions(orgId) : ["org", "none", "ccm"],
+    queryFn: () => repo.listConditions(requireOffice(orgId)),
+    enabled: orgId !== null,
   });
   const write = useMutation({
-    mutationFn: async (
-      transform: (
-        current: rules.ConditionLibraryState,
-      ) => rules.ConditionLibraryState,
-    ) => writeJson(KEY, transform(await readLibrary())),
-    onSuccess: (state) => queryClient.setQueryData(conditionLibraryKey, state),
+    mutationFn: (fn: (orgId: string) => Promise<unknown>) =>
+      fn(requireOffice(orgId)),
+    onSettled: () =>
+      orgId
+        ? queryClient.invalidateQueries({ queryKey: ccmKeys.conditions(orgId) })
+        : undefined,
   });
   const { mutate } = write;
-  const state = query.data ?? rules.EMPTY_LIBRARY;
-  const library = useMemo(() => rules.libraryOf(state), [state]);
+  const library = useMemo(
+    () => rules.libraryFromServer(query.data ?? []),
+    [query.data],
+  );
 
   return {
     /** Every condition, defaults first, each with whether it is offered. */
     library,
-    isPending: query.isPending,
+    isPending: orgId === null || query.isPending,
+    error: orgId === null ? null : query.error,
+    refetch: () => void query.refetch(),
     saveError: write.error,
-    add: useCallback(
-      (draft: rules.ConditionDraft) =>
-        mutate((current) => rules.addLibraryCondition(current, draft)),
-      [mutate],
-    ),
-    setActive: useCallback(
-      (id: string, active: boolean) =>
-        mutate((current) => rules.setConditionActive(current, id, active)),
-      [mutate],
-    ),
-    remove: useCallback(
-      (id: string) =>
-        mutate((current) => rules.removeLibraryCondition(current, id)),
-      [mutate],
-    ),
+    isSaving: write.isPending,
+    /** Sends the name only: the server stores no short name or group. */
+    add: (draft: rules.ConditionDraft) =>
+      mutate((org) => repo.addCondition(org, draft.label)),
+    setActive: (condition: rules.CcmCondition, active: boolean) =>
+      mutate((org) =>
+        condition.custom && condition.entryId
+          ? repo.setCustomConditionActive(org, condition.entryId, active)
+          : repo.setDefaultConditionActive(org, condition.id, active),
+      ),
+    remove: (condition: rules.CcmCondition) =>
+      condition.entryId
+        ? mutate((org) => repo.removeCustomCondition(org, condition.entryId!))
+        : undefined,
   };
 }

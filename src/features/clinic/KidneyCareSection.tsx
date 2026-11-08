@@ -16,8 +16,8 @@ import { userCan } from "@/features/staff/staff";
 import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
 import { ACCESS_CENTER_NAME } from "@/features/vascular-access/vascularAccess.data";
 import { SendReferralModal } from "./AccessReferrals";
-import { kidneyCareFor, usDate } from "./ccm.data";
-import type { CcmStore } from "./useCcm";
+import { usDate } from "./ccm.data";
+import type { CcmKidneyCarePlan, KidneyCareBody } from "./ccm.repository";
 import {
   ACCESS_TYPE_CHOICES,
   KRT_ANSWERS,
@@ -26,6 +26,7 @@ import {
   accessProgress,
   milestones,
   type AccessTypeChoice,
+  type KidneyCarePlan,
   type KrtAnswer,
   type MilestoneState,
 } from "./kidneyCare";
@@ -34,8 +35,9 @@ import {
    CKD Access / Kidney Replacement Therapy Planning — the CCM patient popup
    --------------------------------------------------------------------------
    Milestones at a glance, the access center's progress once a referral is
-   placed, then the checklist the office fills in. Every change saves at
-   once and stamps who made it. See kidneyCare.ts for the rules.
+   placed, then the checklist the office fills in. Every change is one
+   PATCH …/ccm/enrollments/{patientId}/kidney-care; the server stamps who
+   made it and when (Phase 9). See kidneyCare.ts for the rules.
    ========================================================================== */
 
 const glyph: Record<
@@ -55,15 +57,29 @@ const glyph: Record<
 /** Who an organisation's own login writes as. */
 const OFFICE_PERSON = "Dr. Samuel Reed";
 
+/** The server's plan in the shape the milestone rules read. */
+function planOf(plan: CcmKidneyCarePlan | null): KidneyCarePlan | undefined {
+  if (!plan) return undefined;
+  return {
+    answers: plan.answers as KidneyCarePlan["answers"],
+    ...(plan.accessType
+      ? { accessType: plan.accessType as AccessTypeChoice }
+      : {}),
+    ehrDocumented: plan.ehrDocumented,
+    ...(plan.updatedOn ? { updatedOn: plan.updatedOn } : {}),
+  };
+}
+
 export function KidneyCareSection({
   patient,
-  store,
-  today,
+  serverPlan,
+  onSave,
   canEdit,
 }: {
-  patient: { name: string; mrn: string };
-  store: CcmStore;
-  today: string;
+  /** The MRN is display text and the access record's demo key only. */
+  patient: { name: string; mrn: string; patientId: string };
+  serverPlan: CcmKidneyCarePlan | null;
+  onSave: (body: KidneyCareBody) => void;
   /** The signed-in role may update the checklist. */
   canEdit: boolean;
 }) {
@@ -72,7 +88,7 @@ export function KidneyCareSection({
   const access = useVascularAccess();
   const [referring, setReferring] = useState(false);
 
-  const plan = kidneyCareFor(store.state, patient.mrn);
+  const plan = planOf(serverPlan);
   const referrals = access.referrals.filter(
     (r) => r.mrn === patient.mrn && r.source === "nephrology",
   );
@@ -85,8 +101,26 @@ export function KidneyCareSection({
     !sent &&
     userCan(user, "messages.reply");
 
-  const save = (change: Parameters<CcmStore["setKidneyCare"]>[1]) =>
-    store.setKidneyCare(patient.mrn, change, today, me);
+  const save = (change: {
+    answers?: Partial<Record<string, KrtAnswer | undefined>>;
+    accessType?: AccessTypeChoice;
+    ehrDocumented?: boolean;
+  }) =>
+    onSave({
+      ...(change.answers
+        ? {
+            answers: Object.fromEntries(
+              Object.entries(change.answers).map(([id, a]) => [id, a ?? null]),
+            ),
+          }
+        : {}),
+      ...(change.accessType !== undefined
+        ? { accessType: change.accessType }
+        : {}),
+      ...(change.ehrDocumented !== undefined
+        ? { ehrDocumented: change.ehrDocumented }
+        : {}),
+    });
 
   return (
     <section>
@@ -96,7 +130,7 @@ export function KidneyCareSection({
         </h3>
         <span className="text-caption text-fg-muted">
           {plan?.updatedOn
-            ? `Last updated ${usDate(plan.updatedOn)}${plan.updatedBy ? ` by ${plan.updatedBy}` : ""}`
+            ? `Last updated ${usDate(plan.updatedOn.slice(0, 10))}`
             : "Not started"}
         </span>
       </div>

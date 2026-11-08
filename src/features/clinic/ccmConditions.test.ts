@@ -1,24 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_CONDITIONS,
-  EMPTY_LIBRARY,
-  addLibraryCondition,
   chronicCount,
   conditionDraftError,
   conditionLabels,
   conditionSummary,
   hasCondition,
-  libraryOf,
-  removeLibraryCondition,
+  libraryFromServer,
   resolveCondition,
-  setConditionActive,
 } from "./ccmConditions";
-import {
-  CCM_PATIENTS,
-  filterWorklist,
-  seedCcmState,
-  worklist,
-} from "./ccm.data";
 
 describe("the worklist line", () => {
   it("shows the two most important conditions, then how many more", () => {
@@ -62,26 +52,38 @@ describe("reading a stored condition", () => {
 });
 
 describe("the clinic's library", () => {
-  it("adds, switches off and deletes the clinic's own conditions", () => {
-    let state = addLibraryCondition(EMPTY_LIBRARY, {
-      label: "Sickle Cell Disease",
-      short: "SCD",
+  it("reads the server's library: defaults, offered or not, and the clinic's own", () => {
+    const library = libraryFromServer([
+      {
+        id: "pkd",
+        entryId: null,
+        label: "Polycystic Kidney Disease",
+        short: "PKD",
+        group: "Kidney / Renal",
+        secondary: false,
+        isDefault: true,
+        active: false,
+      },
+      {
+        id: "custom:Sickle Cell Disease",
+        entryId: "00000000-0000-4000-8000-000000000001",
+        label: "Sickle Cell Disease",
+        short: "Sickle Cell Disease",
+        group: null,
+        secondary: false,
+        isDefault: false,
+        active: true,
+      },
+    ]);
+    expect(library[0]).toMatchObject({ id: "pkd", active: false });
+    expect(library[0].custom).toBeUndefined();
+    expect(library[1]).toMatchObject({
+      custom: true,
+      entryId: "00000000-0000-4000-8000-000000000001",
       group: "Other Chronic Conditions",
     });
-    let library = libraryOf(state);
-    expect(library).toHaveLength(DEFAULT_CONDITIONS.length + 1);
-    expect(resolveCondition("custom:Sickle Cell Disease", library).short).toBe(
-      "SCD",
-    );
-
-    state = setConditionActive(state, "pkd", false);
-    library = libraryOf(state);
-    expect(library.find((c) => c.id === "pkd")?.active).toBe(false);
-
-    state = removeLibraryCondition(state, "custom:Sickle Cell Disease");
-    library = libraryOf(state);
-    // A patient who had it still reads it by name.
-    expect(resolveCondition("custom:Sickle Cell Disease", library).label).toBe(
+    // A patient who has it reads it by name, even after it is deleted.
+    expect(resolveCondition("custom:Sickle Cell Disease", []).label).toBe(
       "Sickle Cell Disease",
     );
   });
@@ -97,25 +99,10 @@ describe("the clinic's library", () => {
   });
 });
 
-describe("filtering the worklist by condition", () => {
-  const rows = worklist(
-    seedCcmState(Date.now()),
-    CCM_PATIENTS,
-    "2026-09",
-    "2026-09-30",
-  );
-
-  it("keeps only patients with that condition", () => {
-    const chf = filterWorklist(rows, {
-      query: "",
-      provider: "All",
-      location: "All",
-      careManager: "All",
-      status: "All",
-      condition: "chf",
-    });
-    expect(chf.length).toBeGreaterThan(0);
-    expect(chf.every((row) => hasCondition(row.conditions, "chf"))).toBe(true);
-    expect(chf.length).toBeLessThan(rows.length);
+describe("matching a patient's conditions to a library id", () => {
+  it("finds a condition however it was stored", () => {
+    expect(hasCondition(["CHF", "ckd-4"], "chf")).toBe(true);
+    expect(hasCondition(["hf"], "chf")).toBe(true);
+    expect(hasCondition(["Sarcoidosis"], "chf")).toBe(false);
   });
 });

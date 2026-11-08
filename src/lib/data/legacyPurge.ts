@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 8;
+export const STORAGE_VERSION = 10;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -291,6 +291,23 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "video-testimonials",
     since: 8,
     why: "Phase 12: stories are GET /public/testimonials, GET /me/testimonials and POST /testimonials (video through /files by id); the stored entries held dead blob: URLs and member emails; the samples (testimonials.seed.ts) are deleted. No screen reads this key.",
+  },
+  /* Phase 9 (OFFICE lane B, STORAGE_VERSION 10): office labs, CCM and the
+     condition library are the API's (BE modules/labs, modules/ccm). */
+  {
+    name: "clinic-labs",
+    since: 10,
+    why: "Phase 9: office lab charts are GET /patients/:id/labs as the office (403 when labs are not shared); CSV uploads are POST /organizations/:orgId/lab-imports (text in a JSON body, reviewed server-side, confirm/cancel). The demo charts (labs.data.ts seedLabs) are deleted; the member side already reads its clinic results from the API (Phase 6). No screen reads this key.",
+  },
+  {
+    name: "clinic-ccm",
+    since: 10,
+    why: "Phase 9: CCM enrolments, requirements, kidney care, activities and the inbox are /organizations/:orgId/ccm/* by patientId; the seeded patients, activities and inbox (ccm.data.ts seedCcmState) and the member feed folded into it (memberFeed.ts) are deleted. No screen reads this key.",
+  },
+  {
+    name: "ccm-condition-library",
+    since: 10,
+    why: "Phase 9: the condition library is GET/POST/PUT/PATCH/DELETE /organizations/:orgId/ccm/conditions. No screen reads this key.",
   },
 ];
 

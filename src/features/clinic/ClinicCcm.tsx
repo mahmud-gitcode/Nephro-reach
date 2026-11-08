@@ -28,12 +28,12 @@ import {
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Breakdown,
   Button,
   Card,
   EmptyState,
-  ErrorState,
   FormField,
   Input,
   KeyCard,
@@ -61,68 +61,73 @@ import {
   type SeriesTone,
   type SortDirection,
 } from "@/components/ui";
+import { isApiError } from "@/lib/api/client";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import { useDismiss } from "@/lib/utils/useDismiss";
 import * as messaging from "@/features/messaging/messaging.rules";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { useCan, useStaffList } from "@/features/staff/useStaffAccounts";
 import {
   ACTIVITY_TYPES,
-  ALERT_ACTIVITY,
   ALL,
-  CARE_MANAGERS,
-  CCM_PATIENTS,
   CCM_REQUIREMENTS,
   CCM_STATUSES,
   CCM_THRESHOLD_MINUTES,
   COUNTS_LABEL,
-  LOCATIONS,
   OUTCOMES,
-  PROVIDERS,
-  STAFF,
-  activitiesFor,
+  activityTypeFor,
+  addDays,
   ageOn,
-  countStatus,
   dayKey,
   durationMinutes,
-  filterWorklist,
-  followUpsDue,
   formatTime,
   monthLabel,
-  openFollowUps,
-  openInbox,
-  pendingMinutesFor,
+  patientName,
   recentMonths,
-  requirementFor,
-  requirementStatus,
-  sortWorklist,
+  requirementBody,
   usDate,
-  worklist,
   CCM_CHECKLIST_DISCLAIMER,
   REQUIREMENT_STATUS_MEANING,
-  billingQueue,
   CCM_BILLING_DEACTIVATED,
-  type CcmCompliance,
-  withFeed,
   worklistCsv,
-  ccmPatientsOf,
-  type CcmPatient,
   type CcmStatus,
   type CountsToward,
   type RequirementStatus,
-  type WorklistFilters,
-  type WorklistRow,
-  type WorklistSort,
 } from "./ccm.data";
-import { checkInTone, recentCheckIns, type CheckInRow } from "./checkIns.data";
-import { patients as roster } from "./enrollment.data";
-import { defaultClinicSettings } from "./settings.data";
-import { LINKED_MEMBER } from "./memberFeed";
+import {
+  listWorklist,
+  type CcmActivityRow,
+  type CcmEnrollment,
+  type CcmInboxItem,
+  type CcmRequirement,
+  type RosterPick,
+  type WorklistQuery,
+} from "./ccm.repository";
+import {
+  nameOf as noticeName,
+  noticeReasonLabel,
+  type CheckInNotice,
+} from "./checkInNotices.repository";
+import { NoticeModal } from "./ClinicCheckIns";
+import { actionErrorText, useOfficeOrg } from "./officeContext";
 import { UpdatedBar } from "./UpdatedBar";
-import { useCcm, type CcmStore } from "./useCcm";
-import { useMemberFeed } from "./useMemberFeed";
-import { useClinicData } from "./useClinicData";
-import { useCan } from "@/features/staff/useStaffAccounts";
-import { ORGANIZATIONS } from "@/features/staff/staff";
+import {
+  useCcm,
+  useCcmActivities,
+  useCcmInbox,
+  useCcmPatient,
+  useCcmSummary,
+  useCcmWorklist,
+  type CcmActions,
+} from "./useCcm";
+import { useRosterPicks } from "./useClinicLabs";
+import { useCheckInNotices } from "./useOfficeCheckIns";
 import { ConditionSelect } from "./ConditionSelect";
 import { KidneyCareSection } from "./KidneyCareSection";
 import { ConditionLibraryModal } from "./ConditionLibraryModal";
@@ -141,20 +146,24 @@ import {
    The office's month at a glance: who is ready for the practice's review,
    who is short of the 30-minute threshold, and who needs attention today.
    A patient opens in a popup with their checklist, the month's logged time,
-   check-ins, education, EHR documentation and follow-ups.
+   check-ins, EHR documentation and follow-ups.
 
    Tracking only. Practice staff enter the activities; the practice decides
    what counts for billing; the clinical note stays in its EHR. NephroReach
    records time and makes no medical decisions.
+
+   Phase 9: every figure, status and row is the server's (/organizations/
+   {orgId}/ccm). Patients are identified by patientId only; the MRN is
+   display text. The CCM inbox is raised by the server (hourly, from what
+   enrolled patients share); the browser computes no alert (D12).
    ========================================================================== */
 
-/* The nephrology office's home (client, 2026-10-03), moved from the
-   dialysis clinic's portal. */
+/* The nephrology office's home (client, 2026-10-03). */
 const HREF = "/dashboard/nephrology";
-/* CCM is the nephrology office's (moved 2026-10-03). */
-const PRACTICE =
-  ORGANIZATIONS.find((org) => org.portal === "nephrology")?.name ??
-  defaultClinicSettings().profile.name;
+const WORKLIST_PAGE = 50;
+const INBOX_PAGE = 25;
+/* An export reads the filtered worklist a bounded number of pages. */
+const EXPORT_MAX_PAGES = 20;
 
 const statusTone: Record<CcmStatus, BadgeTone> = {
   "Action Needed": "danger",
@@ -183,17 +192,17 @@ const requirementLabel: Record<RequirementStatus, string> = {
 
 const REQUIRED = CCM_REQUIREMENTS.length;
 
-function StatusBadge({ row }: { row: WorklistRow }) {
+function StatusBadge({ row }: { row: CcmEnrollment }) {
   const label =
     row.status === "Below Threshold"
-      ? `${row.remaining} min remaining`
+      ? `${row.remainingMinutes} min remaining`
       : row.status;
   return <Badge tone={statusTone[row.status]}>{label}</Badge>;
 }
 
 /* The checklist at a glance: all done, a gap or two, or most still open. */
-function ChecklistCount({ met }: { met: number }) {
-  const missing = REQUIRED - met;
+function ChecklistCount({ met, total }: { met: number; total: number }) {
+  const missing = total - met;
   const [Icon, tone] =
     missing === 0
       ? [CircleCheck, "text-success"]
@@ -203,7 +212,7 @@ function ChecklistCount({ met }: { met: number }) {
   return (
     <span className="inline-flex items-center gap-inline-sm tabular-nums">
       <Icon aria-hidden="true" className={cn("size-4 shrink-0", tone)} />
-      {met} / {REQUIRED}
+      {met} / {total}
     </span>
   );
 }
@@ -217,22 +226,92 @@ function downloadCsv(filename: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-/** A check-in row's patient, matched on "John D." → "John D. Smith". */
-function checkInsFor(rows: CheckInRow[], name: string): CheckInRow[] {
-  return rows.filter((row) => name.startsWith(row.name));
+/** The month before `month` ("2026-09" → "2026-08"). */
+function monthBefore(month: string, back: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const at = new Date(y, m - 1 - back, 1);
+  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/* The demo patients' check-ins, fixed; the linked member's come from their
-   own app (useMemberFeed) and are added in the page. */
-const demoCheckIns = recentCheckIns.filter((row) =>
-  CCM_PATIENTS.some((patient) => patient.name.startsWith(row.name)),
-);
+/** Previous / next buttons for an offset-paged list. */
+function Pager({
+  page,
+  pagination,
+  onPage,
+}: {
+  page: number;
+  pagination: { mode: string; totalPages?: number } | null | undefined;
+  onPage: (next: number) => void;
+}) {
+  const last =
+    pagination && pagination.mode === "offset"
+      ? (pagination.totalPages ?? 1)
+      : 1;
+  if (last <= 1) return null;
+  return (
+    <div className="flex items-center justify-end gap-inline-md px-card py-inset-sm">
+      <Button
+        size="small"
+        variant="neutral"
+        appearance="fill-stroke"
+        disabled={page <= 1}
+        onClick={() => onPage(page - 1)}
+      >
+        Previous
+      </Button>
+      <span className="text-caption text-fg-muted tabular-nums">
+        Page {page} of {last}
+      </span>
+      <Button
+        size="small"
+        variant="neutral"
+        appearance="fill-stroke"
+        disabled={page >= last}
+        onClick={() => onPage(page + 1)}
+      >
+        Next
+      </Button>
+    </div>
+  );
+}
+
+function readError(
+  error: unknown,
+  title: string,
+  retry: () => void,
+): {
+  error: unknown;
+  errorTitle: React.ReactNode;
+  errorMessage: React.ReactNode;
+  onRetry?: () => void;
+} {
+  return {
+    error,
+    errorTitle: errorTitleFor(error, title),
+    errorMessage: errorMessageFor(error, undefined),
+    onRetry: canRetry(error) ? retry : undefined,
+  };
+}
 
 /* -------------------------------------------------------------- overview */
 
 /* How the enrolled patients split by status: one slim bar under the stat
-   row, so the four figures above keep a row of their own. */
-function StatusSplit({ rows }: { rows: WorklistRow[] }) {
+   row. The counts are the server's summary, never a counted page. */
+function StatusSplit({
+  summary,
+}: {
+  summary: {
+    billingQueue: number;
+    actionNeeded: number;
+    belowThreshold: number;
+    readyForReview: number;
+  };
+}) {
+  const value: Record<CcmStatus, number> = {
+    "Ready for Review": summary.readyForReview,
+    "Below Threshold": summary.belowThreshold,
+    "Action Needed": summary.actionNeeded,
+  };
   const order: CcmStatus[] = [
     "Ready for Review",
     "Below Threshold",
@@ -244,14 +323,14 @@ function StatusSplit({ rows }: { rows: WorklistRow[] }) {
         CCM Status
         <span className="text-body-sm text-fg-muted">
           {" "}
-          · {rows.length} enrolled patients
+          · {summary.billingQueue} enrolled patients
         </span>
       </h2>
       <Breakdown
         label="Enrolled CCM patients by status"
         items={order.map((status) => ({
           label: status,
-          value: countStatus(rows, status),
+          value: value[status],
           tone: statusChart[status],
         }))}
       />
@@ -261,6 +340,17 @@ function StatusSplit({ rows }: { rows: WorklistRow[] }) {
 
 /* -------------------------------------------------------------- worklist */
 
+type Filters = {
+  query: string;
+  provider: string;
+  location: string;
+  careManager: string;
+  status: string;
+  condition: string;
+};
+
+type Sort = { key: "name" | "nextFollowUp"; direction: "asc" | "desc" };
+
 function SortHeader({
   children,
   column,
@@ -268,9 +358,9 @@ function SortHeader({
   onSort,
 }: {
   children: React.ReactNode;
-  column: WorklistSort["key"];
-  sort: WorklistSort;
-  onSort: (column: WorklistSort["key"]) => void;
+  column: Sort["key"];
+  sort: Sort;
+  onSort: (column: Sort["key"]) => void;
 }) {
   const direction: SortDirection = sort.key === column ? sort.direction : null;
   return (
@@ -280,18 +370,34 @@ function SortHeader({
   );
 }
 
+/** The options a free-text filter offers: what the loaded rows carry, and
+ *  the current choice (the server filters; nothing is invented). */
+function optionsOf(
+  rows: CcmEnrollment[],
+  pick: (row: CcmEnrollment) => string,
+  current: string,
+) {
+  const values = new Set(rows.map(pick).filter(Boolean));
+  if (current !== ALL) values.add(current);
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
 function WorklistFiltersBar({
   filters,
+  rows,
   onChange,
   onExport,
   canExport,
+  exporting,
   library,
   onManageLibrary,
 }: {
-  filters: WorklistFilters;
-  onChange: (change: Partial<WorklistFilters>) => void;
+  filters: Filters;
+  rows: CcmEnrollment[];
+  onChange: (change: Partial<Filters>) => void;
   onExport: () => void;
   canExport: boolean;
+  exporting: boolean;
   library: CcmCondition[];
   /** Absent unless the signed-in role manages the clinic's settings. */
   onManageLibrary?: () => void;
@@ -300,7 +406,7 @@ function WorklistFiltersBar({
     <div className="flex flex-col gap-inline-md px-card pb-stack-lg lg:flex-row lg:flex-wrap lg:items-center">
       <SearchField
         label="Search patients"
-        placeholder="Search by name, MRN or DOB…"
+        placeholder="Search by name or MRN…"
         value={filters.query}
         onChange={(e) => onChange({ query: e.target.value })}
         className="lg:w-64"
@@ -312,9 +418,11 @@ function WorklistFiltersBar({
         onChange={(e) => onChange({ provider: e.target.value })}
       >
         <option value={ALL}>All Providers</option>
-        {PROVIDERS.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
+        {optionsOf(rows, (r) => r.providerName, filters.provider).map(
+          (option) => (
+            <option key={option}>{option}</option>
+          ),
+        )}
       </Select>
       <Select
         selectSize="small"
@@ -323,7 +431,7 @@ function WorklistFiltersBar({
         onChange={(e) => onChange({ location: e.target.value })}
       >
         <option value={ALL}>All Locations</option>
-        {LOCATIONS.map((option) => (
+        {optionsOf(rows, (r) => r.location, filters.location).map((option) => (
           <option key={option}>{option}</option>
         ))}
       </Select>
@@ -334,9 +442,11 @@ function WorklistFiltersBar({
         onChange={(e) => onChange({ careManager: e.target.value })}
       >
         <option value={ALL}>All Care Managers</option>
-        {CARE_MANAGERS.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
+        {optionsOf(rows, (r) => r.careManagerName, filters.careManager).map(
+          (option) => (
+            <option key={option}>{option}</option>
+          ),
+        )}
       </Select>
       <Select
         selectSize="small"
@@ -352,7 +462,7 @@ function WorklistFiltersBar({
       <Select
         selectSize="small"
         aria-label="Condition"
-        value={filters.condition ?? ALL}
+        value={filters.condition}
         onChange={(e) => onChange({ condition: e.target.value })}
       >
         <option value={ALL}>All Conditions</option>
@@ -384,7 +494,7 @@ function WorklistFiltersBar({
           size="small"
           variant="neutral"
           appearance="fill-stroke"
-          disabled={!canExport}
+          disabled={!canExport || exporting}
           onClick={onExport}
           leadingIcon={<Download aria-hidden="true" />}
         >
@@ -396,9 +506,8 @@ function WorklistFiltersBar({
 }
 
 /** "CKD 4 · HTN +2 ▾": the two that matter most and how many more, as a
- *  dropdown that opens the patient's whole list (client, 2026-10-01:
- *  conditions are a dropdown per patient). The list is fixed to the
- *  viewport so the table's scroll box never clips it. */
+ *  dropdown that opens the patient's whole list (client, 2026-10-01). The
+ *  list is fixed to the viewport so the table's scroll box never clips it. */
 function ConditionsCell({
   values,
   library,
@@ -487,21 +596,20 @@ function ConditionsCell({
 }
 
 function Worklist({
-  rows,
   month,
   library,
   onManageLibrary,
   onOpen,
 }: {
-  rows: WorklistRow[];
   month: string;
   library: CcmCondition[];
   onManageLibrary?: () => void;
-  onOpen: (mrn: string) => void;
+  onOpen: (patientId: string) => void;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
-  const [filters, setFilters] = useState<WorklistFilters>({
+  const { orgId } = useOfficeOrg();
+  const [filters, setFilters] = useState<Filters>({
     query: "",
     provider: ALL,
     location: ALL,
@@ -509,149 +617,210 @@ function Worklist({
     status: ALL,
     condition: ALL,
   });
-  const [sort, setSort] = useState<WorklistSort>({
-    key: "name",
-    direction: "asc",
-  });
-  const shown = useMemo(
-    () => sortWorklist(filterWorklist(rows, filters, library), sort),
-    [rows, filters, sort, library],
-  );
-  const onSort = (key: WorklistSort["key"]) =>
+  const [sort, setSort] = useState<Sort>({ key: "name", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<unknown>(null);
+  const pick = (value: string) => (value === ALL ? undefined : value);
+  /* The server filters, sorts and pages the billing queue. */
+  const query: WorklistQuery = {
+    month,
+    billing: "queue",
+    search: filters.query.trim() || undefined,
+    provider: pick(filters.provider),
+    location: pick(filters.location),
+    careManager: pick(filters.careManager),
+    status: pick(filters.status) as CcmStatus | undefined,
+    condition: pick(filters.condition),
+    sort: sort.key,
+    direction: sort.direction,
+    page,
+    limit: WORKLIST_PAGE,
+  };
+  const worklist = useCcmWorklist(query);
+  const rows = worklist.data?.items ?? [];
+  const onSort = (key: Sort["key"]) => {
+    setPage(1);
     setSort((current) => ({
       key,
       direction:
         current.key === key && current.direction === "asc" ? "desc" : "asc",
     }));
+  };
+
+  async function exportAll() {
+    if (!orgId) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const all: CcmEnrollment[] = [];
+      for (let p = 1; p <= EXPORT_MAX_PAGES; p++) {
+        const next = await listWorklist(orgId, {
+          ...query,
+          page: p,
+          limit: 150,
+        });
+        all.push(...next.items);
+        if (!next.pagination || !next.pagination.hasNext) break;
+      }
+      downloadCsv(
+        `ccm-worklist-${month}.csv`,
+        worklistCsv(all, month, library),
+      );
+    } catch (error) {
+      setExportError(error);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <>
       <WorklistFiltersBar
         filters={filters}
-        onChange={(change) =>
-          setFilters((current) => ({ ...current, ...change }))
-        }
-        canExport={shown.length > 0}
-        onExport={() =>
-          share.guard(
-            () =>
-              downloadCsv(
-                `ccm-worklist-${month}.csv`,
-                worklistCsv(shown, month, library),
-              ),
-            "download",
-          )
-        }
+        rows={rows}
+        onChange={(change) => {
+          setPage(1);
+          setFilters((current) => ({ ...current, ...change }));
+        }}
+        canExport={rows.length > 0}
+        exporting={exporting}
+        onExport={() => share.guard(() => void exportAll(), "download")}
         library={library}
         onManageLibrary={onManageLibrary}
       />
 
       {share.notice}
-      <Table minWidth={1080}>
-        <TableHead>
-          <TableRow>
-            <SortHeader column="name" sort={sort} onSort={onSort}>
-              Patient
-            </SortHeader>
-            <TableHeaderCell>MRN</TableHeaderCell>
-            <TableHeaderCell>Conditions</TableHeaderCell>
-            <TableHeaderCell>This Month&rsquo;s Minutes</TableHeaderCell>
-            <TableHeaderCell>Last Activity</TableHeaderCell>
-            <TableHeaderCell>CCM Checklist</TableHeaderCell>
-            <TableHeaderCell>Status</TableHeaderCell>
-            <SortHeader column="nextFollowUp" sort={sort} onSort={onSort}>
-              Next Follow-Up
-            </SortHeader>
-            <TableHeaderCell className="text-right">
-              <span className="sr-only">Actions</span>
-            </TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {shown.length === 0 ? (
-            <TableEmptyRow colSpan={9}>
-              No patients match these filters.
-            </TableEmptyRow>
-          ) : (
-            shown.map((row) => (
-              <TableRow key={row.mrn}>
-                <TableCell emphasis className="whitespace-nowrap">
-                  <span className="flex items-center gap-inline-md">
-                    <TableThumb name={row.name} />
-                    <span>
-                      {row.name}
-                      <span className="block text-caption font-normal text-fg-muted">
-                        {row.location}
+      {exportError ? (
+        <div className="px-card pb-stack-md">
+          <Alert tone="danger" onDismiss={() => setExportError(null)}>
+            The export did not finish. {actionErrorText(exportError)}
+          </Alert>
+        </div>
+      ) : null}
+      <AsyncSection
+        pending={worklist.isPending}
+        {...readError(
+          worklist.error,
+          "The worklist could not be loaded",
+          worklist.refetch,
+        )}
+        skeleton={<Skeleton height={320} className="mx-card" />}
+      >
+        <Table minWidth={1080}>
+          <TableHead>
+            <TableRow>
+              <SortHeader column="name" sort={sort} onSort={onSort}>
+                Patient
+              </SortHeader>
+              <TableHeaderCell>MRN</TableHeaderCell>
+              <TableHeaderCell>Conditions</TableHeaderCell>
+              <TableHeaderCell>This Month&rsquo;s Minutes</TableHeaderCell>
+              <TableHeaderCell>Last Activity</TableHeaderCell>
+              <TableHeaderCell>CCM Checklist</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <SortHeader column="nextFollowUp" sort={sort} onSort={onSort}>
+                Next Follow-Up
+              </SortHeader>
+              <TableHeaderCell className="text-right">
+                <span className="sr-only">Actions</span>
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableEmptyRow colSpan={9}>
+                No patients match these filters.
+              </TableEmptyRow>
+            ) : (
+              rows.map((row) => {
+                const name = patientName(row);
+                return (
+                  <TableRow key={row.patientId}>
+                    <TableCell emphasis className="whitespace-nowrap">
+                      <span className="flex items-center gap-inline-md">
+                        <TableThumb name={name} />
+                        <span>
+                          {name}
+                          <span className="block text-caption font-normal text-fg-muted">
+                            {row.location}
+                          </span>
+                        </span>
                       </span>
-                    </span>
-                  </span>
-                </TableCell>
-                <TableCell className="tabular-nums">{row.mrn}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <ConditionsCell
-                    values={row.conditions}
-                    library={library}
-                    patient={row.name}
-                  />
-                </TableCell>
-                <TableCell>
-                  <span className="flex items-center gap-inline-md">
-                    <span className="w-14 whitespace-nowrap tabular-nums">
-                      {row.minutes} min
-                    </span>
-                    <Progress
-                      value={row.minutes}
-                      max={CCM_THRESHOLD_MINUTES}
-                      tone={statusBar[row.status]}
-                      size="small"
-                      label={`${row.name}: ${row.minutes} of ${CCM_THRESHOLD_MINUTES} minutes`}
-                      className="w-20"
-                    />
-                  </span>
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {row.lastActivity ? usDate(row.lastActivity) : "—"}
-                </TableCell>
-                <TableCell>
-                  <ChecklistCount met={row.met} />
-                </TableCell>
-                <TableCell>
-                  <StatusBadge row={row} />
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {row.nextFollowUp ? usDate(row.nextFollowUp) : "—"}
-                </TableCell>
-                <TableCell>
-                  <span className="flex justify-end">
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => onOpen(row.mrn)}
-                      aria-label={`Open ${row.name}`}
-                    >
-                      Open
-                    </Button>
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {row.mrn ?? "—"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <ConditionsCell
+                        values={row.conditions}
+                        library={library}
+                        patient={name}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-inline-md">
+                        <span className="w-14 whitespace-nowrap tabular-nums">
+                          {row.minutes} min
+                        </span>
+                        <Progress
+                          value={Math.min(row.minutes, CCM_THRESHOLD_MINUTES)}
+                          max={CCM_THRESHOLD_MINUTES}
+                          tone={statusBar[row.status]}
+                          size="small"
+                          label={`${name}: ${row.minutes} of ${CCM_THRESHOLD_MINUTES} minutes`}
+                          className="w-20"
+                        />
+                      </span>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {row.lastActivityOn ? usDate(row.lastActivityOn) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ChecklistCount
+                        met={row.requirementsMet}
+                        total={row.requirementsTotal || REQUIRED}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge row={row} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {row.nextFollowUpOn ? usDate(row.nextFollowUpOn) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <OpenButton
+                        name={name}
+                        onOpen={() => onOpen(row.patientId)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+        <Pager
+          page={page}
+          pagination={worklist.data?.pagination}
+          onPage={setPage}
+        />
+      </AsyncSection>
     </>
   );
 }
 
-function PatientCell({ mrn, name }: { mrn: string; name: string }) {
+function PatientCell({ mrn, name }: { mrn: string | null; name: string }) {
   return (
     <span className="flex items-center gap-inline-md">
       <TableThumb name={name} />
       <span>
         {name}
-        <span className="block text-caption font-normal text-fg-muted tabular-nums">
-          MRN {mrn}
-        </span>
+        {mrn ? (
+          <span className="block text-caption font-normal text-fg-muted tabular-nums">
+            MRN {mrn}
+          </span>
+        ) : null}
       </span>
     </span>
   );
@@ -673,213 +842,274 @@ function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
   );
 }
 
-function CheckInsTable({
-  rows: ccmCheckIns,
-  patients,
-  onOpen,
-}: {
-  rows: CheckInRow[];
-  patients: CcmPatient[];
-  onOpen: (mrn: string) => void;
-}) {
+/** Check-in notices members sent this office (server rows). Opening one
+ *  reads the check-in behind it and marks it seen. */
+function CheckInsTable({ onOpen }: { onOpen: (patientId: string) => void }) {
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState<CheckInNotice | null>(null);
+  const notices = useCheckInNotices({ page, limit: INBOX_PAGE });
+  const rows = notices.data?.items ?? [];
   return (
-    <Table minWidth={820}>
-      <TableHead>
-        <TableRow>
-          <TableHeaderCell>Patient</TableHeaderCell>
-          <TableHeaderCell>Date</TableHeaderCell>
-          <TableHeaderCell>Status</TableHeaderCell>
-          <TableHeaderCell>Notes</TableHeaderCell>
-          <TableHeaderCell className="text-right">
-            <span className="sr-only">Actions</span>
-          </TableHeaderCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {ccmCheckIns.length === 0 ? (
-          <TableEmptyRow colSpan={5}>No check-ins this week.</TableEmptyRow>
-        ) : (
-          ccmCheckIns.map((row) => {
-            const patient = patients.find((p) => p.name.startsWith(row.name));
-            if (!patient) return null;
-            return (
-              <TableRow key={`${row.name}-${row.date}`}>
-                <TableCell emphasis className="whitespace-nowrap">
-                  <PatientCell mrn={patient.mrn} name={patient.name} />
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {row.date}
-                </TableCell>
-                <TableCell>
-                  <Badge tone={checkInTone[row.status]}>{row.status}</Badge>
-                </TableCell>
-                <TableCell>{row.notes}</TableCell>
-                <TableCell>
-                  <OpenButton
-                    name={patient.name}
-                    onOpen={() => onOpen(patient.mrn)}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })
-        )}
-      </TableBody>
-    </Table>
+    <AsyncSection
+      pending={notices.isPending}
+      {...readError(
+        notices.error,
+        "Check-in notices could not be loaded",
+        notices.refetch,
+      )}
+      skeleton={<Skeleton height={240} className="mx-card" />}
+    >
+      <Table minWidth={820}>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>Patient</TableHeaderCell>
+            <TableHeaderCell>Date</TableHeaderCell>
+            <TableHeaderCell>Reasons</TableHeaderCell>
+            <TableHeaderCell>Status</TableHeaderCell>
+            <TableHeaderCell className="text-right">
+              <span className="sr-only">Actions</span>
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableEmptyRow colSpan={5}>No check-in notices yet.</TableEmptyRow>
+          ) : (
+            rows.map((row) => {
+              const name = noticeName(row);
+              return (
+                <TableRow key={row.id}>
+                  <TableCell emphasis className="whitespace-nowrap">
+                    <PatientCell mrn={row.mrn} name={name} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {usDate(row.deliverOn)}
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex flex-wrap gap-inline-xs">
+                      {row.reasons.map((reason) => (
+                        <Badge key={reason} tone="warning">
+                          {noticeReasonLabel(reason)}
+                        </Badge>
+                      ))}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge tone={row.seen ? "neutral" : "info"}>
+                      {row.seen ? "Seen" : "New"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex justify-end gap-inline-sm">
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() => setOpen(row)}
+                        aria-label={`View check-in of ${name}`}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() => onOpen(row.patientId)}
+                        aria-label={`Open ${name}`}
+                      >
+                        Open
+                      </Button>
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+      <Pager
+        page={page}
+        pagination={notices.data?.pagination}
+        onPage={setPage}
+      />
+      {open ? (
+        <NoticeModal notice={open} onClose={() => setOpen(null)} />
+      ) : null}
+    </AsyncSection>
   );
 }
 
 function InboxTable({
-  store,
+  actions,
+  canResolve,
   onOpen,
 }: {
-  store: CcmStore;
-  onOpen: (mrn: string) => void;
+  actions: CcmActions;
+  canResolve: boolean;
+  onOpen: (patientId: string) => void;
 }) {
   const now = useNow();
-  const items = openInbox(store.state);
+  const [page, setPage] = useState(1);
+  const inbox = useCcmInbox({ page, limit: INBOX_PAGE });
+  const items = inbox.data?.items ?? [];
   return (
-    <Table minWidth={820}>
-      <TableHead>
-        <TableRow>
-          <TableHeaderCell>Patient</TableHeaderCell>
-          <TableHeaderCell>Type</TableHeaderCell>
-          <TableHeaderCell>Detail</TableHeaderCell>
-          <TableHeaderCell>Received</TableHeaderCell>
-          <TableHeaderCell className="text-right">
-            <span className="sr-only">Actions</span>
-          </TableHeaderCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {items.length === 0 ? (
-          <TableEmptyRow colSpan={5}>The inbox is clear.</TableEmptyRow>
-        ) : (
-          items.map((item) => {
-            const patient = ccmPatientsOf(store.state).find(
-              (p) => p.mrn === item.mrn,
-            );
-            const name = patient?.name ?? `MRN ${item.mrn}`;
-            return (
-              <TableRow key={item.id}>
-                <TableCell emphasis className="whitespace-nowrap">
-                  <PatientCell mrn={item.mrn} name={name} />
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{item.kind}</TableCell>
-                <TableCell>{item.text}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {messaging.relativeLabel(item.receivedAt, now)}
-                </TableCell>
-                <TableCell>
-                  <span className="flex justify-end gap-inline-sm">
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => onOpen(item.mrn)}
-                      aria-label={`Open ${name}`}
-                    >
-                      Open
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => store.resolveInbox(item.id)}
-                      leadingIcon={<Check aria-hidden="true" />}
-                    >
-                      Resolve
-                    </Button>
-                  </span>
-                </TableCell>
-              </TableRow>
-            );
-          })
-        )}
-      </TableBody>
-    </Table>
+    <AsyncSection
+      pending={inbox.isPending}
+      {...readError(
+        inbox.error,
+        "The CCM inbox could not be loaded",
+        inbox.refetch,
+      )}
+      skeleton={<Skeleton height={240} className="mx-card" />}
+    >
+      <Table minWidth={820}>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>Patient</TableHeaderCell>
+            <TableHeaderCell>Type</TableHeaderCell>
+            <TableHeaderCell>Detail</TableHeaderCell>
+            <TableHeaderCell>Received</TableHeaderCell>
+            <TableHeaderCell className="text-right">
+              <span className="sr-only">Actions</span>
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {items.length === 0 ? (
+            <TableEmptyRow colSpan={5}>The inbox is clear.</TableEmptyRow>
+          ) : (
+            items.map((item) => {
+              const name = patientName(item);
+              return (
+                <TableRow key={item.id}>
+                  <TableCell emphasis className="whitespace-nowrap">
+                    <PatientCell mrn={item.mrn} name={name} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {item.kind}
+                  </TableCell>
+                  <TableCell>{item.text}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {messaging.relativeLabel(item.receivedAt, now)}
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex justify-end gap-inline-sm">
+                      <Button
+                        size="small"
+                        variant="neutral"
+                        appearance="fill-stroke"
+                        onClick={() => onOpen(item.patientId)}
+                        aria-label={`Open ${name}`}
+                      >
+                        Open
+                      </Button>
+                      {canResolve ? (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          disabled={actions.isSaving}
+                          onClick={() =>
+                            void actions
+                              .resolveInbox(item.patientId, item.id)
+                              .catch(() => undefined)
+                          }
+                          leadingIcon={<Check aria-hidden="true" />}
+                        >
+                          Resolve
+                        </Button>
+                      ) : null}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+      <Pager page={page} pagination={inbox.data?.pagination} onPage={setPage} />
+    </AsyncSection>
   );
 }
 
+/** Follow-ups due within a week or overdue, from the server's worklist
+ *  fields. The task itself opens with the patient (no office-wide
+ *  follow-up list on the server yet). */
 function FollowUpTable({
-  store,
+  rows,
+  read,
   today,
   onOpen,
 }: {
-  store: CcmStore;
+  rows: CcmEnrollment[];
+  read: { isPending: boolean; error: unknown; refetch: () => void };
   today: string;
-  onOpen: (mrn: string) => void;
+  onOpen: (patientId: string) => void;
 }) {
-  const rows = followUpsDue(store.state, today);
   return (
-    <Table minWidth={820}>
-      <TableHead>
-        <TableRow>
-          <TableHeaderCell>Patient</TableHeaderCell>
-          <TableHeaderCell>Task</TableHeaderCell>
-          <TableHeaderCell>Assigned To</TableHeaderCell>
-          <TableHeaderCell>Due</TableHeaderCell>
-          <TableHeaderCell className="text-right">
-            <span className="sr-only">Actions</span>
-          </TableHeaderCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {rows.length === 0 ? (
-          <TableEmptyRow colSpan={5}>
-            No follow-ups due this week.
-          </TableEmptyRow>
-        ) : (
-          rows.map(({ activity, followUp }) => {
-            const patient = ccmPatientsOf(store.state).find(
-              (p) => p.mrn === activity.mrn,
-            );
-            const name = patient?.name ?? `MRN ${activity.mrn}`;
-            return (
-              <TableRow key={activity.id}>
-                <TableCell emphasis className="whitespace-nowrap">
-                  <PatientCell mrn={activity.mrn} name={name} />
-                </TableCell>
-                <TableCell>{followUp.task}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {followUp.assignee || "Unassigned"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {usDate(followUp.date)}
-                  {followUp.date < today ? (
-                    <Badge tone="danger" className="ml-inline-sm">
-                      Overdue
-                    </Badge>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <span className="flex justify-end gap-inline-sm">
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => onOpen(activity.mrn)}
-                      aria-label={`Open ${name}`}
-                    >
-                      Open
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="fill-stroke"
-                      onClick={() => store.completeFollowUp(activity.id)}
-                      leadingIcon={<Check aria-hidden="true" />}
-                    >
-                      Done
-                    </Button>
-                  </span>
-                </TableCell>
-              </TableRow>
-            );
-          })
-        )}
-      </TableBody>
-    </Table>
+    <AsyncSection
+      pending={read.isPending}
+      {...readError(read.error, "Follow-ups could not be loaded", read.refetch)}
+      skeleton={<Skeleton height={240} className="mx-card" />}
+    >
+      <Table minWidth={820}>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>Patient</TableHeaderCell>
+            <TableHeaderCell>Care Manager</TableHeaderCell>
+            <TableHeaderCell>Overdue</TableHeaderCell>
+            <TableHeaderCell>Due</TableHeaderCell>
+            <TableHeaderCell className="text-right">
+              <span className="sr-only">Actions</span>
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableEmptyRow colSpan={5}>
+              No follow-ups due this week.
+            </TableEmptyRow>
+          ) : (
+            rows.map((row) => {
+              const name = patientName(row);
+              return (
+                <TableRow key={row.patientId}>
+                  <TableCell emphasis className="whitespace-nowrap">
+                    <PatientCell mrn={row.mrn} name={name} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {row.careManagerName || "Unassigned"}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {row.overdueFollowUps > 0 ? (
+                      <Badge tone="danger">
+                        {row.overdueFollowUps} overdue
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {row.nextFollowUpOn ? usDate(row.nextFollowUpOn) : "—"}
+                    {row.nextFollowUpOn && row.nextFollowUpOn < today ? (
+                      <Badge tone="danger" className="ml-inline-sm">
+                        Overdue
+                      </Badge>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <OpenButton
+                      name={name}
+                      onOpen={() => onOpen(row.patientId)}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </AsyncSection>
   );
 }
 
@@ -933,22 +1163,39 @@ function clock(seconds: number) {
 /** What an alert fills in when staff log time against it. */
 type ActivityPrefill = { type: string; note: string };
 
+/** The office's active staff, for "Assign To" (user ids; needs staff View:
+ *  without it only "Unassigned" is offered and the server still checks). */
+function useAssignees(enabled: boolean) {
+  const staff = useStaffList({ page: 1, limit: 150, status: "ACTIVE" });
+  return enabled && !staff.error
+    ? staff.rows.map((m) => ({
+        id: m.userId,
+        label: [m.name ?? m.email ?? "Staff", m.title]
+          .filter(Boolean)
+          .join(", "),
+      }))
+    : [];
+}
+
 function ActivityForm({
-  mrn,
-  store,
+  patientId,
+  actions,
   today,
   prefill,
   onDone,
   locked = false,
 }: {
-  mrn: string;
-  store: CcmStore;
+  patientId: string;
+  actions: CcmActions;
   today: string;
   prefill?: ActivityPrefill;
   onDone: () => void;
   /** CCM billing is deactivated for this patient: nothing can be saved. */
   locked?: boolean;
 }) {
+  const office = useOfficeOrg();
+  const me = useOptionalAuth()?.user?.name ?? "You";
+  const assignees = useAssignees(office.can("staff", 1));
   const [type, setType] = useState(prefill?.type ?? "");
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<EntryMode>("minutes");
@@ -959,12 +1206,12 @@ function ActivityForm({
   const [ehr, setEhr] = useState<YesNo>("no");
   const [note, setNote] = useState(prefill?.note ?? "");
   const [outcome, setOutcome] = useState<string>(OUTCOMES[0]);
-  const [staff, setStaff] = useState<string>(STAFF[0]);
   const [needsFollowUp, setNeedsFollowUp] = useState<YesNo>("no");
   const [followDate, setFollowDate] = useState("");
   const [assignee, setAssignee] = useState("");
   const [task, setTask] = useState("");
   const [tried, setTried] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
   const timer = useStopwatch();
 
   const minutes =
@@ -991,32 +1238,35 @@ function ActivityForm({
   const show = (error: string | null) =>
     tried ? (error ?? undefined) : undefined;
 
-  function save() {
+  async function save() {
     setTried(true);
     if (locked || !valid || timer.running) return;
-    store.addActivity({
-      mrn,
-      type,
-      date,
-      minutes,
-      ...(mode === "times" ? { start, end } : {}),
-      note: note.trim(),
-      outcome,
-      staff,
-      counts,
-      ehrDocumented: ehr === "yes",
-      ...(needsFollowUp === "yes"
-        ? {
-            followUp: {
-              date: followDate,
-              assignee,
-              task: task.trim(),
-              done: false,
-            },
-          }
-        : {}),
-    });
-    onDone();
+    setFailure(null);
+    try {
+      await actions.addActivity(patientId, {
+        type,
+        activityDate: date,
+        ...(mode === "times"
+          ? { startTime: start, endTime: end }
+          : { minutes }),
+        ...(note.trim() ? { note: note.trim() } : {}),
+        outcome,
+        countsToward: counts,
+        ehrDocumented: ehr === "yes",
+        ...(needsFollowUp === "yes"
+          ? {
+              followUp: {
+                date: followDate,
+                task: task.trim(),
+                assigneeId: assignee || null,
+              },
+            }
+          : {}),
+      });
+      onDone();
+    } catch (error) {
+      setFailure(error);
+    }
   }
 
   return (
@@ -1031,6 +1281,11 @@ function ActivityForm({
           Key facts only. The full clinical note stays in the practice EHR.
         </p>
       </div>
+      {failure ? (
+        <Alert tone="danger" onDismiss={() => setFailure(null)}>
+          {actionErrorText(failure)}
+        </Alert>
+      ) : null}
 
       <div className="grid gap-stack-md sm:grid-cols-2">
         <FormField label="Activity Type" required error={show(errors.type)}>
@@ -1183,18 +1438,9 @@ function ActivityForm({
             </Select>
           )}
         </FormField>
-        <FormField label="Entered By" required>
-          {(field) => (
-            <Select
-              {...field}
-              value={staff}
-              onChange={(e) => setStaff(e.target.value)}
-            >
-              {STAFF.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </Select>
-          )}
+        {/* The server records the signed-in staff member; not a choice. */}
+        <FormField label="Entered By" hint="Recorded as you">
+          {(field) => <Input {...field} readOnly value={me} />}
         </FormField>
       </div>
 
@@ -1230,8 +1476,10 @@ function ActivityForm({
                 onChange={(e) => setAssignee(e.target.value)}
               >
                 <option value="">Unassigned</option>
-                {STAFF.map((option) => (
-                  <option key={option}>{option}</option>
+                {assignees.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
                 ))}
               </Select>
             )}
@@ -1273,7 +1521,11 @@ function ActivityForm({
         >
           Cancel
         </Button>
-        <Button size="small" onClick={save} disabled={locked || timer.running}>
+        <Button
+          size="small"
+          onClick={() => void save()}
+          disabled={locked || timer.running || actions.isSaving}
+        >
           Save Activity
         </Button>
       </div>
@@ -1293,19 +1545,22 @@ function ComplianceBadge() {
 }
 
 /** Whether the patient is on dialysis, or under home health or hospice:
- *  either takes them out of the CCM billing queue. */
+ *  either takes them out of the CCM billing queue (the server decides). */
 function ComplianceSection({
   row,
   canEdit,
   onChange,
 }: {
-  row: WorklistRow;
+  row: CcmEnrollment;
   canEdit: boolean;
-  onChange: (flags: CcmCompliance) => void;
+  onChange: (flags: {
+    isOnDialysis: boolean;
+    isOnHomeHealthOrHospice: boolean;
+  }) => void;
 }) {
-  const flags: CcmCompliance = {
-    isOnDialysis: Boolean(row.isOnDialysis),
-    isOnHomeHealthOrHospice: Boolean(row.isOnHomeHealthOrHospice),
+  const flags = {
+    isOnDialysis: row.isOnDialysis,
+    isOnHomeHealthOrHospice: row.isOnHomeHealthOrHospice,
   };
   return (
     <section className="space-y-stack-sm">
@@ -1313,14 +1568,14 @@ function ComplianceSection({
       {row.billingBlocked ? <ComplianceBadge /> : null}
       <div className="space-y-stack-xs">
         <SwitchRow
-          checked={flags.isOnDialysis ?? false}
+          checked={flags.isOnDialysis}
           disabled={!canEdit}
           onChange={(on) => onChange({ ...flags, isOnDialysis: on })}
           title="On dialysis (ESRD)"
           description="Receiving maintenance dialysis."
         />
         <SwitchRow
-          checked={flags.isOnHomeHealthOrHospice ?? false}
+          checked={flags.isOnHomeHealthOrHospice}
           disabled={!canEdit}
           onChange={(on) => onChange({ ...flags, isOnHomeHealthOrHospice: on })}
           title="Home health or hospice"
@@ -1351,35 +1606,41 @@ const requirementGlyph: Record<
   "not-applicable": { icon: CircleMinus, className: "text-fg-muted" },
 };
 
+const EMPTY_REQUIREMENT: CcmRequirement = {
+  id: "",
+  status: "missing",
+  met: false,
+  inProgress: false,
+  notApplicable: false,
+  date: null,
+  detail: "",
+};
+
 /* One checklist item: its state at a glance (glyph, then a caption with the
-   date and note), the status menu on the right. The note is text until
-   someone chooses to edit it: eight open fields competed with the eight
-   statuses they annotate. */
+   date and note), the status menu on the right. Every change sends the
+   item's full state (PUT …/requirements/{id}, `met` always present). */
 function RequirementRow({
-  store,
-  mrn,
-  id,
+  current,
   label,
   today,
   readOnly = false,
+  onSave,
 }: {
-  store: CcmStore;
-  mrn: string;
-  id: (typeof CCM_REQUIREMENTS)[number]["id"];
+  current: CcmRequirement;
   label: string;
   today: string;
   /** The signed-in role may not update the checklist. */
   readOnly?: boolean;
+  onSave: (body: ReturnType<typeof requirementBody>) => void;
 }) {
-  const current = requirementFor(store.state, mrn, id);
-  const status = requirementStatus(current);
+  const status = current.status;
   const [editing, setEditing] = useState(false);
-  const glyph = requirementGlyph[status];
+  const glyph = requirementGlyph[status] ?? requirementGlyph.missing;
   const Glyph = glyph.icon;
 
   const when =
     current.met && current.date
-      ? `Completed ${usDate(current.date)}`
+      ? `Completed ${usDate(current.date.slice(0, 10))}`
       : status === "in-progress"
         ? "Under way"
         : status === "not-applicable"
@@ -1388,7 +1649,8 @@ function RequirementRow({
 
   const saveNote = (value: string) => {
     const detail = value.trim();
-    if (detail !== current.detail) store.setRequirement(mrn, id, { detail });
+    if (detail !== current.detail)
+      onSave(requirementBody(current, { detail }, today));
     setEditing(false);
   };
 
@@ -1447,15 +1709,15 @@ function RequirementRow({
             value={status}
             disabled={readOnly}
             className="w-full"
-            onChange={(e) => {
-              const next = e.target.value as RequirementStatus;
-              store.setRequirement(mrn, id, {
-                met: next === "complete",
-                inProgress: next === "in-progress",
-                notApplicable: next === "not-applicable",
-                date: next === "complete" ? (current.date ?? today) : undefined,
-              });
-            }}
+            onChange={(e) =>
+              onSave(
+                requirementBody(
+                  current,
+                  { status: e.target.value as RequirementStatus },
+                  today,
+                ),
+              )
+            }
           >
             {(Object.keys(requirementLabel) as RequirementStatus[]).map(
               (value) => (
@@ -1479,6 +1741,11 @@ function EhrMark({ documented }: { documented: boolean }) {
   );
 }
 
+function staffLabel(ref: { name: string | null; title: string | null } | null) {
+  if (!ref) return "Unassigned";
+  return [ref.name ?? "Staff", ref.title].filter(Boolean).join(", ");
+}
+
 /* The month's activities as rows that wrap, not a seven-column table that
    scrolled sideways inside the popup. */
 function ActivityTable({
@@ -1487,7 +1754,7 @@ function ActivityTable({
   total,
   limit,
 }: {
-  activities: ReturnType<typeof activitiesFor>;
+  activities: CcmActivityRow[];
   month: string;
   total?: number;
   limit?: number;
@@ -1510,19 +1777,20 @@ function ActivityTable({
             className="flex flex-col gap-stack-sm p-inset-sm sm:flex-row sm:items-start sm:gap-inline-lg"
           >
             <div className="w-24 shrink-0 text-body-sm text-fg-secondary tabular-nums">
-              {usDate(activity.date)}
-              {activity.start && activity.end ? (
+              {usDate(activity.activityDate.slice(0, 10))}
+              {activity.startTime && activity.endTime ? (
                 <span className="block text-caption text-fg-muted">
-                  {formatTime(activity.start)} – {formatTime(activity.end)}
+                  {formatTime(activity.startTime)} –{" "}
+                  {formatTime(activity.endTime)}
                 </span>
               ) : null}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-label-md text-fg">{activity.type}</p>
               <p className="text-caption text-fg-muted">
-                {activity.staff}
+                {staffLabel(activity.staff)}
                 {activity.followUp
-                  ? ` · Follow-up ${usDate(activity.followUp.date)}`
+                  ? ` · Follow-up ${usDate(activity.followUp.date.slice(0, 10))}`
                   : ""}
               </p>
               {activity.note ? (
@@ -1531,11 +1799,15 @@ function ActivityTable({
                 </p>
               ) : null}
               <div className="mt-stack-sm flex flex-wrap gap-inline-sm">
-                {activity.counts !== "yes" ? (
+                {activity.countsToward !== "yes" ? (
                   <Badge
-                    tone={activity.counts === "pending" ? "warning" : "neutral"}
+                    tone={
+                      activity.countsToward === "pending"
+                        ? "warning"
+                        : "neutral"
+                    }
                   >
-                    {activity.counts === "pending"
+                    {activity.countsToward === "pending"
                       ? "Pending review"
                       : "Not counted"}
                   </Badge>
@@ -1620,15 +1892,12 @@ function SummaryTile({
 }
 
 /* The patient's month in four tiles, first thing in the sheet: the answers
-   staff open a patient for. Each says why, not just what: the status tile
-   names the reason a patient needs attention. */
+   staff open a patient for. The figures are the server's. */
 function PatientSummary({
   row,
-  pending,
   followUp,
 }: {
-  row: WorklistRow;
-  pending: number;
+  row: CcmEnrollment;
   followUp?: { task: string; assignee: string };
 }) {
   const plural = (n: number, word: string) =>
@@ -1637,14 +1906,17 @@ function PatientSummary({
     row.status === "Action Needed"
       ? [
           row.openAlerts > 0 ? plural(row.openAlerts, "open alert") : null,
-          row.overdue > 0 ? plural(row.overdue, "overdue follow-up") : null,
+          row.overdueFollowUps > 0
+            ? plural(row.overdueFollowUps, "overdue follow-up")
+            : null,
         ]
           .filter(Boolean)
           .join(" · ")
       : row.status === "Ready for Review"
         ? "Practice review required"
-        : `${row.remaining} min to go`;
-  const missing = REQUIRED - row.met;
+        : `${row.remainingMinutes} min to go`;
+  const total = row.requirementsTotal || REQUIRED;
+  const missing = total - row.requirementsMet;
 
   return (
     <dl
@@ -1664,11 +1936,15 @@ function PatientSummary({
             </span>
           </>
         }
-        note={pending > 0 ? `+${pending} min pending review` : undefined}
+        note={
+          row.pendingMinutes > 0
+            ? `+${row.pendingMinutes} min pending review`
+            : undefined
+        }
       >
         <dd className="mt-stack-xs">
           <Progress
-            value={row.minutes}
+            value={Math.min(row.minutes, CCM_THRESHOLD_MINUTES)}
             max={CCM_THRESHOLD_MINUTES}
             tone={statusBar[row.status]}
             size="small"
@@ -1691,16 +1967,22 @@ function PatientSummary({
         icon={ListChecks}
         tone={missing === 0 ? "success" : "neutral"}
         label="Checklist"
-        value={`${row.met} of ${REQUIRED} complete`}
+        value={`${row.requirementsMet} of ${total} complete`}
         note={missing === 0 ? "All requirements met" : `${missing} still open`}
       />
       <SummaryTile
         icon={CalendarClock}
         tone={
-          row.overdue > 0 ? "danger" : row.nextFollowUp ? "brand" : "neutral"
+          row.overdueFollowUps > 0
+            ? "danger"
+            : row.nextFollowUpOn
+              ? "brand"
+              : "neutral"
         }
         label="Next follow-up"
-        value={row.nextFollowUp ? usDate(row.nextFollowUp) : "None scheduled"}
+        value={
+          row.nextFollowUpOn ? usDate(row.nextFollowUpOn) : "None scheduled"
+        }
         note={
           followUp
             ? `${followUp.task}${followUp.assignee ? ` · ${followUp.assignee.split(",")[0]}` : ""}`
@@ -1711,19 +1993,30 @@ function PatientSummary({
   );
 }
 
+type OpenFollowUp = {
+  activity: CcmActivityRow;
+  followUp: NonNullable<CcmActivityRow["followUp"]>;
+};
+
 /* Why the patient needs attention, with the action for each reason next to
    it, so it can be cleared where it is read. */
 function AttentionPanel({
   alerts,
   overdue,
-  store,
+  canAct,
+  busy,
+  onResolve,
+  onDone,
   onLog,
 }: {
-  alerts: ReturnType<typeof openInbox>;
-  overdue: ReturnType<typeof openFollowUps>;
-  store: CcmStore;
+  alerts: CcmInboxItem[];
+  overdue: OpenFollowUp[];
+  canAct: boolean;
+  busy: boolean;
+  onResolve: (item: CcmInboxItem) => void;
+  onDone: (activity: CcmActivityRow) => void;
   /** Absent when the signed-in role may not log time. */
-  onLog?: (alert: ReturnType<typeof openInbox>[number]) => void;
+  onLog?: (alert: CcmInboxItem) => void;
 }) {
   if (alerts.length === 0 && overdue.length === 0) return null;
   const item =
@@ -1736,7 +2029,7 @@ function AttentionPanel({
             <span className="min-w-0 flex-1">
               <span className="text-label-md">{alert.kind}:</span> {alert.text}
               <span className="block text-caption text-fg-muted">
-                {ALERT_ACTIVITY[alert.kind]}
+                {activityTypeFor(alert)}
               </span>
             </span>
             <span className="flex flex-wrap gap-inline-sm">
@@ -1751,15 +2044,18 @@ function AttentionPanel({
                   Log Time
                 </Button>
               ) : null}
-              <Button
-                size="small"
-                variant="neutral"
-                appearance="fill-stroke"
-                onClick={() => store.resolveInbox(alert.id)}
-                leadingIcon={<Check aria-hidden="true" />}
-              >
-                Resolve
-              </Button>
+              {canAct ? (
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  disabled={busy}
+                  onClick={() => onResolve(alert)}
+                  leadingIcon={<Check aria-hidden="true" />}
+                >
+                  Resolve
+                </Button>
+              ) : null}
             </span>
           </li>
         ))}
@@ -1767,17 +2063,20 @@ function AttentionPanel({
           <li key={activity.id} className={item}>
             <span>
               <span className="text-label-md">Overdue follow-up:</span>{" "}
-              {followUp.task} (due {usDate(followUp.date)})
+              {followUp.task} (due {usDate(followUp.date.slice(0, 10))})
             </span>
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="fill-stroke"
-              onClick={() => store.completeFollowUp(activity.id)}
-              leadingIcon={<Check aria-hidden="true" />}
-            >
-              Done
-            </Button>
+            {canAct ? (
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                disabled={busy}
+                onClick={() => onDone(activity)}
+                leadingIcon={<Check aria-hidden="true" />}
+              >
+                Done
+              </Button>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -1876,21 +2175,68 @@ function ConditionsSection({
   );
 }
 
+/** The CCM sheet's patient check-ins: the notices they sent this office. */
+function PatientCheckIns({ patientId }: { patientId: string }) {
+  const notices = useCheckInNotices({ patientId, page: 1, limit: 25 });
+  const [open, setOpen] = useState<CheckInNotice | null>(null);
+  const rows = notices.data?.items ?? [];
+  return (
+    <AsyncSection
+      pending={notices.isPending}
+      {...readError(
+        notices.error,
+        "Check-ins could not be loaded",
+        notices.refetch,
+      )}
+      isEmpty={rows.length === 0}
+      empty={<EmptyState variant="bare" title="No check-in notices" />}
+      skeleton={<Skeleton height={120} />}
+    >
+      <ul className="divide-y divide-line-subtle">
+        {rows.map((notice) => (
+          <li
+            key={notice.id}
+            className="flex items-start gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-label-lg text-fg">
+                {usDate(notice.deliverOn)}
+              </p>
+              <p className="text-body-sm text-fg-secondary">
+                {notice.reasons.map(noticeReasonLabel).join(" · ")}
+              </p>
+            </div>
+            <Button
+              size="small"
+              variant="neutral"
+              appearance="fill-stroke"
+              onClick={() => setOpen(notice)}
+            >
+              View
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {open ? (
+        <NoticeModal notice={open} onClose={() => setOpen(null)} />
+      ) : null}
+    </AsyncSection>
+  );
+}
+
 function PatientModal({
-  row,
-  store,
+  patientId,
+  actions,
   month,
   today,
-  checkInRows,
   canLog,
   library,
   onClose,
 }: {
-  row: WorklistRow;
-  store: CcmStore;
+  patientId: string;
+  actions: CcmActions;
   month: string;
   today: string;
-  checkInRows: CheckInRow[];
   library: CcmCondition[];
   /** The signed-in role may log time and update the checklist. */
   canLog: boolean;
@@ -1899,350 +2245,482 @@ function PatientModal({
   const [tab, setTab] = useState<PatientTab>("overview");
   const [adding, setAdding] = useState(false);
   const [prefill, setPrefill] = useState<ActivityPrefill | undefined>();
-  const activities = activitiesFor(store.state, row.mrn, month);
-  const followUps = openFollowUps(store.state, row.mrn);
-  const alerts = openInbox(store.state, row.mrn);
-  const pending = pendingMinutesFor(store.state, row.mrn, month);
-  const checkIns = checkInsFor(checkInRows, row.name);
-  const enrolment = roster.find((p) => p.mrn === row.mrn);
+  const patient = useCcmPatient(patientId, month);
+  /* Open follow-ups can sit in earlier months: read this one and two back. */
+  const months = useMemo(
+    () => [month, monthBefore(month, 1), monthBefore(month, 2)],
+    [month],
+  );
+  const activityRead = useCcmActivities(patientId, months);
+  const alertsRead = useCcmInbox({ patientId, page: 1, limit: 50 });
+  const row = patient.data;
+  const activities = useMemo(
+    () =>
+      [...(activityRead.byMonth[0]?.rows ?? [])].sort((a, b) =>
+        b.activityDate.localeCompare(a.activityDate),
+      ),
+    [activityRead.byMonth],
+  );
+  const followUps: OpenFollowUp[] = useMemo(
+    () =>
+      activityRead.byMonth
+        .flatMap((m) => m.rows)
+        .filter((a) => a.followUp && !a.followUp.done)
+        .map((a) => ({ activity: a, followUp: a.followUp! }))
+        .sort((a, b) => a.followUp.date.localeCompare(b.followUp.date)),
+    [activityRead.byMonth],
+  );
+  const alerts = alertsRead.data?.items ?? [];
   const undocumentedCount = activities.filter((a) => !a.ehrDocumented).length;
+  const run = (promise: Promise<unknown>) =>
+    void promise.catch(() => undefined);
 
   const count = (label: string, n: number) =>
     n > 0 ? `${label} (${n})` : label;
+  const name = row ? patientName(row) : "Patient";
+  const notFound = isApiError(patient.error, { status: 404 });
 
   return (
     <Modal
       open
       onClose={onClose}
       placement="bottom"
-      title={row.name}
-      description={`MRN ${row.mrn} · ${ageOn(row.dob, today)} y/o (DOB ${usDate(row.dob)}) · ${row.provider} · ${row.location}`}
+      title={name}
+      description={
+        row
+          ? [
+              row.mrn ? `MRN ${row.mrn}` : null,
+              row.dateOfBirth
+                ? `${ageOn(row.dateOfBirth.slice(0, 10), today)} y/o (DOB ${usDate(row.dateOfBirth.slice(0, 10))})`
+                : null,
+              row.providerName,
+              row.location,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : undefined
+      }
     >
-      <PatientSummary
-        row={row}
-        pending={pending}
-        followUp={followUps[0]?.followUp}
-      />
-
-      {/* The tabs, with the sheet's one primary action at the end of the
-          row: logging time is what staff most often open a patient to do. */}
-      <div className="mb-stack-lg flex flex-wrap items-center justify-between gap-inline-md">
-        <div className="no-scrollbar min-w-0 overflow-x-auto">
-          <Tabs
-            label="Patient CCM"
-            value={tab}
-            onChange={setTab}
-            items={[
-              { id: "overview", label: "Overview" },
-              { id: "activity", label: "Activity" },
-              { id: "checkins", label: "Check-Ins" },
-              { id: "education", label: "Education" },
-              { id: "documents", label: count("Documents", undocumentedCount) },
-              {
-                id: "followups",
-                label: count("Follow-Ups", followUps.length),
-              },
-            ]}
-          />
-        </div>
-        {canLog ? (
-          <Button
-            size="small"
-            onClick={() => {
-              setPrefill(undefined);
-              setTab("activity");
-              setAdding(true);
-            }}
-            leadingIcon={<Plus aria-hidden="true" />}
-          >
-            Log Activity
-          </Button>
-        ) : null}
-      </div>
-
-      <TabPanel id="overview" value={tab} className="space-y-stack-lg">
-        {/* One column: the sheet is at most 900px, too narrow to split. What
-            needs acting on comes first, then the checklist, then history. */}
-        <AttentionPanel
-          alerts={alerts}
-          overdue={followUps.filter((f) => f.followUp.date < today)}
-          store={store}
-          onLog={
-            canLog
-              ? (alert) => {
-                  setPrefill({
-                    type: ALERT_ACTIVITY[alert.kind],
-                    note: `${alert.kind}: ${alert.text}`,
-                  });
-                  setTab("activity");
-                  setAdding(true);
-                }
-              : undefined
-          }
-        />
-
-        <ComplianceSection
-          row={row}
-          canEdit={canLog}
-          onChange={(flags) => store.setCompliance(row.mrn, flags)}
-        />
-
-        <ConditionsSection
-          values={row.conditions}
-          library={library}
-          canEdit={canLog}
-          onSave={(next) => store.setConditions(row.mrn, next)}
-        />
-
-        <section>
-          <div className="mb-stack-sm flex flex-wrap items-baseline justify-between gap-inline-md">
-            <h3 className="text-heading-5 text-fg">
-              CCM Checklist (Tracking Only)
-            </h3>
-            <span className="text-caption text-fg-muted">
-              {row.met} of {REQUIRED} complete or not applicable
-            </span>
-          </div>
-          {/* The client's disclaimer and status meanings (2026-10-07). */}
-          <p className="mb-stack-sm text-caption text-fg-muted">
-            {CCM_CHECKLIST_DISCLAIMER}
-          </p>
-          <dl className="mb-stack-sm grid gap-x-inline-lg gap-y-stack-xs text-caption sm:grid-cols-2">
-            {(Object.keys(requirementLabel) as RequirementStatus[]).map(
-              (value) => (
-                <div key={value} className="min-w-0">
-                  <dt className="inline text-label-sm text-fg">
-                    {requirementLabel[value]}:{" "}
-                  </dt>
-                  <dd className="inline text-fg-muted">
-                    {REQUIREMENT_STATUS_MEANING[value]}
-                  </dd>
-                </div>
-              ),
-            )}
-          </dl>
-          <ul className="divide-y divide-line-subtle rounded-card-nested border border-line p-inset-md">
-            {CCM_REQUIREMENTS.map((requirement) => (
-              <RequirementRow
-                key={requirement.id}
-                store={store}
-                mrn={row.mrn}
-                id={requirement.id}
-                label={requirement.label}
-                today={today}
-                readOnly={!canLog}
-              />
-            ))}
-          </ul>
-        </section>
-
-        <KidneyCareSection
-          patient={{ name: row.name, mrn: row.mrn }}
-          store={store}
-          today={today}
-          canEdit={canLog}
-        />
-        <section>
-          <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
-            <h3 className="text-heading-5 text-fg">
-              Recent CCM Activities ({monthLabel(month)})
-            </h3>
-            {activities.length > 5 ? (
-              <Button
-                size="small"
-                variant="neutral"
-                appearance="ghost"
-                onClick={() => setTab("activity")}
-              >
-                View all {activities.length}
-              </Button>
-            ) : null}
-          </div>
-          <ActivityTable activities={activities} month={month} limit={5} />
-        </section>
-      </TabPanel>
-
-      <TabPanel id="activity" value={tab}>
-        {adding ? (
-          <ActivityForm
-            key={prefill ? `${prefill.type}|${prefill.note}` : "blank"}
-            mrn={row.mrn}
-            store={store}
-            today={today}
-            prefill={prefill}
-            locked={row.billingBlocked}
-            onDone={() => setAdding(false)}
-          />
-        ) : null}
-        {/* One way in (client, 2026-10-01): the header's Log Activity,
-            which opens this form from any tab. */}
-        <ActivityTable
-          activities={activities}
-          month={month}
-          total={row.minutes}
-        />
-      </TabPanel>
-
-      <TabPanel id="checkins" value={tab}>
-        {checkIns.length === 0 ? (
-          <EmptyState variant="bare" title="No check-ins this week" />
-        ) : (
-          <ul className="divide-y divide-line-subtle">
-            {checkIns.map((checkIn) => (
-              <li
-                key={checkIn.date}
-                className="flex items-start gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-label-lg text-fg">{checkIn.date}</p>
-                  <p className="text-body-sm text-fg-secondary">
-                    {checkIn.notes}
-                  </p>
-                </div>
-                <Badge tone={checkInTone[checkIn.status]}>
-                  {checkIn.status}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </TabPanel>
-
-      <TabPanel id="education" value={tab}>
-        {enrolment ? (
-          <section className="rounded-card-nested border border-line p-inset-md">
-            <div className="flex flex-wrap items-center justify-between gap-inline-md">
-              <h3 className="text-heading-5 text-fg">{enrolment.program}</h3>
-              <Badge tone="neutral">{enrolment.status}</Badge>
-            </div>
-            <Progress
-              value={enrolment.progress}
-              label="Curriculum progress"
-              showValue
-              className="mt-stack-md"
+      <AsyncSection
+        pending={patient.isPending}
+        error={patient.error}
+        errorTitle={
+          notFound
+            ? "This patient is no longer in this office's CCM"
+            : errorTitleFor(patient.error, "The patient could not be loaded")
+        }
+        errorMessage={
+          notFound
+            ? "The care relationship ended or the enrollment was removed. Close this and refresh the worklist."
+            : errorMessageFor(patient.error, undefined)
+        }
+        onRetry={
+          !notFound && canRetry(patient.error) ? patient.refetch : undefined
+        }
+        skeleton={<Skeleton height={320} />}
+      >
+        {row ? (
+          <>
+            <PatientSummary
+              row={row}
+              followUp={
+                followUps[0]
+                  ? {
+                      task: followUps[0].followUp.task,
+                      assignee: staffLabel(followUps[0].followUp.assignee),
+                    }
+                  : undefined
+              }
             />
-            <p className="mt-stack-sm text-caption text-fg-muted">
-              Started {enrolment.startDate}
-            </p>
-          </section>
-        ) : (
-          <EmptyState variant="bare" title="Not enrolled in a program" />
-        )}
-      </TabPanel>
 
-      <TabPanel id="documents" value={tab} className="space-y-stack-md">
-        <p className="text-body-sm text-fg-secondary">
-          Clinical documentation lives in the practice EHR. Mark each activity
-          once it has been charted there.
-        </p>
-        {activities.length === 0 ? (
-          <EmptyState
-            variant="bare"
-            title={`No activity logged in ${monthLabel(month)}`}
-          />
-        ) : (
-          <ul className="divide-y divide-line-subtle">
-            {activities.map((activity) => (
-              <li
-                key={activity.id}
-                className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-label-lg text-fg">{activity.type}</p>
-                  <p className="text-body-sm text-fg-secondary tabular-nums">
-                    {usDate(activity.date)} · {activity.staff} ·{" "}
-                    {activity.minutes} min
-                  </p>
-                </div>
-                {activity.ehrDocumented ? (
-                  <Badge tone="success">In EHR</Badge>
-                ) : (
-                  <Button
-                    size="small"
-                    variant="neutral"
-                    appearance="fill-stroke"
-                    onClick={() => store.setEhrDocumented(activity.id, true)}
-                    leadingIcon={<Check aria-hidden="true" />}
-                  >
-                    Mark Documented
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </TabPanel>
-
-      <TabPanel id="followups" value={tab}>
-        {followUps.length === 0 ? (
-          <EmptyState variant="bare" title="No open follow-ups" />
-        ) : (
-          <ul className="divide-y divide-line-subtle">
-            {followUps.map(({ activity, followUp }) => (
-              <li
-                key={activity.id}
-                className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-label-lg text-fg">{followUp.task}</p>
-                  <p className="text-body-sm text-fg-secondary">
-                    {followUp.assignee || "Unassigned"} · due{" "}
-                    {usDate(followUp.date)}
-                    {followUp.date < today ? (
-                      <Badge tone="danger" className="ml-inline-sm">
-                        Overdue
-                      </Badge>
-                    ) : null}
-                  </p>
-                </div>
+            {/* The tabs, with the sheet's one primary action at the end of
+                the row: logging time is what staff most often open a
+                patient to do. */}
+            <div className="mb-stack-lg flex flex-wrap items-center justify-between gap-inline-md">
+              <div className="no-scrollbar min-w-0 overflow-x-auto">
+                <Tabs
+                  label="Patient CCM"
+                  value={tab}
+                  onChange={setTab}
+                  items={[
+                    { id: "overview", label: "Overview" },
+                    { id: "activity", label: "Activity" },
+                    { id: "checkins", label: "Check-Ins" },
+                    { id: "education", label: "Education" },
+                    {
+                      id: "documents",
+                      label: count("Documents", undocumentedCount),
+                    },
+                    {
+                      id: "followups",
+                      label: count("Follow-Ups", followUps.length),
+                    },
+                  ]}
+                />
+              </div>
+              {canLog ? (
                 <Button
                   size="small"
-                  variant="neutral"
-                  appearance="fill-stroke"
-                  onClick={() => store.completeFollowUp(activity.id)}
-                  leadingIcon={<Check aria-hidden="true" />}
+                  onClick={() => {
+                    setPrefill(undefined);
+                    setTab("activity");
+                    setAdding(true);
+                  }}
+                  leadingIcon={<Plus aria-hidden="true" />}
                 >
-                  Done
+                  Log Activity
                 </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </TabPanel>
+              ) : null}
+            </div>
+
+            <TabPanel id="overview" value={tab} className="space-y-stack-lg">
+              {alertsRead.error || activityRead.error ? (
+                <Alert
+                  tone="danger"
+                  title="Some of this patient's data could not be loaded"
+                >
+                  {actionErrorText(alertsRead.error ?? activityRead.error)}
+                </Alert>
+              ) : null}
+              <AttentionPanel
+                alerts={alerts}
+                overdue={followUps.filter(
+                  (f) => f.followUp.date.slice(0, 10) < today,
+                )}
+                canAct={canLog}
+                busy={actions.isSaving}
+                onResolve={(item) =>
+                  run(actions.resolveInbox(patientId, item.id))
+                }
+                onDone={(activity) =>
+                  run(actions.completeFollowUp(patientId, activity.id))
+                }
+                onLog={
+                  canLog
+                    ? (alert) => {
+                        setPrefill({
+                          type: activityTypeFor(alert),
+                          note: `${alert.kind}: ${alert.text}`.slice(0, 250),
+                        });
+                        setTab("activity");
+                        setAdding(true);
+                      }
+                    : undefined
+                }
+              />
+
+              <ComplianceSection
+                row={row}
+                canEdit={canLog}
+                onChange={(flags) =>
+                  run(actions.setCompliance(patientId, flags))
+                }
+              />
+
+              <ConditionsSection
+                values={row.conditions}
+                library={library}
+                canEdit={canLog}
+                onSave={(next) => run(actions.setConditions(patientId, next))}
+              />
+
+              <section>
+                <div className="mb-stack-sm flex flex-wrap items-baseline justify-between gap-inline-md">
+                  <h3 className="text-heading-5 text-fg">
+                    CCM Checklist (Tracking Only)
+                  </h3>
+                  <span className="text-caption text-fg-muted">
+                    {row.requirementsMet} of {row.requirementsTotal || REQUIRED}{" "}
+                    complete or not applicable
+                  </span>
+                </div>
+                {/* The client's disclaimer and status meanings (2026-10-07). */}
+                <p className="mb-stack-sm text-caption text-fg-muted">
+                  {CCM_CHECKLIST_DISCLAIMER}
+                </p>
+                <dl className="mb-stack-sm grid gap-x-inline-lg gap-y-stack-xs text-caption sm:grid-cols-2">
+                  {(Object.keys(requirementLabel) as RequirementStatus[]).map(
+                    (value) => (
+                      <div key={value} className="min-w-0">
+                        <dt className="inline text-label-sm text-fg">
+                          {requirementLabel[value]}:{" "}
+                        </dt>
+                        <dd className="inline text-fg-muted">
+                          {REQUIREMENT_STATUS_MEANING[value]}
+                        </dd>
+                      </div>
+                    ),
+                  )}
+                </dl>
+                <ul className="divide-y divide-line-subtle rounded-card-nested border border-line p-inset-md">
+                  {CCM_REQUIREMENTS.map((requirement) => (
+                    <RequirementRow
+                      key={requirement.id}
+                      current={
+                        row.requirements.find(
+                          (r) => r.id === requirement.id,
+                        ) ?? { ...EMPTY_REQUIREMENT, id: requirement.id }
+                      }
+                      label={requirement.label}
+                      today={today}
+                      readOnly={!canLog}
+                      onSave={(body) =>
+                        run(
+                          actions.setRequirement(
+                            patientId,
+                            requirement.id,
+                            body,
+                          ),
+                        )
+                      }
+                    />
+                  ))}
+                </ul>
+              </section>
+
+              <KidneyCareSection
+                patient={{ name, mrn: row.mrn ?? "", patientId }}
+                serverPlan={row.kidneyCarePlan}
+                canEdit={canLog}
+                onSave={(body) => run(actions.setKidneyCare(patientId, body))}
+              />
+              <section>
+                <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
+                  <h3 className="text-heading-5 text-fg">
+                    Recent CCM Activities ({monthLabel(month)})
+                  </h3>
+                  {activities.length > 5 ? (
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="ghost"
+                      onClick={() => setTab("activity")}
+                    >
+                      View all {activities.length}
+                    </Button>
+                  ) : null}
+                </div>
+                {activityRead.isPending ? (
+                  <Skeleton height={120} />
+                ) : (
+                  <ActivityTable
+                    activities={activities}
+                    month={month}
+                    limit={5}
+                  />
+                )}
+              </section>
+            </TabPanel>
+
+            <TabPanel id="activity" value={tab}>
+              {adding ? (
+                <ActivityForm
+                  key={prefill ? `${prefill.type}|${prefill.note}` : "blank"}
+                  patientId={patientId}
+                  actions={actions}
+                  today={today}
+                  prefill={prefill}
+                  locked={row.billingBlocked}
+                  onDone={() => setAdding(false)}
+                />
+              ) : null}
+              {/* One way in (client, 2026-10-01): the header's Log
+                  Activity, which opens this form from any tab. */}
+              <AsyncSection
+                pending={activityRead.isPending}
+                {...readError(
+                  activityRead.error,
+                  "Activities could not be loaded",
+                  activityRead.refetch,
+                )}
+                skeleton={<Skeleton height={160} />}
+              >
+                <ActivityTable
+                  activities={activities}
+                  month={month}
+                  total={row.minutes}
+                />
+              </AsyncSection>
+            </TabPanel>
+
+            <TabPanel id="checkins" value={tab}>
+              {tab === "checkins" ? (
+                <PatientCheckIns patientId={patientId} />
+              ) : null}
+            </TabPanel>
+
+            <TabPanel id="education" value={tab}>
+              <EmptyState
+                variant="bare"
+                title="Not available here yet"
+                description="Program progress is shown on the Members page."
+              />
+            </TabPanel>
+
+            <TabPanel id="documents" value={tab} className="space-y-stack-md">
+              <p className="text-body-sm text-fg-secondary">
+                Clinical documentation lives in the practice EHR. Mark each
+                activity once it has been charted there.
+              </p>
+              {activities.length === 0 ? (
+                <EmptyState
+                  variant="bare"
+                  title={`No activity logged in ${monthLabel(month)}`}
+                />
+              ) : (
+                <ul className="divide-y divide-line-subtle">
+                  {activities.map((activity) => (
+                    <li
+                      key={activity.id}
+                      className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-label-lg text-fg">{activity.type}</p>
+                        <p className="text-body-sm text-fg-secondary tabular-nums">
+                          {usDate(activity.activityDate.slice(0, 10))} ·{" "}
+                          {staffLabel(activity.staff)} · {activity.minutes} min
+                        </p>
+                      </div>
+                      {activity.ehrDocumented ? (
+                        <Badge tone="success">In EHR</Badge>
+                      ) : canLog ? (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          disabled={actions.isSaving}
+                          onClick={() =>
+                            run(
+                              actions.setEhrDocumented(
+                                patientId,
+                                activity.id,
+                                true,
+                              ),
+                            )
+                          }
+                          leadingIcon={<Check aria-hidden="true" />}
+                        >
+                          Mark Documented
+                        </Button>
+                      ) : (
+                        <EhrMark documented={false} />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabPanel>
+
+            <TabPanel id="followups" value={tab}>
+              {followUps.length === 0 ? (
+                <EmptyState variant="bare" title="No open follow-ups" />
+              ) : (
+                <ul className="divide-y divide-line-subtle">
+                  {followUps.map(({ activity, followUp }) => (
+                    <li
+                      key={activity.id}
+                      className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-label-lg text-fg">{followUp.task}</p>
+                        <p className="text-body-sm text-fg-secondary">
+                          {staffLabel(followUp.assignee)} · due{" "}
+                          {usDate(followUp.date.slice(0, 10))}
+                          {followUp.date.slice(0, 10) < today ? (
+                            <Badge tone="danger" className="ml-inline-sm">
+                              Overdue
+                            </Badge>
+                          ) : null}
+                        </p>
+                      </div>
+                      {canLog ? (
+                        <Button
+                          size="small"
+                          variant="neutral"
+                          appearance="fill-stroke"
+                          disabled={actions.isSaving}
+                          onClick={() =>
+                            run(
+                              actions.completeFollowUp(patientId, activity.id),
+                            )
+                          }
+                          leadingIcon={<Check aria-hidden="true" />}
+                        >
+                          Done
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabPanel>
+          </>
+        ) : null}
+      </AsyncSection>
     </Modal>
   );
 }
 
 /* ------------------------------------------------------------ add to CCM */
 
-/** Enrols one of the clinic's patients in CCM, once they have consented:
- *  the conditions that qualify them and who looks after them. */
+const NAME_MAX = 120;
+
+/** Enrols one of the office's roster patients in CCM, once they have
+ *  consented: the conditions that qualify them and who looks after them.
+ *  The server checks the care relationship and the two chronic
+ *  conditions; a patient already enrolled is refused there. */
 function AddToCcmModal({
-  candidates,
   library,
-  onAdd,
+  actions,
   onClose,
 }: {
-  candidates: Array<{ name: string; mrn: string }>;
   library: CcmCondition[];
-  onAdd: (patient: CcmPatient) => void;
+  actions: CcmActions;
   onClose: () => void;
 }) {
-  const today = dayKey(useNow());
-  const [mrn, setMrn] = useState(candidates[0]?.mrn ?? "");
-  const [dob, setDob] = useState("");
+  const roster = useRosterPicks();
+  const candidates: RosterPick[] = roster.patients;
+  const [chosen, setChosen] = useState("");
+  const patientId = chosen || candidates[0]?.patientId || "";
+  const picked = candidates.find((c) => c.patientId === patientId);
   const [conditions, setConditions] = useState<string[]>([]);
-  const [provider, setProvider] = useState<string>(PROVIDERS[0]);
-  const [careManager, setCareManager] = useState<string>(CARE_MANAGERS[0]);
-  const [location, setLocation] = useState<string>(LOCATIONS[0]);
+  const [provider, setProvider] = useState("");
+  const [careManager, setCareManager] = useState("");
+  const [location, setLocation] = useState("");
   const [tried, setTried] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
   const errors = {
-    dob: dob ? undefined : "Enter the date of birth",
     conditions:
       chronicCount(conditions, library) >= 2
         ? undefined
         : "CCM needs two or more chronic conditions",
+    provider: provider.trim() ? undefined : "Enter the provider",
+    careManager: careManager.trim() ? undefined : "Enter the care manager",
   };
+
+  async function add() {
+    setTried(true);
+    if (
+      !patientId ||
+      errors.conditions ||
+      errors.provider ||
+      errors.careManager
+    )
+      return;
+    setFailure(null);
+    try {
+      await actions.enroll({
+        patientId,
+        conditions,
+        providerName: provider.trim(),
+        careManagerName: careManager.trim(),
+        ...(location.trim() ? { location: location.trim() } : {}),
+      });
+      onClose();
+    } catch (error) {
+      setFailure(error);
+    }
+  }
 
   return (
     <Modal
@@ -2257,65 +2735,55 @@ function AddToCcmModal({
             Cancel
           </Button>
           <Button
-            disabled={candidates.length === 0}
-            onClick={() => {
-              setTried(true);
-              const patient = candidates.find((c) => c.mrn === mrn);
-              if (!patient || errors.dob || errors.conditions) return;
-              onAdd({
-                mrn,
-                name: patient.name,
-                dob,
-                conditions,
-                provider,
-                careManager,
-                location,
-              });
-              onClose();
-            }}
+            disabled={candidates.length === 0 || actions.isSaving}
+            onClick={() => void add()}
           >
             Add to CCM
           </Button>
         </>
       }
     >
-      {candidates.length === 0 ? (
-        <EmptyState
-          variant="bare"
-          title="Every clinic patient is already in CCM"
-        />
-      ) : (
+      <AsyncSection
+        pending={roster.isPending}
+        {...readError(
+          roster.error,
+          "Your patients could not be loaded",
+          roster.refetch,
+        )}
+        isEmpty={candidates.length === 0}
+        empty={
+          <EmptyState variant="bare" title="No patients on your roster yet" />
+        }
+        skeleton={<Skeleton height={240} />}
+      >
         <div className="space-y-stack-md">
+          {failure ? (
+            <Alert tone="danger" onDismiss={() => setFailure(null)}>
+              {actionErrorText(failure)}
+            </Alert>
+          ) : null}
           <FormField label="Patient" required>
             {(field) => (
               <Select
                 {...field}
-                value={mrn}
-                onChange={(e) => setMrn(e.target.value)}
+                value={patientId}
+                onChange={(e) => setChosen(e.target.value)}
               >
                 {candidates.map((c) => (
-                  <option key={c.mrn} value={c.mrn}>
-                    {c.name} · MRN {c.mrn}
+                  <option key={c.patientId} value={c.patientId}>
+                    {patientName(c)}
+                    {c.mrn ? ` · MRN ${c.mrn}` : ""}
                   </option>
                 ))}
               </Select>
             )}
           </FormField>
-          <FormField
-            label="Date of birth"
-            required
-            error={tried ? errors.dob : undefined}
-          >
-            {(field) => (
-              <Input
-                {...field}
-                type="date"
-                max={today}
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-              />
-            )}
-          </FormField>
+          <p className="text-body-sm text-fg-secondary">
+            Date of birth:{" "}
+            {picked?.dateOfBirth
+              ? usDate(picked.dateOfBirth.slice(0, 10))
+              : "not on file"}
+          </p>
           <FormField
             label="Chronic conditions"
             required
@@ -2333,48 +2801,47 @@ function AddToCcmModal({
             )}
           </FormField>
           <div className="grid gap-stack-md sm:grid-cols-3">
-            <FormField label="Provider" required>
+            <FormField
+              label="Provider"
+              required
+              error={tried ? errors.provider : undefined}
+            >
               {(field) => (
-                <Select
+                <Input
                   {...field}
                   value={provider}
+                  maxLength={NAME_MAX}
                   onChange={(e) => setProvider(e.target.value)}
-                >
-                  {PROVIDERS.map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </Select>
+                />
               )}
             </FormField>
-            <FormField label="Care manager" required>
+            <FormField
+              label="Care manager"
+              required
+              error={tried ? errors.careManager : undefined}
+            >
               {(field) => (
-                <Select
+                <Input
                   {...field}
                   value={careManager}
+                  maxLength={NAME_MAX}
                   onChange={(e) => setCareManager(e.target.value)}
-                >
-                  {CARE_MANAGERS.map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </Select>
+                />
               )}
             </FormField>
-            <FormField label="Location" required>
+            <FormField label="Location">
               {(field) => (
-                <Select
+                <Input
                   {...field}
                   value={location}
+                  maxLength={NAME_MAX}
                   onChange={(e) => setLocation(e.target.value)}
-                >
-                  {LOCATIONS.map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </Select>
+                />
               )}
             </FormField>
           </div>
         </div>
-      )}
+      </AsyncSection>
     </Modal>
   );
 }
@@ -2398,215 +2865,59 @@ function PageSkeleton() {
 }
 
 export default function ClinicCcm() {
-  const rawStore = useCcm();
+  const actions = useCcm();
+  const office = useOfficeOrg();
   const canLog = useCan("ccm.log");
   const canManageLibrary = useCan("settings.manage");
   const conditionLibrary = useConditionLibrary();
   const library = conditionLibrary.library;
+  const practice = useOptionalAuth()?.user?.org ?? "";
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  /* The clinic's whole patient list, newly enrolled ones included. */
-  const clinicData = useClinicData();
   const now = useNow();
   const today = dayKey(now);
-  /* What the linked member's own app has raised, folded into the inbox and
-     the check-ins so every count, status and tab reads it like the rest. */
-  const feed = useMemberFeed(now, today, LINKED_MEMBER.program);
-  const state = useMemo(
-    () => withFeed(rawStore.state, feed.inbox),
-    [rawStore.state, feed.inbox],
-  );
-  const store: CcmStore = { ...rawStore, state };
-  const checkInRows = useMemo(
-    () => [...(feed.isPending ? [] : feed.checkInRows), ...demoCheckIns],
-    [feed.isPending, feed.checkInRows],
-  );
   const months = recentMonths(now);
   const [month, setMonth] = useState(months[0]);
   const [tab, setTab] = useState<PageTab>("worklist");
-  const [openMrn, setOpenMrn] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
-  const rows = useMemo(
-    () => worklist(state, ccmPatientsOf(state), month, today),
-    [state, month, today],
+  const summary = useCcmSummary(month);
+  const inboxCount = useCcmInbox({ page: 1, limit: 1 });
+  const unseenNotices = useCheckInNotices(
+    { seen: false, page: 1, limit: 1 },
+    office.can("check_ins", 1),
   );
-  const inboxCount = openInbox(store.state).length;
-  const dueCount = followUpsDue(store.state, today).length;
-  const checkInCount = checkInRows.filter(
-    (row) => row.status !== "Completed",
-  ).length;
   /* Dialysis, home health or hospice charts leave the billing queue
      (client, 2026-10-07); they are listed apart, still openable. */
-  const queue = useMemo(() => billingQueue(rows), [rows]);
-  const deactivated = rows.filter((row) => row.billingBlocked);
-  const openRow = rows.find((row) => row.mrn === openMrn) ?? null;
+  const deactivated = useCcmWorklist({
+    month,
+    billing: "deactivated",
+    sort: "name",
+    page: 1,
+    limit: WORKLIST_PAGE,
+  });
+  /* Follow-ups due this week or overdue, soonest first (server fields). */
+  const dueRead = useCcmWorklist({
+    month: months[0],
+    sort: "nextFollowUp",
+    direction: "asc",
+    page: 1,
+    limit: 150,
+  });
+  const horizon = addDays(today, 7);
+  const due = (dueRead.data?.items ?? []).filter(
+    (row) =>
+      row.overdueFollowUps > 0 ||
+      (row.nextFollowUpOn !== null && row.nextFollowUpOn <= horizon),
+  );
+  const totalOf = (page: { pagination: unknown } | undefined) => {
+    const p = page?.pagination as { mode?: string; total?: number } | null;
+    return p && p.mode === "offset" ? (p.total ?? 0) : 0;
+  };
   const count = (label: string, n: number) =>
     n > 0 ? `${label} (${n})` : label;
-
-  let body: React.ReactNode;
-  if (store.error) {
-    body = (
-      <ErrorState
-        title="CCM data could not be loaded"
-        error={store.error}
-        onRetry={store.refetch}
-      />
-    );
-  } else if (store.isPending) {
-    body = <PageSkeleton />;
-  } else {
-    body = (
-      <>
-        {store.writeError ? (
-          <Alert tone="danger" onDismiss={store.clearWriteError}>
-            That change did not save. Try again.
-          </Alert>
-        ) : null}
-
-        <section
-          aria-label="CCM summary"
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
-        >
-          <KeyCard
-            tone="brand"
-            icon={<UsersSolid />}
-            value={queue.length}
-            label="Enrolled Patients"
-            note={`Active in ${monthLabel(month)}`}
-          />
-          <KeyCard
-            tone="danger"
-            icon={<AlertTriangleSolid />}
-            value={countStatus(queue, "Action Needed")}
-            label="Action Needed"
-            note="Open alert or overdue follow-up"
-          />
-          <KeyCard
-            tone="warning"
-            icon={<ClockSolid />}
-            value={countStatus(queue, "Below Threshold")}
-            label={`Below ${CCM_THRESHOLD_MINUTES} Minutes`}
-            note={`0–${CCM_THRESHOLD_MINUTES - 1} minutes recorded`}
-          />
-          <KeyCard
-            tone="success"
-            icon={<CheckCircleSolid />}
-            value={countStatus(queue, "Ready for Review")}
-            label="Ready for Review"
-            note={`${CCM_THRESHOLD_MINUTES}+ minutes · practice review required`}
-          />
-        </section>
-        <StatusSplit rows={queue} />
-
-        <Card as="section" padding="none" className="min-w-0 overflow-hidden">
-          <div className="p-card pb-stack-lg">
-            <div className="overflow-x-auto">
-              <Tabs
-                label="CCM views"
-                value={tab}
-                onChange={setTab}
-                items={[
-                  { id: "worklist", label: "Patient Worklist" },
-                  {
-                    id: "checkins",
-                    label: count("Patient Check-Ins", checkInCount),
-                  },
-                  { id: "inbox", label: count("CCM Inbox", inboxCount) },
-                  { id: "followups", label: count("Follow-Up Due", dueCount) },
-                ]}
-              />
-            </div>
-          </div>
-          <TabPanel id="worklist" value={tab}>
-            <Worklist
-              rows={queue}
-              month={month}
-              library={library}
-              onManageLibrary={
-                canManageLibrary ? () => setLibraryOpen(true) : undefined
-              }
-              onOpen={setOpenMrn}
-            />
-          </TabPanel>
-          <TabPanel id="checkins" value={tab}>
-            <CheckInsTable
-              rows={checkInRows}
-              patients={ccmPatientsOf(state)}
-              onOpen={setOpenMrn}
-            />
-          </TabPanel>
-          <TabPanel id="inbox" value={tab}>
-            <InboxTable store={store} onOpen={setOpenMrn} />
-          </TabPanel>
-          <TabPanel id="followups" value={tab}>
-            <FollowUpTable store={store} today={today} onOpen={setOpenMrn} />
-          </TabPanel>
-          <p className="flex items-center gap-inline-sm border-t border-line px-(--table-edge) py-inset-sm text-caption text-fg-muted">
-            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
-            Practice staff enter activities and the practice decides what counts
-            for billing. NephroReach tracks time and makes no medical decisions.
-          </p>
-        </Card>
-
-        {deactivated.length > 0 ? (
-          <Card as="section" padding="small">
-            <h2 className="text-heading-4 text-fg">
-              CCM Billing Deactivated ({deactivated.length})
-            </h2>
-            <p className="mt-stack-xs text-body-sm text-fg-muted">
-              On dialysis, home health or hospice. Not in the billing queue and
-              no CCM time can be saved.
-            </p>
-            <ul className="mt-stack-md divide-y divide-line-subtle">
-              {deactivated.map((row) => (
-                <li
-                  key={row.mrn}
-                  className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-label-lg text-fg">
-                      {row.name}
-                    </span>
-                    <span className="block text-caption text-fg-muted">
-                      MRN {row.mrn} ·{" "}
-                      {[
-                        row.isOnDialysis ? "On dialysis (ESRD)" : null,
-                        row.isOnHomeHealthOrHospice
-                          ? "Home health or hospice"
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-inline-md">
-                    <Badge tone="warning">Billing deactivated</Badge>
-                    <OpenButton
-                      name={row.name}
-                      onOpen={() => setOpenMrn(row.mrn)}
-                    />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : null}
-
-        {openRow ? (
-          <PatientModal
-            row={openRow}
-            store={store}
-            month={month}
-            today={today}
-            checkInRows={checkInRows}
-            canLog={canLog}
-            library={library}
-            onClose={() => setOpenMrn(null)}
-          />
-        ) : null}
-      </>
-    );
-  }
+  const deactivatedRows = deactivated.data?.items ?? [];
+  const s = summary.data;
 
   return (
     <div className="space-y-4">
@@ -2614,11 +2925,13 @@ export default function ClinicCcm() {
         href={HREF}
         action={
           <div className="flex flex-wrap items-center gap-inline-md">
-            <span className="text-body-sm text-fg-muted">{PRACTICE}</span>
+            {practice ? (
+              <span className="text-body-sm text-fg-muted">{practice}</span>
+            ) : null}
             <UpdatedBar
-              updatedAt={store.updatedAt}
-              isFetching={store.isFetching}
-              refetch={store.refetch}
+              updatedAt={summary.updatedAt}
+              isFetching={summary.isFetching}
+              refetch={summary.refetch}
             />
             {canLog ? (
               <Button
@@ -2645,14 +2958,190 @@ export default function ClinicCcm() {
           </div>
         }
       />
-      {body}
+      <AsyncSection
+        pending={summary.isPending}
+        {...readError(
+          summary.error,
+          "CCM data could not be loaded",
+          summary.refetch,
+        )}
+        skeleton={<PageSkeleton />}
+      >
+        {actions.writeError ? (
+          <Alert tone="danger" onDismiss={actions.clearWriteError}>
+            That change did not save. {actionErrorText(actions.writeError)}
+          </Alert>
+        ) : null}
+
+        <section
+          aria-label="CCM summary"
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
+        >
+          <KeyCard
+            tone="brand"
+            icon={<UsersSolid />}
+            value={s?.billingQueue ?? 0}
+            label="Enrolled Patients"
+            note={`Active in ${monthLabel(month)}`}
+          />
+          <KeyCard
+            tone="danger"
+            icon={<AlertTriangleSolid />}
+            value={s?.actionNeeded ?? 0}
+            label="Action Needed"
+            note="Open alert or overdue follow-up"
+          />
+          <KeyCard
+            tone="warning"
+            icon={<ClockSolid />}
+            value={s?.belowThreshold ?? 0}
+            label={`Below ${CCM_THRESHOLD_MINUTES} Minutes`}
+            note={`0–${CCM_THRESHOLD_MINUTES - 1} minutes recorded`}
+          />
+          <KeyCard
+            tone="success"
+            icon={<CheckCircleSolid />}
+            value={s?.readyForReview ?? 0}
+            label="Ready for Review"
+            note={`${CCM_THRESHOLD_MINUTES}+ minutes · practice review required`}
+          />
+        </section>
+        {s ? <StatusSplit summary={s} /> : null}
+
+        <Card as="section" padding="none" className="min-w-0 overflow-hidden">
+          <div className="p-card pb-stack-lg">
+            <div className="overflow-x-auto">
+              <Tabs
+                label="CCM views"
+                value={tab}
+                onChange={setTab}
+                items={[
+                  { id: "worklist", label: "Patient Worklist" },
+                  {
+                    id: "checkins",
+                    label: count(
+                      "Patient Check-Ins",
+                      totalOf(unseenNotices.data),
+                    ),
+                  },
+                  {
+                    id: "inbox",
+                    label: count("CCM Inbox", totalOf(inboxCount.data)),
+                  },
+                  {
+                    id: "followups",
+                    label: count("Follow-Up Due", due.length),
+                  },
+                ]}
+              />
+            </div>
+          </div>
+          <TabPanel id="worklist" value={tab}>
+            <Worklist
+              month={month}
+              library={library}
+              onManageLibrary={
+                canManageLibrary ? () => setLibraryOpen(true) : undefined
+              }
+              onOpen={setOpenId}
+            />
+          </TabPanel>
+          <TabPanel id="checkins" value={tab}>
+            {tab === "checkins" ? <CheckInsTable onOpen={setOpenId} /> : null}
+          </TabPanel>
+          <TabPanel id="inbox" value={tab}>
+            {tab === "inbox" ? (
+              <InboxTable
+                actions={actions}
+                canResolve={canLog}
+                onOpen={setOpenId}
+              />
+            ) : null}
+          </TabPanel>
+          <TabPanel id="followups" value={tab}>
+            <FollowUpTable
+              rows={due}
+              read={dueRead}
+              today={today}
+              onOpen={setOpenId}
+            />
+          </TabPanel>
+          <p className="flex items-center gap-inline-sm border-t border-line px-(--table-edge) py-inset-sm text-caption text-fg-muted">
+            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
+            Practice staff enter activities and the practice decides what counts
+            for billing. NephroReach tracks time and makes no medical decisions.
+          </p>
+        </Card>
+
+        {deactivated.error ? (
+          <Alert tone="danger">
+            Billing-deactivated patients could not be loaded.{" "}
+            {actionErrorText(deactivated.error)}
+          </Alert>
+        ) : deactivatedRows.length > 0 ? (
+          <Card as="section" padding="small">
+            <h2 className="text-heading-4 text-fg">
+              CCM Billing Deactivated ({totalOf(deactivated.data)})
+            </h2>
+            <p className="mt-stack-xs text-body-sm text-fg-muted">
+              On dialysis, home health or hospice. Not in the billing queue and
+              no CCM time can be saved.
+            </p>
+            <ul className="mt-stack-md divide-y divide-line-subtle">
+              {deactivatedRows.map((row) => {
+                const name = patientName(row);
+                return (
+                  <li
+                    key={row.patientId}
+                    className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-label-lg text-fg">
+                        {name}
+                      </span>
+                      <span className="block text-caption text-fg-muted">
+                        {row.mrn ? `MRN ${row.mrn} · ` : ""}
+                        {[
+                          row.isOnDialysis ? "On dialysis (ESRD)" : null,
+                          row.isOnHomeHealthOrHospice
+                            ? "Home health or hospice"
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-inline-md">
+                      <Badge tone="warning">Billing deactivated</Badge>
+                      <OpenButton
+                        name={name}
+                        onOpen={() => setOpenId(row.patientId)}
+                      />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        ) : null}
+
+        {openId ? (
+          <PatientModal
+            key={`${openId}:${month}`}
+            patientId={openId}
+            actions={actions}
+            month={month}
+            today={today}
+            canLog={canLog}
+            library={library}
+            onClose={() => setOpenId(null)}
+          />
+        ) : null}
+      </AsyncSection>
       {adding ? (
         <AddToCcmModal
-          candidates={(clinicData.data?.patients ?? []).filter(
-            (p) => !ccmPatientsOf(state).some((c) => c.mrn === p.mrn),
-          )}
           library={library}
-          onAdd={rawStore.enroll}
+          actions={actions}
           onClose={() => setAdding(false)}
         />
       ) : null}

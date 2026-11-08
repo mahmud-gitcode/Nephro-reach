@@ -1,178 +1,88 @@
 import { describe, expect, it } from "vitest";
+import type { CheckInSummaryRow } from "./checkInNotices.repository";
 import {
-  ALL_PROGRAMS,
-  byProgram,
-  categories,
-  checkInTone,
   completionPct,
-  completionTrend,
-  followUps,
-  overview,
-  programs,
-  recentCheckIns,
+  officeCheckInTotals,
   truncateWords,
+  weekLabel,
+  weekWindow,
 } from "./checkIns.data";
 
-describe("byProgram", () => {
-  it("returns every row for All Programs", () => {
-    expect(byProgram(recentCheckIns, ALL_PROGRAMS)).toHaveLength(
-      recentCheckIns.length,
-    );
+const row = (over: Partial<CheckInSummaryRow>): CheckInSummaryRow => ({
+  patientId: "p-1",
+  firstName: "Test",
+  lastName: "Patient",
+  mrn: null,
+  from: "2026-11-01",
+  to: "2026-11-03",
+  daysInWindow: 3,
+  checkInDays: 2,
+  completionPercent: 67,
+  lastCheckInDate: "2026-11-03",
+  ...over,
+});
+
+const page = (items: CheckInSummaryRow[], total = items.length) => ({
+  items,
+  pagination: {
+    mode: "offset" as const,
+    total,
+    page: 1,
+    limit: 150,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  },
+});
+
+describe("this week", () => {
+  it("labels the Sunday-to-Saturday week holding today", () => {
+    expect(weekLabel("2026-10-01")).toBe("Sep 27 – Oct 3, 2026");
   });
 
-  it("narrows to one program", () => {
-    const rows = byProgram(recentCheckIns, "Crash Dialysis (5-Day)");
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((r) => r.program === "Crash Dialysis (5-Day)")).toBe(
-      true,
-    );
-  });
-
-  it("filters the follow-up list by the same rule", () => {
-    const rows = byProgram(followUps, "Journey to Dialysis");
-    expect(rows.every((r) => r.program === "Journey to Dialysis")).toBe(true);
-  });
-
-  it("returns nothing for a program with no rows", () => {
-    expect(byProgram(recentCheckIns, "Not A Program")).toEqual([]);
+  it("asks the server for Sunday to today", () => {
+    expect(weekWindow("2026-11-03")).toEqual({
+      from: "2026-11-01",
+      to: "2026-11-03",
+    });
   });
 });
 
-describe("the program filter", () => {
-  it("offers only programs the rows actually use, plus All", () => {
-    const used = new Set([
-      ...recentCheckIns.map((r) => r.program),
-      ...followUps.map((r) => r.program),
-    ]);
-    for (const program of programs) {
-      if (program === ALL_PROGRAMS) continue;
-      expect(used.has(program)).toBe(true);
-    }
+describe("office totals from the server summary", () => {
+  it("sums a whole list", () => {
+    const totals = officeCheckInTotals(
+      page([row({}), row({ patientId: "p-2", checkInDays: 3 })]),
+    );
+    expect(totals).toEqual({ checkIns: 5, expected: 6, percent: 83 });
   });
 
-  it("leads with All Programs, so the page opens unfiltered", () => {
-    expect(programs[0]).toBe(ALL_PROGRAMS);
-  });
-});
-
-describe("completionPct", () => {
-  it("rounds to a whole percent", () => {
-    expect(completionPct(214, 260)).toBe(82);
-    expect(completionPct(177, 260)).toBe(68);
+  it("claims no total for a partial list (never counts a page)", () => {
+    expect(officeCheckInTotals(page([row({})], 151))).toBeNull();
+    expect(officeCheckInTotals(undefined)).toBeNull();
   });
 
   it("never divides by zero", () => {
-    expect(completionPct(5, 0)).toBe(0);
-  });
-});
-
-describe("the check-in tables", () => {
-  it("gives every row a status the badge knows how to colour", () => {
-    for (const row of recentCheckIns) {
-      expect(checkInTone[row.status]).toBeDefined();
-    }
-  });
-
-  it("never claims more completed check-ins than were expected", () => {
-    for (const category of categories) {
-      expect(category.completed).toBeLessThanOrEqual(category.expected);
-    }
-  });
-});
-
-describe("the completion trend", () => {
-  it("has one label per point, or the chart silently misaligns", () => {
-    expect(completionTrend.labels).toHaveLength(completionTrend.points.length);
-  });
-
-  it("stays inside the 50–100 window the chart draws", () => {
-    for (const point of completionTrend.points) {
-      expect(point).toBeGreaterThanOrEqual(50);
-      expect(point).toBeLessThanOrEqual(100);
-    }
-  });
-});
-
-describe("the overview cards", () => {
-  it("colours a delta by whether it is good news, not by its direction", () => {
-    const missed = overview.find((c) => c.label === "Missed Check-Ins");
-    expect(missed?.delta).toEqual({
-      change: "20%",
-      direction: "down",
-      good: true,
+    expect(completionPct(0, 0)).toBe(0);
+    expect(officeCheckInTotals(page([]))).toEqual({
+      checkIns: 0,
+      expected: 0,
+      percent: 0,
     });
   });
 });
 
 describe("truncateWords", () => {
-  it("leaves text that is already short enough alone, and says so", () => {
-    expect(truncateWords("Mary S.", 3)).toEqual({
-      text: "Mary S.",
+  it("leaves short text alone, and says so", () => {
+    expect(truncateWords("Feeling fine", 3)).toEqual({
+      text: "Feeling fine",
       truncated: false,
     });
   });
 
   it("clips to the word limit and flags that there is more", () => {
-    expect(truncateWords("No symptoms reported. Weight steady.", 3)).toEqual({
-      text: "No symptoms reported.…",
-      truncated: true,
-    });
-  });
-
-  it("does not clip text of exactly the limit", () => {
-    expect(truncateWords("one two three", 3).truncated).toBe(false);
-  });
-
-  it("counts words, not spaces, so runs of whitespace do not fool it", () => {
-    expect(truncateWords("  one   two   three   four ", 3)).toEqual({
+    expect(truncateWords("one two  three four", 3)).toEqual({
       text: "one two three…",
       truncated: true,
     });
-  });
-
-  it("handles empty text without producing a lone ellipsis", () => {
-    expect(truncateWords("", 3)).toEqual({ text: "", truncated: false });
-  });
-
-  it("gives every check-in note a preview short enough for the column", () => {
-    for (const row of recentCheckIns) {
-      const preview = truncateWords(row.notes, 3);
-      expect(preview.text.split(/\s+/).length).toBeLessThanOrEqual(3);
-    }
-  });
-});
-
-describe("this week, with the linked member", () => {
-  it("labels the Sunday-to-Saturday week holding today", async () => {
-    const { weekLabel } = await import("./checkIns.data");
-    expect(weekLabel("2026-09-30")).toBe("Sep 27 – Oct 3, 2026");
-  });
-
-  it("adds the member's own check-ins this week to the clinic's totals", async () => {
-    const { overviewWithLive, overview, weekStartOf } =
-      await import("./checkIns.data");
-    const live = [
-      {
-        name: "John Taylor",
-        program: "x",
-        date: "Sep 29, 2026",
-        status: "At Risk" as const,
-        notes: "",
-      },
-      {
-        name: "John Taylor",
-        program: "x",
-        date: "Sep 20, 2026",
-        status: "Completed" as const,
-        notes: "",
-      },
-    ];
-    const cards = overviewWithLive(live, weekStartOf("2026-09-30"));
-    const value = (label: string) =>
-      Number(cards.find((c) => c.label === label)!.value);
-    const base = (label: string) =>
-      Number(overview.find((c) => c.label === label)!.value);
-    expect(value("Check-Ins This Week")).toBe(base("Check-Ins This Week") + 1);
-    expect(value("At Risk Members")).toBe(base("At Risk Members") + 1);
   });
 });

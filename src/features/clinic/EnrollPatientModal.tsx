@@ -22,15 +22,16 @@ import { useCourseLibrary } from "@/features/education/courseLibrary";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { organizationFor } from "@/features/staff/staff";
-import { useCcm } from "./useCcm";
-import { CARE_MANAGERS, LOCATIONS, PROVIDERS, ccmPatientsOf } from "./ccm.data";
+import { useCcm, type CcmActions } from "./useCcm";
+import { actionErrorText } from "./officeContext";
 import { ConditionSelect } from "./ConditionSelect";
 import { useConditionLibrary } from "./useConditionLibrary";
 import { chronicCount, type CcmCondition } from "./ccmConditions";
 
 /** The nephrology office's own program (client, 2026-10-09). Not an
- *  education program: it uses no contract seat and goes straight onto the
- *  CCM dashboard as an enrolled patient. */
+ *  education program: the patient goes onto the roster (the server counts
+ *  a roster link against the contract seats, NEW-3) and straight onto the
+ *  CCM dashboard as an enrolled patient (Phase 9: both on the API). */
 export const CCM_PROGRAM = "Chronic Care Management (CCM)";
 
 /* Enrolling is one form wherever it is started — Enroll Patients, the
@@ -72,7 +73,7 @@ function EnrollForm({
   ccm,
 }: EnrollProps & {
   /** The CCM record and condition library, for the nephrology office. */
-  ccm?: { store: ReturnType<typeof useCcm>; library: CcmCondition[] };
+  ccm?: { store: CcmActions; library: CcmCondition[] };
 }) {
   const [draft, setDraft] = useState<EnrollmentDraft>(emptyDraft);
   const [attempted, setAttempted] = useState(false);
@@ -86,9 +87,10 @@ function EnrollForm({
   const library = ccm?.library ?? [];
   const [dob, setDob] = useState("");
   const [conditions, setConditions] = useState<string[]>([]);
-  const [provider, setProvider] = useState<string>(PROVIDERS[0]);
-  const [careManager, setCareManager] = useState<string>(CARE_MANAGERS[0]);
-  const [location, setLocation] = useState<string>(LOCATIONS[0]);
+  const [provider, setProvider] = useState("");
+  const [careManager, setCareManager] = useState("");
+  const [location, setLocation] = useState("");
+  const [ccmFailure, setCcmFailure] = useState<unknown>(null);
 
   function ccmErrors() {
     const out: {
@@ -96,13 +98,16 @@ function EnrollForm({
       mrn?: string;
       dob?: string;
       conditions?: string;
+      provider?: string;
+      careManager?: string;
     } = {};
     if (!draft.name.trim()) out.name = "Enter the patient's full name.";
     const mrn = draft.mrn.trim();
+    /* A taken MRN or a patient already in CCM is refused by the server. */
     if (!/^\d{6}$/.test(mrn)) out.mrn = "An MRN is 6 digits.";
-    else if (ccm && ccmPatientsOf(ccm.store.state).some((p) => p.mrn === mrn))
-      out.mrn = "This patient is already in CCM.";
     if (!dob) out.dob = "Enter the date of birth.";
+    if (!provider.trim()) out.provider = "Enter the provider.";
+    if (!careManager.trim()) out.careManager = "Enter the care manager.";
     if (chronicCount(conditions, library) < 2)
       out.conditions = "CCM needs two or more chronic conditions.";
     return out;
@@ -122,16 +127,26 @@ function EnrollForm({
     setAttempted(true);
     if (isCcm && ccm) {
       if (Object.keys(ccmErrors()).length > 0) return;
-      ccm.store.enroll({
-        mrn: draft.mrn.trim(),
-        name: draft.name.trim(),
-        dob,
-        conditions,
-        provider,
-        careManager,
-        location,
-      });
-      onEnrolled(draft.name.trim(), draft.mrn.trim(), true);
+      const name = draft.name.trim().split(/\s+/);
+      const lastName = name.length > 1 ? name.pop()! : "";
+      setCcmFailure(null);
+      ccm.store
+        .enrollNew(
+          {
+            firstName: name.join(" "),
+            lastName,
+            dateOfBirth: dob,
+            mrn: draft.mrn.trim(),
+          },
+          {
+            conditions,
+            providerName: provider.trim(),
+            careManagerName: careManager.trim(),
+            ...(location.trim() ? { location: location.trim() } : {}),
+          },
+        )
+        .then(() => onEnrolled(draft.name.trim(), draft.mrn.trim(), true))
+        .catch(setCcmFailure);
       return;
     }
     if (Object.keys(validateEnrollment(draft, list, programs)).length > 0)
@@ -149,7 +164,7 @@ function EnrollForm({
       title="Enroll New Patient"
       description={
         isCcm
-          ? "Adds the patient to your CCM dashboard. CCM uses no contract seat."
+          ? "Adds the patient to your roster and your CCM dashboard."
           : `${Math.max(0, CONTRACT_SLOTS - list.length)} of ${CONTRACT_SLOTS} contract seats open.`
       }
       footer={
@@ -182,6 +197,11 @@ function EnrollForm({
           <Alert tone="info" className="mb-stack-lg">
             Your role cannot enroll patients. A care coordinator, the front desk
             or an administrator can.
+          </Alert>
+        ) : null}
+        {ccmFailure ? (
+          <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
+            {actionErrorText(ccmFailure)}
           </Alert>
         ) : null}
         {enroll.error ? (
@@ -288,43 +308,38 @@ function EnrollForm({
                   />
                 )}
               </FormField>
-              <FormField label="Provider" required>
+              <FormField label="Provider" required error={errors.provider}>
                 {(props) => (
-                  <Select
+                  <Input
                     {...props}
                     value={provider}
+                    maxLength={120}
                     onChange={(event) => setProvider(event.target.value)}
-                  >
-                    {PROVIDERS.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
-                  </Select>
+                  />
                 )}
               </FormField>
-              <FormField label="Care manager" required>
+              <FormField
+                label="Care manager"
+                required
+                error={errors.careManager}
+              >
                 {(props) => (
-                  <Select
+                  <Input
                     {...props}
                     value={careManager}
+                    maxLength={120}
                     onChange={(event) => setCareManager(event.target.value)}
-                  >
-                    {CARE_MANAGERS.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
-                  </Select>
+                  />
                 )}
               </FormField>
-              <FormField label="Location" required>
+              <FormField label="Location" optionalLabel="optional">
                 {(props) => (
-                  <Select
+                  <Input
                     {...props}
                     value={location}
+                    maxLength={120}
                     onChange={(event) => setLocation(event.target.value)}
-                  >
-                    {LOCATIONS.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
-                  </Select>
+                  />
                 )}
               </FormField>
             </>
