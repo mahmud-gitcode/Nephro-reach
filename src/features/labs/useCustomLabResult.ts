@@ -5,10 +5,10 @@
    --------------------------------------------------------------------------
    The member's own labs are rows on the API now (useMemberLabs). The
    office's member feed (OFFICE, `clinic/memberFeed.ts`) still reads one
-   "custom lab result" object; until OFFICE moves it to per-patient reads
-   (Phase 9), this builds that object from the API: the newest
-   PATIENT_ENTERED draw, values keyed by panel name. With no patient in
-   context (an office), there is no scope and it reads nothing (D33).
+   "custom lab result" object. Phase 9 removed that feed: the office reads
+   the server's CCM inbox and lab chart instead. This still builds the
+   newest PATIENT_ENTERED draw for a patient scope; with no patient in
+   context it reads nothing and reports no error (D33 closed).
    ========================================================================== */
 
 import { useMemo } from "react";
@@ -59,13 +59,16 @@ export function useCustomLabResult(explicitScope?: PatientScope | null) {
           { source: "PATIENT_ENTERED" },
         )
       ).items,
+    /* No patient in context (an office, or before the context loads):
+       nothing to read, and no error either (D33 closed in Phase 9). */
+    enabled: scope !== null,
   });
   const result = useMemo(() => latestDrawOf(query.data ?? []), [query.data]);
   return {
     result,
-    isPending: query.isPending,
-    error: query.error,
-    isError: query.isError,
+    isPending: scope !== null && query.isPending,
+    error: scope === null ? null : query.error,
+    isError: scope !== null && query.isError,
     refetch: () => void query.refetch(),
   };
 }

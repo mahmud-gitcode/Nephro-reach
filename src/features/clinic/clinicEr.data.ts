@@ -1,106 +1,77 @@
-import { monthKey, type ErVisitReport } from "@/features/emergency/erVisits";
-
 /* ==========================================================================
-   ER visits across a clinic's patients
+   ER visits across an office's patients (Phase 9: from the API)
    --------------------------------------------------------------------------
    The client (2026-10-05): the weekly "Have you been to the ER this week?"
-   answers feed the clinic's tracking dashboard, so the office sees ER
-   visits for all its patients, month to month.
+   answers feed the office's tracking dashboard, so it sees ER visits for
+   all its patients, month to month.
 
-   The linked demo patient's answers are their real log (read the same way
-   the clinic reads their other data, clinic/useMemberFeed). The rest of
-   the roster has sample answers until each patient's log comes from the
-   server.
+   The numbers come from GET /organizations/{orgId}/er-visits/summary
+   (spec 034): per patient who shares ER visits with the office, the weeks
+   answered and the weeks answered "yes" in a window. The sample answers
+   and the linked demo patient are gone. A log only, never triage.
    ========================================================================== */
 
-export type PatientErReport = {
-  name: string;
-  mrn: string;
-  /** ISO 8601, when the patient answered Yes. */
-  reportedAt: string;
-};
+import type { Page } from "@/lib/api/paging";
+import type { ErSummaryRow, Window } from "./checkInNotices.repository";
+import { isWholeList } from "./checkInNotices.repository";
 
-/** Sample Yes answers for other roster patients, in weeks ago. */
-const SAMPLE: Array<{ name: string; mrn: string; weeksAgo: number[] }> = [
-  { name: "Mary S. Johnson", mrn: "789012", weeksAgo: [1, 9, 17] },
-  { name: "John D. Smith", mrn: "123456", weeksAgo: [4, 13] },
-  { name: "Angela T. Brown", mrn: "901234", weeksAgo: [2, 6, 20] },
-  { name: "James K. Wilson", mrn: "567890", weeksAgo: [11] },
-  { name: "Robert L. Davis", mrn: "345678", weeksAgo: [7, 15, 22] },
-];
-
-/** Every Yes answer across the clinic's patients, newest first. */
-export function clinicErReports(
-  linked: { name: string; mrn: string },
-  linkedLog: ErVisitReport[],
-  now: number,
-): PatientErReport[] {
-  const week = 7 * 86_400_000;
-  const sample = SAMPLE.flatMap((p) =>
-    p.weeksAgo.map((w) => ({
-      name: p.name,
-      mrn: p.mrn,
-      reportedAt: new Date(now - w * week).toISOString(),
-    })),
-  );
-  const own = linkedLog
-    .filter((r) => r.answer === "yes")
-    .map((r) => ({
-      name: linked.name,
-      mrn: linked.mrn,
-      reportedAt: r.reportedAt,
-    }));
-  return [...own, ...sample].sort((a, b) =>
-    b.reportedAt.localeCompare(a.reportedAt),
-  );
+function pad(n: number) {
+  return String(n).padStart(2, "0");
 }
 
-function monthOf(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+function day(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-export function visitsInMonth(
-  reports: PatientErReport[],
-  month: string,
-): number {
-  return reports.filter((r) => monthOf(r.reportedAt) === month).length;
-}
-
-/** The last `count` months, oldest first, with the clinic's total. */
-export function clinicMonthly(
-  reports: PatientErReport[],
+/** The last `count` calendar months, oldest first, each as a day window
+ *  (the current month ends today). */
+export function monthWindows(
   now: number,
   count = 6,
-): Array<{ month: string; visits: number }> {
+): Array<Window & { month: string }> {
+  const today = new Date(now);
   return Array.from({ length: count }, (_, i) => {
-    const month = monthKey(now, count - 1 - i);
-    return { month, visits: visitsInMonth(reports, month) };
+    const back = count - 1 - i;
+    const first = new Date(today.getFullYear(), today.getMonth() - back, 1);
+    const last =
+      back === 0
+        ? today
+        : new Date(today.getFullYear(), today.getMonth() - back + 1, 0);
+    return {
+      month: `${first.getFullYear()}-${pad(first.getMonth() + 1)}`,
+      from: day(first),
+      to: day(last),
+    };
   });
 }
 
-/** Patients with an ER visit in the window, most visits first. */
-export function patientsWithVisits(
-  reports: PatientErReport[],
-  since: number,
-): Array<{ name: string; mrn: string; visits: number; latest: string }> {
-  const byMrn = new Map<
-    string,
-    { name: string; mrn: string; visits: number; latest: string }
-  >();
-  for (const r of reports) {
-    if (new Date(r.reportedAt).getTime() < since) continue;
-    const entry = byMrn.get(r.mrn) ?? {
-      name: r.name,
-      mrn: r.mrn,
-      visits: 0,
-      latest: r.reportedAt,
-    };
-    entry.visits += 1;
-    if (r.reportedAt > entry.latest) entry.latest = r.reportedAt;
-    byMrn.set(r.mrn, entry);
-  }
-  return [...byMrn.values()].sort(
-    (a, b) => b.visits - a.visits || b.latest.localeCompare(a.latest),
+/** The 90 days ending today. */
+export function last90Days(now: number): Window {
+  const today = new Date(now);
+  const from = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - 89,
   );
+  return { from: day(from), to: day(today) };
+}
+
+/** Weeks with a self-reported ER visit across the office, or null when
+ *  the server's list was not whole (then no total is claimed). */
+export function officeErWeeks(
+  page: Page<ErSummaryRow> | undefined,
+): number | null {
+  if (!page || !isWholeList(page)) return null;
+  return page.items.reduce((sum, row) => sum + row.erVisitWeeks, 0);
+}
+
+/** Patients with a self-reported ER visit in the window, most first. */
+export function patientsWithVisits(rows: ErSummaryRow[]): ErSummaryRow[] {
+  return rows
+    .filter((row) => row.erVisitWeeks > 0)
+    .sort(
+      (a, b) =>
+        b.erVisitWeeks - a.erVisitWeeks ||
+        (b.lastErVisitWeekOf ?? "").localeCompare(a.lastErVisitWeekOf ?? ""),
+    );
 }

@@ -5,9 +5,10 @@
    broad enough for the chronic conditions that drive care-management work,
    short enough that staff are not scrolling through hundreds of diagnoses.
 
-   Not a fixed list. The defaults live here so a new clinic starts with
-   them, but the clinic's Administrator manages its own library: turns off
-   what the practice never sees and adds what it does. Anything still
+   Not a fixed list. The server holds the defaults (the same ids as below,
+   ccm-conditions.constants.ts) and each office's choices: the clinic's
+   Administrator turns off what the practice never sees and adds what it
+   does. DEFAULT_CONDITIONS stays only to read a stored id as a name. Anything still
    missing goes in as "Other" on the patient.
 
    A patient's conditions are stored as library ids ("ckd-4"), or as the
@@ -37,6 +38,8 @@ export type CcmCondition = {
   secondary?: boolean;
   /** Added by the clinic, so the clinic may delete it. */
   custom?: boolean;
+  /** The server's id of a clinic-added entry (toggle and delete use it). */
+  entryId?: string | null;
   /** Offered in the dropdown. Turning one off never removes it from a
    *  patient who already has it. */
   active: boolean;
@@ -147,25 +150,38 @@ const ALIASES: Record<string, string> = {
 
 /* ----------------------------------------------------------- the library */
 
-/** What the clinic has changed: its own additions, and the defaults it
- *  switched off. The defaults themselves stay in code, so a correction to
- *  one reaches every clinic. */
-export type ConditionLibraryState = {
-  custom: CcmCondition[];
-  inactive: string[];
+/* Phase 9: the library is the server's (GET /organizations/{orgId}/ccm/
+   conditions): the defaults with whether this office offers them, and the
+   office's own additions. The browser store `nr:ccm-condition-library` is
+   retired. A custom entry keeps only its name on the server (BE-7 open), so
+   its short name is its name and it sits under "Other Chronic Conditions". */
+
+/** ConditionResponseDto. */
+export type ServerCondition = {
+  id: string;
+  entryId: string | null;
+  label: string;
+  short: string;
+  group: string | null;
+  secondary: boolean;
+  isDefault: boolean;
+  active: boolean;
 };
 
-export const EMPTY_LIBRARY: ConditionLibraryState = {
-  custom: [],
-  inactive: [],
-};
+const OTHER_GROUP: ConditionGroup = "Other Chronic Conditions";
 
-/** Defaults then the clinic's own, each with whether it is offered. */
-export function libraryOf(state: ConditionLibraryState): CcmCondition[] {
-  const off = new Set(state.inactive);
-  return [...DEFAULT_CONDITIONS, ...state.custom].map((condition) => ({
-    ...condition,
-    active: !off.has(condition.id),
+/** The server's library as the screens read it. */
+export function libraryFromServer(rows: ServerCondition[]): CcmCondition[] {
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    short: row.short || row.label,
+    group: (CONDITION_GROUPS as readonly string[]).includes(row.group ?? "")
+      ? (row.group as ConditionGroup)
+      : OTHER_GROUP,
+    active: row.active,
+    ...(row.secondary ? { secondary: true } : {}),
+    ...(row.isDefault ? {} : { custom: true, entryId: row.entryId }),
   }));
 }
 
@@ -189,48 +205,6 @@ export function conditionDraftError(
   );
   if (taken) return "That condition is already in the library.";
   return null;
-}
-
-export function addLibraryCondition(
-  state: ConditionLibraryState,
-  draft: ConditionDraft,
-): ConditionLibraryState {
-  const label = draft.label.trim();
-  return {
-    ...state,
-    custom: [
-      ...state.custom,
-      {
-        id: `custom:${label}`,
-        label,
-        short: draft.short.trim() || label,
-        group: draft.group,
-        custom: true,
-        active: true,
-      },
-    ],
-  };
-}
-
-export function setConditionActive(
-  state: ConditionLibraryState,
-  id: string,
-  active: boolean,
-): ConditionLibraryState {
-  const inactive = state.inactive.filter((other) => other !== id);
-  return { ...state, inactive: active ? inactive : [...inactive, id] };
-}
-
-/** Only the clinic's own additions can be deleted; a default can be
- *  turned off instead. Patients who have it keep it. */
-export function removeLibraryCondition(
-  state: ConditionLibraryState,
-  id: string,
-): ConditionLibraryState {
-  return {
-    custom: state.custom.filter((condition) => condition.id !== id),
-    inactive: state.inactive.filter((other) => other !== id),
-  };
 }
 
 /* ------------------------------------------------------ a patient's list */

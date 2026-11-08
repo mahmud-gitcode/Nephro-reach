@@ -22,9 +22,10 @@ const state = {
   refetch,
 };
 
-/* The ER visits row reads the patients' weekly answers; none here. */
-vi.mock("@/features/emergency/useErVisits", () => ({
-  useErVisits: () => ({ log: [], isPending: false }),
+/* The ER visits row reads the office's ER summary from the API (Phase 9,
+   tested in phase9 tests); this page test stubs it out. */
+vi.mock("./ClinicErVisits", () => ({
+  ClinicErVisits: () => null,
 }));
 
 vi.mock("./useClinicData", () => ({

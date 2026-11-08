@@ -6,10 +6,10 @@ import {
 import { FACILITY } from "@/features/messaging/messaging.seed";
 import type { MessagingState } from "@/features/messaging/messaging.types";
 import { addAccessRecord } from "@/features/vascular-access/vascularAccess.data";
-import { ccmPatientsOf, enrollInCcm, type CcmState } from "./ccm.data";
 
 /* A patient enrolled at the clinic reaches the other clinic screens:
-   Messages, CCM and Vascular Access each start them on request. */
+   Messages and Vascular Access each start them on request (CCM
+   enrolment is the API's: phase9.api.test.tsx). */
 
 const NOW = new Date(2026, 8, 30, 10).getTime();
 
@@ -51,27 +51,6 @@ describe("New Message", () => {
 
   it("an empty message is not sent", () => {
     expect(startConversation(empty, { ...input, body: "  " }, NOW)).toBe(empty);
-  });
-});
-
-describe("Add to CCM", () => {
-  const state: CcmState = { activities: [], requirements: {}, inbox: [] };
-  const patient = {
-    mrn: "777001",
-    name: "Ana Ruiz",
-    dob: "1970-01-01",
-    conditions: ["CKD 3", "HTN"],
-    provider: "Dr. Chen",
-    careManager: "Nurse Lisa",
-    location: "Main Office",
-  };
-
-  it("adds the patient once, with the checklist still to do", () => {
-    const next = enrollInCcm(enrollInCcm(state, patient), patient);
-    expect(ccmPatientsOf(next).filter((p) => p.mrn === "777001")).toHaveLength(
-      1,
-    );
-    expect(next.requirements["777001"]).toEqual({});
   });
 });
 
