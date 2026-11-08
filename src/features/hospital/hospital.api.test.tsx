@@ -24,6 +24,7 @@ import {
 } from "@/lib/data/legacyPurge";
 import {
   apiError,
+  JOHN_ID,
   memberContext,
   pageOf,
   stubApi,
@@ -32,6 +33,7 @@ import {
 import HospitalPatients from "./HospitalPatients";
 import HospitalReports from "./HospitalReports";
 import HospitalOverview from "./HospitalOverview";
+import { MyHospitalCourse } from "./MyHospitalCourse";
 import { useEnrollPatient, useHospitalOffice } from "./useHospital";
 import type { ApiHospitalEnrollment, EducationProgram } from "./hospital.data";
 
@@ -448,6 +450,133 @@ const DATA_FILES = [
   "src/features/hospital/HospitalUi.tsx",
   "src/features/hospital/MyHospitalCourse.tsx",
 ];
+
+/* ------------------------------------------------ the member's own side */
+
+describe("the member's hospital course", () => {
+  it("comes from the member's enrollments; finishing a day completes its classes on the server", async () => {
+    const MOD = "mod-1";
+    const C1 = "class-1";
+    const C2 = "class-2";
+    const { calls } = stubApi((c) => {
+      if (c.path === `/patients/${JOHN_ID}/education/enrollments`)
+        return pageOf([
+          {
+            id: "pe-1",
+            program: SLUG,
+            courseId: COURSE,
+            courseTitleEn: "3-Day Kidney Failure Crash Course",
+            courseTitleEs: "Curso",
+            source: "hospital-discharge",
+            status: "discharged",
+            startDate: null,
+            diagnosis: "new",
+            dischargedAt: "2026-11-01T17:00:00.000Z",
+            accessUntil: "2026-11-22",
+            hasAccess: true,
+            enrolledAt: "2026-10-30T12:00:00.000Z",
+            organizationId: ORG,
+            organizationName: "Synthetic General Hospital",
+          },
+          {
+            id: "pe-2",
+            program: "dialysis-journey-21-day",
+            courseId: "c-journey",
+            courseTitleEn: "Journey",
+            courseTitleEs: "",
+            source: "self-pay",
+            status: "enrolled",
+            startDate: null,
+            diagnosis: null,
+            dischargedAt: null,
+            accessUntil: null,
+            hasAccess: true,
+            enrolledAt: "2026-10-30T12:00:00.000Z",
+            organizationId: null,
+            organizationName: null,
+          },
+        ]);
+      if (c.path === `/courses/${COURSE}`)
+        return {
+          data: {
+            ...COURSE_SUMMARY,
+            modules: [
+              {
+                id: MOD,
+                courseId: COURSE,
+                position: 1,
+                titleEn: "Understanding kidney failure",
+                titleEs: "",
+                classes: [
+                  {
+                    id: C1,
+                    moduleId: MOD,
+                    position: 1,
+                    titleEn: "Reading one",
+                    titleEs: "",
+                    kind: "reading",
+                  },
+                  {
+                    id: C2,
+                    moduleId: MOD,
+                    position: 2,
+                    titleEn: "Video one",
+                    titleEs: "",
+                    kind: "video",
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      if (c.path === `/patients/${JOHN_ID}/education/courses/${COURSE}`)
+        return {
+          data: {
+            courseId: COURSE,
+            access: { enrolled: true, open: true, accessUntil: "2026-11-22" },
+            percent: 50,
+            nextClassId: C2,
+            progress: [
+              {
+                classId: C1,
+                status: "completed",
+                percent: 100,
+                note: null,
+                completedAt: "2026-11-02T10:00:00.000Z",
+                updatedAt: "2026-11-02T10:00:00.000Z",
+              },
+            ],
+            answers: [],
+            attempts: [],
+            certificate: null,
+            certificateStatus: {},
+          },
+        };
+      if (c.method === "POST" && c.path.endsWith("/complete"))
+        return { data: { classId: C2, status: "completed" } };
+      return undefined;
+    }, memberContext());
+    const { container } = render(<MyHospitalCourse isEs={false} />, {
+      wrapper,
+    });
+    expect(
+      await screen.findByText("From Synthetic General Hospital"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Open until November 22")).toBeInTheDocument();
+    expect(screen.queryByText("Journey")).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "I finished Day 1" }),
+    );
+    await waitFor(() =>
+      expect(
+        calls.filter((c) => c.method === "POST").map((c) => c.path),
+      ).toEqual([`/patients/${JOHN_ID}/education/classes/${C2}/complete`]),
+    );
+    for (const c of calls)
+      expect(c.headers["x-organization-id"]).toBeUndefined();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
 
 describe("retired hospital storage", () => {
   it("is in the registry at version 14 and purged with the marker", () => {
