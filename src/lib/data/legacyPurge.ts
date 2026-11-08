@@ -418,6 +418,13 @@ export const RETIRED_KEYS: readonly string[] = [
      screens (addresses, insurance ids, emergency contacts). Trips are
      /patients/:id/trips and /organizations/:id/trips. */
   "nr:travel-trip-requests",
+  /* Phase 14a (EDU-BIZ, STORAGE_VERSION 14): the office profile and
+     settings are GET/PATCH /organizations/:id and /organizations/:id/settings
+     (each section saves its own fields); the security and sharing record
+     kept beside them is gone (sharing is three server settings; password,
+     two-factor and sessions are the account's own flows). */
+  "nr:clinic-settings",
+  "nr:clinic-settings-actions",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */
@@ -425,6 +432,10 @@ export const RETIRED_PREFIXES: readonly string[] = [
   /* Phase 3: the patient a caregiver had chosen, per caregiver email. The
      choice is the in-memory portal context now. */
   "nr:caregiver-viewing:",
+  /* Phase 14a: each office's settings and settings-actions record, keyed
+     by its demo organization id (nr:org-settings-<id>,
+     nr:org-settings-actions-<id>). */
+  "nr:org-settings-",
 ];
 
 /** Cookies to expire. */

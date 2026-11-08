@@ -1,34 +1,84 @@
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
-import type { Organization } from "@/features/staff/staff";
-
 /* ==========================================================================
-   Clinic settings
+   Office settings: API shapes and what the page shows (Phase 14)
    --------------------------------------------------------------------------
-   What the office itself can change: its profile, which notifications it
-   gets, and how the portal behaves for it. All three live under one key,
-   because they are one record on the day there is an organization table.
-
-   The user roster is here too but is not stored — nothing can add, edit or
-   remove a user yet, so there is nothing to save. It is demo data as the
-   client specified it.
+   What the office itself can change, from the API:
+   - the profile: GET/PATCH /organizations/:org (address, phone, email,
+     IANA time zone). The name is NephroReach's (only the platform changes
+     it), so it is shown read-only;
+   - the settings: GET/PATCH /organizations/:org/settings (notification
+     toggles, office hours, on-call phone, landing page, items per page,
+     date format, data-sharing choices).
+   Each section saves only its own changed fields. Nothing is kept in the
+   browser: the retired `nr:clinic-settings`, `nr:org-settings-<id>` and the
+   `…-actions` keys are purged.
    ========================================================================== */
+
+/* ---------------------------------------------------------------- the API */
+
+export type ApiOfficeProfile = {
+  id: string;
+  name: string;
+  type: string;
+  status?: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  timeZone: string;
+};
+
+export type ApiOfficeSettings = {
+  opensAt: string;
+  closesAt: string;
+  closedWeekdays: string[];
+  onCallPhone: string | null;
+  escalateAfterMinutes: number;
+  notifications: Record<NotificationId, boolean>;
+  shareUsageAnalytics: boolean;
+  shareOutcomes: boolean;
+  shareResearch: boolean;
+  landingPage: string | null;
+  itemsPerPage: number;
+  dateFormat: string;
+  updatedAt?: string;
+};
+
+export type ProfilePatch = {
+  address?: string | null;
+  phone?: string | null;
+  email?: string;
+  timeZone?: string;
+};
+
+export type SettingsPatch = Partial<
+  Omit<ApiOfficeSettings, "notifications" | "updatedAt">
+> & { notifications?: Partial<Record<NotificationId, boolean>> };
+
+/* ------------------------------------------------------------- the screen */
 
 export type OrganizationProfile = {
   name: string;
   address: string;
   phone: string;
   email: string;
+  /** IANA id (America/New_York). */
   timeZone: string;
 };
 
+/** The labels the page always showed, with the IANA id each stands for. */
 export const TIME_ZONES = [
-  "(GMT-10:00) Hawaii Time (HT)",
-  "(GMT-09:00) Alaska Time (AKT)",
-  "(GMT-08:00) Pacific Time (PT)",
-  "(GMT-07:00) Mountain Time (MT)",
-  "(GMT-06:00) Central Time (CT)",
-  "(GMT-05:00) Eastern Time (ET)",
+  { label: "(GMT-10:00) Hawaii Time (HT)", iana: "Pacific/Honolulu" },
+  { label: "(GMT-09:00) Alaska Time (AKT)", iana: "America/Anchorage" },
+  { label: "(GMT-08:00) Pacific Time (PT)", iana: "America/Los_Angeles" },
+  { label: "(GMT-07:00) Mountain Time (MT)", iana: "America/Denver" },
+  { label: "(GMT-06:00) Central Time (CT)", iana: "America/Chicago" },
+  { label: "(GMT-05:00) Eastern Time (ET)", iana: "America/New_York" },
 ] as const;
+
+/** The label for an IANA id; an id the list does not know shows itself,
+ *  never a wrong label. */
+export function timeZoneLabel(iana: string): string {
+  return TIME_ZONES.find((zone) => zone.iana === iana)?.label ?? iana;
+}
 
 export const NOTIFICATIONS = [
   { id: "enrollments", label: "New member enrollments" },
@@ -48,87 +98,133 @@ export const ITEMS_PER_PAGE = [10, 25, 50] as const;
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"] as const;
 
 export type OfficePreferences = {
-  /** A clinic route, e.g. "/dashboard/clinic". */
+  /** A portal route, e.g. "/dashboard/clinic"; "" when none is set. */
   landingPage: string;
-  itemsPerPage: (typeof ITEMS_PER_PAGE)[number];
-  dateFormat: (typeof DATE_FORMATS)[number];
-  /* Office hours and on-call (client, 2026-10-07). Optional so settings
-     saved before them still read; 8:00–17:00 until set. */
-  /** "HH:MM", 24h. Messages outside these hours get the after-hours reply. */
-  opensAt?: string;
-  closesAt?: string;
-  /** The on-call nurse manager's phone: with the server, an after-hours
-   *  message unread for 2 hours sends an SMS alert here. */
-  onCallPhone?: string;
+  itemsPerPage: number;
+  dateFormat: string;
+  /** "HH:MM", 24h. Messages outside these hours get the after-hours reply
+   *  (server-side since Phase 11). */
+  opensAt: string;
+  closesAt: string;
+  /** E.164 as the server keeps it, or "". */
+  onCallPhone: string;
+};
+
+export type SharingState = {
+  analytics: boolean;
+  outcomes: boolean;
+  research: boolean;
 };
 
 export type ClinicSettings = {
   profile: OrganizationProfile;
   notifications: Record<NotificationId, boolean>;
   office: OfficePreferences;
+  sharing: SharingState;
 };
 
-/** Where each portal opens until its office picks a landing page. */
-const PORTAL_HOME: Record<Organization["portal"], string> = {
-  admin: "/dashboard",
-  hospital: "/dashboard/hospital",
-  clinic: "/dashboard/clinic",
-  nephrology: "/dashboard/nephrology",
-  access: "/dashboard/access-center",
+export function toProfile(row: ApiOfficeProfile): OrganizationProfile {
+  return {
+    name: row.name,
+    address: row.address ?? "",
+    phone: row.phone ?? "",
+    email: row.email ?? "",
+    timeZone: row.timeZone,
+  };
+}
+
+export function toSettings(
+  profile: OrganizationProfile,
+  row: ApiOfficeSettings,
+): ClinicSettings {
+  return {
+    profile,
+    notifications: row.notifications,
+    office: {
+      landingPage: row.landingPage ?? "",
+      itemsPerPage: row.itemsPerPage,
+      dateFormat: row.dateFormat,
+      opensAt: row.opensAt,
+      closesAt: row.closesAt,
+      onCallPhone: row.onCallPhone ?? "",
+    },
+    sharing: {
+      analytics: row.shareUsageAnalytics,
+      outcomes: row.shareOutcomes,
+      research: row.shareResearch,
+    },
+  };
+}
+
+/* ----------------------------------------------------------- the patches */
+
+const blankToNull = (value: string) => (value.trim() ? value.trim() : null);
+
+/** Only the profile fields that changed; "" clears a nullable field. */
+export function profilePatch(
+  saved: OrganizationProfile,
+  next: OrganizationProfile,
+): ProfilePatch {
+  const patch: ProfilePatch = {};
+  if (next.address.trim() !== saved.address.trim())
+    patch.address = blankToNull(next.address);
+  if (next.phone.trim() !== saved.phone.trim())
+    patch.phone = blankToNull(next.phone);
+  if (next.email.trim() !== saved.email.trim()) patch.email = next.email.trim();
+  if (next.timeZone !== saved.timeZone) patch.timeZone = next.timeZone;
+  return patch;
+}
+
+export const SHARING_FIELD: Record<
+  keyof SharingState,
+  "shareUsageAnalytics" | "shareOutcomes" | "shareResearch"
+> = {
+  analytics: "shareUsageAnalytics",
+  outcomes: "shareOutcomes",
+  research: "shareResearch",
 };
 
-/** The dialysis center's settings, or another office's: that office's own
- *  name and home page, and a blank contact block for it to fill in. */
-export const defaultClinicSettings = (org?: Organization): ClinicSettings => ({
-  profile:
-    org && org.portal !== "clinic"
-      ? {
-          name: org.name,
-          address: "",
-          phone: "",
-          email: "",
-          timeZone: "(GMT-05:00) Eastern Time (ET)",
-        }
-      : {
-          name: "Riverside Dialysis Center",
-          address: "123 Kidney Care Way, Columbia, SC 29201",
-          phone: "(803) 555-0187",
-          email: "mcarter@riversidedialysis.com",
-          timeZone: "(GMT-05:00) Eastern Time (ET)",
-        },
-  /* Everything on except SMS, which the client marks optional — a text
-     message is the one channel that can cost the recipient money. */
-  notifications: {
-    enrollments: true,
-    checkIns: true,
-    liveClass: true,
-    billing: true,
-    announcements: true,
-    support: true,
-    weeklySummary: true,
-    sms: false,
-  },
-  office: {
-    landingPage: PORTAL_HOME[org?.portal ?? "clinic"],
-    itemsPerPage: 10,
-    dateFormat: "MM/DD/YYYY",
-    opensAt: "08:00",
-    closesAt: "17:00",
-    onCallPhone: "",
-  },
-});
+/* ----------------------------------------------------------- validation */
+
+const OFFICE_PHONE = /^[0-9+()\-.\s]{7,40}$/;
+const E164 = /^\+[1-9]\d{1,14}$/;
 
 export type ProfileErrors = Partial<Record<keyof OrganizationProfile, string>>;
 
-/** Only what would break something downstream: a nameless organization,
-    or an address the notification emails cannot be sent to. */
+/** What the server would refuse, said in words before sending. */
 export function validateProfile(profile: OrganizationProfile): ProfileErrors {
   const errors: ProfileErrors = {};
-  if (!profile.name.trim()) errors.name = "Enter the organization name.";
   if (!profile.email.trim()) errors.email = "Enter an email address.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()))
     errors.email = "Enter an email address like name@clinic.com.";
+  if (profile.phone.trim() && !OFFICE_PHONE.test(profile.phone.trim()))
+    errors.phone = "Enter a phone number with digits, spaces, ( ) - + or .";
+  if (profile.address.trim().length > 300)
+    errors.address = "Keep the address under 300 characters.";
   return errors;
+}
+
+/**
+ * A US phone as typed ("(702) 555-0122") in E.164 ("+17025550122"); a
+ * number already starting with "+" keeps its digits. "" clears it (null).
+ * Undefined when it cannot be a phone number.
+ */
+export function toE164(input: string): string | null | undefined {
+  const text = input.trim();
+  if (!text) return null;
+  const digits = text.replace(/\D/g, "");
+  let e164: string;
+  if (text.startsWith("+")) e164 = `+${digits}`;
+  else if (digits.length === 10) e164 = `+1${digits}`;
+  else if (digits.length === 11 && digits.startsWith("1")) e164 = `+${digits}`;
+  else return undefined;
+  return E164.test(e164) ? e164 : undefined;
+}
+
+/** "+17025550122" -> "(702) 555-0122" for display; others as stored. */
+export function displayPhone(e164: string): string {
+  const us = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164);
+  return us ? `(${us[1]}) ${us[2]}-${us[3]}` : e164;
 }
 
 /** "RD" for Riverside Dialysis Center — the stand-in logo. */
@@ -139,37 +235,4 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
     .join("");
-}
-
-/* Each office keeps its own settings (client, 2026-10-09: the nephrology
-   office sets its own on-call nurse manager). The dialysis center keeps the
-   key it always had, so what it saved before still reads. */
-export function settingsKey(org?: Organization): string {
-  return org && org.portal !== "clinic"
-    ? storageKey(`org-settings-${org.id}`)
-    : storageKey("clinic-settings");
-}
-
-/* Merged section by section, so a record saved before a new notification
-   or preference existed still reads back complete. */
-export async function readClinicSettings(
-  org?: Organization,
-): Promise<ClinicSettings> {
-  const stored = await readJson<Partial<ClinicSettings> | null>(
-    settingsKey(org),
-    null,
-  );
-  const defaults = defaultClinicSettings(org);
-  return {
-    profile: { ...defaults.profile, ...stored?.profile },
-    notifications: { ...defaults.notifications, ...stored?.notifications },
-    office: { ...defaults.office, ...stored?.office },
-  };
-}
-
-export async function writeClinicSettings(
-  settings: ClinicSettings,
-  org?: Organization,
-): Promise<ClinicSettings> {
-  return writeJson(settingsKey(org), settings);
 }

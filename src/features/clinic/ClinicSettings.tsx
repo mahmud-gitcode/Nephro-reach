@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
-  Building2,
   Download,
   FileLock2,
   KeyRound,
@@ -18,47 +18,66 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { sidebarItems } from "@/components/layout/navigation";
 import {
   Alert,
+  AsyncSection,
   Badge,
   Button,
+  buttonStyles,
   Card,
   FormField,
   Input,
   Select,
+  Skeleton,
   Switch,
 } from "@/components/ui";
 import { useLanguage, type LanguageCode } from "@/context/LanguageContext";
 import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import {
   DATE_FORMATS,
+  displayPhone,
   initials,
   ITEMS_PER_PAGE,
   NOTIFICATIONS,
+  profilePatch,
+  SHARING_FIELD,
   TIME_ZONES,
+  timeZoneLabel,
+  toE164,
   validateProfile,
-  type ClinicSettings,
+  type ClinicSettings as Settings,
+  type NotificationId,
   type OfficePreferences,
   type OrganizationProfile,
+  type ProfilePatch,
+  type SettingsPatch,
 } from "./settings.data";
 import { useClinicSettings } from "./useClinicSettings";
-import { useSettingsActions } from "./useSettingsActions";
 import { useStaffAccounts } from "@/features/staff/useStaffAccounts";
-import { organizationFor } from "@/features/staff/staff";
 import { useAuth } from "@/features/auth/AuthContext";
 import type { UserRole } from "@/features/auth/auth";
 import { exportDocument, exportFilename } from "./settings.actions";
-import {
-  ChangePasswordModal,
-  DataSharingModal,
-  HipaaModal,
-  LoginActivityModal,
-  SessionsModal,
-  TwoFactorModal,
-} from "./SettingsModals";
+import { actionErrorText } from "./officeContext";
+import { DataSharingModal, HipaaModal } from "./SettingsModals";
 
-type Update = (change: Partial<ClinicSettings>) => void;
+/* ==========================================================================
+   Office Settings (Phase 14)
+   --------------------------------------------------------------------------
+   The office's profile and settings from the API (useClinicSettings). Each
+   card saves only its own changed fields: a switch saves as it flips, the
+   profile on Save. The name is NephroReach's and read-only here; the time
+   zone is stored as an IANA id. Password, sessions and login activity are
+   the account's own flows, which are not built for offices yet, so those
+   rows are shown but not available; two-factor opens the account's own
+   two-factor page. The logo has no server field yet (INT-16).
+   ========================================================================== */
+
+const NOT_AVAILABLE = "Not available yet";
 
 /* The landing page can be any screen in the office's own sidebar, so the
-   list is read from the sidebar rather than copied — a page added there
-   appears here without anyone remembering to. */
+   list is read from the sidebar rather than copied. */
 function landingPagesFor(portal: UserRole) {
   return sidebarItems.filter((item) => item.roles?.includes(portal));
 }
@@ -68,10 +87,8 @@ const LANGUAGES: { code: LanguageCode; label: string }[] = [
   { code: "ES", label: "Español" },
 ];
 
-/* Title and an optional action. The descriptions under these were removed
-   at the client's instruction (2026-09-26) — a panel that says "Manage your
-   organization information" above fields labelled Name, Address and Phone
-   is repeating itself. */
+/* Title and an optional action (descriptions removed at the client's
+   instruction, 2026-09-26). */
 function SectionHeading({
   title,
   action,
@@ -94,11 +111,15 @@ function ActionRow({
   title,
   status,
   action,
+  note,
+  noteId,
 }: {
   icon: React.ReactNode;
   title: string;
   status?: React.ReactNode;
   action: React.ReactNode;
+  note?: string;
+  noteId?: string;
 }) {
   return (
     <li className="flex items-center gap-inline-lg py-inset-sm first:pt-0 last:pb-0">
@@ -111,6 +132,11 @@ function ActionRow({
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-inline-md">
         <span className="text-label-lg text-fg">{title}</span>
         {status}
+        {note ? (
+          <span id={noteId} className="w-full text-caption text-fg-muted">
+            {note}
+          </span>
+        ) : null}
       </span>
       {action}
     </li>
@@ -119,28 +145,26 @@ function ActionRow({
 
 function OrganizationProfileCard({
   saved,
-  update,
+  onSave,
+  saving,
   emailRef,
-  ready,
 }: {
   saved: OrganizationProfile;
-  update: Update;
+  onSave: (patch: ProfilePatch, done: () => void) => void;
+  saving: boolean;
   emailRef: React.RefObject<HTMLDivElement | null>;
-  ready: boolean;
 }) {
   /* Null until the first keystroke, so the form shows what is stored until
-     someone actually edits it — no effect copying the saved record in. */
+     someone actually edits it. */
   const [draft, setDraft] = useState<OrganizationProfile | null>(null);
   const [attempted, setAttempted] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
-  const [logo, setLogo] = useState<string | null>(null);
-  const [logoRemoved, setLogoRemoved] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const profile = draft ?? saved;
-  const dirty =
-    draft !== null && JSON.stringify(draft) !== JSON.stringify(saved);
+  const patch = draft ? profilePatch(saved, draft) : {};
+  const dirty = Object.keys(patch).length > 0;
   const errors = attempted ? validateProfile(profile) : {};
+  const knownZone = TIME_ZONES.some((zone) => zone.iana === profile.timeZone);
 
   function edit(field: keyof OrganizationProfile, value: string) {
     setDraft({ ...profile, [field]: value });
@@ -150,11 +174,12 @@ function OrganizationProfileCard({
   function save(event: React.FormEvent) {
     event.preventDefault();
     setAttempted(true);
-    if (Object.keys(validateProfile(profile)).length > 0) return;
-    update({ profile });
-    setDraft(null);
-    setAttempted(false);
-    setJustSaved(true);
+    if (Object.keys(validateProfile(profile)).length > 0 || !dirty) return;
+    onSave(patch, () => {
+      setDraft(null);
+      setAttempted(false);
+      setJustSaved(true);
+    });
   }
 
   function cancel() {
@@ -162,60 +187,48 @@ function OrganizationProfileCard({
     setAttempted(false);
   }
 
-  /* Previewed in the browser only; the upload endpoint arrives with the
-     backend, so a reload shows the stand-in again. */
-  function chooseLogo(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (logo) URL.revokeObjectURL(logo);
-    setLogo(URL.createObjectURL(file));
-    setLogoRemoved(false);
-  }
-
-  function removeLogo() {
-    if (logo) URL.revokeObjectURL(logo);
-    setLogo(null);
-    setLogoRemoved(true);
-  }
-
   return (
     <Card as="section" padding="small">
-      {/* noValidate: the field errors below say what is wrong in words;
-          the browser bubble would say it first, and differently. */}
+      {/* noValidate: the field errors below say what is wrong in words. */}
       <form onSubmit={save} noValidate>
         <SectionHeading title="Organization Profile" />
 
         <div className="space-y-stack-md">
-          <FormField label="Organization Name" required error={errors.name}>
+          <FormField
+            label="Organization Name"
+            hint="Only NephroReach can change the organization name."
+          >
             {(props) => (
               <Input
                 {...props}
                 inputSize="small"
                 value={profile.name}
-                onChange={(event) => edit("name", event.target.value)}
+                readOnly
+                disabled
               />
             )}
           </FormField>
-          <FormField label="Address">
+          <FormField label="Address" error={errors.address}>
             {(props) => (
               <Input
                 {...props}
                 inputSize="small"
                 autoComplete="street-address"
+                maxLength={300}
                 value={profile.address}
                 onChange={(event) => edit("address", event.target.value)}
               />
             )}
           </FormField>
           <div className="grid gap-stack-md sm:grid-cols-2 xl:grid-cols-1">
-            <FormField label="Phone">
+            <FormField label="Phone" error={errors.phone}>
               {(props) => (
                 <Input
                   {...props}
                   type="tel"
                   inputSize="small"
                   autoComplete="tel"
+                  maxLength={40}
                   value={profile.phone}
                   onChange={(event) => edit("phone", event.target.value)}
                 />
@@ -244,8 +257,15 @@ function OrganizationProfileCard({
                 value={profile.timeZone}
                 onChange={(event) => edit("timeZone", event.target.value)}
               >
+                {knownZone ? null : (
+                  <option value={profile.timeZone}>
+                    {timeZoneLabel(profile.timeZone)}
+                  </option>
+                )}
                 {TIME_ZONES.map((zone) => (
-                  <option key={zone}>{zone}</option>
+                  <option key={zone.iana} value={zone.iana}>
+                    {zone.label}
+                  </option>
                 ))}
               </Select>
             )}
@@ -254,44 +274,24 @@ function OrganizationProfileCard({
           <div>
             <p className="text-label-lg text-fg">Logo</p>
             <div className="mt-stack-xs flex flex-wrap items-center gap-inline-lg">
-              {logo ? (
-                // A local object URL, which next/image cannot optimise.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logo}
-                  alt="Current logo"
-                  className="h-16 w-16 rounded-control border border-line object-contain"
-                />
-              ) : logoRemoved ? (
-                <span className="flex h-16 w-16 items-center justify-center rounded-control border border-dashed border-line-strong text-fg-muted">
-                  <Building2 aria-hidden="true" className="h-6 w-6" />
-                  <span className="sr-only">No logo</span>
-                </span>
-              ) : (
-                <span
-                  role="img"
-                  aria-label="Current logo"
-                  className="flex h-16 w-16 items-center justify-center rounded-control bg-surface-brand-subtle text-heading-4 text-brand-600"
-                >
-                  {initials(profile.name) || "?"}
-                </span>
-              )}
+              <span
+                role="img"
+                aria-label="Current logo"
+                className="flex h-16 w-16 items-center justify-center rounded-control bg-surface-brand-subtle text-heading-4 text-brand-600"
+              >
+                {initials(profile.name) || "?"}
+              </span>
+              {/* No server field for a logo yet (INT-16): shown, disabled,
+                  explained; nothing is uploaded or kept. */}
               <div className="flex flex-wrap gap-inline-md">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml"
-                  onChange={chooseLogo}
-                  className="sr-only"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
                 <Button
                   type="button"
                   variant="neutral"
                   appearance="fill-stroke"
                   size="small"
-                  onClick={() => fileRef.current?.click()}
+                  disabled
+                  title={NOT_AVAILABLE}
+                  aria-describedby="logo-not-available"
                 >
                   <Upload className="h-4 w-4" />
                   Change Logo
@@ -301,21 +301,28 @@ function OrganizationProfileCard({
                   variant="neutral"
                   appearance="stroke"
                   size="small"
-                  disabled={logoRemoved}
-                  onClick={removeLogo}
+                  disabled
+                  title={NOT_AVAILABLE}
+                  aria-describedby="logo-not-available"
                 >
                   Remove
                 </Button>
               </div>
+              <p
+                id="logo-not-available"
+                className="w-full text-caption text-fg-muted"
+              >
+                {NOT_AVAILABLE}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="mt-stack-lg flex flex-wrap items-center gap-inline-md border-t border-line-subtle pt-inset-sm">
-          <Button type="submit" size="small" disabled={!dirty || !ready}>
+          <Button type="submit" size="small" disabled={!dirty || saving}>
             Save Changes
           </Button>
-          {dirty ? (
+          {draft !== null ? (
             <Button
               type="button"
               variant="neutral"
@@ -337,19 +344,18 @@ function OrganizationProfileCard({
 
 function NotificationCard({
   settings,
-  update,
+  onToggle,
   onEditEmail,
 }: {
-  settings: ClinicSettings;
-  update: Update;
+  settings: Settings;
+  onToggle: (id: NotificationId, on: boolean) => void;
   onEditEmail: () => void;
 }) {
   return (
     <Card as="section" padding="small" className="flex flex-col">
       <SectionHeading title="Notification Preferences" />
 
-      {/* Each switch saves as it flips — that is what makes it a switch
-          rather than a checkbox waiting on a Save button. */}
+      {/* Each switch saves as it flips, and only that toggle is sent. */}
       <ul className="divide-y divide-line-subtle">
         {NOTIFICATIONS.map((item) => {
           const labelId = `notify-${item.id}`;
@@ -366,16 +372,9 @@ function NotificationCard({
               </span>
               <Switch
                 size="small"
-                checked={settings.notifications[item.id]}
+                checked={settings.notifications[item.id] ?? false}
                 aria-labelledby={labelId}
-                onChange={(checked) =>
-                  update({
-                    notifications: {
-                      ...settings.notifications,
-                      [item.id]: checked,
-                    },
-                  })
-                }
+                onChange={(checked) => onToggle(item.id, checked)}
               />
             </li>
           );
@@ -388,12 +387,11 @@ function NotificationCard({
             Email notifications will be sent to:
           </p>
           <p className="text-label-md break-all text-fg">
-            {settings.profile.email}
+            {settings.profile.email || "—"}
           </p>
         </div>
-        {/* The address is the organization's email, so editing it means
-            editing the profile — this takes you there rather than keeping
-            a second copy that could disagree with it. */}
+        {/* The address is the organization's email: Edit takes you to the
+            profile field rather than keeping a second copy. */}
         <Button
           type="button"
           variant="neutral"
@@ -409,20 +407,25 @@ function NotificationCard({
 }
 
 function SecurityCard({
-  twoFactor,
-  passwordChangedAt,
-  onPassword,
-  onTwoFactor,
-  onSessions,
-  onActivity,
+  mfaEnabled,
+  mfaHref,
 }: {
-  twoFactor: string | null;
-  passwordChangedAt: string;
-  onPassword: () => void;
-  onTwoFactor: () => void;
-  onSessions: () => void;
-  onActivity: () => void;
+  mfaEnabled: boolean;
+  mfaHref: string;
 }) {
+  const disabledButton = (label: string, noteId: string) => (
+    <Button
+      variant="neutral"
+      appearance="fill-stroke"
+      size="small"
+      className="shrink-0"
+      disabled
+      title={NOT_AVAILABLE}
+      aria-describedby={noteId}
+    >
+      {label}
+    </Button>
+  );
   return (
     <Card as="section" padding="small">
       <SectionHeading title="Security Settings" />
@@ -430,43 +433,44 @@ function SecurityCard({
         <ActionRow
           icon={<KeyRound />}
           title="Change Password"
-          status={
-            passwordChangedAt ? (
-              <Badge tone="neutral">
-                Changed {new Date(passwordChangedAt).toLocaleDateString()}
-              </Badge>
-            ) : null
-          }
-          action={<RowButton label="Change" onClick={onPassword} />}
+          note={NOT_AVAILABLE}
+          noteId="security-password-na"
+          action={disabledButton("Change", "security-password-na")}
         />
         <ActionRow
           icon={<Smartphone />}
           title="Two-Factor Authentication (2FA)"
           status={
-            <Badge tone={twoFactor ? "success" : "neutral"}>
-              {twoFactor === "app"
-                ? "On — app"
-                : twoFactor === "sms"
-                  ? "On — SMS"
-                  : "Off"}
+            <Badge tone={mfaEnabled ? "success" : "neutral"}>
+              {mfaEnabled ? "On" : "Off"}
             </Badge>
           }
           action={
-            <RowButton
-              label={twoFactor ? "Manage" : "Enable"}
-              onClick={onTwoFactor}
-            />
+            <Link
+              href={mfaHref}
+              className={buttonStyles({
+                variant: "neutral",
+                appearance: "fill-stroke",
+                size: "small",
+              })}
+            >
+              {mfaEnabled ? "Manage" : "Enable"}
+            </Link>
           }
         />
         <ActionRow
           icon={<Laptop />}
           title="Active Sessions"
-          action={<RowButton label="View" onClick={onSessions} />}
+          note={NOT_AVAILABLE}
+          noteId="security-sessions-na"
+          action={disabledButton("View", "security-sessions-na")}
         />
         <ActionRow
           icon={<Activity />}
           title="Login Activity"
-          action={<RowButton label="View" onClick={onActivity} />}
+          note={NOT_AVAILABLE}
+          noteId="security-activity-na"
+          action={disabledButton("View", "security-activity-na")}
         />
       </ul>
     </Card>
@@ -489,20 +493,36 @@ function RowButton({ label, onClick }: { label: string; onClick: () => void }) {
 
 function OfficePreferencesCard({
   office,
-  update,
+  onChange,
   landingPages,
 }: {
   office: OfficePreferences;
-  update: Update;
+  onChange: (patch: SettingsPatch) => void;
   landingPages: ReturnType<typeof landingPagesFor>;
 }) {
   const { language, setLanguage } = useLanguage();
+  const [phone, setPhone] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState("");
+  const shownPhone = phone ?? displayPhone(office.onCallPhone);
+  const itemCounts: number[] = ITEMS_PER_PAGE.includes(
+    office.itemsPerPage as (typeof ITEMS_PER_PAGE)[number],
+  )
+    ? [...ITEMS_PER_PAGE]
+    : [office.itemsPerPage, ...ITEMS_PER_PAGE];
+  const knownLanding = landingPages.some(
+    (page) => page.href === office.landingPage,
+  );
 
-  function set<K extends keyof OfficePreferences>(
-    key: K,
-    value: OfficePreferences[K],
-  ) {
-    update({ office: { ...office, [key]: value } });
+  function savePhone() {
+    if (phone === null) return;
+    const e164 = toE164(phone);
+    if (e164 === undefined) {
+      setPhoneError("Enter a phone number like (803) 555-0100.");
+      return;
+    }
+    setPhoneError("");
+    if (e164 !== (office.onCallPhone || null)) onChange({ onCallPhone: e164 });
+    setPhone(null);
   }
 
   return (
@@ -515,8 +535,15 @@ function OfficePreferencesCard({
               {...props}
               selectSize="small"
               value={office.landingPage}
-              onChange={(event) => set("landingPage", event.target.value)}
+              onChange={(event) =>
+                onChange({ landingPage: event.target.value || null })
+              }
             >
+              {knownLanding ? null : (
+                <option value={office.landingPage}>
+                  {office.landingPage || "Not set"}
+                </option>
+              )}
               {landingPages.map((page) => (
                 <option key={page.href} value={page.href}>
                   {page.label}
@@ -532,15 +559,10 @@ function OfficePreferencesCard({
               selectSize="small"
               value={String(office.itemsPerPage)}
               onChange={(event) =>
-                set(
-                  "itemsPerPage",
-                  Number(
-                    event.target.value,
-                  ) as OfficePreferences["itemsPerPage"],
-                )
+                onChange({ itemsPerPage: Number(event.target.value) })
               }
             >
-              {ITEMS_PER_PAGE.map((count) => (
+              {itemCounts.map((count) => (
                 <option key={count}>{count}</option>
               ))}
             </Select>
@@ -552,12 +574,7 @@ function OfficePreferencesCard({
               {...props}
               selectSize="small"
               value={office.dateFormat}
-              onChange={(event) =>
-                set(
-                  "dateFormat",
-                  event.target.value as OfficePreferences["dateFormat"],
-                )
-              }
+              onChange={(event) => onChange({ dateFormat: event.target.value })}
             >
               {DATE_FORMATS.map((format) => (
                 <option key={format}>{format}</option>
@@ -573,8 +590,11 @@ function OfficePreferencesCard({
                 {...props}
                 type="time"
                 inputSize="small"
-                value={office.opensAt ?? "08:00"}
-                onChange={(event) => set("opensAt", event.target.value)}
+                value={office.opensAt}
+                onChange={(event) =>
+                  event.target.value &&
+                  onChange({ opensAt: event.target.value })
+                }
               />
             )}
           </FormField>
@@ -584,8 +604,11 @@ function OfficePreferencesCard({
                 {...props}
                 type="time"
                 inputSize="small"
-                value={office.closesAt ?? "17:00"}
-                onChange={(event) => set("closesAt", event.target.value)}
+                value={office.closesAt}
+                onChange={(event) =>
+                  event.target.value &&
+                  onChange({ closesAt: event.target.value })
+                }
               />
             )}
           </FormField>
@@ -597,21 +620,22 @@ function OfficePreferencesCard({
         </p>
         <FormField
           label="On-Call Nurse Manager Phone"
-          hint="If an after-hours message is still unread after 2 hours, an SMS alert goes to this number (once the server is connected)."
+          error={phoneError || undefined}
+          hint="If an after-hours message is still unread, NephroReach alerts this number. Saved when you leave the field."
         >
           {(props) => (
             <Input
               {...props}
               type="tel"
               inputSize="small"
-              value={office.onCallPhone ?? ""}
+              value={shownPhone}
               placeholder="(803) 555-0100"
-              onChange={(event) => set("onCallPhone", event.target.value)}
+              onChange={(event) => setPhone(event.target.value)}
+              onBlur={savePhone}
             />
           )}
         </FormField>
-        {/* The app already has a language setting; this is it, not a copy
-            that would disagree with the switcher in the header. */}
+        {/* The app's own language setting, not a copy of it. */}
         <FormField label="Language">
           {(props) => (
             <Select
@@ -687,50 +711,30 @@ export default function ClinicSettings({
    *  nephrology office's (client, 2026-10-09). */
   href?: string;
 }) {
-  const { settings, update, isPending, error, refetch, saveError } =
-    useClinicSettings();
+  const office = useClinicSettings();
+  const settings = office.settings;
   const emailRef = useRef<HTMLDivElement>(null);
-
-  /* The roster, the security record and the sharing choices. Kept apart
-     from the settings above so that adding a user does not rewrite the
-     office's address. */
-  const actions = useSettingsActions();
   const staff = useStaffAccounts();
-  const { user } = useAuth();
-  const org = organizationFor(user);
+  const { user, context } = useAuth();
 
-  const [passwordOpen, setPasswordOpen] = useState(false);
-  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
-  const [sessionsOpen, setSessionsOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
   const [sharingOpen, setSharingOpen] = useState(false);
   const [hipaaOpen, setHipaaOpen] = useState(false);
 
-  /* A real file, built from what the browser already holds — the one action
-     on this page that needs nothing from a server. */
+  /* A file built from what the page read from the API: the office's
+     profile and settings and its staff (no patient data, no secret). */
   function downloadData() {
+    if (!settings) return;
     const blob = new Blob(
-      [
-        exportDocument(
-          settings,
-          actions.actions,
-          new Date(),
-          staff.accounts.filter((account) => account.orgId === org?.id),
-        ),
-      ],
-      {
-        type: "application/json",
-      },
+      [exportDocument(settings, new Date(), staff.accounts)],
+      { type: "application/json" },
     );
     const url = URL.createObjectURL(blob);
-
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = exportFilename();
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-
     // Freed on the next tick: revoking synchronously can beat the download.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -745,100 +749,87 @@ export default function ClinicSettings({
     <div className="space-y-4">
       <PageTitle href={href} />
 
-      {error ? (
+      {office.saveError ? (
         <Alert
           tone="danger"
-          title="Your saved settings could not be loaded."
+          title="That change was not saved."
           action={
-            <Button size="small" variant="neutral" onClick={refetch}>
-              Try again
+            <Button
+              size="small"
+              variant="neutral"
+              onClick={office.dismissSaveError}
+            >
+              Dismiss
             </Button>
           }
         >
-          {error.message}
-        </Alert>
-      ) : null}
-      {saveError ? (
-        <Alert tone="danger" title="That change was not saved.">
-          {saveError.message}
+          {actionErrorText(office.saveError)}
         </Alert>
       ) : null}
 
-      {/* Staff moved to its own menu, Staff & Roles (2026-09-30), so the
-          settings are three to a row. */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <OrganizationProfileCard
-          saved={settings.profile}
-          update={update}
-          emailRef={emailRef}
-          ready={!isPending}
-        />
-        <NotificationCard
-          settings={settings}
-          update={update}
-          onEditEmail={editEmail}
-        />
-        <SecurityCard
-          twoFactor={actions.security.twoFactor}
-          passwordChangedAt={actions.security.passwordChangedAt}
-          onPassword={() => setPasswordOpen(true)}
-          onTwoFactor={() => setTwoFactorOpen(true)}
-          onSessions={() => setSessionsOpen(true)}
-          onActivity={() => setActivityOpen(true)}
-        />
-      </section>
+      <AsyncSection
+        pending={office.isPending}
+        error={office.error}
+        errorTitle={errorTitleFor(
+          office.error,
+          "Your saved settings could not be loaded.",
+        )}
+        errorMessage={errorMessageFor(office.error, undefined)}
+        onRetry={canRetry(office.error) ? office.refetch : undefined}
+        skeleton={<Skeleton height={480} className="rounded-card" />}
+      >
+        {settings ? (
+          <>
+            {/* Staff moved to its own menu, Staff & Roles (2026-09-30), so
+                the settings are three to a row. */}
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <OrganizationProfileCard
+                saved={settings.profile}
+                saving={office.isSaving}
+                onSave={(patch, done) =>
+                  office.updateProfile(patch, { onSuccess: done })
+                }
+                emailRef={emailRef}
+              />
+              <NotificationCard
+                settings={settings}
+                onToggle={(id, on) =>
+                  office.updateSettings({ notifications: { [id]: on } })
+                }
+                onEditEmail={editEmail}
+              />
+              <SecurityCard
+                mfaEnabled={context?.user.mfaEnabled ?? false}
+                mfaHref={`/setup/mfa?next=${encodeURIComponent(href)}`}
+              />
+            </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <OfficePreferencesCard
-          office={settings.office}
-          update={update}
-          landingPages={landingPagesFor(org?.portal ?? "clinic")}
-        />
-        <div className="xl:col-span-2">
-          <DataPrivacyCard
-            onDownload={downloadData}
-            onSharing={() => setSharingOpen(true)}
-            onHipaa={() => setHipaaOpen(true)}
-          />
-        </div>
-      </section>
+            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <OfficePreferencesCard
+                office={settings.office}
+                onChange={office.updateSettings}
+                landingPages={landingPagesFor(user?.role ?? "clinic")}
+              />
+              <div className="xl:col-span-2">
+                <DataPrivacyCard
+                  onDownload={downloadData}
+                  onSharing={() => setSharingOpen(true)}
+                  onHipaa={() => setHipaaOpen(true)}
+                />
+              </div>
+            </section>
 
-      {/* The dialogs behind the actions above. Keyed on open where they hold
-          a draft, so a reopened form starts clean. */}
-      <ChangePasswordModal
-        key={`password-${passwordOpen}`}
-        open={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
-        onChanged={actions.changePassword}
-      />
-
-      <TwoFactorModal
-        key={`two-factor-${twoFactorOpen}`}
-        open={twoFactorOpen}
-        onClose={() => setTwoFactorOpen(false)}
-        current={actions.security.twoFactor}
-        onChoose={actions.setTwoFactor}
-      />
-
-      {sessionsOpen ? (
-        <SessionsModal
-          open
-          onClose={() => setSessionsOpen(false)}
-          signedOut={actions.security.signedOutSessions}
-          onSignOut={actions.signOutSession}
-        />
-      ) : null}
-
-      {activityOpen ? (
-        <LoginActivityModal open onClose={() => setActivityOpen(false)} />
-      ) : null}
-
-      <DataSharingModal
-        open={sharingOpen}
-        onClose={() => setSharingOpen(false)}
-        sharing={actions.sharing}
-        onToggle={actions.setSharing}
-      />
+            <DataSharingModal
+              open={sharingOpen}
+              onClose={() => setSharingOpen(false)}
+              sharing={settings.sharing}
+              onToggle={(id, on) =>
+                office.updateSettings({ [SHARING_FIELD[id]]: on })
+              }
+            />
+          </>
+        ) : null}
+      </AsyncSection>
 
       <HipaaModal open={hipaaOpen} onClose={() => setHipaaOpen(false)} />
     </div>

@@ -74,13 +74,6 @@ export function requestChange(
   );
 }
 
-/** The office profile (name, email, phone), for the contract card. */
-export function getOfficeProfile(organizationId: string) {
-  return api<{
-    id: string;
-    name: string;
-    type: string;
-    email: string | null;
-    phone: string | null;
-  }>(officePath(organizationId, ""), { organizationId });
-}
+/** The office profile (name, email, phone), for the contract card: the
+ *  same read and cache entry as the Settings page. */
+export { getProfile as getOfficeProfile } from "./orgSettings.repository";

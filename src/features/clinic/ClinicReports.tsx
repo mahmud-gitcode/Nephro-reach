@@ -167,7 +167,7 @@ function FilterBar({
               aria-hidden="true"
               className="h-4 w-4 shrink-0 text-fg-muted"
             />
-            <span className="truncate">{settings.profile.name}</span>
+            <span className="truncate">{settings?.profile.name ?? "—"}</span>
           </p>
         </div>
         <label className="block">
