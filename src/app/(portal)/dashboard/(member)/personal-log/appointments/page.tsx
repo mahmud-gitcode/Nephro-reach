@@ -1,7 +1,7 @@
 "use client";
 
 import { LogMediaBar, appendText } from "@/features/personal-log/LogMediaBar";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Pencil,
   Calendar,
@@ -46,12 +46,7 @@ import {
   type Attendance,
 } from "@/features/personal-log/appointments/appointments";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
-import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
-import {
-  TEAM_LABEL,
-  recordForMember,
-} from "@/features/vascular-access/vascularAccess.data";
-import { useMemberName } from "@/features/auth/useMemberName";
+import { useMemberAccessAppointments } from "@/features/vascular-access/useMemberAccessAppointments";
 import { useNow } from "@/lib/utils/useNow";
 
 /* ==========================================================================
@@ -433,41 +428,24 @@ export default function AppointmentsPage() {
   const { t, language } = useLanguage();
   const isEs = language === "ES";
   const store = useAppointments();
-  const access = useVascularAccess();
-  const memberName = useMemberName();
-  const accessRecord = recordForMember(access.state, memberName);
-  /* The access center's bookings for this member, as appointments. */
-  const { syncExternal } = store;
-  useEffect(() => {
-    if (!accessRecord) return;
-    syncExternal(
-      accessRecord.appointments
-        .filter((a) => !a.completed)
-        .map((a) => ({
-          id: `va-${a.id}`,
-          date: a.date,
-          start: a.time,
-          end: "",
-          title: a.title,
-          doctor: TEAM_LABEL[a.team],
-          location: a.place,
-          address: "",
-          notes: "",
-          source: "vascular-access" as const,
-        })),
-    );
-  }, [accessRecord, syncExternal]);
+  /* The access center's bookings for this member, read from the API and
+     shown beside the member's own list, in memory only (Phase 10: nothing
+     from the API is copied into browser storage). Copies an older version
+     saved into the member's list are not shown twice. */
+  const access = useMemberAccessAppointments();
   const now = new Date(useNow());
   const pad = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const ahead = upcoming(store.appointments, today);
-  const before = past(store.appointments, today);
+  const own = store.appointments.filter((a) => a.source !== "vascular-access");
+  const listed = [...own, ...access.appointments];
+  const ahead = upcoming(listed, today);
+  const before = past(listed, today);
   /* The one past visit still waiting for "did you go?" — asked here rather
      than left in a details dialog nobody opens. The answer (or the lack of
      one) reaches the care team's CCM dashboard. */
-  const unanswered = awaitingAnswer(store.appointments, today)[0];
+  const unanswered = awaitingAnswer(own, today)[0];
   /* A missed visit keeps reminding the member to book it again. */
-  const toReschedule = needsReschedule(store.appointments)[0];
+  const toReschedule = needsReschedule(own)[0];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   /* The appointment being changed, or null when adding a new one: the
@@ -479,7 +457,7 @@ export default function AppointmentsPage() {
   const [tried, setTried] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  const opened = store.appointments.find((a) => a.id === openId) ?? null;
+  const opened = listed.find((a) => a.id === openId) ?? null;
   const error = appointmentError(draft);
   const set = (key: keyof AppointmentDraft, value: string) =>
     setDraft((d) => ({ ...d, [key]: value }));

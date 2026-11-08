@@ -5,11 +5,10 @@ import {
 } from "@/features/messaging/messaging.rules";
 import { FACILITY } from "@/features/messaging/messaging.seed";
 import type { MessagingState } from "@/features/messaging/messaging.types";
-import { addAccessRecord } from "@/features/vascular-access/vascularAccess.data";
 
 /* A patient enrolled at the clinic reaches the other clinic screens:
-   Messages and Vascular Access each start them on request (CCM
-   enrolment is the API's: phase9.api.test.tsx). */
+   Messages starts them on request (CCM enrolment and access records are
+   the API's: phase9.api.test.tsx, phase10 tests). */
 
 const NOW = new Date(2026, 8, 30, 10).getTime();
 
@@ -51,26 +50,5 @@ describe("New Message", () => {
 
   it("an empty message is not sent", () => {
     expect(startConversation(empty, { ...input, body: "  " }, NOW)).toBe(empty);
-  });
-});
-
-describe("Add Access Patient", () => {
-  it("starts an empty shared record, once", () => {
-    const overview = {
-      type: "AV Fistula",
-      location: "Left Forearm",
-      createdOn: "2026-09-01",
-      status: "Review Requested" as const,
-      lastAssessment: "",
-    };
-    const patient = { memberName: "Ana Ruiz", mrn: "777001" };
-    const next = addAccessRecord(
-      addAccessRecord({ records: [] }, patient, overview),
-      patient,
-      overview,
-    );
-    expect(next.records).toHaveLength(1);
-    expect(next.records[0].conversation.messages).toEqual([]);
-    expect(next.records[0].conversation.dialysisCanPost).toBe(false);
   });
 });

@@ -360,6 +360,13 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 12,
     why: "Phase 11: outside shares are /patients/:id/outside-shares and /organizations/:id/outside-shares; the link is made and emailed by the server and opened through /shared/:token with an emailed code and a share session held in memory only. The stored shares held link tokens, recipients' emails and data: attachments. No screen reads this key.",
   },
+  /* Phase 10 (OFFICE, STORAGE_VERSION 11): vascular access, rides and
+     referrals are the API's (BE modules/vascular-access). */
+  {
+    name: "vascular-access",
+    since: 11,
+    why: "Phase 10: access records are /patients/:id/access-profiles and /organizations/:id/access-profiles (several per patient, the viewer's party from the server, private messages sent hidden), rides are …/transport and the office queue /organizations/:id/transport, referrals are /organizations/:id/referrals with directory ids. The old key held every patient's record in one browser, matched by MRN and name, with data: URL photos; the seed (seedAccessState) is deleted. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that

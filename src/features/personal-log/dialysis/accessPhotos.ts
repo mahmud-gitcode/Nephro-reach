@@ -59,13 +59,8 @@ export function photoAttachment(
 
 export interface AccessPhoto {
   id: string;
-  /**
-   * @deprecated Gone since Phase 7: the picture is on the server, opened
-   * through `link(id)` / `AccessPhotoImage`. Always undefined; kept only so
-   * OFFICE's vascular-access screen (which still reads it) compiles until
-   * that lane switches to the link (Lead coordination note).
-   */
-  dataUrl?: undefined;
+  /* No picture data here (Phase 7): it is on the server, opened through
+     `link(id)` / `AccessPhotoImage`. */
   subject: PhotoSubject;
   note: string;
   /** ISO 8601. */

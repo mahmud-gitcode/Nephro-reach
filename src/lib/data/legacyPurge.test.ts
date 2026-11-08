@@ -41,6 +41,8 @@ const RETIRED = [
   "nr:messaging",
   "nr:outside-shares",
   "nr:support-tickets",
+  /* Phase 10: vascular access, rides and referrals moved to the API. */
+  "nr:vascular-access",
 ];
 
 beforeEach(() => {

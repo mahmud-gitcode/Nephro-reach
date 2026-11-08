@@ -11,11 +11,12 @@ import {
 } from "lucide-react";
 import { Badge, Button, Select, Switch } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { notBuiltYet } from "@/lib/utils/notBuiltYet";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
-import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
-import { ACCESS_CENTER_NAME } from "@/features/vascular-access/vascularAccess.data";
+import { useOfficeOrgId } from "@/features/vascular-access/useAccess";
 import { SendReferralModal } from "./AccessReferrals";
+import { useOfficePatientByMrn, useReferrals } from "./useAccessReferrals";
 import { usDate } from "./ccm.data";
 import type { CcmKidneyCarePlan, KidneyCareBody } from "./ccm.repository";
 import {
@@ -54,9 +55,6 @@ const glyph: Record<
   na: { icon: CircleMinus, className: "text-fg-subtle", label: "N/A" },
 };
 
-/** Who an organisation's own login writes as. */
-const OFFICE_PERSON = "Dr. Samuel Reed";
-
 /** The server's plan in the shape the milestone rules read. */
 function planOf(plan: CcmKidneyCarePlan | null): KidneyCarePlan | undefined {
   if (!plan) return undefined;
@@ -76,30 +74,53 @@ export function KidneyCareSection({
   onSave,
   canEdit,
 }: {
-  /** The MRN is display text and the access record's demo key only. */
-  patient: { name: string; mrn: string; patientId: string };
+  /** `patientId` (the API id) reads and sends referrals. The CCM page
+   *  (Phase 9, by patient id) always passes it; the MRN is display text and,
+   *  only without an id, the exact roster lookup below. */
+  patient: { name: string; mrn: string; patientId?: string };
   serverPlan: CcmKidneyCarePlan | null;
   onSave: (body: KidneyCareBody) => void;
   /** The signed-in role may update the checklist. */
   canEdit: boolean;
 }) {
   const { user } = useAuth();
-  const me = user?.staffRole ? user.name : OFFICE_PERSON;
-  const access = useVascularAccess();
+  /* Phase 10: the practice's referrals for this patient, from the API by
+     patient id. The CCM page (Phase 9) passes the id; without one, the
+     patient is found on this office's own roster by its MRN, and only when
+     exactly one ACTIVE patient has it. The access record itself is the
+     access and dialysis centers', so progress follows the referral. */
+  const orgId = useOfficeOrgId();
+  const byMrn = useOfficePatientByMrn(orgId, patient.mrn, {
+    enabled: !patient.patientId,
+  });
+  const target = patient.patientId
+    ? { patientId: patient.patientId, name: patient.name, mrn: patient.mrn }
+    : byMrn.patient;
+  const patientId = target?.patientId ?? null;
+  const access = useReferrals(
+    orgId,
+    { patientId: patientId ?? undefined },
+    { enabled: !!patientId },
+  );
   const [referring, setReferring] = useState(false);
 
   const plan = planOf(serverPlan);
-  const referrals = access.referrals.filter(
-    (r) => r.mrn === patient.mrn && r.source === "nephrology",
-  );
-  const record = access.records.find((r) => r.mrn === patient.mrn);
-  const progress = accessProgress(plan, referrals, record);
+  const referrals = patientId
+    ? access.referrals.filter((r) => r.patient?.id === patientId)
+    : [];
+  const progress = accessProgress(plan, referrals, undefined);
   const marks = milestones(plan, progress);
   const sent = referrals.some((r) => r.kind !== "General Message");
-  const canSend =
+  const showSend =
     plan?.answers.accessReferral === "Yes" &&
     !sent &&
+    !access.isPending &&
+    !access.error &&
     userCan(user, "messages.reply");
+  const canSend = showSend && !!patientId;
+  /* Shown, but honestly unavailable, when this patient cannot be matched
+     to one patient on the practice's list (or that list cannot be read). */
+  const unmatched = showSend && !patientId && !byMrn.isPending;
 
   const save = (change: {
     answers?: Partial<Record<string, KrtAnswer | undefined>>;
@@ -171,7 +192,7 @@ export function KidneyCareSection({
             <p className="mb-stack-sm text-label-md text-fg">
               Access Referral Progress
               <span className="ml-inline-sm text-caption font-normal text-fg-muted">
-                at {ACCESS_CENTER_NAME}
+                {referrals[0] ? `at ${referrals[0].to.name}` : null}
               </span>
             </p>
             <ol className="flex flex-wrap items-center gap-inline-sm">
@@ -200,16 +221,19 @@ export function KidneyCareSection({
           </div>
         ) : null}
 
-        {canSend ? (
+        {canSend || unmatched ? (
           <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card-nested bg-surface-sunken p-inset-sm">
             <p className="text-body-sm text-fg-secondary">
-              Referral marked as placed. Send it to the access center to follow
-              its progress here.
+              {canSend
+                ? "Referral marked as placed. Send it to the access center to follow its progress here."
+                : "Sending from here is not available yet for this patient: they could not be matched to one patient on your practice's list. Send it from Access Center Messages instead."}
             </p>
             <Button
               size="small"
               leadingIcon={<Send aria-hidden="true" />}
-              onClick={() => setReferring(true)}
+              {...(canSend
+                ? { onClick: () => setReferring(true) }
+                : notBuiltYet("Sending this referral from CCM"))}
             >
               Send to Access Center
             </Button>
@@ -286,14 +310,13 @@ export function KidneyCareSection({
         </p>
       </div>
 
-      {referring ? (
+      {referring && target ? (
         <SendReferralModal
           side="nephrology"
-          patients={[patient]}
-          initialMrn={patient.mrn}
+          orgId={orgId}
+          patients={[target]}
+          initialPatientId={target.patientId}
           initialKind="New Access Referral"
-          me={me}
-          onSend={access.sendReferral}
           onClose={() => setReferring(false)}
         />
       ) : null}
