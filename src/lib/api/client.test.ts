@@ -4,6 +4,7 @@ import {
   ApiError,
   apiRequest,
   isApiError,
+  isNoRefreshRoute,
   NO_REFRESH,
   onSessionEnded,
   resetApiClientState,
@@ -550,6 +551,25 @@ describe("outside-share links (Phase 11 P-1)", () => {
       code: "sharing.verification_required",
     });
     expect(calls).toHaveLength(1);
+    expect(ended).not.toHaveBeenCalled();
+  });
+
+  /* QA round 1 (L1): even a bare 401 (no code) on a share route is an
+     answer: no /auth/refresh with the member's cookies, no sign-out. */
+  it("never refresh or end the session on a bare 401 from a share route", async () => {
+    expect(isNoRefreshRoute("/shared/abc/content")).toBe(true);
+    const ended = vi.fn();
+    onSessionEnded(ended);
+    const { calls } = scriptFetch(() => ({
+      status: 401,
+      body: { success: false, statusCode: 401, message: "Unauthorized" },
+    }));
+    await expect(
+      api("/shared/abc/content", { shareSession: "x" }),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(calls.map((c) => new URL(c.url).pathname)).toEqual([
+      "/api/v1/shared/abc/content",
+    ]);
     expect(ended).not.toHaveBeenCalled();
   });
 
