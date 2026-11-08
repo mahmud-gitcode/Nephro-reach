@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 13;
+export const STORAGE_VERSION = 14;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -367,6 +367,18 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 11,
     why: "Phase 10: access records are /patients/:id/access-profiles and /organizations/:id/access-profiles (several per patient, the viewer's party from the server, private messages sent hidden), rides are …/transport and the office queue /organizations/:id/transport, referrals are /organizations/:id/referrals with directory ids. The old key held every patient's record in one browser, matched by MRN and name, with data: URL photos; the seed (seedAccessState) is deleted. No screen reads this key.",
   },
+  /* Phase 14a (EDU-BIZ, STORAGE_VERSION 14): the hospital portal is the
+     API's (BE modules/education program enrollments, modules/reports). */
+  {
+    name: "hospital-enrollments",
+    since: 14,
+    why: "Phase 14: hospital enrollments are GET/POST/PATCH /organizations/:id/program-enrollments (this hospital's own roster, server scoped; discharge, accessUntil and hasAccess from the server) and the figures are /organizations/:id/reports/education; a member's hospital course is /patients/:id/education/enrollments. The sample enrollments (hospital.seed.ts, synthetic names, emails and MRNs) are deleted. No screen reads this key.",
+  },
+  {
+    name: "clinic-billing-actions",
+    since: 14,
+    why: "Phase 14: the office contract, seats, invoices and change requests are /organizations/:id/billing/* (contract, invoices with a server download link, change-requests); payments and the renewal choice are NephroReach's (no office route), so nothing an office does on the billing page is kept in the browser. No screen reads this key.",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that
@@ -406,6 +418,13 @@ export const RETIRED_KEYS: readonly string[] = [
      screens (addresses, insurance ids, emergency contacts). Trips are
      /patients/:id/trips and /organizations/:id/trips. */
   "nr:travel-trip-requests",
+  /* Phase 14a (EDU-BIZ, STORAGE_VERSION 14): the office profile and
+     settings are GET/PATCH /organizations/:id and /organizations/:id/settings
+     (each section saves its own fields); the security and sharing record
+     kept beside them is gone (sharing is three server settings; password,
+     two-factor and sessions are the account's own flows). */
+  "nr:clinic-settings",
+  "nr:clinic-settings-actions",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */
@@ -413,6 +432,10 @@ export const RETIRED_PREFIXES: readonly string[] = [
   /* Phase 3: the patient a caregiver had chosen, per caregiver email. The
      choice is the in-memory portal context now. */
   "nr:caregiver-viewing:",
+  /* Phase 14a: each office's settings and settings-actions record, keyed
+     by its demo organization id (nr:org-settings-<id>,
+     nr:org-settings-actions-<id>). */
+  "nr:org-settings-",
 ];
 
 /** Cookies to expire. */

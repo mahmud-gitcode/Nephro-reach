@@ -1,85 +1,112 @@
 "use client";
 
-import { useCallback } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { useMemo } from "react";
 import {
-  EMPTY_ACTIONS,
-  addChangeRequest,
-  markPaid,
-  normaliseActions,
-  type BillingActions,
-  type ChangeTopic,
-  type RenewalChoice,
-} from "./billing.actions";
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { Pagination } from "@/lib/api/client";
+import { nextPageParams } from "@/lib/api/paging";
+import { orgKey } from "@/lib/data/queryKeys";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { officeKey, requireOffice, useOfficeScope } from "./office.scope";
+import * as repo from "./officeBilling.repository";
+import { toContract, toInvoice } from "./billing.data";
+import type { ChangeTopic } from "./billing.actions";
 
 /* ==========================================================================
-   Contract & Billing — local state for the page's actions
+   Contract & Billing: the API hooks (Phase 14; ADR 0007)
    --------------------------------------------------------------------------
-   One key for all four things a clinic can do here: settle an invoice, ask
-   for a contract change, choose what happens at renewal. They are written
-   together because they are all the same record — this clinic's dealings
-   with NephroReach — and splitting them would mean four reads to render one
-   page.
+   Replaces the browser record of payments, change requests and renewal
+   (the retired `nr:clinic-billing-actions` key). Reads are keyed by the
+   office (orgKey), so a portal switch never shows another office's
+   contract; a failed read is an error (a 403 is "no access"), never the
+   demo contract.
    ========================================================================== */
 
-const ACTIONS_KEY = storageKey("clinic-billing-actions");
-const QUERY_KEY = ["clinic-billing-actions"];
+const total = (p: Pagination | null | undefined) =>
+  p?.mode === "offset" ? p.total : null;
 
-async function readActions(): Promise<BillingActions> {
-  return normaliseActions(await readJson<unknown>(ACTIONS_KEY, null));
-}
-
-export function useBillingActions() {
+export function useOfficeBilling() {
+  const { organizationId: orgId } = useOfficeScope();
+  const userId = useOptionalAuth()?.user?.id ?? null;
   const queryClient = useQueryClient();
 
-  const actionsQuery = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: readActions,
+  const contract = useQuery({
+    queryKey: officeKey(orgId, "billing", "contract"),
+    queryFn: () => repo.getContract(requireOffice(orgId)),
+  });
+  const invoices = useInfiniteQuery({
+    queryKey: officeKey(orgId, "billing", "invoices"),
+    queryFn: ({ pageParam }) =>
+      repo.listInvoices(requireOffice(orgId), pageParam),
+    initialPageParam: { page: 1 } as { page?: number; cursor?: string | null },
+    getNextPageParam: (last) => nextPageParams(last.pagination),
+  });
+  const requests = useQuery({
+    queryKey: officeKey(orgId, "billing", "change-requests"),
+    queryFn: () => repo.listChangeRequests(requireOffice(orgId), { page: 1 }),
+  });
+  /* Email and phone on the contract card are the office profile (settings
+     read); without that permission they show "—". */
+  const profile = useQuery({
+    queryKey: officeKey(orgId, "profile"),
+    queryFn: () => repo.getOfficeProfile(requireOffice(orgId)),
   });
 
-  const write = useMutation({
-    mutationFn: async (
-      transform: (current: BillingActions) => BillingActions,
-    ) => writeJson(ACTIONS_KEY, transform(await readActions())),
-    onSuccess: (actions) => queryClient.setQueryData(QUERY_KEY, actions),
+  const send = useMutation({
+    mutationFn: (input: { topic: ChangeTopic; detail: string }) =>
+      repo.requestChange(requireOffice(orgId), input),
+    onSuccess: () => {
+      if (orgId)
+        void queryClient.invalidateQueries({
+          queryKey: orgKey(orgId, "billing", "change-requests"),
+        });
+    },
   });
 
-  const actions = actionsQuery.data ?? EMPTY_ACTIONS;
-  const { mutate } = write;
+  const invoiceRows = useMemo(
+    () =>
+      (invoices.data?.pages ?? []).flatMap((page) => page.items.map(toInvoice)),
+    [invoices.data],
+  );
 
   return {
-    actions,
-    paidInvoices: actions.paidInvoices,
-    changeRequests: actions.changeRequests,
-    renewal: actions.renewal,
+    orgId,
+    contract: contract.data?.contract
+      ? toContract(contract.data.contract)
+      : null,
+    pendingContract: contract.data?.pendingContract
+      ? toContract(contract.data.pendingContract)
+      : null,
+    seats: contract.data?.seats ?? null,
+    isPending: contract.isPending,
+    error: contract.error,
+    refetch: () => void contract.refetch(),
 
-    pay: useCallback(
-      (invoiceNumbers: string[]) =>
-        mutate((current) => markPaid(current, invoiceNumbers)),
-      [mutate],
-    ),
-    requestChange: useCallback(
-      (topic: ChangeTopic, detail: string) =>
-        mutate((current) => addChangeRequest(current, topic, detail)),
-      [mutate],
-    ),
-    setRenewal: useCallback(
-      (renewal: RenewalChoice) =>
-        mutate((current) => ({
-          ...current,
-          renewal,
-          updatedAt: new Date().toISOString(),
-        })),
-      [mutate],
-    ),
+    invoices: invoiceRows,
+    invoicesTotal: total(invoices.data?.pages[0]?.pagination),
+    invoicesPending: invoices.isPending,
+    invoicesError: invoices.error,
+    refetchInvoices: () => void invoices.refetch(),
+    hasMoreInvoices: invoices.hasNextPage,
+    loadMoreInvoices: () => void invoices.fetchNextPage(),
 
-    isPending: actionsQuery.isPending,
-    error: actionsQuery.error,
-    isSaving: write.isPending,
-    saveError: write.error,
-    dismissSaveError: () => write.reset(),
+    changeRequests: requests.data?.items ?? [],
+    changeRequestsError: requests.error,
+    /** "you" when the request is the signed-in user's; no name is sent. */
+    requesterLabel: (requestedById: string) =>
+      requestedById === userId ? "you" : "a colleague",
+
+    profile: profile.data ?? null,
+
+    requestChange: send.mutate,
+    isSending: send.isPending,
+    sendError: send.error,
+    resetSend: () => send.reset(),
   };
 }
 
-export type BillingActionsLog = ReturnType<typeof useBillingActions>;
+export type OfficeBilling = ReturnType<typeof useOfficeBilling>;

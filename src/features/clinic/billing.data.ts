@@ -1,52 +1,186 @@
 import type { BadgeTone } from "@/components/ui";
-import { CONTRACT_SLOTS } from "./enrollment.data";
 
 /* ==========================================================================
-   Contract & Billing — demo data
+   Contract & Billing: API shapes and what the page shows (Phase 14)
    --------------------------------------------------------------------------
-   One clinic's own contract, and nothing else. The client's mockup was a
-   NephroReach-wide view listing twelve organizations' contracts, fees and
-   contacts; in the clinic portal that would show every facility the others'
-   business, which the requirements rule out ("Facility A must never reach
-   Facility B"). Joni chose to scope it to the signed-in clinic
-   (2026-09-21). The all-organizations view belongs to a NephroReach admin
-   page, when there is one.
-
-   The clinic's row and details panel are taken from the mockup as given. The
-   seat count is not retyped: it is the Enroll Patients roster, so the two
-   pages cannot disagree. Invoices are derived from the contract — one per
-   month since the start date, at the monthly fee.
+   One office's own contract, and nothing else ("Facility A must never
+   reach Facility B"; Joni, 2026-09-21). Everything is the server's:
+   - GET /organizations/:org/billing/contract: the current contract, any
+     pending one, and the seats in use (the server counts them);
+   - GET …/billing/invoices: the invoices NephroReach issued (paged);
+   - GET …/billing/invoices/:id/download-link: a short-lived link to the
+     issued PDF, only when the invoice has one;
+   - GET/POST …/billing/change-requests.
+   Money arrives in cents and is shown with the cents. Contract days are
+   YYYY-MM-DD and parsed on the local calendar (`localDate`), never with
+   `new Date(day)` (a UTC shift). Nothing here invents an invoice, a
+   payment or a contract term.
    ========================================================================== */
 
-export type ContractStatus = "Active" | "Pending" | "Expiring Soon";
+/* ---------------------------------------------------------------- the API */
+
+export type ApiContractStatus =
+  "PENDING" | "ACTIVE" | "EXPIRING_SOON" | "ENDED";
+
+export type ApiOfficeContract = {
+  id: string;
+  contractNumber: string | null;
+  plan: { name: string };
+  status: ApiContractStatus | string;
+  startsOn: string;
+  endsOn: string | null;
+  patientsAllowed: number;
+  monthlyFeeCents: number;
+  billingCycle: string;
+  autoRenew: boolean;
+  renewalChoice: string | null;
+  primaryContact: { id: string; name: string | null } | null;
+};
+
+export type ApiSeats = {
+  used: number;
+  /** null: no seat limit. */
+  allowed: number | null;
+  available: number | null;
+};
+
+export type ApiBillingContract = {
+  contract: ApiOfficeContract | null;
+  pendingContract: ApiOfficeContract | null;
+  seats: ApiSeats | null;
+};
+
+export type ApiInvoiceStatus = "DUE" | "PAID" | "OVERDUE";
+
+export type ApiInvoice = {
+  id: string;
+  number: string;
+  periodLabel: string;
+  issuedOn: string;
+  dueOn: string;
+  amountCents: number;
+  currency: string;
+  status: ApiInvoiceStatus | string;
+  paidAt: string | null;
+  hasPdf: boolean;
+};
+
+export type ApiChangeRequest = {
+  id: string;
+  topic: string;
+  detail: string;
+  requestedById: string;
+  requestedAt: string;
+  resolvedAt: string | null;
+};
+
+/* ------------------------------------------------------------- the screen */
+
+export type ContractStatus = "Active" | "Pending" | "Expiring Soon" | "Ended";
 
 export const contractTone: Record<ContractStatus, BadgeTone> = {
   Active: "success",
   Pending: "warning",
   "Expiring Soon": "info",
+  Ended: "neutral",
 };
 
-export const contract = {
-  number: "NR-2026-0125",
-  type: "Dialysis Center",
-  status: "Active" as ContractStatus,
-  /** ISO dates, parsed locally by `localDate`. */
-  start: "2026-01-01",
-  end: "2026-12-31",
-  patientsAllowed: CONTRACT_SLOTS,
-  monthlyFee: 1995,
-  billingCycle: "Monthly",
-  autoRenew: true,
-  primaryContact: "Dr. Melissa Carter",
+const CONTRACT_STATUS: Record<string, ContractStatus> = {
+  ACTIVE: "Active",
+  PENDING: "Pending",
+  EXPIRING_SOON: "Expiring Soon",
+  ENDED: "Ended",
 };
 
-/** The client's demo figure, shown only until the live roster loads (the
- *  page reads the roster); the contract moves to the API in Phase 14. */
-export const patientsCovered = 23;
+/** An unknown status shows as "Ended" (never as active). */
+export function contractStatusLabel(status: string): ContractStatus {
+  return CONTRACT_STATUS[status] ?? "Ended";
+}
+
+export type InvoiceStatus = "Paid" | "Due" | "Overdue";
+
+export const invoiceTone: Record<InvoiceStatus, BadgeTone> = {
+  Paid: "success",
+  Due: "warning",
+  Overdue: "danger",
+};
+
+const INVOICE_STATUS: Record<string, InvoiceStatus> = {
+  PAID: "Paid",
+  DUE: "Due",
+  OVERDUE: "Overdue",
+};
+
+/** An unknown status shows as "Due" (never as paid). */
+export function invoiceStatusLabel(status: string): InvoiceStatus {
+  return INVOICE_STATUS[status] ?? "Due";
+}
+
+export type Invoice = {
+  id: string;
+  number: string;
+  period: string;
+  issued: Date;
+  due: Date;
+  amountCents: number;
+  currency: string;
+  status: InvoiceStatus;
+  hasPdf: boolean;
+};
+
+export function toInvoice(row: ApiInvoice): Invoice {
+  return {
+    id: row.id,
+    number: row.number,
+    period: row.periodLabel,
+    issued: localDate(row.issuedOn),
+    due: localDate(row.dueOn),
+    amountCents: row.amountCents,
+    currency: row.currency || "USD",
+    status: invoiceStatusLabel(row.status),
+    hasPdf: row.hasPdf,
+  };
+}
+
+export type Contract = {
+  number: string;
+  type: string;
+  status: ContractStatus;
+  start: string;
+  end: string | null;
+  patientsAllowed: number;
+  monthlyFeeCents: number;
+  billingCycle: string;
+  autoRenew: boolean;
+  renewalChoice: string | null;
+  primaryContact: string;
+};
+
+export function toContract(row: ApiOfficeContract): Contract {
+  return {
+    number: row.contractNumber ?? "—",
+    type: row.plan?.name ?? "—",
+    status: contractStatusLabel(row.status),
+    start: row.startsOn,
+    end: row.endsOn,
+    patientsAllowed: row.patientsAllowed,
+    monthlyFeeCents: row.monthlyFeeCents,
+    billingCycle: cycleLabel(row.billingCycle),
+    autoRenew: row.autoRenew,
+    renewalChoice: row.renewalChoice,
+    primaryContact: row.primaryContact?.name ?? "—",
+  };
+}
+
+function cycleLabel(cycle: string): string {
+  return cycle ? cycle.charAt(0).toUpperCase() + cycle.slice(1) : "—";
+}
+
+/* -------------------------------------------------------------- formatting */
 
 /** `new Date("2026-01-01")` is UTC midnight — Dec 31 in the Americas. */
 export function localDate(iso: string): Date {
-  const [year, month, day] = iso.split("-").map(Number);
+  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
@@ -58,108 +192,77 @@ export function formatDate(date: Date): string {
   });
 }
 
-export function formatMoney(amount: number): string {
-  return amount.toLocaleString("en-US", {
+/** "2026-01-01" -> "Jan 1, 2026"; "—" for none. */
+export function formatDay(day: string | null | undefined): string {
+  return day ? formatDate(localDate(day)) : "—";
+}
+
+/** Cents in, money out with the cents: 199500 -> "$1,995.00". */
+export function formatCents(cents: number, currency = "USD"): string {
+  return (cents / 100).toLocaleString("en-US", {
     style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
-export type InvoiceStatus = "Paid" | "Due" | "Overdue";
+/* ------------------------------------------------- figures from the page */
 
-export const invoiceTone: Record<InvoiceStatus, BadgeTone> = {
-  Paid: "success",
-  Due: "warning",
-  Overdue: "danger",
-};
-
-export type Invoice = {
-  number: string;
-  period: string;
-  issued: Date;
-  due: Date;
-  amount: number;
-  status: InvoiceStatus;
-};
-
-/**
- * One invoice per month from the contract start up to and including the
- * month of `today`, newest first. Issued on the 1st, due on the 15th.
- *
- * Every one is Paid: the client's figure is "100% invoices paid", and a
- * past invoice that was not paid would contradict it.
- */
-export function invoicesUpTo(today: Date): Invoice[] {
-  const start = localDate(contract.start);
-  const end = localDate(contract.end);
-  const out: Invoice[] = [];
-  for (
-    let month = new Date(start.getFullYear(), start.getMonth(), 1);
-    month <= today && month <= end;
-    month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
-  ) {
-    const n = month.getMonth() + 1;
-    out.push({
-      number: `INV-${month.getFullYear()}-${String(n).padStart(2, "0")}`,
-      period: month.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      }),
-      issued: month,
-      due: new Date(month.getFullYear(), month.getMonth(), 15),
-      amount: contract.monthlyFee,
-      status: "Paid",
-    });
-  }
-  return out.reverse();
-}
-
-/** Share of this month's invoices that are paid, as a whole percent. */
-export function paidThisMonthPct(invoices: Invoice[], today: Date): number {
+/** Share of the shown invoices issued this month that are paid; null when
+ *  none of the shown invoices is from this month. */
+export function paidThisMonthPct(
+  invoices: Invoice[],
+  today: Date,
+): number | null {
   const current = invoices.filter(
     (invoice) =>
       invoice.issued.getFullYear() === today.getFullYear() &&
       invoice.issued.getMonth() === today.getMonth(),
   );
-  if (current.length === 0) return 100;
+  if (current.length === 0) return null;
   const paid = current.filter((invoice) => invoice.status === "Paid").length;
   return Math.round((paid / current.length) * 100);
 }
 
-export function totalPaid(invoices: Invoice[]): number {
+/** Paid this calendar year, among the shown invoices (cents). */
+export function totalPaidThisYear(invoices: Invoice[], today: Date): number {
   return invoices
-    .filter((invoice) => invoice.status === "Paid")
-    .reduce((sum, invoice) => sum + invoice.amount, 0);
+    .filter(
+      (invoice) =>
+        invoice.status === "Paid" &&
+        invoice.issued.getFullYear() === today.getFullYear(),
+    )
+    .reduce((sum, invoice) => sum + invoice.amountCents, 0);
 }
 
+/** Not yet paid, among the shown invoices (cents). */
 export function outstanding(invoices: Invoice[]): number {
   return invoices
     .filter((invoice) => invoice.status !== "Paid")
-    .reduce((sum, invoice) => sum + invoice.amount, 0);
-}
-
-/** The 1st of next month, while the contract still runs; else null. */
-export function nextInvoiceDate(today: Date): Date | null {
-  const next = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  return next <= localDate(contract.end) ? next : null;
+    .reduce((sum, invoice) => sum + invoice.amountCents, 0);
 }
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Whole days from `today` to the contract end; 0 once it has passed. */
-export function daysUntilEnd(today: Date): number {
+/** Whole days from `today` to the end day; 0 once it has passed. */
+export function daysUntilEnd(end: string, today: Date): number {
   const from = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.max(
     0,
-    Math.round((localDate(contract.end).getTime() - from.getTime()) / DAY),
+    Math.round((localDate(end).getTime() - from.getTime()) / DAY),
   );
 }
 
 /** How far through the term `today` is, 0–100. */
-export function termElapsedPct(today: Date): number {
-  const start = localDate(contract.start).getTime();
-  const end = localDate(contract.end).getTime();
-  const pct = ((today.getTime() - start) / (end - start)) * 100;
+export function termElapsedPct(
+  start: string,
+  end: string,
+  today: Date,
+): number {
+  const from = localDate(start).getTime();
+  const to = localDate(end).getTime();
+  if (to <= from) return 100;
+  const pct = ((today.getTime() - from) / (to - from)) * 100;
   return Math.min(100, Math.max(0, Math.round(pct)));
 }

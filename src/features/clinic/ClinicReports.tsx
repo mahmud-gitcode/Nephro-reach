@@ -3,16 +3,7 @@
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Building2,
-  CalendarDays,
-  CheckCircle2,
-  Download,
-  FileBarChart,
-} from "lucide-react";
+import { Building2, CalendarDays, Download, FileBarChart } from "lucide-react";
 
 import {
   ActivitySolid,
@@ -23,55 +14,69 @@ import {
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
 import {
-  Badge,
+  Alert,
+  AsyncSection,
   BarChart,
   Button,
   Card,
-  KeyCard,
-  type KeyCardTone,
   ChartLegend,
   DonutChart,
+  EmptyState,
+  KeyCard,
+  type KeyCardTone,
   LineChart,
   Modal,
   Progress,
   Select,
-  type SeriesTone,
+  Skeleton,
   buttonStyles,
 } from "@/components/ui";
-import { downloadText, toCsv } from "@/lib/utils/download";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useNow } from "@/lib/utils/useNow";
 import {
-  activityTone,
-  checkInCompletion,
-  engagementMonths,
-  engagementSeries,
-  ALL_MEMBERS_LABEL,
-  ALL_PROGRAMS_LABEL,
-  isImprovement,
-  memberActivityCsv,
-  moduleCompletion,
-  reportRows,
-  rosterReport,
-  type ReportFilters,
-  outcomes,
-  percentChange,
-  recentActivity,
-  topTopics,
+  axisMax,
+  byMonth,
+  EXPORTS,
+  monthLabel,
+  PER_MEMBER_REPORTS,
+  programStatusLabel,
+  shares,
+  type CcmReport,
+  type CheckInNoticesReport,
+  type MessagesReport,
+  type ProgramsReport,
+  type RosterReport,
+  type ShareRow,
 } from "./reports.data";
-import { useClinicSettings } from "./useClinicSettings";
-import { useClinicData } from "./useClinicData";
+import { useOfficeReport, useReportExport } from "./useOfficeReports";
+import { REPORT_MONTHS } from "./officeReports.repository";
+import { actionErrorText } from "./officeContext";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
 import type { OpenQuestion } from "@/features/messaging/messaging.rules";
-import {
-  FACILITY,
-  NEPHROLOGY_OFFICE,
-} from "@/features/messaging/messaging.seed";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
-import { organizationFor } from "@/features/staff/staff";
-import { MEMBER_STATUSES, type RosterMember } from "./members.data";
 
-type Report = ReturnType<typeof rosterReport>;
+/* ==========================================================================
+   Office Reports (Phase 14)
+   --------------------------------------------------------------------------
+   Every figure is the server's office report (GET /organizations/:org/
+   reports/*): aggregate counts only, never computed from a page of rows and
+   never a sample. A panel with no server source says "No data yet". Each
+   card has its own error state (a 403 is "no access", never a zero).
+   Downloads are the server's CSV of the same counts: the server audits
+   every download, and it holds no names or MRNs. The per-member files the
+   prototype built in the browser have no audited source (B14-4), so they
+   are shown but not available. The Program and Member Type filters have no
+   server filter, so they are shown but not available; the period is the
+   report window in months.
+   ========================================================================== */
+
+const NOT_AVAILABLE = "Not available yet";
+const PERIODS = [3, 6, 12, 24] as const;
 
 const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
   {
@@ -81,6 +86,8 @@ const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
     active: { icon: <ActivitySolid />, tone: "success" },
     questions: { icon: <HeartPulseSolid />, tone: "warning" },
   };
+
+type Read<T> = ReturnType<typeof useOfficeReport<T>>;
 
 function PanelHeading({
   title,
@@ -99,67 +106,76 @@ function PanelHeading({
   );
 }
 
-/** "↑ 12%" in green when it is good news, red when it is not — so a fall
-    in ER visits reads as the win it is. The arrow and sign carry the
-    direction; colour only says whether that direction is good. */
-function Change({
-  value,
-  lowerIsBetter,
-  suffix,
+/** One report card's loading, error (403 = no access) and loaded states. */
+function ReportSection<T>({
+  read,
+  title,
+  height = 200,
+  children,
 }: {
-  value: number;
-  lowerIsBetter?: boolean;
-  suffix?: string;
+  read: Read<T>;
+  title: string;
+  height?: number;
+  children: (data: T) => React.ReactNode;
 }) {
-  const good = isImprovement(value, lowerIsBetter);
-  const Arrow = value < 0 ? ArrowDownRight : ArrowUpRight;
   return (
-    <span
-      className={`inline-flex items-center gap-inline-xs text-body-sm ${
-        good ? "text-success" : "text-danger"
-      }`}
+    <AsyncSection
+      pending={read.isPending}
+      error={read.error}
+      errorTitle={errorTitleFor(read.error, `${title} did not load`)}
+      errorMessage={errorMessageFor(read.error, undefined)}
+      onRetry={canRetry(read.error) ? read.refetch : undefined}
+      skeleton={<Skeleton height={height} />}
     >
-      <Arrow aria-hidden="true" className="h-4 w-4" />
-      <span className="tabular-nums">
-        {value > 0 ? "+" : ""}
-        {value}%
-      </span>
-      {suffix ? <span className="text-fg-muted">{suffix}</span> : null}
-    </span>
+      {read.data ? children(read.data) : null}
+    </AsyncSection>
+  );
+}
+
+function NoDataYet({ title }: { title: string }) {
+  return (
+    <Card as="section" padding="small" className="h-full">
+      <PanelHeading title={title} />
+      <EmptyState
+        variant="bare"
+        title="No data yet"
+        description="NephroReach does not report this yet."
+      />
+    </Card>
   );
 }
 
 function FilterBar({
-  filters: value,
-  programs,
-  onChange,
+  months,
+  onMonths,
 }: {
-  filters: ReportFilters;
-  programs: string[];
-  onChange: (next: ReportFilters) => void;
+  months: number;
+  onMonths: (months: number) => void;
 }) {
-  /* The client's view is one clinic, so the organization is a label, not a
-     choice — a clinic must never be able to pick another. */
-  const { settings } = useClinicSettings();
-  const now = useNow();
-  const month = new Date(now).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
+  /* The view is one office, so the organization is a label, not a choice:
+     an office must never be able to pick another. */
+  const officeName = useOptionalAuth()?.user?.org ?? "—";
   return (
     <Card as="section" padding="small" aria-label="Report filters">
       <div className="grid gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <p className="text-label-md text-fg-secondary">Period</p>
-          <p className="mt-stack-xs flex h-control-small items-center gap-inline-md rounded-control-small border border-line bg-surface-sunken px-control-x-small text-body-sm text-fg">
-            <CalendarDays
-              aria-hidden="true"
-              className="h-4 w-4 shrink-0 text-fg-muted"
-            />
-            {month}
-          </p>
-        </div>
+        <label className="block">
+          <span className="flex items-center gap-inline-xs text-label-md text-fg-secondary">
+            <CalendarDays aria-hidden="true" className="h-4 w-4" />
+            Period
+          </span>
+          <Select
+            selectSize="small"
+            className="mt-stack-xs"
+            value={String(months)}
+            onChange={(e) => onMonths(Number(e.target.value))}
+          >
+            {PERIODS.map((n) => (
+              <option key={n} value={n}>
+                Last {n} months
+              </option>
+            ))}
+          </Select>
+        </label>
         <div>
           <p className="text-label-md text-fg-secondary">Organization</p>
           <p className="mt-stack-xs flex h-control-small items-center gap-inline-md rounded-control-small border border-line bg-surface-sunken px-control-x-small text-body-sm text-fg">
@@ -167,47 +183,122 @@ function FilterBar({
               aria-hidden="true"
               className="h-4 w-4 shrink-0 text-fg-muted"
             />
-            <span className="truncate">{settings.profile.name}</span>
+            <span className="truncate">{officeName}</span>
           </p>
         </div>
-        <label className="block">
-          <span className="text-label-md text-fg-secondary">Program</span>
+        <div>
+          <p
+            id="report-filter-program"
+            className="text-label-md text-fg-secondary"
+          >
+            Program
+          </p>
           <Select
             selectSize="small"
             className="mt-stack-xs"
-            value={value.program}
-            onChange={(e) => onChange({ ...value, program: e.target.value })}
+            disabled
+            title={NOT_AVAILABLE}
+            aria-labelledby="report-filter-program"
+            aria-describedby="report-filters-na"
+            value="All Programs"
+            onChange={() => undefined}
           >
-            {[ALL_PROGRAMS_LABEL, ...programs].map((option) => (
-              <option key={option}>{option}</option>
-            ))}
+            <option>All Programs</option>
           </Select>
-        </label>
-        <label className="block">
-          <span className="text-label-md text-fg-secondary">Member Type</span>
+        </div>
+        <div>
+          <p
+            id="report-filter-type"
+            className="text-label-md text-fg-secondary"
+          >
+            Member Type
+          </p>
           <Select
             selectSize="small"
             className="mt-stack-xs"
-            value={value.status}
-            onChange={(e) => onChange({ ...value, status: e.target.value })}
+            disabled
+            title={NOT_AVAILABLE}
+            aria-labelledby="report-filter-type"
+            aria-describedby="report-filters-na"
+            value="All Members"
+            onChange={() => undefined}
           >
-            {[ALL_MEMBERS_LABEL, ...MEMBER_STATUSES].map((option) => (
-              <option key={option}>{option}</option>
-            ))}
+            <option>All Members</option>
           </Select>
-        </label>
+        </div>
       </div>
+      <p
+        id="report-filters-na"
+        className="mt-stack-sm text-caption text-fg-muted"
+      >
+        Program and member-type filters: {NOT_AVAILABLE.toLowerCase()}.
+      </p>
     </Card>
   );
 }
 
 function KpiCards({
-  kpis,
+  roster,
+  programs,
+  messages,
+  questions,
+  questionsError,
   onOpenQuestions,
 }: {
-  kpis: Report["kpis"];
+  roster: Read<RosterReport>;
+  programs: Read<ProgramsReport>;
+  messages: Read<MessagesReport>;
+  questions: OpenQuestion[];
+  questionsError: unknown;
   onOpenQuestions: () => void;
 }) {
+  const value = (read: Read<unknown>, text: () => string) =>
+    read.isPending ? "…" : read.error ? "—" : text();
+  const kpis = [
+    {
+      id: "members",
+      label: "Total Members",
+      value: value(roster, () => String(roster.data!.activePatients)),
+      note: roster.error
+        ? errorTitleFor(roster.error, "Did not load")
+        : roster.data
+          ? `${roster.data.endedRelationships} ended`
+          : undefined,
+    },
+    {
+      id: "completion",
+      label: "Program Completion Rate",
+      value: value(
+        programs,
+        () => `${programs.data!.courseCompletionPercent}%`,
+      ),
+      note: programs.error
+        ? errorTitleFor(programs.error, "Did not load")
+        : programs.data
+          ? `${programs.data.courseCompleted} of ${programs.data.withCourse} with a course`
+          : undefined,
+    },
+    {
+      id: "attendees",
+      label: "Live Class Attendances",
+      value: "—",
+      note: "No data yet",
+    },
+    {
+      id: "active",
+      label: "Patients Writing In",
+      value: value(messages, () => String(messages.data!.fromMembers)),
+      note: messages.error
+        ? errorTitleFor(messages.error, "Did not load")
+        : "Messages from members in the period",
+    },
+    {
+      id: "questions",
+      label: "Open Questions",
+      value: questionsError ? "—" : String(questions.length),
+      note: questionsError ? "Did not load" : "Shown in your inbox",
+    },
+  ];
   return (
     <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
       {kpis.map((kpi) => (
@@ -220,7 +311,7 @@ function KpiCards({
           note={kpi.note}
         >
           {/* Who is waiting (client, 2026-10-06: "can they open it?"). */}
-          {kpi.id === "questions" && kpi.value !== "0" ? (
+          {kpi.id === "questions" && questions.length > 0 ? (
             <Button
               size="small"
               variant="neutral"
@@ -236,29 +327,33 @@ function KpiCards({
   );
 }
 
-/** A panel whose figures have no source in the app yet. */
-function SampleNote() {
-  return (
-    <p className="mt-stack-xs text-caption text-fg-muted">
-      Sample figures until reporting data is connected.
-    </p>
-  );
-}
-
-function EngagementTrend() {
+function NewPatientsTrend({ roster }: { roster: Read<RosterReport> }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Member Engagement Trend" />
-      <SampleNote />
-      <LineChart
-        series={engagementSeries}
-        xLabels={engagementMonths}
-        yMin={0}
-        yMax={300}
-        yTicks={7}
-        label="Member engagement by month"
-        height={260}
-      />
+      <PanelHeading title="New Patients per Month" />
+      <ReportSection read={roster} title="New patients" height={260}>
+        {(data) => {
+          const rows = byMonth(data.newLinksPerMonth);
+          return (
+            <LineChart
+              series={[
+                {
+                  id: "new-links",
+                  label: "New patients",
+                  tone: "cat-1",
+                  points: rows.map((r) => r.count),
+                },
+              ]}
+              xLabels={rows.map((r) => monthLabel(r.month))}
+              yMin={0}
+              yMax={axisMax(rows.map((r) => r.count))}
+              yTicks={6}
+              label="New patients linked to this office by month"
+              height={260}
+            />
+          );
+        }}
+      </ReportSection>
     </Card>
   );
 }
@@ -268,19 +363,20 @@ function ShareDonut({
   label,
   rows,
   total,
+  centerLabel,
 }: {
-  total: number;
   title: string;
   label: string;
-  rows: {
-    label: string;
-    pct: number;
-    tone: SeriesTone;
-  }[];
+  rows: ShareRow[];
+  total: number;
+  centerLabel: string;
 }) {
+  if (total === 0)
+    return (
+      <EmptyState variant="bare" title="Nothing to show" description={title} />
+    );
   return (
-    <Card as="section" padding="small" className="h-full">
-      <PanelHeading title={title} />
+    <>
       <DonutChart
         segments={rows.map((row) => ({
           label: row.label,
@@ -291,7 +387,7 @@ function ShareDonut({
         size={168}
         thickness={30}
         centerValue={total}
-        centerLabel="Members"
+        centerLabel={centerLabel}
         className="mx-auto"
       />
       <ChartLegend
@@ -302,302 +398,200 @@ function ShareDonut({
           value: `${row.pct}%`,
         }))}
       />
-    </Card>
+    </>
   );
 }
 
-function RateBars({
-  title,
-  label,
-  bars,
-}: {
-  title: string;
-  label: string;
-  bars: { label: string; value: number }[];
-}) {
-  /* One measure across the bars, so one hue — the axis label says which
-     program or week each is. */
+function EnrollmentsByStatus({ programs }: { programs: Read<ProgramsReport> }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title={title} />
-      <SampleNote />
-      <BarChart
-        bars={bars}
-        label={label}
-        unit="%"
-        yMax={100}
-        yTicks={6}
-        height={220}
-      />
+      <PanelHeading title="Enrollments by Status" />
+      <ReportSection read={programs} title="Enrollments">
+        {(data) => (
+          <ShareDonut
+            title="No enrollments in programs yet."
+            label="Program enrollments by status"
+            rows={shares(
+              data.byStatus.map((row) => ({
+                label: programStatusLabel(row.key),
+                count: row.count,
+              })),
+            )}
+            total={data.totalEnrollments}
+            centerLabel="Enrollments"
+          />
+        )}
+      </ReportSection>
     </Card>
   );
 }
 
-function ModuleCompletion() {
-  /* Horizontal, so each program keeps its full name — a column chart had
-     room for "Journey…" and nothing more. One measure, one hue. */
+function MemberStatus({ roster }: { roster: Read<RosterReport> }) {
+  return (
+    <Card as="section" padding="small" className="h-full">
+      <PanelHeading title="Member Status" />
+      <ReportSection read={roster} title="Member status">
+        {(data) => (
+          <ShareDonut
+            title="No members yet."
+            label="Members by status"
+            rows={shares([
+              { label: "Active", count: data.activePatients },
+              { label: "Ended", count: data.endedRelationships },
+            ])}
+            total={data.activePatients + data.endedRelationships}
+            centerLabel="Members"
+          />
+        )}
+      </ReportSection>
+    </Card>
+  );
+}
+
+function ProgramCompletion({ programs }: { programs: Read<ProgramsReport> }) {
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title="Module Completion Rate" />
-      <SampleNote />
-      <ul className="space-y-stack-md">
-        {moduleCompletion.map((row) => (
-          <li key={row.label}>
+      <ReportSection read={programs} title="Completion">
+        {(data) => (
+          <div className="space-y-stack-md">
             <div className="flex items-baseline justify-between gap-inline-md">
               <span className="text-body-sm text-fg-secondary">
-                {row.label}
+                All programs with a course
               </span>
               <span className="text-label-md text-fg tabular-nums">
-                {row.value}%
+                {data.courseCompletionPercent}%
               </span>
             </div>
             <Progress
-              value={row.value}
-              label={`${row.label} module completion`}
+              value={data.courseCompletionPercent}
+              label="Course completion across programs"
               size="medium"
-              className="mt-stack-xs"
             />
-          </li>
-        ))}
-      </ul>
+            <p className="text-caption text-fg-muted">
+              {data.courseCompleted} of {data.withCourse} enrollments with a
+              course have finished it. Per-program rates: no data yet.
+            </p>
+          </div>
+        )}
+      </ReportSection>
     </Card>
   );
 }
 
-function TopTopics() {
-  const max = Math.max(...topTopics.map((topic) => topic.views));
+function CheckInRate({ notices }: { notices: Read<CheckInNoticesReport> }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Top Education Topics" />
-      <SampleNote />
-      <ul className="space-y-stack-md">
-        {topTopics.map((topic) => (
-          <li key={topic.label}>
-            <div className="flex items-baseline justify-between gap-inline-md">
-              <span className="text-body-sm text-fg-secondary">
-                {topic.label}
-              </span>
-              <span className="text-label-md text-fg tabular-nums">
-                {topic.views}
-              </span>
-            </div>
-            <Progress
-              value={topic.views}
-              max={max}
-              label={`${topic.label} views`}
-              size="small"
-              className="mt-stack-xs"
-            />
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function MemberOutcomes() {
-  return (
-    <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Member Outcomes" />
-      <SampleNote />
-      <ul className="divide-y divide-line-subtle">
-        {outcomes.map((row) => (
-          <li
-            key={row.label}
-            className="flex items-center justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
-          >
-            <div className="min-w-0">
-              <p className="text-label-lg text-fg">{row.label}</p>
-              <p className="text-body-sm text-fg-muted tabular-nums">
-                <span className="text-heading-5 text-fg">{row.thisMonth}</span>{" "}
-                this month · {row.lastMonth} last month
+      <PanelHeading title="Check-In Completion Rate" />
+      <ReportSection read={notices} title="Check-in notices" height={220}>
+        {(data) => {
+          const rows = byMonth(data.perMonth);
+          return (
+            <>
+              <p className="mb-stack-sm text-caption text-fg-muted">
+                Check-in notices seen by your office, by month (
+                {data.seenRatePercent}% overall).
               </p>
-            </div>
-            <Change
-              value={percentChange(row.thisMonth, row.lastMonth)}
-              lowerIsBetter={row.lowerIsBetter}
-            />
-          </li>
-        ))}
-      </ul>
+              <BarChart
+                bars={rows.map((r) => ({
+                  label: monthLabel(r.month),
+                  value: r.delivered
+                    ? Math.round((r.seen / r.delivered) * 100)
+                    : 0,
+                }))}
+                label="Check-in notices seen by month"
+                unit="%"
+                yMax={100}
+                yTicks={6}
+                height={220}
+              />
+            </>
+          );
+        }}
+      </ReportSection>
     </Card>
   );
 }
 
-function RecentActivity() {
+function CcmCard({ ccm }: { ccm: Read<CcmReport> }) {
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Recent Activity" />
-      <SampleNote />
-      <ul className="divide-y divide-line-subtle">
-        {recentActivity.map((entry) => (
-          <li
-            key={`${entry.member}-${entry.activity}`}
-            className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-label-lg text-fg">{entry.member}</p>
-              <p className="text-body-sm text-fg-secondary">
-                {entry.activity}
-                <span className="text-fg-muted"> · {entry.date}</span>
-              </p>
-            </div>
-            <Badge
-              tone={activityTone[entry.status]}
-              icon={
-                entry.status === "Done" ? (
-                  <CheckCircle2 aria-hidden="true" />
-                ) : (
-                  <AlertTriangle aria-hidden="true" />
-                )
-              }
-            >
-              {entry.status}
-            </Badge>
-          </li>
-        ))}
-      </ul>
+      <PanelHeading title="CCM This Month" />
+      <ReportSection read={ccm} title="CCM">
+        {(data) => (
+          <dl className="divide-y divide-line-subtle">
+            {(
+              [
+                ["Patients", data.patients],
+                ["At the time threshold", data.patientsAtThreshold],
+                ["Minutes counted", data.countedMinutes],
+                ["Minutes pending", data.pendingMinutes],
+                ["Activities", data.activities],
+              ] as const
+            ).map(([term, value]) => (
+              <div
+                key={term}
+                className="flex items-baseline justify-between gap-inline-lg py-inset-xs first:pt-0"
+              >
+                <dt className="text-body-sm text-fg-muted">{term}</dt>
+                <dd className="text-label-lg text-fg tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </ReportSection>
     </Card>
   );
 }
 
-/* Each report is a CSV of the rows on screen, built in the browser. */
+/* Each download is the server's CSV of one report's counts (audited). */
 function CustomReports({
-  rows,
-  questions,
+  months,
+  nephrology,
 }: {
-  rows: RosterMember[];
-  questions: OpenQuestion[];
+  months: number;
+  nephrology: boolean;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
-  const reports: Array<{
-    id: string;
-    label: string;
-    table: () => Array<Array<string | number>>;
-  }> = [
-    {
-      id: "engagement",
-      label: "Member Engagement Report",
-      table: () => [
-        [
-          "Name",
-          "Program",
-          "Status",
-          "Last activity",
-          "Live classes",
-          "Check-ins",
-        ],
-        ...rows.map((m) => [
-          m.name,
-          m.program,
-          m.status ?? "—",
-          m.lastActivity,
-          m.liveClasses ? `${m.liveClasses[0]}/${m.liveClasses[1]}` : "—",
-          m.checkIns ? `${m.checkIns[0]}/${m.checkIns[1]}` : "—",
-        ]),
-      ],
-    },
-    {
-      id: "completion",
-      label: "Program Completion Report",
-      table: () => [
-        ["Name", "Program", "Progress %", "Current module", "Status"],
-        ...rows.map((m) => [
-          m.name,
-          m.program,
-          m.progress,
-          m.currentModule,
-          m.status ?? "—",
-        ]),
-      ],
-    },
-    {
-      id: "checkins",
-      label: "Check-In Compliance Report",
-      table: () => [
-        ["Name", "Program", "Check-ins done", "Expected", "Compliance %"],
-        ...rows.map((m) => [
-          m.name,
-          m.program,
-          m.checkIns ? m.checkIns[0] : "—",
-          m.checkIns ? m.checkIns[1] : "—",
-          m.checkIns && m.checkIns[1]
-            ? Math.round((m.checkIns[0] / m.checkIns[1]) * 100)
-            : "—",
-        ]),
-      ],
-    },
-    {
-      id: "questions",
-      label: "Open Questions Report",
-      table: () => [
-        ["Patient", "MRN", "Program", "Sent", "Question"],
-        ...questions.map((q) => [
-          q.memberName,
-          q.mrn ?? "",
-          q.program ?? "",
-          new Date(q.sentAt).toLocaleString("en-US"),
-          q.body,
-        ]),
-      ],
-    },
-    {
-      id: "attendance",
-      label: "Live Class Attendance Report",
-      table: () => [
-        ["Name", "Program", "Attended", "Offered"],
-        ...rows.map((m) => [
-          m.name,
-          m.program,
-          m.liveClasses ? m.liveClasses[0] : "—",
-          m.liveClasses ? m.liveClasses[1] : "—",
-        ]),
-      ],
-    },
-    {
-      id: "export",
-      label: "Member Activity Export (CSV)",
-      table: () => memberActivityCsv(rows),
-    },
-  ];
+  const download = useReportExport();
+  const tileClass =
+    "flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <Card as="section" padding="small">
       <PanelHeading title="Custom Reports" />
       <p className="-mt-stack-md mb-stack-md text-caption text-fg-muted">
-        Downloads the members shown by the filters above, as a CSV file.
+        Each file holds this office&rsquo;s counts for the period above (no
+        names or MRNs). NephroReach records every download.
       </p>
+      {download.error ? (
+        <Alert tone="danger" className="mb-stack-md">
+          {actionErrorText(download.error)}
+        </Alert>
+      ) : null}
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {reports.map((report) => (
-          <li key={report.id}>
+        {EXPORTS.filter((e) => !e.nephrologyOnly || nephrology).map((e) => (
+          <li key={e.report}>
             <button
               type="button"
-              disabled={rows.length === 0}
+              disabled={download.isPending}
               onClick={() =>
                 share.guard(
-                  () =>
-                    downloadText(
-                      `${report.id}-report.csv`,
-                      toCsv(report.table()),
-                    ),
+                  () => download.mutate({ report: e.report, months }),
                   "download",
                 )
               }
-              className="flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
+              className={tileClass}
             >
               <span
                 aria-hidden="true"
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-brand-subtle text-brand-600"
               >
-                {report.id === "export" ? (
-                  <Download className="h-5 w-5" />
-                ) : (
-                  <FileBarChart className="h-5 w-5" />
-                )}
+                <FileBarChart className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1 text-label-lg text-fg">
-                {report.label}
+                {e.label}
               </span>
               <Download
                 aria-hidden="true"
@@ -606,7 +600,34 @@ function CustomReports({
             </button>
           </li>
         ))}
+        {/* No audited per-member export exists (B14-4): shown, disabled,
+            explained; nothing is built in the browser. */}
+        {PER_MEMBER_REPORTS.map((label) => (
+          <li key={label}>
+            <button
+              type="button"
+              disabled
+              title={NOT_AVAILABLE}
+              aria-describedby="per-member-na"
+              className={tileClass}
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-sunken text-fg-muted"
+              >
+                <Download className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1 text-label-lg text-fg">
+                {label}
+              </span>
+            </button>
+          </li>
+        ))}
       </ul>
+      <p id="per-member-na" className="mt-stack-md text-caption text-fg-muted">
+        Per-member files: {NOT_AVAILABLE.toLowerCase()}. They need an audited
+        download from NephroReach.
+      </p>
       {share.notice}
     </Card>
   );
@@ -666,59 +687,35 @@ function OpenQuestionsList({
 }
 
 export default function ClinicReports() {
-  const clinic = useClinicData();
-  const roster = clinic.data?.roster ?? [];
-  const [filters, setFilters] = useState<ReportFilters>({
-    program: ALL_PROGRAMS_LABEL,
-    status: ALL_MEMBERS_LABEL,
-  });
-  const rows = reportRows(roster, filters);
-  const base = rosterReport(rows);
+  const [months, setMonths] = useState<number>(REPORT_MONTHS.DEFAULT);
+  const auth = useOptionalAuth();
+  const nephrology =
+    auth?.choice?.kind === "office" &&
+    auth.choice.membership.organizationType === "NEPHROLOGY_OFFICE";
+  const officeName = auth?.user?.org ?? undefined;
 
-  /* Open Questions are real messages: a patient's last word to this
-     office, still unanswered (client, 2026-10-09: the count has to lead to
-     the question). Each office reads its own inbox. */
-  const org = organizationFor(useOptionalAuth()?.user);
-  const isNephrology = org?.portal === "nephrology";
-  const office = isNephrology ? NEPHROLOGY_OFFICE : FACILITY;
-  const messagesHref = isNephrology
-    ? "/dashboard/nephrology/messages"
-    : "/dashboard/clinic/messages";
-  const { conversations } = useMessages();
-  const filtered =
-    filters.program !== ALL_PROGRAMS_LABEL ||
-    filters.status !== ALL_MEMBERS_LABEL;
-  const shownMrns = new Set(rows.map((m) => m.mrn));
-  const questions = messagingRules
-    .openQuestions(conversations, office.name)
-    .filter((q) => !filtered || (q.mrn ? shownMrns.has(q.mrn) : false));
-  const report = {
-    ...base,
-    kpis: base.kpis.map((k) =>
-      k.id === "questions" ? { ...k, value: String(questions.length) } : k,
-    ),
-  };
-  const programs = [...new Set(roster.map((m) => m.program))].sort();
-  const [questionsOpen, setQuestionsOpen] = useState(false);
+  const roster = useOfficeReport<RosterReport>("roster", months);
+  const programs = useOfficeReport<ProgramsReport>("programs");
+  const notices = useOfficeReport<CheckInNoticesReport>(
+    "check-in-notices",
+    months,
+  );
+  const messages = useOfficeReport<MessagesReport>("messages", months);
+  const ccm = useOfficeReport<CcmReport>("ccm", undefined, nephrology);
+  const exportRoster = useReportExport();
   const exportShare = useExternalShare();
 
-  function exportReport() {
-    downloadText(
-      "clinic-report.csv",
-      toCsv([
-        ["Measure", "Value"],
-        ...report.kpis.map((k) => [k.label, k.value]),
-        [],
-        ["Program", "Share %"],
-        ...report.byProgram.map((p) => [p.label, p.pct]),
-        [],
-        ["Status", "Share %"],
-        ...report.byStatus.map((p) => [p.label, p.pct]),
-        [],
-        ...memberActivityCsv(rows),
-      ]),
-    );
-  }
+  /* Open Questions are this office's inbox from the server (COLLAB's
+     read-only adapter): a patient's last word, still unanswered. */
+  const messagesHref = nephrology
+    ? "/dashboard/nephrology/messages"
+    : "/dashboard/clinic/messages";
+  const inbox = useMessages();
+  const questions = messagingRules.openQuestions(
+    inbox.conversations,
+    officeName,
+  );
+  const [questionsOpen, setQuestionsOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -727,8 +724,13 @@ export default function ClinicReports() {
         action={
           <Button
             size="small"
-            onClick={() => exportShare.guard(exportReport, "download")}
-            disabled={rows.length === 0}
+            loading={exportRoster.isPending}
+            onClick={() =>
+              exportShare.guard(
+                () => exportRoster.mutate({ report: "roster", months }),
+                "download",
+              )
+            }
           >
             <Download className="h-4 w-4" />
             Export Report
@@ -737,10 +739,17 @@ export default function ClinicReports() {
       />
 
       {exportShare.notice}
-      <FilterBar filters={filters} programs={programs} onChange={setFilters} />
+      {exportRoster.error ? (
+        <Alert tone="danger">{actionErrorText(exportRoster.error)}</Alert>
+      ) : null}
+      <FilterBar months={months} onMonths={setMonths} />
 
       <KpiCards
-        kpis={report.kpis}
+        roster={roster}
+        programs={programs}
+        messages={messages}
+        questions={questions}
+        questionsError={inbox.error}
         onOpenQuestions={() => setQuestionsOpen(true)}
       />
       <Modal
@@ -754,38 +763,28 @@ export default function ClinicReports() {
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <EngagementTrend />
+          <NewPatientsTrend roster={roster} />
         </div>
-        <ShareDonut
-          title="Members by Program"
-          label="Members by program"
-          rows={report.byProgram}
-          total={report.total}
-        />
+        <EnrollmentsByStatus programs={programs} />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <ShareDonut
-          title="Member Status"
-          label="Members by status"
-          rows={report.byStatus}
-          total={report.total}
-        />
-        <ModuleCompletion />
-        <RateBars
-          title="Check-In Completion Rate"
-          label="Check-in completion rate by week"
-          bars={checkInCompletion}
-        />
+        <MemberStatus roster={roster} />
+        <ProgramCompletion programs={programs} />
+        <CheckInRate notices={notices} />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <TopTopics />
-        <MemberOutcomes />
-        <RecentActivity />
+        {nephrology ? (
+          <CcmCard ccm={ccm} />
+        ) : (
+          <NoDataYet title="Top Education Topics" />
+        )}
+        <NoDataYet title="Member Outcomes" />
+        <NoDataYet title="Recent Activity" />
       </section>
 
-      <CustomReports rows={rows} questions={questions} />
+      <CustomReports months={months} nephrology={nephrology} />
     </div>
   );
 }
