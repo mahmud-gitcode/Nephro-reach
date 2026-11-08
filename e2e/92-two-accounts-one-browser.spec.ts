@@ -94,7 +94,7 @@ const PAIRS: Pair[] = [
 
 async function settle(page: Page) {
   await page
-    .waitForLoadState("networkidle", { timeout: 10_000 })
+    .waitForLoadState("networkidle", { timeout: 4_000 })
     .catch(() => undefined);
 }
 
@@ -166,7 +166,8 @@ test.beforeAll(async () => {
   }
 });
 
-test.setTimeout(10 * 60_000);
+/* Three passes over every sidebar page (A, B, then the name check). */
+test.setTimeout(20 * 60_000);
 
 for (const pair of PAIRS) {
   test(`two accounts, one browser: ${pair.id} @phase15`, async ({
