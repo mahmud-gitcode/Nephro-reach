@@ -154,7 +154,7 @@ function MembersTable() {
   const subs = useMemberSubscriptions(page);
   const plans = usePlans();
   const planName = (id: string, code: string) =>
-    plans.plans.find((p) => p.id === id)?.name ?? code;
+    plans.allVersions.find((p) => p.id === id)?.name ?? code;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

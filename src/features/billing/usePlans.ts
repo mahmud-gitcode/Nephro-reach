@@ -106,6 +106,8 @@ export function usePlans() {
 
   return {
     plans,
+    /** Every row, earlier versions included (a member may still be on one). */
+    allVersions: all,
     isPending: query.isPending,
     error: query.error,
     refetch: () => void query.refetch(),
