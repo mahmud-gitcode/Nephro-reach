@@ -9,9 +9,7 @@ import { useClinicNotices } from "@/features/personal-log/check-in/useClinicNoti
 import { useBloodPressure } from "@/features/personal-log/blood-pressure/useBloodPressure";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useWeightLog } from "@/features/personal-log/fluid/useWeightLog";
-import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
 import {
-  LINKED_MEMBER,
   fluidFollowUpRows,
   memberCheckInRows,
   memberInbox,
@@ -36,11 +34,11 @@ export function useMemberFeed(now: number, today: string, program: string) {
   const bloodPressure = useBloodPressure();
   const weights = useWeightLog();
   const appointments = useAppointments();
-  const access = useVascularAccess();
-  const accessRecord = useMemo(
-    () => access.records.find((r) => r.mrn === LINKED_MEMBER.mrn) ?? null,
-    [access.records],
-  );
+  /* Phase 10: the access record is on the API now and this seam read it
+     from the shared browser store by MRN; until OFFICE Phase 9 replaces
+     the feed with per-patient office reads (D33), no access items show
+     here (fails closed, never another patient's data). */
+  const accessRecord = null;
 
   const inbox = useMemo(
     () =>

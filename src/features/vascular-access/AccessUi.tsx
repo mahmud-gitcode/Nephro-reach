@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Camera,
   CheckCircle2,
   CircleDot,
   Clock3,
@@ -28,8 +29,11 @@ import {
   type BadgeTone,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { useNow } from "@/lib/utils/useNow";
 import * as messaging from "@/features/messaging/messaging.rules";
+import type { AccessTarget } from "./access.repository";
+import { useAccessImageUrl } from "./useAccess";
 import {
   dayParts,
   formatDay,
@@ -40,7 +44,6 @@ import {
   PARTY_LABEL,
   canManagePrivacy,
   canPost,
-  canRead,
   type AccessParty,
   type AccessRecord,
   type AccessStatus,
@@ -54,6 +57,53 @@ import {
 /* ==========================================================================
    Pieces both portals draw the same way
    ========================================================================== */
+
+/**
+ * A concern's or a message's photo, through its short-lived link (Phase
+ * 10). Nothing is asked for until it is drawn; a camera icon stands in
+ * until the link arrives, or if it cannot be had (a 403/404 from the
+ * server). Only an https:/loopback link the safe-URL check accepts is used.
+ */
+export function AccessPicture({
+  target,
+  profileId,
+  kind,
+  id,
+  alt,
+  className,
+}: {
+  target: AccessTarget | null;
+  profileId: string;
+  kind: "concern" | "message";
+  id: string;
+  alt: string;
+  className?: string;
+}) {
+  const { url } = useAccessImageUrl(target, profileId, kind, id);
+  if (!url || !isSafeFileUrl(url)) {
+    return (
+      <span
+        role="img"
+        aria-label={alt}
+        className={cn(
+          "flex items-center justify-center bg-surface-sunken text-fg-subtle",
+          className,
+        )}
+      >
+        <Camera aria-hidden="true" className="h-5 w-5" />
+      </span>
+    );
+  }
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element -- a short-lived private link, never cached */
+    <img
+      src={url}
+      alt={alt}
+      referrerPolicy="no-referrer"
+      className={cn("object-cover", className)}
+    />
+  );
+}
 
 export const accessStatusTone: Record<AccessStatus, BadgeTone> = {
   "No Active Concern": "success",
@@ -444,21 +494,24 @@ const PARTY_ES: Record<AccessParty, string> = {
  * The three-way access conversation, from one party's side.
  *
  * Everyone reads what is shared. A private message (patient ↔ access
- * center) reaches the dialysis center only as a placeholder. The patient
- * and the access center can make a message private or share it again, and
- * decide whether the dialysis center may post; the dialysis center reads
- * until they do. `attach` is an optional slot above the composer (the
- * member's photo picker); `attachedUrl` is what it chose.
+ * center) reaches the dialysis center only as a placeholder: the server
+ * sends it `hidden`, with no body, picture or author, and this view draws
+ * only that. The patient and the access center can make a message private
+ * or share it again, and decide whether the dialysis center may post; the
+ * dialysis center reads until they do (hints: the server decides).
+ * `attach` is an optional slot above the composer (the member's photo
+ * input); `hasAttachment` says a picture is chosen.
  */
 export function AccessConversationView({
   record,
   party,
+  target,
   myName,
   onSend,
   onSetPrivate,
   onSetDialysisCanPost,
   attach,
-  attachedUrl,
+  hasAttachment,
   sending,
   readOnlyReason,
   isEs = false,
@@ -468,7 +521,10 @@ export function AccessConversationView({
    *  the member confirms, so a cancel keeps what they typed. */
   confirmSend?: (send: () => void) => void;
   record: AccessRecord;
+  /** The viewer's party, from the server (`record.party`). */
   party: AccessParty;
+  /** Whose routes the pictures are read through. */
+  target: AccessTarget | null;
   /** Set when this person's role may not post; shown instead of the
    *  composer, and they cannot change privacy either. */
   readOnlyReason?: string;
@@ -477,7 +533,7 @@ export function AccessConversationView({
   onSetPrivate: (messageId: string, isPrivate: boolean) => void;
   onSetDialysisCanPost: (allowed: boolean) => void;
   attach?: React.ReactNode;
-  attachedUrl?: string;
+  hasAttachment?: boolean;
   sending?: boolean;
   isEs?: boolean;
 }) {
@@ -496,7 +552,7 @@ export function AccessConversationView({
     endRef.current?.scrollIntoView({ block: "end" });
   }, [count]);
 
-  const canSend = draft.trim().length > 0 || !!attachedUrl;
+  const canSend = draft.trim().length > 0 || !!hasAttachment;
 
   function submit() {
     if (!canSend || sending || !mayPost) return;
@@ -533,15 +589,18 @@ export function AccessConversationView({
         ) : (
           <ol className="space-y-stack-sm">
             {conversation.messages.map((message) => {
-              const mine = message.author === party;
-              const readable = canRead(message, party);
+              /* Alignment from the server's `mine`, never a name match. */
+              const mine = message.mine;
+              const readable = !message.hidden;
               const who = mine
                 ? isEs
                   ? "Tú"
                   : "You"
                 : message.author === "member"
-                  ? message.authorName
-                  : `${message.authorName} · ${partyLabel(message.author)}`;
+                  ? (message.authorName ?? partyLabel("member"))
+                  : message.authorName
+                    ? `${message.authorName} · ${partyLabel(message.author)}`
+                    : partyLabel(message.author);
               return (
                 <li
                   key={message.id}
@@ -583,12 +642,14 @@ export function AccessConversationView({
                           {message.body}
                         </p>
                       ) : null}
-                      {message.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise
-                        <img
-                          src={message.imageUrl}
+                      {message.hasImage ? (
+                        <AccessPicture
+                          target={target}
+                          profileId={record.id}
+                          kind="message"
+                          id={message.id}
                           alt={isEs ? "Foto adjunta" : "Attached photo"}
-                          className="mt-stack-sm block max-h-56 w-full max-w-xs rounded-control object-cover"
+                          className="mt-stack-sm block h-40 max-h-56 w-full max-w-xs rounded-control"
                         />
                       ) : null}
                     </div>

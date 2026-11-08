@@ -5,7 +5,6 @@ import {
 } from "@/features/messaging/messaging.rules";
 import { FACILITY } from "@/features/messaging/messaging.seed";
 import type { MessagingState } from "@/features/messaging/messaging.types";
-import { addAccessRecord } from "@/features/vascular-access/vascularAccess.data";
 import { ccmPatientsOf, enrollInCcm, type CcmState } from "./ccm.data";
 
 /* A patient enrolled at the clinic reaches the other clinic screens:
@@ -72,26 +71,5 @@ describe("Add to CCM", () => {
       1,
     );
     expect(next.requirements["777001"]).toEqual({});
-  });
-});
-
-describe("Add Access Patient", () => {
-  it("starts an empty shared record, once", () => {
-    const overview = {
-      type: "AV Fistula",
-      location: "Left Forearm",
-      createdOn: "2026-09-01",
-      status: "Review Requested" as const,
-      lastAssessment: "",
-    };
-    const patient = { memberName: "Ana Ruiz", mrn: "777001" };
-    const next = addAccessRecord(
-      addAccessRecord({ records: [] }, patient, overview),
-      patient,
-      overview,
-    );
-    expect(next.records).toHaveLength(1);
-    expect(next.records[0].conversation.messages).toEqual([]);
-    expect(next.records[0].conversation.dialysisCanPost).toBe(false);
   });
 });

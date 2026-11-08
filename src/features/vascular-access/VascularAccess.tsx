@@ -1,7 +1,7 @@
 "use client";
 
 import { useSafetyNotice } from "@/features/messaging/useSafetyNotice";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -35,20 +35,28 @@ import {
   Skeleton,
   Textarea,
 } from "@/components/ui";
+import { uploadErrorMessage } from "@/lib/api/upload";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { cn } from "@/lib/utils/cn";
 import { useNow } from "@/lib/utils/useNow";
 import { useMemberName } from "@/features/auth/useMemberName";
 import * as messaging from "@/features/messaging/messaging.rules";
-import { PhotoPicker } from "@/features/personal-log/dialysis/PhotoPicker";
+import { fileError } from "@/features/personal-log/dialysis/accessPhotos";
+import type { AccessTarget } from "./access.repository";
 import {
-  downscaleToDataUrl,
-  useAccessPhotos,
-} from "@/features/personal-log/dialysis/useAccessPhotos";
+  useAccessActions,
+  useAccessProfiles,
+  useAccessRecord,
+  useMemberTarget,
+  type AccessActions,
+} from "./useAccess";
 import {
-  ACCESS_TYPES,
   CONCERN_KINDS,
   MOBILITY_LEVELS,
-  TRANSPORT_COORDINATOR,
   activeTransport,
   dayKey,
   formatDay,
@@ -57,11 +65,9 @@ import {
   nextAppointment,
   concernsNewestFirst,
   openConcerns,
-  recordForMember,
   sortedHistory,
   sortedUpdates,
   transportFor,
-  unreadFor,
   upcomingAppointments,
   type AccessConcern,
   type AccessRecord,
@@ -70,6 +76,7 @@ import {
 } from "./vascularAccess.data";
 import {
   AccessConversationView,
+  AccessPicture,
   AccessStatusBadge,
   AppointmentRow,
   HistoryTable,
@@ -78,10 +85,6 @@ import {
   TransportSteps,
   UpdatesTimeline,
 } from "./AccessUi";
-import {
-  useVascularAccess,
-  type VascularAccessStore,
-} from "./useVascularAccess";
 
 /* ==========================================================================
    Vascular Access — the member's tab
@@ -89,18 +92,107 @@ import {
    Everything about the access in one place: what it is, the visits ahead,
    reporting a problem with a photo, asking for a ride and seeing it
    confirmed, and one conversation with the access center and the dialysis
-   center. The clinic works the same record
-   from its own Vascular Access tab.
+   center. The offices work the same record from their own pages.
+
+   On the API (Phase 10): the member may have several access profiles, one
+   per access center; with more than one, a selector picks which. Every
+   write is the member's own route, and a photo is uploaded first and sent
+   by file id (a fresh upload only: attaching a saved access photo waits on
+   NEW-5).
    ========================================================================== */
 
 const HREF = "/dashboard/vascular-access";
 
 type Props = {
   record: AccessRecord;
-  store: VascularAccessStore;
+  actions: AccessActions;
+  target: AccessTarget | null;
   isEs: boolean;
   today: string;
 };
+
+/**
+ * A picture chosen from the device for upload: kept as a File (never read
+ * into a data: URL); its preview is a blob: URL released when it goes.
+ */
+function PhotoInput({
+  file,
+  onChange,
+  isEs,
+}: {
+  file: File | null;
+  onChange: (file: File | null) => void;
+  isEs: boolean;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const preview = useMemo(
+    () => (file ? URL.createObjectURL(file) : null),
+    [file],
+  );
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
+  return (
+    <div className="space-y-stack-xs">
+      {file && preview ? (
+        <div className="flex items-center gap-inline-md">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: preview of the file about to be uploaded */}
+          <img
+            src={preview}
+            alt={isEs ? "Foto para enviar" : "Photo to send"}
+            className="h-14 w-14 rounded-control object-cover"
+          />
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="ghost"
+            onClick={() => onChange(null)}
+          >
+            {isEs ? "Quitar foto" : "Remove photo"}
+          </Button>
+        </div>
+      ) : null}
+      <label
+        className={buttonStyles({
+          variant: "neutral",
+          appearance: "fill-stroke",
+          size: "small",
+        })}
+      >
+        <Camera aria-hidden="true" />
+        {isEs ? "Tomar o elegir una foto" : "Take or choose a photo"}
+        {/* No `capture`: on a phone the picker then offers both the
+            camera and the album. */}
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(event) => {
+            const chosen = event.target.files?.[0];
+            event.target.value = "";
+            if (!chosen) return;
+            const problem = fileError(chosen, isEs);
+            setError(problem);
+            if (!problem) onChange(chosen);
+          }}
+        />
+      </label>
+      {error ? <p className="text-caption text-danger">{error}</p> : null}
+    </div>
+  );
+}
+
+/** Why a write was refused: the upload's own reason, or a plain retry. */
+function writeErrorText(error: unknown, isEs: boolean): string {
+  const upload = error ? uploadErrorMessage(error) : "";
+  if (upload && !isEs) return upload;
+  return isEs
+    ? "No se pudo guardar. Intenta de nuevo."
+    : "That did not save. Try again.";
+}
 
 function Fact({
   label,
@@ -119,34 +211,23 @@ function Fact({
 
 /* --------------------------------------------------------------- overview */
 
-function OverviewCard({ record, store, isEs, today }: Props) {
-  const [editing, setEditing] = useState(false);
+/* The access center keeps the overview (`PATCH …/access-profiles/:id` is
+   access center only): the member has no route to change it, so the page
+   no longer offers an edit the server would refuse. */
+function OverviewCard({ record, isEs, today }: Props) {
   const next = nextAppointment(record, today);
   const { overview } = record;
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <SectionTitle
-        title={isEs ? "Resumen del Acceso" : "Access Overview"}
-        action={
-          <Button
-            variant="neutral"
-            appearance="fill-stroke"
-            size="small"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil aria-hidden="true" />
-            {isEs ? "Editar" : "Edit"}
-          </Button>
-        }
-      />
+      <SectionTitle title={isEs ? "Resumen del Acceso" : "Access Overview"} />
       <dl>
         <Fact label={isEs ? "Tipo de acceso" : "Access Type"}>
           {overview.type}
         </Fact>
         <Fact label={isEs ? "Ubicación" : "Location"}>{overview.location}</Fact>
         <Fact label={isEs ? "Fecha de creación" : "Created"}>
-          {formatDay(overview.createdOn)}
+          {overview.createdOn ? formatDay(overview.createdOn) : "—"}
         </Fact>
         <Fact label={isEs ? "Estado actual" : "Current Status"}>
           <AccessStatusBadge status={overview.status} isEs={isEs} />
@@ -158,106 +239,7 @@ function OverviewCard({ record, store, isEs, today }: Props) {
           {next ? formatDay(next.date) : "—"}
         </Fact>
       </dl>
-
-      {editing ? (
-        <EditOverviewModal
-          record={record}
-          store={store}
-          isEs={isEs}
-          onClose={() => setEditing(false)}
-        />
-      ) : null}
     </Card>
-  );
-}
-
-function EditOverviewModal({
-  record,
-  store,
-  isEs,
-  onClose,
-}: {
-  record: AccessRecord;
-  store: VascularAccessStore;
-  isEs: boolean;
-  onClose: () => void;
-}) {
-  const now = useNow();
-  const [type, setType] = useState(record.overview.type);
-  const [location, setLocation] = useState(record.overview.location);
-  const [createdOn, setCreatedOn] = useState(record.overview.createdOn);
-  const valid = location.trim().length > 0 && createdOn !== "";
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="small"
-      title={isEs ? "Editar acceso" : "Edit Access"}
-      footer={
-        <>
-          <Button
-            variant="neutral"
-            appearance="fill-stroke"
-            size="small"
-            onClick={onClose}
-          >
-            {isEs ? "Cancelar" : "Cancel"}
-          </Button>
-          <Button
-            size="small"
-            disabled={!valid}
-            onClick={() => {
-              store.editOverview(record.mrn, {
-                type,
-                location: location.trim(),
-                createdOn,
-              });
-              onClose();
-            }}
-          >
-            {isEs ? "Guardar" : "Save"}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-stack-md">
-        <FormField label={isEs ? "Tipo de acceso" : "Access Type"} required>
-          {(field) => (
-            <Select
-              {...field}
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              {ACCESS_TYPES.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </Select>
-          )}
-        </FormField>
-        <FormField label={isEs ? "Ubicación" : "Location"} required>
-          {(field) => (
-            <Input
-              {...field}
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Left Forearm"
-            />
-          )}
-        </FormField>
-        <FormField label={isEs ? "Fecha de creación" : "Created"} required>
-          {(field) => (
-            <Input
-              {...field}
-              type="date"
-              value={createdOn}
-              max={dayKey(now)}
-              onChange={(e) => setCreatedOn(e.target.value)}
-            />
-          )}
-        </FormField>
-      </div>
-    </Modal>
   );
 }
 
@@ -325,11 +307,8 @@ function concernDate(iso: string, isEs: boolean) {
 /* The member's reports under the button (client, 2026-10-06): they can see
    what they sent, and edit, delete or resend it. */
 /** "Vascular access center and dialysis center". */
-function recipientsLabel(
-  sendTo: ConcernRecipient[] | undefined,
-  isEs: boolean,
-): string {
-  const who = sendTo ?? ["access", "dialysis"];
+function recipientsLabel(sendTo: ConcernRecipient[], isEs: boolean): string {
+  const who = sendTo;
   const names = who.map((w) =>
     w === "access"
       ? isEs
@@ -342,7 +321,7 @@ function recipientsLabel(
   return names.join(isEs ? " y " : " and ");
 }
 
-function ConcernCard({ record, store, isEs }: Props) {
+function ConcernCard({ record, actions, target, isEs }: Props) {
   const [open, setOpen] = useState<AccessConcern | "new" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AccessConcern | null>(null);
@@ -442,13 +421,16 @@ function ConcernCard({ record, store, isEs }: Props) {
                       variant="neutral"
                       appearance="ghost"
                       leadingIcon={<Send aria-hidden="true" />}
-                      onClick={() => {
-                        store.resendConcern(record.mrn, concern.id);
-                        setNotice(
-                          isEs
-                            ? `Reenviado a: ${recipientsLabel(concern.sendTo, true)}.`
-                            : `Sent again to: ${recipientsLabel(concern.sendTo, false)}.`,
-                        );
+                      disabled={actions.isSaving}
+                      onClick={async () => {
+                        setNotice(null);
+                        /* Said only once the server took it. */
+                        if (await actions.resendConcern(record.id, concern.id))
+                          setNotice(
+                            isEs
+                              ? `Reenviado a: ${recipientsLabel(concern.sendTo, true)}.`
+                              : `Sent again to: ${recipientsLabel(concern.sendTo, false)}.`,
+                          );
                       }}
                     >
                       {isEs ? "Reenviar" : "Resend"}
@@ -474,7 +456,8 @@ function ConcernCard({ record, store, isEs }: Props) {
         <ConcernModal
           key={open === "new" ? "new" : open.id}
           record={record}
-          store={store}
+          actions={actions}
+          target={target}
           isEs={isEs}
           editing={open === "new" ? undefined : open}
           onClose={() => setOpen(null)}
@@ -516,8 +499,9 @@ function ConcernCard({ record, store, isEs }: Props) {
               </Button>
               <Button
                 variant="danger"
-                onClick={() => {
-                  store.deleteConcern(record.mrn, deleting.id);
+                disabled={actions.isSaving}
+                onClick={async () => {
+                  await actions.deleteConcern(record.id, deleting.id);
                   setDeleting(null);
                 }}
               >
@@ -533,14 +517,16 @@ function ConcernCard({ record, store, isEs }: Props) {
 
 function ConcernModal({
   record,
-  store,
+  actions,
+  target,
   isEs,
   editing,
   onClose,
   onSent,
 }: {
   record: AccessRecord;
-  store: VascularAccessStore;
+  actions: AccessActions;
+  target: AccessTarget | null;
   isEs: boolean;
   /** A report being changed; absent for a new one. */
   editing?: AccessConcern;
@@ -548,21 +534,23 @@ function ConcernModal({
   onSent: (edited: boolean, sendTo: ConcernRecipient[]) => void;
 }) {
   const safety = useSafetyNotice(isEs);
-  const photoLog = useAccessPhotos();
+  /* A dialysis center to send to only when the record names one: the
+     server refuses `dialysis` otherwise (a hint, not a rule). */
+  const hasDialysis = !!record.dialysisCenter;
   const [kinds, setKinds] = useState<string[]>(editing?.kinds ?? []);
   const [detail, setDetail] = useState(editing?.detail ?? "");
-  const [photoId, setPhotoId] = useState<string | null>(null);
-  /* An edit keeps the photo already sent unless a new one is picked. */
-  const [keptImage, setKeptImage] = useState(editing?.imageUrl);
-  const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
+  /* An edit keeps the photo already sent unless it is removed or a new
+     one is chosen. */
+  const [keepPhoto, setKeepPhoto] = useState(editing?.hasImage ?? false);
   /* A photo taken or picked from the phone's album right here (client,
-     2026-10-12: "under Report a Concern, put Add photo"). */
-  const [newImage, setNewImage] = useState<string | null>(null);
-  const [photoError, setPhotoError] = useState(false);
-  /* Where it goes, said up front: the dialysis center sends the order to
-     the access center, so by default both see it (client, 2026-10-12). */
+     2026-10-12: "under Report a Concern, put Add photo"): uploaded on
+     send, then sent by id. */
+  const [file, setFile] = useState<File | null>(null);
+  const [failed, setFailed] = useState<unknown>(null);
+  /* Where it goes, said up front: by default both see it (client,
+     2026-10-12). */
   const [sendTo, setSendTo] = useState<ConcernRecipient[]>(
-    editing?.sendTo ?? ["access", "dialysis"],
+    editing?.sendTo ?? (hasDialysis ? ["access", "dialysis"] : ["access"]),
   );
   const valid =
     kinds.length > 0 && detail.trim().length > 0 && sendTo.length > 0;
@@ -579,6 +567,19 @@ function ConcernModal({
         ? current.filter((entry) => entry !== id)
         : [...current, id],
     );
+
+  async function send() {
+    setFailed(null);
+    const draft = { kinds, detail: detail.trim(), sendTo, file };
+    const ok = editing
+      ? await actions.editConcern(record.id, editing.id, {
+          ...draft,
+          removePhoto: editing.hasImage && !keepPhoto && !file,
+        })
+      : await actions.reportConcern(record.id, draft);
+    if (ok) onSent(Boolean(editing), sendTo);
+    else setFailed(actions.error ?? true);
+  }
 
   return (
     <Modal
@@ -606,26 +607,8 @@ function ConcernModal({
           <Button
             size="small"
             variant="danger"
-            disabled={!valid}
-            onClick={() =>
-              safety.guard(() => {
-                const imageUrl =
-                  newImage ?? (photo ? photo.dataUrl : keptImage);
-                const change = {
-                  kinds,
-                  detail: detail.trim(),
-                  sendTo,
-                  ...(imageUrl ? { imageUrl } : {}),
-                };
-                if (editing) {
-                  store.editConcern(record.mrn, editing.id, change);
-                } else {
-                  store.reportConcern(record.mrn, change);
-                }
-                if (photo) photoLog.markSent(photo.id);
-                onSent(Boolean(editing), sendTo);
-              })
-            }
+            disabled={!valid || actions.isSaving}
+            onClick={() => safety.guard(() => void send())}
           >
             {editing
               ? isEs
@@ -640,6 +623,11 @@ function ConcernModal({
     >
       {safety.notice}
       <div className="space-y-stack-md">
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(null)}>
+            {writeErrorText(failed, isEs)}
+          </Alert>
+        ) : null}
         <ChipGroup label={isEs ? "¿Qué notas?" : "What are you noticing?"}>
           {CONCERN_KINDS.map((kind) => (
             <Chip
@@ -677,108 +665,41 @@ function ConcernModal({
           >
             {isEs ? "Centro de acceso vascular" : "Vascular access center"}
           </Chip>
-          <Chip
-            selected={sendTo.includes("dialysis")}
-            onClick={() => toggleRecipient("dialysis")}
-          >
-            {isEs ? "Centro de diálisis" : "Dialysis center"}
-          </Chip>
+          {hasDialysis ? (
+            <Chip
+              selected={sendTo.includes("dialysis")}
+              onClick={() => toggleRecipient("dialysis")}
+            >
+              {isEs ? "Centro de diálisis" : "Dialysis center"}
+            </Chip>
+          ) : null}
         </ChipGroup>
         {sendTo.length === 0 ? (
           <p className="text-caption text-danger">
             {isEs ? "Elija al menos uno." : "Choose at least one."}
           </p>
         ) : null}
-        {newImage ? (
+        {editing && keepPhoto && !file ? (
           <div className="flex items-center gap-inline-md">
-            {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
-            <img
-              src={newImage}
-              alt={isEs ? "Foto para enviar" : "Photo to send"}
-              className="h-14 w-14 rounded-control object-cover"
-            />
-            <Button
-              size="small"
-              variant="neutral"
-              appearance="ghost"
-              onClick={() => setNewImage(null)}
-            >
-              {isEs ? "Quitar foto" : "Remove photo"}
-            </Button>
-          </div>
-        ) : null}
-        <div className="space-y-stack-xs">
-          <label
-            className={buttonStyles({
-              variant: "neutral",
-              appearance: "fill-stroke",
-              size: "small",
-            })}
-          >
-            <Camera aria-hidden="true" />
-            {isEs ? "Tomar o elegir una foto" : "Take or choose a photo"}
-            {/* No `capture`: on a phone the picker then offers both the
-                camera and the album. */}
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (!file) return;
-                try {
-                  setPhotoError(false);
-                  setNewImage(await downscaleToDataUrl(file));
-                  setPhotoId(null);
-                } catch {
-                  setPhotoError(true);
-                }
-              }}
-            />
-          </label>
-          {photoError ? (
-            <p className="text-caption text-danger">
-              {isEs
-                ? "No se pudo leer esa foto."
-                : "That photo could not be read."}
-            </p>
-          ) : null}
-        </div>
-        {keptImage && !photo && !newImage ? (
-          <div className="flex items-center gap-inline-md">
-            {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, nothing to optimise */}
-            <img
-              src={keptImage}
+            <AccessPicture
+              target={target}
+              profileId={record.id}
+              kind="concern"
+              id={editing.id}
               alt={isEs ? "Foto enviada" : "Photo sent"}
-              className="h-14 w-14 rounded-control object-cover"
+              className="h-14 w-14 rounded-control"
             />
             <Button
               size="small"
               variant="neutral"
               appearance="ghost"
-              onClick={() => setKeptImage(undefined)}
+              onClick={() => setKeepPhoto(false)}
             >
               {isEs ? "Quitar foto" : "Remove photo"}
             </Button>
           </div>
         ) : null}
-        {photoLog.photos.length > 0 ? (
-          <PhotoPicker
-            photos={photoLog.photos}
-            value={photoId}
-            onChange={(id) => {
-              setPhotoId(id);
-              if (id) setNewImage(null);
-            }}
-            isEs={isEs}
-            label={
-              isEs
-                ? "O una de sus fotos guardadas"
-                : "Or one of your saved photos"
-            }
-          />
-        ) : null}
+        <PhotoInput file={file} onChange={setFile} isEs={isEs} />
         <Alert tone="warning">
           {isEs
             ? "Sangrado que no para, o sin frémito: llama al 911 o a tu centro ahora."
@@ -793,7 +714,7 @@ function ConcernModal({
 
 function RideRequestModal({
   record,
-  store,
+  actions,
   isEs,
   today,
   onClose,
@@ -807,6 +728,8 @@ function RideRequestModal({
   const [mobility, setMobility] = useState<MobilityLevel>("ambulatory");
   const [memberNote, setMemberNote] = useState("");
   const [tried, setTried] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const coordinator = record.dialysisCenter?.name ?? "";
   const addressError =
     pickupAddress.trim().length < 5
       ? isEs
@@ -814,17 +737,19 @@ function RideRequestModal({
         : "Enter the pickup address"
       : undefined;
 
-  function submit() {
+  async function submit() {
     setTried(true);
     if (addressError || !appointmentId) return;
-    store.requestTransport(record.mrn, {
+    setFailed(false);
+    const ok = await actions.requestTransport(record.id, {
       appointmentId,
       pickupAddress,
       returnTrip: returnTrip === "yes",
       mobility,
       memberNote,
     });
-    onClose();
+    if (ok) onClose();
+    else setFailed(true);
   }
 
   return (
@@ -834,22 +759,25 @@ function RideRequestModal({
       size="big"
       title={isEs ? "Solicitar transporte" : "Request a Ride"}
       description={
-        isEs
-          ? `Se envía a: ${TRANSPORT_COORDINATOR}`
-          : `Goes to: ${TRANSPORT_COORDINATOR}`
+        isEs ? `Se envía a: ${coordinator}` : `Goes to: ${coordinator}`
       }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             {isEs ? "Cancelar" : "Cancel"}
           </Button>
-          <Button onClick={submit} disabled={store.isSaving}>
+          <Button onClick={() => void submit()} disabled={actions.isSaving}>
             {isEs ? "Enviar solicitud" : "Submit Request"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(false)}>
+            {writeErrorText(null, isEs)}
+          </Alert>
+        ) : null}
         <FormField label={isEs ? "Cita" : "Appointment"} required>
           {(field) => (
             <Select
@@ -931,14 +859,18 @@ function RideRequestModal({
   );
 }
 
-function TransportCard({ record, store, isEs, today }: Props) {
+function TransportCard(props: Props) {
+  const { record, actions, isEs, today } = props;
   const [asking, setAsking] = useState(false);
   const requests = activeTransport(record).sort((a, b) =>
     a.requestedAt.localeCompare(b.requestedAt),
   );
-  const canAsk = upcomingAppointments(record, today).some(
-    (appointment) => !transportFor(record, appointment.id),
-  );
+  /* Rides go to the record's dialysis center: none named, none to ask. */
+  const canAsk =
+    !!record.dialysisCenter &&
+    upcomingAppointments(record, today).some(
+      (appointment) => !transportFor(record, appointment.id),
+    );
 
   return (
     <Card as="section" padding="small" className="h-full">
@@ -969,9 +901,7 @@ function TransportCard({ record, store, isEs, today }: Props) {
       ) : (
         <ul className="space-y-stack-md">
           {requests.map((request) => {
-            const appointment = record.appointments.find(
-              (a) => a.id === request.appointmentId,
-            )!;
+            const appointment = request.appointment;
             return (
               <li
                 key={request.id}
@@ -979,11 +909,15 @@ function TransportCard({ record, store, isEs, today }: Props) {
               >
                 <div className="flex items-start justify-between gap-inline-md">
                   <div className="min-w-0">
-                    <p className="text-label-md text-fg">{appointment.title}</p>
-                    <p className="text-caption text-fg-muted">
-                      {formatDay(appointment.date)} ·{" "}
-                      {formatTime(appointment.time)} · {appointment.place}
+                    <p className="text-label-md text-fg">
+                      {appointment?.title ?? "—"}
                     </p>
+                    {appointment ? (
+                      <p className="text-caption text-fg-muted">
+                        {formatDay(appointment.date)} ·{" "}
+                        {formatTime(appointment.time)} · {appointment.place}
+                      </p>
+                    ) : null}
                   </div>
                   <TransportStatusBadge status={request.status} isEs={isEs} />
                 </div>
@@ -1009,8 +943,9 @@ function TransportCard({ record, store, isEs, today }: Props) {
                   size="small"
                   variant="neutral"
                   appearance="ghost"
+                  disabled={actions.isSaving}
                   onClick={() =>
-                    store.cancelTransport(record.mrn, request.id, "member")
+                    void actions.cancelTransport(record.id, request.id)
                   }
                 >
                   {isEs ? "Cancelar transporte" : "Cancel ride"}
@@ -1022,13 +957,7 @@ function TransportCard({ record, store, isEs, today }: Props) {
       )}
 
       {asking ? (
-        <RideRequestModal
-          record={record}
-          store={store}
-          isEs={isEs}
-          today={today}
-          onClose={() => setAsking(false)}
-        />
+        <RideRequestModal {...props} onClose={() => setAsking(false)} />
       ) : null}
     </Card>
   );
@@ -1038,15 +967,16 @@ function TransportCard({ record, store, isEs, today }: Props) {
 
 /* One conversation with both teams (client, 2026-09-30), so the card is a
    preview of it and a way in. */
-function MessagesCard({ record, store, isEs }: Props) {
+function MessagesCard(props: Props) {
+  const { record, actions, isEs } = props;
   const now = useNow();
   const [open, setOpen] = useState(false);
-  const last = lastMessage(record.conversation, "member");
-  const unread = unreadFor(record, "member");
+  const last = lastMessage(record.conversation);
+  const unread = record.unread;
 
   function openConversation() {
     setOpen(true);
-    store.markConversationRead(record.mrn, "member");
+    if (unread > 0) void actions.markRead(record.id);
   }
 
   return (
@@ -1099,7 +1029,7 @@ function MessagesCard({ record, store, isEs }: Props) {
             )}
           >
             {last
-              ? `${last.author === "member" ? (isEs ? "Tú" : "You") : last.authorName}: ${last.body || (isEs ? "Foto" : "Photo")}`
+              ? `${last.mine ? (isEs ? "Tú" : "You") : (last.authorName ?? "")}: ${last.body || (isEs ? "Foto" : "Photo")}`
               : isEs
                 ? "Sin mensajes"
                 : "No messages yet"}
@@ -1113,12 +1043,7 @@ function MessagesCard({ record, store, isEs }: Props) {
       </button>
 
       {open ? (
-        <ConversationModal
-          record={record}
-          store={store}
-          isEs={isEs}
-          onClose={() => setOpen(false)}
-        />
+        <ConversationModal {...props} onClose={() => setOpen(false)} />
       ) : null}
     </Card>
   );
@@ -1126,19 +1051,16 @@ function MessagesCard({ record, store, isEs }: Props) {
 
 function ConversationModal({
   record,
-  store,
+  actions,
+  target,
   isEs,
   onClose,
-}: {
-  record: AccessRecord;
-  store: VascularAccessStore;
-  isEs: boolean;
-  onClose: () => void;
-}) {
+}: Props & { onClose: () => void }) {
   const safety = useSafetyNotice(isEs);
-  const photoLog = useAccessPhotos();
-  const [photoId, setPhotoId] = useState<string | null>(null);
-  const photo = photoLog.photos.find((entry) => entry.id === photoId) ?? null;
+  /* A fresh picture from the device only (NEW-5: a saved access photo
+     would need the same user's new upload anyway). */
+  const [file, setFile] = useState<File | null>(null);
+  const [failed, setFailed] = useState(false);
 
   return (
     <>
@@ -1154,35 +1076,35 @@ function ConversationModal({
             : "Your vascular access center and your dialysis center see this conversation, except what you mark private."
         }
       >
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(false)}>
+            {writeErrorText(actions.error, isEs)}
+          </Alert>
+        ) : null}
         <AccessConversationView
           record={record}
-          party="member"
+          party={record.party}
+          target={target}
           myName={record.memberName}
           isEs={isEs}
-          sending={store.isSaving}
-          attachedUrl={photo?.dataUrl}
-          attach={
-            <PhotoPicker
-              photos={photoLog.photos}
-              value={photoId}
-              onChange={setPhotoId}
-              isEs={isEs}
-            />
-          }
+          sending={actions.isSaving}
+          hasAttachment={!!file}
+          attach={<PhotoInput file={file} onChange={setFile} isEs={isEs} />}
           confirmSend={safety.guard}
-          onSend={(body, isPrivate) => {
-            store.sendMessage(record.mrn, "member", record.memberName, body, {
-              imageUrl: photo?.dataUrl,
-              private: isPrivate,
+          onSend={async (body, isPrivate) => {
+            setFailed(false);
+            const ok = await actions.sendMessage(record.id, body, {
+              file,
+              isPrivate,
             });
-            if (photo) photoLog.markSent(photo.id);
-            setPhotoId(null);
+            if (ok) setFile(null);
+            else setFailed(true);
           }}
           onSetPrivate={(messageId, isPrivate) =>
-            store.setMessagePrivate(record.mrn, messageId, isPrivate, "member")
+            void actions.setMessagePrivate(record.id, messageId, isPrivate)
           }
           onSetDialysisCanPost={(allowed) =>
-            store.setDialysisCanPost(record.mrn, allowed, "member")
+            void actions.setDialysisCanPost(record.id, allowed)
           }
         />
       </Modal>
@@ -1212,25 +1134,49 @@ export default function VascularAccess() {
   const now = useNow();
   const { language } = useLanguage();
   const isEs = language === "ES";
-  const store = useVascularAccess();
+  const target = useMemberTarget();
+  const profiles = useAccessProfiles(target);
   const memberName = useMemberName();
-  const record = recordForMember(store.state, memberName);
+  /* Several access centers may each keep a record (one per center): the
+     first is shown until another is picked. */
+  const [chosen, setChosen] = useState<string | null>(null);
+  const profileId =
+    profiles.profiles.find((p) => p.id === chosen)?.id ??
+    profiles.profiles[0]?.id ??
+    null;
+  const reads = useAccessRecord(target, profileId, {
+    memberName,
+    mrn: null,
+  });
+  const actions = useAccessActions(target);
+  const record = reads.record;
   const today = dayKey(now);
+  const error = profiles.error ?? reads.error;
+  const lang = isEs ? "es" : "en";
+  const retry = () => {
+    profiles.refetch();
+    reads.refetch();
+  };
 
   let body: React.ReactNode;
-  if (store.error) {
+  if (error) {
+    /* A 403 (not shared, a caregiver without the area) never shows
+       cached or sample data. */
     body = (
       <ErrorState
-        title={
+        title={errorTitleFor(
+          error,
           isEs
             ? "No se pudo cargar tu acceso"
-            : "Your access could not be loaded"
-        }
-        error={store.error}
-        onRetry={store.refetch}
+            : "Your access could not be loaded",
+          lang,
+        )}
+        message={errorMessageFor(error, undefined, lang)}
+        error={error}
+        onRetry={canRetry(error) ? retry : undefined}
       />
     );
-  } else if (store.isPending) {
+  } else if (profiles.isPending || reads.isPending) {
     body = <PageSkeleton />;
   } else if (!record) {
     body = (
@@ -1244,14 +1190,33 @@ export default function VascularAccess() {
       />
     );
   } else {
-    const props: Props = { record, store, isEs, today };
+    const props: Props = { record, actions, target, isEs, today };
     body = (
       <>
-        {store.writeError ? (
-          <Alert tone="danger" onDismiss={store.clearWriteError}>
-            {isEs
-              ? "No se pudo guardar. Intenta de nuevo."
-              : "That did not save. Try again."}
+        {profiles.profiles.length > 1 ? (
+          <FormField
+            label={isEs ? "Centro de acceso" : "Access center"}
+            className="max-w-sm"
+          >
+            {(field) => (
+              <Select
+                {...field}
+                value={record.id}
+                onChange={(e) => setChosen(e.target.value)}
+              >
+                {profiles.profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.accessCenter.name} · {profile.overview.type}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+        ) : null}
+
+        {actions.error ? (
+          <Alert tone="danger" onDismiss={actions.clearError}>
+            {writeErrorText(actions.error, isEs)}
           </Alert>
         ) : null}
 

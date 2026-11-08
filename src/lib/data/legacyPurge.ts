@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 8;
+export const STORAGE_VERSION = 11;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -291,6 +291,13 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "video-testimonials",
     since: 8,
     why: "Phase 12: stories are GET /public/testimonials, GET /me/testimonials and POST /testimonials (video through /files by id); the stored entries held dead blob: URLs and member emails; the samples (testimonials.seed.ts) are deleted. No screen reads this key.",
+  },
+  /* Phase 10 (OFFICE, STORAGE_VERSION 11): vascular access, rides and
+     referrals are the API's (BE modules/vascular-access). */
+  {
+    name: "vascular-access",
+    since: 11,
+    why: "Phase 10: access records are /patients/:id/access-profiles and /organizations/:id/access-profiles (several per patient, the viewer's party from the server, private messages sent hidden), rides are …/transport and the office queue /organizations/:id/transport, referrals are /organizations/:id/referrals with directory ids. The old key held every patient's record in one browser, matched by MRN and name, with data: URL photos; the seed (seedAccessState) is deleted. No screen reads this key.",
   },
 ];
 

@@ -13,9 +13,9 @@ import { Badge, Button, Select, Switch } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
-import { useVascularAccess } from "@/features/vascular-access/useVascularAccess";
-import { ACCESS_CENTER_NAME } from "@/features/vascular-access/vascularAccess.data";
+import { useOfficeOrgId } from "@/features/vascular-access/useAccess";
 import { SendReferralModal } from "./AccessReferrals";
+import { useReferrals } from "./useAccessReferrals";
 import { kidneyCareFor, usDate } from "./ccm.data";
 import type { CcmStore } from "./useCcm";
 import {
@@ -61,7 +61,8 @@ export function KidneyCareSection({
   today,
   canEdit,
 }: {
-  patient: { name: string; mrn: string };
+  /** `patientId` (the API id) is needed to read and send referrals. */
+  patient: { name: string; mrn: string; patientId?: string };
   store: CcmStore;
   today: string;
   /** The signed-in role may update the checklist. */
@@ -69,18 +70,28 @@ export function KidneyCareSection({
 }) {
   const { user } = useAuth();
   const me = user?.staffRole ? user.name : OFFICE_PERSON;
-  const access = useVascularAccess();
+  /* Phase 10: the practice's referrals for this patient, from the API by
+     patient id (none until the CCM list carries the id; the access record
+     itself is the access and dialysis centers', so progress follows the
+     referral). */
+  const orgId = useOfficeOrgId();
+  const patientId = patient.patientId ?? null;
+  const access = useReferrals(
+    orgId,
+    { patientId: patientId ?? undefined },
+    { enabled: !!patientId },
+  );
   const [referring, setReferring] = useState(false);
 
   const plan = kidneyCareFor(store.state, patient.mrn);
-  const referrals = access.referrals.filter(
-    (r) => r.mrn === patient.mrn && r.source === "nephrology",
-  );
-  const record = access.records.find((r) => r.mrn === patient.mrn);
-  const progress = accessProgress(plan, referrals, record);
+  const referrals = patientId
+    ? access.referrals.filter((r) => r.patient?.id === patientId)
+    : [];
+  const progress = accessProgress(plan, referrals, undefined);
   const marks = milestones(plan, progress);
   const sent = referrals.some((r) => r.kind !== "General Message");
   const canSend =
+    !!patientId &&
     plan?.answers.accessReferral === "Yes" &&
     !sent &&
     userCan(user, "messages.reply");
@@ -137,7 +148,7 @@ export function KidneyCareSection({
             <p className="mb-stack-sm text-label-md text-fg">
               Access Referral Progress
               <span className="ml-inline-sm text-caption font-normal text-fg-muted">
-                at {ACCESS_CENTER_NAME}
+                {referrals[0] ? `at ${referrals[0].to.name}` : null}
               </span>
             </p>
             <ol className="flex flex-wrap items-center gap-inline-sm">
@@ -252,14 +263,13 @@ export function KidneyCareSection({
         </p>
       </div>
 
-      {referring ? (
+      {referring && patientId ? (
         <SendReferralModal
           side="nephrology"
-          patients={[patient]}
-          initialMrn={patient.mrn}
+          orgId={orgId}
+          patients={[{ patientId, name: patient.name, mrn: patient.mrn }]}
+          initialPatientId={patientId}
           initialKind="New Access Referral"
-          me={me}
-          onSend={access.sendReferral}
           onClose={() => setReferring(false)}
         />
       ) : null}

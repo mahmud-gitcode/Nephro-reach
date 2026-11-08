@@ -97,7 +97,8 @@ describe("the list a care team reads", () => {
 describe("photos live on the server (Phase 7)", () => {
   it("a photo carries no picture data, only its id and details", () => {
     const one = photo({ id: "a" });
-    expect(one.dataUrl).toBeUndefined();
+    /* The type has no picture field at all since Phase 10 (QA M2). */
+    expect(one).not.toHaveProperty("dataUrl");
     expect(JSON.stringify(one)).not.toContain("data:");
   });
 });

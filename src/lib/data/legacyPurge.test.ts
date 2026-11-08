@@ -37,6 +37,8 @@ const RETIRED = [
   "nr:member:new.member@example.test:dialysis-treatments",
   "nr:dialysis-schedule",
   "nr:dialysis-access-photos",
+  /* Phase 10: vascular access, rides and referrals moved to the API. */
+  "nr:vascular-access",
 ];
 
 beforeEach(() => {

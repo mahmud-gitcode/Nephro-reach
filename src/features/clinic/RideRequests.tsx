@@ -1,26 +1,35 @@
 "use client";
 
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Car, Check, Plus } from "lucide-react";
 import {
+  Alert,
   Button,
   Card,
+  ErrorState,
   FormField,
   Input,
   Modal,
   Select,
+  Skeleton,
   SwitchRow,
 } from "@/components/ui";
+import { isApiError } from "@/lib/api/client";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { cn } from "@/lib/utils/cn";
 import {
-  activeTransport,
+  dayKey,
   formatDay,
   formatTime,
   MOBILITY_LEVELS,
-  transportFor,
-  upcomingAppointments,
+  toHhMm,
   type MobilityLevel,
-  type AccessRecord,
+  type QueuedRide,
   type TransportConfirmation,
   type TransportRequest,
 } from "@/features/vascular-access/vascularAccess.data";
@@ -30,10 +39,16 @@ import {
   TransportStatusBadge,
   TransportSteps,
 } from "@/features/vascular-access/AccessUi";
+import { listAppointments } from "@/features/vascular-access/access.repository";
+import { toAppointment } from "@/features/vascular-access/access.mapper";
 import {
-  useVascularAccess,
-  type VascularAccessStore,
-} from "@/features/vascular-access/useVascularAccess";
+  accessKey,
+  useAccessActions,
+  useAccessRoster,
+  useOfficeOrgId,
+  useRideQueue,
+  type AccessActions,
+} from "@/features/vascular-access/useAccess";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 
@@ -45,32 +60,40 @@ import { userCan } from "@/features/staff/staff";
    not the access center's job, so this lives on the dialysis center's
    messaging board, for the social worker and the administrator, and not
    on the access center's dashboard.
+
+   On the API (Phase 10): the queue is the office's rides across all its
+   records (`GET /organizations/:orgId/transport?active=true`, BE-12,
+   spec 048), paged. Each action is the record's own route
+   (acknowledge, confirm with HH:mm times, cancel, set up), which the server
+   allows only for the dialysis center on that record and only for the
+   roles with transport Edit (D4, PM-2); the buttons follow those levels
+   and a refusal is shown, never hidden.
    ========================================================================== */
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
+function refusal(error: unknown): string {
+  return isApiError(error) && error.messages[0]
+    ? error.messages[0]
+    : "That change did not save. Try again.";
+}
+
 /* ----------------------------------------------------------- ride booking */
 
 /** The coordinator books the ride: the details go to the patient. Also
- *  used to correct a confirmed ride. */
+ *  used to correct a confirmed ride (the same route). */
 function ConfirmRideModal({
-  record,
-  request,
-  store,
-  by,
+  ride,
+  actions,
   onClose,
 }: {
-  record: AccessRecord;
-  request: TransportRequest;
-  store: VascularAccessStore;
-  /** Who is booking it. */
-  by: string;
+  ride: QueuedRide;
+  actions: AccessActions;
   onClose: () => void;
 }) {
-  const appointment = record.appointments.find(
-    (a) => a.id === request.appointmentId,
-  );
+  const { request } = ride;
+  const appointment = request.appointment;
   const current = request.confirmation;
   const [form, setForm] = useState<TransportConfirmation>({
     pickupTime: current?.pickupTime ?? "",
@@ -81,11 +104,12 @@ function ConfirmRideModal({
     note: current?.note ?? "",
   });
   const [tried, setTried] = useState(false);
+  const [failed, setFailed] = useState<unknown>(null);
   const set = (change: Partial<TransportConfirmation>) =>
     setForm((f) => ({ ...f, ...change }));
 
   const errors = {
-    pickupTime: form.pickupTime ? undefined : "Set the pickup time",
+    pickupTime: toHhMm(form.pickupTime) ? undefined : "Set the pickup time",
     provider: form.provider.trim() ? undefined : "Who is driving?",
     phone:
       form.phone.replace(/\D/g, "").length >= 7
@@ -104,18 +128,25 @@ function ConfirmRideModal({
       onClose={onClose}
       size="wide"
       title={current ? "Edit Ride" : "Confirm Ride"}
-      description={`${record.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date)} at ${formatTime(appointment.time)}` : "Appointment removed"}`}
+      description={`${ride.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date)} at ${formatTime(appointment.time)}` : "Appointment removed"}`}
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
             Cancel
           </Button>
           <Button
-            onClick={() => {
+            disabled={actions.isSaving}
+            onClick={async () => {
               setTried(true);
               if (!valid) return;
-              store.confirmTransport(record.mrn, request.id, form, by);
-              onClose();
+              setFailed(null);
+              const ok = await actions.confirmTransport(
+                request.profileId,
+                request.id,
+                form,
+              );
+              if (ok) onClose();
+              else setFailed(actions.error ?? true);
             }}
           >
             {current ? "Save Changes" : "Confirm & Notify Patient"}
@@ -124,6 +155,11 @@ function ConfirmRideModal({
       }
     >
       <div className="space-y-stack-lg">
+        {failed ? (
+          <Alert tone="danger" onDismiss={() => setFailed(null)}>
+            {refusal(failed)}
+          </Alert>
+        ) : null}
         <section className="rounded-card-nested border border-line p-inset-sm">
           <h3 className="mb-stack-sm text-heading-5 text-fg">
             What the patient asked for
@@ -212,53 +248,168 @@ function ConfirmRideModal({
   );
 }
 
-/** Every live ride request. The dialysis center works them; the access
- *  center sees where each one is. */
+/** The office's live ride requests. The dialysis center works them; other
+ *  roles see where each one is. */
 export function RideRequestsPanel({
-  records,
-  store,
-  me,
+  orgId,
   canManage,
   onOpen,
 }: {
-  records: AccessRecord[];
-  store: VascularAccessStore;
-  /** Who is booking, on what they confirm. */
-  me: string;
-  /** The social worker and the administrator work the rides. */
+  orgId: string | null;
+  /** The roles with transport Edit (D4: Administrator, Social Worker). */
   canManage: boolean;
   /** Opens the patient's access record, where the page has one. */
-  onOpen?: (mrn: string) => void;
+  onOpen?: (profileId: string) => void;
 }) {
+  const queue = useRideQueue(orgId);
+  const actions = useAccessActions(
+    orgId ? { kind: "office", organizationId: orgId } : null,
+  );
   /* The ride being booked: by its request, or by the appointment of one
-     just set up by the clinic (its id is made by the store). */
+     just set up (its id comes back from the server's queue). */
   const [editing, setEditing] = useState<{
-    mrn: string;
+    profileId: string;
     id?: string;
     appointmentId?: string;
   } | null>(null);
   const [settingUp, setSettingUp] = useState(false);
-  const rides = records
-    .flatMap((record) =>
-      activeTransport(record).map((request) => ({ record, request })),
-    )
-    .sort((a, b) => {
-      /* The ones still to book first, oldest first. */
-      const rank = (r: TransportRequest) => (r.status === "Confirmed" ? 1 : 0);
-      return (
-        rank(a.request) - rank(b.request) ||
-        a.request.requestedAt.localeCompare(b.request.requestedAt)
-      );
-    });
+  const rides = [...queue.rides].sort((a, b) => {
+    /* The ones still to book first, oldest first. */
+    const rank = (r: TransportRequest) => (r.status === "Confirmed" ? 1 : 0);
+    return (
+      rank(a.request) - rank(b.request) ||
+      a.request.requestedAt.localeCompare(b.request.requestedAt)
+    );
+  });
   const works = canManage;
   const selected = editing
     ? rides.find(
         (ride) =>
-          ride.record.mrn === editing.mrn &&
+          ride.request.profileId === editing.profileId &&
           (ride.request.id === editing.id ||
             ride.request.appointmentId === editing.appointmentId),
       )
     : null;
+
+  let list: React.ReactNode;
+  if (queue.error) {
+    list = (
+      <ErrorState
+        title={errorTitleFor(queue.error, "Ride requests could not be loaded")}
+        message={errorMessageFor(queue.error, undefined)}
+        error={queue.error}
+        onRetry={canRetry(queue.error) ? queue.refetch : undefined}
+      />
+    );
+  } else if (queue.isPending) {
+    list = <Skeleton height={120} className="rounded-card" />;
+  } else if (rides.length === 0) {
+    list = <p className="text-body-sm text-fg-muted">No ride requests.</p>;
+  } else {
+    list = (
+      <ul className="space-y-stack-md">
+        {rides.map((ride) => {
+          const { request } = ride;
+          const appointment = request.appointment;
+          return (
+            <li
+              key={request.id}
+              className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
+            >
+              <div className="flex items-start justify-between gap-inline-md">
+                <div className="min-w-0">
+                  {onOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpen(request.profileId)}
+                      className={cn(
+                        "cursor-pointer rounded-control-small text-label-lg text-fg hover:text-fg-brand hover:underline",
+                        focusRing,
+                      )}
+                    >
+                      {ride.memberName}
+                    </button>
+                  ) : (
+                    <p className="text-label-lg text-fg">{ride.memberName}</p>
+                  )}
+                  <p className="text-caption text-fg-muted">
+                    {appointment
+                      ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)} · ${appointment.place}`
+                      : "Appointment removed"}
+                  </p>
+                </div>
+                <TransportStatusBadge status={request.status} />
+              </div>
+              <TransportSteps request={request} />
+              {request.confirmation ? (
+                <TransportConfirmationView
+                  confirmation={request.confirmation}
+                  confirmedBy={request.confirmedBy}
+                />
+              ) : (
+                <TransportAsk request={request} />
+              )}
+              {works ? (
+                <div className="flex flex-wrap gap-inline-sm">
+                  {request.status === "Requested" ? (
+                    <Button
+                      size="small"
+                      variant="neutral"
+                      appearance="fill-stroke"
+                      disabled={actions.isSaving}
+                      onClick={() =>
+                        void actions.acknowledgeTransport(
+                          request.profileId,
+                          request.id,
+                        )
+                      }
+                      leadingIcon={<Check aria-hidden="true" />}
+                    >
+                      Acknowledge
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    variant={
+                      request.status === "Confirmed" ? "neutral" : "primary"
+                    }
+                    appearance={
+                      request.status === "Confirmed" ? "fill-stroke" : "fill"
+                    }
+                    onClick={() =>
+                      setEditing({
+                        profileId: request.profileId,
+                        id: request.id,
+                      })
+                    }
+                    leadingIcon={<Car aria-hidden="true" />}
+                  >
+                    {request.status === "Confirmed"
+                      ? "Edit Ride"
+                      : "Confirm Ride"}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="neutral"
+                    appearance="ghost"
+                    disabled={actions.isSaving}
+                    onClick={() =>
+                      void actions.cancelTransport(
+                        request.profileId,
+                        request.id,
+                      )
+                    }
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
   return (
     <Card as="section" padding="small" className="h-full">
@@ -281,117 +432,36 @@ export function RideRequestsPanel({
           ? "Patients' rides to access appointments come to your social worker. Confirming sends the details to the patient."
           : "Your social worker or administrator arranges these rides."}
       </p>
-      {rides.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">No ride requests.</p>
-      ) : (
-        <ul className="space-y-stack-md">
-          {rides.map(({ record, request }) => {
-            const appointment = record.appointments.find(
-              (a) => a.id === request.appointmentId,
-            );
-            return (
-              <li
-                key={request.id}
-                className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm"
-              >
-                <div className="flex items-start justify-between gap-inline-md">
-                  <div className="min-w-0">
-                    {onOpen ? (
-                      <button
-                        type="button"
-                        onClick={() => onOpen(record.mrn)}
-                        className={cn(
-                          "cursor-pointer rounded-control-small text-label-lg text-fg hover:text-fg-brand hover:underline",
-                          focusRing,
-                        )}
-                      >
-                        {record.memberName}
-                      </button>
-                    ) : (
-                      <p className="text-label-lg text-fg">
-                        {record.memberName}
-                      </p>
-                    )}
-                    <p className="text-caption text-fg-muted">
-                      {appointment
-                        ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)} · ${appointment.place}`
-                        : "Appointment removed"}
-                    </p>
-                  </div>
-                  <TransportStatusBadge status={request.status} />
-                </div>
-                <TransportSteps request={request} />
-                {request.confirmation ? (
-                  <TransportConfirmationView
-                    confirmation={request.confirmation}
-                    confirmedBy={request.confirmedBy}
-                  />
-                ) : (
-                  <TransportAsk request={request} />
-                )}
-                {works ? (
-                  <div className="flex flex-wrap gap-inline-sm">
-                    {request.status === "Requested" ? (
-                      <Button
-                        size="small"
-                        variant="neutral"
-                        appearance="fill-stroke"
-                        onClick={() =>
-                          store.acknowledgeTransport(record.mrn, request.id)
-                        }
-                        leadingIcon={<Check aria-hidden="true" />}
-                      >
-                        Acknowledge
-                      </Button>
-                    ) : null}
-                    <Button
-                      size="small"
-                      variant={
-                        request.status === "Confirmed" ? "neutral" : "primary"
-                      }
-                      appearance={
-                        request.status === "Confirmed" ? "fill-stroke" : "fill"
-                      }
-                      onClick={() =>
-                        setEditing({ mrn: record.mrn, id: request.id })
-                      }
-                      leadingIcon={<Car aria-hidden="true" />}
-                    >
-                      {request.status === "Confirmed"
-                        ? "Edit Ride"
-                        : "Confirm Ride"}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="neutral"
-                      appearance="ghost"
-                      onClick={() =>
-                        store.cancelTransport(
-                          record.mrn,
-                          request.id,
-                          "dialysis",
-                        )
-                      }
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {actions.error && !selected && !settingUp ? (
+        <div className="mb-stack-md">
+          <Alert tone="danger" onDismiss={actions.clearError}>
+            {refusal(actions.error)}
+          </Alert>
+        </div>
+      ) : null}
+      {list}
+      {queue.hasMore ? (
+        <div className="mt-stack-md flex justify-center">
+          <Button
+            size="small"
+            variant="neutral"
+            appearance="fill-stroke"
+            onClick={queue.loadMore}
+          >
+            Load more
+          </Button>
+        </div>
+      ) : null}
 
       {settingUp ? (
         <SetUpRideModal
-          records={records}
+          orgId={orgId}
+          actions={actions}
           onClose={() => setSettingUp(false)}
-          onSave={(mrn, details) => {
-            store.requestTransport(mrn, details);
+          onSaved={(profileId, appointmentId) => {
             setSettingUp(false);
             /* Straight on to booking it. */
-            setEditing({ mrn, appointmentId: details.appointmentId });
+            setEditing({ profileId, appointmentId });
           }}
         />
       ) : null}
@@ -399,10 +469,8 @@ export function RideRequestsPanel({
       {selected ? (
         <ConfirmRideModal
           key={selected.request.id}
-          record={selected.record}
-          request={selected.request}
-          store={store}
-          by={me}
+          ride={selected}
+          actions={actions}
           onClose={() => setEditing(null)}
         />
       ) : null}
@@ -415,43 +483,44 @@ export function RideRequestsPanel({
 /** The dialysis center starts a ride for an upcoming access appointment
  *  that has none yet; booking it follows (ConfirmRideModal). */
 function SetUpRideModal({
-  records,
-  onSave,
+  orgId,
+  actions,
+  onSaved,
   onClose,
 }: {
-  records: AccessRecord[];
-  onSave: (
-    mrn: string,
-    details: {
-      appointmentId: string;
-      pickupAddress: string;
-      returnTrip: boolean;
-      mobility: MobilityLevel;
-      memberNote: string;
-    },
-  ) => void;
+  orgId: string | null;
+  actions: AccessActions;
+  onSaved: (profileId: string, appointmentId: string) => void;
   onClose: () => void;
 }) {
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
-  /* Upcoming appointments with no ride yet, per patient. */
-  const choices = records
-    .map((record) => ({
-      record,
-      open: upcomingAppointments(record, today).filter(
-        (a) => !transportFor(record, a.id),
-      ),
-    }))
-    .filter((c) => c.open.length > 0);
-  const [mrn, setMrn] = useState(choices[0]?.record.mrn ?? "");
-  const chosen = choices.find((c) => c.record.mrn === mrn);
-  const [appointmentId, setAppointmentId] = useState(
-    choices[0]?.open[0]?.id ?? "",
-  );
+  const [today] = useState(() => dayKey(Date.now()));
+  /* The records this office is the dialysis center on. */
+  const roster = useAccessRoster(orgId);
+  const choices = roster.rows.filter((row) => row.party === "dialysis");
+  const [profileId, setProfileId] = useState("");
+  const chosenId = profileId || choices[0]?.id || "";
+  const target = orgId
+    ? ({ kind: "office", organizationId: orgId } as const)
+    : null;
+  /* That record's upcoming visits with no ride yet. */
+  const visits = useQuery({
+    queryKey: accessKey(target, chosenId, "appointments", "upcoming"),
+    queryFn: () =>
+      listAppointments(target!, chosenId, { state: "upcoming", limit: 50 }),
+    enabled: !!target && !!chosenId,
+  });
+  const open = (visits.data?.items ?? [])
+    .map(toAppointment)
+    .filter((a) => !a.completed && a.date >= today && !a.transportStatus);
+  const [appointmentId, setAppointmentId] = useState("");
+  const chosenAppointment = appointmentId || open[0]?.id || "";
   const [pickup, setPickup] = useState("");
   const [returnTrip, setReturnTrip] = useState(true);
   const [mobility, setMobility] = useState<MobilityLevel>("ambulatory");
   const [tried, setTried] = useState(false);
+  const [failed, setFailed] = useState<unknown>(null);
   const pickupError = pickup.trim() ? undefined : "Enter the pickup address.";
+  const loadError = roster.error ?? visits.error;
 
   return (
     <Modal
@@ -465,17 +534,20 @@ function SetUpRideModal({
             Cancel
           </Button>
           <Button
-            disabled={!appointmentId}
-            onClick={() => {
+            disabled={!chosenAppointment || actions.isSaving}
+            onClick={async () => {
               setTried(true);
-              if (pickupError || !appointmentId) return;
-              onSave(mrn, {
-                appointmentId,
+              if (pickupError || !chosenAppointment) return;
+              setFailed(null);
+              const ok = await actions.setUpTransport(chosenId, {
+                appointmentId: chosenAppointment,
                 pickupAddress: pickup.trim(),
                 returnTrip,
                 mobility,
                 memberNote: "Arranged by your dialysis center.",
               });
+              if (ok) onSaved(chosenId, chosenAppointment);
+              else setFailed(actions.error ?? true);
             }}
           >
             Continue
@@ -483,28 +555,39 @@ function SetUpRideModal({
         </>
       }
     >
-      {choices.length === 0 ? (
+      {loadError ? (
+        <ErrorState
+          title={errorTitleFor(loadError, "Appointments could not be loaded")}
+          message={errorMessageFor(loadError, undefined)}
+          error={loadError}
+        />
+      ) : roster.isPending ? (
+        <Skeleton height={160} className="rounded-card" />
+      ) : choices.length === 0 ? (
         <p className="text-body-sm text-fg-muted">
           Every upcoming access appointment already has a ride.
         </p>
       ) : (
         <div className="space-y-stack-md">
+          {failed ? (
+            <Alert tone="danger" onDismiss={() => setFailed(null)}>
+              {refusal(failed)}
+            </Alert>
+          ) : null}
           <FormField label="Patient" required>
             {(field) => (
               <Select
                 {...field}
-                value={mrn}
+                value={chosenId}
                 onChange={(e) => {
-                  setMrn(e.target.value);
-                  const next = choices.find(
-                    (c) => c.record.mrn === e.target.value,
-                  );
-                  setAppointmentId(next?.open[0]?.id ?? "");
+                  setProfileId(e.target.value);
+                  setAppointmentId("");
                 }}
               >
-                {choices.map(({ record }) => (
-                  <option key={record.mrn} value={record.mrn}>
-                    {record.memberName} · MRN {record.mrn}
+                {choices.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.memberName}
+                    {row.mrn ? ` · MRN ${row.mrn}` : ""}
                   </option>
                 ))}
               </Select>
@@ -514,10 +597,15 @@ function SetUpRideModal({
             {(field) => (
               <Select
                 {...field}
-                value={appointmentId}
+                value={chosenAppointment}
                 onChange={(e) => setAppointmentId(e.target.value)}
               >
-                {(chosen?.open ?? []).map((a) => (
+                {open.length === 0 ? (
+                  <option value="">
+                    No upcoming appointment without a ride
+                  </option>
+                ) : null}
+                {open.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.title} · {formatDay(a.date)}, {formatTime(a.time)}
                   </option>
@@ -566,25 +654,15 @@ function SetUpRideModal({
 }
 
 /** The panel as the clinic's Messages page shows it: only to the people
- *  who book rides, the social worker and the administrator. */
+ *  who book rides, the social worker and the administrator (the server's
+ *  transport level, D4/PM-2). Name and props unchanged: ClinicMessages
+ *  (COLLAB) renders it. */
 export function ClinicRideRequests() {
   const { user } = useAuth();
-  const store = useVascularAccess();
+  const orgId = useOfficeOrgId();
   /* The dialysis center's alone: never on the nephrology office's page. */
-  if (
-    user?.role !== "clinic" ||
-    !userCan(user, "rides.manage") ||
-    store.isPending ||
-    store.error
-  ) {
+  if (user?.role !== "clinic" || !userCan(user, "rides.manage") || !orgId) {
     return null;
   }
-  return (
-    <RideRequestsPanel
-      records={store.records}
-      store={store}
-      me={user?.staffRole ? user.name : "Social Worker"}
-      canManage
-    />
-  );
+  return <RideRequestsPanel orgId={orgId} canManage />;
 }
