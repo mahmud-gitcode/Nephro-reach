@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 13;
+export const STORAGE_VERSION = 14;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -342,6 +342,13 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     name: "ccm-condition-library",
     since: 10,
     why: "Phase 9: the condition library is GET/POST/PUT/PATCH/DELETE /organizations/:orgId/ccm/conditions. No screen reads this key.",
+  },
+  /* Phase 14a (EDU-BIZ, STORAGE_VERSION 14): the hospital portal is the
+     API's (BE modules/education program enrollments, modules/reports). */
+  {
+    name: "hospital-enrollments",
+    since: 14,
+    why: "Phase 14: hospital enrollments are GET/POST/PATCH /organizations/:id/program-enrollments (this hospital's own roster, server scoped; discharge, accessUntil and hasAccess from the server) and the figures are /organizations/:id/reports/education; a member's hospital course is /patients/:id/education/enrollments. The sample enrollments (hospital.seed.ts, synthetic names, emails and MRNs) are deleted. No screen reads this key.",
   },
 ];
 

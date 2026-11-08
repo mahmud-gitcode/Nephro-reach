@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import {
+  AsyncSection,
   Button,
   Card,
   EmptyState,
@@ -17,12 +18,21 @@ import {
   TableRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
-import { useCan } from "@/features/staff/useStaffAccounts";
-import { useHospital } from "./useHospital";
 import {
-  accessUntil,
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
+import { useCan } from "@/features/staff/useStaffAccounts";
+import {
+  useEnrollPatient,
+  useHospitalEnrollments,
+  useHospitalPrograms,
+  useUpdateEnrollment,
+} from "./useHospital";
+import {
   educationStatus,
-  programById,
+  type EnrollmentStatus,
   type HospitalEnrollment,
 } from "./hospital.data";
 import {
@@ -42,12 +52,15 @@ import {
    when they were enrolled, newly diagnosed or already on dialysis, their
    program and where they are in it, and their enrollment status — which
    staff with the permission can update.
+
+   The list is the server's (this hospital's own roster, a page at a
+   time); the status filter is sent to the server, and the search and the
+   education filter apply to the loaded rows only.
    ========================================================================== */
 
 const HREF = "/dashboard/hospital/patients";
 
 export default function HospitalPatients() {
-  const hospital = useHospital();
   const canEnroll = useCan("hospital.enroll");
   const canAssign = useCan("hospital.education.assign");
   const [query, setQuery] = useState("");
@@ -55,23 +68,40 @@ export default function HospitalPatients() {
   const [education, setEducation] = useState("all");
   const [enrolling, setEnrolling] = useState(false);
   const [editing, setEditing] = useState<HospitalEnrollment | null>(null);
+  const hospital = useHospitalEnrollments(
+    status === "all" ? {} : { status: status as EnrollmentStatus },
+  );
+  const programs = useHospitalPrograms().programs;
+  const enroll = useEnrollPatient(programs);
+  const update = useUpdateEnrollment(programs);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return hospital.enrollments.filter(
       (e) =>
-        (status === "all" || e.status === status) &&
         (education === "all" || educationStatus(e) === education) &&
-        (!q || e.patientName.toLowerCase().includes(q) || e.mrn.includes(q)),
+        (!q ||
+          e.patientName.toLowerCase().includes(q) ||
+          e.mrn.toLowerCase().includes(q)),
     );
-  }, [hospital.enrollments, query, status, education]);
+  }, [hospital.enrollments, query, education]);
+
+  const closeEnroll = () => {
+    enroll.reset();
+    enroll.forgetPartial();
+    setEnrolling(false);
+  };
+  const closeEdit = () => {
+    update.reset();
+    setEditing(null);
+  };
 
   return (
     <div className="space-y-stack-xl">
       <PageTitle
         href={HREF}
         action={
-          canEnroll ? (
+          canEnroll && canAssign ? (
             <Button leadingIcon={<Plus />} onClick={() => setEnrolling(true)}>
               Enroll patient
             </Button>
@@ -112,20 +142,29 @@ export default function HospitalPatients() {
           </Select>
         </div>
 
-        {hospital.isPending ? (
-          <div className="p-card pt-0">
-            <Skeleton height={240} />
-          </div>
-        ) : rows.length === 0 ? (
-          <EmptyState
-            title="No patients here"
-            description={
-              hospital.enrollments.length === 0
-                ? "Enroll a patient to start their education."
-                : "No patient matches these filters."
-            }
-          />
-        ) : (
+        <AsyncSection
+          pending={hospital.isPending}
+          error={hospital.error}
+          errorTitle={errorTitleFor(hospital.error, "Patients did not load")}
+          errorMessage={errorMessageFor(hospital.error, undefined)}
+          onRetry={canRetry(hospital.error) ? hospital.refetch : undefined}
+          isEmpty={rows.length === 0}
+          skeleton={
+            <div className="p-card pt-0">
+              <Skeleton height={240} />
+            </div>
+          }
+          empty={
+            <EmptyState
+              title="No patients here"
+              description={
+                hospital.enrollments.length === 0
+                  ? "Enroll a patient to start their education."
+                  : "No patient matches these filters."
+              }
+            />
+          }
+        >
           <Table minWidth={980}>
             <TableHead>
               <TableRow>
@@ -136,7 +175,7 @@ export default function HospitalPatients() {
                 <TableHeaderCell>Enrollment</TableHeaderCell>
                 <TableHeaderCell>Education</TableHeaderCell>
                 <TableHeaderCell>Access until</TableHeaderCell>
-                {canEnroll ? (
+                {canAssign ? (
                   <TableHeaderCell>
                     <span className="sr-only">Actions</span>
                   </TableHeaderCell>
@@ -149,15 +188,13 @@ export default function HospitalPatients() {
                   <TableCell emphasis>
                     <span className="block">{e.patientName}</span>
                     <span className="block text-caption font-normal text-fg-muted">
-                      MRN {e.mrn}
+                      MRN {e.mrn || "—"}
                     </span>
                   </TableCell>
                   <TableCell>
                     <DiagnosisBadge diagnosis={e.diagnosis} />
                   </TableCell>
-                  <TableCell>
-                    {programById(e.programId)?.nameEn ?? e.programId}
-                  </TableCell>
+                  <TableCell>{e.programName}</TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
                     {shortDay(e.enrolledAt)}
                   </TableCell>
@@ -173,9 +210,11 @@ export default function HospitalPatients() {
                   <TableCell className="whitespace-nowrap tabular-nums">
                     {e.status === "admitted"
                       ? "While admitted"
-                      : shortDay(accessUntil(e))}
+                      : e.status === "withdrawn"
+                        ? "Ended"
+                        : shortDay(e.accessUntil)}
                   </TableCell>
-                  {canEnroll ? (
+                  {canAssign ? (
                     <TableCell>
                       <Button
                         size="small"
@@ -193,22 +232,46 @@ export default function HospitalPatients() {
               ))}
             </TableBody>
           </Table>
-        )}
+          {hospital.hasMore ? (
+            <div className="flex justify-center p-card">
+              <Button
+                size="small"
+                variant="neutral"
+                appearance="fill-stroke"
+                disabled={hospital.isLoadingMore}
+                onClick={hospital.loadMore}
+              >
+                Show more patients
+              </Button>
+            </div>
+          ) : null}
+        </AsyncSection>
       </Card>
 
       {enrolling ? (
         <EnrollModal
-          existing={hospital.enrollments}
-          onEnroll={hospital.enroll}
-          onClose={() => setEnrolling(false)}
+          programs={programs}
+          saving={enroll.isPending}
+          partial={enroll.partialPatientId !== null}
+          error={enroll.error?.cause ?? enroll.error}
+          onEnroll={(draft) => enroll.mutate(draft, { onSuccess: closeEnroll })}
+          onClose={closeEnroll}
         />
       ) : null}
       {editing ? (
         <EditEnrollmentModal
           enrollment={editing}
+          programs={programs}
           canAssign={canAssign}
-          onSave={(change) => hospital.update(editing.id, change)}
-          onClose={() => setEditing(null)}
+          saving={update.isPending}
+          error={update.error}
+          onSave={(change) =>
+            update.mutate(
+              { enrollment: editing, change },
+              { onSuccess: closeEdit },
+            )
+          }
+          onClose={closeEdit}
         />
       ) : null}
     </div>

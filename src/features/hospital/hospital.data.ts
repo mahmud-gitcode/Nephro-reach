@@ -1,22 +1,30 @@
 /* ==========================================================================
-   Hospital — kidney education and the move home
+   Hospital: kidney education and the move home (Phase 14, ADR 0007)
    --------------------------------------------------------------------------
    The client (2026-10-13): the hospital enrolls the patient, NephroReach
    delivers the education, hospital staff follow participation, and the
-   patient keeps learning after discharge. Hospitals already plan
-   discharges and coordinate care, so none of that is rebuilt here.
+   patient keeps learning after discharge.
 
-   Programs are data, not screens: the 3-Day Kidney Failure Crash Course is
-   the first, and another program is one more entry in PROGRAMS — "support
-   future kidney education programs without requiring a redesign".
+   Everything here is the API's: enrollments are
+   GET /organizations/:org/program-enrollments (this hospital's own, server
+   scoped), the figures are GET /organizations/:org/reports/education, and
+   the programs are the published courses with an access rule after
+   discharge (GET /courses, accessDaysAfterDischarge set). The server sets
+   the enrollment status, the discharge instant, accessUntil and hasAccess;
+   nothing here computes them. This file only maps API shapes to what the
+   screens show, and validates the enroll form.
 
-   Pure: state in, state out. Storage lives in useHospital.ts.
+   Patients are identified by `patientId` only. The MRN is display text: it
+   is never a key, a lookup or part of a URL (INT-13).
    ========================================================================== */
 
-import { csvCell } from "@/lib/utils/download";
+import type { ApiProgramEnrollment } from "@/features/clinic/enrollment.mapping";
+import type {
+  ApiCourse,
+  ApiCourseSummary,
+} from "@/features/education/education.mappers";
 
-export type LessonKind =
-  "video" | "presentation" | "activity" | "knowledge-check";
+export type LessonKind = string;
 
 export type ProgramDay = {
   day: number;
@@ -25,211 +33,263 @@ export type ProgramDay = {
   items: Array<{ kind: LessonKind; titleEn: string; titleEs: string }>;
 };
 
+/** A hospital program: a published course with an access rule after
+ *  discharge. `id` is the course id; `slug` is what an enrollment's
+ *  `program` holds. */
 export type EducationProgram = {
   id: string;
+  slug: string;
   nameEn: string;
   nameEs: string;
   summaryEn: string;
   summaryEs: string;
+  /** The course's modules, one per day. Empty until the outline loads. */
   days: ProgramDay[];
-  /** How long the patient keeps access after discharge (program rule). */
+  /** How long the patient keeps access after discharge (course rule). */
   accessDaysAfterDischarge: number;
 };
-
-/* The course outline. Each day carries the four kinds of material the
-   client listed; the videos, slides, activities and questions themselves
-   come from her program content and are added in Class Management. */
-const crashDay = (
-  day: number,
-  titleEn: string,
-  titleEs: string,
-): ProgramDay => ({
-  day,
-  titleEn,
-  titleEs,
-  items: [
-    {
-      kind: "video",
-      titleEn: `Day ${day} video`,
-      titleEs: `Video del día ${day}`,
-    },
-    {
-      kind: "presentation",
-      titleEn: `Day ${day} presentation`,
-      titleEs: `Presentación del día ${day}`,
-    },
-    {
-      kind: "activity",
-      titleEn: `Day ${day} interactive activity`,
-      titleEs: `Actividad interactiva del día ${day}`,
-    },
-    {
-      kind: "knowledge-check",
-      titleEn: `Day ${day} knowledge check`,
-      titleEs: `Prueba de conocimientos del día ${day}`,
-    },
-  ],
-});
-
-export const PROGRAMS: EducationProgram[] = [
-  {
-    id: "crash-3",
-    nameEn: "3-Day Kidney Failure Crash Course",
-    nameEs: "Curso Intensivo de 3 Días sobre Insuficiencia Renal",
-    summaryEn:
-      "Structured education for hospitalized kidney patients, started in the hospital and continued at home.",
-    summaryEs:
-      "Educación estructurada para pacientes renales hospitalizados, que empieza en el hospital y continúa en casa.",
-    days: [
-      crashDay(
-        1,
-        "Understanding kidney failure",
-        "Entender la insuficiencia renal",
-      ),
-      crashDay(2, "Your treatment options", "Sus opciones de tratamiento"),
-      crashDay(
-        3,
-        "Going home and what comes next",
-        "Volver a casa y lo que sigue",
-      ),
-    ],
-    accessDaysAfterDischarge: 21,
-  },
-];
-
-export function programById(id: string): EducationProgram | undefined {
-  return PROGRAMS.find((p) => p.id === id);
-}
 
 export type Diagnosis = "new" | "on-dialysis";
 export type EnrollmentStatus = "admitted" | "discharged" | "withdrawn";
 export type EducationStatus = "not-started" | "in-progress" | "completed";
 
-export type DayProgress = {
-  /** ISO 8601, when the patient finished the day. */
-  completedAt?: string;
-  /** The day's knowledge check, once taken. */
-  knowledgeCheck?: { score: number; total: number; passed: boolean };
+export const DIAGNOSES: readonly Diagnosis[] = ["new", "on-dialysis"];
+export const HOSPITAL_STATUSES: readonly EnrollmentStatus[] = [
+  "admitted",
+  "discharged",
+  "withdrawn",
+];
+
+/* ---------------------------------------------------------------- the API */
+
+/** One row of GET /organizations/:org/program-enrollments at a hospital. */
+export type ApiHospitalEnrollment = ApiProgramEnrollment & {
+  diagnosis: string | null;
+  /** ISO instant, or null. */
+  dischargedAt: string | null;
+  /** YYYY-MM-DD (the hospital's calendar), or null while admitted. */
+  accessUntil: string | null;
+  hasAccess: boolean;
+};
+
+export type ApiEducationReport = {
+  enrolled: number;
+  started: number;
+  completed: number;
+  notStarted: number;
+  completionPercent: number;
+  byDiagnosis: { key: string; count: number }[];
+  perMonth: {
+    month: string;
+    enrolled: number;
+    started: number;
+    completed: number;
+    completionPercent: number;
+  }[];
+};
+
+/* ------------------------------------------------------------- the screen */
+
+export type EnrollmentProgress = {
+  classesCompleted: number;
+  classesTotal: number;
+  percent: number;
+  status: EducationStatus;
+  lastActivityAt: string | null;
 };
 
 export type HospitalEnrollment = {
   id: string;
-  /** The hospital organisation (staff.ts) — a hospital sees only its own. */
-  hospitalId: string;
+  patientId: string;
   patientName: string;
-  /** The patient's own NephroReach account: they learn signed in as
-   *  themselves (client, 2026-10-13). */
-  patientEmail: string;
+  /** Display only; may be blank. */
   mrn: string;
-  diagnosis: Diagnosis;
-  programId: string;
-  /** yyyy-mm-dd */
-  enrolledAt: string;
-  enrolledBy: string;
+  diagnosis: Diagnosis | null;
+  /** The program slug (the course slug). */
+  program: string;
+  courseId: string | null;
+  programName: string;
   status: EnrollmentStatus;
-  /** yyyy-mm-dd, set when discharged. */
-  dischargedAt?: string;
-  progress: Record<number, DayProgress>;
-  /** ISO 8601 */
-  lastActivityAt?: string;
+  /** ISO instant. */
+  enrolledAt: string;
+  /** ISO instant, or null. */
+  dischargedAt: string | null;
+  /** YYYY-MM-DD, or null while admitted. */
+  accessUntil: string | null;
+  hasAccess: boolean;
+  progress: EnrollmentProgress;
 };
 
-export type HospitalState = { enrollments: HospitalEnrollment[] };
+const EDUCATION_STATUSES: readonly EducationStatus[] = [
+  "not-started",
+  "in-progress",
+  "completed",
+];
 
-/* ------------------------------------------------------------- dates */
-
-function iso(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function educationStatusOf(value: string | undefined): EducationStatus {
+  return EDUCATION_STATUSES.includes(value as EducationStatus)
+    ? (value as EducationStatus)
+    : "not-started";
 }
 
-export function addDays(day: string, n: number): string {
-  const [y, m, d] = day.split("-").map(Number);
-  return iso(new Date(y, m - 1, d + n));
+/** An unknown status from the server is shown as withdrawn (no access),
+ *  never as admitted. */
+export function enrollmentStatusOf(value: string): EnrollmentStatus {
+  return HOSPITAL_STATUSES.includes(value as EnrollmentStatus)
+    ? (value as EnrollmentStatus)
+    : "withdrawn";
 }
 
-/* ------------------------------------------------------- the patient */
+export function diagnosisOf(value: string | null): Diagnosis | null {
+  return DIAGNOSES.includes(value as Diagnosis) ? (value as Diagnosis) : null;
+}
 
-export function daysDone(e: HospitalEnrollment): number {
-  return Object.values(e.progress).filter((p) => p.completedAt).length;
+export function toHospitalEnrollment(
+  row: ApiHospitalEnrollment,
+): HospitalEnrollment {
+  return {
+    id: row.id,
+    patientId: row.patientId,
+    patientName: `${row.firstName} ${row.lastName}`.trim(),
+    mrn: row.mrn ?? "",
+    diagnosis: diagnosisOf(row.diagnosis),
+    program: row.program,
+    courseId: row.courseId,
+    programName: row.courseTitleEn?.trim() || row.program,
+    status: enrollmentStatusOf(row.status),
+    enrolledAt: row.enrolledAt,
+    dischargedAt: row.dischargedAt,
+    accessUntil: row.accessUntil,
+    hasAccess: row.hasAccess,
+    progress: {
+      classesCompleted: row.progress?.classesCompleted ?? 0,
+      classesTotal: row.progress?.classesTotal ?? 0,
+      percent: row.progress?.percent ?? 0,
+      status: educationStatusOf(row.progress?.status),
+      lastActivityAt: row.progress?.lastActivityAt ?? null,
+    },
+  };
 }
 
 export function educationStatus(e: HospitalEnrollment): EducationStatus {
-  const program = programById(e.programId);
-  const done = daysDone(e);
-  if (program && done >= program.days.length) return "completed";
-  return done > 0 || e.lastActivityAt ? "in-progress" : "not-started";
+  return e.progress.status;
 }
 
 export function percentDone(e: HospitalEnrollment): number {
-  const total = programById(e.programId)?.days.length ?? 0;
-  return total ? Math.round((daysDone(e) / total) * 100) : 0;
+  return e.progress.percent;
 }
 
-/**
- * When the patient's access ends: open while admitted, then the program's
- * days after discharge (21 for the crash course), closed on withdrawal.
- * Null while admitted — access does not run out in the hospital.
- */
-export function accessUntil(e: HospitalEnrollment): string | null {
-  if (e.status === "admitted") return null;
-  if (e.status === "withdrawn") return e.dischargedAt ?? e.enrolledAt;
-  const days = programById(e.programId)?.accessDaysAfterDischarge ?? 0;
-  return addDays(e.dischargedAt ?? e.enrolledAt, days);
+/* ---------------------------------------------------------- the programs */
+
+/** Hospital programs are the published courses with an access rule after
+ *  discharge. */
+export function isHospitalCourse(course: ApiCourseSummary): boolean {
+  return (
+    course.accessDaysAfterDischarge !== null &&
+    course.accessDaysAfterDischarge !== undefined
+  );
 }
 
-export function hasAccess(e: HospitalEnrollment, today: string): boolean {
-  if (e.status === "withdrawn") return false;
-  const until = accessUntil(e);
-  return until === null || today <= until;
+export function toProgram(
+  course: ApiCourseSummary,
+  detail?: ApiCourse | null,
+): EducationProgram {
+  return {
+    id: course.id,
+    slug: course.slug,
+    nameEn: course.titleEn,
+    nameEs: course.titleEs || course.titleEn,
+    summaryEn: course.descriptionEn,
+    summaryEs: course.descriptionEs || course.descriptionEn,
+    accessDaysAfterDischarge: course.accessDaysAfterDischarge ?? 0,
+    days: (detail?.modules ?? [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((module, index) => ({
+        day: index + 1,
+        titleEn: module.titleEn,
+        titleEs: module.titleEs || module.titleEn,
+        items: module.classes
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((c) => ({
+            kind: c.kind,
+            titleEn: c.titleEn,
+            titleEs: c.titleEs || c.titleEn,
+          })),
+      })),
+  };
 }
 
-/* ------------------------------------------------------- the hospital */
+/* ------------------------------------------------------------ the figures */
 
 export type HospitalSummary = {
   enrolled: number;
+  started: number;
   inProgress: number;
   completed: number;
   notStarted: number;
   /** Enrolled and not finished. */
   incomplete: number;
+  completionPct: number;
   newlyDiagnosed: number;
   onDialysis: number;
 };
 
-export function summarise(list: HospitalEnrollment[]): HospitalSummary {
-  const status = list.map(educationStatus);
-  const completed = status.filter((s) => s === "completed").length;
+/** The server's education report as the screens' figures. `started`
+ *  includes the patients who completed (any class progress). */
+export function summaryFrom(report: ApiEducationReport): HospitalSummary {
+  const count = (key: string) =>
+    report.byDiagnosis.find((row) => row.key === key)?.count ?? 0;
   return {
-    enrolled: list.length,
-    inProgress: status.filter((s) => s === "in-progress").length,
-    completed,
-    notStarted: status.filter((s) => s === "not-started").length,
-    incomplete: list.length - completed,
-    newlyDiagnosed: list.filter((e) => e.diagnosis === "new").length,
-    onDialysis: list.filter((e) => e.diagnosis === "on-dialysis").length,
+    enrolled: report.enrolled,
+    started: report.started,
+    inProgress: Math.max(0, report.started - report.completed),
+    completed: report.completed,
+    notStarted: report.notStarted,
+    incomplete: Math.max(0, report.enrolled - report.completed),
+    completionPct: report.completionPercent,
+    newlyDiagnosed: count("new"),
+    onDialysis: count("on-dialysis"),
   };
 }
 
-export function forHospital(
-  state: HospitalState,
-  hospitalId: string,
-): HospitalEnrollment[] {
-  return state.enrollments.filter((e) => e.hospitalId === hospitalId);
+export type MonthRow = {
+  /** yyyy-mm */
+  month: string;
+  enrolled: number;
+  started: number;
+  completed: number;
+  /** 0-100, from the server. */
+  completionPct: number;
+};
+
+/** Monthly participation, newest month first. */
+export function monthsFrom(report: ApiEducationReport): MonthRow[] {
+  return report.perMonth
+    .map((row) => ({
+      month: row.month,
+      enrolled: row.enrolled,
+      started: row.started,
+      completed: row.completed,
+      completionPct: row.completionPercent,
+    }))
+    .sort((a, b) => b.month.localeCompare(a.month));
 }
 
 export type ActivityEvent = {
   id: string;
-  /** ISO date or date-time; sorts newest first. */
+  /** ISO instant; sorts newest first. */
   at: string;
   patientName: string;
-  kind: "enrolled" | "day-completed" | "course-completed" | "discharged";
-  day?: number;
+  kind: "enrolled" | "active" | "course-completed" | "discharged";
 };
 
-/** Enrollment and education activity, newest first. */
+/** Enrollment and education activity from one loaded page of enrollments,
+ *  newest first (the server has no activity feed). */
 export function recentActivity(
-  list: HospitalEnrollment[],
-  limit = 8,
+  list: readonly HospitalEnrollment[],
+  limit = 10,
 ): ActivityEvent[] {
   const events: ActivityEvent[] = [];
   for (const e of list) {
@@ -239,15 +299,12 @@ export function recentActivity(
       patientName: e.patientName,
       kind: "enrolled",
     });
-    const total = programById(e.programId)?.days.length ?? 0;
-    for (const [day, p] of Object.entries(e.progress)) {
-      if (!p.completedAt) continue;
+    if (e.progress.lastActivityAt) {
       events.push({
-        id: `${e.id}-day-${day}`,
-        at: p.completedAt,
+        id: `${e.id}-activity`,
+        at: e.progress.lastActivityAt,
         patientName: e.patientName,
-        kind: Number(day) === total ? "course-completed" : "day-completed",
-        day: Number(day),
+        kind: e.progress.status === "completed" ? "course-completed" : "active",
       });
     }
     if (e.dischargedAt) {
@@ -262,206 +319,121 @@ export function recentActivity(
   return events.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 
-export type MonthRow = {
-  /** yyyy-mm */
-  month: string;
-  enrolled: number;
-  started: number;
-  completed: number;
-  /** Completed as a share of enrolled that month, 0–100. */
-  completionPct: number;
-};
+/* ------------------------------------------------------------- the forms */
 
-/** Monthly participation, by the month each patient was enrolled. */
-export function monthlyReport(list: HospitalEnrollment[]): MonthRow[] {
-  const byMonth = new Map<string, HospitalEnrollment[]>();
-  for (const e of list) {
-    const key = e.enrolledAt.slice(0, 7);
-    byMonth.set(key, [...(byMonth.get(key) ?? []), e]);
-  }
-  return [...byMonth.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([month, rows]) => {
-      const completed = rows.filter(
-        (e) => educationStatus(e) === "completed",
-      ).length;
-      return {
-        month,
-        enrolled: rows.length,
-        started: rows.filter((e) => educationStatus(e) !== "not-started")
-          .length,
-        completed,
-        completionPct: rows.length
-          ? Math.round((completed / rows.length) * 100)
-          : 0,
-      };
-    });
-}
-
-/** The patient list as CSV, for a report download. */
-export function enrollmentsCsv(list: HospitalEnrollment[]): string {
-  const header = [
-    "Patient",
-    "MRN",
-    "Diagnosis",
-    "Program",
-    "Enrolled",
-    "Enrollment status",
-    "Education status",
-    "Days completed",
-    "Access until",
-  ];
-  const rows = list.map((e) => [
-    e.patientName,
-    e.mrn,
-    e.diagnosis === "new" ? "Newly diagnosed" : "On dialysis",
-    programById(e.programId)?.nameEn ?? e.programId,
-    e.enrolledAt,
-    e.status,
-    educationStatus(e),
-    daysDone(e),
-    accessUntil(e) ?? "While admitted",
-  ]);
-  return [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n");
-}
-
-export function monthlyCsv(rows: MonthRow[]): string {
-  const header = ["Month", "Enrolled", "Started", "Completed", "Completion %"];
-  return [
-    header,
-    ...rows.map((r) => [
-      r.month,
-      r.enrolled,
-      r.started,
-      r.completed,
-      r.completionPct,
-    ]),
-  ]
-    .map((r) => r.map(csvCell).join(","))
-    .join("\n");
-}
-
-/* ----------------------------------------------------------- changes */
+/** Enroll-by-email (D11) is open: the email field is shown but never sent
+ *  until the decision is made. */
+export const ENROLL_BY_EMAIL = false;
 
 export type EnrollmentDraft = {
-  patientName: string;
+  firstName: string;
+  lastName: string;
+  /** Collected but not sent while ENROLL_BY_EMAIL is false (D11). */
   patientEmail: string;
   mrn: string;
   diagnosis: Diagnosis;
+  /** The course id of the chosen program. */
   programId: string;
-  enrolledAt: string;
 };
 
-export type EnrollmentError = "name" | "email" | "mrn" | "duplicate";
+export type EnrollmentError =
+  "firstName" | "lastName" | "email" | "mrn" | "program";
+
+export const MRN_MAX = 40;
 
 export function enrollmentError(
-  list: HospitalEnrollment[],
   draft: EnrollmentDraft,
 ): EnrollmentError | null {
-  if (!draft.patientName.trim()) return "name";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.patientEmail.trim()))
-    return "email";
-  if (!draft.mrn.trim()) return "mrn";
-  const email = draft.patientEmail.trim().toLowerCase();
-  if (
-    list.some(
-      (e) =>
-        e.patientEmail === email &&
-        e.programId === draft.programId &&
-        e.status !== "withdrawn",
-    )
-  )
-    return "duplicate";
+  if (!draft.firstName.trim()) return "firstName";
+  if (!draft.lastName.trim()) return "lastName";
+  const email = draft.patientEmail.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "email";
+  const mrn = draft.mrn.trim();
+  if (!mrn || mrn.length > MRN_MAX) return "mrn";
+  if (!draft.programId) return "program";
   return null;
 }
 
-export function enroll(
-  state: HospitalState,
-  hospitalId: string,
-  draft: EnrollmentDraft,
-  by: string,
-  now: number,
-): HospitalState {
-  return {
-    enrollments: [
-      ...state.enrollments,
-      {
-        id: `henr-${now}`,
-        hospitalId,
-        patientName: draft.patientName.trim(),
-        patientEmail: draft.patientEmail.trim().toLowerCase(),
-        mrn: draft.mrn.trim(),
-        diagnosis: draft.diagnosis,
-        programId: draft.programId,
-        enrolledAt: draft.enrolledAt,
-        enrolledBy: by,
-        status: "admitted",
-        progress: {},
-      },
-    ],
-  };
+/* ------------------------------------------------------------- the dates */
+
+/** YYYY-MM-DD of an instant on a time zone's calendar. */
+export function dayIn(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-export function updateEnrollment(
-  state: HospitalState,
-  id: string,
-  change: Partial<
-    Pick<
-      HospitalEnrollment,
-      "status" | "dischargedAt" | "programId" | "diagnosis"
-    >
-  >,
-): HospitalState {
-  return {
-    enrollments: state.enrollments.map((e) => {
-      if (e.id !== id) return e;
-      const next = { ...e, ...change };
-      /* A new program starts from its own first day. */
-      if (change.programId && change.programId !== e.programId) {
-        next.progress = {};
-      }
-      if (change.status === "admitted") delete next.dischargedAt;
-      return next;
-    }),
-  };
-}
-
-/** The patient finished a day (from their own classroom). */
-export function completeDay(
-  state: HospitalState,
-  id: string,
-  day: number,
-  now: number,
-  knowledgeCheck?: DayProgress["knowledgeCheck"],
-): HospitalState {
-  const at = new Date(now).toISOString();
-  return {
-    enrollments: state.enrollments.map((e) =>
-      e.id === id
-        ? {
-            ...e,
-            lastActivityAt: at,
-            progress: {
-              ...e.progress,
-              [day]: {
-                ...e.progress[day],
-                completedAt: e.progress[day]?.completedAt ?? at,
-                ...(knowledgeCheck ? { knowledgeCheck } : {}),
-              },
-            },
-          }
-        : e,
-    ),
-  };
-}
-
-/** A member's own active hospital courses, by their account email. */
-export function enrollmentsForMember(
-  state: HospitalState,
-  email: string,
-): HospitalEnrollment[] {
-  const mine = email.trim().toLowerCase();
-  return state.enrollments.filter(
-    (e) => e.patientEmail === mine && e.status !== "withdrawn",
+/** Minutes the zone is ahead of UTC at that instant. */
+function offsetMinutes(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  const n = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    n("year"),
+    n("month") - 1,
+    n("day"),
+    n("hour"),
+    n("minute"),
+    n("second"),
   );
+  return Math.round((asUtc - instant.getTime()) / 60000);
+}
+
+/** Noon of `day` in `timeZone`, as an instant (DST-safe). */
+export function noonIn(day: string, timeZone: string): Date {
+  const [y, m, d] = day.split("-").map(Number);
+  const guess = new Date(Date.UTC(y, m - 1, d, 12));
+  const first = offsetMinutes(guess, timeZone);
+  const shifted = new Date(guess.getTime() - first * 60000);
+  const second = offsetMinutes(shifted, timeZone);
+  return second === first
+    ? shifted
+    : new Date(guess.getTime() - second * 60000);
+}
+
+/**
+ * The discharge instant to send for a picked day: "today" (on the
+ * hospital's calendar) is now; another day is noon of that day in the
+ * hospital's zone. The server refuses a future instant and one before the
+ * enrollment, so on the enrollment day the instant is moved just after the
+ * enrollment when noon came before it.
+ */
+export function dischargeInstant(
+  day: string,
+  timeZone: string,
+  now: Date,
+  enrolledAt: string,
+): string {
+  if (day === dayIn(now, timeZone)) return now.toISOString();
+  let at = noonIn(day, timeZone);
+  const enrolled = new Date(enrolledAt);
+  if (at < enrolled && dayIn(enrolled, timeZone) === day)
+    at = new Date(Math.min(enrolled.getTime() + 60000, now.getTime()));
+  return at.toISOString();
+}
+
+/** Today on the viewer's calendar, YYYY-MM-DD. */
+export function localToday(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/** The viewer's calendar day of an ISO instant (or a YYYY-MM-DD as is). */
+export function dayOf(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : localToday(date);
 }
