@@ -111,8 +111,7 @@ class Recorder {
   private consoleErrors: string[] = [];
   private pageErrors: string[] = [];
   private server5xx: string[] = [];
-  private client4xx: Array<{ status: number; path: string; code: string }> =
-    [];
+  private client4xx: Array<{ status: number; path: string; code: string }> = [];
   mutations = 0;
   requests = 0;
   shot = 0;
@@ -449,7 +448,10 @@ async function mark(page: Page, key: string): Promise<boolean> {
       if (h.closest('[role="dialog"], [role="alertdialog"]')) continue;
       if ((h.getAttribute("role") ?? "") !== role) continue;
       const isFile = h instanceof HTMLInputElement && h.type === "file";
-      if (!isFile && (h.getClientRects().length === 0 || h.offsetParent === null))
+      if (
+        !isFile &&
+        (h.getClientRects().length === 0 || h.offsetParent === null)
+      )
         continue;
       if (
         (h as HTMLButtonElement).disabled ||
@@ -484,7 +486,8 @@ async function snapshot(page: Page): Promise<string> {
     .evaluate(() => {
       const text = document.body.innerText;
       let h = 0;
-      for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+      for (let i = 0; i < text.length; i++)
+        h = (h * 31 + text.charCodeAt(i)) | 0;
       const states = [
         ...document.querySelectorAll(
           "[aria-expanded],[aria-selected],[aria-pressed],[aria-checked],input,select,textarea",
@@ -504,7 +507,9 @@ async function snapshot(page: Page): Promise<string> {
 }
 
 async function openDialog(page: Page) {
-  const d = page.locator('[role="dialog"]:visible, [role="alertdialog"]:visible');
+  const d = page.locator(
+    '[role="dialog"]:visible, [role="alertdialog"]:visible',
+  );
   return (await d.count()) ? d.last() : null;
 }
 
@@ -512,11 +517,7 @@ const SUBMIT =
   /^(save|send|submit|create|add|invite|enroll|confirm|continue|next|request|assign|apply|update|book|schedule|post|upload|share|start)\b/i;
 
 /** Submit an open modal empty, expect validation, then close it. */
-async function exerciseDialog(
-  rec: Recorder,
-  pagePath: string,
-  opener: string,
-) {
+async function exerciseDialog(rec: Recorder, pagePath: string, opener: string) {
   const page = rec.page;
   const dlg = await openDialog(page);
   if (!dlg) return;
@@ -550,8 +551,14 @@ async function exerciseDialog(
       rec.counts.controlsClicked++;
       await page.waitForTimeout(120);
       if (!(await dlg.isVisible().catch(() => false))) {
-        rec.notes.push(`${pagePath} | ${title}: inner "${label}" closed the dialog`);
-        await rec.drain(pagePath, `${opener} > ${label}`, `click ${label} in ${title}`);
+        rec.notes.push(
+          `${pagePath} | ${title}: inner "${label}" closed the dialog`,
+        );
+        await rec.drain(
+          pagePath,
+          `${opener} > ${label}`,
+          `click ${label} in ${title}`,
+        );
         return;
       }
     }
@@ -561,15 +568,25 @@ async function exerciseDialog(
       const sel = selects.nth(i);
       if (await sel.isDisabled().catch(() => true)) continue;
       const values = await sel
-        .evaluate((x) => [...(x as HTMLSelectElement).options].map((o) => o.value))
+        .evaluate((x) =>
+          [...(x as HTMLSelectElement).options].map((o) => o.value),
+        )
         .catch(() => [] as string[]);
       if (values.length > 1) {
-        await sel.selectOption(values[1], { timeout: 2000 }).catch(() => undefined);
+        await sel
+          .selectOption(values[1], { timeout: 2000 })
+          .catch(() => undefined);
         rec.counts.controlsClicked++;
-        await sel.selectOption(values[0], { timeout: 2000 }).catch(() => undefined);
+        await sel
+          .selectOption(values[0], { timeout: 2000 })
+          .catch(() => undefined);
       }
     }
-    await rec.drain(pagePath, `${opener} > (inner controls)`, `click the choices in ${title}`);
+    await rec.drain(
+      pagePath,
+      `${opener} > (inner controls)`,
+      `click the choices in ${title}`,
+    );
   }
   const buttons = dlg.locator("button:visible");
   const names = await buttons.allInnerTexts().catch(() => [] as string[]);
@@ -582,8 +599,9 @@ async function exerciseDialog(
     }
   }
   const hasFields =
-    (await dlg.locator("input:visible, textarea:visible, select:visible").count()) >
-    0;
+    (await dlg
+      .locator("input:visible, textarea:visible, select:visible")
+      .count()) > 0;
   /* An edit dialog opens prefilled: "empty" would mean re-saving a seeded
      record, so it is only opened and closed (journeys save their own). */
   const prefilled = await dlg
@@ -591,9 +609,15 @@ async function exerciseDialog(
       [...d.querySelectorAll("input, textarea")].some((e) => {
         const i = e as HTMLInputElement;
         if (
-          ["checkbox", "radio", "hidden", "file", "date", "time", "number"].includes(
-            i.type,
-          )
+          [
+            "checkbox",
+            "radio",
+            "hidden",
+            "file",
+            "date",
+            "time",
+            "number",
+          ].includes(i.type)
         )
           return false;
         return !i.disabled && !i.readOnly && i.value.trim() !== "";
@@ -630,12 +654,15 @@ async function exerciseDialog(
           (await dlg
             .evaluate(
               (d) =>
-                d.querySelectorAll("input:invalid, textarea:invalid, select:invalid")
-                  .length > 0,
+                d.querySelectorAll(
+                  "input:invalid, textarea:invalid, select:invalid",
+                ).length > 0,
             )
             .catch(() => false)) ||
           (await dlg
-            .getByText(/required|please (enter|choose|select|add|pick)|must|enter a|choose a|select a|is not valid|invalid/i)
+            .getByText(
+              /required|please (enter|choose|select|add|pick)|must|enter a|choose a|select a|is not valid|invalid/i,
+            )
             .count()
             .catch(() => 0)) > 0);
       if (!still && rec.mutations > m0)
@@ -672,9 +699,12 @@ async function closeDialog(rec: Recorder, pagePath: string, title: string) {
     if (attempt === 0) await page.keyboard.press("Escape");
     else {
       const close = dlg
-        .getByRole("button", { name: /^(cancel|close|done|not now|×|x|back)$/i })
+        .getByRole("button", {
+          name: /^(cancel|close|done|not now|×|x|back)$/i,
+        })
         .first();
-      if (await close.count()) await close.click({ timeout: 2000 }).catch(() => undefined);
+      if (await close.count())
+        await close.click({ timeout: 2000 }).catch(() => undefined);
       else await page.keyboard.press("Escape");
     }
     await page.waitForTimeout(250);
@@ -803,7 +833,9 @@ async function crawlPage(
         continue;
       }
       if (u.origin !== appOrigin) {
-        rec.notes.push(`${href} | outside link ${u.protocol}${u.host}${u.pathname}`);
+        rec.notes.push(
+          `${href} | outside link ${u.protocol}${u.host}${u.pathname}`,
+        );
         continue;
       }
     }
@@ -838,7 +870,9 @@ async function crawlPage(
           await page.waitForTimeout(300);
           await rec.drain(href, name, `choose "${other}" in ${name}`);
           before = await snapshot(page);
-          await target.selectOption(cur, { timeout: 3000 }).catch(() => undefined);
+          await target
+            .selectOption(cur, { timeout: 3000 })
+            .catch(() => undefined);
         }
       } else if (next.type === "search") {
         /* Judged while filled: the list must react to the query. */
@@ -898,7 +932,9 @@ async function crawlPage(
         }
       }
     } catch (e) {
-      rec.notes.push(`${href} | ${name}: not clickable (${String(e).slice(0, 80)})`);
+      rec.notes.push(
+        `${href} | ${name}: not clickable (${String(e).slice(0, 80)})`,
+      );
       continue;
     }
     await page.waitForTimeout(350);
@@ -956,15 +992,17 @@ async function crawlPage(
 
 async function checkLinks(rec: Recorder, links: Set<string>, pages: string[]) {
   for (const link of links) {
-    if (pages.includes(link.split("?")[0])) continue;
     rec.counts.linksChecked++;
+    /* A sidebar page was already opened and crawled. */
+    if (pages.includes(link.split("?")[0])) continue;
     const res = await rec.page
       .goto(link, { waitUntil: "domcontentloaded" })
       .catch(() => null);
     await settle(rec.page, 5000);
     const notFound =
       (res?.status() ?? 200) === 404 ||
-      (await rec.page.getByText(/This page could not be found|404/).count()) > 0;
+      (await rec.page.getByText(/This page could not be found|404/).count()) >
+        0;
     if (notFound)
       await rec.add({
         page: link,
@@ -1033,7 +1071,9 @@ async function twoPortalAccount(): Promise<Account> {
     try {
       const list = (await json(await client.get("/me/invitations"), "mine"))
         .data as Array<{ id: string; kind: string; status: string }>;
-      const next = list.find((i) => i.kind === "STAFF" && i.status === "PENDING");
+      const next = list.find(
+        (i) => i.kind === "STAFF" && i.status === "PENDING",
+      );
       if (!next) break;
       const r = await client.post(`/me/invitations/${next.id}/accept`);
       expect(r.ok(), `accept: ${r.status()}`).toBeTruthy();
@@ -1060,7 +1100,11 @@ const ROLES: Role[] = [
     limited: true,
   },
   { id: "nephrology-owner", account: ACCOUNTS.nephrology },
-  { id: "nephrology-ccm", account: staff("ccm@nephroreach.com"), limited: true },
+  {
+    id: "nephrology-ccm",
+    account: staff("ccm@nephroreach.com"),
+    limited: true,
+  },
   {
     id: "two-portal-hospital",
     account: getTwoPortal,
@@ -1097,7 +1141,8 @@ for (const role of ROLES) {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL(/\/(dashboard|select-portal)/, { timeout: 30_000 });
     if (/\/select-portal/.test(page.url()) || role.portal) {
-      if (!/\/select-portal/.test(page.url())) await page.goto("/select-portal");
+      if (!/\/select-portal/.test(page.url()))
+        await page.goto("/select-portal");
       const open = role.portal
         ? page.getByRole("button", { name: `Open: ${role.portal}` })
         : page.getByRole("button", { name: /^Open: / }).first();
@@ -1166,7 +1211,9 @@ for (const role of ROLES) {
         !KNOWN[`${i.kind}|${i.page}|${i.control}`],
     );
     expect(
-      failing.map((i) => `${i.severity} ${i.kind} ${i.page} ${i.control}: ${i.actual}`),
+      failing.map(
+        (i) => `${i.severity} ${i.kind} ${i.page} ${i.control}: ${i.actual}`,
+      ),
       `${role.id}: blocker/high issues`,
     ).toEqual([]);
   });
@@ -1244,7 +1291,7 @@ test("journey: hospital enrolls, discharges and withdraws its own synthetic pati
   await expect(row).toContainText("Admitted");
 
   /* Saved on the server: still there after a reload. */
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   await expect(row).toBeVisible({ timeout: 15_000 });
   await rec.drain(H, "Enroll patient", "enroll a synthetic patient");
@@ -1257,7 +1304,7 @@ test("journey: hospital enrolls, discharges and withdraws its own synthetic pati
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden({ timeout: 15_000 });
   rec.counts.formsSubmittedValid++;
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   await expect(row).toContainText("Discharged", { timeout: 15_000 });
   await expect(row).not.toContainText("While admitted");
@@ -1272,7 +1319,7 @@ test("journey: hospital enrolls, discharges and withdraws its own synthetic pati
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15_000 });
   rec.counts.formsSubmittedValid++;
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   await expect(row).toContainText("Withdrawn", { timeout: 15_000 });
   await expect(row).toContainText("Ended");
@@ -1322,7 +1369,7 @@ test("journey: hospital team invitation (empty, invalid, valid) and withdrawing 
   await expect(dlg).toBeHidden({ timeout: 15_000 });
   rec.counts.formsSubmittedValid++;
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   if (await invitations.count()) await invitations.first().click();
   await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
@@ -1339,7 +1386,7 @@ test("journey: hospital team invitation (empty, invalid, valid) and withdrawing 
       .last()
       .click();
   await expect(withdraw).toHaveCount(0, { timeout: 15_000 });
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   if (await invitations.count()) await invitations.first().click();
   await expect(withdraw).toHaveCount(0);
@@ -1375,7 +1422,7 @@ test("journey: hospital support request (empty, then valid, listed after reload)
   await expect(page.getByText(subject).first()).toBeVisible({
     timeout: 15_000,
   });
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   await expect(page.getByText(subject).first()).toBeVisible({
     timeout: 15_000,
