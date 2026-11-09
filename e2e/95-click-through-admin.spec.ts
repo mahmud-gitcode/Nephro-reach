@@ -1,7 +1,8 @@
 /* Phase 16e: click-through crawl of every platform admin page.
    For each platform role (the owner with MANAGE everywhere, Administrative
-   Support with support WRITE + content MANAGE, and an optional custom
-   "write-only" admin), the crawler signs in, collects the pages from the
+   Support with support WRITE + content MANAGE, and a custom "write-only"
+   admin, required: fixture-write-admin.mjs makes it and run-crawl.sh passes
+   its login), the crawler signs in, collects the pages from the
    sidebar plus every admin route, and on each page:
    - clicks every visible button, link, tab, switch, checkbox, select option,
      menu item and pagination control (each distinct control name at most
@@ -23,7 +24,13 @@ import fs from "node:fs";
 import path from "node:path";
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 import { ApiClient } from "./fixtures/api";
-import { ACCOUNTS, apiOrigin, appOrigin, type Account } from "./fixtures/env";
+import {
+  ACCOUNTS,
+  apiOrigin,
+  appOrigin,
+  env,
+  type Account,
+} from "./fixtures/env";
 import { cookieSession } from "./fixtures/session";
 import { expect, test } from "./fixtures/test";
 
@@ -88,7 +95,7 @@ const ADMIN_ROUTES = [
    pending or outside this lane's fix rules). key = `${kind}|${page}|${control}`. */
 const KNOWN: Record<string, string> = {};
 
-type Role = { id: string; account: Account; optional?: boolean };
+type Role = { id: string; account: Account };
 const ROLES: Role[] = [
   { id: "admin-owner", account: ACCOUNTS.admin },
   {
@@ -101,7 +108,6 @@ const ROLES: Role[] = [
   },
   {
     id: "admin-write",
-    optional: true,
     account: {
       email: process.env.E2E_P16E_WRITE_ADMIN_EMAIL ?? "",
       password: process.env.E2E_P16E_WRITE_ADMIN_PASSWORD ?? "",
@@ -466,9 +472,7 @@ class Crawl {
 
 type Seen = { key: string; name: string; tag: string; role: string };
 
-async function listControls(
-  scope: Locator,
-): Promise<
+async function listControls(scope: Locator): Promise<
   (Seen & {
     idx: number;
     disabled: boolean;
@@ -1207,189 +1211,528 @@ async function seedTaggedRecords() {
 }
 
 test.describe.configure({ mode: "serial" });
-test.setTimeout(45 * 60_000);
+test.setTimeout(75 * 60_000);
 
 const allIssues: Issue[] = [];
 const allCoverage: Record<string, Coverage> = {};
+/** The crawl that is running now: flushed with the finished ones, so a
+ *  failed or timed-out run still leaves what it found. */
+let live: Crawl | null = null;
 
-test.beforeAll(async () => {
-  ensureDir(path.join(OUT, "screens"));
-  await seedTaggedRecords();
-});
-
-test.afterAll(async () => {
+function flush() {
+  ensureDir(OUT);
+  const issues = live ? [...allIssues, ...live.issues] : allIssues;
+  const coverage = live
+    ? { ...allCoverage, [live.role]: live.cov }
+    : allCoverage;
   fs.writeFileSync(
     path.join(OUT, "issues.json"),
     JSON.stringify(
-      { tag: TAG, at: new Date().toISOString(), issues: allIssues },
+      {
+        tag: TAG,
+        at: new Date().toISOString(),
+        partial: Boolean(live),
+        issues,
+      },
       null,
       1,
     ),
   );
   fs.writeFileSync(
     path.join(OUT, "coverage.json"),
-    JSON.stringify(allCoverage, null, 1),
+    JSON.stringify(coverage, null, 1),
   );
+}
+
+test.beforeAll(async () => {
+  ensureDir(path.join(OUT, "screens"));
+  flush();
+  await seedTaggedRecords();
+});
+
+test.afterAll(() => {
+  flush();
+});
+
+const WRITE_ADMIN = ROLES.find((r) => r.id === "admin-write")!.account;
+function requireWriteAdmin() {
+  if (!WRITE_ADMIN.email || !WRITE_ADMIN.password)
+    throw new Error(
+      "E2E_P16E_WRITE_ADMIN_EMAIL / _PASSWORD are required for this lane (run fixture-write-admin.mjs, then run-crawl.sh)",
+    );
+}
+
+/* MANAGE-only actions (backend @RequirePlatformPermission /
+   @RequireOrganizationPermission at PermissionLevel.MANAGE) that the
+   WRITE-only admin must be refused. Guards run before validation, so the
+   server answers 403 whatever the body; the ids are random and the bodies
+   empty, so even a broken guard could not change a real record.
+   Organization settings and profile need only WRITE on the server, so they
+   are not MANAGE-only and are not probed here. */
+const NO_ID = "00000000-0000-4000-8000-0000000000aa";
+type Probe = {
+  what: string;
+  method: "post" | "patch" | "put" | "delete";
+  path: (org: string) => string;
+  ownerControl?: boolean;
+};
+const MANAGE_ONLY: Probe[] = [
+  // Staff and roles (platform team).
+  {
+    what: "invite staff",
+    method: "post",
+    path: (o) => `/organizations/${o}/invitations`,
+  },
+  {
+    what: "revoke an invitation",
+    method: "post",
+    path: (o) => `/organizations/${o}/invitations/${NO_ID}/revoke`,
+    ownerControl: true,
+  },
+  {
+    what: "resend an invitation",
+    method: "post",
+    path: (o) => `/organizations/${o}/invitations/${NO_ID}/resend`,
+    ownerControl: true,
+  },
+  {
+    what: "change a member role",
+    method: "patch",
+    path: (o) => `/organizations/${o}/staff/${NO_ID}/role`,
+    ownerControl: true,
+  },
+  {
+    what: "deactivate a member",
+    method: "post",
+    path: (o) => `/organizations/${o}/staff/${NO_ID}/deactivate`,
+    ownerControl: true,
+  },
+  {
+    what: "reactivate a member",
+    method: "post",
+    path: (o) => `/organizations/${o}/staff/${NO_ID}/reactivate`,
+    ownerControl: true,
+  },
+  {
+    what: "transfer ownership",
+    method: "post",
+    path: (o) => `/organizations/${o}/staff/ownership-transfer`,
+  },
+  {
+    what: "create a role",
+    method: "post",
+    path: (o) => `/organizations/${o}/roles`,
+  },
+  {
+    what: "change role permissions",
+    method: "put",
+    path: (o) => `/organizations/${o}/roles/permissions`,
+  },
+  {
+    what: "delete a role",
+    method: "delete",
+    path: (o) => `/organizations/${o}/roles`,
+  },
+  // Plans.
+  {
+    what: "publish a member plan",
+    method: "post",
+    path: () => `/platform/member-plans/${NO_ID}/publish`,
+    ownerControl: true,
+  },
+  {
+    what: "retire a member plan",
+    method: "post",
+    path: () => `/platform/member-plans/${NO_ID}/retire`,
+    ownerControl: true,
+  },
+  {
+    what: "publish an organization plan",
+    method: "post",
+    path: () => `/platform/organization-plans/${NO_ID}/publish`,
+    ownerControl: true,
+  },
+  {
+    what: "retire an organization plan",
+    method: "post",
+    path: () => `/platform/organization-plans/${NO_ID}/retire`,
+    ownerControl: true,
+  },
+  // Contracts and invoices.
+  {
+    what: "mark an invoice paid",
+    method: "post",
+    path: () => `/platform/invoices/${NO_ID}/mark-paid`,
+    ownerControl: true,
+  },
+  {
+    what: "resolve a contract change request",
+    method: "post",
+    path: () => `/platform/contract-change-requests/${NO_ID}/resolve`,
+    ownerControl: true,
+  },
+  // Organizations (create, edit, suspend, close, reactivate).
+  {
+    what: "create an organization",
+    method: "post",
+    path: () => `/platform/organizations`,
+  },
+  {
+    what: "edit an organization",
+    method: "patch",
+    path: () => `/platform/organizations/${NO_ID}`,
+    ownerControl: true,
+  },
+  {
+    what: "suspend an organization",
+    method: "post",
+    path: () => `/platform/organizations/${NO_ID}/suspend`,
+    ownerControl: true,
+  },
+  {
+    what: "close an organization",
+    method: "post",
+    path: () => `/platform/organizations/${NO_ID}/close`,
+    ownerControl: true,
+  },
+  {
+    what: "reactivate an organization",
+    method: "post",
+    path: () => `/platform/organizations/${NO_ID}/reactivate`,
+    ownerControl: true,
+  },
+  // Content moderation (CONTENT MANAGE).
+  {
+    what: "approve a review",
+    method: "post",
+    path: () => `/platform/content/reviews/${NO_ID}/approve`,
+    ownerControl: true,
+  },
+  {
+    what: "decline a review",
+    method: "post",
+    path: () => `/platform/content/reviews/${NO_ID}/decline`,
+    ownerControl: true,
+  },
+];
+/** MANAGE-only reads: the moderation queues. */
+const MANAGE_ONLY_READS = [
+  "/platform/content/reviews",
+  "/platform/content/testimonials",
+  "/platform/content/community/posts",
+];
+
+async function send(api: ApiClient, method: string, url: string, org: string) {
+  const opts = { headers: api.headers(org), data: {} };
+  const full = `${env.apiURL}${url}`;
+  if (method === "post") return api.ctx.post(full, opts);
+  if (method === "patch") return api.ctx.patch(full, opts);
+  if (method === "put") return api.ctx.put(full, opts);
+  return api.ctx.delete(full, opts);
+}
+
+test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", async ({
+  browser,
+}) => {
+  requireWriteAdmin();
+  const results: {
+    what: string;
+    path: string;
+    writeAdmin: number;
+    owner?: number;
+  }[] = [];
+  const write = await ApiClient.login(WRITE_ADMIN);
+  const owner = await ApiClient.login(ACCOUNTS.admin);
+  try {
+    const ctx = (await write.context()) as unknown as {
+      platform?: { organizationId?: string };
+    };
+    const org = ctx.platform?.organizationId ?? "";
+    expect(org, "the write-only admin has a platform membership").not.toBe("");
+
+    // Positive controls: WRITE-level reads still work for this admin.
+    for (const p of [`/platform/organizations`, `/organizations/${org}/staff`])
+      expect((await write.get(p, org)).status(), `GET ${p}`).toBe(200);
+
+    for (const pr of MANAGE_ONLY) {
+      const url = pr.path(org);
+      const w = await send(write, pr.method, url, org);
+      const row: (typeof results)[number] = {
+        what: pr.what,
+        path: `${pr.method.toUpperCase()} ${url.replace(org, ":platformOrg")}`,
+        writeAdmin: w.status(),
+      };
+      // The owner (MANAGE) passes the guard: a random id is a 404, never 403.
+      if (pr.ownerControl)
+        row.owner = (await send(owner, pr.method, url, org)).status();
+      results.push(row);
+    }
+    for (const p of MANAGE_ONLY_READS)
+      results.push({
+        what: `list ${p}`,
+        path: `GET ${p}`,
+        writeAdmin: (await write.get(p, org)).status(),
+        owner: (await owner.get(p, org)).status(),
+      });
+  } finally {
+    ensureDir(OUT);
+    fs.writeFileSync(
+      path.join(OUT, "write-admin-refusals.json"),
+      JSON.stringify(results, null, 1),
+    );
+    await write.logout().catch(() => undefined);
+    await owner.logout().catch(() => undefined);
+    await write.dispose();
+    await owner.dispose();
+  }
+  expect(results.length).toBe(MANAGE_ONLY.length + MANAGE_ONLY_READS.length);
+  for (const r of results) {
+    expect(
+      r.writeAdmin,
+      `${r.what} (${r.path}) must be 403 for the WRITE-only admin`,
+    ).toBe(403);
+    if (r.owner !== undefined)
+      expect(r.owner, `${r.what}: the owner must pass the guard`).not.toBe(403);
+  }
+
+  // UI: no MANAGE-only control is offered, and the moderation queues show
+  // the no-access state (or send the admin home), never a crash.
+  const { context } = await newSession(browser, WRITE_ADMIN);
+  const page = await context.newPage();
+  const c = new Crawl("admin-write-refusal", page);
+  c.attach();
+  try {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    c.current = "/dashboard/admin-team";
+    await go(page, c.current);
+    await c.settle("open");
+    await expect(page.getByRole("heading").first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^invite staff$/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /transfer ownership/i }),
+    ).toHaveCount(0);
+
+    c.current = "/dashboard/subscriptions";
+    await go(page, c.current);
+    await c.settle("open");
+    await expect(
+      page.getByRole("button", { name: /^edit plan$/i }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^(publish|retire) /i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^mark .* paid$/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^resolve the /i }),
+    ).toHaveCount(0);
+
+    for (const route of [
+      "/dashboard/admin-reviews",
+      "/dashboard/admin-testimonials",
+      "/dashboard/admin-community",
+    ]) {
+      c.current = route;
+      await go(page, route);
+      await c.settle("open");
+      const landed = new URL(page.url()).pathname;
+      const refused = await page
+        .getByText(NO_ACCESS)
+        .first()
+        .isVisible()
+        .catch(() => false);
+      expect(
+        landed !== route || refused,
+        `${route}: the no-access state or a redirect`,
+      ).toBe(true);
+      await expect(
+        page.getByRole("button", {
+          name: /^(approve|decline|feature|hide)\b/i,
+        }),
+      ).toHaveCount(0);
+    }
+    c.pending403 = [];
+    const bad = c.issues.filter(
+      (i) => i.severity === "blocker" || i.severity === "high",
+    );
+    expect(
+      bad,
+      bad.map((i) => `${i.kind} ${i.page}: ${i.actual}`).join("\n"),
+    ).toEqual([]);
+  } finally {
+    allIssues.push(...c.issues);
+    flush();
+    await context.close().catch(() => undefined);
+  }
 });
 
 for (const role of ROLES) {
   test(`click-through every admin page: ${role.id} @phase16`, async ({
     browser,
   }) => {
-    test.skip(
-      Boolean(role.optional && !role.account.email),
-      "E2E_P16E_WRITE_ADMIN_EMAIL is not set (fixture-write-admin.mjs)",
-    );
+    if (role.id === "admin-write") requireWriteAdmin();
     const { context, blocked } = await newSession(browser, role.account);
     const page = await context.newPage();
     context.on("page", (p) => {
       if (p !== page) void p.close();
     });
     const c = new Crawl(role.id, page);
+    live = c;
     c.attach();
-    await page.setViewportSize({ width: 1280, height: 900 });
+    try {
+      await page.setViewportSize({ width: 1280, height: 900 });
 
-    c.current = "/dashboard";
-    await go(page, "/dashboard");
-    await c.settle("home");
-    const sidebar = [
-      ...new Set(
-        await page
-          .locator('aside a[href^="/dashboard"]')
-          .evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? "")),
-      ),
-    ].filter(Boolean);
-    expect(sidebar.length, "the admin sidebar lists pages").toBeGreaterThan(0);
-    const routes = [...new Set([...sidebar, ...ADMIN_ROUTES])];
-    const budget = Number(process.env.E2E_CRAWL_PAGE_MS ?? 150_000);
+      c.current = "/dashboard";
+      await go(page, "/dashboard");
+      await c.settle("home");
+      const sidebar = [
+        ...new Set(
+          await page
+            .locator('aside a[href^="/dashboard"]')
+            .evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? "")),
+        ),
+      ].filter(Boolean);
+      expect(sidebar.length, "the admin sidebar lists pages").toBeGreaterThan(
+        0,
+      );
+      const routes = [...new Set([...sidebar, ...ADMIN_ROUTES])];
+      const budget = Number(process.env.E2E_CRAWL_PAGE_MS ?? 60_000);
 
-    // The header once (notifications, user menu, breadcrumbs).
-    c.control = "header";
-    const header = page.locator("header").first();
-    const headerControls = await listControls(header).catch(() => []);
-    for (const h of headerControls.filter((x) => !x.disabled)) {
-      if (NEVER.test(h.name) || h.external) continue;
-      c.control = `header: ${h.name}`;
-      await header
-        .locator(CONTROL_SELECTOR)
-        .nth(h.idx)
-        .click({ timeout: 2_000 })
-        .catch(() => undefined);
-      c.cov.controlsClicked++;
-      await page.waitForTimeout(300);
-      await c.health(c.control);
-      await closeDialogs(page);
-      await page.keyboard.press("Escape").catch(() => undefined);
-      if (new URL(page.url()).pathname !== "/dashboard") {
-        await c.settle("header link", 6_000);
-        await go(page, "/dashboard");
-      }
-    }
-
-    for (const route of routes) {
-      c.current = route;
-      c.control = "";
-      const inSidebar = sidebar.includes(route);
-      await go(page, route);
-      await c.settle("open");
-      await c.health("page load");
-      const landed = new URL(page.url()).pathname;
-      if (!inSidebar) {
-        // A page this role's menu does not offer: a redirect home or the
-        // no-access state is the intended result.
-        const refused = await page
-          .getByText(NO_ACCESS)
-          .first()
-          .isVisible()
-          .catch(() => false);
-        c.cov.controlsSkipped.push({
-          page: route,
-          control: "(page)",
-          why: `not in this role's sidebar: ${landed !== route ? `redirected to ${landed}` : refused ? "no-access state shown" : "page rendered"}`,
-        });
-        if (landed !== route || refused) continue;
-      }
-      if (landed !== route) {
-        c.add({
-          kind: "sidebar-redirect",
-          control: "(sidebar link)",
-          steps: `Open ${route} from the sidebar`,
-          expected: "The page opens",
-          actual: `Redirected to ${landed}`,
-          severity: "medium",
-        });
-        continue;
-      }
-      c.cov.pages.push(route);
-      await c.overflow(1280);
-      await crawlPage(c, route, budget);
-      // Course detail pages.
-      if (route === "/dashboard/manage-curriculum") {
-        await go(page, route);
-        await c.settle("open");
-        const course = page
-          .locator('main a[href^="/dashboard/manage-curriculum/"]')
-          .first();
-        if (await course.count()) {
-          const href = (await course.getAttribute("href")) ?? "";
-          c.current = href;
-          await go(page, href);
-          await c.settle("open");
-          await c.health("page load");
-          c.cov.pages.push(href);
-          await crawlPage(c, href, budget);
+      // The header once (notifications, user menu, breadcrumbs).
+      c.control = "header";
+      const header = page.locator("header").first();
+      const headerControls = await listControls(header).catch(() => []);
+      for (const h of headerControls.filter((x) => !x.disabled)) {
+        if (NEVER.test(h.name) || h.external) continue;
+        c.control = `header: ${h.name}`;
+        await header
+          .locator(CONTROL_SELECTOR)
+          .nth(h.idx)
+          .click({ timeout: 2_000 })
+          .catch(() => undefined);
+        c.cov.controlsClicked++;
+        await page.waitForTimeout(300);
+        await c.health(c.control);
+        await closeDialogs(page);
+        await page.keyboard.press("Escape").catch(() => undefined);
+        if (new URL(page.url()).pathname !== "/dashboard") {
+          await c.settle("header link", 6_000);
+          await go(page, "/dashboard");
         }
       }
-    }
 
-    // Mobile width: every page again for layout, errors and the bottom bar.
-    await page.setViewportSize({ width: 390, height: 844 });
-    for (const route of c.cov.pages) {
-      c.current = route;
-      c.control = "(390px)";
-      await go(page, route);
-      await c.settle("mobile");
-      await c.health("mobile load");
-      await c.overflow(390);
-      c.cov.mobilePages++;
-    }
-    const more = page.getByRole("button", { name: /^more$/i }).first();
-    if (await more.isVisible().catch(() => false)) {
-      c.control = "bottom bar: More";
-      await more.click().catch(() => undefined);
+      for (const route of routes) {
+        c.current = route;
+        c.control = "";
+        const inSidebar = sidebar.includes(route);
+        await go(page, route);
+        await c.settle("open");
+        await c.health("page load");
+        const landed = new URL(page.url()).pathname;
+        if (!inSidebar) {
+          // A page this role's menu does not offer: a redirect home or the
+          // no-access state is the intended result.
+          const refused = await page
+            .getByText(NO_ACCESS)
+            .first()
+            .isVisible()
+            .catch(() => false);
+          c.cov.controlsSkipped.push({
+            page: route,
+            control: "(page)",
+            why: `not in this role's sidebar: ${landed !== route ? `redirected to ${landed}` : refused ? "no-access state shown" : "page rendered"}`,
+          });
+          if (landed !== route || refused) continue;
+        }
+        if (landed !== route) {
+          c.add({
+            kind: "sidebar-redirect",
+            control: "(sidebar link)",
+            steps: `Open ${route} from the sidebar`,
+            expected: "The page opens",
+            actual: `Redirected to ${landed}`,
+            severity: "medium",
+          });
+          continue;
+        }
+        c.cov.pages.push(route);
+        await c.overflow(1280);
+        await crawlPage(c, route, budget);
+        flush();
+        // Course detail pages.
+        if (route === "/dashboard/manage-curriculum") {
+          await go(page, route);
+          await c.settle("open");
+          const course = page
+            .locator('main a[href^="/dashboard/manage-curriculum/"]')
+            .first();
+          if (await course.count()) {
+            const href = (await course.getAttribute("href")) ?? "";
+            c.current = href;
+            await go(page, href);
+            await c.settle("open");
+            await c.health("page load");
+            c.cov.pages.push(href);
+            await crawlPage(c, href, budget);
+          }
+        }
+      }
+
+      // Mobile width: every page again for layout, errors and the bottom bar.
+      await page.setViewportSize({ width: 390, height: 844 });
+      for (const route of c.cov.pages) {
+        c.current = route;
+        c.control = "(390px)";
+        await go(page, route);
+        await c.settle("mobile");
+        await c.health("mobile load");
+        await c.overflow(390);
+        c.cov.mobilePages++;
+      }
+      flush();
+      const more = page.getByRole("button", { name: /^more$/i }).first();
+      if (await more.isVisible().catch(() => false)) {
+        c.control = "bottom bar: More";
+        await more.click().catch(() => undefined);
+        c.cov.controlsClicked++;
+        await page.waitForTimeout(300);
+        await c.health("More");
+        await closeDialogs(page);
+      }
+
+      // Sign out through the UI ends the crawl.
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await go(page, "/dashboard");
+      await c.settle("sign out");
+      c.current = "/dashboard";
+      c.control = "Log out";
+      await page
+        .getByRole("button", { name: /^log out$/i })
+        .first()
+        .click();
       c.cov.controlsClicked++;
-      await page.waitForTimeout(300);
-      await c.health("More");
-      await closeDialogs(page);
+      await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
+
+      for (const b of blocked)
+        c.add({
+          kind: "third-party-request",
+          control: "(network)",
+          steps: "Any",
+          expected:
+            "Only the app, the API and the local storage stand-in are contacted",
+          actual: b.slice(0, 200),
+          severity: "high",
+        });
+    } finally {
+      allIssues.push(...c.issues);
+      allCoverage[role.id] = c.cov;
+      live = null;
+      flush();
+      await context.close().catch(() => undefined);
     }
-
-    // Sign out through the UI ends the crawl.
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await go(page, "/dashboard");
-    await c.settle("sign out");
-    c.current = "/dashboard";
-    c.control = "Log out";
-    await page
-      .getByRole("button", { name: /^log out$/i })
-      .first()
-      .click();
-    c.cov.controlsClicked++;
-    await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
-
-    for (const b of blocked)
-      c.add({
-        kind: "third-party-request",
-        control: "(network)",
-        steps: "Any",
-        expected:
-          "Only the app, the API and the local storage stand-in are contacted",
-        actual: b.slice(0, 200),
-        severity: "high",
-      });
-
-    allIssues.push(...c.issues);
-    allCoverage[role.id] = c.cov;
-    await context.close();
 
     const open = c.issues.filter(
       (i) =>
