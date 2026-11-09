@@ -1414,7 +1414,92 @@ const MANAGE_ONLY: Probe[] = [
     path: () => `/platform/content/reviews/${NO_ID}/decline`,
     ownerControl: true,
   },
+  {
+    what: "approve a testimonial",
+    method: "post",
+    path: () => `/platform/content/testimonials/${NO_ID}/approve`,
+    ownerControl: true,
+  },
+  {
+    what: "decline a testimonial",
+    method: "post",
+    path: () => `/platform/content/testimonials/${NO_ID}/decline`,
+    ownerControl: true,
+  },
+  {
+    what: "approve a community post",
+    method: "post",
+    path: () => `/platform/content/community/posts/${NO_ID}/approve`,
+    ownerControl: true,
+  },
+  {
+    what: "reject a community post",
+    method: "post",
+    path: () => `/platform/content/community/posts/${NO_ID}/reject`,
+    ownerControl: true,
+  },
 ];
+
+/* MANAGE-only UI controls. Each one is checked for the owner first (it must
+   be there, so a selector that matches nothing cannot pass) and then for the
+   WRITE-only admin (it must be absent). Some exist only when a row needs the
+   action: `needs` names that row, and when the owner's API read shows there
+   is none the check is recorded as not exercised instead of passing. */
+type UiControl = {
+  route: string;
+  what: string;
+  name: RegExp;
+  needs?: "unpaid-invoice" | "open-change-request" | "pending-review";
+};
+const MANAGE_UI: UiControl[] = [
+  {
+    route: "/dashboard/admin-team",
+    what: "invite staff",
+    name: /^invite staff$/i,
+  },
+  {
+    route: "/dashboard/admin-team",
+    what: "make a member the owner",
+    name: /^make .+ the owner$/i,
+  },
+  {
+    route: "/dashboard/subscriptions",
+    what: "publish or retire a plan",
+    name: /^(publish|retire) /i,
+  },
+  {
+    route: "/dashboard/subscriptions",
+    what: "mark an invoice paid",
+    name: /^mark .+ paid$/i,
+    needs: "unpaid-invoice",
+  },
+  {
+    route: "/dashboard/subscriptions",
+    what: "resolve a change request",
+    name: /^resolve the /i,
+    needs: "open-change-request",
+  },
+  {
+    route: "/dashboard/admin-reviews",
+    what: "accept or decline a review",
+    name: /^(accept|decline)\b/i,
+    needs: "pending-review",
+  },
+];
+/** Moderation buttons on the three queues (reviews, testimonials, community). */
+const MODERATION_BUTTON =
+  /^(approve|accept|decline|reject|re-approve|feature|hide)\b/i;
+const MODERATION_ROUTES = [
+  "/dashboard/admin-reviews",
+  "/dashboard/admin-testimonials",
+  "/dashboard/admin-community",
+];
+
+function rows(body: unknown): Record<string, unknown>[] {
+  if (Array.isArray(body)) return body as Record<string, unknown>[];
+  const items = (body as { items?: unknown } | null)?.items;
+  return Array.isArray(items) ? (items as Record<string, unknown>[]) : [];
+}
 /** MANAGE-only reads: the moderation queues. */
 const MANAGE_ONLY_READS = [
   "/platform/content/reviews",
@@ -1431,6 +1516,125 @@ async function send(api: ApiClient, method: string, url: string, org: string) {
   return api.ctx.delete(full, opts);
 }
 
+type UiCheck = {
+  role: "owner" | "admin-write";
+  route: string;
+  what: string;
+  /** "not-exercised" when no row on the page needs the action. */
+  result: "present" | "absent" | "not-exercised";
+};
+type Anchors = Partial<Record<NonNullable<UiControl["needs"]>, string | null>>;
+
+/** Opens each MANAGE_UI route as one admin. The owner must see every
+ *  exercised control; the WRITE-only admin must see none. The page's own
+ *  content (and the row that needs the action) is awaited first, so an
+ *  absence is never read off a page that has not loaded yet. */
+async function checkManageUi(
+  browser: import("@playwright/test").Browser,
+  role: UiCheck["role"],
+  account: Account,
+  anchors: Anchors,
+  checks: UiCheck[],
+  issues: Issue[],
+) {
+  const expectPresent = role === "owner";
+  const { context } = await newSession(browser, account);
+  const page = await context.newPage();
+  const c = new Crawl(`${role}-manage-ui`, page);
+  c.attach();
+  try {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    for (const route of [...new Set(MANAGE_UI.map((u) => u.route))]) {
+      c.current = route;
+      await go(page, route);
+      await c.settle("open");
+      await expect(page.getByRole("heading").first()).toBeVisible();
+      if (route === "/dashboard/subscriptions")
+        // WRITE on plans: both admins may edit a plan, and the cards loaded.
+        await expect(
+          page.getByRole("button", { name: /^edit plan$/i }).first(),
+        ).toBeVisible();
+      if (route === "/dashboard/admin-team")
+        // The staff list loaded (support staff is a seeded member).
+        await expect(page.getByText(/Dana Brooks/).first()).toBeVisible();
+      for (const u of MANAGE_UI.filter((x) => x.route === route)) {
+        if (u.needs) {
+          const anchor = anchors[u.needs];
+          if (!anchor) {
+            checks.push({ role, route, what: u.what, result: "not-exercised" });
+            continue;
+          }
+          // The row that needs the action is on screen for both admins.
+          await expect(page.getByText(anchor).first()).toBeVisible();
+        }
+        const control = page.getByRole("button", { name: u.name });
+        if (expectPresent)
+          await expect(
+            control.first(),
+            `${u.what}: the owner (MANAGE) must see it on ${route}`,
+          ).toBeVisible();
+        else
+          await expect(
+            control,
+            `${u.what}: the WRITE-only admin must not see it on ${route}`,
+          ).toHaveCount(0);
+        checks.push({
+          role,
+          route,
+          what: u.what,
+          result: expectPresent ? "present" : "absent",
+        });
+      }
+    }
+
+    // Moderation queues: the owner gets the page; the WRITE-only admin gets
+    // the no-access state or a redirect, and no moderation button.
+    for (const route of MODERATION_ROUTES) {
+      c.current = route;
+      await go(page, route);
+      await c.settle("open");
+      const landed = new URL(page.url()).pathname;
+      const refused = await page
+        .getByText(NO_ACCESS)
+        .first()
+        .isVisible()
+        .catch(() => false);
+      if (expectPresent) {
+        expect(landed, `${route}: the owner stays on the page`).toBe(route);
+        expect(refused, `${route}: no no-access state for the owner`).toBe(
+          false,
+        );
+      } else {
+        expect(
+          landed !== route || refused,
+          `${route}: the no-access state or a redirect`,
+        ).toBe(true);
+        await expect(
+          page.getByRole("button", { name: MODERATION_BUTTON }),
+        ).toHaveCount(0);
+      }
+      checks.push({
+        role,
+        route,
+        what: "moderation queue",
+        result: expectPresent ? "present" : "absent",
+      });
+    }
+    // The WRITE-only admin's 403s on the queues are the intended refusal.
+    if (!expectPresent) c.pending403 = [];
+    const bad = c.issues.filter(
+      (i) => i.severity === "blocker" || i.severity === "high",
+    );
+    expect(
+      bad,
+      bad.map((i) => `${i.kind} ${i.page}: ${i.actual}`).join("\n"),
+    ).toEqual([]);
+  } finally {
+    issues.push(...c.issues);
+    await context.close().catch(() => undefined);
+  }
+}
+
 test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", async ({
   browser,
 }) => {
@@ -1441,6 +1645,15 @@ test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", a
     writeAdmin: number;
     owner?: number;
   }[] = [];
+  const ui: UiCheck[] = [];
+  const anchors: Anchors = {};
+  const save = () => {
+    ensureDir(OUT);
+    fs.writeFileSync(
+      path.join(OUT, "write-admin-refusals.json"),
+      JSON.stringify({ api: results, ui }, null, 1),
+    );
+  };
   const write = await ApiClient.login(WRITE_ADMIN);
   const owner = await ApiClient.login(ACCOUNTS.admin);
   try {
@@ -1462,7 +1675,8 @@ test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", a
         path: `${pr.method.toUpperCase()} ${url.replace(org, ":platformOrg")}`,
         writeAdmin: w.status(),
       };
-      // The owner (MANAGE) passes the guard: a random id is a 404, never 403.
+      // The owner (MANAGE) passes the guard: a random id is a 404 (or a 400
+      // for the empty body), never 403.
       if (pr.ownerControl)
         row.owner = (await send(owner, pr.method, url, org)).status();
       results.push(row);
@@ -1474,12 +1688,33 @@ test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", a
         writeAdmin: (await write.get(p, org)).status(),
         owner: (await owner.get(p, org)).status(),
       });
-  } finally {
-    ensureDir(OUT);
-    fs.writeFileSync(
-      path.join(OUT, "write-admin-refusals.json"),
-      JSON.stringify(results, null, 1),
+
+    // Rows the data-dependent UI controls need, read as the owner (page 1,
+    // as the screens show it).
+    const read = async (p: string) => {
+      const res = await owner.get(p, org);
+      return res.ok() ? rows(await res.json()) : [];
+    };
+    const unpaid = (await read("/platform/invoices")).find(
+      (i) => i.status !== "PAID",
     );
+    anchors["unpaid-invoice"] = unpaid ? String(unpaid.number) : null;
+    const open = (await read("/platform/contract-change-requests")).find(
+      (r) => !r.resolvedAt,
+    );
+    if (open) {
+      const orgs = await read("/platform/organizations");
+      const name = orgs.find((o) => o.id === open.organizationId)?.name;
+      anchors["open-change-request"] = name ? String(name) : null;
+    } else anchors["open-change-request"] = null;
+    const pending = (await read("/platform/content/reviews")).find(
+      (r) =>
+        String(r.status).toUpperCase() === "PENDING" &&
+        String(r.comment ?? "").includes(TAG),
+    );
+    anchors["pending-review"] = pending ? String(pending.comment) : null;
+  } finally {
+    save();
     await write.logout().catch(() => undefined);
     await owner.logout().catch(() => undefined);
     await write.dispose();
@@ -1494,79 +1729,35 @@ test("admin-write: MANAGE-only actions are refused (API 403 and UI) @phase16", a
     if (r.owner !== undefined)
       expect(r.owner, `${r.what}: the owner must pass the guard`).not.toBe(403);
   }
+  // The crawl seeded this review, so its control is always exercised.
+  expect(
+    anchors["pending-review"],
+    "the seeded review is pending",
+  ).toBeTruthy();
 
-  // UI: no MANAGE-only control is offered, and the moderation queues show
-  // the no-access state (or send the admin home), never a crash.
-  const { context } = await newSession(browser, WRITE_ADMIN);
-  const page = await context.newPage();
-  const c = new Crawl("admin-write-refusal", page);
-  c.attach();
+  // UI: the owner first (positive control: a selector that matches nothing
+  // fails here), then the WRITE-only admin must see none of the controls.
+  const issues: Issue[] = [];
   try {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    c.current = "/dashboard/admin-team";
-    await go(page, c.current);
-    await c.settle("open");
-    await expect(page.getByRole("heading").first()).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /^invite staff$/i }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: /transfer ownership/i }),
-    ).toHaveCount(0);
-
-    c.current = "/dashboard/subscriptions";
-    await go(page, c.current);
-    await c.settle("open");
-    await expect(
-      page.getByRole("button", { name: /^edit plan$/i }).first(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /^(publish|retire) /i }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: /^mark .* paid$/i }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: /^resolve the /i }),
-    ).toHaveCount(0);
-
-    for (const route of [
-      "/dashboard/admin-reviews",
-      "/dashboard/admin-testimonials",
-      "/dashboard/admin-community",
-    ]) {
-      c.current = route;
-      await go(page, route);
-      await c.settle("open");
-      const landed = new URL(page.url()).pathname;
-      const refused = await page
-        .getByText(NO_ACCESS)
-        .first()
-        .isVisible()
-        .catch(() => false);
-      expect(
-        landed !== route || refused,
-        `${route}: the no-access state or a redirect`,
-      ).toBe(true);
-      await expect(
-        page.getByRole("button", {
-          name: /^(approve|decline|feature|hide)\b/i,
-        }),
-      ).toHaveCount(0);
-    }
-    c.pending403 = [];
-    const bad = c.issues.filter(
-      (i) => i.severity === "blocker" || i.severity === "high",
+    await checkManageUi(browser, "owner", ACCOUNTS.admin, anchors, ui, issues);
+    await checkManageUi(
+      browser,
+      "admin-write",
+      WRITE_ADMIN,
+      anchors,
+      ui,
+      issues,
     );
-    expect(
-      bad,
-      bad.map((i) => `${i.kind} ${i.page}: ${i.actual}`).join("\n"),
-    ).toEqual([]);
   } finally {
-    allIssues.push(...c.issues);
+    allIssues.push(...issues);
     flush();
-    await context.close().catch(() => undefined);
+    save();
   }
+  const key = (u: UiCheck) =>
+    `${u.route} ${u.what} ${u.result === "not-exercised"}`;
+  expect(ui.filter((u) => u.role === "admin-write").map(key)).toEqual(
+    ui.filter((u) => u.role === "owner").map(key),
+  );
 });
 
 for (const role of ROLES) {
