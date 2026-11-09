@@ -59,6 +59,14 @@ const STAFF_PAGE = { page: 1, limit: 150 } as const;
 const NOT_AVAILABLE_ID = "team-messages-not-available";
 const NOT_AVAILABLE =
   "Not available yet: starting a message needs the office's staff list, which your role cannot view. You can reply to messages sent to you.";
+/* Why "Message a Physician" is disabled in the other cases (QA-SEC P15c
+   round 2, L1): a disabled button always says why. */
+const READ_ONLY =
+  "Your role can read team messages but not send them. Ask the account owner if you need to write to colleagues.";
+const NO_COLLEAGUE =
+  "No other active colleague in this office to message yet. You can reply to messages sent to you.";
+const STAFF_UNREAD =
+  "The office's staff list did not load, so no colleague can be chosen right now. You can reply to messages sent to you.";
 
 function useTeamMessages(orgId: string | null) {
   const queryClient = useQueryClient();
@@ -111,7 +119,11 @@ function useColleagues(orgId: string | null, allowed: boolean) {
       name: m.name ?? m.email ?? SOMEONE,
       role: m.role,
     }));
-  return { colleagues, isPending: allowed && query.isPending };
+  return {
+    colleagues,
+    isPending: allowed && query.isPending,
+    failed: allowed && query.isError,
+  };
 }
 
 export function TeamMessages() {
@@ -142,6 +154,21 @@ export function TeamMessages() {
   const notShared =
     isApiError(team.list.error) && team.list.error.status === 403;
   const startDisabled = !canSend || colleagues.length === 0;
+  /* One reason for a disabled start: none while the staff list loads, and
+     none when the card already says the messages are not available. */
+  const startReason = notShared
+    ? null
+    : !canSend
+      ? canLevel(permissions, "team_messages", 1)
+        ? READ_ONLY
+        : null
+      : !canListStaff
+        ? NOT_AVAILABLE
+        : staff.failed
+          ? STAFF_UNREAD
+          : !staff.isPending && colleagues.length === 0
+            ? NO_COLLEAGUE
+            : null;
   const writeError = team.send.error ?? team.markRead.error;
 
   return (
@@ -162,9 +189,7 @@ export function TeamMessages() {
             appearance="fill-stroke"
             leadingIcon={<Stethoscope aria-hidden="true" />}
             disabled={startDisabled}
-            aria-describedby={
-              canSend && !canListStaff ? NOT_AVAILABLE_ID : undefined
-            }
+            aria-describedby={startReason ? NOT_AVAILABLE_ID : undefined}
             onClick={() => setWriting({ to: colleagues[0]?.userId ?? "" })}
           >
             Message a Physician
@@ -181,12 +206,12 @@ export function TeamMessages() {
             </Button>
           ) : null}
         </div>
-        {canSend && !canListStaff ? (
+        {startReason ? (
           <p
             id={NOT_AVAILABLE_ID}
             className="w-full text-caption text-fg-muted"
           >
-            {NOT_AVAILABLE}
+            {startReason}
           </p>
         ) : null}
       </div>

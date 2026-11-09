@@ -31,6 +31,7 @@ import {
   buttonStyles,
   Card,
   EmptyState,
+  ErrorState,
   FormField,
   Input,
   Select,
@@ -186,7 +187,24 @@ function UpcomingAppointments() {
         </Link>
       </div>
 
-      {store.isPending ? (
+      {/* An error first: a refused or failed read is never "nothing
+          booked" (QA R2-F1). A 403 is the shared not-shared state. */}
+      {store.error ? (
+        <ErrorState
+          variant="bare"
+          title={errorTitleFor(
+            store.error,
+            isEs
+              ? "No se pudieron cargar sus citas"
+              : "Your appointments could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(store.error, undefined, isEs ? "es" : "en")}
+          error={store.error}
+          onRetry={canRetry(store.error) ? store.refetch : undefined}
+          retryLabel={isEs ? "Intentar de nuevo" : "Try again"}
+        />
+      ) : store.isPending ? (
         <Skeleton height={180} />
       ) : ahead.length === 0 ? (
         <EmptyState

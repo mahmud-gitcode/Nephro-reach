@@ -51,7 +51,7 @@ import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useMemberLiveClasses } from "@/features/education/useMemberLiveClasses";
 import { zoneLabel } from "@/features/clinic/liveClass.mappers";
 import { isApiError } from "@/lib/api/client";
-import { isNotShared } from "@/lib/data/asyncState";
+import { errorTitleFor, isNotShared } from "@/lib/data/asyncState";
 import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
@@ -655,7 +655,19 @@ export default function UserDashboard() {
               ) : null
             }
           />
-          {appointments.isPending ? (
+          {/* An error first, like the learning card: a refused or failed
+              read is never "Nothing scheduled" (QA R2-F1). */}
+          {appointments.error ? (
+            <p className="text-body-sm text-fg-muted">
+              {errorTitleFor(
+                appointments.error,
+                isEs
+                  ? "Tus citas no cargaron."
+                  : "Your appointments did not load.",
+                isEs ? "es" : "en",
+              )}
+            </p>
+          ) : appointments.isPending ? (
             <Skeleton height={160} />
           ) : nextAppointment ? (
             <>
