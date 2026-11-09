@@ -51,7 +51,7 @@ import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useMemberLiveClasses } from "@/features/education/useMemberLiveClasses";
 import { zoneLabel } from "@/features/clinic/liveClass.mappers";
 import { isApiError } from "@/lib/api/client";
-import { errorTitleFor, isNotShared } from "@/lib/data/asyncState";
+import { canRetry, errorTitleFor, isNotShared } from "@/lib/data/asyncState";
 import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
@@ -658,15 +658,28 @@ export default function UserDashboard() {
           {/* An error first, like the learning card: a refused or failed
               read is never "Nothing scheduled" (QA R2-F1). */}
           {appointments.error ? (
-            <p className="text-body-sm text-fg-muted">
-              {errorTitleFor(
-                appointments.error,
-                isEs
-                  ? "Tus citas no cargaron."
-                  : "Your appointments did not load.",
-                isEs ? "es" : "en",
-              )}
-            </p>
+            <div className="flex flex-col items-start gap-stack-sm">
+              <p className="text-body-sm text-fg-muted">
+                {errorTitleFor(
+                  appointments.error,
+                  isEs
+                    ? "Tus citas no cargaron."
+                    : "Your appointments did not load.",
+                  isEs ? "es" : "en",
+                )}
+              </p>
+              {/* A refusal is final; only a failed read can be retried. */}
+              {canRetry(appointments.error) ? (
+                <Button
+                  size="small"
+                  variant="neutral"
+                  appearance="fill-stroke"
+                  onClick={appointments.refetch}
+                >
+                  {isEs ? "Intentar de nuevo" : "Try again"}
+                </Button>
+              ) : null}
+            </div>
           ) : appointments.isPending ? (
             <Skeleton height={160} />
           ) : nextAppointment ? (

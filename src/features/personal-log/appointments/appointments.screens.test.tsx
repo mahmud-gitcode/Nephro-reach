@@ -188,16 +188,21 @@ describe("the member dashboard's next-appointment card on a failed read", () => 
     expect(screen.queryByText("Nothing scheduled")).toBeNull();
     const card = copy.closest("section") as HTMLElement;
     expect(within(card).getByText("Next appointment")).toBeInTheDocument();
+    expect(
+      within(card).queryByRole("button", { name: /try again/i }),
+    ).toBeNull();
     expect(await axe(card)).toHaveNoViolations();
   });
 
-  it("a server error says the appointments did not load, not 'Nothing scheduled'", async () => {
+  it("a server error says the appointments did not load, not 'Nothing scheduled', and offers a retry", async () => {
     stubWithAppointments(apiError(500, null, "Boom"), undefined, notFound);
     render(<UserDashboard />, { wrapper });
     const copy = await screen.findByText("Your appointments did not load.");
     expect(screen.queryByText("Nothing scheduled")).toBeNull();
+    const card = copy.closest("section") as HTMLElement;
     expect(
-      await axe(copy.closest("section") as HTMLElement),
-    ).toHaveNoViolations();
+      within(card).getByRole("button", { name: /try again/i }),
+    ).toBeInTheDocument();
+    expect(await axe(card)).toHaveNoViolations();
   });
 });
