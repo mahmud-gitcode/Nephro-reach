@@ -24,11 +24,13 @@
    evidence directory) or test-results/p16b. */
 import fs from "node:fs";
 import path from "node:path";
-import type { Locator, Page } from "@playwright/test";
-import { ApiClient } from "./fixtures/api";
+import { request, type Locator, type Page } from "@playwright/test";
+import { ApiClient, currentConsent, json } from "./fixtures/api";
 import {
   ACCOUNTS,
   apiOrigin,
+  appOrigin,
+  env,
   throwawayAccount,
   type Account,
 } from "./fixtures/env";
@@ -55,6 +57,8 @@ type Issue = {
   actual: string;
   severity: Severity;
   screenshot?: string;
+  /** Set for a high issue on the ALLOWED_HIGH list. */
+  allowedReason?: string;
 };
 type Coverage = {
   role: string;
@@ -77,6 +81,41 @@ function writeResult(name: string, data: unknown) {
     path.join(OUT, `result-${name}.json`),
     JSON.stringify(data, null, 2),
   );
+}
+
+/** High issues that stay open on purpose, each with its reason (the
+ *  acceptance criterion: 0 blocker/high unfixed unless recorded with a
+ *  reason). Blockers are never allowed. Empty means every high fails. */
+const ALLOWED_HIGH: {
+  role?: RegExp;
+  page?: RegExp;
+  actual: RegExp;
+  reason: string;
+}[] = [];
+
+function markAllowed(issues: Issue[]) {
+  for (const i of issues) {
+    if (i.severity !== "high") continue;
+    const rule = ALLOWED_HIGH.find(
+      (r) =>
+        r.actual.test(i.actual) &&
+        (!r.role || r.role.test(i.role)) &&
+        (!r.page || r.page.test(i.page)),
+    );
+    if (rule) i.allowedReason = rule.reason;
+  }
+}
+
+/** Fails on any blocker and on any high issue without an allow-list reason. */
+function expectNoOpenSevere(issues: Issue[]) {
+  const open = issues.filter(
+    (i) =>
+      i.severity === "blocker" || (i.severity === "high" && !i.allowedReason),
+  );
+  expect(
+    open.map((i) => `${i.severity} ${i.page} ${i.control}: ${i.actual}`),
+    "blocker/high issues with no recorded reason",
+  ).toEqual([]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1094,6 +1133,76 @@ async function crawlPortal(
 test.describe.configure({ mode: "serial" });
 test.setTimeout(45 * 60_000);
 
+/** Grace's custom map for the limited caregiver: profile and logs view,
+ *  medications edit, everything else not shared. */
+const LIMITED_MAP = {
+  profile: 1,
+  "personal-logs": 1,
+  nutrition: 0,
+  "check-ins": 0,
+  "er-visits": 0,
+  dialysis: 0,
+  medications: 2,
+  labs: 0,
+  journal: 0,
+  messages: 0,
+};
+
+/** The limited caregiver through the API: register (D6 consent), verify the
+ *  mailed code, Grace invites with LIMITED_MAP, the account accepts. */
+async function setupLimitedCaregiver(): Promise<Account> {
+  const acct = throwawayAccount("p16b-cg");
+  const consent = await currentConsent();
+  const since = mailMark();
+  await pace("register");
+  const ctx = await request.newContext();
+  try {
+    const res = await ctx.post(`${env.apiURL}/auth/register`, {
+      headers: { "X-Auth-Transport": "bearer", Origin: appOrigin },
+      data: { ...acct, consent },
+    });
+    const body = await json(res, "register limited caregiver");
+    const access = (body.tokens as { access: { token: string } }).access.token;
+    const mail = await waitForMail(acct.email, { since });
+    const v = await ctx.post(`${env.apiURL}/auth/email/verify/confirm`, {
+      headers: { Authorization: `Bearer ${access}`, Origin: appOrigin },
+      data: { code: extractOtp(mail) },
+    });
+    expect(v.ok(), `verify limited caregiver: ${v.status()}`).toBeTruthy();
+  } finally {
+    await ctx.dispose();
+  }
+  const grace = await ApiClient.login(ACCOUNTS.grace);
+  try {
+    const inv = await grace.post(
+      `/patients/${await grace.patientId()}/caregiver-invitations`,
+      {
+        email: acct.email,
+        relationship: "Son",
+        preset: "custom",
+        permissions: LIMITED_MAP,
+      },
+    );
+    expect(inv.ok(), `invite ${inv.status()}`).toBeTruthy();
+  } finally {
+    await grace.logout();
+    await grace.dispose();
+  }
+  const me = await ApiClient.login(acct);
+  try {
+    const list = (await json(await me.get("/me/invitations"), "mine"))
+      .data as Array<{ id: string; status: string }>;
+    const pending = list.find((i) => i.status === "PENDING");
+    expect(pending, "pending caregiver invitation").toBeTruthy();
+    const res = await me.post(`/me/invitations/${pending!.id}/accept`);
+    expect(res.ok(), `accept ${res.status()}`).toBeTruthy();
+  } finally {
+    await me.logout();
+    await me.dispose();
+  }
+  return acct;
+}
+
 /** Registered through the UI by the public test, then invited by Grace. */
 let limited: Account | null = null;
 
@@ -1148,10 +1257,34 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   await page.goto("/login");
   let m = mon.mark();
   await page.getByRole("button", { name: /^sign in$/i }).click();
-  await expect(
-    page.getByText(VALIDATION).first().or(page.locator("#login-email:invalid")),
-  ).toBeVisible();
   cov.formsSubmitted++;
+  /* An empty submit must not sign in and must say something. The login form
+     has no client-side check (no `required`), so the API refuses it and the
+     page shows its error line. Login is protected UI (phase-16 brief): when
+     that line is the generic one instead of a validation message, it is
+     recorded, not fixed. */
+  const loginError = page
+    .locator("form p.text-red-500")
+    .or(page.locator("#login-email:invalid"))
+    .first();
+  await expect(loginError).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
+  const loginErrorText = (await loginError.textContent())?.trim() ?? "";
+  if (!VALIDATION.test(loginErrorText))
+    await issue(
+      ctx,
+      'button "Sign in" (empty form)',
+      "open /login, leave email and password empty, click Sign in",
+      "a validation message such as 'Enter your email and password' (or a field-level required hint)",
+      `generic error "${loginErrorText}" after an API ${
+        mon.api
+          .slice(m.a)
+          .filter((h) => /\/auth\/login/.test(h.path))
+          .map((h) => `${h.status} ${h.code}`)
+          .join(", ") || "(no request)"
+      }; Login is protected UI, recorded only`,
+      "medium",
+    );
   await pace("login");
   await page.locator("#login-email").fill(ACCOUNTS.caregiver.email);
   await page.locator("#login-password").fill("wrong-password-1");
@@ -1167,11 +1300,16 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
       invalidSubmit: true,
     },
   );
-  /* The wrong-password 401 on /auth/login is the intended answer. */
+  /* The wrong-password 401 and the empty-form 400 on /auth/login are the
+     intended answers (the empty-form text is recorded above). */
   issues.splice(
     0,
     issues.length,
-    ...issues.filter((i) => !/401 POST \/auth\/login/.test(i.actual)),
+    ...issues.filter(
+      (i) =>
+        !/^(401|400) POST \/auth\/login/.test(i.actual) ||
+        i.control.startsWith('button "Sign in" (empty'),
+    ),
   );
 
   /* Registration: empty, invalid email, mismatched passwords, then valid. */
@@ -1202,18 +1340,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
     email: acct.email,
     relationship: "Son",
     preset: "custom",
-    permissions: {
-      profile: 1,
-      "personal-logs": 1,
-      nutrition: 0,
-      "check-ins": 0,
-      "er-visits": 0,
-      dialysis: 0,
-      medications: 2,
-      labs: 0,
-      journal: 0,
-      messages: 0,
-    },
+    permissions: LIMITED_MAP,
   });
   expect(inv.ok(), `invite ${inv.status()}`).toBeTruthy();
   await grace.logout();
@@ -1391,11 +1518,12 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   });
 
   cov.downloads = mon.downloads.length;
+  markAllowed(issues);
   writeResult("anonymous", { coverage: cov, issues });
   test
     .info()
     .annotations.push({ type: "issues", description: String(issues.length) });
-  expect(issues.filter((i) => i.severity === "blocker")).toEqual([]);
+  expectNoOpenSevere(issues);
 });
 
 async function caregiverCrawl(
@@ -1492,17 +1620,20 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   }
 
   cov.downloads = mon.downloads.length;
+  markAllowed(issues);
   writeResult("caregiver-sarah", { coverage: cov, issues });
-  expect(issues.filter((i) => i.severity === "blocker")).toEqual([]);
+  expectNoOpenSevere(issues);
 });
 
 test("caregiver-limited: every page with a custom map from Grace @phase16", async ({
   asUser,
 }) => {
-  test.skip(!limited, "the anonymous test registers the limited caregiver");
+  /* Never skipped: when the anonymous test did not register the account in
+     this run (a --grep run, or an earlier failure), it is set up here
+     through the API with the same custom map. */
   const issues: Issue[] = [];
   const cov = newCoverage("caregiver-limited");
-  const acct = limited!;
+  const acct = limited ?? (await setupLimitedCaregiver());
   const c = await ApiClient.login(acct);
   await c.post("/me/preferences/tour-completed");
   await c.logout();
@@ -1518,6 +1649,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   });
   await caregiverCrawl(ctx, page, null, true);
   cov.downloads = mon.downloads.length;
+  markAllowed(issues);
   writeResult("caregiver-limited", { coverage: cov, issues });
-  expect(issues.filter((i) => i.severity === "blocker")).toEqual([]);
+  expectNoOpenSevere(issues);
 });
