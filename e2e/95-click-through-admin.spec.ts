@@ -1450,17 +1450,21 @@ type UiControl = {
   what: string;
   name: RegExp;
   needs?: "unpaid-invoice" | "open-change-request" | "pending-review";
+  /** The tab the control lives on, opened first. */
+  tab?: RegExp;
 };
 const MANAGE_UI: UiControl[] = [
   {
     route: "/dashboard/admin-team",
-    what: "invite staff",
-    name: /^invite staff$/i,
+    what: "make a member the owner",
+    name: /^make .+ the owner$/i,
+    tab: /^people$/i,
   },
   {
     route: "/dashboard/admin-team",
-    what: "make a member the owner",
-    name: /^make .+ the owner$/i,
+    what: "invite staff",
+    name: /^invite staff$/i,
+    tab: /^invitations$/i,
   },
   {
     route: "/dashboard/subscriptions",
@@ -1495,9 +1499,12 @@ const MODERATION_ROUTES = [
   "/dashboard/admin-community",
 ];
 
+/** The API answers { success, data }, where data is the list or a page
+ *  ({ items, ... }). */
 function rows(body: unknown): Record<string, unknown>[] {
-  if (Array.isArray(body)) return body as Record<string, unknown>[];
-  const items = (body as { items?: unknown } | null)?.items;
+  const data = (body as { data?: unknown } | null)?.data ?? body;
+  if (Array.isArray(data)) return data as Record<string, unknown>[];
+  const items = (data as { items?: unknown } | null)?.items;
   return Array.isArray(items) ? (items as Record<string, unknown>[]) : [];
 }
 /** MANAGE-only reads: the moderation queues. */
@@ -1564,8 +1571,24 @@ async function checkManageUi(
             checks.push({ role, route, what: u.what, result: "not-exercised" });
             continue;
           }
-          // The row that needs the action is on screen for both admins.
-          await expect(page.getByText(anchor).first()).toBeVisible();
+          // The row that needs the action is on screen, unless the whole
+          // page is refused to the WRITE-only admin (a MANAGE-only queue):
+          // then the redirect or the no-access state is the refusal.
+          const refusedPage =
+            !expectPresent &&
+            (new URL(page.url()).pathname !== route ||
+              (await page
+                .getByText(NO_ACCESS)
+                .first()
+                .isVisible()
+                .catch(() => false)));
+          if (!refusedPage)
+            await expect(page.getByText(anchor).first()).toBeVisible();
+        }
+        if (u.tab) {
+          const tab = page.getByRole("tab", { name: u.tab }).first();
+          await tab.click();
+          await expect(tab).toHaveAttribute("aria-selected", "true");
         }
         const control = page.getByRole("button", { name: u.name });
         if (expectPresent)
