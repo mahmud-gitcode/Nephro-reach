@@ -44,6 +44,8 @@ type Issue = {
 type Role = {
   id: string;
   account: Account;
+  /** The portal's routes in src/app, crawled with the sidebar links. */
+  routes: readonly string[];
   /** Least-privilege staff: a role refusal shown as not shared is fine. */
   limited?: boolean;
 };
@@ -54,25 +56,69 @@ const staff = (email: string): Account => ({
   name: email,
 });
 
+/* Every page under src/app/(portal)/dashboard/(clinic|access|nephrology).
+   Deep-link-only pages are reached this way too; a route the role may not
+   open must redirect or show the no-access state, never crash. */
+const CLINIC_ROUTES = [
+  "/dashboard",
+  "/dashboard/clinic",
+  "/dashboard/clinic/billing",
+  "/dashboard/clinic/checkins",
+  "/dashboard/clinic/curriculum-progress",
+  "/dashboard/clinic/enroll-patients",
+  "/dashboard/clinic/labs",
+  "/dashboard/clinic/live-class",
+  "/dashboard/clinic/members",
+  "/dashboard/clinic/messages",
+  "/dashboard/clinic/reports",
+  "/dashboard/clinic/settings",
+  "/dashboard/clinic/support",
+  "/dashboard/clinic/team",
+  "/dashboard/clinic/travel",
+  "/dashboard/clinic/vascular-access",
+] as const;
+const ACCESS_ROUTES = [
+  "/dashboard",
+  "/dashboard/access-center",
+  "/dashboard/access-center/messages",
+  "/dashboard/access-center/support",
+  "/dashboard/access-center/team",
+] as const;
+const NEPHROLOGY_ROUTES = [
+  "/dashboard",
+  "/dashboard/nephrology",
+  "/dashboard/nephrology/access-messages",
+  "/dashboard/nephrology/messages",
+  "/dashboard/nephrology/settings",
+  "/dashboard/nephrology/team",
+] as const;
+
 const ROLES: Role[] = [
-  { id: "dialysis-owner", account: ACCOUNTS.clinic },
+  { id: "dialysis-owner", account: ACCOUNTS.clinic, routes: CLINIC_ROUTES },
   {
     id: "dialysis-office-manager",
+    routes: CLINIC_ROUTES,
     account: staff("officemanager@nephroreach.com"),
     limited: true,
   },
   {
     id: "dialysis-nurse",
+    routes: CLINIC_ROUTES,
     account: staff("nurse@nephroreach.com"),
     limited: true,
   },
   {
     id: "access-front-desk",
+    routes: ACCESS_ROUTES,
     account: staff("frontdesk@nephroreach.com"),
     limited: true,
   },
-  { id: "access-owner", account: ACCOUNTS.access },
-  { id: "nephrology-owner", account: ACCOUNTS.nephrology },
+  { id: "access-owner", account: ACCOUNTS.access, routes: ACCESS_ROUTES },
+  {
+    id: "nephrology-owner",
+    account: ACCOUNTS.nephrology,
+    routes: NEPHROLOGY_ROUTES,
+  },
 ];
 
 /* Blocker/high issues that are recorded in REPORT.md with their reason and
@@ -143,6 +189,17 @@ class Crawl {
     noOps: 0,
   };
   pagesVisited: string[] = [];
+  /** Per page: actions, controls clicked, forms submitted, redirect target. */
+  perPage: Record<
+    string,
+    {
+      source: string;
+      actions: number;
+      clicked: number;
+      forms: number;
+      redirectedTo?: string;
+    }
+  > = {};
   notes: string[] = [];
   current = "";
   step = "";
@@ -990,15 +1047,32 @@ async function act(
   return "ok";
 }
 
-async function crawlPage(c: Crawl, href: string) {
+async function crawlPage(c: Crawl, href: string, source: string) {
   const page = c.page;
   c.current = href;
   c.step = `open ${href}`;
+  const stat = {
+    source,
+    actions: 0,
+    clicked: 0,
+    forms: 0,
+  } as Crawl["perPage"][string];
+  c.perPage[href] = stat;
   await page.goto(href);
   await waitReady(c);
   c.coverage.pages++;
   c.pagesVisited.push(href);
   await c.flush("(page load)");
+  const landed = new URL(page.url()).pathname;
+  if (landed !== new URL(href, appOrigin).pathname) {
+    // A deep link the role may not open: the guard sent it elsewhere. The
+    // page it landed on is crawled under its own entry.
+    stat.redirectedTo = landed;
+    c.notes.push(`${href}: redirected to ${landed}`);
+    return;
+  }
+  const clicked0 = c.coverage.controlsClicked;
+  const forms0 = c.coverage.formsSubmitted;
   await checkLayout(c, "1280px");
   await page.setViewportSize({ width: 390, height: 844 });
   await settle(page, 300);
@@ -1034,6 +1108,9 @@ async function crawlPage(c: Crawl, href: string) {
   }
   if (actions >= MAX_ACTIONS_PER_PAGE)
     c.notes.push(`${href}: stopped at ${MAX_ACTIONS_PER_PAGE} actions`);
+  stat.actions = actions;
+  stat.clicked = c.coverage.controlsClicked - clicked0;
+  stat.forms = c.coverage.formsSubmitted - forms0;
 }
 
 test.setTimeout(45 * 60_000);
@@ -1068,14 +1145,20 @@ for (const role of ROLES) {
           .evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? "")),
       ),
     ].filter(Boolean);
+    const sidebar = new Set(hrefs.map((h) => h.split(/[?#]/)[0]));
+    const all = [
+      ...new Set([...sidebar, ...role.routes.filter((r) => !sidebar.has(r))]),
+    ];
 
-    for (const href of hrefs) await crawlPage(c, href);
+    for (const href of all)
+      await crawlPage(c, href, sidebar.has(href) ? "sidebar" : "src/app");
 
     const result = {
       role: role.id,
       account: role.account.email,
       marker: MARK,
       pages: c.pagesVisited,
+      perPage: c.perPage,
       coverage: c.coverage,
       issues: c.issues,
       notes: c.notes,
@@ -1090,12 +1173,10 @@ for (const role of ROLES) {
         !KNOWN.has(`${i.role} ${i.page} ${i.kind}`),
     );
     for (const i of c.issues.filter((x) => x.severity === "medium"))
-      test
-        .info()
-        .annotations.push({
-          type: "medium",
-          description: `${i.page} ${i.control}: ${i.actual}`,
-        });
+      test.info().annotations.push({
+        type: "medium",
+        description: `${i.page} ${i.control}: ${i.actual}`,
+      });
     expect(
       open.map((i) => `${i.severity} ${i.page} ${i.control}: ${i.actual}`),
       `${role.id}: unexplained blocker/high issues`,
