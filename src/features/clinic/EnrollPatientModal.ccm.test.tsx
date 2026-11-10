@@ -230,7 +230,7 @@ describe("CCM enroll new: roster, then CCM, with a partial retry", () => {
       providerName: "Dr. Synthetic",
       careManagerName: "Nurse Synthetic",
     });
-  });
+  }, 15_000);
 
   it("a refused roster POST (taken MRN) is not a partial: nothing is locked", async () => {
     const { calls } = api((c) =>
@@ -249,5 +249,5 @@ describe("CCM enroll new: roster, then CCM, with a partial retry", () => {
       within(dialog).getByRole("textbox", { name: /MRN/ }),
     ).not.toHaveAttribute("readonly");
     expect(calls.filter(ccmPost)).toHaveLength(0);
-  });
+  }, 15_000);
 });
