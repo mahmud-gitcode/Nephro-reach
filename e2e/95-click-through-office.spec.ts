@@ -27,6 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Locator, Page, Request, Response } from "@playwright/test";
 import { ACCOUNTS, apiOrigin, appOrigin, type Account } from "./fixtures/env";
+import { cookieSession } from "./fixtures/session";
 import { expect, test } from "./fixtures/test";
 
 type Severity = "blocker" | "high" | "medium" | "low";
@@ -133,6 +134,14 @@ const MAX_ACTIONS_PER_PAGE = Number(process.env.E2E_P16_MAX_ACTIONS ?? 90);
 const GOTO_TIMEOUT = 90_000;
 
 const NOT_SHARED = /not been shared with you/i;
+/* Domain refusals the API answers on purpose and the screen explains in
+   words (code -> why it is expected). They are notes, not issues. */
+const EXPECTED_4XX = new Map<string, string>([
+  [
+    "check_ins.notice_check_in_deleted",
+    "the member deleted the check-in behind an old notice; the notice shows that",
+  ],
+]);
 const ERROR_STATE = /^try again$/i;
 const DESTRUCTIVE =
   /\b(delete|remove|archive|revoke|deactivate|discharge|unenroll|disenroll|end (care|access)|disable|cancel (the )?(trip|ride|visit|request|enrol|invitation|class)|decline|reject|close (thread|case|ticket)|withdraw)\b/i;
@@ -257,6 +266,19 @@ class Crawl {
     return this.apiCalls;
   }
 
+  /** next dev served a half-written chunk (seen while it compiles a route
+      under load): the page is reloaded once before anything is recorded. */
+  takeChunkError() {
+    const i = this.pageErrors.findIndex((e) =>
+      /SyntaxError: (Invalid or unexpected token|Unexpected end of input)/.test(
+        e,
+      ),
+    );
+    if (i < 0) return false;
+    this.pageErrors.splice(i, 1);
+    return true;
+  }
+
   async issue(i: Omit<Issue, "role" | "page" | "steps"> & { steps?: string }) {
     const key = `${this.role.id}|${this.current}|${i.kind}|${i.control}|${i.actual}`;
     if (
@@ -328,6 +350,12 @@ class Crawl {
           );
           continue;
         }
+        if (e.code && EXPECTED_4XX.has(e.code)) {
+          this.notes.push(
+            `${this.current} ${control}: expected ${tag} (${EXPECTED_4XX.get(e.code)})`,
+          );
+          continue;
+        }
         if (this.allow4xx && [400, 409, 422].includes(e.status)) {
           this.notes.push(`${this.current} ${control}: submit refused ${tag}`);
           continue;
@@ -352,9 +380,9 @@ class Crawl {
     const p = this.page;
     if (
       await p
-        // The dev overlay's dialog only: nextjs-portal itself is always
-        // there in next dev (it holds the dev indicator).
-        .locator("[data-nextjs-dialog], #nextjs__container_errors_label")
+        // nextjs-portal itself is always there in next dev (dev indicator).
+        // The open dialog only: the "N Issues" badge is not a crash.
+        .locator("[data-nextjs-dialog]:visible")
         .count()
         .catch(() => 0)
     )
@@ -479,6 +507,23 @@ async function checkLayout(c: Crawl, label: string) {
         }
       }
       if (off.length >= 3) break;
+    }
+    // A select squeezed narrower than its chosen option's words.
+    const ctx = document.createElement("canvas").getContext("2d");
+    for (const el of Array.from(document.querySelectorAll("main select"))) {
+      const sel = el as HTMLSelectElement;
+      if (!ctx || !sel.offsetWidth || off.length >= 3) continue;
+      const cs = getComputedStyle(sel);
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const text = sel.selectedOptions[0]?.text ?? "";
+      const room =
+        sel.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight);
+      if (text && ctx.measureText(text).width > room + 2)
+        off.push(
+          `select "${text.slice(0, 40)}" is ${sel.clientWidth}px, too narrow`,
+        );
     }
     return { w, doc, off };
   });
@@ -909,7 +954,7 @@ async function act(
     if (u.pathname !== new URL(page.url()).pathname) {
       c.coverage.linksChecked++;
       const res = await page.request
-        .get(u.toString(), { maxRedirects: 3 })
+        .get(u.toString(), { maxRedirects: 3, timeout: GOTO_TIMEOUT })
         .catch(() => null);
       if (!res || res.status() >= 400)
         await c.issue({
@@ -1048,6 +1093,42 @@ async function act(
   return "ok";
 }
 
+/** Opens a page: retries once after a dev-server compile hiccup, and signs
+    in again (recording it) when the session ended under the crawl. */
+async function open(c: Crawl, href: string) {
+  const page = c.page;
+  await page
+    .goto(href, { timeout: GOTO_TIMEOUT })
+    .catch(() => page.goto(href, { timeout: GOTO_TIMEOUT }));
+  await page
+    .locator("main")
+    .first()
+    .waitFor({ timeout: 20_000 })
+    .catch(() => undefined);
+  if (c.takeChunkError()) {
+    c.notes.push(`${href}: dev chunk SyntaxError on load, reloaded once`);
+    await page.reload({ timeout: GOTO_TIMEOUT });
+  }
+  if (new URL(page.url()).pathname === "/login") {
+    await c.issue({
+      control: "(page load)",
+      kind: "session-ended",
+      expected: "the session stays signed in during the crawl",
+      actual: "sent to /login (see the API log for the failed refresh)",
+      severity: "high",
+    });
+    await cookieSession(page.context(), c.role.account);
+    await page.goto("/dashboard", { timeout: GOTO_TIMEOUT });
+    if (/\/select-portal/.test(page.url()))
+      await page
+        .getByRole("button", { name: /^Open: / })
+        .first()
+        .click();
+    await page.goto(href, { timeout: GOTO_TIMEOUT });
+  }
+  await waitReady(c);
+}
+
 async function crawlPage(c: Crawl, href: string, source: string) {
   const page = c.page;
   c.current = href;
@@ -1060,8 +1141,7 @@ async function crawlPage(c: Crawl, href: string, source: string) {
   } as Crawl["perPage"][string];
   c.perPage[href] = stat;
   // next dev compiles a route on its first visit, which can take ~20s.
-  await page.goto(href, { timeout: GOTO_TIMEOUT });
-  await waitReady(c);
+  await open(c, href);
   c.coverage.pages++;
   c.pagesVisited.push(href);
   await c.flush("(page load)");
@@ -1103,8 +1183,7 @@ async function crawlPage(c: Crawl, href: string, source: string) {
       r === "navigated" ||
       new URL(page.url()).pathname !== new URL(href, appOrigin).pathname
     ) {
-      await page.goto(href, { timeout: GOTO_TIMEOUT });
-      await waitReady(c);
+      await open(c, href);
       await c.flush("(back to page)");
     }
   }
