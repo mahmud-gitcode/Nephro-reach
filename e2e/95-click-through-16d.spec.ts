@@ -516,7 +516,14 @@ async function openDialog(page: Page) {
 const SUBMIT =
   /^(save|send|submit|create|add|invite|enroll|confirm|continue|next|request|assign|apply|update|book|schedule|post|upload|share|start)\b/i;
 
-/** Submit an open modal empty, expect validation, then close it. */
+/* A dialog opened from a row action edits a record that already exists
+   (often a seeded one): it is opened, its choices clicked and closed, never
+   saved. The journeys save their own records. */
+const EDIT_OPENER =
+  /^(update|edit|change|manage|reschedule|rename|view|open|review|assign|reassign|move|details?)\b/i;
+
+/** Submit an open modal empty, expect validation, click its inner choices,
+    then close it without saving. */
 async function exerciseDialog(rec: Recorder, pagePath: string, opener: string) {
   const page = rec.page;
   const dlg = await openDialog(page);
@@ -531,63 +538,37 @@ async function exerciseDialog(rec: Recorder, pagePath: string, opener: string) {
       .catch(() => "")) ||
     opener;
   const destructiveDialog = DESTRUCTIVE.test(title) || DESTRUCTIVE.test(opener);
-  /* Inner choices (tabs, segmented choices, radios, selects): each once,
-     then back to the first option so the empty-submit check stays empty. */
-  if (!destructiveDialog) {
-    const inner = dlg.locator(
-      '[role="tab"]:visible, [role="radio"]:visible, [aria-pressed]:visible, input[type="radio"]:visible, input[type="checkbox"]:visible, [role="switch"]:visible',
+  /* An edit dialog opens prefilled: "empty" would mean re-saving an
+     existing record, so it is only opened, explored and closed. Judged
+     before anything in it is clicked. */
+  const prefilled =
+    EDIT_OPENER.test(opener) ||
+    (await dlg
+      .evaluate((d) =>
+        [...d.querySelectorAll("input, textarea")].some((e) => {
+          const i = e as HTMLInputElement;
+          if (
+            [
+              "checkbox",
+              "radio",
+              "hidden",
+              "file",
+              "date",
+              "time",
+              "number",
+            ].includes(i.type)
+          )
+            return false;
+          return !i.disabled && !i.readOnly && i.value.trim() !== "";
+        }),
+      )
+      .catch(() => true));
+  if (prefilled)
+    rec.notes.push(
+      `${pagePath} | ${title}: edit dialog opened and explored, not saved`,
     );
-    const n = Math.min(await inner.count().catch(() => 0), 24);
-    for (let i = 0; i < n; i++) {
-      const el = inner.nth(i);
-      if (await el.isDisabled().catch(() => true)) continue;
-      const label = (
-        (await el.getAttribute("aria-label").catch(() => null)) ||
-        (await el.innerText({ timeout: 500 }).catch(() => "")) ||
-        ""
-      ).trim();
-      if (DESTRUCTIVE.test(label)) continue;
-      await el.click({ timeout: 2000 }).catch(() => undefined);
-      rec.counts.controlsClicked++;
-      await page.waitForTimeout(120);
-      if (!(await dlg.isVisible().catch(() => false))) {
-        rec.notes.push(
-          `${pagePath} | ${title}: inner "${label}" closed the dialog`,
-        );
-        await rec.drain(
-          pagePath,
-          `${opener} > ${label}`,
-          `click ${label} in ${title}`,
-        );
-        return;
-      }
-    }
-    const selects = dlg.locator("select:visible");
-    const s = Math.min(await selects.count().catch(() => 0), 8);
-    for (let i = 0; i < s; i++) {
-      const sel = selects.nth(i);
-      if (await sel.isDisabled().catch(() => true)) continue;
-      const values = await sel
-        .evaluate((x) =>
-          [...(x as HTMLSelectElement).options].map((o) => o.value),
-        )
-        .catch(() => [] as string[]);
-      if (values.length > 1) {
-        await sel
-          .selectOption(values[1], { timeout: 2000 })
-          .catch(() => undefined);
-        rec.counts.controlsClicked++;
-        await sel
-          .selectOption(values[0], { timeout: 2000 })
-          .catch(() => undefined);
-      }
-    }
-    await rec.drain(
-      pagePath,
-      `${opener} > (inner controls)`,
-      `click the choices in ${title}`,
-    );
-  }
+
+  /* 1. Empty submit, before any choice in the form is touched. */
   const buttons = dlg.locator("button:visible");
   const names = await buttons.allInnerTexts().catch(() => [] as string[]);
   let submitIdx = -1;
@@ -602,32 +583,6 @@ async function exerciseDialog(rec: Recorder, pagePath: string, opener: string) {
     (await dlg
       .locator("input:visible, textarea:visible, select:visible")
       .count()) > 0;
-  /* An edit dialog opens prefilled: "empty" would mean re-saving a seeded
-     record, so it is only opened and closed (journeys save their own). */
-  const prefilled = await dlg
-    .evaluate((d) =>
-      [...d.querySelectorAll("input, textarea")].some((e) => {
-        const i = e as HTMLInputElement;
-        if (
-          [
-            "checkbox",
-            "radio",
-            "hidden",
-            "file",
-            "date",
-            "time",
-            "number",
-          ].includes(i.type)
-        )
-          return false;
-        return !i.disabled && !i.readOnly && i.value.trim() !== "";
-      }),
-    )
-    .catch(() => true);
-  if (prefilled)
-    rec.notes.push(
-      `${pagePath} | ${title}: prefilled edit dialog opened, not submitted`,
-    );
   if (!destructiveDialog && !prefilled && submitIdx >= 0 && hasFields) {
     const submit = buttons.nth(submitIdx);
     const label = names[submitIdx].trim();
@@ -687,6 +642,62 @@ async function exerciseDialog(rec: Recorder, pagePath: string, opener: string) {
         });
       await rec.drain(pagePath, `${opener} > ${label}`, "empty submit");
     }
+  }
+
+  /* 2. Inner choices (tabs, segmented choices, radios, selects): each once;
+     a select is put back to its own value. Nothing is saved afterwards. */
+  if (!destructiveDialog && (await dlg.isVisible().catch(() => false))) {
+    const inner = dlg.locator(
+      '[role="tab"]:visible, [role="radio"]:visible, [aria-pressed]:visible, input[type="radio"]:visible, input[type="checkbox"]:visible, [role="switch"]:visible',
+    );
+    const n = Math.min(await inner.count().catch(() => 0), 24);
+    for (let i = 0; i < n; i++) {
+      const el = inner.nth(i);
+      if (await el.isDisabled().catch(() => true)) continue;
+      const label = (
+        (await el.getAttribute("aria-label").catch(() => null)) ||
+        (await el.innerText({ timeout: 500 }).catch(() => "")) ||
+        ""
+      ).trim();
+      if (DESTRUCTIVE.test(label)) continue;
+      await el.click({ timeout: 2000 }).catch(() => undefined);
+      rec.counts.controlsClicked++;
+      await page.waitForTimeout(120);
+      if (!(await dlg.isVisible().catch(() => false))) {
+        rec.notes.push(
+          `${pagePath} | ${title}: inner "${label}" closed the dialog`,
+        );
+        await rec.drain(
+          pagePath,
+          `${opener} > ${label}`,
+          `click ${label} in ${title}`,
+        );
+        return;
+      }
+    }
+    const selects = dlg.locator("select:visible");
+    const s = Math.min(await selects.count().catch(() => 0), 8);
+    for (let i = 0; i < s; i++) {
+      const sel = selects.nth(i);
+      if (await sel.isDisabled().catch(() => true)) continue;
+      const cur = await sel.inputValue().catch(() => null);
+      const values = await sel
+        .evaluate((x) =>
+          [...(x as HTMLSelectElement).options].map((o) => o.value),
+        )
+        .catch(() => [] as string[]);
+      const other = values.find((v) => v !== cur);
+      if (cur !== null && other !== undefined) {
+        await sel.selectOption(other, { timeout: 2000 }).catch(() => undefined);
+        rec.counts.controlsClicked++;
+        await sel.selectOption(cur, { timeout: 2000 }).catch(() => undefined);
+      }
+    }
+    await rec.drain(
+      pagePath,
+      `${opener} > (inner controls)`,
+      `click the choices in ${title}`,
+    );
   }
   await closeDialog(rec, pagePath, title);
 }
@@ -766,8 +777,15 @@ async function overflowCheck(
 
 const pathOf = (page: Page) => new URL(page.url()).pathname;
 
+/* next dev compiles a route on its first visit, which can take far longer
+   than the 20 s navigation default on a busy machine. */
+const NAV_TIMEOUT = 90_000;
+
 async function gotoPage(rec: Recorder, href: string) {
-  await rec.page.goto(href, { waitUntil: "domcontentloaded" });
+  await rec.page.goto(href, {
+    waitUntil: "domcontentloaded",
+    timeout: NAV_TIMEOUT,
+  });
   const state = await settle(rec.page);
   if (state === "stuck")
     await rec.add({
@@ -996,7 +1014,7 @@ async function checkLinks(rec: Recorder, links: Set<string>, pages: string[]) {
     /* A sidebar page was already opened and crawled. */
     if (pages.includes(link.split("?")[0])) continue;
     const res = await rec.page
-      .goto(link, { waitUntil: "domcontentloaded" })
+      .goto(link, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT })
       .catch(() => null);
     await settle(rec.page, 5000);
     const notFound =
@@ -1138,21 +1156,26 @@ for (const role of ROLES) {
     await page.setViewportSize({ width: 1280, height: 800 });
     const rec = new Recorder(role.id, page);
 
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await page.waitForURL(/\/(dashboard|select-portal)/, { timeout: 30_000 });
+    await page.goto("/dashboard", {
+      waitUntil: "domcontentloaded",
+      timeout: NAV_TIMEOUT,
+    });
+    await page.waitForURL(/\/(dashboard|select-portal)/, {
+      timeout: NAV_TIMEOUT,
+    });
     if (/\/select-portal/.test(page.url()) || role.portal) {
       if (!/\/select-portal/.test(page.url()))
         await page.goto("/select-portal");
       const open = role.portal
         ? page.getByRole("button", { name: `Open: ${role.portal}` })
         : page.getByRole("button", { name: /^Open: / }).first();
-      await open.click({ timeout: 30_000 });
-      await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+      await open.click({ timeout: NAV_TIMEOUT });
+      await page.waitForURL(/\/dashboard/, { timeout: NAV_TIMEOUT });
     }
     await page
       .locator('aside a[href^="/dashboard"]')
       .first()
-      .waitFor({ timeout: 30_000 });
+      .waitFor({ timeout: NAV_TIMEOUT });
     await rec.drain("/dashboard", "(sign-in)", "sign in and open the portal");
     const pages = [
       ...new Set(
@@ -1169,7 +1192,9 @@ for (const role of ROLES) {
     for (const href of pages) {
       await page.locator(`aside a[href="${href}"]`).first().click();
       await page
-        .waitForURL((u) => u.pathname.startsWith(href), { timeout: 20_000 })
+        .waitForURL((u) => u.pathname.startsWith(href), {
+          timeout: NAV_TIMEOUT,
+        })
         .catch(() => undefined);
       const landed = pathOf(page);
       await crawlPage(rec, landed, links, first);
@@ -1179,8 +1204,8 @@ for (const role of ROLES) {
       if (/\/select-portal/.test(page.url()) && role.portal) {
         await page
           .getByRole("button", { name: `Open: ${role.portal}` })
-          .click({ timeout: 20_000 });
-        await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+          .click({ timeout: NAV_TIMEOUT });
+        await page.waitForURL(/\/dashboard/, { timeout: NAV_TIMEOUT });
       }
     }
     await checkLinks(rec, links, pages);
