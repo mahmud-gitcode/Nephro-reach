@@ -86,7 +86,11 @@ export function usePatientLabChart(patientId: string | null) {
     updatedAt: query.dataUpdatedAt,
     hasMore: query.hasNextPage,
     loadMore: () => void query.fetchNextPage(),
-    refetch: () => void query.refetch(),
+    /* refetch() ignores `enabled`: with no patient it would ask for
+       /patients/null/labs (P16c crawl), so it waits for one. */
+    refetch: () => {
+      if (orgId !== null && patientId !== null) void query.refetch();
+    },
   };
 }
 
