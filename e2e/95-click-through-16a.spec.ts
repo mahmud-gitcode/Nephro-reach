@@ -158,11 +158,15 @@ function syntheticFile(accept: string) {
 /** window.print() calls (stubbed in session(): a print dialog is the
  *  control's result, and headless Chromium shows none). */
 const prints = (page: Page) =>
-  page
-    .evaluate(
-      () => (window as unknown as { __p16Prints?: number }).__p16Prints ?? 0,
-    )
-    .catch(() => 0);
+  within(
+    page
+      .evaluate(
+        () => (window as unknown as { __p16Prints?: number }).__p16Prints ?? 0,
+      )
+      .catch(() => 0),
+    5_000,
+    0,
+  );
 
 const storageOrigin = (() => {
   const raw = process.env.E2E_STORAGE_ORIGIN ?? "";
@@ -180,6 +184,18 @@ const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+
+/** page.evaluate has no timeout of its own: a tab stuck in a navigation
+ *  would hold the crawl forever. Give up after `ms` with `fallback`. */
+function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    p.finally(() => clearTimeout(t)),
+    new Promise<T>((resolve) => {
+      t = setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
+}
 
 /* ------------------------------------------------------------------ */
 /* Recorder: everything the browser reports between two checkpoints.  */
@@ -335,7 +351,20 @@ class Recorder {
 /* API refusals that are the designed answer and that the page handles (it
    shows an empty or explained state, checked in REPORT.md). They are not
    recorded as issues. */
-const EXPECTED_4XX: { status: number; code: string; why: string }[] = [
+const EXPECTED_4XX: {
+  status: number;
+  code: string;
+  path?: RegExp;
+  why: string;
+}[] = [
+  {
+    /* The API's NotFoundException for this route carries the message only
+       (no code); dialysis.repository getPrescription maps 404 to null. */
+    status: 404,
+    code: "",
+    path: /^\/patients\/[^/]+\/dialysis\/prescription$/,
+    why: "no prescription on file yet: the page shows its empty state",
+  },
   {
     status: 404,
     code: "dialysis.prescription_not_found",
@@ -398,7 +427,14 @@ async function judge(
       continue;
     }
     const what = `${r.method} ${r.path} -> ${r.status}${r.code ? ` ${r.code}` : ""}`;
-    if (EXPECTED_4XX.some((e) => e.status === r.status && e.code === r.code))
+    if (
+      EXPECTED_4XX.some(
+        (e) =>
+          e.status === r.status &&
+          e.code === r.code &&
+          (!e.path || (r.method === "GET" && e.path.test(r.path))),
+      )
+    )
       continue;
     if (
       r.method === "GET" &&
@@ -582,7 +618,7 @@ async function waitLoaded(
 
 /** A cheap fingerprint of <main> and open dialogs. */
 async function fingerprint(page: Page): Promise<string> {
-  return page
+  const fp = page
     .evaluate(() => {
       const parts = [
         document.querySelector("main")?.innerHTML ?? "",
@@ -599,6 +635,7 @@ async function fingerprint(page: Page): Promise<string> {
       return `${s.length}:${h}`;
     })
     .catch(() => "gone");
+  return within(fp, 10_000, "gone");
 }
 
 type Control = {
@@ -611,7 +648,7 @@ type Control = {
 
 /** Tag every visible enabled control in <main> (not in a dialog). */
 async function enumerate(page: Page): Promise<Control[]> {
-  return page
+  const list = page
     .evaluate(() => {
       // Drop the tags of an earlier pass: a stale tag would make two
       // elements answer the same [data-p16] locator.
@@ -676,7 +713,8 @@ async function enumerate(page: Page): Promise<Control[]> {
       }
       return out;
     })
-    .catch(() => []);
+    .catch((): Control[] => []);
+  return within(list, 15_000, []);
 }
 
 const nameShape = (s: string) => s.replace(/\d+/g, "#").replace(/#\d+$/, "");
@@ -1315,38 +1353,44 @@ async function layout(page: Page, rec: Recorder, href: string) {
   ] as const) {
     await page.setViewportSize({ width: w, height: h });
     await page.waitForTimeout(250);
-    const r = await page.evaluate(() => {
-      const iw = window.innerWidth;
-      const doc = document.documentElement.scrollWidth > iw + 1;
-      const out: string[] = [];
-      const main = document.querySelector("main");
-      if (main)
-        for (const el of main.querySelectorAll<HTMLElement>("*")) {
-          const rect = el.getBoundingClientRect();
-          if (!rect.width || rect.right <= iw + 1) continue;
-          let p: HTMLElement | null = el.parentElement;
-          let clipped = false;
-          while (p && p !== document.body) {
-            const ox = getComputedStyle(p).overflowX;
-            if (
-              ox === "auto" ||
-              ox === "scroll" ||
-              ox === "hidden" ||
-              ox === "clip"
-            ) {
-              clipped = true;
-              break;
+    const r = await within(
+      page
+        .evaluate(() => {
+          const iw = window.innerWidth;
+          const doc = document.documentElement.scrollWidth > iw + 1;
+          const out: string[] = [];
+          const main = document.querySelector("main");
+          if (main)
+            for (const el of main.querySelectorAll<HTMLElement>("*")) {
+              const rect = el.getBoundingClientRect();
+              if (!rect.width || rect.right <= iw + 1) continue;
+              let p: HTMLElement | null = el.parentElement;
+              let clipped = false;
+              while (p && p !== document.body) {
+                const ox = getComputedStyle(p).overflowX;
+                if (
+                  ox === "auto" ||
+                  ox === "scroll" ||
+                  ox === "hidden" ||
+                  ox === "clip"
+                ) {
+                  clipped = true;
+                  break;
+                }
+                p = p.parentElement;
+              }
+              if (clipped) continue;
+              out.push(
+                `${el.tagName.toLowerCase()} '${(el.textContent ?? "").trim().slice(0, 40)}' right=${Math.round(rect.right)}`,
+              );
+              if (out.length > 2) break;
             }
-            p = p.parentElement;
-          }
-          if (clipped) continue;
-          out.push(
-            `${el.tagName.toLowerCase()} '${(el.textContent ?? "").trim().slice(0, 40)}' right=${Math.round(rect.right)}`,
-          );
-          if (out.length > 2) break;
-        }
-      return { doc, out };
-    });
+          return { doc, out };
+        })
+        .catch(() => ({ doc: false, out: [] as string[] })),
+      10_000,
+      { doc: false, out: [] as string[] },
+    );
     if (r.doc || r.out.length)
       await rec.add(page, {
         kind: `layout-overflow-${w}`,
@@ -1420,7 +1464,15 @@ async function session(
   await cookieSession(context, account);
   const page = await context.newPage();
   mainPage = page;
-  return { context, page };
+  /* A replacement for a hung tab becomes the crawl's tab (the listener
+     above would otherwise close it as a stray new tab). */
+  const replace = async () => {
+    mainPage = null;
+    const next = await context.newPage();
+    mainPage = next;
+    return next;
+  };
+  return { context, page, replace };
 }
 
 for (const role of ROLES) {
@@ -1428,6 +1480,7 @@ for (const role of ROLES) {
     let context: BrowserContext;
     let page: Page;
     let rec: Recorder;
+    let replace: () => Promise<Page>;
     const blocked: BlockedLog = [];
     const external: string[] = [];
 
@@ -1435,7 +1488,7 @@ for (const role of ROLES) {
       fs.mkdirSync(OUT, { recursive: true });
       rec = new Recorder(role.id, OUT);
       rec.external = external;
-      ({ context, page } = await session(
+      ({ context, page, replace } = await session(
         browser,
         role.account,
         blocked,
@@ -1511,7 +1564,7 @@ for (const role of ROLES) {
         if (outcome === "timeout") {
           await page.close().catch(() => undefined);
           await crawl;
-          page = await context.newPage();
+          page = await replace();
           page.setDefaultTimeout(10_000);
           rec.attach(page);
         }
