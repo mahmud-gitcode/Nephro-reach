@@ -526,7 +526,15 @@ async function snapshot(page: Page): Promise<string> {
       let s = 0;
       for (let i = 0; i < states.length; i++)
         s = (s * 31 + states.charCodeAt(i)) | 0;
-      return `${location.pathname}${location.search}#${h}#${s}#${document.querySelectorAll('[role="dialog"],[role="alertdialog"]').length}`;
+      /* A control that only moves the view (scroll to a section, focus a
+         field) is a visible result too. */
+      const focused = document.activeElement;
+      const field =
+        focused && /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName)
+          ? `${focused.tagName}${focused.id}${focused.getAttribute("name") ?? ""}`
+          : "";
+      const where = `${Math.round(window.scrollY)}:${Math.round(document.querySelector("main")?.scrollTop ?? 0)}:${field}`;
+      return `${location.pathname}${location.search}#${h}#${s}#${document.querySelectorAll('[role="dialog"],[role="alertdialog"]').length}#${where}`;
     })
     .catch(() => "gone");
 }
@@ -906,6 +914,10 @@ async function crawlPage(
           e.getAttribute("aria-current") !== null,
       )
       .catch(() => false);
+    /* Scrolled into view first, so the click itself moves nothing. */
+    await target
+      .scrollIntoViewIfNeeded({ timeout: 2000 })
+      .catch(() => undefined);
     let before = await snapshot(page);
     const r0 = rec.requests;
     const d0 = rec.counts.downloads;
@@ -1430,11 +1442,13 @@ test("journey: hospital team invitation (empty, invalid, valid) and withdrawing 
   await send.click();
   await expect(dlg).toBeHidden({ timeout: 15_000 });
   rec.counts.formsSubmittedValid++;
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
+  /* The row, not the "Invitation sent to …" toast that also names it. */
+  const sent = page.getByRole("cell", { name: email, exact: true });
+  await expect(sent).toBeVisible({ timeout: 15_000 });
   await page.reload({ waitUntil: "domcontentloaded" });
   await settle(page);
   if (await invitations.count()) await invitations.first().click();
-  await expect(page.getByText(email)).toBeVisible({ timeout: 15_000 });
+  await expect(sent).toBeVisible({ timeout: 15_000 });
   await rec.drain(T, "Invite staff", "invite a synthetic address");
 
   const withdraw = page.getByRole("button", {
