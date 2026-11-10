@@ -163,13 +163,17 @@ function Section({
 
 export function CheckInForm({
   entry,
+  date,
   notice,
   onSave,
   onCancel,
   saving = false,
 }: {
-  /** An existing day, reopened. Omit to check in for today. */
+  /** An existing day, reopened. Omit to check in for a new day. */
   entry?: BetweenTreatmentCheckIn;
+  /** The day a new check-in is for (the day picked in the strip). Omit
+   *  for today. Ignored when `entry` is given. */
+  date?: string;
   /** The notice already raised for this day, if there is one. */
   notice?: ClinicNotice | null;
   onSave: (entry: BetweenTreatmentCheckIn, notifyClinic: boolean) => void;
@@ -180,7 +184,7 @@ export function CheckInForm({
   const isEs = language === "ES";
 
   const [draft, setDraft] = useState<BetweenTreatmentCheckIn>(
-    () => entry ?? emptyCheckIn(),
+    () => entry ?? emptyCheckIn(date),
   );
   const [otherSymptom, setOtherSymptom] = useState("");
 
