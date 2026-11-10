@@ -242,7 +242,14 @@ class Recorder {
         );
       const intendedDenial =
         (r.status === 403 ? why403 !== null : r.status === 404) && noAccess;
-      if (r.status === 401 && r.code === "" && refreshed) {
+      if (r.status === 401 && r.code === "" && r.path === "GET /auth/session") {
+        /* The idle timer's passive read never refreshes (client.ts
+           NO_REFRESH, spec 025 §4): a bare 401 there means "access cookie
+           expired, keep what we knew" (sessionTimer.ts), by design. */
+        this.notes.push(
+          `${pagePath} | ${control}: 401 GET /auth/session (passive read, expired access cookie; by design no refresh)`,
+        );
+      } else if (r.status === 401 && r.code === "" && refreshed) {
         this.notes.push(
           `${pagePath} | ${control}: 401 ${r.path} (expired access cookie), refreshed and retried`,
         );
