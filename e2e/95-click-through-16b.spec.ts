@@ -65,6 +65,10 @@ type Coverage = {
   pages: string[];
   controlsClicked: number;
   formsSubmitted: number;
+  /** Of formsSubmitted: in-app submits with invalid input (P16b QA round 2). */
+  invalidSubmitted: number;
+  /** In-page (not dialog) forms the page-form pass filled and sent. */
+  pageForms: number;
   dialogsOpened: number;
   downloads: number;
   notes: string[];
@@ -304,7 +308,6 @@ async function issue(
  *  a caregiver never reaches it. Matched against the path after
  *  /patients/{id}/. */
 const PATIENT_ROUTE_KEYS: [RegExp, string | null][] = [
-  [/^dialysis\/prescription\/transfers/, null],
   [/^(dialysis|access-profiles|trips)(\/|$)/, "dialysis"],
   [/^nutrition(\/|$)/, "nutrition"],
   [/^check-ins(\/|$)/, "check-ins"],
@@ -355,6 +358,10 @@ function refusalVerdict(
   if (rest === "") key = null;
   else if (/^care-relationships(\/|$)/.test(rest))
     key = method === "GET" ? "profile" : null;
+  else if (/^dialysis\/prescription\/transfers(\/|$)/.test(rest))
+    /* GET is PRESCRIPTION READ (caregiver key dialysis); every write is
+       PRESCRIPTION MANAGE, which no caregiver map reaches (P16b QA r2). */
+    key = method === "GET" ? "dialysis" : null;
   else key = PATIENT_ROUTE_KEYS.find(([re]) => re.test(rest))?.[1];
   if (key === undefined) return "unknown";
   const level = key === null ? 0 : (perms[key] ?? 0);
@@ -877,6 +884,194 @@ const PNG_1PX = Buffer.from(
   "base64",
 );
 
+/** Fields of a validly filled form set to invalid input (P16b QA round 2):
+ *  a negative number, a malformed email or phone, over-long text where the
+ *  field has no maxlength, a future date where the label says the day has
+ *  already happened. Returns what was changed and how to put it back. */
+async function fillInvalid(scope: Locator): Promise<{
+  kinds: string[];
+  restore: () => Promise<void>;
+}> {
+  const fields = scope.locator(
+    "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=search]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])",
+  );
+  const changed: { f: Locator; old: string }[] = [];
+  const kinds = new Set<string>();
+  const n = await fields.count();
+  for (let i = 0; i < n; i++) {
+    const f = fields.nth(i);
+    if (!(await f.isVisible().catch(() => false))) continue;
+    const meta = await f
+      .evaluate(
+        (el) => {
+          const label = el.id
+            ? (document.querySelector(`label[for="${el.id}"]`)?.textContent ??
+              "")
+            : "";
+          return {
+            tag: el.tagName.toLowerCase(),
+            type: (el.getAttribute("type") ?? "text").toLowerCase(),
+            mode: el.getAttribute("inputmode") ?? "",
+            maxLength: (el as HTMLInputElement).maxLength,
+            value: (el as HTMLInputElement).value,
+            name: [
+              el.getAttribute("name"),
+              el.id,
+              el.getAttribute("placeholder"),
+              el.getAttribute("aria-label"),
+              label,
+            ]
+              .join(" ")
+              .toLowerCase(),
+          };
+        },
+        undefined,
+        { timeout: 2_000 },
+      )
+      .catch(() => null);
+    if (!meta) continue;
+    const { name, type } = meta;
+    const numeric =
+      type === "number" ||
+      (type === "text" &&
+        (/numeric|decimal/.test(meta.mode) ||
+          /\((mg|g|kcal|kg|lb|lbs|ml|oz|mmhg|bpm)\)/.test(name)));
+    let v: string | null = null;
+    let kind = "";
+    if (numeric) {
+      v = "-5";
+      kind = "negative number";
+    } else if (type === "email" || /e-?mail/.test(name)) {
+      v = "not-an-email";
+      kind = "malformed email";
+    } else if (type === "tel" || /phone/.test(name)) {
+      v = "not-a-phone";
+      kind = "malformed phone";
+    } else if (type === "date") {
+      if (
+        /birth|dob|diagnos|onset|occurred|happened|visit|taken|logged|measured/.test(
+          name,
+        )
+      ) {
+        v = "2099-01-01";
+        kind = "future date";
+      }
+    } else if (
+      (type === "text" || meta.tag === "textarea") &&
+      meta.maxLength < 0 &&
+      !/search|filter|code|otp/.test(name)
+    ) {
+      v = "x".repeat(5001);
+      kind = "over-long text";
+    }
+    if (v === null) continue;
+    await f.fill(v, { timeout: 2_000 }).catch(() => undefined);
+    changed.push({ f, old: meta.value });
+    kinds.add(kind);
+  }
+  return {
+    kinds: [...kinds],
+    restore: async () => {
+      for (const { f, old } of changed)
+        await f.fill(old, { timeout: 2_000 }).catch(() => undefined);
+    },
+  };
+}
+
+/** Submit a validly filled form with invalid input and expect a message
+ *  (a field message, an alert, the browser's own field check, a disabled
+ *  submit, or a refused 400 shown in the form), never a save. Returns
+ *  false when the form closed (it saved or went away). */
+async function invalidPass(
+  ctx: Ctx,
+  scope: Locator,
+  opener: string,
+): Promise<boolean> {
+  const { page, mon } = ctx;
+  const { kinds, restore } = await fillInvalid(scope);
+  if (!kinds.length) {
+    ctx.cov.notes.push(
+      `${ctx.current}: "${opener}": no field takes an invalid value (selects, bounded text); invalid pass skipped`,
+    );
+    return true;
+  }
+  const what = kinds.join(", ");
+  const submit = await submitOf(scope);
+  if (!submit || !(await submit.isEnabled().catch(() => false))) {
+    ctx.cov.notes.push(
+      `${ctx.current}: "${opener}" with ${what}: submit disabled (refused before sending)`,
+    );
+    await restore();
+    return true;
+  }
+  const label = ((await submit.textContent()) ?? "").trim();
+  const m = mon.mark();
+  await submit.click({ timeout: 3_000 }).catch(() => undefined);
+  await page.waitForTimeout(700);
+  ctx.cov.formsSubmitted++;
+  ctx.cov.invalidSubmitted++;
+  const control = `${opener} > ${label} (invalid: ${what})`;
+  const steps = `open "${opener}", fill it, then enter ${what}, and submit "${label}"`;
+  /* Uploads (/files) may run before the form's own check. */
+  const writes = mon.api
+    .slice(m.a)
+    .filter((h) => h.method !== "GET" && !/^\/files(\/|$)/.test(h.path));
+  const saved = writes.filter((h) => h.status < 400);
+  const refused400 = writes.filter((h) => [400, 422].includes(h.status));
+  const open = await scope.isVisible().catch(() => false);
+  const message =
+    open &&
+    ((await scope
+      .getByText(VALIDATION)
+      .count()
+      .catch(() => 0)) > 0 ||
+      (await scope
+        .locator('[aria-invalid="true"], [role="alert"]')
+        .count()
+        .catch(() => 0)) > 0 ||
+      (await scope
+        .locator("input:invalid, textarea:invalid, select:invalid")
+        .count()
+        .catch(() => 0)) > 0);
+  if (saved.length)
+    await issue(
+      ctx,
+      control,
+      steps,
+      "a validation message, nothing saved",
+      `saved invalid input (${saved.map((h) => `${h.status} ${h.method} ${h.path}`).join(", ")})`,
+      "medium",
+    );
+  else if (refused400.length && !message)
+    await issue(
+      ctx,
+      control,
+      steps,
+      "the server's refusal shown in the form",
+      `${refused400.map((h) => `${h.status} ${h.method} ${h.path} ${h.code}`).join(", ")} with no message in the form`,
+      "medium",
+    );
+  else if (!message)
+    await issue(
+      ctx,
+      control,
+      steps,
+      "a validation message",
+      open
+        ? "nothing sent and no message (a control that does nothing)"
+        : "the form closed with nothing sent and no message",
+      "low",
+    );
+  else
+    ctx.cov.notes.push(
+      `${ctx.current}: "${opener}" with ${what}: ${refused400.length ? "server 400 shown in the form" : "validation message shown"}, nothing saved`,
+    );
+  await checkSince(ctx, m, control, steps, { invalidSubmit: true });
+  if (!open) return false;
+  await restore();
+  return true;
+}
+
 /** The submit button of a dialog or form. */
 async function submitOf(scope: Locator): Promise<Locator | null> {
   const typed = scope
@@ -894,7 +1089,7 @@ async function submitOf(scope: Locator): Promise<Locator | null> {
   return null;
 }
 
-/** Empty submit, then valid submit, of an open dialog. Returns the marker
+/** Empty submit, invalid submit, then valid submit, of an open dialog. Returns the marker
  *  when a valid submit closed the dialog with a successful write. */
 async function exerciseDialog(
   ctx: Ctx,
@@ -987,8 +1182,12 @@ async function exerciseDialog(
     if (!stillOpen) return null;
   }
   if (!allowWrites) return null;
-  /* 2. Valid synthetic data, then submit. */
   const marker = `Synthetic P16b ${Date.now().toString(36)}`;
+  await fillValid(dialog, marker);
+  /* 2. Invalid input on a validly filled form (P16b QA round 2: Goals
+        saved "-5" as 0, and no in-app form was ever sent invalid input). */
+  if (!(await invalidPass(ctx, dialog, opener))) return null;
+  /* 3. Valid synthetic data, then submit. */
   await fillValid(dialog, marker);
   const m1 = mon.mark();
   const s2 = await submitOf(dialog);
@@ -1267,6 +1466,9 @@ async function crawlPage(
         .catch(() => undefined);
     }
   }
+  /* In-page forms (not in a dialog): invalid input, then valid input. */
+  if (opts.allowWrites && ctx.root === "main")
+    await pageForms(ctx, startUrl, created);
   /* Persistence and clean-up of what this crawl created. */
   for (const marker of created) {
     await ctx.go(new URL(startUrl).pathname + new URL(startUrl).search);
@@ -1307,6 +1509,81 @@ async function crawlPage(
       );
       ctx.cov.notes.push(`${ctx.current}: created and deleted "${marker}"`);
     }
+  }
+}
+
+/** Forms in the page body, which the control clicks only sent as they
+ *  were: each visible one (search forms aside) is filled, sent with
+ *  invalid input, then sent valid (P16b QA round 2). */
+async function pageForms(ctx: Ctx, startUrl: string, created: string[]) {
+  const { page, mon } = ctx;
+  const path0 = new URL(startUrl).pathname + new URL(startUrl).search;
+  for (let i = 0; i < 6; i++) {
+    if (page.url() !== startUrl) {
+      await ctx.go(path0);
+      await settled(ctx, "(back to page)");
+    }
+    for (let k = 0; k < 3 && (await page.getByRole("dialog").count()); k++)
+      await page.keyboard.press("Escape");
+    const forms = page
+      .locator(`${ctx.root} form:not([role="search"])`)
+      .filter({ visible: true })
+      .filter({
+        has: page.locator(
+          "input:not([type=hidden]):not([type=search]):not([type=checkbox]):not([type=radio]), textarea",
+        ),
+      });
+    const count = await forms.count().catch(() => 0);
+    if (i >= count) return;
+    const form = forms.nth(i);
+    if ((await form.locator("xpath=ancestor::*[@role='dialog']").count()) > 0)
+      continue;
+    if (!(await submitOf(form))) continue;
+    const name = (
+      (await form
+        .evaluate(
+          (el) =>
+            el.getAttribute("aria-label") ??
+            el.querySelector("h1,h2,h3,legend,label")?.textContent ??
+            "",
+        )
+        .catch(() => "")) || `form #${i + 1}`
+    )
+      .trim()
+      .slice(0, 50);
+    ctx.cov.pageForms++;
+    const marker = `Synthetic P16b ${Date.now().toString(36)}`;
+    await fillValid(form, marker);
+    if (!(await invalidPass(ctx, form, `page form "${name}"`))) continue;
+    await fillValid(form, marker);
+    const s = await submitOf(form);
+    if (!s || !(await s.isEnabled().catch(() => false))) {
+      ctx.cov.notes.push(
+        `${ctx.current}: page form "${name}": submit stays disabled after the generic fill`,
+      );
+      continue;
+    }
+    const label = ((await s.textContent()) ?? "").trim();
+    const m = mon.mark();
+    await s.click({ timeout: 3_000 }).catch(() => undefined);
+    await page.waitForTimeout(800);
+    ctx.cov.formsSubmitted++;
+    await checkSince(
+      ctx,
+      m,
+      `page form "${name}" > ${label}`,
+      `fill page form "${name}" with synthetic data and submit`,
+      { invalidSubmit: true },
+    );
+    const ok = mon.api
+      .slice(m.a)
+      .some(
+        (h) =>
+          h.method !== "GET" &&
+          h.status < 400 &&
+          !/^\/files(\/|$)/.test(h.path),
+      );
+    if (ok) created.push(marker);
   }
 }
 
@@ -1497,6 +1774,8 @@ function newCoverage(role: string): Coverage {
     pages: [],
     controlsClicked: 0,
     formsSubmitted: 0,
+    invalidSubmitted: 0,
+    pageForms: 0,
     dialogsOpened: 0,
     downloads: 0,
     notes: [],
@@ -2131,8 +2410,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
      show its refusal (checked in exerciseDialog and here). */
   ctx.perms = LIMITED_MAP;
   ctx.intended403 = (_p, code, method) =>
-    method === "GET" &&
-    /not_shared|no_access|patient_access_denied|caregiver/i.test(code);
+    method === "GET" && code === "access.patient_access_denied";
   await gotoSafe(page, "/dashboard");
   await page.waitForURL((u) => !/\/login/.test(u.pathname), {
     timeout: 30_000,
