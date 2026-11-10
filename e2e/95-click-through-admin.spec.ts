@@ -298,7 +298,11 @@ class Crawl {
       if (s < 400) {
         // The client renewed the access token: the 401s it answered were
         // the designed expiry-and-retry, not a failure.
-        if (/\/auth\/refresh$/.test(u.pathname)) this.pending401 = [];
+        if (/\/auth\/refresh$/.test(u.pathname)) {
+          this.pending401 = [];
+          this.refreshedAt = Date.now();
+        }
+        this.okAt.set(p, Date.now());
         return;
       }
       const body = (await res.json().catch(() => null)) as {
@@ -315,6 +319,7 @@ class Crawl {
         // POST /auth/refresh and the call retried (session tiers, D2).
         this.pending401.push({
           at: Date.now(),
+          call: p,
           what: `${s} on ${p} ${code}`.trim(),
           steps: `On ${this.current}, "${this.control || "page load"}"`,
         });
@@ -385,14 +390,24 @@ class Crawl {
   downloadsStarted = 0;
   /** The last SyntaxError a script threw (see settle). */
   chunkError: string | null = null;
-  pending401: { at: number; what: string; steps: string }[] = [];
+  pending401: { at: number; call: string; what: string; steps: string }[] = [];
+  /** When the client last renewed its access token. */
+  refreshedAt = 0;
+  /** When each call (method + path) last answered 2xx/3xx. */
+  okAt = new Map<string, number>();
 
   /** A 401 counts only when no token renewal answered it within 8 s. */
   judge401() {
     const now = Date.now();
     const stale = this.pending401.filter((x) => now - x.at > 8_000);
     this.pending401 = this.pending401.filter((x) => now - x.at <= 8_000);
-    for (const x of stale)
+    // A call sent with the old token can answer 401 just after the renewal
+    // landed; the client retries it. Such a 401 counts only when there was
+    // no renewal around it and the same call never succeeded afterwards.
+    const renewed = (x: (typeof stale)[number]) =>
+      Math.abs(x.at - this.refreshedAt) <= 8_000 ||
+      (this.okAt.get(x.call) ?? 0) > x.at;
+    for (const x of stale.filter((y) => !renewed(y)))
       this.add({
         kind: "api-401",
         steps: x.steps,
