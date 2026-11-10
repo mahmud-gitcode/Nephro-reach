@@ -17,6 +17,7 @@ import {
   enrollmentWindowQuery,
   isWholeList,
   totalOf,
+  useOfficeReadAccess,
 } from "./useClinicData";
 
 /* ==========================================================================
@@ -85,6 +86,7 @@ function combineOwn(
 
 export function useRosterPage(input: RosterPageInput, enabled = true) {
   const { organizationId } = useOfficeScope();
+  const access = useOfficeReadAccess();
   const search = useSettled(input.search);
   const query: RosterQuery = {
     status: "ACTIVE",
@@ -101,7 +103,7 @@ export function useRosterPage(input: RosterPageInput, enabled = true) {
     enabled,
   });
   const newest = useQuery({
-    ...enrollmentWindowQuery(organizationId),
+    ...enrollmentWindowQuery(organizationId, access.programs),
     enabled,
   });
   const newestWhole = newest.data ? isWholeList(newest.data) : false;
@@ -168,6 +170,7 @@ export type RosterPage = ReturnType<typeof useRosterPage>;
  */
 export function useRosterPatient(patientId: string | null) {
   const { organizationId } = useOfficeScope();
+  const { programs } = useOfficeReadAccess();
   const patient = useQuery({
     queryKey: officeKey(organizationId, "roster", "patient", patientId ?? ""),
     queryFn: () =>
@@ -184,7 +187,8 @@ export function useRosterPatient(patientId: string | null) {
         patientId: patientId ?? "",
         limit: 150,
       }),
-    enabled: patientId !== null && patient.isSuccess,
+    /* Not sent when the programs level does not allow it (P16d). */
+    enabled: patientId !== null && patient.isSuccess && programs,
   });
   return useMemo(
     () =>
