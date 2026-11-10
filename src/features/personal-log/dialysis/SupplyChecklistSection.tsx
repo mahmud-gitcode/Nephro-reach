@@ -225,8 +225,9 @@ export default function SupplyChecklistSection({
 
                         {/* "I have" first: it is the number the member types
                         each month. The month's figure follows, labelled,
-                        so "20 of 0" can no longer read backwards. */}
-                        <div className="flex items-end gap-inline-sm">
+                        so "20 of 0" can no longer read backwards. The
+                        status wraps under the numbers on a phone (390px). */}
+                        <div className="flex flex-wrap items-end gap-inline-sm">
                           <label className="flex w-24 shrink-0 flex-col gap-0.5">
                             <span className="text-caption whitespace-nowrap text-fg-muted">
                               {isEs ? "Tengo" : "I have"}
