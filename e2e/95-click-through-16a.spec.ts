@@ -142,6 +142,27 @@ const MP4 = Buffer.from(
   "hex",
 );
 
+function syntheticFile(accept: string) {
+  if (/video/.test(accept))
+    return { name: "p16a-synthetic.mp4", mimeType: "video/mp4", buffer: MP4 };
+  if (/pdf/.test(accept) && !/image/.test(accept))
+    return {
+      name: "p16a-synthetic.pdf",
+      mimeType: "application/pdf",
+      buffer: PDF,
+    };
+  return { name: "p16a-synthetic.png", mimeType: "image/png", buffer: PNG };
+}
+
+/** window.print() calls (stubbed in session(): a print dialog is the
+ *  control's result, and headless Chromium shows none). */
+const prints = (page: Page) =>
+  page
+    .evaluate(
+      () => (window as unknown as { __p16Prints?: number }).__p16Prints ?? 0,
+    )
+    .catch(() => 0);
+
 const storageOrigin = (() => {
   const raw = process.env.E2E_STORAGE_ORIGIN ?? "";
   if (!raw) return null;
@@ -176,6 +197,10 @@ class Recorder {
     code: string;
   }[] = [];
   downloads: string[] = [];
+  /** File pickers opened (answered with the synthetic files). */
+  fileChoosers = 0;
+  /** Bare 401s the client recovered from by refresh + retry. */
+  refreshRetries = 0;
   /** Links that left the app (aborted, see session()). */
   external: string[] = [];
   current = "";
@@ -221,6 +246,15 @@ class Recorder {
         status,
         code,
       });
+    });
+    page.on("filechooser", async (fc) => {
+      this.fileChoosers += 1;
+      const accept =
+        (await fc
+          .element()
+          .getAttribute("accept")
+          .catch(() => "")) ?? "";
+      await fc.setFiles(syntheticFile(accept)).catch(() => undefined);
     });
     page.on("download", async (d) => {
       const file = path.join(
@@ -341,7 +375,27 @@ async function judge(
     .getByText(NOT_SHARED)
     .count()
     .catch(() => 0);
-  for (const r of seen.api) {
+  /* The API client answers a bare 401 (expired access cookie) with one
+     refresh and one retry (src/lib/api/client.ts): that is the designed
+     session flow, not an error, when the refresh succeeded. */
+  const refreshed = seen.api.some(
+    (r) => r.method === "POST" && r.path === "/auth/refresh" && r.status < 300,
+  );
+  for (const [n, r] of seen.api.entries()) {
+    if (
+      r.status === 401 &&
+      !r.code &&
+      !r.path.startsWith("/auth/") &&
+      (refreshed ||
+        seen.api
+          .slice(n + 1)
+          .some(
+            (x) => x.method === r.method && x.path === r.path && x.status < 300,
+          ))
+    ) {
+      rec.refreshRetries += 1;
+      continue;
+    }
     const what = `${r.method} ${r.path} -> ${r.status}${r.code ? ` ${r.code}` : ""}`;
     if (EXPECTED_4XX.some((e) => e.status === r.status && e.code === r.code))
       continue;
@@ -438,13 +492,20 @@ async function judge(
 /* ------------------------------------------------------------------ */
 /* Page helpers                                                        */
 /* ------------------------------------------------------------------ */
-async function open(page: Page, rec: Recorder, href: string) {
+/* next dev may serve a half-written chunk while it recompiles a route; the
+   browser then throws a SyntaxError/ChunkLoadError before hydration. That
+   is the dev server, not the app: reload once and keep a note of it. */
+const DEV_CHUNK =
+  /ChunkLoadError|Loading chunk|SyntaxError: Invalid or unexpected token|SyntaxError: Unexpected end of input/;
+
+async function open(page: Page, rec: Recorder, href: string, retry = true) {
   trace(`open ${href}`);
   await rec.pace(page);
   // next dev compiles a route on its first visit: allow for that.
   const res = await page
     .goto(href, { waitUntil: "domcontentloaded", timeout: 90_000 })
     .catch(async (e: unknown) => {
+      if (retry) return null; // a second attempt follows below
       await rec.add(page, {
         kind: "navigation-failed",
         severity: "high",
@@ -454,6 +515,7 @@ async function open(page: Page, rec: Recorder, href: string) {
       });
       return null;
     });
+  if (!res && retry) return open(page, rec, href, false);
   if (res && res.status() === 404)
     await rec.add(page, {
       kind: "route-404",
@@ -467,11 +529,30 @@ async function open(page: Page, rec: Recorder, href: string) {
     .first()
     .waitFor({ timeout: 20_000 })
     .catch(() => undefined);
-  await waitLoaded(page, rec, `open ${href}`);
+  const loaded = await waitLoaded(page, rec, `open ${href}`, !retry);
+  if (!loaded && retry) {
+    const chunk = rec.pageErrors.filter((e) => DEV_CHUNK.test(e));
+    if (chunk.length) {
+      rec.pageErrors = rec.pageErrors.filter((e) => !DEV_CHUNK.test(e));
+      await rec.add(page, {
+        kind: "dev-chunk-reload",
+        severity: "info",
+        steps: `open ${href}`,
+        expected: "the page hydrates",
+        actual: `next dev served a broken chunk (${chunk[0].slice(0, 80)}); reloaded once`,
+      });
+    }
+    await open(page, rec, href, false);
+  }
 }
 
 /** Content shown and no skeleton/aria-busy left. Short waits only. */
-async function waitLoaded(page: Page, rec: Recorder, step: string) {
+async function waitLoaded(
+  page: Page,
+  rec: Recorder,
+  step: string,
+  record = true,
+): Promise<boolean> {
   const deadline = Date.now() + 12_000;
   for (;;) {
     const busy = await page
@@ -482,8 +563,9 @@ async function waitLoaded(page: Page, rec: Recorder, step: string) {
       .locator("main h1, main h2")
       .count()
       .catch(() => 0);
-    if (!busy && heading) return;
+    if (!busy && heading) return true;
     if (Date.now() > deadline) {
+      if (!record) return false;
       await rec.add(page, {
         kind: "stuck-loading",
         severity: "high",
@@ -491,7 +573,7 @@ async function waitLoaded(page: Page, rec: Recorder, step: string) {
         expected: "content within 12 s",
         actual: busy ? `${busy} loading placeholder(s) left` : "no heading",
       });
-      return;
+      return false;
     }
     await page.waitForTimeout(200);
   }
@@ -671,30 +753,18 @@ async function fill(root: Locator, rec: Recorder, mode: FillMode) {
       if (type === "file") {
         if (mode !== "valid") continue;
         const accept = (await f.getAttribute("accept")) ?? "";
-        await f.setInputFiles(
-          /video/.test(accept)
-            ? {
-                name: "p16a-synthetic.mp4",
-                mimeType: "video/mp4",
-                buffer: MP4,
-              }
-            : /pdf/.test(accept) && !/image/.test(accept)
-              ? {
-                  name: "p16a-synthetic.pdf",
-                  mimeType: "application/pdf",
-                  buffer: PDF,
-                }
-              : {
-                  name: "p16a-synthetic.png",
-                  mimeType: "image/png",
-                  buffer: PNG,
-                },
-        );
+        await f.setInputFiles(syntheticFile(accept));
         continue;
       }
       if (type === "checkbox") {
-        if (mode === "valid" && (await f.getAttribute("required")) !== null)
-          await f.check({ timeout: 2_000 });
+        // Valid data ticks required boxes and acknowledgements (the
+        // "information leaves NephroReach" notice); other options stay.
+        if (
+          mode === "valid" &&
+          ((await f.getAttribute("required")) !== null ||
+            /acknowledg|i agree|i understand|i confirm|consent/i.test(label))
+        )
+          await f.check({ timeout: 2_000, force: true });
         continue;
       }
       if (type === "radio") {
@@ -1065,8 +1135,16 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     const dlBefore = rec.downloads.length;
     const extBefore = rec.external.length;
     const selectedBefore = await loc
-      .getAttribute("aria-selected")
+      .evaluate((el) =>
+        ["aria-selected", "aria-checked", "aria-pressed"].some(
+          (a) => el.getAttribute(a) === "true",
+        ) || (el as HTMLInputElement).checked === true
+          ? "true"
+          : "false",
+      )
       .catch(() => null);
+    const printsBefore = await prints(page);
+    const choosersBefore = rec.fileChoosers;
     rec.checkpoint();
     try {
       if (next.kind === "select") {
@@ -1109,8 +1187,8 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     }
     /* Short wait for a visible result. */
     let after = before;
-    for (let t = 0; t < 6; t += 1) {
-      await page.waitForTimeout(150);
+    for (let t = 0; t < 10; t += 1) {
+      await page.waitForTimeout(200);
       after = await fingerprint(page);
       if (after !== before) break;
     }
@@ -1123,6 +1201,8 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
       !seen.api.length &&
       rec.downloads.length === dlBefore &&
       rec.external.length === extBefore &&
+      rec.fileChoosers === choosersBefore &&
+      (await prints(page)) === printsBefore &&
       // the tab already shown: clicking it again changes nothing, by design
       selectedBefore !== "true" &&
       !["select", "input"].includes(next.kind)
@@ -1330,6 +1410,12 @@ async function session(
       void p.close().catch(() => undefined);
     }
   });
+  await context.addInitScript(() => {
+    const w = window as unknown as { __p16Prints?: number };
+    window.print = () => {
+      w.__p16Prints = (w.__p16Prints ?? 0) + 1;
+    };
+  });
   await cookieSession(context, account);
   const page = await context.newPage();
   mainPage = page;
@@ -1373,6 +1459,8 @@ for (const role of ROLES) {
             stats: rec.stats,
             issues: rec.issues,
             downloads: rec.downloads,
+            fileChoosers: rec.fileChoosers,
+            refreshRetries: rec.refreshRetries,
           },
           null,
           2,
