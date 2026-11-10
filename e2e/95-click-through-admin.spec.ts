@@ -440,22 +440,26 @@ class Crawl {
   }
 
   async overflow(width: number) {
-    const res = await this.page.evaluate(() => {
-      const doc = document.documentElement;
-      const over = doc.scrollWidth - window.innerWidth;
-      if (over <= 1) return null;
-      let widest = "";
-      let max = 0;
-      for (const el of Array.from(document.querySelectorAll("main *"))) {
-        const r = (el as HTMLElement).getBoundingClientRect();
-        if (r.right - window.innerWidth > max && r.width > 0) {
-          max = r.right - window.innerWidth;
-          const e = el as HTMLElement;
-          widest = `${e.tagName.toLowerCase()}${e.className && typeof e.className === "string" ? "." + e.className.split(" ").slice(0, 3).join(".") : ""} "${(e.innerText || "").slice(0, 40)}"`;
+    const res = await this.page
+      .evaluate(() => {
+        const doc = document.documentElement;
+        const over = doc.scrollWidth - window.innerWidth;
+        if (over <= 1) return null;
+        let widest = "";
+        let max = 0;
+        for (const el of Array.from(document.querySelectorAll("main *"))) {
+          const r = (el as HTMLElement).getBoundingClientRect();
+          if (r.right - window.innerWidth > max && r.width > 0) {
+            max = r.right - window.innerWidth;
+            const e = el as HTMLElement;
+            widest = `${e.tagName.toLowerCase()}${e.className && typeof e.className === "string" ? "." + e.className.split(" ").slice(0, 3).join(".") : ""} "${(e.innerText || "").slice(0, 40)}"`;
+          }
         }
-      }
-      return { over, widest };
-    });
+        return { over, widest };
+      })
+      // A late client redirect can replace the document mid-measure; the
+      // page is measured again on the next pass.
+      .catch(() => null);
     if (res)
       this.add({
         kind: `overflow-${width}`,
