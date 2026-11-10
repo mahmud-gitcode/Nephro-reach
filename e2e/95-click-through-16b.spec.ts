@@ -147,6 +147,11 @@ const HANDLED_4XX: { status: number; code: RegExp; why: string }[] = [
     code: /^education\.join_not_open_yet$/,
     why: "Join class before the class opens: 'The class opens 30 minutes before it starts.'",
   },
+  {
+    status: 400,
+    code: /^education\.class_activities_unanswered$/,
+    why: "I finished Day N before the day's activities are answered: 'That did not save. Finish the day's activities and try again.'",
+  },
 ];
 
 /** Console lines that are dev-server noise, not app errors. */
