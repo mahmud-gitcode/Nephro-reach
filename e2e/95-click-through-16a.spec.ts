@@ -112,6 +112,10 @@ const CHILDREN: Record<string, RegExp> = {
   "/dashboard/my-library": /^\/dashboard\/my-library\/[^/?#]+$/,
   "/dashboard/table-talk": /^\/dashboard\/table-talk\/[^/?#]+$/,
   "/dashboard/travel-log": /^\/dashboard\/travel-log\/[^/?#]+$/,
+  /* The detail page takes ?id=; the bare route is crawled too (its "not
+     in your log" state). */
+  "/dashboard/personal-log/dialysis-treatment":
+    /^\/dashboard\/personal-log\/dialysis-treatment\/view\?id=[^&#]+$/,
   "/dashboard/my-classroom":
     /^\/dashboard\/my-classroom\/day-?\d+|^\/dashboard\/my-classroom\/\d+$/,
 };
@@ -372,6 +376,11 @@ const EXPECTED_4XX: {
   },
   {
     status: 400,
+    code: "education.class_activities_unanswered",
+    why: "'I finished Day N' before the day's activities are answered: MyHospitalCourse shows 'That did not save. Finish the day's activities and try again.'",
+  },
+  {
+    status: 400,
     code: "education.join_not_open_yet",
     why: "Join class before the class opens: the card says it opens 30 minutes before the start",
   },
@@ -510,8 +519,11 @@ async function judge(
       expected: "the page renders",
       actual: crash.slice(0, 200).replace(/\s+/g, " "),
     });
+  /* The shared ErrorState (role="alert") carries the retry button; a
+     "Try again" elsewhere is a designed control (re-answer a quiz). */
   if (
     await page
+      .locator('[role="alert"]')
       .getByRole("button", { name: "Try again" })
       .count()
       .catch(() => 0)
@@ -583,6 +595,10 @@ async function open(page: Page, rec: Recorder, href: string, retry = true) {
   }
 }
 
+/* Designed states that have no heading of their own (checked in
+   REPORT.md): the treatment detail page opened without an id. */
+const NO_HEADING_STATES = /That treatment is not in your log/;
+
 /** Content shown and no skeleton/aria-busy left. Short waits only. */
 async function waitLoaded(
   page: Page,
@@ -601,6 +617,15 @@ async function waitLoaded(
       .count()
       .catch(() => 0);
     if (!busy && heading) return true;
+    if (
+      !busy &&
+      (await page
+        .locator("main")
+        .getByText(NO_HEADING_STATES)
+        .count()
+        .catch(() => 0))
+    )
+      return true;
     if (Date.now() > deadline) {
       if (!record) return false;
       await rec.add(page, {
@@ -669,6 +694,8 @@ async function enumerate(page: Page): Promise<Control[]> {
       let idx = 0;
       for (const el of main.querySelectorAll<HTMLElement>(sel)) {
         if (el.closest('[role="dialog"]')) continue;
+        // A closed off-canvas panel is inert: not reachable, not a control.
+        if (el.closest('[inert], [aria-hidden="true"]')) continue;
         const r = el.getBoundingClientRect();
         if (!r.width || !r.height) continue;
         const st = getComputedStyle(el);
@@ -861,6 +888,27 @@ async function fill(root: Locator, rec: Recorder, mode: FillMode) {
   return { marker, invalid: true };
 }
 
+/** True when a text field holds a value the crawler did not write. */
+async function prefilledSeed(root: Locator) {
+  return root
+    .evaluate(
+      (el, mark) =>
+        [
+          ...el.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            'input:not([type]), input[type="text"], input[type="tel"], input[type="email"], input[type="url"], textarea',
+          ),
+        ].some(
+          (f) =>
+            !f.disabled &&
+            !f.readOnly &&
+            f.value.trim() !== "" &&
+            !f.value.includes(mark),
+        ),
+      MARK,
+    )
+    .catch(() => false);
+}
+
 async function submitButton(root: Locator): Promise<Locator | null> {
   const typed = root.locator('button[type="submit"]:visible');
   if (await typed.count()) return typed.last();
@@ -905,6 +953,15 @@ async function formPass(
     if (!(await root.isVisible().catch(() => false))) {
       if (!reopen || !(await reopen())) return;
       root = rootSel();
+    }
+    /* An edit form already holding a saved record that the crawler did not
+       create: an empty save can mean "clear it" by design (the home clinic),
+       which would destroy a seed record. Not submitted empty. */
+    if (mode === "empty" && (await prefilledSeed(root))) {
+      stats.skipped.push(
+        `${label}: edit form of a seed record not submitted empty`,
+      );
+      continue;
     }
     const { marker, invalid } = await fill(root, rec, mode);
     if (mode === "invalid" && !invalid) continue;
@@ -1297,10 +1354,16 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
   if (child) {
     const target = (await enumerate(page)).find(
       (c) =>
-        c.kind === "link" && child.test(new URL(c.href, page.url()).pathname),
+        c.kind === "link" &&
+        [
+          new URL(c.href, page.url()).pathname,
+          new URL(c.href, page.url()).pathname +
+            new URL(c.href, page.url()).search,
+        ].some((u) => child.test(u)),
     );
     if (target) {
-      const childHref = new URL(target.href, page.url()).pathname;
+      const u = new URL(target.href, page.url());
+      const childHref = u.pathname + u.search;
       await crawlPage(page, rec, childHref);
     } else
       rec.stats
@@ -1364,6 +1427,8 @@ async function layout(page: Page, rec: Recorder, href: string) {
             for (const el of main.querySelectorAll<HTMLElement>("*")) {
               const rect = el.getBoundingClientRect();
               if (!rect.width || rect.right <= iw + 1) continue;
+              // A closed off-canvas panel waits off screen, inert by design.
+              if (el.closest('[inert], [aria-hidden="true"]')) continue;
               let p: HTMLElement | null = el.parentElement;
               let clipped = false;
               while (p && p !== document.body) {
@@ -1407,7 +1472,6 @@ async function layout(page: Page, rec: Recorder, href: string) {
 /* ------------------------------------------------------------------ */
 /* Tests                                                               */
 /* ------------------------------------------------------------------ */
-test.describe.configure({ mode: "serial" });
 /* One long-lived context per role: a trace of a whole role crawl is too
    large to start per test (the trace fixture timed out). */
 test.use({ trace: "off", screenshot: "off" });
@@ -1477,6 +1541,9 @@ async function session(
 
 for (const role of ROLES) {
   test.describe(`click-through ${role.id}`, () => {
+    /* Serial inside a role (one session, pages in order); a failed summary
+       of one role does not skip the next role. */
+    test.describe.configure({ mode: "serial" });
     let context: BrowserContext;
     let page: Page;
     let rec: Recorder;
@@ -1576,7 +1643,13 @@ for (const role of ROLES) {
     test(`${role.id} summary: no unexplained blocker/high issue @phase16`, () => {
       save();
       const fatal = rec.issues
-        .filter((i) => i.severity === "blocker" || i.severity === "high")
+        .filter(
+          (i) =>
+            i.severity === "blocker" ||
+            i.severity === "high" ||
+            // the page itself scrolls sideways on a phone (fixed in P16a)
+            (i.kind === "layout-overflow-390" && i.severity === "medium"),
+        )
         .filter(
           (i) =>
             !EXPLAINED.some(
