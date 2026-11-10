@@ -327,6 +327,19 @@ async function checkSince(
       }
       if (h.status === 401 && /\/auth\/(refresh|me)|\/me\/context/.test(h.path))
         continue;
+      /* A write the role may not make (a view-only area): refused on
+         purpose, and fine when the page says so. */
+      if (
+        h.status === 403 &&
+        h.method !== "GET" &&
+        ctx.intended403(h.path, h.code, "GET") &&
+        (await refusalShown(ctx.page))
+      ) {
+        ctx.cov.notes.push(
+          `${ctx.current}: refused write ${h.method} ${h.path} ${h.code} (refusal shown)`,
+        );
+        continue;
+      }
       if (
         (h.status === 403 || h.status === 404) &&
         (ctx.intended403(h.path, h.code, h.method) || notShared)
@@ -388,6 +401,20 @@ async function checkSince(
       "generic error state shown",
       "medium",
     );
+}
+
+/** A refusal message on screen (alert, toast or inline text). */
+const REFUSAL =
+  /not allowed|permission|no access|not shared|(do not|don'?t) have access|can'?t (do|change|edit)|view[- ]only|access denied/i;
+async function refusalShown(page: Page): Promise<boolean> {
+  return page
+    .locator('[role="alert"], [role="status"], [data-sonner-toast]')
+    .filter({ hasText: REFUSAL })
+    .or(page.getByText(REFUSAL))
+    .first()
+    .waitFor({ state: "visible", timeout: 1_500 })
+    .then(() => true)
+    .catch(() => false);
 }
 
 /** Wait (briefly) until the page shows no loading indicator. */
