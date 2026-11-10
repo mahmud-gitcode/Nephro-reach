@@ -576,6 +576,29 @@ async function open(page: Page, rec: Recorder, href: string, retry = true) {
   const res = await page
     .goto(href, { waitUntil: "domcontentloaded", timeout: 90_000 })
     .catch(async (e: unknown) => {
+      /* next dev restarts itself near its memory threshold ("Server is
+         approaching the used memory threshold, restarting..."): the port
+         is closed for a few seconds. Wait for it, note it, and retry. */
+      if (/ERR_CONNECTION_REFUSED/.test(String(e))) {
+        for (let t = 0; t < 30; t += 1) {
+          const up = await page.request
+            .get(appOrigin, { timeout: 5_000, maxRedirects: 0 })
+            .then(() => true)
+            .catch(() => false);
+          if (up) break;
+          await page.waitForTimeout(2_000);
+        }
+        await rec.add(page, {
+          kind: "dev-server-restart",
+          severity: "info",
+          steps: `open ${href}`,
+          expected: "the dev server is up",
+          actual: "next dev restarted itself (memory threshold); retried",
+        });
+        return page
+          .goto(href, { waitUntil: "domcontentloaded", timeout: 90_000 })
+          .catch(() => null);
+      }
       if (retry) return null; // a second attempt follows below
       await rec.add(page, {
         kind: "navigation-failed",
