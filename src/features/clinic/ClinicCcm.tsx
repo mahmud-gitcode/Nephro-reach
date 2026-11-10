@@ -1166,7 +1166,11 @@ type ActivityPrefill = { type: string; note: string };
 /** The office's active staff, for "Assign To" (user ids; needs staff View:
  *  without it only "Unassigned" is offered and the server still checks). */
 function useAssignees(enabled: boolean) {
-  const staff = useStaffList({ page: 1, limit: 150, status: "ACTIVE" });
+  /* Not read without staff read: the server would refuse it (P16d). */
+  const staff = useStaffList(
+    { page: 1, limit: 150, status: "ACTIVE" },
+    { enabled },
+  );
   return enabled && !staff.error
     ? staff.rows.map((m) => ({
         id: m.userId,

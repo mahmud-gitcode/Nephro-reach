@@ -54,18 +54,25 @@ export const staffKeys = {
   roles: (orgId: string) => orgKey(orgId, "roles"),
 };
 
-export function useStaffList(q: api.StaffQuery) {
+/** `enabled: false` reads nothing: a caller whose user holds no staff read
+ *  must not ask for a list the server would refuse (P16d: a care
+ *  coordinator opening the CCM activity form got a 403). */
+export function useStaffList(
+  q: api.StaffQuery,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   const { orgId } = useAdminContext();
+  const on = orgId !== null && enabled;
   const query = useQuery({
     queryKey: orgId ? staffKeys.staff(orgId, q) : ["org", "none", "staff"],
     queryFn: () => api.listStaff(orgId!, q),
-    enabled: orgId !== null,
+    enabled: on,
   });
   return {
-    rows: query.data?.items ?? [],
-    pagination: query.data?.pagination ?? null,
-    isPending: orgId !== null && query.isPending,
-    error: orgId === null ? null : query.error,
+    rows: on ? (query.data?.items ?? []) : [],
+    pagination: on ? (query.data?.pagination ?? null) : null,
+    isPending: on && query.isPending,
+    error: on ? query.error : null,
     refetch: () => void query.refetch(),
   };
 }
