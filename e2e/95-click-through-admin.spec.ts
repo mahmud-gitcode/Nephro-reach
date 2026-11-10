@@ -93,7 +93,23 @@ const ADMIN_ROUTES = [
 
 /* Issues reviewed and recorded in REPORT.md with their reason (decision
    pending or outside this lane's fix rules). key = `${kind}|${page}|${control}`. */
-const KNOWN: Record<string, string> = {};
+const KNOWN: Record<string, string> = {
+  "form-empty-accepted|/dashboard/manage-table-talk|Topics / Done":
+    "Done only closes the topic manager; a topic is saved by its own Add button, which is disabled while the name is empty (CategoryManager.tsx).",
+  "form-empty-accepted|/dashboard/design-system|Add a ride / Save ride":
+    "The design-system page is a static component gallery; its demo modal saves nothing by design.",
+};
+/* The same, for controls named after a row (any staff member). */
+const KNOWN_PATTERNS: [RegExp, string][] = [
+  [
+    /^form-empty-accepted\|\/dashboard\/admin-team\|Title for .+ \/ Save title$/,
+    "The staff title is optional: saving it empty clears the title (PATCH title null), which is the intended way to remove it.",
+  ],
+];
+function known(i: Issue): string | undefined {
+  const key = `${i.kind}|${i.page}|${i.control}`;
+  return KNOWN[key] ?? KNOWN_PATTERNS.find(([re]) => re.test(key))?.[1];
+}
 
 type Role = { id: string; account: Account };
 const ROLES: Role[] = [
@@ -124,6 +140,11 @@ const NEVER =
    holds this run's tag. */
 const DESTRUCTIVE =
   /delete|remove|archive|revoke|deactivate|retire|reject|decline|ban\b|suspend|reset|transfer|mark (as )?paid|refund|unpublish|disable|approve|publish|resolve|close ticket|deny|end class|cancel (class|subscription|invitation)|activate|hide|restore|move back|make owner|reopen/i;
+/* A select that saves the row as soon as it changes (a record's status or
+   role): only inside a row that holds this run's tag. */
+const ROW_STATE = /^(status|role|access|level|plan|permission)s? (for|of) /i;
+/* Buttons that save a row's state at once (feature it, reorder it). */
+const ROW_STATE_BUTTON = /^feature |^move .+ (up|down)$/i;
 const SUBMIT =
   /^(save|create|add|submit|send|invite|publish|schedule|confirm|upload|update|post|reply|apply|continue|next|import|done|ok|yes)\b|save changes|create|add |send|invite/i;
 const CREATES =
@@ -237,6 +258,8 @@ class Crawl {
       });
     });
     page.on("pageerror", (err) => {
+      if (err.name === "SyntaxError")
+        this.chunkError = `${err.name}: ${err.message}`.slice(0, 400);
       this.add({
         kind: "uncaught-exception",
         steps: `On ${this.current}, after "${this.control || "page load"}"`,
@@ -266,7 +289,12 @@ class Crawl {
         });
         return;
       }
-      if (s < 400) return;
+      if (s < 400) {
+        // The client renewed the access token: the 401s it answered were
+        // the designed expiry-and-retry, not a failure.
+        if (/\/auth\/refresh$/.test(u.pathname)) this.pending401 = [];
+        return;
+      }
       const body = (await res.json().catch(() => null)) as {
         code?: string;
       } | null;
@@ -276,6 +304,16 @@ class Crawl {
         return;
       }
       if (s === 401 && /\/auth\/(refresh|logout)/.test(u.pathname)) return;
+      if (s === 401) {
+        // Judged after the action: an expired access token is renewed by
+        // POST /auth/refresh and the call retried (session tiers, D2).
+        this.pending401.push({
+          at: Date.now(),
+          what: `${s} on ${p} ${code}`.trim(),
+          steps: `On ${this.current}, "${this.control || "page load"}"`,
+        });
+        return;
+      }
       if (s === 403) {
         // Judged after the action: an intended refusal shows the no-access state.
         this.pending403.push(`${p} ${code}`);
@@ -336,6 +374,24 @@ class Crawl {
   }
 
   pending403: string[] = [];
+  /** The last SyntaxError a script threw (see settle). */
+  chunkError: string | null = null;
+  pending401: { at: number; what: string; steps: string }[] = [];
+
+  /** A 401 counts only when no token renewal answered it within 8 s. */
+  judge401() {
+    const now = Date.now();
+    const stale = this.pending401.filter((x) => now - x.at > 8_000);
+    this.pending401 = this.pending401.filter((x) => now - x.at <= 8_000);
+    for (const x of stale)
+      this.add({
+        kind: "api-401",
+        steps: x.steps,
+        expected: "No unexpected 4xx (an expired token is renewed)",
+        actual: x.what,
+        severity: "high",
+      });
+  }
 
   /** After an action: 403s only count when no no-access state is shown. */
   async judge403() {
@@ -401,11 +457,13 @@ class Crawl {
       });
     }
     await this.judge403();
+    this.judge401();
   }
 
   /** Waits for skeletons and busy regions to clear; reports blank or stuck. */
-  async settle(label: string, ms = 10_000) {
+  async settle(label: string, ms = 10_000, retried = false) {
     const { page } = this;
+    const mark = this.issues.length;
     const main = page.locator("main").first();
     await main.waitFor({ state: "visible", timeout: 20_000 }).catch(() => {
       this.add({
@@ -437,6 +495,39 @@ class Crawl {
         actual: `main has ${text.length} characters`,
         severity: "high",
       });
+    const blank = this.issues.slice(mark).some((i) => i.kind === "blank-page");
+    if (blank && !retried && this.chunkError) {
+      // next dev served a script while it was recompiling (a webpack
+      // chunk that does not parse). Reload once: a page that renders then
+      // is a dev-server race, recorded low; one that stays blank stands.
+      const err = this.chunkError;
+      this.chunkError = null;
+      const dropped = this.issues.splice(mark);
+      const exception = this.issues.findIndex(
+        (i) =>
+          i.kind === "uncaught-exception" &&
+          i.page === this.current &&
+          i.actual === err,
+      );
+      const removed =
+        exception >= 0 ? this.issues.splice(exception, 1) : ([] as Issue[]);
+      await page
+        .reload({ waitUntil: "domcontentloaded", timeout: 60_000 })
+        .catch(() => undefined);
+      const again = this.issues.length;
+      await this.settle(label, ms, true);
+      if (this.issues.slice(again).some((i) => i.kind === "blank-page")) {
+        this.issues.push(...removed, ...dropped);
+      } else {
+        this.add({
+          kind: "dev-chunk-error",
+          steps: `Open ${this.current} (${label}) on next dev`,
+          expected: "The page renders on the first load",
+          actual: `${err}; blank until one reload, then rendered (next dev compile race, not seen on a warm server)`,
+          severity: "low",
+        });
+      }
+    }
   }
 
   async overflow(width: number) {
@@ -1021,6 +1112,18 @@ async function crawlPage(c: Crawl, route: string, budgetMs: number) {
       });
       continue;
     }
+    if (
+      ((next.tag === "select" && ROW_STATE.test(name)) ||
+        ROW_STATE_BUTTON.test(name)) &&
+      !next.inTagged
+    ) {
+      c.cov.controlsSkipped.push({
+        page: route,
+        control: name,
+        why: "saves at once (status, role, feature or order of a record this crawl did not create)",
+      });
+      continue;
+    }
     const loc = main.locator(CONTROL_SELECTOR).nth(next.idx);
     const urlBefore = page.url();
     const mutBefore = await mutationCount(page);
@@ -1030,11 +1133,14 @@ async function crawlPage(c: Crawl, route: string, budgetMs: number) {
         const opts = await loc
           .locator("option")
           .evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+        const original = await loc.inputValue().catch(() => opts[0]);
         for (const v of opts.slice(0, 5)) {
           await loc.selectOption(v, { timeout: 2_000 });
           await page.waitForTimeout(150);
         }
-        if (opts.length) await loc.selectOption(opts[0]).catch(() => undefined);
+        // Back to what it was, so a filter or a saved setting is unchanged.
+        if (opts.length)
+          await loc.selectOption(original ?? opts[0]).catch(() => undefined);
       } else {
         await loc.click({ timeout: 3_000 });
       }
@@ -1236,7 +1342,7 @@ function flush() {
         tag: TAG,
         at: new Date().toISOString(),
         partial: Boolean(live),
-        issues,
+        issues: issues.map((i) => ({ ...i, known: known(i) })),
       },
       null,
       1,
@@ -1930,7 +2036,8 @@ for (const role of ROLES) {
       await page
         .getByRole("button", { name: /^log out$/i })
         .first()
-        .click();
+        // The sign-out navigation may wait for next dev to compile /login.
+        .click({ timeout: 45_000 });
       c.cov.controlsClicked++;
       await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
 
@@ -1952,14 +2059,20 @@ for (const role of ROLES) {
       await context.close().catch(() => undefined);
     }
 
-    const open = c.issues.filter(
-      (i) =>
-        (i.severity === "blocker" || i.severity === "high") &&
-        !KNOWN[`${i.kind}|${i.page}|${i.control}`],
-    );
-    expect(
-      open,
-      `blocker/high issues for ${role.id}:\n${open.map((i) => `${i.severity} ${i.kind} ${i.page} "${i.control}": ${i.actual}`).join("\n")}`,
-    ).toEqual([]);
+    // Judged in the last test, so every role is crawled even when one
+    // role's crawl finds a blocker.
+    expect(c.cov.pages.length, `${role.id} visited pages`).toBeGreaterThan(0);
   });
 }
+
+test("no unexplained blocker or high issue on any admin page @phase16", () => {
+  const open = allIssues.filter(
+    (i) => (i.severity === "blocker" || i.severity === "high") && !known(i),
+  );
+  expect(
+    open,
+    `blocker/high issues:\n${open.map((i) => `${i.role} ${i.severity} ${i.kind} ${i.page} "${i.control}": ${i.actual}`).join("\n")}`,
+  ).toEqual([]);
+  for (const role of ROLES)
+    expect(allCoverage[role.id], `${role.id} was crawled`).toBeTruthy();
+});
