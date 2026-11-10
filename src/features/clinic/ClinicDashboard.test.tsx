@@ -195,3 +195,19 @@ describe("enrolling from the dashboard", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("members without an MRN (P16c)", () => {
+  it("lists each one, with no duplicate-key warning", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const noMrn = roster.slice(0, 2).map((m) => ({ ...m, mrn: "" }));
+    set({ data: { ...loaded, roster: noMrn } });
+    render(<ClinicDashboard />);
+    const members = within(panel("Members"));
+    for (const m of noMrn)
+      expect(members.getAllByText(m.name).length).toBeGreaterThan(0);
+    expect(errors.mock.calls.some((c) => /same key/.test(String(c[0])))).toBe(
+      false,
+    );
+    errors.mockRestore();
+  });
+});
