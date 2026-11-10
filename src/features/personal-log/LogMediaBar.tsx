@@ -6,6 +6,8 @@ import { Button } from "@/components/ui";
 import { checkUpload } from "@/lib/api/upload";
 import { isNotShared } from "@/lib/data/asyncState";
 import { useAccessPhotos } from "./dialysis/useAccessPhotos";
+import { useCaregiverView } from "@/features/caregivers/useCaregivers";
+import { areaLevel } from "@/features/caregivers/caregivers.mapping";
 
 /* ==========================================================================
    Camera and voice on every log
@@ -72,7 +74,19 @@ export function LogMediaBar({
   /** With `onPhotoFile`: an in-memory preview of a newly picked photo. */
   photoPreview?: string | null;
 }) {
-  const photos = useAccessPhotos();
+  /* The bar only adds photos, it never lists them: no list read (a
+     caregiver without the dialysis area got a refused read on every log
+     page, P16b QA round 2). */
+  const photos = useAccessPhotos(undefined, { list: false });
+  /* A caregiver whose grant has no dialysis edit cannot save to the
+     member's Photos: the server refuses the record. Say so before the
+     picture is uploaded, so no unattached copy of it (an access site may
+     be PHI) is left in storage. The server still decides every save. */
+  const { grant } = useCaregiverView();
+  const mayAddPhoto = grant
+    ? areaLevel(grant.permissions, "dialysis") >= 2
+    : true;
+  const [noPermission, setNoPermission] = useState(false);
   const [canDictate, setCanDictate] = useState(false);
   const [listening, setListening] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -158,6 +172,10 @@ export function LogMediaBar({
             if (!refused) onPhotoFile(file);
             return;
           }
+          if (!mayAddPhoto) {
+            setNoPermission(true);
+            return;
+          }
           /* Uploaded to the member's Photos (by file id, Phase 7). */
           void photos.add(file, "other", logName);
           setSaved(true);
@@ -197,6 +215,7 @@ export function LogMediaBar({
         leadingIcon={<Camera aria-hidden="true" />}
         onClick={() => {
           setSaved(false);
+          setNoPermission(false);
           fileInput.current?.click();
         }}
       >
@@ -226,11 +245,11 @@ export function LogMediaBar({
           {isEs ? "Guardada en sus Fotos" : "Saved to your Photos"}
         </span>
       ) : null}
-      {photos.encodeError || photos.saveError ? (
+      {noPermission || photos.encodeError || photos.saveError ? (
         <span role="alert" className="text-caption text-danger">
           {/* A refusal (403: photos not shared with a caregiver) says so;
               anything else is a plain failure. */}
-          {isNotShared(photos.saveError)
+          {noPermission || isNotShared(photos.saveError)
             ? isEs
               ? "No tiene permiso para guardar fotos aquí."
               : "You don't have permission to save photos here."

@@ -99,7 +99,15 @@ export async function downscaleToFile(file: File): Promise<File> {
   }
 }
 
-export function useAccessPhotos(explicitScope?: PatientScope | null) {
+export function useAccessPhotos(
+  explicitScope?: PatientScope | null,
+  options?: {
+    /** False when the caller only adds photos and never shows the list
+     *  (the log photo bar): the list is not read at all, so a caregiver
+     *  without the dialysis area gets no refused read (P16b QA, F1). */
+    list?: boolean;
+  },
+) {
   const scope = usePatientScope(explicitScope);
   const queryClient = useQueryClient();
 
@@ -109,6 +117,7 @@ export function useAccessPhotos(explicitScope?: PatientScope | null) {
     params: { limit: 50 },
     fetch: listAccessPhotos,
     map: fromApiAccessPhoto,
+    enabled: options?.list ?? true,
   });
 
   const refresh = () =>
