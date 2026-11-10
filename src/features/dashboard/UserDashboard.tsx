@@ -51,7 +51,12 @@ import { useJourneyProgress } from "@/features/education/useJourneyProgress";
 import { useMemberLiveClasses } from "@/features/education/useMemberLiveClasses";
 import { zoneLabel } from "@/features/clinic/liveClass.mappers";
 import { isApiError } from "@/lib/api/client";
-import { canRetry, errorTitleFor, isNotShared } from "@/lib/data/asyncState";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+  isNotShared,
+} from "@/lib/data/asyncState";
 import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import { useMessages } from "@/features/messaging/useMessages";
 import * as messagingRules from "@/features/messaging/messaging.rules";
@@ -529,10 +534,17 @@ export default function UserDashboard() {
               </span>
             ) : null}
             {live.register.error ? (
-              <span className="text-caption text-danger md:text-right">
-                {isEs
-                  ? "No pudimos inscribirte. Inténtalo de nuevo."
-                  : "We could not register you. Please try again."}
+              <span
+                role="alert"
+                className="text-caption text-danger md:text-right"
+              >
+                {/* A refusal (403) is "not shared with you": trying again
+                    changes nothing (ADR 0007 §5). */}
+                {isNotShared(live.register.error)
+                  ? errorMessageFor(live.register.error, "", isEs ? "es" : "en")
+                  : isEs
+                    ? "No pudimos inscribirte. Inténtalo de nuevo."
+                    : "We could not register you. Please try again."}
               </span>
             ) : null}
             {joinLink ? (
