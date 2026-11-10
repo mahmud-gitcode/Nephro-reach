@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,11 @@ import { routeAfterSignIn } from "@/features/auth/auth.mapping";
 import { authErrorKind, authErrorPath } from "@/features/auth/authErrors";
 import { useAuthText } from "@/features/auth/authText";
 import { useAuthProviders } from "@/features/auth/providers";
+import {
+  fetchCurrentLegalDocuments,
+  legalDocumentLinks,
+  type LegalDocumentLinks,
+} from "@/features/auth/consent";
 import { LocalSvg } from "@/components/icons/LocalSvg";
 
 const inputClassName =
@@ -17,6 +22,17 @@ const inputClassName =
 
 const labelClassName =
   "text-base font-medium leading-6 tracking-[0.08px] text-[#0F172A]";
+
+const legalLinkClassName = "text-[#1D4ED8] hover:underline";
+
+/* D44: a document link opens the current version in a new tab, so the form
+   keeps what was typed. Until the list arrives (or when a document has no
+   safe address) the link stays the inert "#" it always was. */
+function legalLinkProps(href: string | null) {
+  return href
+    ? { href, target: "_blank", rel: "noopener noreferrer" }
+    : { href: "#" };
+}
 
 export default function RegistrationPage() {
   const [name, setName] = useState("");
@@ -34,6 +50,26 @@ export default function RegistrationPage() {
   const providers = useAuthProviders();
   const router = useRouter();
   const busy = useRef(false);
+  const [legalLinks, setLegalLinks] = useState<LegalDocumentLinks>({
+    terms: null,
+    privacy: null,
+  });
+
+  /* D44: the consent text links the current Terms and Privacy Notice, read
+     from the same public list the consent versions come from (spec 032).
+     A failed read leaves the links inert; the submit reads the list again
+     and the server refuses an outdated or missing version. */
+  useEffect(() => {
+    let live = true;
+    fetchCurrentLegalDocuments()
+      .then((documents) => {
+        if (live) setLegalLinks(legalDocumentLinks(documents));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
 
   /* `next` survives registration (an invitation link, Phase 3). Read from
      the address bar at submit time: this page has no Suspense boundary for
@@ -351,9 +387,20 @@ export default function RegistrationPage() {
                     <p className="flex-1 text-base leading-6 font-medium tracking-[0.08px] text-[#344056]">
                       {s?.agreeTerms ||
                         "I am 18 years or older and have read and agree to the"}{" "}
-                      <Link href="#" className="text-[#1D4ED8] hover:underline">
-                        {s?.termsLink || "Terms & Conditions."}
+                      <Link
+                        {...legalLinkProps(legalLinks.terms)}
+                        className={legalLinkClassName}
+                      >
+                        {s?.termsLink || "Terms & Conditions"}
+                      </Link>{" "}
+                      {s?.agreeAnd || "and the"}{" "}
+                      <Link
+                        {...legalLinkProps(legalLinks.privacy)}
+                        className={legalLinkClassName}
+                      >
+                        {s?.privacyLink || "Privacy Notice"}
                       </Link>
+                      {s?.agreeEnd || "."}
                     </p>
                   </div>
                 </div>
