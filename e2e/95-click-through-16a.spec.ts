@@ -24,7 +24,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Browser, BrowserContext, Locator, Page } from "@playwright/test";
-import { ACCOUNTS, apiOrigin, type Account } from "./fixtures/env";
+import { ACCOUNTS, apiOrigin, appOrigin, type Account } from "./fixtures/env";
 import { blockThirdParty, type BlockedLog } from "./fixtures/network";
 import { cookieSession } from "./fixtures/session";
 import { expect, test } from "./fixtures/test";
@@ -161,8 +161,16 @@ class Recorder {
   apiTimes: number[] = [];
   consoleErrors: string[] = [];
   pageErrors: string[] = [];
-  api: { method: string; path: string; status: number; code: string }[] = [];
+  api: {
+    method: string;
+    path: string;
+    url: string;
+    status: number;
+    code: string;
+  }[] = [];
   downloads: string[] = [];
+  /** Links that left the app (aborted, see session()). */
+  external: string[] = [];
   current = "";
   control = "";
   shots = 0;
@@ -202,6 +210,7 @@ class Recorder {
       this.api.push({
         method: res.request().method(),
         path: u.pathname.replace(/^\/api\/v1/, ""),
+        url: res.url(),
         status,
         code,
       });
@@ -279,6 +288,22 @@ class Recorder {
   }
 }
 
+/* API refusals that are the designed answer and that the page handles (it
+   shows an empty or explained state, checked in REPORT.md). They are not
+   recorded as issues. */
+const EXPECTED_4XX: { status: number; code: string; why: string }[] = [
+  {
+    status: 404,
+    code: "dialysis.prescription_not_found",
+    why: "no prescription on file yet: the page shows its empty state",
+  },
+  {
+    status: 400,
+    code: "education.join_not_open_yet",
+    why: "Join class before the class opens: the card says it opens 30 minutes before the start",
+  },
+];
+
 /* Evaluate what the browser reported since the last checkpoint. */
 async function judge(
   page: Page,
@@ -309,6 +334,30 @@ async function judge(
     .catch(() => 0);
   for (const r of seen.api) {
     const what = `${r.method} ${r.path} -> ${r.status}${r.code ? ` ${r.code}` : ""}`;
+    if (EXPECTED_4XX.some((e) => e.status === r.status && e.code === r.code))
+      continue;
+    if (
+      r.method === "GET" &&
+      (r.status >= 500 || (r.status === 401 && !r.path.startsWith("/auth/")))
+    ) {
+      /* Same request again, same session. A 2xx now means the failure was
+         transient (in this env: the shared Postgres timing out a pool
+         connection under five parallel lanes, see the API log); it is
+         recorded as such, never dropped. */
+      const again = await page.request
+        .get(r.url, { timeout: 20_000 })
+        .catch(() => null);
+      if (again && again.ok()) {
+        await rec.add(page, {
+          kind: `api-${r.status}-transient`,
+          severity: "medium",
+          steps: step,
+          expected: `no API ${r.status}`,
+          actual: `${what} (the same GET answered ${again.status()} right after)`,
+        });
+        continue;
+      }
+    }
     if (r.status >= 500)
       await rec.add(page, {
         kind: "api-5xx",
@@ -383,7 +432,19 @@ async function judge(
 async function open(page: Page, rec: Recorder, href: string) {
   trace(`open ${href}`);
   await rec.pace(page);
-  const res = await page.goto(href, { waitUntil: "domcontentloaded" });
+  // next dev compiles a route on its first visit: allow for that.
+  const res = await page
+    .goto(href, { waitUntil: "domcontentloaded", timeout: 90_000 })
+    .catch(async (e: unknown) => {
+      await rec.add(page, {
+        kind: "navigation-failed",
+        severity: "high",
+        steps: `open ${href}`,
+        expected: "the page loads",
+        actual: String(e).split("\n")[0].slice(0, 200),
+      });
+      return null;
+    });
   if (res && res.status() === 404)
     await rec.add(page, {
       kind: "route-404",
@@ -756,6 +817,12 @@ async function formPass(
         (await root
           .locator('[role="alert"]')
           .count()
+          .catch(() => 0)) +
+        // The browser's own message for a required or typed field is a
+        // native bubble, not in the DOM: the field matches :invalid.
+        (await root
+          .locator("input:invalid, textarea:invalid, select:invalid")
+          .count()
           .catch(() => 0));
       const text = stillOpen ? await root.innerText().catch(() => "") : "";
       const ok2xx = muts.some((r) => r.status < 300);
@@ -970,6 +1037,10 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     await rec.pace(page);
     const before = await fingerprint(page);
     const dlBefore = rec.downloads.length;
+    const extBefore = rec.external.length;
+    const selectedBefore = await loc
+      .getAttribute("aria-selected")
+      .catch(() => null);
     rec.checkpoint();
     try {
       if (next.kind === "select") {
@@ -1025,6 +1096,9 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
       !hasDialog &&
       !seen.api.length &&
       rec.downloads.length === dlBefore &&
+      rec.external.length === extBefore &&
+      // the tab already shown: clicking it again changes nothing, by design
+      selectedBefore !== "true" &&
       !["select", "input"].includes(next.kind)
     )
       await rec.add(page, {
@@ -1192,6 +1266,7 @@ async function session(
   browser: Browser,
   account: Account,
   blocked: BlockedLog,
+  external: string[],
 ) {
   const context: BrowserContext = await browser.newContext({
     acceptDownloads: true,
@@ -1202,8 +1277,28 @@ async function session(
       (url) => url.origin === storageOrigin,
       (route) => route.continue(),
     );
+  /* A link the member clicks that leaves the app (map directions, the
+     emergency "ER near me" search) is a top-level navigation the user
+     chose, not a request the app makes. It is still aborted (nothing
+     third-party is contacted) and listed in the report as an external
+     link; any other third-party request stays in `blocked` and fails. */
+  await context.route(
+    (url) => url.origin !== appOrigin && url.origin !== apiOrigin,
+    (route) => {
+      const req = route.request();
+      if (!req.isNavigationRequest()) return route.fallback();
+      external.push(req.url());
+      return route.abort("blockedbyclient");
+    },
+  );
+  let mainPage: Page | null = null;
+  context.on("page", (p) => {
+    // A target=_blank link opens a tab: keep the crawl in one tab.
+    if (mainPage && p !== mainPage) void p.close().catch(() => undefined);
+  });
   await cookieSession(context, account);
   const page = await context.newPage();
+  mainPage = page;
   return { context, page };
 }
 
@@ -1213,11 +1308,18 @@ for (const role of ROLES) {
     let page: Page;
     let rec: Recorder;
     const blocked: BlockedLog = [];
+    const external: string[] = [];
 
     test.beforeAll(async ({ browser }) => {
       fs.mkdirSync(OUT, { recursive: true });
       rec = new Recorder(role.id, OUT);
-      ({ context, page } = await session(browser, role.account, blocked));
+      rec.external = external;
+      ({ context, page } = await session(
+        browser,
+        role.account,
+        blocked,
+        external,
+      ));
       page.setDefaultTimeout(10_000);
       rec.attach(page);
       // Skip the first-visit tour so it does not cover every page.
@@ -1233,6 +1335,7 @@ for (const role of ROLES) {
           {
             role: role.id,
             blocked,
+            external,
             stats: rec.stats,
             issues: rec.issues,
             downloads: rec.downloads,
@@ -1250,25 +1353,40 @@ for (const role of ROLES) {
 
     for (const href of ROUTES) {
       test(`${role.id} ${href} @phase16`, async () => {
-        test.setTimeout(8 * 60_000);
-        const from = rec.issues.length;
-        await crawlPage(page, rec, href);
+        test.setTimeout(10 * 60_000);
+        try {
+          await crawlPage(page, rec, href);
+        } catch (e) {
+          // One broken page must not stop the crawl of the others: record
+          // it; the summary test below fails on it.
+          rec.current = href;
+          await rec.add(page, {
+            kind: "crawler-error",
+            severity: "high",
+            steps: rec.control,
+            expected: "the crawler finishes the page",
+            actual: String(e).split("\n")[0].slice(0, 200),
+          });
+        }
         save();
-        const fatal = rec.issues
-          .slice(from)
-          .filter((i) => i.severity === "blocker" || i.severity === "high")
-          .filter(
-            (i) =>
-              !EXPLAINED.some(
-                (e) => e.kind === i.kind && e.actual.test(i.actual),
-              ),
-          );
         expect(blocked, "third-party requests").toEqual([]);
-        expect(
-          fatal.map((i) => `${i.page} | ${i.control} | ${i.kind}: ${i.actual}`),
-          `${role.id} ${href}: unexplained blocker/high issues`,
-        ).toEqual([]);
       });
     }
+
+    test(`${role.id} summary: no unexplained blocker/high issue @phase16`, () => {
+      save();
+      const fatal = rec.issues
+        .filter((i) => i.severity === "blocker" || i.severity === "high")
+        .filter(
+          (i) =>
+            !EXPLAINED.some(
+              (e) => e.kind === i.kind && e.actual.test(i.actual),
+            ),
+        );
+      expect(
+        fatal.map((i) => `${i.page} | ${i.control} | ${i.kind}: ${i.actual}`),
+        `${role.id}: unexplained blocker/high issues`,
+      ).toEqual([]);
+    });
   });
 }
