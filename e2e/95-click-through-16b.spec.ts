@@ -176,6 +176,8 @@ class Monitor {
   api: ApiHit[] = [];
   requests = 0;
   downloads: string[] = [];
+  /** Other-origin addresses the page asked window.open for (not opened). */
+  externalOpens: string[] = [];
 
   constructor(readonly page: Page) {
     page.on("console", (m) => {
@@ -985,6 +987,7 @@ async function crawlPage(
           (e as HTMLInputElement).checked === true,
       )
       .catch(() => false);
+    const opensBefore = mon.externalOpens.length;
     let chooser = false;
     const onChooser = () => {
       chooser = true;
@@ -1071,6 +1074,7 @@ async function crawlPage(
       before === after &&
       mon.requests === m.r &&
       mon.downloads.length === m.d &&
+      mon.externalOpens.length === opensBefore &&
       c.kind !== "link" &&
       /* A select's new value shows on submit; a file picker or the print
          dialog opens outside the page. */
@@ -1091,6 +1095,10 @@ async function crawlPage(
     page.off("filechooser", onChooser);
     if (chooser)
       ctx.cov.notes.push(`${ctx.current}: ${label} opened the file picker`);
+    for (const u of mon.externalOpens.slice(opensBefore))
+      ctx.cov.notes.push(
+        `${ctx.current}: ${label} asked to open ${u} in a new tab (external, not followed)`,
+      );
     await checkSince(ctx, m, label, steps);
     /* Menus/popovers opened by the click: close. */
     if (
@@ -1172,6 +1180,36 @@ async function allowLocalStorage(page: Page) {
     (url) => url.origin === storageOrigin,
     (route) => route.continue(),
   );
+}
+
+/** window.open to another origin (e.g. "Directions" to a map site) is
+ *  recorded and not opened: the crawl never leaves the env, and the
+ *  third-party block would otherwise fail the run on a user-chosen link. */
+async function guardExternalOpen(page: Page, mon: Monitor) {
+  await page.exposeFunction("__p16ExternalOpen", (url: string) => {
+    mon.externalOpens.push(url);
+  });
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      open: typeof window.open;
+      __p16ExternalOpen: (u: string) => void;
+    };
+    const real = w.open.bind(window);
+    w.open = (url?: string | URL, ...rest) => {
+      const href = url === undefined ? "" : String(url);
+      let other = false;
+      try {
+        other = new URL(href, location.href).origin !== location.origin;
+      } catch {
+        other = false;
+      }
+      if (other) {
+        w.__p16ExternalOpen(href);
+        return null;
+      }
+      return real(url, ...rest);
+    };
+  });
 }
 
 /** A setup sign-in through the API, once more when the busy machine makes
@@ -1496,6 +1534,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   const mon = new Monitor(page);
   open = { name: "anonymous", issues, cov, mon };
   await allowLocalStorage(page);
+  await guardExternalOpen(page, mon);
   const ctx: Ctx = {
     role: "anonymous",
     page,
@@ -1854,6 +1893,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   const mon = new Monitor(page);
   open = { name: "caregiver-sarah", issues, cov, mon };
   await allowLocalStorage(page);
+  await guardExternalOpen(page, mon);
   const ctx = caregiverCtx("caregiver-sarah", page, mon, issues, cov);
 
   await gotoSafe(page, "/dashboard");
@@ -1913,6 +1953,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   const mon = new Monitor(page);
   open = { name: "caregiver-limited", issues, cov, mon };
   await allowLocalStorage(page);
+  await guardExternalOpen(page, mon);
   const ctx = caregiverCtx("caregiver-limited", page, mon, issues, cov);
   /* Reads of an area Grace did not share are refused on purpose (the
      server's access.patient_access_denied); a refused WRITE still has to
