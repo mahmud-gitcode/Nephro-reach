@@ -141,6 +141,10 @@ const EXPECTED_4XX = new Map<string, string>([
     "check_ins.notice_check_in_deleted",
     "the member deleted the check-in behind an old notice; the notice shows that",
   ],
+  [
+    "vascular_access.referral_patient_not_linked",
+    "the crawler picked a patient not linked to both offices; the modal says so and stays open (AccessReferrals.test.tsx)",
+  ],
 ]);
 const ERROR_STATE = /^try again$/i;
 const DESTRUCTIVE =
@@ -197,6 +201,8 @@ class Crawl {
     destructive: 0,
     skippedDestructive: 0,
     noOps: 0,
+    /** Repeated rows of one list past the first ROW_SAMPLE, not clicked. */
+    rowsSampledOut: 0,
   };
   pagesVisited: string[] = [];
   /** Per page: actions, controls clicked, forms submitted, redirect target. */
@@ -220,7 +226,14 @@ class Crawl {
   private consoleErrors: string[] = [];
   private pageErrors: string[] = [];
   private api5xx: string[] = [];
-  private api4xx: Array<{ status: number; path: string; code: string }> = [];
+  private api4xx: Array<{
+    status: number;
+    path: string;
+    code: string;
+    refreshSeq?: number;
+  }> = [];
+  /** Successful POST /auth/refresh responses seen so far. */
+  private refreshes = 0;
 
   constructor(
     readonly page: Page,
@@ -242,6 +255,7 @@ class Crawl {
       if (!res.url().startsWith(apiOrigin)) return;
       const p = new URL(res.url()).pathname.replace(/^\/api\/v1/, "");
       const s = res.status();
+      if (p === "/auth/refresh" && s < 300) this.refreshes++;
       if (s >= 500) this.api5xx.push(`${s} ${res.request().method()} ${p}`);
       else if (s >= 400 && s !== 401) {
         const body = (await res.json().catch(() => null)) as {
@@ -253,10 +267,15 @@ class Crawl {
           code: typeof body?.code === "string" ? body.code : "",
         });
       } else if (s === 401 && !/\/auth\//.test(p)) {
+        const refreshSeq = this.refreshes;
+        const body = (await res.json().catch(() => null)) as {
+          code?: unknown;
+        } | null;
         this.api4xx.push({
           status: s,
           path: `${res.request().method()} ${p}`,
-          code: "",
+          code: typeof body?.code === "string" ? body.code : "",
+          refreshSeq,
         });
       }
     });
@@ -342,8 +361,37 @@ class Crawl {
         .getByText(NOT_SHARED)
         .count()
         .catch(() => 0);
+      // Give a refresh that is still in flight a moment to land.
+      for (
+        let t = 0;
+        t < 20 &&
+        e4.some(
+          (e) =>
+            e.status === 401 &&
+            !e.code &&
+            e.refreshSeq !== undefined &&
+            this.refreshes <= e.refreshSeq,
+        );
+        t++
+      )
+        await this.page.waitForTimeout(150);
       for (const e of e4) {
         const tag = `${e.status} ${e.path}${e.code ? ` ${e.code}` : ""}`;
+        /* The access cookie lives 15 minutes. A bare 401 is the client's
+           cue to refresh once and retry (src/lib/api/client.ts); when a
+           refresh succeeded after it, the read was retried and nothing was
+           lost. A 401 with no successful refresh stays an issue. */
+        if (
+          e.status === 401 &&
+          !e.code &&
+          e.refreshSeq !== undefined &&
+          this.refreshes > e.refreshSeq
+        ) {
+          this.notes.push(
+            `${this.current} ${control}: ${tag} on an expired access cookie, refreshed and retried`,
+          );
+          continue;
+        }
         if (e.status === 403 && (notShared || this.role.limited)) {
           this.notes.push(
             `${this.current} ${control}: refused ${tag}${notShared ? " (not-shared state shown)" : " (limited role)"}`,
@@ -1129,6 +1177,17 @@ async function open(c: Crawl, href: string) {
   await waitReady(c);
 }
 
+const ROW_SAMPLE = 3;
+/** A control's name with its counts, times and ids taken out. */
+function shapeOf(ctl: Ctl) {
+  const name = ctl.name
+    .replace(/\bjust now\b/gi, "#")
+    .replace(/\d+/g, "#")
+    .replace(/[#\s·:]+$/g, "");
+  const href = ctl.href.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ":id");
+  return `${ctl.kind}|${name}|${href}`;
+}
+
 async function crawlPage(c: Crawl, href: string, source: string) {
   const page = c.page;
   c.current = href;
@@ -1163,6 +1222,7 @@ async function crawlPage(c: Crawl, href: string, source: string) {
   await settle(page, 200);
 
   const done = new Set<string>();
+  const shapes = new Map<string, number>();
   let actions = 0;
   while (actions < MAX_ACTIONS_PER_PAGE) {
     await closeOverlays(page);
@@ -1172,6 +1232,21 @@ async function crawlPage(c: Crawl, href: string, source: string) {
     if (!ctls.length) break;
     const ctl = ctls[0];
     done.add(ctl.key);
+    /* Rows of one list (threads, notices) differ only in counts and
+       times; the first ROW_SAMPLE of each shape are exercised, the rest
+       are counted as sampled. The list grows on every crawl (each run
+       sends new threads), so clicking them all would not end. */
+    const sh = shapeOf(ctl);
+    const seen = (shapes.get(sh) ?? 0) + 1;
+    shapes.set(sh, seen);
+    if (seen > ROW_SAMPLE) {
+      c.coverage.rowsSampledOut++;
+      if (seen === ROW_SAMPLE + 1)
+        c.notes.push(
+          `${href}: ${ctl.kind} rows like "${ctl.name.slice(0, 50)}" sampled (first ${ROW_SAMPLE} exercised)`,
+        );
+      continue;
+    }
     actions++;
     const r = await act(c, ctl, href).catch(async (e: unknown) => {
       c.notes.push(
