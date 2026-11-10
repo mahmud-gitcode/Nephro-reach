@@ -132,7 +132,19 @@ const OUT =
 const MARK = `P16C${Date.now().toString(36).slice(-5)}`;
 /** Rows the crawler made (any run): its names carry P16C, its emails p16c. */
 const OWN = /p16c/i;
-const MAX_ACTIONS_PER_PAGE = Number(process.env.E2E_P16_MAX_ACTIONS ?? 90);
+const MAX_ACTIONS_PER_PAGE = Number(process.env.E2E_P16_MAX_ACTIONS ?? 120);
+
+/* Uploads go to the env's LOCAL S3 stand-in (E2E_STORAGE_ORIGIN, loopback
+   only), as in e2e/52: the page may reach that one origin. Every other
+   host stays blocked by the shared guard. */
+const STORAGE_ORIGIN = (() => {
+  const raw = process.env.E2E_STORAGE_ORIGIN ?? "";
+  if (!raw) return null;
+  const u = new URL(raw);
+  if (!["localhost", "127.0.0.1"].includes(u.hostname))
+    throw new Error("E2E_STORAGE_ORIGIN must be the local S3 stand-in");
+  return u.origin;
+})();
 const GOTO_TIMEOUT = 90_000;
 
 const NOT_SHARED = /not been shared with you/i;
@@ -768,8 +780,15 @@ async function collect(page: Page): Promise<Ctl[]> {
         h.setAttribute("data-p16c", id);
         const inRow = h.parentElement?.closest('tr, li, [role="row"]');
         const words = (h.textContent ?? "").replace(/\s+/g, " ").trim();
-        const rowLabel =
-          inRow && words && words !== name && name.includes(words) ? words : "";
+        /* An icon-only row action keeps its verb: "Change role of X" ->
+           "Change role of". */
+        const rowLabel = !inRow
+          ? ""
+          : words && words !== name && name.includes(words)
+            ? words
+            : !words && /\b(of|for|to|from)\b/i.test(name)
+              ? name.replace(/\b(of|for|to|from)\b.*$/i, "$1")
+              : "";
         out.push({ id, key: `${base}|${k}`, kind, name, href, rowLabel });
       }
     return out;
@@ -1665,8 +1684,11 @@ async function crawlPage(c: Crawl, href: string, source: string) {
     const sh = shapeOf(ctl);
     const seen = (shapes.get(sh) ?? 0) + 1;
     shapes.set(sh, seen);
-    // The crawler's own rows are never sampled out (destructive runs).
-    if (seen > ROW_SAMPLE && !OWN.test(ctl.name)) {
+    // Destructive actions on the crawler's own rows are never sampled out.
+    if (
+      seen > ROW_SAMPLE &&
+      !(OWN.test(ctl.name) && DESTRUCTIVE.test(ctl.name))
+    ) {
       c.coverage.rowsSampledOut++;
       if (seen === ROW_SAMPLE + 1)
         c.notes.push(
@@ -1707,6 +1729,11 @@ for (const role of ROLES) {
     const me = await (await api(role.account)).context();
     expect(me.memberships.length, "an office account").toBeGreaterThan(0);
     const { page } = await asUser(role.account);
+    if (STORAGE_ORIGIN)
+      await page.route(
+        (url) => url.origin === STORAGE_ORIGIN,
+        (route) => route.continue(),
+      );
     const c = new Crawl(page, role);
     fs.mkdirSync(path.join(OUT, "screens"), { recursive: true });
     page.on("dialog", (d) => void d.dismiss().catch(() => undefined));
