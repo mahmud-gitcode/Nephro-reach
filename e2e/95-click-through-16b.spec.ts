@@ -253,8 +253,13 @@ type Ctx = {
   go: (href: string) => Promise<void>;
   /** Root that holds the page body (dashboard: main; public: body). */
   root: string;
-  /** Areas this role may see; a 403 there is unexpected. */
+  /** Refusals that are intended for a route the area table below does not
+   *  cover (invitation/share tokens; the server's not-shared code). */
   intended403: (apiPath: string, code: string, method: string) => boolean;
+  /** The caregiver map this role acts under (area -> 0 none, 1 view,
+   *  2 edit). A refusal on a patient route is judged by the route's own
+   *  area against this map, not by text elsewhere on the page. */
+  perms?: Record<string, number>;
   /** Whether the role may write here (view-only caregiver: false). */
   current: string;
 };
@@ -291,6 +296,69 @@ async function issue(
     severity,
     screenshot: await shot(ctx, control),
   });
+}
+
+/** The caregiver key each patient route needs, from the backend's
+ *  @RequirePatientAccess (src/modules/access/patient-area.constants.ts).
+ *  null: the patient alone (account, caregivers, share grants, ...);
+ *  a caregiver never reaches it. Matched against the path after
+ *  /patients/{id}/. */
+const PATIENT_ROUTE_KEYS: [RegExp, string | null][] = [
+  [/^dialysis\/prescription\/transfers/, null],
+  [/^(dialysis|access-profiles|trips)(\/|$)/, "dialysis"],
+  [/^nutrition(\/|$)/, "nutrition"],
+  [/^check-ins(\/|$)/, "check-ins"],
+  [/^er-visits(\/|$)/, "er-visits"],
+  [/^labs(\/|$)/, "labs"],
+  [/^(medications|reminders)(\/|$)/, "medications"],
+  [/^journal(\/|$)/, "journal"],
+  [/^conversations(\/|$)/, "messages"],
+  [
+    /^(appointments|blood-pressure|exercise|urine-output|weight-fluid|care-team-questions)(\/|$)/,
+    "personal-logs",
+  ],
+  [
+    /^(allergies|medical-conditions|emergency-contact|care-contacts|care-team-contacts|home-dialysis-clinic|ride-contacts|education)(\/|$)/,
+    "profile",
+  ],
+  [/^outside-shares(\/|$)/, "sharing"],
+  [/^(caregivers|caregiver-invitations|share-grants|subscription)(\/|$)/, null],
+];
+
+/** Sarah's FULL grant (journal and sharing stay off in every preset). */
+const FULL_MAP: Record<string, number> = {
+  profile: 2,
+  "personal-logs": 2,
+  nutrition: 2,
+  "check-ins": 2,
+  "er-visits": 2,
+  dialysis: 2,
+  medications: 2,
+  labs: 2,
+  messages: 2,
+};
+
+/** Whether a 403/404 on this API call is what the role's map says:
+ *  "intended" (the area is not shared at the level the call needs),
+ *  "wrong" (the map covers it, so the refusal is a bug) or "unknown"
+ *  (not a patient route, or a route missing from the table). */
+function refusalVerdict(
+  perms: Record<string, number> | undefined,
+  method: string,
+  apiPath: string,
+): "intended" | "wrong" | "unknown" {
+  if (!perms) return "unknown";
+  const m = /^\/patients\/[^/]+(?:\/(.*))?$/.exec(apiPath);
+  if (!m) return "unknown";
+  const rest = m[1] ?? "";
+  let key: string | null | undefined;
+  if (rest === "") key = null;
+  else if (/^care-relationships(\/|$)/.test(rest))
+    key = method === "GET" ? "profile" : null;
+  else key = PATIENT_ROUTE_KEYS.find(([re]) => re.test(rest))?.[1];
+  if (key === undefined) return "unknown";
+  const level = key === null ? 0 : (perms[key] ?? 0);
+  return level < (method === "GET" ? 1 : 2) ? "intended" : "wrong";
 }
 
 /** Problems that appeared since `m` (console, crash, API). */
@@ -337,28 +405,66 @@ async function checkSince(
       }
       if (h.status === 401 && /\/auth\/(refresh|me)|\/me\/context/.test(h.path))
         continue;
-      /* A write the role may not make (a view-only area): refused on
-         purpose, and fine when the page says so. */
+      /* An expired access cookie: the API's guard sends a bare 401, the
+         client refreshes once and retries (src/lib/api/client.ts). Fine
+         when that refresh succeeded. */
       if (
-        h.status === 403 &&
-        h.method !== "GET" &&
-        ctx.intended403(h.path, h.code, "GET") &&
-        (await refusalShown(ctx.page))
+        h.status === 401 &&
+        h.code === "" &&
+        mon.api.some(
+          (x) =>
+            x.path === "/auth/refresh" && x.status < 400 && x.at >= h.at - 2000,
+        )
       ) {
         ctx.cov.notes.push(
-          `${ctx.current}: refused write ${h.method} ${h.path} ${h.code} (refusal shown)`,
+          `${ctx.current}: bare 401 ${h.method} ${h.path} then a successful refresh (access cookie expired; the client retried)`,
         );
         continue;
       }
-      if (
-        (h.status === 403 || h.status === 404) &&
-        (ctx.intended403(h.path, h.code, h.method) || notShared)
-      ) {
-        if (!notShared && h.method === "GET")
-          ctx.cov.notes.push(
-            `${ctx.current}: intended ${h.status} ${h.path} ${h.code} (no "not shared" text on screen)`,
-          );
-        continue;
+      if (h.status === 403 || h.status === 404) {
+        /* A patient route: judged by its own area against the role's map,
+           whatever the body said (it may be unread after a navigation)
+           and whatever other text is on the page. */
+        const verdict = refusalVerdict(ctx.perms, h.method, h.path);
+        if (verdict === "intended") {
+          if (h.method === "GET") {
+            if (!notShared)
+              ctx.cov.notes.push(
+                `${ctx.current}: intended ${h.status} ${h.path} ${h.code || "(no code read)"} (area not shared; no "not shared" text on screen)`,
+              );
+            continue;
+          }
+          /* A write the map does not allow: fine when the page says so. */
+          if (await refusalShown(ctx.page)) {
+            ctx.cov.notes.push(
+              `${ctx.current}: refused write ${h.method} ${h.path} ${h.code} (refusal shown)`,
+            );
+            continue;
+          }
+        } else if (verdict === "unknown") {
+          /* Not a patient route (or not in the table): only the role's
+             own list of intended refusals counts, never page text. */
+          if (
+            h.status === 403 &&
+            h.method !== "GET" &&
+            ctx.intended403(h.path, h.code, "GET") &&
+            (await refusalShown(ctx.page))
+          ) {
+            ctx.cov.notes.push(
+              `${ctx.current}: refused write ${h.method} ${h.path} ${h.code} (refusal shown)`,
+            );
+            continue;
+          }
+          if (ctx.intended403(h.path, h.code, h.method)) {
+            if (!notShared && h.method === "GET")
+              ctx.cov.notes.push(
+                `${ctx.current}: intended ${h.status} ${h.path} ${h.code} (no "not shared" text on screen)`,
+              );
+            continue;
+          }
+        }
+        /* verdict "wrong": the map covers this area, so the refusal is
+           a finding even if "not shared" shows for another section. */
       }
       await issue(
         ctx,
@@ -1608,6 +1714,9 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
       /* After "Continue" this is the limited caregiver (Grace's custom
          map): reads of the areas she did not share are refused on purpose. */
       (method === "GET" && code === "access.patient_access_denied"),
+    /* After MFA setup the account acts for Grace under LIMITED_MAP; the
+       public pages call no patient route. */
+    perms: LIMITED_MAP,
   };
   for (const href of PUBLIC_PAGES) {
     ctx.current = href;
@@ -1935,6 +2044,9 @@ function caregiverCtx(
        show the not-shared state (checked by checkSince). Staff and
        platform routes are never called by a caregiver. */
     intended403: () => false,
+    /* Sarah: FULL on John and on Grace (phase-15 role-journeys). The
+       limited caregiver's test replaces it with LIMITED_MAP. */
+    perms: FULL_MAP,
   };
 }
 
@@ -2017,6 +2129,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   /* Reads of an area Grace did not share are refused on purpose (the
      server's access.patient_access_denied); a refused WRITE still has to
      show its refusal (checked in exerciseDialog and here). */
+  ctx.perms = LIMITED_MAP;
   ctx.intended403 = (_p, code, method) =>
     method === "GET" &&
     /not_shared|no_access|patient_access_denied|caregiver/i.test(code);
