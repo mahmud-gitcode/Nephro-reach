@@ -154,3 +154,120 @@ describe("Add Food validation message", () => {
     expect(screen.queryByText("Enter a food name.")).toBeNull();
   });
 });
+
+/* P16b QA round 2: Set Goals with Calories "-5" sent a calorie goal of 0,
+   got 200 and closed with no message. Invalid input now stays in the form
+   with a field message, and nothing is sent. */
+describe("nutrition forms refuse invalid amounts with a field message", () => {
+  it("Goals: '-5' calories is not saved as 0", async () => {
+    const onSave = vi.fn();
+    render(
+      wrap(<GoalsModal goals={goals} onClose={vi.fn()} onSave={onSave} />),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const calories = screen.getByLabelText(/^Calories/);
+    fireEvent.change(calories, { target: { value: "-5" } });
+    const form = dialog.querySelector("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Enter a number of 0 or more.",
+    );
+    expect(calories.getAttribute("aria-invalid")).toBe("true");
+    expect(await axe(document.body)).toHaveNoViolations();
+
+    /* Fixing the field clears its message and saves the typed goal. */
+    fireEvent.change(calories, { target: { value: "1,900" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.submit(form);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].calories).toBe(1900);
+  });
+
+  it("Goals: a goal above the server's limit is named", async () => {
+    const onSave = vi.fn();
+    render(
+      wrap(<GoalsModal goals={goals} onClose={vi.fn()} onSave={onSave} />),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(screen.getByLabelText(/^Fluids/), {
+      target: { value: "20000" },
+    });
+    fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Enter a number up to 10,000 ml.",
+    );
+  });
+
+  it("Add Food: letters in an amount are not saved as 0", async () => {
+    const onSave = vi.fn();
+    render(
+      wrap(
+        <AddFoodModal
+          defaultMeal="breakfast"
+          dayLabel="Today"
+          mealLabels={mealLabels}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      ),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(screen.getByLabelText(/^Food/), {
+      target: { value: "Synthetic oatmeal" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Sodium/), {
+      target: { value: "lots" },
+    });
+    fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText("Check the amounts marked below.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Enter a number of 0 or more.",
+    );
+  });
+
+  it("Add Food: an over-long name is named, not sent", async () => {
+    const onSave = vi.fn();
+    render(
+      wrap(
+        <AddFoodModal
+          defaultMeal="breakfast"
+          dayLabel="Today"
+          mealLabels={mealLabels}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      ),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(screen.getByLabelText(/^Food/), {
+      target: { value: "x".repeat(201) },
+    });
+    fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("The food name can be up to 200 characters."),
+    ).toBeTruthy();
+  });
+
+  it("Add Fluid: a negative amount says why instead of doing nothing", async () => {
+    const onSave = vi.fn();
+    render(
+      wrap(
+        <AddWaterModal dayLabel="Today" onClose={vi.fn()} onSave={onSave} />,
+      ),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(screen.getByLabelText(/^Amount/), {
+      target: { value: "-8" },
+    });
+    fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Enter an amount greater than 0.",
+    );
+  });
+});
