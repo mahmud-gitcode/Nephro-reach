@@ -925,6 +925,18 @@ async function exerciseForm(
     c.step = `${control} → fill synthetic → ${btnName}`;
     const typedMark = await fill(scope, "valid", c);
     btn = (await submitButton(scope)) ?? btn;
+    if (!(await btn.isEnabled().catch(() => false)) && isDialog) {
+      /* An acknowledgement gate (the external-share notice before an
+         export): its checkbox is not marked required, the button waits
+         for it. */
+      const boxes = scope.locator("input[type=checkbox]:visible:not(:checked)");
+      for (let i = (await boxes.count()) - 1; i >= 0; i--)
+        await boxes
+          .nth(i)
+          .check({ timeout: 1_500 })
+          .catch(() => undefined);
+      btn = (await submitButton(scope)) ?? btn;
+    }
     if (!(await btn.isEnabled().catch(() => false))) {
       c.notes.push(
         `${c.current} ${control}: submit stays disabled after the synthetic fill`,
@@ -932,8 +944,38 @@ async function exerciseForm(
       return;
     }
     const before = c.calls;
+    // An export confirmed in the dialog downloads after the click.
+    const download = /download|export|csv|pdf/i.test(btnName)
+      ? page.waitForEvent("download", { timeout: 8_000 }).catch(() => null)
+      : null;
     await btn.click({ timeout: 2_000 }).catch(() => undefined);
     c.coverage.formsSubmitted++;
+    const dl = download ? await download : null;
+    if (download && !dl)
+      await c.issue({
+        control: `${control} → ${btnName}`,
+        kind: "download",
+        expected: "the confirmed export downloads",
+        actual: "no download within 8s",
+        severity: "medium",
+      });
+    if (dl) {
+      c.coverage.downloads++;
+      const fail = await dl.failure();
+      if (fail)
+        await c.issue({
+          control: `${control} → ${btnName}`,
+          kind: "download",
+          expected: "the export downloads",
+          actual: `download failed: ${fail}`,
+          severity: "high",
+        });
+      else
+        c.notes.push(
+          `${c.current} ${control}: downloaded ${dl.suggestedFilename()}`,
+        );
+      await dl.delete().catch(() => undefined);
+    }
     await settle(page, 700);
     const sent = c.calls - before;
     const stillOpen = isDialog ? await openDialog(page).count() : 0;
@@ -1084,6 +1126,11 @@ async function act(
     await dl.delete().catch(() => undefined);
   }
   await settle(page);
+  /* Taken before any dialog is exercised and closed: a control whose
+     dialog closed again leaves the page as it was, and that is not a
+     no-op. */
+  const mid = await signature(page).catch(() => "");
+  const dialogs0 = c.coverage.dialogsOpened;
 
   // A listbox or menu opened: pick an option / item (one per visit).
   const lb = page.locator('[role="listbox"]:visible').last();
@@ -1126,7 +1173,14 @@ async function act(
   await c.flush(label);
 
   const after = await signature(page).catch(() => "");
-  if (before && before === after && c.calls === callsBefore && !dl) {
+  if (
+    before &&
+    before === mid &&
+    before === after &&
+    c.coverage.dialogsOpened === dialogs0 &&
+    c.calls === callsBefore &&
+    !dl
+  ) {
     c.coverage.noOps++;
     await c.issue({
       control: label,
