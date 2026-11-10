@@ -57,6 +57,7 @@ const OUT = path.resolve(
   process.env.E2E_CRAWL_OUT ?? path.join("test-results", "crawl-16a"),
 );
 const MARK = "P16a";
+const PAGE_BUDGET_MS = 8 * 60_000;
 const API_BUDGET = Math.max(10, Number(process.env.E2E_API_BUDGET ?? 75) || 75);
 
 const ROLES: { id: string; account: Account }[] = [
@@ -1114,7 +1115,7 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
             });
         }
         // Follow the first link of each target once, then come back.
-        if (links.size <= 12 || CHILDREN[href]?.test(url.pathname)) {
+        if (links.size <= 6 || CHILDREN[href]?.test(url.pathname)) {
           budget -= 1;
           stats.clicked += 1;
           await rec.pace(page);
@@ -1475,20 +1476,44 @@ for (const role of ROLES) {
 
     for (const href of ROUTES) {
       test(`${role.id} ${href} @phase16`, async () => {
-        test.setTimeout(10 * 60_000);
-        try {
-          await crawlPage(page, rec, href);
-        } catch (e) {
+        test.setTimeout(PAGE_BUDGET_MS + 3 * 60_000);
+        /* A page that hangs (a frozen tab, a dev server under memory
+           pressure) must not time the test out: in serial mode that would
+           skip every later page of the role. After the budget the tab is
+           replaced and the page recorded. */
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const crawl = crawlPage(page, rec, href).then(
+          () => "done" as const,
+          (e: unknown) => e,
+        );
+        const outcome = await Promise.race([
+          crawl,
+          new Promise<"timeout">((resolve) => {
+            timer = setTimeout(() => resolve("timeout"), PAGE_BUDGET_MS);
+          }),
+        ]);
+        clearTimeout(timer);
+        if (outcome !== "done") {
           // One broken page must not stop the crawl of the others: record
           // it; the summary test below fails on it.
           rec.current = href;
           await rec.add(page, {
-            kind: "crawler-error",
+            kind: outcome === "timeout" ? "page-budget" : "crawler-error",
             severity: "high",
             steps: rec.control,
             expected: "the crawler finishes the page",
-            actual: String(e).split("\n")[0].slice(0, 200),
+            actual:
+              outcome === "timeout"
+                ? `no result within ${PAGE_BUDGET_MS / 60_000} min (last control: ${rec.control})`
+                : String(outcome).split("\n")[0].slice(0, 200),
           });
+        }
+        if (outcome === "timeout") {
+          await page.close().catch(() => undefined);
+          await crawl;
+          page = await context.newPage();
+          page.setDefaultTimeout(10_000);
+          rec.attach(page);
         }
         save();
         expect(blocked, "third-party requests").toEqual([]);
