@@ -20,5 +20,10 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     css: false,
     restoreMocks: true,
+    // Under parallel load (several agents, little free RAM) long form
+    // tests ran past Vitest's 5 s default. A suite-wide ceiling keeps a
+    // slow machine from failing a correct test; no assertion changes.
+    testTimeout: 15_000,
+    hookTimeout: 15_000,
   },
 });
