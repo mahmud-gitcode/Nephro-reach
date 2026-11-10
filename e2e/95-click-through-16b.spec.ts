@@ -991,6 +991,18 @@ async function crawlPage(
 /* Navigation helpers                                                  */
 /* ------------------------------------------------------------------ */
 
+/** page.goto that survives a `next dev` stall: the dev server compiles on
+ *  demand and a Fast Refresh full reload can leave one navigation hanging
+ *  (runs 1 and 2 on env 08). One retry with a longer timeout; a second
+ *  failure is a real failure. */
+async function gotoSafe(page: Page, href: string) {
+  try {
+    await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  } catch {
+    await page.goto(href, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  }
+}
+
 /** In-app navigation through the Next router when the page exposes it in
  *  dev, else a click on a matching link, else page.goto. */
 function inAppGo(page: Page, reopen?: () => Promise<void>) {
@@ -1009,7 +1021,7 @@ function inAppGo(page: Page, reopen?: () => Promise<void>) {
         r.push(h);
         return true;
       }, href);
-      if (!pushed) await page.goto(href);
+      if (!pushed) await gotoSafe(page, href);
     }
     await page
       .waitForURL(
@@ -1223,6 +1235,36 @@ const PUBLIC_PAGES = [
   "/secure/p16b-not-a-real-token",
 ];
 
+/** `next dev` compiles a route on its first request, which can take longer
+ *  than the navigation timeout on a busy machine (run 1 timed out on "/").
+ *  Request every route of the lane once before the crawl so the crawl
+ *  measures the app, not the compiler. */
+const WARM_ROUTES = [
+  ...PUBLIC_PAGES,
+  "/setup/patient",
+  "/setup/mfa",
+  "/dashboard",
+  "/dashboard/caregiver",
+  "/dashboard/my-health",
+  "/dashboard/personal-log",
+  "/dashboard/messages",
+  "/dashboard/my-caregivers",
+  "/dashboard/settings",
+];
+
+test.beforeAll(async () => {
+  test.setTimeout(10 * 60_000);
+  const ctx = await request.newContext({ baseURL: appOrigin });
+  try {
+    for (const r of WARM_ROUTES)
+      await ctx
+        .get(r, { timeout: 180_000, maxRedirects: 0 })
+        .catch(() => undefined);
+  } finally {
+    await ctx.dispose();
+  }
+});
+
 test("anonymous: every public page and control @phase16", async ({ page }) => {
   const issues: Issue[] = [];
   const cov = newCoverage("anonymous");
@@ -1236,7 +1278,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
     root: "body",
     current: "/",
     go: async (href) => {
-      await page.goto(href);
+      await gotoSafe(page, href);
     },
     /* Public pages read nothing private; a bad invitation/share token is
        refused on purpose. */
@@ -1245,7 +1287,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   for (const href of PUBLIC_PAGES) {
     ctx.current = href;
     const m = mon.mark();
-    await page.goto(href);
+    await gotoSafe(page, href);
     cov.pages.push(href);
     await checkSince(ctx, m, "(open page)", `open ${href}`);
     /* The login/registration forms are exercised explicitly below. */
@@ -1254,7 +1296,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
 
   /* Login: empty, wrong password, then a valid sign-in and sign-out. */
   ctx.current = "/login";
-  await page.goto("/login");
+  await gotoSafe(page, "/login");
   let m = mon.mark();
   await page.getByRole("button", { name: /^sign in$/i }).click();
   cov.formsSubmitted++;
@@ -1314,7 +1356,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
 
   /* Registration: empty, invalid email, mismatched passwords, then valid. */
   ctx.current = "/registration";
-  await page.goto("/registration");
+  await gotoSafe(page, "/registration");
   m = mon.mark();
   await page.getByRole("button", { name: /^sign up$/i }).click();
   cov.formsSubmitted++;
@@ -1405,7 +1447,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   ctx.current = "/invitations/[token]";
   cov.pages.push("/invitations/[token]");
   m = mon.mark();
-  await page.goto(link.pathname);
+  await gotoSafe(page, link.pathname);
   await settled(ctx, "(invitation)");
   await pageChecks(ctx);
   await page
@@ -1425,7 +1467,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   /* MFA setup self-service for a caregiver (D17, D31): open, wrong code. */
   ctx.current = "/setup/mfa";
   m = mon.mark();
-  await page.goto("/setup/mfa");
+  await gotoSafe(page, "/setup/mfa");
   cov.pages.push("/setup/mfa");
   await crawlPage(ctx, { allowWrites: false, maxControls: 15 });
   await checkSince(
@@ -1442,7 +1484,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
      header; the multitab spec 02 covers it), then forgot/reset password. */
   await page.context().clearCookies();
   ctx.current = "/forgot-password";
-  await page.goto("/forgot-password");
+  await gotoSafe(page, "/forgot-password");
   m = mon.mark();
   /* Empty: Continue stays disabled (the form needs 3+ characters). */
   const fpSubmit = page.locator('form button[type="submit"]').first();
@@ -1506,7 +1548,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   /* Reset by link with a token that is not real: the refusal is shown. */
   ctx.current = "/reset-password?token=…";
   m = mon.mark();
-  await page.goto("/reset-password?token=p16b-not-a-real-token");
+  await gotoSafe(page, "/reset-password?token=p16b-not-a-real-token");
   const rpw = page.locator('input[type="password"]');
   await rpw.nth(0).fill("Synthetic-P16b-pass1");
   await rpw.nth(1).fill("Synthetic-P16b-pass1");
@@ -1562,7 +1604,7 @@ function caregiverCtx(
     root: "main",
     current: "/dashboard",
     go: async (h) => {
-      await page.goto(h);
+      await gotoSafe(page, h);
     },
     /* Patient routes outside the grant are refused on purpose, and must
        show the not-shared state (checked by checkSince). Staff and
@@ -1585,7 +1627,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   const mon = new Monitor(page);
   const ctx = caregiverCtx("caregiver-sarah", page, mon, issues, cov);
 
-  await page.goto("/dashboard");
+  await gotoSafe(page, "/dashboard");
   await page
     .waitForURL(/\/dashboard\/caregiver/, { timeout: 30_000 })
     .catch(() => undefined);
@@ -1593,7 +1635,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   cov.pages.push("/dashboard/caregiver");
   /* My Patients itself: no writes (its controls open patients). */
   await crawlPage(ctx, { allowWrites: false, maxControls: 20 });
-  await page.goto("/dashboard/caregiver");
+  await gotoSafe(page, "/dashboard/caregiver");
   await page.getByRole("button", { name: "Open John Taylor" }).click();
   await page.waitForURL((u) => !/\/dashboard\/caregiver\/?$/.test(u.pathname), {
     timeout: 30_000,
@@ -1602,7 +1644,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
 
   /* Grace: every page opens cleanly (no clicks), after the switch. */
   ctx.role = "caregiver-sarah (Grace)";
-  await page.goto("/dashboard/caregiver");
+  await gotoSafe(page, "/dashboard/caregiver");
   await page.getByRole("button", { name: "Open Grace Taylor" }).click();
   await page.waitForURL((u) => !/\/dashboard\/caregiver\/?$/.test(u.pathname), {
     timeout: 30_000,
@@ -1643,7 +1685,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   const ctx = caregiverCtx("caregiver-limited", page, mon, issues, cov);
   /* Areas Grace did not share: refused on purpose (the page must say so). */
   ctx.intended403 = (_p, code) => /not_shared|no_access|caregiver/i.test(code);
-  await page.goto("/dashboard");
+  await gotoSafe(page, "/dashboard");
   await page.waitForURL((u) => !/\/login/.test(u.pathname), {
     timeout: 30_000,
   });
