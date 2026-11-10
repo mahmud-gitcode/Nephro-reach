@@ -146,6 +146,9 @@ export function AddFoodModal({
       return;
     }
 
+    /* A valid submit clears the earlier "Enter a food name." so it does not
+       sit next to a save failure (saveError) shown in the same form. */
+    setError("");
     onSave({
       meal,
       name: name.trim(),

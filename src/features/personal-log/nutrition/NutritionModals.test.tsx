@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -103,5 +103,54 @@ describe("nutrition forms show why a save failed", () => {
     render(wrap(make(null)));
     await screen.findByRole("dialog");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Add Food validation message", () => {
+  it("clears 'Enter a food name.' once a valid food is submitted", async () => {
+    const onSave = vi.fn();
+    const { rerender } = render(
+      wrap(
+        <AddFoodModal
+          defaultMeal="breakfast"
+          dayLabel="Today"
+          mealLabels={mealLabels}
+          onClose={vi.fn()}
+          onSave={onSave}
+          saveError={null}
+        />,
+      ),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const form = dialog.querySelector("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    expect(screen.getByText("Enter a food name.")).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/^Food/), {
+      target: { value: "Synthetic oatmeal" },
+    });
+    fireEvent.submit(form);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Enter a food name.")).toBeNull();
+
+    /* The server then refuses the save: only its reason is shown. */
+    rerender(
+      wrap(
+        <AddFoodModal
+          defaultMeal="breakfast"
+          dayLabel="Today"
+          mealLabels={mealLabels}
+          onClose={vi.fn()}
+          onSave={onSave}
+          saveError={REFUSED}
+        />,
+      ),
+    );
+    expect(screen.getByRole("alert").textContent).toContain(
+      "You do not have access",
+    );
+    expect(screen.queryByText("Enter a food name.")).toBeNull();
   });
 });
