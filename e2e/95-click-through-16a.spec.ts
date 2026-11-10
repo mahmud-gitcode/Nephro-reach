@@ -128,6 +128,9 @@ const NEVER =
 const SUBMIT =
   /^(save|submit|add|send|create|request|log|confirm|update|book|invite|post|share|record|continue|next|done|apply|reply|start|finish|upload|schedule|check in|ask)\b/i;
 const CLOSE = /^(cancel|close|dismiss|back|no|not now|keep|×|x)$/i;
+/* An open dialog: visible and not inside a closed (inert) off-canvas panel. */
+const OPEN_DIALOG =
+  '[role="dialog"]:visible:not([inert] *):not([aria-hidden="true"] *)';
 const NOT_SHARED = /not been shared with you/i;
 const VALIDATION =
   /required|please|enter|must|invalid|select|choose|at least|too (long|short)|cannot be|can't be|between|valid/i;
@@ -1129,7 +1132,7 @@ const trace = (msg: string) => {
 
 async function closeDialog(page: Page) {
   for (let i = 0; i < 3; i += 1) {
-    const d = page.locator('[role="dialog"]:visible').last();
+    const d = page.locator(OPEN_DIALOG).last();
     if (!(await d.count())) return;
     await page.keyboard.press("Escape").catch(() => undefined);
     await page.waitForTimeout(200);
@@ -1199,6 +1202,9 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
       stats.skipped.push("control budget (90) reached");
       break;
     }
+    /* A dialog an in-page form or an earlier click left open would cover
+       every control behind it: close it first. */
+    if (await page.locator(OPEN_DIALOG).count()) await closeDialog(page);
     const controls = await enumerate(page);
     stats.controls = Math.max(
       stats.controls,
@@ -1334,7 +1340,7 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
       if (after !== before) break;
     }
     const seen = await judge(page, rec, `click ${rec.control}`);
-    const dialog = page.locator('[role="dialog"]:visible').last();
+    const dialog = page.locator(OPEN_DIALOG).last();
     const hasDialog = (await dialog.count()) > 0;
     if (
       after === before &&
@@ -1361,7 +1367,7 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
         page,
         rec,
         stats,
-        () => page.locator('[role="dialog"]:visible').last(),
+        () => page.locator(OPEN_DIALOG).last(),
         `dialog from '${next.name}'`,
         async () => {
           if (new URL(page.url()).pathname !== pagePath)
@@ -1375,7 +1381,7 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
             .click({ timeout: 3_000 })
             .catch(() => undefined);
           await page.waitForTimeout(400);
-          return (await page.locator('[role="dialog"]:visible').count()) > 0;
+          return (await page.locator(OPEN_DIALOG).count()) > 0;
         },
       );
       /* Click the dialog's own non-submit controls (tabs, toggles). */
@@ -1437,7 +1443,7 @@ async function deleteOwn(page: Page, rec: Recorder, stats: PageStats) {
     rec.checkpoint();
     await btn.click({ timeout: 3_000 }).catch(() => undefined);
     await page.waitForTimeout(400);
-    const d = page.locator('[role="dialog"]:visible').last();
+    const d = page.locator(OPEN_DIALOG).last();
     if (await d.count()) {
       const confirm = d
         .getByRole("button", {
