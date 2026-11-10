@@ -4,68 +4,172 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Reply, Send, Stethoscope } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
   EmptyState,
+  ErrorState,
   FormField,
   Modal,
   Select,
+  Skeleton,
   Textarea,
 } from "@/components/ui";
-import { readJson, storageKey, writeJson } from "@/lib/data/storage";
+import { isApiError } from "@/lib/api/client";
+import { orgKey } from "@/lib/data/queryKeys";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
-import { organizationFor } from "./staff";
-import { useStaffAccounts } from "./useStaffAccounts";
+import { canLevel } from "@/features/permissions/permissionMap";
 import {
-  markTeamRead,
-  messagesFor,
+  actionErrorText,
+  requireOffice,
+  useOfficeOrg,
+} from "@/features/clinic/officeContext";
+import { listStaff } from "./staff.api";
+import { staffKeys, useAdminContext } from "./useStaffAccounts";
+import {
+  listTeamMessages,
+  listUnreadTeamMessages,
+  markTeamMessagesRead,
+  orderColleagues,
   sendTeamMessage,
-  type TeamMessage,
+  SOMEONE,
+  TEAM_MESSAGE_MAX,
+  viewTeamMessages,
+  type Colleague,
 } from "./teamMessages.data";
 
 /* ==========================================================================
    Team Messages card — nurses write to the physicians (client, 2026-10-06)
+   --------------------------------------------------------------------------
+   On the API (P15c, INT-P15-1): the active office's
+   /organizations/{orgId}/team-messages, read and written as that office
+   (path and X-Organization-Id from the portal context, office mode only).
+   The server decides every call; a 403 is "no access", never an empty list.
+
+   Colleagues' names and the "To" list come from the office's staff list,
+   which only a role with staff View may read. Without it the card still
+   lists the messages and lets the person reply, but starting a new message
+   is shown disabled with the D52 "not available yet" note (no colleague
+   directory route for team messages; decision D75).
    ========================================================================== */
 
-const KEY = storageKey("team-messages");
-const QUERY = ["team-messages"];
+const STAFF_PAGE = { page: 1, limit: 150 } as const;
 
-function useTeamMessages() {
+const NOT_AVAILABLE_ID = "team-messages-not-available";
+const NOT_AVAILABLE =
+  "Not available yet: starting a message needs the office's staff list, which your role cannot view. You can reply to messages sent to you.";
+/* Why "Message a Physician" is disabled in the other cases (QA-SEC P15c
+   round 2, L1): a disabled button always says why. */
+const READ_ONLY =
+  "Your role can read team messages but not send them. Ask the account owner if you need to write to colleagues.";
+const NO_COLLEAGUE =
+  "No other active colleague in this office to message yet. You can reply to messages sent to you.";
+const STAFF_UNREAD =
+  "The office's staff list did not load, so no colleague can be chosen right now. You can reply to messages sent to you.";
+
+function useTeamMessages(orgId: string | null) {
   const queryClient = useQueryClient();
+  const enabled = orgId !== null;
+  const list = useQuery({
+    queryKey: orgId
+      ? orgKey(orgId, "team-messages")
+      : ["org", "none", "team-messages"],
+    queryFn: () => listTeamMessages(requireOffice(orgId)),
+    enabled,
+  });
+  const unread = useQuery({
+    queryKey: orgId
+      ? orgKey(orgId, "team-messages", "unread")
+      : ["org", "none", "team-messages", "unread"],
+    queryFn: () => listUnreadTeamMessages(requireOffice(orgId)),
+    enabled,
+  });
+  const settle = () =>
+    orgId
+      ? queryClient.invalidateQueries({
+          queryKey: orgKey(orgId, "team-messages"),
+        })
+      : undefined;
+  const send = useMutation({
+    mutationFn: (body: { toId: string; body: string }) =>
+      sendTeamMessage(requireOffice(orgId), body),
+    onSettled: settle,
+  });
+  const markRead = useMutation({
+    mutationFn: () => markTeamMessagesRead(requireOffice(orgId)),
+    onSettled: settle,
+  });
+  return { list, unread, send, markRead };
+}
+
+/** The office's active colleagues, when this role may read the staff list. */
+function useColleagues(orgId: string | null, allowed: boolean) {
   const query = useQuery({
-    queryKey: QUERY,
-    queryFn: () => readJson<TeamMessage[]>(KEY, []),
+    queryKey: orgId
+      ? staffKeys.staff(orgId, STAFF_PAGE)
+      : ["org", "none", "staff"],
+    queryFn: () => listStaff(requireOffice(orgId), STAFF_PAGE),
+    enabled: orgId !== null && allowed,
   });
-  const write = useMutation({
-    mutationFn: async (transform: (current: TeamMessage[]) => TeamMessage[]) =>
-      writeJson(KEY, transform(await readJson<TeamMessage[]>(KEY, []))),
-    onSuccess: (next) => queryClient.setQueryData(QUERY, next),
-  });
-  return { all: query.data ?? [], change: write.mutate };
+  const colleagues: Colleague[] = (query.data?.items ?? [])
+    .filter((m) => m.status === "ACTIVE")
+    .map((m) => ({
+      userId: m.userId,
+      name: m.name ?? m.email ?? SOMEONE,
+      role: m.role,
+    }));
+  return {
+    colleagues,
+    isPending: allowed && query.isPending,
+    failed: allowed && query.isError,
+  };
 }
 
 export function TeamMessages() {
   const user = useOptionalAuth()?.user;
-  const staff = useStaffAccounts();
-  const team = useTeamMessages();
+  const { orgId } = useOfficeOrg();
+  const { permissions } = useAdminContext();
+  const canSend = canLevel(permissions, "team_messages", 2);
+  const canListStaff = canLevel(permissions, "staff", 1);
+  const team = useTeamMessages(orgId);
+  const staff = useColleagues(orgId, canListStaff);
   const [writing, setWriting] = useState<{ to: string } | null>(null);
-  const org = organizationFor(user);
-  if (!user || !org) return null;
+  if (!user || !orgId) return null;
 
-  const me = user.name;
-  const owner = !user.staffRole;
-  const mine = messagesFor(team.all, org.name, me, owner);
-  const unread = mine.filter((m) => m.to === me && !m.read).length;
-  /* Physicians first: they are who a nurse is usually after. */
-  const colleagues = staff.accounts
-    .filter((a) => a.orgId === org.id && a.status === "Active" && a.name !== me)
-    .sort(
-      (a, b) =>
-        Number(!a.role.startsWith("Physician")) -
-          Number(!b.role.startsWith("Physician")) ||
-        a.name.localeCompare(b.name),
-    );
+  const me = {
+    userId: user.id,
+    name: user.name,
+    role: user.staffRole ?? "Account owner",
+  };
+  const colleagues = orderColleagues(
+    staff.colleagues.filter((c) => c.userId !== me.userId),
+  );
+  const mine = viewTeamMessages(
+    team.list.data?.items ?? [],
+    me,
+    staff.colleagues,
+  );
+  const unread = (team.unread.data?.items ?? []).length;
+  const notShared =
+    isApiError(team.list.error) && team.list.error.status === 403;
+  const startDisabled = !canSend || colleagues.length === 0;
+  /* One reason for a disabled start: none while the staff list loads, and
+     none when the card already says the messages are not available. */
+  const startReason = notShared
+    ? null
+    : !canSend
+      ? canLevel(permissions, "team_messages", 1)
+        ? READ_ONLY
+        : null
+      : !canListStaff
+        ? NOT_AVAILABLE
+        : staff.failed
+          ? STAFF_UNREAD
+          : !staff.isPending && colleagues.length === 0
+            ? NO_COLLEAGUE
+            : null;
+  const writeError = team.send.error ?? team.markRead.error;
 
   return (
     <Card as="section" padding="small">
@@ -84,8 +188,9 @@ export function TeamMessages() {
             variant="neutral"
             appearance="fill-stroke"
             leadingIcon={<Stethoscope aria-hidden="true" />}
-            disabled={colleagues.length === 0}
-            onClick={() => setWriting({ to: colleagues[0]?.name ?? "" })}
+            disabled={startDisabled}
+            aria-describedby={startReason ? NOT_AVAILABLE_ID : undefined}
+            onClick={() => setWriting({ to: colleagues[0]?.userId ?? "" })}
           >
             Message a Physician
           </Button>
@@ -94,17 +199,49 @@ export function TeamMessages() {
               size="small"
               variant="neutral"
               appearance="ghost"
-              onClick={() =>
-                team.change((all) => markTeamRead(all, org.name, me))
-              }
+              disabled={team.markRead.isPending}
+              onClick={() => team.markRead.mutate()}
             >
               Mark read
             </Button>
           ) : null}
         </div>
+        {startReason ? (
+          <p
+            id={NOT_AVAILABLE_ID}
+            className="w-full text-caption text-fg-muted"
+          >
+            {startReason}
+          </p>
+        ) : null}
       </div>
 
-      {mine.length === 0 ? (
+      {writeError ? (
+        <Alert
+          tone="danger"
+          className="mb-stack-md"
+          onDismiss={() => {
+            team.send.reset();
+            team.markRead.reset();
+          }}
+        >
+          {actionErrorText(writeError)}
+        </Alert>
+      ) : null}
+
+      {team.list.error ? (
+        <ErrorState
+          title={
+            notShared
+              ? "Team messages are not available to your role"
+              : "Team messages could not be loaded"
+          }
+          error={team.list.error}
+          onRetry={() => void team.list.refetch()}
+        />
+      ) : team.list.isPending ? (
+        <Skeleton height={120} />
+      ) : mine.length === 0 ? (
         <EmptyState
           variant="bare"
           title="No team messages yet"
@@ -112,7 +249,7 @@ export function TeamMessages() {
         />
       ) : (
         <ul className="divide-y divide-line-subtle">
-          {mine.slice(0, 20).map((m) => (
+          {mine.map((m) => (
             <li
               key={m.id}
               className="flex items-start justify-between gap-inline-lg py-inset-sm first:pt-0 last:pb-0"
@@ -120,9 +257,11 @@ export function TeamMessages() {
               <div className="min-w-0">
                 <p className="text-label-md text-fg">
                   {m.from}
-                  <span className="text-fg-muted"> ({m.fromRole}) → </span>
+                  <span className="text-fg-muted">
+                    {m.fromRole ? ` (${m.fromRole})` : ""} →{" "}
+                  </span>
                   {m.to}
-                  {m.to === me && !m.read ? (
+                  {m.isNew ? (
                     <Badge tone="info" className="ml-inline-sm">
                       New
                     </Badge>
@@ -140,13 +279,14 @@ export function TeamMessages() {
                   })}
                 </p>
               </div>
-              {m.to === me ? (
+              {m.toMe && m.fromId !== me.userId && canSend ? (
                 <Button
                   size="small"
                   variant="neutral"
                   appearance="fill-stroke"
                   leadingIcon={<Reply aria-hidden="true" />}
-                  onClick={() => setWriting({ to: m.from })}
+                  aria-label={`Reply to ${m.from}`}
+                  onClick={() => setWriting({ to: m.fromId })}
                 >
                   Reply
                 </Button>
@@ -161,30 +301,30 @@ export function TeamMessages() {
           to={writing.to}
           options={[
             ...colleagues.map((c) => ({
-              value: c.name,
+              value: c.userId,
               label: `${c.name} · ${c.role}`,
             })),
-            /* A reply to the office's own login, which has no staff row. */
-            ...(colleagues.some((c) => c.name === writing.to) || !writing.to
+            /* A reply to someone this role cannot list (the office's own
+               login, or any colleague when the staff list is not
+               readable): named from the message, never by id. */
+            ...(colleagues.some((c) => c.userId === writing.to) || !writing.to
               ? []
-              : [{ value: writing.to, label: writing.to }]),
+              : [
+                  {
+                    value: writing.to,
+                    label:
+                      mine.find((m) => m.fromId === writing.to)?.from ??
+                      SOMEONE,
+                  },
+                ]),
           ]}
+          isSending={team.send.isPending}
           onClose={() => setWriting(null)}
-          onSend={(to, body) => {
-            team.change((all) =>
-              sendTeamMessage(
-                all,
-                {
-                  org: org.name,
-                  from: me,
-                  fromRole: user.staffRole ?? "Account owner",
-                  to,
-                  body,
-                },
-                new Date(),
-              ),
+          onSend={(toId, body) => {
+            team.send.mutate(
+              { toId, body },
+              { onSuccess: () => setWriting(null) },
             );
-            setWriting(null);
           }}
         />
       ) : null}
@@ -195,18 +335,24 @@ export function TeamMessages() {
 function WriteModal({
   to: initialTo,
   options,
+  isSending,
   onSend,
   onClose,
 }: {
   to: string;
   options: Array<{ value: string; label: string }>;
+  isSending: boolean;
   onSend: (to: string, body: string) => void;
   onClose: () => void;
 }) {
   const [to, setTo] = useState(initialTo);
   const [body, setBody] = useState("");
   const [tried, setTried] = useState(false);
-  const error = body.trim() ? undefined : "Write your message.";
+  const error = !body.trim()
+    ? "Write your message."
+    : body.trim().length > TEAM_MESSAGE_MAX
+      ? `Keep it under ${TEAM_MESSAGE_MAX} characters.`
+      : undefined;
   return (
     <Modal
       open
@@ -220,7 +366,7 @@ function WriteModal({
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
-            disabled={!to}
+            disabled={!to || isSending}
             onClick={() => {
               setTried(true);
               if (error) return;

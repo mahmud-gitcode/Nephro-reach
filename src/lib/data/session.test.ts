@@ -286,3 +286,39 @@ describe("back/forward cache", () => {
     stop();
   });
 });
+
+/* P15c (INT-P15-1): the retired appointments and team-messages copies, in
+   every variant an older build wrote, are gone after sign-out. */
+describe("signOut: retired appointments and team messages", () => {
+  const COPIES = [
+    "nr:member-appointments",
+    "nr:member:ana@example.test:member-appointments",
+    "nr:member-id:0f0f0f0f-0000-4000-8000-0000000000a1:member-appointments",
+    "nr:caregiver-none:member-appointments",
+    "nr:team-messages",
+  ];
+
+  it("leaves none of these keys and no email in localStorage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 200 })),
+    );
+    for (const key of COPIES)
+      window.localStorage.setItem(
+        key,
+        JSON.stringify([{ id: "x", title: "Test visit", org: "Test Office" }]),
+      );
+    window.localStorage.setItem("preferred_language", "EN");
+
+    await signOut();
+
+    const left = Object.keys(window.localStorage);
+    expect(
+      left.filter(
+        (k) => k.includes("member-appointments") || k.includes("team-messages"),
+      ),
+    ).toEqual([]);
+    expect(left.some((k) => k.includes("@"))).toBe(false);
+    expect(window.localStorage.getItem("preferred_language")).toBe("EN");
+  });
+});

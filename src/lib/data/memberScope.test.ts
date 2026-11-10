@@ -21,13 +21,14 @@ afterEach(() => {
 });
 
 describe("whose data a key holds", () => {
-  /* A store still on this device (appointments move in a later phase). */
-  const LOG = storageKey("member-appointments");
+  /* A member-owned store name: the mechanism under test. Every such store
+     but the D8 vitals is retired (P15c retired the appointments). */
+  const LOG = storageKey("travel-reflections");
 
   it("files a member's own log under that member", () => {
     signIn("user", "ana@example.com");
     expect(resolveKey(LOG)).toBe(
-      "nr:member:ana@example.com:member-appointments",
+      "nr:member:ana@example.com:travel-reflections",
     );
   });
 
@@ -93,8 +94,9 @@ describe("the vitals store is keyed by the account id", () => {
 
 describe("the scope cannot be forged from the browser (INT-2)", () => {
   it("ignores a hand-written session cookie", () => {
-    /* A store still on this device (appointments move in a later phase). */
-    const LOG = storageKey("member-appointments");
+    /* A member-owned store name: the mechanism under test. Every such store
+     but the D8 vitals is retired (P15c retired the appointments). */
+    const LOG = storageKey("travel-reflections");
     document.cookie = `${LEGACY_SESSION_COOKIE}=${encodeURIComponent(
       JSON.stringify({ role: "user", email: "victim@example.com", name: "x" }),
     )}; path=/`;
@@ -102,15 +104,15 @@ describe("the scope cannot be forged from the browser (INT-2)", () => {
     expect(resolveKey(LOG)).toBe(LOG);
     signIn("user", "ana@example.com");
     expect(resolveKey(LOG)).toBe(
-      "nr:member:ana@example.com:member-appointments",
+      "nr:member:ana@example.com:travel-reflections",
     );
     document.cookie = `${LEGACY_SESSION_COOKIE}=; path=/; max-age=0`;
   });
 
   it("normalises the email the server reports", () => {
     signIn("user", " Ana@Example.com ");
-    expect(resolveKey(storageKey("member-appointments"))).toBe(
-      "nr:member:ana@example.com:member-appointments",
+    expect(resolveKey(storageKey("travel-reflections"))).toBe(
+      "nr:member:ana@example.com:travel-reflections",
     );
   });
 });

@@ -31,12 +31,14 @@ import {
 } from "@/components/ui";
 import {
   appointmentError,
+  canAnswerAttendance,
   draftOf,
   awaitingAnswer,
   REMINDER_LEADS,
   directionsUrl,
   icsFor,
   needsReschedule,
+  notCopiedYet,
   past,
   timeRange,
   upcoming,
@@ -47,12 +49,18 @@ import {
 } from "@/features/personal-log/appointments/appointments";
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useMemberAccessAppointments } from "@/features/vascular-access/useMemberAccessAppointments";
+import { saveErrorText } from "@/features/profile/saveError";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useNow } from "@/lib/utils/useNow";
 
 /* ==========================================================================
    Appointments
    --------------------------------------------------------------------------
-   The member's own list, stored (useAppointments): what is coming up, the
+   The member's own list, on the API (useAppointments): what is coming up, the
    next one with directions, the details of any one, and the full list with
    past visits.
    ========================================================================== */
@@ -183,7 +191,9 @@ function DetailsModal({
   isEs: boolean;
   /** The day has gone by, so "did you go?" can be answered. */
   isPast: boolean;
-  onAttendance: (attendance: Attendance) => void;
+  /** Absent when the answer has nowhere to go yet: an access visit the
+   *  server has not copied into the member's list. */
+  onAttendance?: (attendance: Attendance) => void;
   /** Absent for an appointment that belongs to another record. */
   onEdit?: () => void;
   /** Absent for an appointment that belongs to another record. */
@@ -275,7 +285,14 @@ function DetailsModal({
               : "Delete this appointment? This cannot be undone."}
           </Alert>
         ) : null}
-        {isPast ? (
+        {isPast && !onAttendance ? (
+          <p className="text-caption text-fg-muted">
+            {isEs
+              ? "Aún no disponible: podrá responder si fue a esta cita cuando el centro de acceso la agregue a su lista."
+              : "Not available yet: you can say whether you went once the access center adds this visit to your list."}
+          </p>
+        ) : null}
+        {isPast && onAttendance ? (
           <SegmentedChoice<Attendance | null>
             label={
               isEs ? "¿Fue a esta cita?" : "Did you go to this appointment?"
@@ -428,16 +445,16 @@ export default function AppointmentsPage() {
   const { t, language } = useLanguage();
   const isEs = language === "ES";
   const store = useAppointments();
-  /* The access center's bookings for this member, read from the API and
-     shown beside the member's own list, in memory only (Phase 10: nothing
-     from the API is copied into browser storage). Copies an older version
-     saved into the member's list are not shown twice. */
+  /* The access center's bookings for this member, read from its record on
+     the API, in memory only. The server copies each booked visit into the
+     member's appointments (read-only there except "did you go?"); a visit
+     it has not copied yet is shown from the access read, never twice. */
   const access = useMemberAccessAppointments();
   const now = new Date(useNow());
   const pad = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const own = store.appointments.filter((a) => a.source !== "vascular-access");
-  const listed = [...own, ...access.appointments];
+  const own = store.appointments;
+  const listed = [...own, ...notCopiedYet(own, access.appointments)];
   const ahead = upcoming(listed, today);
   const before = past(listed, today);
   /* The one past visit still waiting for "did you go?" — asked here rather
@@ -470,14 +487,27 @@ export default function AppointmentsPage() {
           : "This is needed"
       : undefined;
 
-  function save(e: React.FormEvent) {
+  /* One step at a time: the booking first, and only once the server has
+     it is the missed visit marked rescheduled. A refused booking keeps the
+     form open with the member's draft and the error. */
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     setTried(true);
-    if (error) return;
-    if (editingId) store.update(editingId, draft);
-    else store.add(draft);
-    if (reschedulingId) store.markRescheduled(reschedulingId);
+    if (error || store.isSaving) return;
+    const replaces = reschedulingId;
+    try {
+      if (editingId) await store.updateAsync(editingId, draft);
+      else await store.addAsync(draft);
+    } catch {
+      return;
+    }
     closeForm();
+    if (replaces) store.markRescheduled(replaces);
+  }
+
+  function openForm() {
+    store.dismissSaveError();
+    setIsModalOpen(true);
   }
 
   function closeForm() {
@@ -495,7 +525,7 @@ export default function AppointmentsPage() {
     setReschedulingId(appointment.id);
     setTried(false);
     setOpenId(null);
-    setIsModalOpen(true);
+    openForm();
   }
 
   function openEdit(appointment: Appointment) {
@@ -503,7 +533,7 @@ export default function AppointmentsPage() {
     setEditingId(appointment.id);
     setTried(false);
     setOpenId(null);
-    setIsModalOpen(true);
+    openForm();
   }
 
   const shown = showAll ? ahead : ahead.slice(0, 3);
@@ -514,7 +544,7 @@ export default function AppointmentsPage() {
 
       <header className="flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-heading-1 text-fg">{t("appointments.title")}</h1>
-        <Button onClick={() => setIsModalOpen(true)} leadingIcon={<Plus />}>
+        <Button onClick={openForm} leadingIcon={<Plus />}>
           {t("appointments.addAppointment")}
         </Button>
       </header>
@@ -582,15 +612,31 @@ export default function AppointmentsPage() {
         </Alert>
       ) : null}
 
+      {store.saveError ? (
+        <Alert
+          tone="danger"
+          title={
+            isEs ? "No se pudo guardar el cambio" : "That change did not save"
+          }
+          onDismiss={store.dismissSaveError}
+        >
+          {saveErrorText(store.saveError, isEs ? "es" : "en")}
+        </Alert>
+      ) : null}
+
       {store.error ? (
         <ErrorState
-          title={
+          title={errorTitleFor(
+            store.error,
             isEs
               ? "No se pudieron cargar tus citas"
-              : "Your appointments could not be loaded"
-          }
+              : "Your appointments could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(store.error, undefined, isEs ? "es" : "en")}
           error={store.error}
-          onRetry={store.refetch}
+          onRetry={canRetry(store.error) ? store.refetch : undefined}
+          retryLabel={isEs ? "Intentar de nuevo" : "Try again"}
         />
       ) : store.isPending ? (
         <Skeleton height={420} className="rounded-card" />
@@ -672,8 +718,10 @@ export default function AppointmentsPage() {
           appointment={opened}
           isEs={isEs}
           isPast={opened.date < today}
-          onAttendance={(attendance) =>
-            store.setAttendance(opened.id, attendance)
+          onAttendance={
+            canAnswerAttendance(opened)
+              ? (attendance) => store.setAttendance(opened.id, attendance)
+              : undefined
           }
           onClose={() => setOpenId(null)}
           onEdit={opened.source ? undefined : () => openEdit(opened)}
@@ -717,7 +765,11 @@ export default function AppointmentsPage() {
             >
               {t("appointments.cancel")}
             </Button>
-            <Button type="submit" form="appointment-form">
+            <Button
+              type="submit"
+              form="appointment-form"
+              loading={store.isSaving}
+            >
               {editingId
                 ? isEs
                   ? "Guardar Cambios"
@@ -729,10 +781,22 @@ export default function AppointmentsPage() {
       >
         <form
           id="appointment-form"
-          onSubmit={save}
+          onSubmit={(e) => void save(e)}
           noValidate
           className="space-y-stack-lg"
         >
+          {store.saveError ? (
+            <Alert
+              tone="danger"
+              title={
+                isEs
+                  ? "No se pudo guardar el cambio"
+                  : "That change did not save"
+              }
+            >
+              {saveErrorText(store.saveError, isEs ? "es" : "en")}
+            </Alert>
+          ) : null}
           <FormField
             label={t("appointments.specialtyLabel")}
             required

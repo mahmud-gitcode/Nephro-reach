@@ -27,7 +27,7 @@
 export const STORAGE_VERSION_KEY = "nr:storage-version";
 
 /** Bumped whenever the registry below grows. */
-export const STORAGE_VERSION = 16;
+export const STORAGE_VERSION = 17;
 
 /** Never removed. */
 export const KEPT_KEYS: readonly string[] = [
@@ -379,6 +379,12 @@ export const RETIRED_STORES: readonly RetiredStore[] = [
     since: 14,
     why: "Phase 14: the office contract, seats, invoices and change requests are /organizations/:id/billing/* (contract, invoices with a server download link, change-requests); payments and the renewal choice are NephroReach's (no office route), so nothing an office does on the billing page is kept in the browser. No screen reads this key.",
   },
+  /* P15c (LEAD, STORAGE_VERSION 17; INT-P15-1, D73 option (a)). */
+  {
+    name: "member-appointments",
+    since: 17,
+    why: "P15c: appointments are /patients/:id/appointments (the patient from the portal context; a caregiver only under a grant with personal logs; access-center visits copied in by the server). The old key held appointment PHI that survived sign-out, named the member by email (nr:member:<email>:…) and gave every caregiver one shared copy (nr:caregiver-none:…); the sample appointments (seedAppointments) are deleted. No screen reads this key. Every variant is also removed at sign-out and sign-in (purgeSignOutStores).",
+  },
 ];
 
 /** The prototype's demo session: an unsigned, editable JSON cookie that
@@ -434,6 +440,11 @@ export const RETIRED_KEYS: readonly string[] = [
      this browser. Office plans are /platform/organization-plans and an
      office's plan is its contract (/platform/contracts). */
   "nr:org-subscriptions",
+  /* P15c (STORAGE_VERSION 17; INT-P15-1): every office's staff chat in one
+     key, filtered only in the UI by office name. Team messages are
+     /organizations/:id/team-messages (the server returns only the caller's
+     own office and own messages). Also removed at sign-out and sign-in. */
+  "nr:team-messages",
 ];
 
 /** Key prefixes that are retired in every variant (one key per user). */
@@ -501,7 +512,8 @@ export function isRetiredKey(key: string): boolean {
     ({ name }) =>
       key === `nr:${name}` ||
       key === `nr:caregiver-none:${name}` ||
-      (key.startsWith("nr:member:") && key.endsWith(`:${name}`)),
+      ((key.startsWith("nr:member:") || key.startsWith("nr:member-id:")) &&
+        key.endsWith(`:${name}`)),
   );
 }
 
@@ -550,9 +562,11 @@ function storageOrNull(): Storage | null {
 
 /**
  * Removes every copy of the SIGN_OUT_STORES (every member's, the plain key,
- * the caregiver's empty view). Runs on sign-out, on session end and at the
- * start of every sign-in, so an account switch on one browser never finds
- * the previous person's copy. Never throws.
+ * the caregiver's empty view) and every retired key (P15c: so the retired
+ * appointments and team-messages copies, in every variant, go at sign-out
+ * and sign-in as well as at boot). Runs on sign-out, on session end and at
+ * the start of every sign-in, so an account switch on one browser never
+ * finds the previous person's copy. Never throws.
  */
 export function purgeSignOutStores(
   storage: Storage | null = storageOrNull(),
@@ -566,7 +580,10 @@ export function purgeSignOutStores(
       if (key !== null) keys.push(key);
     }
     for (const key of keys) {
-      if (SIGN_OUT_STORES.some(({ name }) => isSignOutStoreKey(key, name))) {
+      if (
+        SIGN_OUT_STORES.some(({ name }) => isSignOutStoreKey(key, name)) ||
+        isRetiredKey(key)
+      ) {
         storage.removeItem(key);
         removed.push(key);
       }
