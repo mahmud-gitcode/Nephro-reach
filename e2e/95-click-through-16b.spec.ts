@@ -783,6 +783,9 @@ async function exerciseDialog(
   return ok && !stillOpen ? marker : null;
 }
 
+/** Upper bound for the clicks on one page (the crawl must stay fast). */
+const PAGE_BUDGET_MS = 4 * 60_000;
+
 /** Click every control on the current page. */
 async function crawlPage(
   ctx: Ctx,
@@ -796,7 +799,15 @@ async function crawlPage(
   const created: string[] = [];
   const done = new Set<string>();
   let clicked = 0;
+  /* A time budget per page keeps the crawl bounded; what is left is noted. */
+  const deadline = Date.now() + PAGE_BUDGET_MS;
   for (const c of controls) {
+    if (Date.now() > deadline) {
+      ctx.cov.notes.push(
+        `${ctx.current}: page time budget reached (${controls.length} controls, ${clicked} clicked)`,
+      );
+      break;
+    }
     if (clicked >= (opts.maxControls ?? 70)) {
       ctx.cov.notes.push(
         `${ctx.current}: control cap reached (${controls.length} controls, ${clicked} clicked)`,
@@ -873,6 +884,13 @@ async function crawlPage(
     clicked++;
     ctx.cov.controlsClicked++;
     await page.waitForTimeout(350);
+    /* A click that navigates: wait for the new document (bounded), so the
+       checks below never queue behind a navigation that has not committed
+       (run 3 hung 40 minutes on one). */
+    if (page.url() !== startUrl)
+      await page
+        .waitForLoadState("domcontentloaded", { timeout: 20_000 })
+        .catch(() => undefined);
     const steps = `on ${ctx.current}, click ${label}`;
     const dialogsAfter = await page.getByRole("dialog").count();
     const urlChanged = page.url() !== startUrl;
@@ -1142,8 +1160,31 @@ async function crawlPortal(
 /* Shared state between the tests (serial)                              */
 /* ------------------------------------------------------------------ */
 
-test.describe.configure({ mode: "serial" });
+/* Not serial: a failing role must not skip the next roles (the limited
+   caregiver is set up through the API when the public test did not). */
 test.setTimeout(45 * 60_000);
+
+/** The running test's results, written by afterEach even on a failure. */
+let open: {
+  name: string;
+  issues: Issue[];
+  cov: Coverage;
+  mon: Monitor;
+} | null = null;
+
+test.afterEach(async ({}, info) => {
+  if (!open) return;
+  const { name, issues, cov, mon } = open;
+  open = null;
+  cov.downloads = mon.downloads.length;
+  markAllowed(issues);
+  writeResult(name, {
+    status: info.status,
+    error: info.error?.message?.split("\n")[0] ?? null,
+    coverage: cov,
+    issues,
+  });
+});
 
 /** Grace's custom map for the limited caregiver: profile and logs view,
  *  medications edit, everything else not shared. */
@@ -1269,6 +1310,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   const issues: Issue[] = [];
   const cov = newCoverage("anonymous");
   const mon = new Monitor(page);
+  open = { name: "anonymous", issues, cov, mon };
   const ctx: Ctx = {
     role: "anonymous",
     page,
@@ -1561,7 +1603,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
 
   cov.downloads = mon.downloads.length;
   markAllowed(issues);
-  writeResult("anonymous", { coverage: cov, issues });
+  /* Written by afterEach (also when the test fails part way). */
   test
     .info()
     .annotations.push({ type: "issues", description: String(issues.length) });
@@ -1625,6 +1667,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   const cov = newCoverage("caregiver-sarah");
   const { page } = await asUser(ACCOUNTS.caregiver);
   const mon = new Monitor(page);
+  open = { name: "caregiver-sarah", issues, cov, mon };
   const ctx = caregiverCtx("caregiver-sarah", page, mon, issues, cov);
 
   await gotoSafe(page, "/dashboard");
@@ -1663,7 +1706,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
 
   cov.downloads = mon.downloads.length;
   markAllowed(issues);
-  writeResult("caregiver-sarah", { coverage: cov, issues });
+  /* Written by afterEach (also when the test fails part way). */
   expectNoOpenSevere(issues);
 });
 
@@ -1682,6 +1725,7 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   await c.dispose();
   const { page } = await asUser(acct);
   const mon = new Monitor(page);
+  open = { name: "caregiver-limited", issues, cov, mon };
   const ctx = caregiverCtx("caregiver-limited", page, mon, issues, cov);
   /* Areas Grace did not share: refused on purpose (the page must say so). */
   ctx.intended403 = (_p, code) => /not_shared|no_access|caregiver/i.test(code);
@@ -1692,6 +1736,6 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   await caregiverCrawl(ctx, page, null, true);
   cov.downloads = mon.downloads.length;
   markAllowed(issues);
-  writeResult("caregiver-limited", { coverage: cov, issues });
+  /* Written by afterEach (also when the test fails part way). */
   expectNoOpenSevere(issues);
 });
