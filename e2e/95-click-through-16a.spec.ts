@@ -57,6 +57,7 @@ const OUT = path.resolve(
   process.env.E2E_CRAWL_OUT ?? path.join("test-results", "crawl-16a"),
 );
 const MARK = "P16a";
+const API_BUDGET = Math.max(10, Number(process.env.E2E_API_BUDGET ?? 75) || 75);
 
 const ROLES: { id: string; account: Account }[] = [
   { id: "member-john", account: ACCOUNTS.john },
@@ -133,6 +134,12 @@ const PNG = Buffer.from(
 const PDF = Buffer.from(
   "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
   "utf8",
+);
+
+/* A 32-byte ISO-BMFF "ftyp" box: enough for a type check, no content. */
+const MP4 = Buffer.from(
+  "00000020667479706973736f6d0000020069736f6d69736f32617663316d703431",
+  "hex",
 );
 
 const storageOrigin = (() => {
@@ -227,12 +234,14 @@ class Recorder {
     });
   }
 
-  /** The API answers 100 requests a minute per IP: stay under it. */
+  /** The API answers RATE_LIMIT_LIMIT (default 100) requests a minute per
+   *  IP: stay under it. E2E_API_BUDGET raises the budget only for an env
+   *  whose API was started with a higher local limit. */
   async pace(page: Page) {
     for (;;) {
       const now = Date.now();
       this.apiTimes = this.apiTimes.filter((t) => now - t < 60_000);
-      if (this.apiTimes.length < 75) return;
+      if (this.apiTimes.length < API_BUDGET) return;
       await page.waitForTimeout(this.apiTimes[0] + 60_000 - now + 200);
     }
   }
@@ -521,6 +530,10 @@ type Control = {
 async function enumerate(page: Page): Promise<Control[]> {
   return page
     .evaluate(() => {
+      // Drop the tags of an earlier pass: a stale tag would make two
+      // elements answer the same [data-p16] locator.
+      for (const old of document.querySelectorAll("[data-p16]"))
+        old.removeAttribute("data-p16");
       const main = document.querySelector("main");
       if (!main) return [];
       const sel =
@@ -635,13 +648,14 @@ async function fill(root: Locator, rec: Recorder, mode: FillMode) {
   const radiosDone = new Set<string>();
   for (let i = 0; i < n; i += 1) {
     const f = fields.nth(i);
-    if (!(await f.isVisible().catch(() => false))) continue;
-    const tag = await f
-      .evaluate((e) => e.tagName.toLowerCase())
-      .catch(() => "");
     const type = (
       (await f.getAttribute("type").catch(() => "")) ?? "text"
     ).toLowerCase();
+    // A file input is usually visually hidden behind its drop zone.
+    if (type !== "file" && !(await f.isVisible().catch(() => false))) continue;
+    const tag = await f
+      .evaluate((e) => e.tagName.toLowerCase())
+      .catch(() => "");
     const label = await labelOf(f);
     try {
       if (tag === "select") {
@@ -658,17 +672,23 @@ async function fill(root: Locator, rec: Recorder, mode: FillMode) {
         if (mode !== "valid") continue;
         const accept = (await f.getAttribute("accept")) ?? "";
         await f.setInputFiles(
-          /pdf/.test(accept) && !/image/.test(accept)
+          /video/.test(accept)
             ? {
-                name: "p16a-synthetic.pdf",
-                mimeType: "application/pdf",
-                buffer: PDF,
+                name: "p16a-synthetic.mp4",
+                mimeType: "video/mp4",
+                buffer: MP4,
               }
-            : {
-                name: "p16a-synthetic.png",
-                mimeType: "image/png",
-                buffer: PNG,
-              },
+            : /pdf/.test(accept) && !/image/.test(accept)
+              ? {
+                  name: "p16a-synthetic.pdf",
+                  mimeType: "application/pdf",
+                  buffer: PDF,
+                }
+              : {
+                  name: "p16a-synthetic.png",
+                  mimeType: "image/png",
+                  buffer: PNG,
+                },
         );
         continue;
       }
@@ -821,8 +841,14 @@ async function formPass(
         // The browser's own message for a required or typed field is a
         // native bubble, not in the DOM: the field matches :invalid.
         (await root
-          .locator("input:invalid, textarea:invalid, select:invalid")
-          .count()
+          .evaluate(
+            (el) =>
+              [
+                ...el.querySelectorAll<
+                  HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+                >("input, textarea, select"),
+              ].filter((f) => f.willValidate && !f.validity.valid).length,
+          )
           .catch(() => 0));
       const text = stillOpen ? await root.innerText().catch(() => "") : "";
       const ok2xx = muts.some((r) => r.status < 300);
@@ -1257,6 +1283,9 @@ async function layout(page: Page, rec: Recorder, href: string) {
 /* Tests                                                               */
 /* ------------------------------------------------------------------ */
 test.describe.configure({ mode: "serial" });
+/* One long-lived context per role: a trace of a whole role crawl is too
+   large to start per test (the trace fixture timed out). */
+test.use({ trace: "off", screenshot: "off" });
 
 /* Issues judged and explained in REPORT.md (role-independent). Each entry
    names the issue it explains; anything else of blocker/high fails. */
@@ -1293,8 +1322,13 @@ async function session(
   );
   let mainPage: Page | null = null;
   context.on("page", (p) => {
-    // A target=_blank link opens a tab: keep the crawl in one tab.
-    if (mainPage && p !== mainPage) void p.close().catch(() => undefined);
+    // A target=_blank link or window.open() opens a tab: keep the crawl in
+    // one tab, but count the tab as the control's result (not a dead
+    // control). Its navigation is aborted by the route above.
+    if (mainPage && p !== mainPage) {
+      external.push(`new tab: ${p.url()}`);
+      void p.close().catch(() => undefined);
+    }
   });
   await cookieSession(context, account);
   const page = await context.newPage();
