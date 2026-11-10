@@ -50,6 +50,11 @@ import {
 import { useAppointments } from "@/features/personal-log/appointments/useAppointments";
 import { useMemberAccessAppointments } from "@/features/vascular-access/useMemberAccessAppointments";
 import { saveErrorText } from "@/features/profile/saveError";
+import {
+  canRetry,
+  errorMessageFor,
+  errorTitleFor,
+} from "@/lib/data/asyncState";
 import { useNow } from "@/lib/utils/useNow";
 
 /* ==========================================================================
@@ -621,13 +626,17 @@ export default function AppointmentsPage() {
 
       {store.error ? (
         <ErrorState
-          title={
+          title={errorTitleFor(
+            store.error,
             isEs
               ? "No se pudieron cargar tus citas"
-              : "Your appointments could not be loaded"
-          }
+              : "Your appointments could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(store.error, undefined, isEs ? "es" : "en")}
           error={store.error}
-          onRetry={store.refetch}
+          onRetry={canRetry(store.error) ? store.refetch : undefined}
+          retryLabel={isEs ? "Intentar de nuevo" : "Try again"}
         />
       ) : store.isPending ? (
         <Skeleton height={420} className="rounded-card" />
