@@ -98,6 +98,8 @@ const KNOWN: Record<string, string> = {
     "Done only closes the topic manager; a topic is saved by its own Add button, which is disabled while the name is empty (CategoryManager.tsx).",
   "form-empty-accepted|/dashboard/design-system|Add a ride / Save ride":
     "The design-system page is a static component gallery; its demo modal saves nothing by design.",
+  "form-empty-accepted|/dashboard/live-class|Zoom Integration / Save":
+    "Every Zoom setting is optional: the meeting link may be empty (a non-https link is refused) and the rest are switches, so an empty save is valid (SETTING_FIELDS.zoom).",
 };
 /* The same, for controls named after a row (any staff member). */
 const KNOWN_PATTERNS: [RegExp, string][] = [
@@ -249,11 +251,15 @@ class Crawl {
       const text = msg.text();
       // The network listener reports failed requests with their status.
       if (/Failed to load resource/i.test(text)) return;
+      const at = msg.location();
+      const where = at.url
+        ? ` [at ${at.url.replace(/^https?:\/\/[^/]+/, "")}:${at.lineNumber}]`
+        : "";
       this.add({
         kind: "console-error",
         steps: `On ${this.current}, after "${this.control || "page load"}"`,
         expected: "No console error",
-        actual: text.slice(0, 400),
+        actual: `${text.slice(0, 400)}${where}`,
         severity: "medium",
       });
     });
@@ -338,6 +344,7 @@ class Crawl {
       });
     });
     page.on("download", async (d) => {
+      this.downloadsStarted++;
       const dir = path.join(OUT, "downloads");
       ensureDir(dir);
       const file = path.join(
@@ -374,6 +381,8 @@ class Crawl {
   }
 
   pending403: string[] = [];
+  /** Downloads begun (a blob export changes neither the DOM nor the network). */
+  downloadsStarted = 0;
   /** The last SyntaxError a script threw (see settle). */
   chunkError: string | null = null;
   pending401: { at: number; what: string; steps: string }[] = [];
@@ -1128,6 +1137,16 @@ async function crawlPage(c: Crawl, route: string, budgetMs: number) {
     const urlBefore = page.url();
     const mutBefore = await mutationCount(page);
     const apiBefore = c.apiCalls;
+    const downloadsBefore = c.downloadsStarted;
+    // The tab, filter or page already chosen: clicking it again changes nothing.
+    const alreadyOn = await loc
+      .evaluate((el) =>
+        ["aria-selected", "aria-pressed", "aria-current"].some((a) => {
+          const v = el.getAttribute(a);
+          return v !== null && v !== "false";
+        }),
+      )
+      .catch(() => false);
     try {
       if (next.tag === "select") {
         const opts = await loc
@@ -1233,8 +1252,10 @@ async function crawlPage(c: Crawl, route: string, budgetMs: number) {
     }
     // A control that did nothing.
     const changed =
-      (await mutationCount(page)) !== mutBefore || c.apiCalls !== apiBefore;
-    if (!changed && next.tag !== "a")
+      (await mutationCount(page)) !== mutBefore ||
+      c.apiCalls !== apiBefore ||
+      c.downloadsStarted !== downloadsBefore;
+    if (!changed && next.tag !== "a" && !alreadyOn)
       c.add({
         kind: "no-op-control",
         steps: `On ${route}, click "${name}"`,
@@ -1296,24 +1317,57 @@ async function newSession(
 
 /** Records this crawl owns, so the moderation and support screens have
  *  tagged rows to approve, decline, reply to and resolve. */
+/* The review queue lists the oldest pending review first, ten to a page.
+   Earlier runs' crawler-made reviews (still pending when a run stops early)
+   would push this run's review off page 1, so the owner declines them
+   first. Only reviews whose comment carries a crawler tag. */
+async function declineStaleTaggedReviews() {
+  const owner = await ApiClient.login(ACCOUNTS.admin);
+  try {
+    const res = await owner.get("/platform/content/reviews?limit=100");
+    expect(res.status(), "owner reads the review queue").toBe(200);
+    const stale = rows(await res.json()).filter(
+      (r) =>
+        String(r.status).toUpperCase() === "PENDING" &&
+        /^P16E[A-Z0-9]+ synthetic review /.test(String(r.comment ?? "")) &&
+        !String(r.comment).startsWith(`${TAG} `),
+    );
+    for (const r of stale) {
+      const d = await owner.post(
+        `/platform/content/reviews/${String(r.id)}/decline`,
+        { reason: "Synthetic review from an earlier admin crawl." },
+      );
+      expect(d.status(), "decline an earlier crawl's review").toBe(200);
+    }
+  } finally {
+    await owner.logout().catch(() => undefined);
+    await owner.dispose();
+  }
+}
+
 async function seedTaggedRecords() {
+  await declineStaleTaggedReviews();
   const john = await ApiClient.login(ACCOUNTS.john);
   try {
-    await john.post("/community/posts", {
-      categoryId: "general",
-      body: `${TAG} synthetic community post for the admin crawl.`,
-    });
-    await john.post("/reviews", {
-      rating: 4,
-      role: "Dialysis Member",
-      comment: `${TAG} synthetic review for the admin crawl.`,
-    });
-    await john.post("/me/support-tickets", {
-      dashboard: "Patient",
-      subject: `${TAG} synthetic ticket`,
-      category: "technical",
-      message: `${TAG} synthetic support message for the admin crawl.`,
-    });
+    const made = [
+      await john.post("/community/posts", {
+        categoryId: "general",
+        body: `${TAG} synthetic community post for the admin crawl.`,
+      }),
+      await john.post("/reviews", {
+        rating: 4,
+        role: "Dialysis Member",
+        comment: `${TAG} synthetic review for the admin crawl.`,
+      }),
+      await john.post("/me/support-tickets", {
+        dashboard: "Patient",
+        subject: `${TAG} synthetic ticket`,
+        category: "technical",
+        message: `${TAG} synthetic support message for the admin crawl.`,
+      }),
+    ];
+    for (const r of made)
+      expect(r.status(), `seed ${r.url()}`).toBeLessThan(300);
   } finally {
     await john.logout().catch(() => undefined);
     await john.dispose();
@@ -2036,10 +2090,20 @@ for (const role of ROLES) {
       await page
         .getByRole("button", { name: /^log out$/i })
         .first()
-        // The sign-out navigation may wait for next dev to compile /login.
         .click({ timeout: 45_000 });
       c.cov.controlsClicked++;
-      await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
+      // Sign-out lands on the public home page (AuthContext.logout,
+      // destination "/"), and the server session is dead.
+      await expect(page).not.toHaveURL(/\/dashboard/, { timeout: 20_000 });
+      await expect
+        .poll(async () =>
+          (
+            await context.request.get(`${env.apiURL}/me/context`, {
+              headers: { Origin: appOrigin },
+            })
+          ).status(),
+        )
+        .toBe(401);
 
       for (const b of blocked)
         c.add({
