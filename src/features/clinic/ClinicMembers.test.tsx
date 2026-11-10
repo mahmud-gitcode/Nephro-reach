@@ -297,6 +297,21 @@ describe("the details popup", () => {
 });
 
 describe("bulk selection", () => {
+  it("'Select all' is off while the filters leave no rows (P16c crawl: it did nothing)", async () => {
+    set({ data: loaded });
+    render(<ClinicMembers />);
+    const all = screen.getByRole("checkbox", {
+      name: "Select all members on this page",
+    });
+    expect(all).toBeEnabled();
+    await userEvent.selectOptions(
+      screen.getByLabelText("Status"),
+      "Attention Needed",
+    );
+    expect(showing()).toHaveTextContent("of 0 members");
+    expect(all).toBeDisabled();
+  });
+
   it("shows what can be done with the ticked members, and clears", async () => {
     set({ data: loaded });
     render(<ClinicMembers />);
