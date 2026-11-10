@@ -2,7 +2,13 @@
 
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { FormField, Input, Modal, SegmentedChoice } from "@/components/ui";
+import {
+  Alert,
+  FormField,
+  Input,
+  Modal,
+  SegmentedChoice,
+} from "@/components/ui";
 import {
   FLUID_PRESETS,
   formatFluid,
@@ -28,11 +34,16 @@ export function ModalShell({
   title,
   subtitle,
   onClose,
+  saveError,
   children,
 }: {
   title: string;
   subtitle?: string;
   onClose: () => void;
+  /** Why the last save failed. The form stays open on a failed save, so
+   *  the reason is shown here, in front of the member (the page's own
+   *  banner sits behind the modal). */
+  saveError?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -43,6 +54,11 @@ export function ModalShell({
       title={title}
       description={subtitle}
     >
+      {saveError ? (
+        <Alert tone="danger" className="mt-4">
+          {saveError}
+        </Alert>
+      ) : null}
       {children}
     </Modal>
   );
@@ -87,6 +103,7 @@ export function AddFoodModal({
   mealLabels,
   onClose,
   onSave,
+  saveError,
 }: {
   defaultMeal: MealKey;
   /** The day the food is filed under, as the member reads it. */
@@ -94,6 +111,8 @@ export function AddFoodModal({
   mealLabels: Record<MealKey, string>;
   onClose: () => void;
   onSave: (food: Omit<FoodEntry, "id" | "date">) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -151,6 +170,7 @@ export function AddFoodModal({
           : `Add a food to a meal · ${dayLabel}.`
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         {error ? (
@@ -303,10 +323,13 @@ export function GoalsModal({
   goals,
   onClose,
   onSave,
+  saveError,
 }: {
   goals: Goals;
   onClose: () => void;
   onSave: (next: Goals) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -349,6 +372,7 @@ export function GoalsModal({
           : "Set your daily targets. Confirm them with your nephrology team."
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <div className="grid grid-cols-2 gap-3">
@@ -397,12 +421,15 @@ export function AddWaterModal({
   dayLabel,
   onClose,
   onSave,
+  saveError,
 }: {
   /** The day the water is filed under, as the member reads it. */
   dayLabel: string;
   onClose: () => void;
   /** What the member drank, in the unit they chose (the server converts). */
   onSave: (amount: number, unit: FluidUnit) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -427,6 +454,7 @@ export function AddWaterModal({
           : `Log what you drank · ${dayLabel}.`
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <SegmentedChoice<FluidUnit>
