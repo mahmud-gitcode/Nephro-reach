@@ -25,6 +25,7 @@
    ========================================================================== */
 
 import { api } from "@/lib/api/client";
+import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 
 /** On since BE-AUTH-2 (spec 030) was merged into int/lead (15dedc3). */
 export const CONSENT_SUPPORTED = true;
@@ -63,6 +64,27 @@ export function consentFor(
   const privacyVersion = version("PRIVACY");
   if (!termsVersion || !privacyVersion) return null;
   return { termsVersion, privacyVersion };
+}
+
+/** Where the registration text links each current document (D44). */
+export type LegalDocumentLinks = {
+  terms: string | null;
+  privacy: string | null;
+};
+
+/** The current Terms and Privacy Notice links, from the same
+ *  `GET /legal/documents/current` list the consent versions come from (no
+ *  hardcoded version or address). A missing, empty or unsafe `contentUrl`
+ *  (anything but http(s) or a path on this site) gives null, so the page
+ *  never renders a `javascript:` or `data:` href from stored data. Pure. */
+export function legalDocumentLinks(
+  documents: readonly CurrentLegalDocument[],
+): LegalDocumentLinks {
+  const link = (type: LegalDocumentType) => {
+    const url = documents.find((d) => d.type === type)?.contentUrl?.trim();
+    return isSafeLinkUrl(url) ? url : null;
+  };
+  return { terms: link("TERMS"), privacy: link("PRIVACY") };
 }
 
 /**

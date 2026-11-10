@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CONSENT_SUPPORTED,
   consentFor,
+  legalDocumentLinks,
   registrationConsent,
   type CurrentLegalDocument,
 } from "./consent";
@@ -68,5 +69,37 @@ describe("registration consent (D6)", () => {
     expect(authErrorPath(required)).toBe("errors.consentRequired");
     expect(authErrorPath(outdated)).toBe("errors.consentOutdated");
     expect(authErrorPath(none)).toBe("errors.registrationUnavailable");
+  });
+});
+
+describe("registration document links (D44)", () => {
+  const linked = (type: string, contentUrl: string | null) => ({
+    ...doc(type, "1"),
+    contentUrl,
+  });
+
+  it("links each current document at its own address", () => {
+    expect(
+      legalDocumentLinks([
+        linked("PRIVACY", "https://example.test/legal/privacy-v4"),
+        linked("TERMS", "https://example.test/legal/terms-v9"),
+      ]),
+    ).toEqual({
+      terms: "https://example.test/legal/terms-v9",
+      privacy: "https://example.test/legal/privacy-v4",
+    });
+  });
+
+  it("gives no link for a missing, empty or unsafe address", () => {
+    expect(legalDocumentLinks([])).toEqual({ terms: null, privacy: null });
+    expect(
+      legalDocumentLinks([
+        linked("TERMS", "javascript:alert(1)"),
+        linked("PRIVACY", "data:text/html,<p>x</p>"),
+      ]),
+    ).toEqual({ terms: null, privacy: null });
+    expect(
+      legalDocumentLinks([linked("TERMS", " "), linked("PRIVACY", null)]),
+    ).toEqual({ terms: null, privacy: null });
   });
 });
