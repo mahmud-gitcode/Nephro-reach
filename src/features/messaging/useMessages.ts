@@ -57,13 +57,17 @@ export function useMessages() {
   const role = useOptionalAuth()?.user?.role;
   const office = useActiveOffice();
   const isMember = role === "user" || role === "caregiver";
+  /* A platform admin has no inbox: reading the platform organization's
+     conversations was a 403 on every page for an admin without the
+     messages permission (P16e). */
+  const isOffice = !isMember && role !== "admin";
   /* Only the signed-in side's inbox is read; the other is switched off. */
   const member = useMemberInbox(undefined, { enabled: isMember });
   const officeInbox = useOfficeInbox(
-    isMember ? null : office.organizationId,
+    isOffice ? office.organizationId : null,
     "all",
     office.contact,
-    { enabled: !isMember },
+    { enabled: isOffice },
   );
   const read = isMember ? member : officeInbox;
   const conversations: Conversation[] = useMemo(
