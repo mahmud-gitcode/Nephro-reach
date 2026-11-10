@@ -296,12 +296,10 @@ class Crawl {
         return;
       }
       if (s < 400) {
-        // The client renewed the access token: the 401s it answered were
-        // the designed expiry-and-retry, not a failure.
-        if (/\/auth\/refresh$/.test(u.pathname)) {
-          this.pending401 = [];
-          this.refreshedAt = Date.now();
-        }
+        // The client renewed the access token. A 401 near it is excused
+        // only when the same call then succeeds (judge401).
+        if (/\/auth\/refresh$/.test(u.pathname))
+          this.refreshes.push(Date.now());
         this.okAt.set(p, Date.now());
         return;
       }
@@ -391,23 +389,30 @@ class Crawl {
   /** The last SyntaxError a script threw (see settle). */
   chunkError: string | null = null;
   pending401: { at: number; call: string; what: string; steps: string }[] = [];
-  /** When the client last renewed its access token. */
-  refreshedAt = 0;
+  /** When the client renewed its access token (each successful refresh). */
+  refreshes: number[] = [];
   /** When each call (method + path) last answered 2xx/3xx. */
   okAt = new Map<string, number>();
 
-  /** A 401 counts only when no token renewal answered it within 8 s. */
-  judge401() {
+  /** A 401 is excused only as the designed expiry-and-retry: a token
+   *  renewal succeeded within 8 s of it AND the same call (method + path)
+   *  then answered 2xx/3xx after both the 401 and that renewal. Anything
+   *  else is reported. `final` judges every pending 401 now. */
+  judge401(final = false) {
     const now = Date.now();
-    const stale = this.pending401.filter((x) => now - x.at > 8_000);
-    this.pending401 = this.pending401.filter((x) => now - x.at <= 8_000);
-    // A call sent with the old token can answer 401 just after the renewal
-    // landed; the client retries it. Such a 401 counts only when there was
-    // no renewal around it and the same call never succeeded afterwards.
-    const renewed = (x: (typeof stale)[number]) =>
-      Math.abs(x.at - this.refreshedAt) <= 8_000 ||
-      (this.okAt.get(x.call) ?? 0) > x.at;
-    for (const x of stale.filter((y) => !renewed(y)))
+    const stale = final
+      ? this.pending401
+      : this.pending401.filter((x) => now - x.at > 8_000);
+    this.pending401 = final
+      ? []
+      : this.pending401.filter((x) => now - x.at <= 8_000);
+    const retried = (x: (typeof stale)[number]) => {
+      const ok = this.okAt.get(x.call) ?? 0;
+      return this.refreshes.some(
+        (r) => Math.abs(x.at - r) <= 8_000 && ok > Math.max(x.at, r),
+      );
+    };
+    for (const x of stale.filter((y) => !retried(y)))
       this.add({
         kind: "api-401",
         steps: x.steps,
@@ -2100,6 +2105,8 @@ for (const role of ROLES) {
       await page.setViewportSize({ width: 1280, height: 900 });
       await go(page, "/dashboard");
       await c.settle("sign out");
+      // Judge the 401s still pending before signing out makes 401 normal.
+      c.judge401(true);
       c.current = "/dashboard";
       c.control = "Log out";
       await page
