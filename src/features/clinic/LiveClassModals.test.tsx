@@ -8,7 +8,11 @@ import {
   within,
 } from "@testing-library/react";
 import { axe } from "vitest-axe";
-import { RecordingModal, RecordingsLibraryModal } from "./LiveClassModals";
+import {
+  RecordingModal,
+  RecordingsLibraryModal,
+  SettingModal,
+} from "./LiveClassModals";
 import type { RecentClass } from "./liveClass.data";
 
 /* P15a: a recording link becomes an href only when it is http(s)
@@ -88,5 +92,45 @@ describe("RecordingsLibraryModal", () => {
     expect(dialog.querySelector('a[href^="javascript"]')).toBeNull();
     expect(within(dialog).getByText("No link")).toBeInTheDocument();
     expect(await axe(dialog)).toHaveNoViolations();
+  });
+});
+
+/* P16e: an emptied "Default capacity" read as 0 and the dialog closed as
+   if saved, then the server refused it (400). The dialog now says so. */
+describe("SettingModal number fields", () => {
+  it("keeps Save off and explains when the capacity is outside 1-1000", async () => {
+    const onSave = vi.fn();
+    const { container } = render(
+      <SettingModal
+        id="limits"
+        title="Registration Limits"
+        onClose={() => undefined}
+        values={{ capacity: 50, waitlist: false }}
+        onSave={onSave}
+      />,
+    );
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText("Default capacity"), {
+      target: { value: "" },
+    });
+    expect(save).toBeDisabled();
+    expect(
+      screen.getByText("Default capacity must be between 1 and 1000."),
+    ).toBeInTheDocument();
+    fireEvent.click(save);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(await axe(container)).toHaveNoViolations();
+
+    fireEvent.change(screen.getByLabelText("Default capacity"), {
+      target: { value: "40" },
+    });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(onSave).toHaveBeenCalledWith("limits", {
+      capacity: 40,
+      waitlist: false,
+    });
   });
 });
