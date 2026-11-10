@@ -130,6 +130,7 @@ const OUT =
   path.join(process.env.E2E_OUTPUT_DIR ?? "test-results", "p16c");
 const MARK = `P16C${Date.now().toString(36).slice(-5)}`;
 const MAX_ACTIONS_PER_PAGE = Number(process.env.E2E_P16_MAX_ACTIONS ?? 90);
+const GOTO_TIMEOUT = 90_000;
 
 const NOT_SHARED = /not been shared with you/i;
 const ERROR_STATE = /^try again$/i;
@@ -351,9 +352,9 @@ class Crawl {
     const p = this.page;
     if (
       await p
-        .locator(
-          "nextjs-portal, [data-nextjs-dialog], #nextjs__container_errors_label",
-        )
+        // The dev overlay's dialog only: nextjs-portal itself is always
+        // there in next dev (it holds the dev indicator).
+        .locator("[data-nextjs-dialog], #nextjs__container_errors_label")
         .count()
         .catch(() => 0)
     )
@@ -1058,7 +1059,8 @@ async function crawlPage(c: Crawl, href: string, source: string) {
     forms: 0,
   } as Crawl["perPage"][string];
   c.perPage[href] = stat;
-  await page.goto(href);
+  // next dev compiles a route on its first visit, which can take ~20s.
+  await page.goto(href, { timeout: GOTO_TIMEOUT });
   await waitReady(c);
   c.coverage.pages++;
   c.pagesVisited.push(href);
@@ -1101,7 +1103,7 @@ async function crawlPage(c: Crawl, href: string, source: string) {
       r === "navigated" ||
       new URL(page.url()).pathname !== new URL(href, appOrigin).pathname
     ) {
-      await page.goto(href);
+      await page.goto(href, { timeout: GOTO_TIMEOUT });
       await waitReady(c);
       await c.flush("(back to page)");
     }
@@ -1151,7 +1153,18 @@ for (const role of ROLES) {
     ];
 
     for (const href of all)
-      await crawlPage(c, href, sidebar.has(href) ? "sidebar" : "src/app");
+      await crawlPage(c, href, sidebar.has(href) ? "sidebar" : "src/app").catch(
+        async (e: unknown) => {
+          // One page that fails to open must not lose the rest of the crawl.
+          await c.issue({
+            control: "(page load)",
+            kind: "page-failed",
+            expected: "the page opens and can be crawled",
+            actual: String(e).split("\n")[0].slice(0, 200),
+            severity: "high",
+          });
+        },
+      );
 
     const result = {
       role: role.id,
