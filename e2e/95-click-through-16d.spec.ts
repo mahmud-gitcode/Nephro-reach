@@ -114,6 +114,9 @@ class Recorder {
   private client4xx: Array<{ status: number; path: string; code: string }> = [];
   mutations = 0;
   requests = 0;
+  /** Successful POST /auth/refresh responses so far. */
+  refreshes = 0;
+  private refreshesSeen = 0;
   shot = 0;
 
   constructor(
@@ -142,6 +145,7 @@ class Recorder {
       const p = `${res.request().method()} ${u.pathname.replace(/^\/api\/v1/, "")}`;
       const s = res.status();
       if (s >= 500) this.server5xx.push(`${s} ${p}`);
+      else if (p === "POST /auth/refresh" && s < 300) this.refreshes++;
       else if (s >= 400) {
         const body = (await res.json().catch(() => null)) as {
           code?: unknown;
@@ -178,6 +182,19 @@ class Recorder {
 
   /** Judge what happened since the last drain, for one action. */
   async drain(pagePath: string, control: string, steps: string) {
+    /* A bare 401 (no code) is the API's "access cookie expired": the client
+       refreshes once and retries (src/lib/api/client.ts). It is a failure
+       only when no refresh succeeds after it. */
+    const bare401 = this.client4xx.filter(
+      (r) => r.status === 401 && r.code === "",
+    ).length;
+    if (bare401) {
+      const end = Date.now() + 15_000;
+      while (this.refreshes <= this.refreshesSeen && Date.now() < end)
+        await this.page.waitForTimeout(250);
+    }
+    const refreshed = this.refreshes > this.refreshesSeen;
+    this.refreshesSeen = this.refreshes;
     const noAccess = await hasNoAccessState(this.page);
     for (const e of this.pageErrors)
       await this.add({
@@ -214,7 +231,11 @@ class Recorder {
         `${pagePath} | ${control} | ${r.status} ${r.path} ${r.code}`,
       );
       const intendedDenial = (r.status === 403 || r.status === 404) && noAccess;
-      if (r.status === 401) {
+      if (r.status === 401 && r.code === "" && refreshed) {
+        this.notes.push(
+          `${pagePath} | ${control}: 401 ${r.path} (expired access cookie), refreshed and retried`,
+        );
+      } else if (r.status === 401) {
         await this.add({
           page: pagePath,
           control,
@@ -320,8 +341,12 @@ async function crashed(page: Page): Promise<boolean> {
   );
 }
 
+/* A page still busy after this long counts as stuck. The lane shares one
+   Postgres with four other lanes, so a read can take several seconds. */
+const STUCK_MS = 20_000;
+
 /** Wait until the page body shows and nothing is busy (short waits only). */
-async function settle(page: Page, maxMs = 8000): Promise<"ok" | "stuck"> {
+async function settle(page: Page, maxMs = STUCK_MS): Promise<"ok" | "stuck"> {
   await page
     .locator("main")
     .first()
@@ -777,6 +802,15 @@ async function overflowCheck(
 
 const pathOf = (page: Page) => new URL(page.url()).pathname;
 
+/** One progress line per page on stdout (the list reporter shows it). */
+function progress(rec: Recorder, what: string) {
+  const c = rec.counts;
+  process.stdout.write(
+    `[p16d ${rec.role}] ${what} (controls ${c.controlsClicked}, dialogs ${c.dialogsOpened}, issues ${rec.issues.length})
+`,
+  );
+}
+
 /* next dev compiles a route on its first visit, which can take far longer
    than the 20 s navigation default on a busy machine. */
 const NAV_TIMEOUT = 90_000;
@@ -793,7 +827,7 @@ async function gotoPage(rec: Recorder, href: string) {
       control: "(load)",
       steps: `open ${href}`,
       expected: "the page finishes loading",
-      actual: "still busy / Loading… after 8 s",
+      actual: `still busy / Loading… after ${STUCK_MS / 1000} s`,
       severity: "high",
       kind: "stuck",
     });
@@ -823,6 +857,8 @@ async function crawlPage(
 ) {
   const page = rec.page;
   rec.counts.pages++;
+  const t0 = Date.now();
+  progress(rec, `${href}: crawl`);
   await gotoPage(rec, href);
   await rec.drain(href, "(load)", `open ${href}`);
   await overflowCheck(rec, href, "desktop");
@@ -1006,6 +1042,7 @@ async function crawlPage(
   await overflowCheck(rec, href, "mobile");
   await rec.drain(href, "(mobile)", `open ${href} at 390 px`);
   await page.setViewportSize({ width: 1280, height: 800 });
+  progress(rec, `${href}: done in ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
 async function checkLinks(rec: Recorder, links: Set<string>, pages: string[]) {
