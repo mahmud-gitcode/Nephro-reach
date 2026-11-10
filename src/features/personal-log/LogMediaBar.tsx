@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Camera, Check, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui";
 import { checkUpload } from "@/lib/api/upload";
+import { isNotShared } from "@/lib/data/asyncState";
 import { useAccessPhotos } from "./dialysis/useAccessPhotos";
 
 /* ==========================================================================
@@ -227,9 +228,15 @@ export function LogMediaBar({
       ) : null}
       {photos.encodeError || photos.saveError ? (
         <span role="alert" className="text-caption text-danger">
-          {isEs
-            ? "No se pudo guardar la foto."
-            : "The photo could not be saved."}
+          {/* A refusal (403: photos not shared with a caregiver) says so;
+              anything else is a plain failure. */}
+          {isNotShared(photos.saveError)
+            ? isEs
+              ? "No tiene permiso para guardar fotos aquí."
+              : "You don't have permission to save photos here."
+            : isEs
+              ? "No se pudo guardar la foto."
+              : "The photo could not be saved."}
         </span>
       ) : null}
       {listening ? (
