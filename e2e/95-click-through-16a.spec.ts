@@ -394,6 +394,28 @@ async function judge(
   opts: { expect4xx?: boolean } = {},
 ) {
   const seen = rec.checkpoint();
+  /* An expired access cookie answers every request in flight with a bare
+     401; the client then refreshes once and retries them. The page can be
+     drawn before that refresh lands: wait briefly for it and judge the
+     whole exchange together. */
+  const bare401 = (api: typeof seen.api) =>
+    api.some(
+      (r) => r.status === 401 && !r.code && !r.path.startsWith("/auth/"),
+    );
+  const refreshedIn = (api: typeof seen.api) =>
+    api.some(
+      (r) =>
+        r.method === "POST" && r.path === "/auth/refresh" && r.status < 300,
+    );
+  if (bare401(seen.api) && !refreshedIn(seen.api)) {
+    for (let t = 0; t < 15 && !refreshedIn(rec.api); t += 1)
+      await page.waitForTimeout(200);
+    await page.waitForTimeout(800); // the retries after the refresh
+    const more = rec.checkpoint();
+    seen.api.push(...more.api);
+    seen.console.push(...more.console);
+    seen.errors.push(...more.errors);
+  }
   for (const e of seen.errors)
     await rec.add(page, {
       kind: "uncaught-exception",
