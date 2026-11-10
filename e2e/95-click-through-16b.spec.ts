@@ -134,6 +134,21 @@ const NOT_SHARED = /not been shared with you|has not shared|not shared/i;
 const VALIDATION =
   /required|please (enter|select|choose|fill|add|provide)|must|invalid|enter a|is not valid|at least|too (short|long)|can'?t be|cannot be|select a|choose a|valid /i;
 
+/** 4xx answers the page handles on purpose, each with the text it shows
+ *  (checked by hand on the crawl screenshots; see REPORT.md). */
+const HANDLED_4XX: { status: number; code: RegExp; why: string }[] = [
+  {
+    status: 404,
+    code: /^dialysis\.prescription_not_found$/,
+    why: "no prescription on file: the page shows its empty state",
+  },
+  {
+    status: 400,
+    code: /^education\.join_not_open_yet$/,
+    why: "Join class before the class opens: 'The class opens 30 minutes before it starts.'",
+  },
+];
+
 /** Console lines that are dev-server noise, not app errors. */
 const CONSOLE_NOISE = [
   /Download the React DevTools/i,
@@ -227,7 +242,7 @@ type Ctx = {
   /** Root that holds the page body (dashboard: main; public: body). */
   root: string;
   /** Areas this role may see; a 403 there is unexpected. */
-  intended403: (apiPath: string, code: string) => boolean;
+  intended403: (apiPath: string, code: string, method: string) => boolean;
   /** Whether the role may write here (view-only caregiver: false). */
   current: string;
 };
@@ -299,11 +314,20 @@ async function checkSince(
         continue;
       }
       if (opts.invalidSubmit && [400, 422].includes(h.status)) continue;
+      const handled = HANDLED_4XX.find(
+        (x) => x.status === h.status && x.code.test(h.code),
+      );
+      if (handled) {
+        ctx.cov.notes.push(
+          `${ctx.current}: handled ${h.status} ${h.method} ${h.path} ${h.code} (${handled.why})`,
+        );
+        continue;
+      }
       if (h.status === 401 && /\/auth\/(refresh|me)|\/me\/context/.test(h.path))
         continue;
       if (
         (h.status === 403 || h.status === 404) &&
-        (ctx.intended403(h.path, h.code) || notShared)
+        (ctx.intended403(h.path, h.code, h.method) || notShared)
       ) {
         if (!notShared && h.method === "GET")
           ctx.cov.notes.push(
@@ -334,10 +358,10 @@ async function checkSince(
       "Next error overlay shown",
       "blocker",
     );
+  /* A crash (Next's client-exception page). A form's own error line such
+     as "Something went wrong. Try again." is not a crash. */
   const crashed = await ctx.page
-    .getByText(
-      /Application error|Unhandled Runtime Error|Something went wrong/i,
-    )
+    .getByText(/Application error|Unhandled Runtime Error/i)
     .count();
   if (crashed)
     await issue(
@@ -347,6 +371,20 @@ async function checkSince(
       "page renders",
       "error boundary shown",
       "high",
+    );
+  /* The generic ErrorState fallback: a read or action failed with no
+     readable reason. */
+  const generic = await ctx.page
+    .getByText(/Something went wrong on this device/i)
+    .count();
+  if (generic)
+    await issue(
+      ctx,
+      control,
+      steps,
+      "content, or an error that says what failed",
+      "generic error state shown",
+      "medium",
     );
 }
 
@@ -551,18 +589,56 @@ async function fillValid(scope: Locator, marker: string) {
   for (let i = 0; i < n; i++) {
     const f = fields.nth(i);
     if (!(await f.isVisible().catch(() => false))) continue;
-    const type = ((await f.getAttribute("type")) ?? "text").toLowerCase();
-    const name =
-      `${(await f.getAttribute("name")) ?? ""} ${(await f.getAttribute("id")) ?? ""} ${(await f.getAttribute("placeholder")) ?? ""} ${(await f.getAttribute("aria-label")) ?? ""}`.toLowerCase();
-    const current = await f.inputValue().catch(() => "");
+    /* One bounded read: the dialog may close while it is being filled. */
+    const meta = await f
+      .evaluate(
+        (el) => {
+          const label = el.id
+            ? (document.querySelector(`label[for="${el.id}"]`)?.textContent ??
+              "")
+            : "";
+          return {
+            type: (el.getAttribute("type") ?? "text").toLowerCase(),
+            mode: el.getAttribute("inputmode") ?? "",
+            name: [
+              el.getAttribute("name"),
+              el.id,
+              el.getAttribute("placeholder"),
+              el.getAttribute("aria-label"),
+              label,
+            ]
+              .join(" ")
+              .toLowerCase(),
+          };
+        },
+        undefined,
+        { timeout: 2_000 },
+      )
+      .catch(() => null);
+    if (!meta) continue;
+    const { name } = meta;
+    /* Numeric text fields (inputmode, or a unit in the label) get a number. */
+    const type =
+      meta.type === "text" &&
+      (/numeric|decimal/.test(meta.mode) ||
+        /\((mg|g|kcal|kg|lb|ml|oz|mmhg|bpm)\)/.test(name))
+        ? "number"
+        : meta.type;
+    const current = await f.inputValue({ timeout: 2_000 }).catch(() => "");
     if (current && type !== "number") continue;
     let v = marker;
     if (type === "email" || /email/.test(name))
       v = `p16b-${Date.now().toString(36)}@example.test`;
     else if (type === "tel" || /phone/.test(name)) v = "5555550100";
     else if (type === "number") {
-      const min = Number((await f.getAttribute("min")) ?? "NaN");
-      const max = Number((await f.getAttribute("max")) ?? "NaN");
+      const min = Number(
+        (await f.getAttribute("min", { timeout: 2_000 }).catch(() => null)) ??
+          "NaN",
+      );
+      const max = Number(
+        (await f.getAttribute("max", { timeout: 2_000 }).catch(() => null)) ??
+          "NaN",
+      );
       v = String(
         Number.isFinite(min) && Number.isFinite(max)
           ? Math.round((min + max) / 2)
@@ -626,7 +702,11 @@ async function fillValid(scope: Locator, marker: string) {
   /* A synthetic file where the form takes one (local test file). */
   const files = scope.locator('input[type="file"]');
   for (let i = 0; i < (await files.count()); i++) {
-    const accept = (await files.nth(i).getAttribute("accept")) ?? "";
+    const accept =
+      (await files
+        .nth(i)
+        .getAttribute("accept", { timeout: 2_000 })
+        .catch(() => null)) ?? "";
     const isCsv = /csv/.test(accept);
     await files
       .nth(i)
@@ -685,6 +765,24 @@ async function exerciseDialog(
   /* 1. Empty submit: a validation message, a disabled button, or a refusal
         that is shown; never a silent save. */
   const writesBefore = mon.api.filter((h) => h.method !== "GET").length;
+  /* Empty text fields the user would have to fill. A form with none (every
+     field has a default, e.g. a check-in that defaults to "Good") may save
+     as it is. */
+  const emptyFields = await dialog
+    .locator(
+      "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=date]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])",
+    )
+    .evaluateAll(
+      (els) =>
+        els.filter(
+          (e) =>
+            (e as HTMLInputElement).value === "" &&
+            (e as HTMLElement).offsetParent !== null &&
+            (e.hasAttribute("required") ||
+              e.getAttribute("aria-required") === "true"),
+        ).length,
+    )
+    .catch(() => 0);
   const m0 = mon.mark();
   const enabled = await submit.isEnabled().catch(() => false);
   if (enabled) {
@@ -705,6 +803,14 @@ async function exerciseDialog(
         .count()
         .catch(() => 0)) > 0;
     if (
+      okWrites > 0 &&
+      emptyFields === 0 &&
+      mon.api.filter((h) => h.method !== "GET").length > writesBefore
+    )
+      ctx.cov.notes.push(
+        `${ctx.current}: "${opener}" > "${label}" saved untouched: no required field was empty (defaults)`,
+      );
+    else if (
       okWrites > 0 &&
       mon.api.filter((h) => h.method !== "GET").length > writesBefore
     )
@@ -782,6 +888,9 @@ async function exerciseDialog(
   }
   return ok && !stillOpen ? marker : null;
 }
+
+/** An empty full-screen click-away layer. */
+const BACKDROP = "div.fixed.inset-0:empty";
 
 /** Upper bound for the clicks on one page (the crawl must stay fast). */
 const PAGE_BUDGET_MS = 4 * 60_000;
@@ -863,6 +972,24 @@ async function crawlPage(
       .innerHTML()
       .catch(() => "");
     const dialogsBefore = await page.getByRole("dialog").count();
+    const layersBefore = await page.locator(BACKDROP).count();
+    /* Already the selected tab/filter/option: clicking it changes nothing,
+       on purpose. */
+    const alreadyOn = await el
+      .evaluate(
+        (e) =>
+          ["aria-selected", "aria-pressed", "aria-checked"].some(
+            (a) => e.getAttribute(a) === "true",
+          ) ||
+          e.getAttribute("aria-current") === "page" ||
+          (e as HTMLInputElement).checked === true,
+      )
+      .catch(() => false);
+    let chooser = false;
+    const onChooser = () => {
+      chooser = true;
+    };
+    page.on("filechooser", onChooser);
     if (c.kind === "select") {
       const opts2 = await el.$$eval("option", (os) =>
         os.map((o) => (o as HTMLOptionElement).value),
@@ -877,6 +1004,7 @@ async function crawlPage(
         .then(() => "ok")
         .catch((e: Error) => e.message.split("\n")[0]);
       if (res !== "ok") {
+        page.off("filechooser", onChooser);
         ctx.cov.notes.push(`${ctx.current}: could not click ${label}: ${res}`);
         continue;
       }
@@ -943,7 +1071,13 @@ async function crawlPage(
       before === after &&
       mon.requests === m.r &&
       mon.downloads.length === m.d &&
-      c.kind !== "link"
+      c.kind !== "link" &&
+      /* A select's new value shows on submit; a file picker or the print
+         dialog opens outside the page. */
+      c.kind !== "select" &&
+      !chooser &&
+      !alreadyOn &&
+      !/^print$/i.test(c.name)
     ) {
       await issue(
         ctx,
@@ -954,6 +1088,9 @@ async function crawlPage(
         "low",
       );
     }
+    page.off("filechooser", onChooser);
+    if (chooser)
+      ctx.cov.notes.push(`${ctx.current}: ${label} opened the file picker`);
     await checkSince(ctx, m, label, steps);
     /* Menus/popovers opened by the click: close. */
     if (
@@ -961,6 +1098,18 @@ async function crawlPage(
       (await page.locator('[role="menu"], [role="listbox"]').count())
     )
       await page.keyboard.press("Escape");
+    /* A click-away backdrop (an empty full-screen layer, e.g. the landing
+       header's language list, which Escape does not close): click it away
+       so it does not swallow the next clicks. */
+    const backdrop = page.locator(BACKDROP).last();
+    if (!urlChanged && (await page.locator(BACKDROP).count()) > layersBefore) {
+      ctx.cov.notes.push(
+        `${ctx.current}: ${label} left a click-away layer open (closed by a click on it)`,
+      );
+      await backdrop
+        .click({ position: { x: 2, y: 2 }, timeout: 2_000 })
+        .catch(() => undefined);
+    }
   }
   /* Persistence and clean-up of what this crawl created. */
   for (const marker of created) {
@@ -1002,6 +1151,37 @@ async function crawlPage(
       );
       ctx.cov.notes.push(`${ctx.current}: created and deleted "${marker}"`);
     }
+  }
+}
+
+/** The env's local S3 stand-in (E2E_STORAGE_ORIGIN, local hosts only, as
+ *  in e2e/52): photos the pages show are read from it. Nothing else is
+ *  let through; the fixture still blocks and records every other host. */
+const storageOrigin = (() => {
+  const raw = process.env.E2E_STORAGE_ORIGIN ?? "";
+  if (!raw) return null;
+  const u = new URL(raw);
+  if (!["localhost", "127.0.0.1"].includes(u.hostname))
+    throw new Error("E2E_STORAGE_ORIGIN must be the local S3 stand-in");
+  return u.origin;
+})();
+
+async function allowLocalStorage(page: Page) {
+  if (!storageOrigin) return;
+  await page.route(
+    (url) => url.origin === storageOrigin,
+    (route) => route.continue(),
+  );
+}
+
+/** A setup sign-in through the API, once more when the busy machine makes
+ *  the first one time out (run 4: a 10 s timeout on POST /auth/login). */
+async function loginRetry(account: Account) {
+  try {
+    return await ApiClient.login(account);
+  } catch (e) {
+    if (!/Timeout/i.test(String(e))) throw e;
+    return ApiClient.login(account);
   }
 }
 
@@ -1135,6 +1315,10 @@ async function crawlPortal(
     const href = queue.shift()!;
     const key = routeKey(href);
     if (seen.has(key)) continue;
+    /* My Patients is crawled on its own without writes: its Open buttons
+       switch the patient, which would move the rest of this crawl to
+       another person. */
+    if (/^\/dashboard\/caregiver\/?$/.test(href)) continue;
     if (
       /\/dashboard\/(admin|clinic|hospital|nephrology|access-center|platform)/.test(
         href,
@@ -1162,7 +1346,7 @@ async function crawlPortal(
 
 /* Not serial: a failing role must not skip the next roles (the limited
    caregiver is set up through the API when the public test did not). */
-test.setTimeout(45 * 60_000);
+test.describe.configure({ timeout: 45 * 60_000 });
 
 /** The running test's results, written by afterEach even on a failure. */
 let open: {
@@ -1216,7 +1400,7 @@ async function setupLimitedCaregiver(): Promise<Account> {
     });
     const body = await json(res, "register limited caregiver");
     const access = (body.tokens as { access: { token: string } }).access.token;
-    const mail = await waitForMail(acct.email, { since });
+    const mail = await waitForMail(acct.email, { since, subject: /verify/i });
     const v = await ctx.post(`${env.apiURL}/auth/email/verify/confirm`, {
       headers: { Authorization: `Bearer ${access}`, Origin: appOrigin },
       data: { code: extractOtp(mail) },
@@ -1225,7 +1409,7 @@ async function setupLimitedCaregiver(): Promise<Account> {
   } finally {
     await ctx.dispose();
   }
-  const grace = await ApiClient.login(ACCOUNTS.grace);
+  const grace = await loginRetry(ACCOUNTS.grace);
   try {
     const inv = await grace.post(
       `/patients/${await grace.patientId()}/caregiver-invitations`,
@@ -1311,6 +1495,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   const cov = newCoverage("anonymous");
   const mon = new Monitor(page);
   open = { name: "anonymous", issues, cov, mon };
+  await allowLocalStorage(page);
   const ctx: Ctx = {
     role: "anonymous",
     page,
@@ -1417,7 +1602,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   await expect(page).toHaveURL(/\/registration/);
   const acct = throwawayAccount("p16b-cg");
   /* Grace invites the address first (any email may be invited, D48 open). */
-  const grace = await ApiClient.login(ACCOUNTS.grace);
+  const grace = await loginRetry(ACCOUNTS.grace);
   const graceId = await grace.patientId();
   const inviteSince = mailMark();
   const inv = await grace.post(`/patients/${graceId}/caregiver-invitations`, {
@@ -1453,7 +1638,7 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   /* Verify email: a wrong code first, then the code from the sink. */
   ctx.current = "/verify-email";
   m = mon.mark();
-  const mail = await waitForMail(acct.email, { since });
+  const mail = await waitForMail(acct.email, { since, subject: /verify/i });
   await page.getByLabel("Code").fill("000000");
   await page.getByRole("button", { name: "Verify email" }).click();
   cov.formsSubmitted++;
@@ -1668,6 +1853,7 @@ test("caregiver-sarah: My Patients and every page for John, then Grace @phase16"
   const { page } = await asUser(ACCOUNTS.caregiver);
   const mon = new Monitor(page);
   open = { name: "caregiver-sarah", issues, cov, mon };
+  await allowLocalStorage(page);
   const ctx = caregiverCtx("caregiver-sarah", page, mon, issues, cov);
 
   await gotoSafe(page, "/dashboard");
@@ -1719,20 +1905,31 @@ test("caregiver-limited: every page with a custom map from Grace @phase16", asyn
   const issues: Issue[] = [];
   const cov = newCoverage("caregiver-limited");
   const acct = limited ?? (await setupLimitedCaregiver());
-  const c = await ApiClient.login(acct);
+  const c = await loginRetry(acct);
   await c.post("/me/preferences/tour-completed");
   await c.logout();
   await c.dispose();
   const { page } = await asUser(acct);
   const mon = new Monitor(page);
   open = { name: "caregiver-limited", issues, cov, mon };
+  await allowLocalStorage(page);
   const ctx = caregiverCtx("caregiver-limited", page, mon, issues, cov);
-  /* Areas Grace did not share: refused on purpose (the page must say so). */
-  ctx.intended403 = (_p, code) => /not_shared|no_access|caregiver/i.test(code);
+  /* Reads of an area Grace did not share are refused on purpose (the
+     server's access.patient_access_denied); a refused WRITE still has to
+     show its refusal (checked in exerciseDialog and here). */
+  ctx.intended403 = (_p, code, method) =>
+    method === "GET" &&
+    /not_shared|no_access|patient_access_denied|caregiver/i.test(code);
   await gotoSafe(page, "/dashboard");
   await page.waitForURL((u) => !/\/login/.test(u.pathname), {
     timeout: 30_000,
   });
+  /* My Patients (one patient here): its controls, no writes. */
+  await gotoSafe(page, "/dashboard/caregiver");
+  ctx.current = "/dashboard/caregiver";
+  cov.pages.push("/dashboard/caregiver");
+  await crawlPage(ctx, { allowWrites: false, maxControls: 20 });
+  await gotoSafe(page, "/dashboard");
   await caregiverCrawl(ctx, page, null, true);
   cov.downloads = mon.downloads.length;
   markAllowed(issues);
