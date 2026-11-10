@@ -246,6 +246,59 @@ describe("TeamMessages on the API", () => {
     );
   });
 
+  /* QA-SEC P15c round 2, L1: a disabled start always says why. */
+  it("a read-only role: starting a message is disabled and explained, no reply", async () => {
+    stubApi(handler(), officeContext({ team_messages: 1, staff: 1 }));
+    const { container } = render(<TeamMessages />, { wrapper });
+    expect(
+      await screen.findByText("Please review the test labs."),
+    ).toBeInTheDocument();
+    const start = screen.getByRole("button", { name: "Message a Physician" });
+    expect(start).toBeDisabled();
+    expect(start).toHaveAccessibleDescription(
+      /can read team messages but not send/,
+    );
+    expect(screen.queryByRole("button", { name: /Reply to/ })).toBeNull();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("no other active colleague: starting a message is disabled and explained", async () => {
+    stubApi(
+      handler((c) =>
+        c.path === `/organizations/${ORG}/staff` ? pageOf([]) : undefined,
+      ),
+      officeContext({ team_messages: 2, staff: 1 }),
+    );
+    const { container } = render(<TeamMessages />, { wrapper });
+    const start = await screen.findByRole("button", {
+      name: "Message a Physician",
+    });
+    await waitFor(() =>
+      expect(start).toHaveAccessibleDescription(/No other active colleague/),
+    );
+    expect(start).toBeDisabled();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("a failed staff list: starting a message is disabled and says why", async () => {
+    stubApi(
+      handler((c) =>
+        c.path === `/organizations/${ORG}/staff`
+          ? apiError(500, null, "Boom")
+          : undefined,
+      ),
+      officeContext({ team_messages: 2, staff: 1 }),
+    );
+    render(<TeamMessages />, { wrapper });
+    const start = await screen.findByRole("button", {
+      name: "Message a Physician",
+    });
+    await waitFor(() =>
+      expect(start).toHaveAccessibleDescription(/staff list did not load/),
+    );
+    expect(start).toBeDisabled();
+  });
+
   it("a refused read is shown as no access, never as no messages", async () => {
     stubApi(
       handler((c) =>
