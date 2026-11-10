@@ -740,6 +740,11 @@ async function collect(page: Page): Promise<Ctl[]> {
     const seen = new Set<Element>();
     const counts = new Map<string, number>();
     let n = 0;
+    /* Tags from an earlier pass stay on elements that are hidden now; a
+       second element with the same tag made the locator ambiguous, so a
+       control "could not be clicked" or a select did not change. */
+    for (const old of Array.from(document.querySelectorAll("[data-p16c]")))
+      old.removeAttribute("data-p16c");
     for (const root of roots)
       for (const el of Array.from(root.querySelectorAll(sel))) {
         if (seen.has(el)) continue;
