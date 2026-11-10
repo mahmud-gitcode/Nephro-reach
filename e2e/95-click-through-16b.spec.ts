@@ -148,6 +148,11 @@ const HANDLED_4XX: { status: number; code: RegExp; why: string }[] = [
     why: "Join class before the class opens: 'The class opens 30 minutes before it starts.'",
   },
   {
+    status: 403,
+    code: /^auth\.sudo_required$/,
+    why: "turning MFA on needs a re-authentication: the sudo prompt opens (the crawl cancels it; the generic text after a cancel is recorded in REPORT.md)",
+  },
+  {
     status: 400,
     code: /^education\.class_activities_unanswered$/,
     why: "I finished Day N before the day's activities are answered: 'That did not save. Finish the day's activities and try again.'",
@@ -1069,8 +1074,12 @@ async function crawlPage(
       )
       .catch(() => "");
     if (dialogsAfter > dialogsBefore) {
+      /* The click that opened it; what the dialog then does is checked in
+         exerciseDialog, and only its closing below (no double count). */
+      await checkSince(ctx, m, label, steps);
       const made = await exerciseDialog(ctx, c.name, opts.allowWrites);
       if (made) created.push(made);
+      const dialogMark = mon.mark();
       /* Close whatever is still open. */
       for (let i = 0; i < 3 && (await page.getByRole("dialog").count()); i++) {
         await page.keyboard.press("Escape");
@@ -1084,6 +1093,7 @@ async function crawlPage(
           .first();
         await close.click({ timeout: 2_000 }).catch(() => undefined);
       }
+      Object.assign(m, dialogMark);
     } else if (urlChanged) {
       await settled(ctx, label);
       if (
@@ -1275,9 +1285,22 @@ async function gotoSafe(page: Page, href: string) {
  *  dev, else a click on a matching link, else page.goto. */
 function inAppGo(page: Page, reopen?: () => Promise<void>) {
   return async (href: string) => {
+    /* A dialog the last page left open (e.g. "Share Outside NephroReach",
+       run 6) covers the sidebar: close it first. */
+    for (let i = 0; i < 3; i++) {
+      if (
+        !(await page
+          .getByRole("dialog")
+          .count()
+          .catch(() => 0))
+      )
+        break;
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(150);
+    }
     const link = page.locator(`aside a[href="${href}"]`).first();
     if (await link.isVisible().catch(() => false)) {
-      await link.click();
+      await link.click({ timeout: 5_000 }).catch(() => gotoSafe(page, href));
     } else {
       const pushed = await page.evaluate((h) => {
         const w = window as unknown as {
@@ -1580,7 +1603,11 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
     },
     /* Public pages read nothing private; a bad invitation/share token is
        refused on purpose. */
-    intended403: (p) => /^\/(invitations|shared)\//.test(p),
+    intended403: (p, code, method) =>
+      /^\/(invitations|shared)\//.test(p) ||
+      /* After "Continue" this is the limited caregiver (Grace's custom
+         map): reads of the areas she did not share are refused on purpose. */
+      (method === "GET" && code === "access.patient_access_denied"),
   };
   for (const href of PUBLIC_PAGES) {
     ctx.current = href;
