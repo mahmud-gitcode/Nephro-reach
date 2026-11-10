@@ -22,7 +22,12 @@
    that is not in KNOWN with its recorded reason.
 
    Synthetic data only: seed accounts and fresh *.example.test accounts.
-   Run with --workers=1 (one browser per lane). Never uses networkidle. */
+   Run with --workers=1 (one browser per lane). Never uses networkidle.
+
+   Status: final (QA round 1 fix pass, 2026-11-11). Commits 869d9de,
+   52c8fc1 and f3a5593 were session-stop saves of earlier drafts of this
+   file; this version supersedes them. Results and triage:
+   integration-evidence/phase-16/16d/REPORT.md. */
 import fs from "node:fs";
 import path from "node:path";
 import { request, type Page } from "@playwright/test";
@@ -64,8 +69,6 @@ type Role = {
   account: Account | (() => Promise<Account>);
   /** Portal to open on /select-portal (multi-membership accounts). */
   portal?: string;
-  /** Limited staff role: a refusal shown as the no-access state is fine. */
-  limited?: boolean;
   /** Only these sidebar pages (prefixes); default: every sidebar page. */
   only?: RegExp;
 };
@@ -107,6 +110,8 @@ class Recorder {
   skipped: string[] = [];
   notes: string[] = [];
   api4xx: string[] = [];
+  /** The expected 403s this role got, with the reason (EXPECTED_403). */
+  api403Expected = new Set<string>();
   /** Events since the last drain. */
   private consoleErrors: string[] = [];
   private pageErrors: string[] = [];
@@ -230,7 +235,13 @@ class Recorder {
       this.api4xx.push(
         `${pagePath} | ${control} | ${r.status} ${r.path} ${r.code}`,
       );
-      const intendedDenial = (r.status === 403 || r.status === 404) && noAccess;
+      const why403 = r.status === 403 ? expected403(this.role, r.path) : null;
+      if (why403)
+        this.api403Expected.add(
+          `${r.path.replace(/[0-9a-f-]{36}/g, ":id")}: ${why403}`,
+        );
+      const intendedDenial =
+        (r.status === 403 ? why403 !== null : r.status === 404) && noAccess;
       if (r.status === 401 && r.code === "" && refreshed) {
         this.notes.push(
           `${pagePath} | ${control}: 401 ${r.path} (expired access cookie), refreshed and retried`,
@@ -255,8 +266,10 @@ class Recorder {
           control,
           steps,
           expected: "an intended 403 shows the no-access state",
-          actual: `403 ${r.path} ${r.code} with no no-access state on the page`,
-          severity: r.path.startsWith("GET") ? "medium" : "medium",
+          actual: why403
+            ? `403 ${r.path} ${r.code} with no no-access state on the page`
+            : `403 ${r.path} ${r.code}: not an expected refusal for this role`,
+          severity: "medium",
           kind: "api403",
         });
       } else if (
@@ -305,6 +318,37 @@ class Recorder {
 
 /* spec 048 §2: an office that keeps no access records is refused the list. */
 const SERVICE_DENIALS = new Set(["vascular_access.profiles_not_kept_here"]);
+
+/* Every 403 a role is expected to get, by role and request (QA round 1,
+   M1). A 403 is intended only when it is listed here AND the page shows
+   the no-access state; any other 403 is recorded, even when some other
+   panel on the page shows a no-access state, so a page-wide check cannot
+   hide it. The code is not used to match: the body of a refused read may
+   be gone when the page moved on. */
+const EXPECTED_403: Array<{ roles: RegExp; request: RegExp; why: string }> = [
+  {
+    roles: /^hospital-rn$/,
+    request: /^GET \/organizations\/[^/]+\/reports\/education$/,
+    why: "a hospital RN holds no reports read; the dashboard's education figures show the no-access state",
+  },
+  {
+    roles: /^(nephrology-ccm|two-portal-nephrology)$/,
+    request: /^GET \/organizations\/[^/]+\/check-in-notices$/,
+    why: "a nephrology care coordinator holds no check_ins read; the CCM Check-Ins tab shows the no-access state",
+  },
+  {
+    roles: /./,
+    request: /^GET \/organizations\/[^/]+\/access-profiles$/,
+    why: "spec 048 §2: a nephrology office keeps no access profiles (vascular_access.profiles_not_kept_here); the page says so",
+  },
+];
+
+function expected403(role: string, request: string): string | null {
+  return (
+    EXPECTED_403.find((e) => e.roles.test(role) && e.request.test(request))
+      ?.why ?? null
+  );
+}
 
 async function hasNoAccessState(page: Page): Promise<boolean> {
   return (
@@ -1159,30 +1203,25 @@ const ROLES: Role[] = [
   {
     id: "hospital-rn",
     account: staff("hospitalrn@nephroreach.com"),
-    limited: true,
   },
   {
     id: "hospital-educator",
     account: staff("educator@nephroreach.com"),
-    limited: true,
   },
   { id: "nephrology-owner", account: ACCOUNTS.nephrology },
   {
     id: "nephrology-ccm",
     account: staff("ccm@nephroreach.com"),
-    limited: true,
   },
   {
     id: "two-portal-hospital",
     account: getTwoPortal,
     portal: "Riverside General Hospital",
-    limited: true,
   },
   {
     id: "two-portal-nephrology",
     account: getTwoPortal,
     portal: "Riverside Nephrology Associates",
-    limited: true,
   },
 ];
 
@@ -1191,6 +1230,44 @@ const ONLY = process.env.E2E_P16_ROLES
   : null;
 
 test.setTimeout(40 * 60_000);
+
+/* QA round 1 (L1): on a cold `next dev` the first page compiles for longer
+   than the session check waits. Each route the crawl opens first is asked
+   for once before any test, so it is compiled when a browser opens it. */
+const WARM_ROUTES = [
+  "/login",
+  "/select-portal",
+  "/dashboard",
+  "/dashboard/hospital",
+  "/dashboard/clinic",
+  "/dashboard/nephrology",
+];
+test.beforeAll(async () => {
+  test.setTimeout(10 * 60_000);
+  const ctx = await request.newContext({ baseURL: appOrigin });
+  try {
+    for (const route of WARM_ROUTES)
+      await ctx
+        .get(route, { timeout: 180_000, maxRedirects: 0 })
+        .catch(() => undefined);
+  } finally {
+    await ctx.dispose();
+  }
+});
+
+/** Wait for the sidebar; on a cold start reload once before giving up. */
+async function waitForSidebar(page: Page, rec: Recorder) {
+  const sidebar = page.locator('aside a[href^="/dashboard"]').first();
+  try {
+    await sidebar.waitFor({ timeout: NAV_TIMEOUT });
+  } catch {
+    rec.notes.push(
+      `(sign-in) sidebar not shown after ${NAV_TIMEOUT / 1000} s; reloaded once`,
+    );
+    await page.reload({ waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT });
+    await sidebar.waitFor({ timeout: NAV_TIMEOUT });
+  }
+}
 
 for (const role of ROLES) {
   test(`click-through: ${role.id} @phase16`, async ({ asUser }) => {
@@ -1221,10 +1298,7 @@ for (const role of ROLES) {
       await open.click({ timeout: NAV_TIMEOUT });
       await page.waitForURL(/\/dashboard/, { timeout: NAV_TIMEOUT });
     }
-    await page
-      .locator('aside a[href^="/dashboard"]')
-      .first()
-      .waitFor({ timeout: NAV_TIMEOUT });
+    await waitForSidebar(page, rec);
     await rec.drain("/dashboard", "(sign-in)", "sign in and open the portal");
     const pages = [
       ...new Set(
@@ -1273,6 +1347,7 @@ for (const role of ROLES) {
           issues: rec.issues,
           skippedDestructive: rec.skipped,
           api4xx: rec.api4xx,
+          api403Expected: [...rec.api403Expected],
           notes: rec.notes,
         },
         null,
@@ -1504,6 +1579,173 @@ test("journey: hospital support request (empty, then valid, listed after reload)
     timeout: 15_000,
   });
   await journeyEnd(rec, "journey hospital support");
+});
+
+/* QA round 1 (M2): valid submits on the nephrology office's pages, for the
+   owner and the care coordinator, each on the crawler's own records. */
+for (const [who, account] of [
+  ["nephrology-owner", ACCOUNTS.nephrology],
+  ["nephrology-ccm", staff("ccm@nephroreach.com")],
+] as const) {
+  test(`journey: ${who} support request (empty, then valid, listed after reload) @phase16`, async ({
+    asUser,
+  }) => {
+    test.skip(Boolean(ONLY && !ONLY.has("journeys")), "not selected");
+    const { page } = await asUser(account);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const rec = new Recorder(`journey-${who}-support`, page);
+    const subject = `P16D synthetic office request ${stamp()}`;
+    const S = "/dashboard/clinic/support";
+    await page.goto("/dashboard", { timeout: NAV_TIMEOUT });
+    await waitForSidebar(page, rec);
+    await page.locator(`aside a[href="${S}"]`).first().click();
+    await page.waitForURL((u) => u.pathname === S, { timeout: NAV_TIMEOUT });
+    await settle(page);
+    await page.getByRole("button", { name: "New Request" }).click();
+    const dlg = page.getByRole("dialog", { name: "New Support Request" });
+    const send = dlg.getByRole("button", { name: "Send" });
+    await send.click();
+    rec.counts.formsSubmittedEmpty++;
+    await expect(dlg).toBeVisible();
+    await expect(
+      dlg.locator('[aria-invalid="true"], [role="alert"]').first(),
+    ).toBeVisible();
+    await dlg.getByLabel("Subject").fill(subject);
+    await dlg
+      .getByLabel("How can we help?")
+      .fill(
+        "Synthetic test request from the Phase 16 crawler. No patient data.",
+      );
+    await send.click();
+    await expect(dlg).toBeHidden({ timeout: 15_000 });
+    rec.counts.formsSubmittedValid++;
+    await expect(page.getByText(subject).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await settle(page);
+    await expect(page.getByText(subject).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await rec.drain(S, "New Request > Send", "send a synthetic request");
+    await journeyEnd(rec, `journey ${who} support`);
+  });
+}
+
+test("journey: nephrology owner enrolls its own synthetic patient (empty, invalid, valid, listed after reload) @phase16", async ({
+  asUser,
+}) => {
+  test.skip(Boolean(ONLY && !ONLY.has("journeys")), "not selected");
+  const { page } = await asUser(ACCOUNTS.nephrology);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const rec = new Recorder("journey-nephrology-enroll", page);
+  const name = `Pxvi${stamp()} Synthetic`;
+  /* Six digits, fresh per run; 8xxxxx is outside the seeded MRNs. */
+  const mrn = `8${String(Date.now()).slice(-5)}`;
+  const E = "/dashboard/clinic/enroll-patients";
+  await page.goto("/dashboard", { timeout: NAV_TIMEOUT });
+  await waitForSidebar(page, rec);
+  await page.locator(`aside a[href="${E}"]`).first().click();
+  await page.waitForURL((u) => u.pathname === E, { timeout: NAV_TIMEOUT });
+  await settle(page);
+  await page
+    .getByRole("button", { name: /Enroll New Patient/ })
+    .first()
+    .click();
+  const dlg = page.getByRole("dialog", { name: "Enroll New Patient" });
+  await expect(dlg).toBeVisible();
+  const submit = dlg.getByRole("button", { name: "Enroll Patient" });
+  /* Empty. */
+  await submit.click();
+  rec.counts.formsSubmittedEmpty++;
+  await expect(dlg.getByText("Enter the patient's full name.")).toBeVisible();
+  await expect(dlg.getByText("An MRN is 6 digits.")).toBeVisible();
+  /* Invalid MRN. */
+  await dlg.getByRole("textbox", { name: /Full name/ }).fill(name);
+  await dlg.getByRole("textbox", { name: /MRN/ }).fill("12ab");
+  await submit.click();
+  await expect(dlg.getByText("An MRN is 6 digits.")).toBeVisible();
+  /* Valid. */
+  await dlg.getByRole("textbox", { name: /MRN/ }).fill(mrn);
+  await submit.click();
+  const full = page.getByText("All contract seats are filled.");
+  const done = page.getByText(`${name} is enrolled.`);
+  await expect(full.or(done).first()).toBeVisible({ timeout: 20_000 });
+  test.skip(
+    (await full.count()) > 0,
+    "the office's contract seats are full on this env",
+  );
+  rec.counts.formsSubmittedValid++;
+  await rec.drain(E, "Enroll New Patient > Enroll Patient", "enroll");
+  /* Saved on the server: found by the server's search after a reload. */
+  await page.keyboard.press("Escape");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await settle(page);
+  await page.getByRole("searchbox").first().fill(mrn);
+  await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+  await journeyEnd(rec, "journey nephrology enroll");
+});
+
+test("journey: care coordinator logs CCM time (empty, invalid, valid, kept after reload) @phase16", async ({
+  asUser,
+}) => {
+  test.skip(Boolean(ONLY && !ONLY.has("journeys")), "not selected");
+  const { page } = await asUser(staff("ccm@nephroreach.com"));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const rec = new Recorder("journey-ccm-activity", page);
+  const note = `P16D synthetic crawler entry ${stamp()}`;
+  const C = "/dashboard/nephrology";
+  await page.goto(C, { timeout: NAV_TIMEOUT });
+  await waitForSidebar(page, rec);
+  await settle(page);
+  const open = page.getByRole("button", { name: /^Open / }).first();
+  await expect(open).toBeVisible({ timeout: 20_000 });
+  const opener = (await open.getAttribute("aria-label")) ?? "";
+  await open.click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet).toBeVisible();
+  await settle(page);
+  await sheet.getByRole("button", { name: "Log Activity" }).click();
+  const form = sheet.getByRole("region", { name: "Add CCM activity" });
+  await expect(form).toBeVisible();
+  const save = form.getByRole("button", { name: "Save Activity" });
+  test.skip(
+    await save.isDisabled(),
+    "CCM billing is deactivated for the first worklist patient",
+  );
+  /* Empty. */
+  await save.click();
+  rec.counts.formsSubmittedEmpty++;
+  await expect(form.getByText("Choose an activity type")).toBeVisible();
+  await expect(form.getByText("Enter 1 to 240 minutes")).toBeVisible();
+  /* Invalid minutes. */
+  const type = form.getByLabel("Activity Type");
+  const types = await type.evaluate((s) =>
+    [...(s as HTMLSelectElement).options].map((o) => o.value).filter(Boolean),
+  );
+  await type.selectOption(types[0]);
+  await form.getByLabel("Minutes").fill("500");
+  await save.click();
+  await expect(form.getByText("Enter 1 to 240 minutes")).toBeVisible();
+  /* Valid. */
+  await form.getByLabel("Minutes").fill("7");
+  await form.getByLabel("Administrative Note").fill(note);
+  await save.click();
+  await expect(form).toBeHidden({ timeout: 15_000 });
+  rec.counts.formsSubmittedValid++;
+  await expect(sheet.getByText(note).first()).toBeVisible({ timeout: 15_000 });
+  await rec.drain(C, `${opener} > Log Activity > Save`, "log CCM time");
+  /* Saved on the server: still there after a reload. */
+  await page.keyboard.press("Escape");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await settle(page);
+  await page.getByRole("button", { name: opener }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("tab", { name: "Activity" }).click();
+  await expect(page.getByRole("dialog").getByText(note).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  await journeyEnd(rec, "journey ccm activity");
 });
 
 test("journey: two-membership staff switches portal; each portal calls only its own office @phase16", async ({
