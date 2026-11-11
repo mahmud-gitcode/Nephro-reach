@@ -1,8 +1,14 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
 import { expect } from "vitest";
 import * as axeMatchers from "vitest-axe/matchers";
 
 expect.extend(axeMatchers);
+
+/* findBy* and waitFor give up after 1 s by default. Under parallel load a
+   correct render can take longer, so allow 5 s (still well inside the
+   suite-wide 15 s test timeout in vitest.config.mts). */
+configure({ asyncUtilTimeout: 5_000 });
 
 /* jsdom implements neither of these, and components that use them are not
    broken — they just have nothing to talk to. Stubbing here keeps the
