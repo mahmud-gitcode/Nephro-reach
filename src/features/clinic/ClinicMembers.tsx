@@ -380,6 +380,7 @@ function MemberTable({
                   <input
                     type="checkbox"
                     checked={allOnPage}
+                    disabled={pageMrns.length === 0}
                     onChange={toggleAll}
                     aria-label="Select all members on this page"
                     className="h-4 w-4 cursor-pointer accent-brand-600"
