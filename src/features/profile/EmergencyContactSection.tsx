@@ -17,6 +17,7 @@ import {
   canRetry,
   errorMessageFor,
   errorTitleFor,
+  isNotShared,
 } from "@/lib/data/asyncState";
 
 /* ==========================================================================
@@ -68,9 +69,15 @@ function EmergencyContactForm({
     >
       {saveError ? (
         <Alert tone="danger" className="mb-stack-lg">
-          {isEs
-            ? "No pudimos guardar tu contacto de emergencia. Inténtalo de nuevo."
-            : "We could not save your emergency contact. Please try again."}
+          {/* A refusal (403: a caregiver whose grant does not let them
+              change the profile) says so; trying again cannot help. */}
+          {isNotShared(saveError)
+            ? isEs
+              ? "No tiene permiso para cambiar este contacto de emergencia."
+              : "You don't have permission to change this emergency contact."
+            : isEs
+              ? "No pudimos guardar tu contacto de emergencia. Inténtalo de nuevo."
+              : "We could not save your emergency contact. Please try again."}
         </Alert>
       ) : null}
 

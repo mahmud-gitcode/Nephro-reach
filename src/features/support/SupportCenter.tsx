@@ -148,6 +148,10 @@ export function TicketThread({
               <Textarea
                 {...field}
                 rows={2}
+                /* The server's limit, as on a new request (P16b QA round 2
+                   crawl: a longer reply was refused with the reason only
+                   in the banner at the top of the page). */
+                maxLength={4000}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
               />

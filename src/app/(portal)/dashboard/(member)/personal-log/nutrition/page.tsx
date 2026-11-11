@@ -83,6 +83,10 @@ export default function NutritionPage() {
   const [tab, setTab] = useState<LogTab>("food");
 
   const [addFoodMeal, setAddFoodMeal] = useState<MealKey | null>(null);
+  /* A failed save keeps its form open, and the form says why. */
+  const modalSaveError = saveError
+    ? saveErrorText(saveError, isEs ? "es" : "en")
+    : null;
   const [isGoalsOpen, setIsGoalsOpen] = useState(false);
   const [isWaterOpen, setIsWaterOpen] = useState(false);
 
@@ -299,9 +303,14 @@ export default function NutritionPage() {
           defaultMeal={addFoodMeal}
           dayLabel={dayLabel}
           mealLabels={mealLabels}
-          onClose={() => setAddFoodMeal(null)}
+          onClose={() => {
+            /* The reason was shown in the form; a closed form drops it. */
+            setAddFoodMeal(null);
+            dismissSaveError();
+          }}
+          saveError={modalSaveError}
           onSave={(food) => {
-            /* Closed once the server kept it; a failure shows above. */
+            /* Closed once the server kept it; a failure shows in the form. */
             addFood(food, () => setAddFoodMeal(null));
           }}
         />
@@ -310,7 +319,11 @@ export default function NutritionPage() {
       {isGoalsOpen ? (
         <GoalsModal
           goals={goals}
-          onClose={() => setIsGoalsOpen(false)}
+          onClose={() => {
+            setIsGoalsOpen(false);
+            dismissSaveError();
+          }}
+          saveError={modalSaveError}
           onSave={(next) => {
             saveGoals(next, () => setIsGoalsOpen(false));
           }}
@@ -320,7 +333,11 @@ export default function NutritionPage() {
       {isWaterOpen ? (
         <AddWaterModal
           dayLabel={dayLabel}
-          onClose={() => setIsWaterOpen(false)}
+          onClose={() => {
+            setIsWaterOpen(false);
+            dismissSaveError();
+          }}
+          saveError={modalSaveError}
           onSave={(amount, unit) => {
             /* Sent in the unit tapped: the server's amountMl is the one
                conversion (Phase 5). */

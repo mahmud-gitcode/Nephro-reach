@@ -17,6 +17,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useHomeVisits } from "./useHomeVisits";
+import { HOME_VISIT_PURPOSE_MAX_LENGTH } from "./homeDialysis.mapper";
 import {
   canRetry,
   errorMessageFor,
@@ -330,6 +331,7 @@ export default function HomeVisitsSection({
             <Input
               id="visit-purpose"
               inputSize="small"
+              maxLength={HOME_VISIT_PURPOSE_MAX_LENGTH}
               value={draft.purpose}
               onChange={(event) => set({ purpose: event.target.value })}
               placeholder={

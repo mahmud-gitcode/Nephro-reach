@@ -2,7 +2,13 @@
 
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { FormField, Input, Modal, SegmentedChoice } from "@/components/ui";
+import {
+  Alert,
+  FormField,
+  Input,
+  Modal,
+  SegmentedChoice,
+} from "@/components/ui";
 import {
   FLUID_PRESETS,
   formatFluid,
@@ -11,13 +17,41 @@ import {
   useFluidUnit,
   type FluidUnit,
 } from "./fluidUnit";
-import { toNumber } from "./nutrition.format";
 import {
+  amountProblem,
+  parseAmount,
+  toNumber,
+  type AmountProblem,
+} from "./nutrition.format";
+import {
+  FLUID_ML_MAX,
+  FOOD_NAME_MAX_LENGTH,
+  FOOD_PORTION_MAX_LENGTH,
   MEAL_KEYS,
   NUTRIENT_ORDER,
   NUTRIENT_UNITS,
+  NUTRIENT_VALUE_MAX,
 } from "./nutrition.constants";
 import type { FoodEntry, Goals, MealKey, NutrientKey } from "./nutrition.types";
+
+/** The field message for an amount that cannot be saved (P16b QA: Goals
+ *  saved "-5" as 0 with no message). */
+export function amountMessage(
+  problem: AmountProblem,
+  max: number,
+  unit: string,
+  isEs: boolean,
+) {
+  if (problem === "not-a-number") {
+    return isEs
+      ? "Ingrese un número de 0 o más."
+      : "Enter a number of 0 or more.";
+  }
+  const limit = `${max.toLocaleString()} ${unit}`;
+  return isEs
+    ? `Ingrese un número de hasta ${limit}.`
+    : `Enter a number up to ${limit}.`;
+}
 
 /* The three forms: log a food, change the goals, add water. */
 
@@ -28,11 +62,16 @@ export function ModalShell({
   title,
   subtitle,
   onClose,
+  saveError,
   children,
 }: {
   title: string;
   subtitle?: string;
   onClose: () => void;
+  /** Why the last save failed. The form stays open on a failed save, so
+   *  the reason is shown here, in front of the member (the page's own
+   *  banner sits behind the modal). */
+  saveError?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -43,6 +82,11 @@ export function ModalShell({
       title={title}
       description={subtitle}
     >
+      {saveError ? (
+        <Alert tone="danger" className="mt-4">
+          {saveError}
+        </Alert>
+      ) : null}
       {children}
     </Modal>
   );
@@ -53,11 +97,14 @@ export function NumberField({
   unit,
   value,
   onChange,
+  error,
 }: {
   label: string;
   unit: string;
   value: string;
   onChange: (next: string) => void;
+  /** Why the typed value cannot be saved (shown under the field). */
+  error?: string | null;
 }) {
   return (
     <FormField
@@ -66,6 +113,7 @@ export function NumberField({
           {label} <span className="text-fg-muted">({unit})</span>
         </>
       }
+      error={error || undefined}
     >
       {(props) => (
         <Input
@@ -87,6 +135,7 @@ export function AddFoodModal({
   mealLabels,
   onClose,
   onSave,
+  saveError,
 }: {
   defaultMeal: MealKey;
   /** The day the food is filed under, as the member reads it. */
@@ -94,6 +143,8 @@ export function AddFoodModal({
   mealLabels: Record<MealKey, string>;
   onClose: () => void;
   onSave: (food: Omit<FoodEntry, "id" | "date">) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -113,9 +164,14 @@ export function AddFoodModal({
     fiber: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<NutrientKey, string>>
+  >({});
 
-  const setValue = (key: NutrientKey, next: string) =>
+  const setValue = (key: NutrientKey, next: string) => {
     setValues((prev) => ({ ...prev, [key]: next }));
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
 
   const nutrientLabel = (key: NutrientKey, fallback: string) =>
     n?.nutrientOverview?.nutrients?.[key] || fallback;
@@ -126,19 +182,65 @@ export function AddFoodModal({
       setError(isEs ? "Ingrese el nombre del alimento." : "Enter a food name.");
       return;
     }
+    if (name.trim().length > FOOD_NAME_MAX_LENGTH) {
+      setError(
+        isEs
+          ? `El nombre puede tener hasta ${FOOD_NAME_MAX_LENGTH} caracteres.`
+          : `The food name can be up to ${FOOD_NAME_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+    if (portion.trim().length > FOOD_PORTION_MAX_LENGTH) {
+      setError(
+        isEs
+          ? `La porción puede tener hasta ${FOOD_PORTION_MAX_LENGTH} caracteres.`
+          : `The portion can be up to ${FOOD_PORTION_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
 
+    /* A minus sign or letters in an amount used to be saved as 0 with no
+       word to the member (P16b QA round 2). Each such field now says why. */
+    const found: Partial<Record<NutrientKey, string>> = {};
+    const parsed = {} as Record<NutrientKey, number>;
+    NUTRIENT_ORDER.forEach((key) => {
+      const problem = amountProblem(values[key], NUTRIENT_VALUE_MAX);
+      if (problem) {
+        found[key] = amountMessage(
+          problem,
+          NUTRIENT_VALUE_MAX,
+          NUTRIENT_UNITS[key],
+          isEs,
+        );
+      } else {
+        parsed[key] = parseAmount(values[key]) ?? 0;
+      }
+    });
+    setFieldErrors(found);
+    if (Object.keys(found).length > 0) {
+      setError(
+        isEs
+          ? "Revise las cantidades marcadas."
+          : "Check the amounts marked below.",
+      );
+      return;
+    }
+
+    /* A valid submit clears the earlier "Enter a food name." so it does not
+       sit next to a save failure (saveError) shown in the same form. */
+    setError("");
     onSave({
       meal,
       name: name.trim(),
       portion: portion.trim(),
-      calories: toNumber(values.calories),
-      sodium: toNumber(values.sodium),
-      potassium: toNumber(values.potassium),
-      phosphorus: toNumber(values.phosphorus),
-      protein: toNumber(values.protein),
-      carbs: toNumber(values.carbs),
-      fats: toNumber(values.fats),
-      fiber: toNumber(values.fiber),
+      calories: parsed.calories,
+      sodium: parsed.sodium,
+      potassium: parsed.potassium,
+      phosphorus: parsed.phosphorus,
+      protein: parsed.protein,
+      carbs: parsed.carbs,
+      fats: parsed.fats,
+      fiber: parsed.fiber,
     });
   };
 
@@ -151,10 +253,14 @@ export function AddFoodModal({
           : `Add a food to a meal · ${dayLabel}.`
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         {error ? (
-          <p className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger">
+          <p
+            role="alert"
+            className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger"
+          >
             {error}
           </p>
         ) : null}
@@ -225,24 +331,28 @@ export function AddFoodModal({
               unit={NUTRIENT_UNITS.calories}
               value={values.calories}
               onChange={(next) => setValue("calories", next)}
+              error={fieldErrors.calories}
             />
             <NumberField
               label={nutrientLabel("sodium", "Sodium")}
               unit={NUTRIENT_UNITS.sodium}
               value={values.sodium}
               onChange={(next) => setValue("sodium", next)}
+              error={fieldErrors.sodium}
             />
             <NumberField
               label={nutrientLabel("potassium", "Potassium")}
               unit={NUTRIENT_UNITS.potassium}
               value={values.potassium}
               onChange={(next) => setValue("potassium", next)}
+              error={fieldErrors.potassium}
             />
             <NumberField
               label={nutrientLabel("phosphorus", "Phosphorus")}
               unit={NUTRIENT_UNITS.phosphorus}
               value={values.phosphorus}
               onChange={(next) => setValue("phosphorus", next)}
+              error={fieldErrors.phosphorus}
             />
           </div>
         </div>
@@ -257,24 +367,28 @@ export function AddFoodModal({
               unit={NUTRIENT_UNITS.protein}
               value={values.protein}
               onChange={(next) => setValue("protein", next)}
+              error={fieldErrors.protein}
             />
             <NumberField
               label={nutrientLabel("carbs", "Carbs")}
               unit={NUTRIENT_UNITS.carbs}
               value={values.carbs}
               onChange={(next) => setValue("carbs", next)}
+              error={fieldErrors.carbs}
             />
             <NumberField
               label={nutrientLabel("fats", "Fats")}
               unit={NUTRIENT_UNITS.fats}
               value={values.fats}
               onChange={(next) => setValue("fats", next)}
+              error={fieldErrors.fats}
             />
             <NumberField
               label={nutrientLabel("fiber", "Fiber")}
               unit={NUTRIENT_UNITS.fiber}
               value={values.fiber}
               onChange={(next) => setValue("fiber", next)}
+              error={fieldErrors.fiber}
             />
           </div>
         </div>
@@ -303,10 +417,13 @@ export function GoalsModal({
   goals,
   onClose,
   onSave,
+  saveError,
 }: {
   goals: Goals;
   onClose: () => void;
   onSave: (next: Goals) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -331,12 +448,35 @@ export function GoalsModal({
     fiber: "Fiber",
   };
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const setField = (key: string, next: string) => {
+    setDraft((prev) => ({ ...prev, [key]: next }));
+    setFieldErrors((prev) => {
+      const rest = { ...prev };
+      delete rest[key];
+      return rest;
+    });
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const next = { fluid: toNumber(draft.fluid) } as Goals;
-    NUTRIENT_ORDER.forEach((key) => {
-      next[key] = toNumber(draft[key]);
-    });
+    /* "-5" or "abc" used to be saved as a goal of 0 with no message
+       (P16b QA round 2). Each such field now says why and nothing is sent.
+       An empty field is still 0, the server's "no goal". */
+    const found: Record<string, string> = {};
+    const next = {} as Goals;
+    const read = (key: NutrientKey | "fluid", max: number, unit: string) => {
+      const problem = amountProblem(draft[key] ?? "", max);
+      if (problem) found[key] = amountMessage(problem, max, unit, isEs);
+      else next[key] = parseAmount(draft[key] ?? "") ?? 0;
+    };
+    NUTRIENT_ORDER.forEach((key) =>
+      read(key, NUTRIENT_VALUE_MAX, NUTRIENT_UNITS[key]),
+    );
+    read("fluid", FLUID_ML_MAX, "ml");
+    setFieldErrors(found);
+    if (Object.keys(found).length > 0) return;
     onSave(next);
   };
 
@@ -349,6 +489,7 @@ export function GoalsModal({
           : "Set your daily targets. Confirm them with your nephrology team."
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <div className="grid grid-cols-2 gap-3">
@@ -360,16 +501,16 @@ export function GoalsModal({
               }
               unit={NUTRIENT_UNITS[key]}
               value={draft[key]}
-              onChange={(next) =>
-                setDraft((prev) => ({ ...prev, [key]: next }))
-              }
+              onChange={(next) => setField(key, next)}
+              error={fieldErrors[key]}
             />
           ))}
           <NumberField
             label={n?.keyMetrics?.fluids?.title || "Fluids"}
             unit="ml"
             value={draft.fluid}
-            onChange={(next) => setDraft((prev) => ({ ...prev, fluid: next }))}
+            onChange={(next) => setField("fluid", next)}
+            error={fieldErrors.fluid}
           />
         </div>
 
@@ -397,12 +538,15 @@ export function AddWaterModal({
   dayLabel,
   onClose,
   onSave,
+  saveError,
 }: {
   /** The day the water is filed under, as the member reads it. */
   dayLabel: string;
   onClose: () => void;
   /** What the member drank, in the unit they chose (the server converts). */
   onSave: (amount: number, unit: FluidUnit) => void;
+  /** Why the last save failed (shown in the form). */
+  saveError?: string | null;
 }) {
   const { language, dictionary } = useLanguage();
   const n = dictionary?.nutrition;
@@ -412,10 +556,29 @@ export function AddWaterModal({
   const { unit, setUnit } = useFluidUnit();
   const [amount, setAmount] = useState(unit === "oz" ? "8" : "240");
 
+  const [amountError, setAmountError] = useState<string | null>(null);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const value = toNumber(amount);
-    if (value > 0) onSave(value, unit);
+    /* An empty, zero, negative or unreadable amount used to do nothing at
+       all (P16b QA round 2: a control that does nothing). It now says why. */
+    const value = parseAmount(amount);
+    if (value === null || value <= 0) {
+      setAmountError(
+        isEs
+          ? "Ingrese una cantidad mayor que 0."
+          : "Enter an amount greater than 0.",
+      );
+      return;
+    }
+    if (toMl(value, unit) > FLUID_ML_MAX) {
+      setAmountError(
+        amountMessage("too-large", fromMl(FLUID_ML_MAX, unit), unit, isEs),
+      );
+      return;
+    }
+    setAmountError(null);
+    onSave(value, unit);
   };
 
   return (
@@ -427,6 +590,7 @@ export function AddWaterModal({
           : `Log what you drank · ${dayLabel}.`
       }
       onClose={onClose}
+      saveError={saveError}
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <SegmentedChoice<FluidUnit>
@@ -454,7 +618,10 @@ export function AddWaterModal({
               <button
                 key={preset}
                 type="button"
-                onClick={() => setAmount(`${preset}`)}
+                onClick={() => {
+                  setAmount(`${preset}`);
+                  setAmountError(null);
+                }}
                 className={`cursor-pointer rounded-card border px-2 py-2.5 text-body-sm font-bold transition-all ${
                   isSelected
                     ? "border-primary-edge bg-primary-soft text-fg-brand"
@@ -471,7 +638,11 @@ export function AddWaterModal({
           label={isEs ? "Cantidad" : "Amount"}
           unit={unit}
           value={amount}
-          onChange={setAmount}
+          onChange={(next) => {
+            setAmount(next);
+            setAmountError(null);
+          }}
+          error={amountError}
         />
         {toNumber(amount) > 0 ? (
           <p className="text-caption text-fg-muted">

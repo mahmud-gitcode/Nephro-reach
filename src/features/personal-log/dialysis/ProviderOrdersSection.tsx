@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { BellRing, Check, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useProviderOrders } from "./useProviderOrders";
+import { PROVIDER_ORDER_MAX_LENGTH } from "./homeDialysis.mapper";
 import {
   canRetry,
   errorMessageFor,
@@ -315,6 +316,7 @@ export function ProviderOrdersSection() {
                 <Textarea
                   {...props}
                   rows={3}
+                  maxLength={PROVIDER_ORDER_MAX_LENGTH}
                   value={text}
                   onChange={(event) => setText(event.target.value)}
                   placeholder={

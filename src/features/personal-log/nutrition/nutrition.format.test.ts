@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatNumber, statusForPercent, toNumber } from "./nutrition.format";
+import {
+  amountProblem,
+  formatNumber,
+  parseAmount,
+  statusForPercent,
+  toNumber,
+} from "./nutrition.format";
 
 /* These decide what a member reads on a diet where potassium is measured in
  * milligrams and getting it wrong matters. */
@@ -47,5 +53,37 @@ describe("formatNumber", () => {
 
   it("does not print a decimal tail on a whole number", () => {
     expect(formatNumber(120)).toBe("120");
+  });
+});
+
+describe("parseAmount", () => {
+  it("reads a typed amount, with or without a thousands comma", () => {
+    expect(parseAmount("120")).toBe(120);
+    expect(parseAmount("1.5")).toBe(1.5);
+    expect(parseAmount("1,900")).toBe(1900);
+    expect(parseAmount(" 42 ")).toBe(42);
+  });
+
+  it("reads an empty field as 0 (optional, and 'no goal' on the goals form)", () => {
+    expect(parseAmount("")).toBe(0);
+    expect(parseAmount("   ")).toBe(0);
+  });
+
+  it("does not turn a negative or unreadable amount into 0 (P16b QA round 2)", () => {
+    // Goals saved "-5" as a calorie goal of 0 with no message.
+    expect(parseAmount("-5")).toBeNull();
+    expect(parseAmount("abc")).toBeNull();
+    expect(parseAmount("12abc")).toBeNull();
+    expect(parseAmount("1.2.3")).toBeNull();
+    expect(parseAmount("1e5")).toBeNull();
+  });
+});
+
+describe("amountProblem", () => {
+  it("names what is wrong, using the server's limit", () => {
+    expect(amountProblem("-5", 100_000)).toBe("not-a-number");
+    expect(amountProblem("100001", 100_000)).toBe("too-large");
+    expect(amountProblem("100000", 100_000)).toBeNull();
+    expect(amountProblem("", 100_000)).toBeNull();
   });
 });

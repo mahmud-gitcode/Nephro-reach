@@ -436,6 +436,7 @@ export default function BetweenTreatmentPage() {
           <CheckInForm
             key={openDate}
             entry={openEntry ?? undefined}
+            date={openDate}
             notice={notices.getByDate(openDate)}
             onSave={handleSave}
             onCancel={() => setOpenDate(null)}

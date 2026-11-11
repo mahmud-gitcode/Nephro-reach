@@ -46,6 +46,11 @@ export function fromApiExtraTreatment(raw: ApiExtraTreatment): ExtraTreatment {
   };
 }
 
+/** The server's limit on an extra treatment's notes; the form stops typing
+ *  there, so the slice below never cuts a note without a word (P16b QA
+ *  round 2 crawl). */
+export const EXTRA_TREATMENT_NOTES_MAX_LENGTH = 4000;
+
 /** Throws for a reason the server would refuse (never sent). */
 export function toExtraTreatmentBody(draft: {
   dateKey: string;
@@ -58,6 +63,6 @@ export function toExtraTreatmentBody(draft: {
   return {
     date: draft.dateKey,
     reason: draft.reason,
-    notes: notes ? notes.slice(0, 4000) : null,
+    notes: notes ? notes.slice(0, EXTRA_TREATMENT_NOTES_MAX_LENGTH) : null,
   };
 }

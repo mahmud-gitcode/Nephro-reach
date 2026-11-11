@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Calendar } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button, Modal, MonthCalendar } from "@/components/ui";
+import { EXTRA_TREATMENT_NOTES_MAX_LENGTH } from "./extraTreatments";
 
 /* ==========================================================================
    ExtraTreatmentModal
@@ -197,6 +198,7 @@ export function ExtraTreatmentModal({
           </label>
           <textarea
             rows={3}
+            maxLength={EXTRA_TREATMENT_NOTES_MAX_LENGTH}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={

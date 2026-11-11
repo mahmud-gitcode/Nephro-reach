@@ -30,3 +30,10 @@ export const NUTRIENT_ORDER: NutrientKey[] = [
 
 /* No client default goals (Phase 5): the server owns them and says when
    they are its defaults (`isDefault`). */
+
+/* The server's limits (backend nutrition.constants.ts), so a form can say
+   what is wrong before a refused save. */
+export const NUTRIENT_VALUE_MAX = 100_000;
+export const FLUID_ML_MAX = 10_000;
+export const FOOD_NAME_MAX_LENGTH = 200;
+export const FOOD_PORTION_MAX_LENGTH = 100;
