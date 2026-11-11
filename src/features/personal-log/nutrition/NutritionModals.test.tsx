@@ -223,10 +223,12 @@ describe("nutrition forms refuse invalid amounts with a field message", () => {
     });
     fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
     expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText("Check the amounts marked below.")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain(
-      "Enter a number of 0 or more.",
-    );
+    /* Both the summary and the field's own message are announced. */
+    const alerts = screen.getAllByRole("alert").map((a) => a.textContent);
+    expect(alerts).toContain("Check the amounts marked below.");
+    expect(
+      alerts.some((t) => t?.includes("Enter a number of 0 or more.")),
+    ).toBe(true);
   });
 
   it("Add Food: an over-long name is named, not sent", async () => {
@@ -248,9 +250,9 @@ describe("nutrition forms refuse invalid amounts with a field message", () => {
     });
     fireEvent.submit(dialog.querySelector("form") as HTMLFormElement);
     expect(onSave).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("The food name can be up to 200 characters."),
-    ).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe(
+      "The food name can be up to 200 characters.",
+    );
   });
 
   it("Add Fluid: a negative amount says why instead of doing nothing", async () => {

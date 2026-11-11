@@ -257,7 +257,10 @@ export function AddFoodModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         {error ? (
-          <p className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger">
+          <p
+            role="alert"
+            className="rounded-card-nested border border-danger-line bg-danger-surface p-3 text-caption font-semibold text-danger"
+          >
             {error}
           </p>
         ) : null}
