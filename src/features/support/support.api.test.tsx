@@ -233,6 +233,23 @@ describe("the requester's Support tab", () => {
       "One more thing",
     );
   });
+
+  /* P16b QA round 2 crawl: a reply over the server's 4,000 characters was
+     refused (400) with the reason only in the banner at the top. */
+  it("the reply box stops at the server's 4,000 characters", async () => {
+    pathname = "/dashboard/support";
+    stubApi((call) => {
+      if (call.path === "/me/support-tickets")
+        return pageOf([ticket({ status: "answered" })]);
+      if (call.path.startsWith("/me/support-tickets/"))
+        return { data: ticket({ status: "answered", replies: [] }) };
+      return undefined;
+    });
+    render(<SupportCenter href="/dashboard/support" />, { wrapper });
+    fireEvent.click(await screen.findByText("Upload fails"));
+    const reply = await screen.findByLabelText("Reply");
+    expect(reply.getAttribute("maxlength")).toBe("4000");
+  });
 });
 
 describe("the NephroReach team's Support Inbox", () => {
