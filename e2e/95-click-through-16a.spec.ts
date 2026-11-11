@@ -65,6 +65,17 @@ type PageStats = {
   repeats: number;
   /** Controls left when the control budget or the time budget ran out. */
   budgetLeft: number;
+  /** In-page links whose target was checked for a 404 but not clicked
+   *  (six links followed per page). */
+  linksChecked: number;
+  /** Clicks that failed (recorded as click-failed issues). */
+  failed: number;
+  /** Fields of an in-page form that were gone (another tab shown) before
+   *  their own turn: the form pass filled and submitted them. */
+  formFields: number;
+  /** Other controls seen once that were gone before their turn (behind
+   *  another tab or view). */
+  unreached: number;
   skipped: string[];
 };
 
@@ -832,6 +843,8 @@ type Control = {
   kind: string;
   name: string;
   href: string;
+  /** Inside an in-page <form> (its fields get the form pass). */
+  inForm: boolean;
 };
 
 /** Tag every visible enabled control in <main> (not in a dialog). */
@@ -853,6 +866,7 @@ async function enumerate(page: Page): Promise<Control[]> {
         kind: string;
         name: string;
         href: string;
+        inForm: boolean;
       }[] = [];
       let idx = 0;
       for (const el of main.querySelectorAll<HTMLElement>(sel)) {
@@ -898,6 +912,7 @@ async function enumerate(page: Page): Promise<Control[]> {
           kind,
           name,
           href: tag === "a" ? (el.getAttribute("href") ?? "") : "",
+          inForm: !!el.closest("form"),
         });
         idx += 1;
       }
@@ -1460,6 +1475,10 @@ async function crawlPage(
     restored: 0,
     repeats: 0,
     budgetLeft: 0,
+    linksChecked: 0,
+    failed: 0,
+    formFields: 0,
+    unreached: 0,
     skipped: [],
   };
   rec.stats.push(stats);
@@ -1472,7 +1491,7 @@ async function crawlPage(
 
   /* In-page forms (e.g. the add pages). */
   const formCount = await page.locator("main form").count();
-  for (let f = 0; f < Math.min(formCount, 3); f += 1) {
+  for (let f = 0; f < Math.min(formCount, 8); f += 1) {
     await formPass(
       page,
       rec,
@@ -1489,15 +1508,17 @@ async function crawlPage(
   }
 
   const visited = new Set<string>();
+  /** Every control seen on the page in any state: the "found" count. */
+  const seenSigs = new Set<string>();
+  const formSigs = new Set<string>();
   const shapes = new Map<string, number>();
   const links = new Set<string>();
   const { controls: budgetMax } = budgetFor(href);
   let budget = budgetMax;
   for (;;) {
     if (budget <= 0 || Date.now() > softEnd) {
-      const left = (await enumerate(page)).filter(
-        (c) => !visited.has(c.sig),
-      ).length;
+      for (const c of await enumerate(page)) seenSigs.add(c.sig);
+      const left = [...seenSigs].filter((sig) => !visited.has(sig)).length;
       stats.budgetLeft = left;
       if (left)
         stats.skipped.push(
@@ -1511,12 +1532,17 @@ async function crawlPage(
        every control behind it: close it first. */
     if (await page.locator(OPEN_DIALOG).count()) await closeDialog(page);
     const controls = await enumerate(page);
-    stats.controls = Math.max(
-      stats.controls,
-      visited.size + controls.filter((c) => !visited.has(c.sig)).length,
-    );
+    for (const c of controls) {
+      seenSigs.add(c.sig);
+      if (c.inForm) formSigs.add(c.sig);
+    }
     const next = controls.find((c) => !visited.has(c.sig));
-    if (!next) break;
+    if (!next) {
+      const gone = [...seenSigs].filter((sig) => !visited.has(sig));
+      stats.formFields = gone.filter((sig) => formSigs.has(sig)).length;
+      stats.unreached = gone.length - stats.formFields;
+      break;
+    }
     visited.add(next.sig);
     const shape = `${next.kind}|${nameShape(next.name)}`;
     const nShape = (shapes.get(shape) ?? 0) + 1;
@@ -1579,7 +1605,7 @@ async function crawlPage(
           if (new URL(page.url()).pathname !== pagePath) {
             await open(page, rec, href);
           }
-        }
+        } else stats.linksChecked += 1;
         continue;
       }
     }
@@ -1638,6 +1664,7 @@ async function crawlPage(
         expected: "the control can be clicked",
         actual: String(e).split("\n")[0].slice(0, 200),
       });
+      stats.failed += 1;
       continue;
     }
     /* Short wait for a visible result. */
@@ -1700,6 +1727,7 @@ async function crawlPage(
       await open(page, rec, href);
     }
   }
+  stats.controls = seenSigs.size;
   stats.downloads = rec.downloads.length - dl0;
 
   /* Destructive actions only on rows this crawler created. A round
