@@ -62,6 +62,8 @@ type Coverage = {
   uploads: number;
   links: number;
   mobilePages: number;
+  /** Routes outside a limited admin's sidebar, opened by URL. */
+  unlistedRefused: { page: string; result: string }[];
 };
 
 const OUT = path.resolve(
@@ -201,6 +203,7 @@ class Crawl {
     uploads: 0,
     links: 0,
     mobilePages: 0,
+    unlistedRefused: [],
   };
   current = "";
   control = "";
@@ -301,6 +304,7 @@ class Crawl {
         if (/\/auth\/refresh$/.test(u.pathname))
           this.refreshes.push(Date.now());
         this.okAt.set(p, Date.now());
+        if (!/^[A-Z]+ \/auth\//.test(p)) this.lastAuthedOk = Date.now();
         return;
       }
       const body = (await res.json().catch(() => null)) as {
@@ -393,11 +397,20 @@ class Crawl {
   refreshes: number[] = [];
   /** When each call (method + path) last answered 2xx/3xx. */
   okAt = new Map<string, number>();
+  /** When any non-/auth API call last answered 2xx/3xx (the session works). */
+  lastAuthedOk = 0;
 
   /** A 401 is excused only as the designed expiry-and-retry: a token
    *  renewal succeeded within 8 s of it AND the same call (method + path)
    *  then answered 2xx/3xx after both the 401 and that renewal. Anything
-   *  else is reported. `final` judges every pending 401 now. */
+   *  else is reported. `final` judges every pending 401 now.
+   *  One exception: GET /auth/session is the passive idle-timer read, which
+   *  the client never retries (NO_REFRESH in src/lib/api/client.ts, D2). It
+   *  can race a refresh that is rotating the session row and get
+   *  auth.session_no_longer_active. That 401 is excused when a successful
+   *  renewal lands within 8 s of it and the session goes on: a later
+   *  authenticated 2xx on any other call, after both, and no sign-out (the
+   *  page is still on /dashboard). Every other call keeps the strict rule. */
   judge401(final = false) {
     const now = Date.now();
     const stale = final
@@ -406,7 +419,19 @@ class Crawl {
     this.pending401 = final
       ? []
       : this.pending401.filter((x) => now - x.at <= 8_000);
+    const onDashboard = /^\/dashboard/.test(
+      new URL(this.page.url(), appOrigin).pathname,
+    );
     const retried = (x: (typeof stale)[number]) => {
+      if (x.call === "GET /auth/session")
+        return (
+          onDashboard &&
+          this.refreshes.some(
+            (r) =>
+              Math.abs(x.at - r) <= 8_000 &&
+              this.lastAuthedOk > Math.max(x.at, r),
+          )
+        );
       const ok = this.okAt.get(x.call) ?? 0;
       return this.refreshes.some(
         (r) => Math.abs(x.at - r) <= 8_000 && ok > Math.max(x.at, r),
@@ -2043,6 +2068,64 @@ for (const role of ROLES) {
             control: "(page)",
             why: `not in this role's sidebar: ${landed !== route ? `redirected to ${landed}` : refused ? "no-access state shown" : "page rendered"}`,
           });
+          if (role.id !== "admin-owner") {
+            // A platform admin route outside a limited admin's menu must be
+            // refused by URL too (redirect or no-access state), and no
+            // MANAGE-only or moderation control may show (regression check).
+            if (landed === route && !refused)
+              c.add({
+                kind: "unlisted-route-rendered",
+                control: "(direct URL)",
+                steps: `Open ${route} by URL (not in this role's sidebar)`,
+                expected: "A redirect or the no-access state",
+                actual: "The page rendered",
+                severity: "high",
+              });
+            // After a redirect the page shown is another one (crawled on its
+            // own); on the refused page itself no such control may show.
+            const here = landed === route;
+            for (const u of MANAGE_UI.filter((x) => here && x.route === route))
+              if (
+                await page
+                  .getByRole("button", { name: u.name })
+                  .first()
+                  .isVisible()
+                  .catch(() => false)
+              )
+                c.add({
+                  kind: "unlisted-route-manage-control",
+                  control: u.what,
+                  steps: `Open ${route} by URL (not in this role's sidebar)`,
+                  expected: "No MANAGE-only control",
+                  actual: `"${u.what}" is shown`,
+                  severity: "high",
+                });
+            if (
+              here &&
+              (await page
+                .getByRole("button", { name: MODERATION_BUTTON })
+                .first()
+                .isVisible()
+                .catch(() => false))
+            )
+              c.add({
+                kind: "unlisted-route-manage-control",
+                control: "moderation",
+                steps: `Open ${route} by URL (not in this role's sidebar)`,
+                expected: "No moderation control",
+                actual: "A moderation button is shown",
+                severity: "high",
+              });
+            c.cov.unlistedRefused.push({
+              page: route,
+              result:
+                landed !== route
+                  ? `redirected to ${landed}`
+                  : refused
+                    ? "no-access state"
+                    : "rendered",
+            });
+          }
           if (landed !== route || refused) continue;
         }
         if (landed !== route) {
@@ -2148,6 +2231,13 @@ for (const role of ROLES) {
     // Judged in the last test, so every role is crawled even when one
     // role's crawl finds a blocker.
     expect(c.cov.pages.length, `${role.id} visited pages`).toBeGreaterThan(0);
+    if (role.id === "admin-support")
+      // Administrative Support's menu leaves out admin routes; each was
+      // opened by URL and checked to be refused.
+      expect(
+        c.cov.unlistedRefused.length,
+        "admin routes outside the support sidebar were checked",
+      ).toBeGreaterThan(0);
   });
 }
 
