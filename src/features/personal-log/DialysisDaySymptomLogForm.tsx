@@ -644,6 +644,10 @@ function TreatmentForm({
                     <button
                       type="button"
                       onClick={() => setActiveTab(step.id)}
+                      /* Says which step is open: a click on the open step
+                         changes nothing, and nothing told a screen reader
+                         (or the P16a crawler) that it was the current one. */
+                      aria-current={isCurrent ? "step" : undefined}
                       /* Shrinks on a phone, and the label wraps under its
                        circle: the Spanish step names are too long for one
                        line at 390px. */
