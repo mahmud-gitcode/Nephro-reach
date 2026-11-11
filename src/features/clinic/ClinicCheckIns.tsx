@@ -121,17 +121,21 @@ function WeeklySummary({ today }: { today: string }) {
             This Week ({weekLabel(today)})
           </p>
           {/* The server's summary has no program filter yet: the control
-              stays, disabled, rather than filtering nothing. */}
-          <Select
-            selectSize="small"
-            aria-label="Program"
-            value="All Programs"
-            disabled
-            title={NOT_AVAILABLE}
-            onChange={() => undefined}
-          >
-            <option>All Programs</option>
-          </Select>
+              stays, disabled, rather than filtering nothing. Its wrapper
+              does not shrink, so the words never break inside the control
+              (P16c). */}
+          <div className="shrink-0">
+            <Select
+              selectSize="small"
+              aria-label="Program"
+              value="All Programs"
+              disabled
+              title={NOT_AVAILABLE}
+              onChange={() => undefined}
+            >
+              <option>All Programs</option>
+            </Select>
+          </div>
         </div>
       </div>
 

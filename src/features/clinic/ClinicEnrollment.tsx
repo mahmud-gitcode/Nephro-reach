@@ -463,6 +463,7 @@ function PatientTable({
                   <input
                     type="checkbox"
                     checked={allOnPageSelected}
+                    disabled={pageMrns.length === 0}
                     onChange={toggleAllOnPage}
                     aria-label="Select all patients on this page"
                     className="h-4 w-4 cursor-pointer accent-brand-600"

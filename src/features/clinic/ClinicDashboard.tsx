@@ -742,7 +742,7 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
                     </TableEmptyRow>
                   ) : (
                     view.rows.map((member) => (
-                      <MemberRow key={member.mrn} member={member} />
+                      <MemberRow key={member.id} member={member} />
                     ))
                   )}
                 </TableBody>
