@@ -195,11 +195,17 @@ const ERROR_STATE = /^try again$/i;
 const DESTRUCTIVE =
   /\b(delete|remove|archive|revoke|deactivate|discharge|unenroll|disenroll|end (care|access)|disable|cancel (the )?(trip|ride|visit|request|enrol|invitation|class)|decline|reject|close (thread|case|ticket)|withdraw)\b/i;
 const NEVER = /\b(sign out|log ?out|switch (portal|office)|change portal)\b/i;
+/* Staff administration that would change who the seeded accounts are
+   (owner, role, on/off): run only on a row the crawler made, like a
+   destructive action. The crawler never makes staff, so these are skipped
+   and counted; Team still opens and checks every other control. */
+const GUARDED =
+  /\b(make .+ the owner|make owner|transfer ownership|turn off|turn on|change role)\b/i;
 const SUBMIT =
-  /^(save|submit|send|create|add|invite|enrol|enroll|confirm|book|request|schedule|upload|import|update|apply|post|reply|share|continue|next|done)\b/i;
+  /^(save|submit|send|create|add|invite|enrol|enroll|confirm|book|request|schedule|upload|import|update|apply|post|reply|share|continue|next)\b/i;
 const CLOSE = /^(close|cancel|not now|back|dismiss|no)\b/i;
 const VALIDATION =
-  /(required|enter a|enter an|must|invalid|please|valid|at least|too (long|short)|choose|select|pick)/i;
+  /(required|enter a|enter an|must|invalid|please|valid|at least|too (long|short)|choose|select|pick|\bneeds?\b|or more)/i;
 
 function fileFor(accept: string) {
   if (/csv|text/i.test(accept))
@@ -793,7 +799,9 @@ async function collect(page: Page): Promise<Ctl[]> {
             ? words
             : !words && /\b(of|for|to|from)\b/i.test(name)
               ? name.replace(/\b(of|for|to|from)\b.*$/i, "$1")
-              : "";
+              : !words
+                ? name.split(" ")[0]
+                : "";
         out.push({ id, key: `${base}|${k}`, kind, name, href, rowLabel });
       }
     return out;
@@ -981,7 +989,10 @@ async function fill(
 async function submitButton(scope: Locator) {
   const typed = scope.locator('button[type="submit"]:visible');
   if (await typed.count()) return typed.last();
-  const named = scope.getByRole("button", { name: SUBMIT });
+  // An icon-only "Add note: …" pencil is not the form's submit.
+  const named = scope
+    .getByRole("button", { name: SUBMIT })
+    .filter({ hasText: /\S/ });
   if (await named.count()) return named.last();
   return null;
 }
@@ -1359,7 +1370,7 @@ async function act(
      (QA-SEC round 1, F5: a case-sensitive test skipped them all). */
   let ownDestructive = "";
   if (
-    DESTRUCTIVE.test(ctl.name) &&
+    (DESTRUCTIVE.test(ctl.name) || GUARDED.test(ctl.name)) &&
     !(await el
       .getAttribute("type")
       .then((t) => t === "submit")
@@ -1483,7 +1494,7 @@ async function act(
     await closeOverlays(page);
     for (const [j, text] of items.entries()) {
       if (NEVER.test(text)) continue;
-      if (DESTRUCTIVE.test(text)) {
+      if (DESTRUCTIVE.test(text) || GUARDED.test(text)) {
         /* Menu actions that destroy are left alone; on the crawler's own
            row they are counted as skipped with the reason in the notes. */
         c.coverage.skippedDestructive++;
@@ -1723,7 +1734,10 @@ async function crawlPage(c: Crawl, href: string, source: string) {
   stat.forms = c.coverage.formsSubmitted - forms0;
 }
 
-test.setTimeout(45 * 60_000);
+/* A role crawls up to 17 pages; under a loaded env next dev compiled a
+   page in 50-65 s (round 4 run, fe.log), and the nephrology owner went past
+   45 minutes. */
+test.setTimeout(120 * 60_000);
 test.use({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
 
 for (const role of ROLES) {
