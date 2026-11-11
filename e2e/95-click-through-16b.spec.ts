@@ -952,7 +952,7 @@ async function fillInvalid(scope: Locator): Promise<{
       kind = "malformed phone";
     } else if (type === "date") {
       if (
-        /birth|dob|diagnos|onset|occurred|happened|visit|taken|logged|measured/.test(
+        /birth|dob|diagnos|onset|occurred|happened|taken|logged|measured/.test(
           name,
         )
       ) {
@@ -966,7 +966,7 @@ async function fillInvalid(scope: Locator): Promise<{
     ) {
       /* Past every text limit a caregiver can reach (the largest server
          limit is 50,000; a 5,001 one was within some of them). */
-      v = "x".repeat(60_001);
+      v = "xxxxxxxxx ".repeat(6_001);
       kind = "over-long text";
     }
     if (v === null) continue;
@@ -1026,11 +1026,17 @@ async function invalidPass(
   /* A confirmation step (the messaging safety notice) opened: answer it,
      so what is judged is what the form does with the input. */
   if ((await page.getByRole("dialog").count()) > dialogsBefore) {
-    const confirm = page
-      .getByRole("dialog")
-      .last()
+    const notice = page.getByRole("dialog").last();
+    /* Its acknowledgement box first ("I understand ..."), then its button. */
+    const boxes = notice.getByRole("checkbox");
+    for (let b = 0; b < (await boxes.count()); b++)
+      await boxes
+        .nth(b)
+        .check({ timeout: 2_000 })
+        .catch(() => undefined);
+    const confirm = notice
       .getByRole("button", {
-        name: /continue|confirm|understand|agree|send|^ok|yes/i,
+        name: /continue|confirm|understand|agree|send|submit|^ok|yes/i,
       })
       .last();
     if (await confirm.isVisible().catch(() => false)) {
@@ -1046,14 +1052,23 @@ async function invalidPass(
   const control = `${opener} > ${label} (invalid: ${what})`;
   const steps = `open "${opener}", fill it, then enter ${what}, and submit "${label}"`;
   /* Uploads (/files) may run before the form's own check. */
-  const writes = mon.api
-    .slice(m.a)
-    .filter((h) => h.method !== "GET" && !/^\/files(\/|$)/.test(h.path));
+  const writes = mon.api.slice(m.a).filter(
+    (h) =>
+      h.method !== "GET" &&
+      !/^\/files(\/|$)/.test(h.path) &&
+      /* The log photo bar saves a picked photo to Photos on its own,
+           when the file is picked (LogMediaBar), not on this submit. */
+      !/^\/patients\/[^/]+\/dialysis\/access-photos$/.test(h.path),
+  );
   const saved = writes.filter((h) => h.status < 400);
   const refused400 = writes.filter((h) => [400, 422].includes(h.status));
   const open = await scope.isVisible().catch(() => false);
   const alertsAfter = await pageAlerts();
-  const pageMessage = alertsAfter !== "" && alertsAfter !== alertsBefore;
+  /* New page alert text, or one that names what is wrong (it may be the
+     same message an earlier click already brought up). */
+  const pageMessage =
+    alertsAfter !== "" &&
+    (alertsAfter !== alertsBefore || VALIDATION.test(alertsAfter));
   const message =
     pageMessage ||
     (open &&
@@ -1125,7 +1140,7 @@ async function submitOf(scope: Locator): Promise<Locator | null> {
   return null;
 }
 
-/** Empty submit, invalid submit, then valid submit, of an open dialog. Returns the marker
+/** Invalid submit, empty submit, then valid submit, of an open dialog. Returns the marker
  *  when a valid submit closed the dialog with a successful write. */
 async function exerciseDialog(
   ctx: Ctx,
@@ -1136,9 +1151,32 @@ async function exerciseDialog(
   const dialog = page.getByRole("dialog").last();
   ctx.cov.dialogsOpened++;
   const submit = await submitOf(dialog);
-  if (!submit) return null;
+  if (!submit) {
+    ctx.cov.notes.push(`${ctx.current}: dialog "${opener}" (no submit)`);
+    return null;
+  }
   const label = ((await submit.textContent()) ?? "").trim();
-  /* 1. Empty submit: a validation message, a disabled button, or a refusal
+  ctx.cov.notes.push(`${ctx.current}: dialog "${opener}" > "${label}"`);
+  /* 1. Invalid input first, on a validly filled form, then the fields are
+        put back as they opened (P16b QA round 2: Goals saved "-5" as 0; a
+        pre-filled form closes on its untouched save below, so the invalid
+        pass has to come before it). */
+  if (allowWrites) {
+    const textFields = dialog.locator(
+      "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])",
+    );
+    const opened = await textFields
+      .evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))
+      .catch(() => [] as string[]);
+    await fillValid(dialog, `Synthetic P16b ${Date.now().toString(36)}`);
+    if (!(await invalidPass(ctx, dialog, opener))) return null;
+    for (let i = 0; i < opened.length; i++)
+      await textFields
+        .nth(i)
+        .fill(opened[i], { timeout: 2_000 })
+        .catch(() => undefined);
+  }
+  /* 2. Empty submit: a validation message, a disabled button, or a refusal
         that is shown; never a silent save. */
   const writesBefore = mon.api.filter((h) => h.method !== "GET").length;
   /* Empty text fields the user would have to fill. A form with none (every
@@ -1219,10 +1257,6 @@ async function exerciseDialog(
   }
   if (!allowWrites) return null;
   const marker = `Synthetic P16b ${Date.now().toString(36)}`;
-  await fillValid(dialog, marker);
-  /* 2. Invalid input on a validly filled form (P16b QA round 2: Goals
-        saved "-5" as 0, and no in-app form was ever sent invalid input). */
-  if (!(await invalidPass(ctx, dialog, opener))) return null;
   /* 3. Valid synthetic data, then submit. */
   await fillValid(dialog, marker);
   const m1 = mon.mark();
@@ -1285,6 +1319,19 @@ async function crawlPage(
   await pageChecks(ctx);
   const startUrl = page.url();
   const controls = await listControls(page, ctx.root);
+  /* The tabs selected when the page opened: a click on another tab hides
+     the controls listed under the first one (nutrition: Set Goals, Add
+     Fluid and the meal rows sat under "Food" and were never reached once
+     "Exercise" was clicked, P16b QA round 2). */
+  const initialTabs = (
+    await page
+      .locator(`${ctx.root} [role="tab"][aria-selected="true"]`)
+      .allTextContents()
+      .catch(() => [] as string[])
+  )
+    .map((t) => t.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  let notFound = 0;
   const created: string[] = [];
   const done = new Set<string>();
   let clicked = 0;
@@ -1314,8 +1361,22 @@ async function crawlPage(
       await ctx.go(new URL(startUrl).pathname + new URL(startUrl).search);
       await settled(ctx, "(back to page)");
     }
-    const el = await find(page, ctx.root, c);
-    if (!el) continue;
+    let el = await find(page, ctx.root, c);
+    if (!el && initialTabs.length) {
+      for (const t of initialTabs)
+        await page
+          .locator(ctx.root)
+          .getByRole("tab", { name: t, exact: true })
+          .first()
+          .click({ timeout: 2_000 })
+          .catch(() => undefined);
+      await page.waitForTimeout(300);
+      el = await find(page, ctx.root, c);
+    }
+    if (!el) {
+      notFound++;
+      continue;
+    }
     const href = c.kind === "link" ? await el.getAttribute("href") : null;
     const target = c.kind === "link" ? await el.getAttribute("target") : null;
     /* External links (mailto/tel/other origin) are checked, not followed. */
@@ -1502,6 +1563,10 @@ async function crawlPage(
         .catch(() => undefined);
     }
   }
+  if (notFound)
+    ctx.cov.notes.push(
+      `${ctx.current}: ${notFound} listed control(s) no longer on the page when their turn came`,
+    );
   /* In-page forms (not in a dialog): invalid input, then valid input. */
   if (opts.allowWrites && ctx.root === "main")
     await pageForms(ctx, startUrl, created);
