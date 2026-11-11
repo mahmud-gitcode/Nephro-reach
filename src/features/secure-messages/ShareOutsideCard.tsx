@@ -93,7 +93,14 @@ function useOutsideOffices(): Office[] {
   ];
   for (const [kind, label] of others) {
     const name = contacts[kind].name;
-    if (name && !networkOffices(kind).includes(name)) {
+    /* The option's value is the office name: two contacts with the same
+       name are one recipient, listed once (a repeated name gave two
+       options with the same React key). */
+    if (
+      name &&
+      !networkOffices(kind).includes(name) &&
+      !offices.some((o) => o.name === name)
+    ) {
       offices.push({ name, kind: label });
     }
   }

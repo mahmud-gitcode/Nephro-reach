@@ -373,6 +373,55 @@ describe("the recipient's /secure/<token> page", () => {
 });
 
 describe("the sender's card", () => {
+  it("lists an outside office once when two care contacts share its name (no repeated React key)", async () => {
+    const contact = (kind: string, id: string) => ({
+      id,
+      patientId: JOHN_ID,
+      kind,
+      name: "Synthetic Same Office",
+      phone: "",
+      address: "",
+      updatedAt: "2026-11-02T10:00:00.000Z",
+    });
+    stubApi((call) =>
+      call.path === `/patients/${JOHN_ID}/care-contacts`
+        ? {
+            body: {
+              success: true,
+              message: "Success",
+              statusCode: 200,
+              data: [
+                contact("vascular", "c-1"),
+                contact("primary-care", "c-2"),
+              ],
+            },
+          }
+        : quiet(call),
+    );
+    const errors = vi.mocked(console.error);
+    const { container } = render(<ShareOutsideCard />, { wrapper });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Share Outside NephroReach" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const recipient = within(dialog).getByLabelText(
+      /^Recipient$/,
+    ) as HTMLSelectElement;
+    await waitFor(() =>
+      expect(
+        within(recipient).getAllByRole("option", {
+          name: "Synthetic Same Office",
+        }),
+      ).toHaveLength(1),
+    );
+    expect(
+      errors.mock.calls.some((args) =>
+        String(args[0]).includes("two children with the same key"),
+      ),
+    ).toBe(false);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it("sends one recipient field and shows the server's message, never a link to copy", async () => {
     const created: StubCall[] = [];
     stubApi((call) => {

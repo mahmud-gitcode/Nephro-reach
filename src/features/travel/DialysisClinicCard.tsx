@@ -279,7 +279,22 @@ export default function DialysisClinicCard() {
           error={saveError}
           onClose={() => setEditing(false)}
           onSave={(next) =>
-            save.mutate(next, { onSuccess: () => setEditing(false) })
+            save.mutate(
+              {
+                ...next,
+                /* A center on NephroReach stays linked when the member adds
+                   or changes its phone or address; only a new name makes it
+                   a different, typed-in center. Before, every save here
+                   dropped the link (P16a crawl). Both names are compared
+                   trimmed, so spaces around the name never unlink it. */
+                organizationId:
+                  clinic.organizationId &&
+                  next.name.trim() === clinic.name.trim()
+                    ? clinic.organizationId
+                    : null,
+              },
+              { onSuccess: () => setEditing(false) },
+            )
           }
         />
       )}

@@ -9,7 +9,7 @@
    edit or delete.
    ========================================================================== */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PatientScope } from "@/lib/data/queryKeys";
 import {
@@ -83,9 +83,17 @@ export function useHomeVisits(
     },
     onSuccess: refresh,
   });
+  /* Ids with a DELETE in flight, until the list has refetched without
+     them: a second click on the same row (a double click, or a click while
+     the old list is still shown) must not send a second DELETE, whose 404
+     would show an error for a delete that succeeded (P16a M1). */
+  const removing = useRef(new Set<string>());
   const drop = useMutation({
     mutationFn: (id: string) => removeHomeVisit(requireScope(scope), id),
     onSuccess: refresh,
+    onSettled: (_data, _error, id) => {
+      removing.current.delete(id);
+    },
   });
 
   const visits = list.items;
@@ -108,7 +116,18 @@ export function useHomeVisits(
         mutate({ draft, editId }, { onSuccess: () => onSaved?.() }),
       [mutate],
     ),
-    remove: useCallback((id: string) => dropMutate(id), [dropMutate]),
+    /** Deletes one visit; a second call for the same id while the first
+     *  is in flight (or its list refetch) is ignored. */
+    remove: useCallback(
+      (id: string) => {
+        if (removing.current.has(id)) return;
+        removing.current.add(id);
+        dropMutate(id);
+      },
+      [dropMutate],
+    ),
+    /** True while this visit's delete is in flight. */
+    isRemoving: (id: string) => drop.isPending && drop.variables === id,
 
     isPending: list.isPending,
     error: list.error,

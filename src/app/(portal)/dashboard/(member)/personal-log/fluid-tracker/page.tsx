@@ -180,6 +180,7 @@ export default function FluidTrackerPage() {
           <div className="flex h-12 items-center rounded-card-nested border border-line bg-[var(--color-gray-100)] p-1 shadow-control">
             <button
               type="button"
+              aria-pressed={unit === "kg"}
               onClick={() => setUnit("kg")}
               className={`h-full min-w-11 cursor-pointer rounded-control px-3 text-body-sm font-bold transition-all ${
                 unit === "kg"
@@ -191,6 +192,7 @@ export default function FluidTrackerPage() {
             </button>
             <button
               type="button"
+              aria-pressed={unit === "lbs"}
               onClick={() => setUnit("lbs")}
               className={`h-full min-w-11 cursor-pointer rounded-control px-3 text-body-sm font-bold transition-all ${
                 unit === "lbs"
