@@ -1619,7 +1619,12 @@ async function crawlPage(
       .evaluate((el) =>
         ["aria-selected", "aria-checked", "aria-pressed"].some(
           (a) => el.getAttribute(a) === "true",
-        ) || (el as HTMLInputElement).checked === true
+        ) ||
+        /* The open step of a stepper, the current page of a list. */
+        ["step", "page", "true"].includes(
+          el.getAttribute("aria-current") ?? "",
+        ) ||
+        (el as HTMLInputElement).checked === true
           ? "true"
           : "false",
       )
@@ -1900,6 +1905,11 @@ const EXPLAINED: {
     kind: "empty-submit-accepted",
     actual: /^saved: POST \/patients\/[^/]+\/dialysis\/extra-treatments 201$/,
     why: "REPORT.md E2: Take extra treatment defaults to the picked date and 'Fluid Overload'; notes are optional (ExtraTreatmentModal.tsx:62-66), so the save is valid by design.",
+  },
+  {
+    kind: "resource-404",
+    actual: /^GET app \/videos\/day-\d+\.mp4 -> 404$/,
+    why: "REPORT.md E3: the course lessons point at /videos/day-NN.mp4 (dialysisJourneyData.ts), files the repository does not ship; the video files are content still to be supplied (decisionsNeeded), not an app fault.",
   },
 ];
 
